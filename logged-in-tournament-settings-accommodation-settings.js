@@ -102,7 +102,7 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
         await updateDoc(accommodationDocRef, {
           types: arrayUnion({ type: trimmedType, capacity: newAccommodationCapacity })
         });
-        showNotification(`Typ ubytovania "${trimmedType}" úspešne pridaný!`, 'success');
+        showNotification(`Typ ubytovania ${trimmedType} pridaný!`, 'success');
         await sendAdminNotification({ type: 'createAccommodation', data: { type: trimmedType, capacity: newAccommodationCapacity } });
       } else if (accommodationModalMode === 'edit') {
         if (trimmedType !== currentAccommodationEdit.type && accommodations.some(acc => acc.type === trimmedType)) {
@@ -115,7 +115,7 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
         await updateDoc(accommodationDocRef, {
           types: arrayUnion({ type: trimmedType, capacity: newAccommodationCapacity })
         });
-        showNotification(`Typ ubytovania "${currentAccommodationEdit.type}" úspešne zmenený na "${trimmedType}"!`, 'success');
+        showNotification(`Typ ubytovania ${currentAccommodationEdit.type} zmenený na ${trimmedType}.`, 'success');
         await sendAdminNotification({ type: 'editAccommodation', data: { originalType: currentAccommodationEdit.type, originalCapacity: currentAccommodationEdit.capacity, newType: trimmedType, newCapacity: newAccommodationCapacity } });
       }
       handleCloseAccommodationModal();
@@ -146,7 +146,7 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
       await updateDoc(accommodationDocRef, {
         types: arrayRemove(accommodationToDelete)
       });
-      showNotification(`Typ ubytovania "${accommodationToDelete.type}" úspešne zmazaný!`, 'success');
+      showNotification(`Typ ubytovania ${accommodationToDelete.type} bol zmazaný.`, 'success');
       await sendAdminNotification({ type: 'deleteAccommodation', data: { deletedType: accommodationToDelete.type, deletedCapacity: accommodationToDelete.capacity } });
       handleCloseConfirmDeleteAccommodationModal();
     } catch (e) {
