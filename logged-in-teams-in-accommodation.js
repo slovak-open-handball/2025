@@ -1290,9 +1290,48 @@ const AddGroupsApp = ({ userProfileData }) => {
                         'Odstrániť priradenie'
                     ),
                     React.createElement(
-                        'p',
-                        { className: 'text-gray-600' },
-                        `Naozaj chcete odstrániť priradenie tímu "${teamToRemove?.teamName}" z ubytovne "${teamToRemove?.assignedPlace}"?`
+                        'div',
+                        { className: 'mb-6' },
+                        React.createElement(
+                            'h3',
+                            { className: 'text-xl font-bold text-gray-900 mb-2' },
+                            'Odstrániť priradenie'
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-gray-600' },
+                            [
+                                'Naozaj chcete odstrániť priradenie tímu ',
+                                React.createElement(
+                                    'span',
+                                    { 
+                                        key: 'team-name',
+                                        className: 'font-bold text-gray-800' 
+                                    },
+                                    teamToRemove?.teamName
+                                ),
+                                ' z ubytovne ',
+                                React.createElement(
+                                    'span',
+                                    { 
+                                        key: 'accommodation-name',
+                                        className: 'font-bold text-gray-800' 
+                                    },
+                                    teamToRemove?.assignedPlace
+                                ),
+                                '?'
+                            ]
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg' },
+                            React.createElement(
+                                'p',
+                                { className: 'text-sm text-yellow-700' },
+                                React.createElement('strong', null, 'Upozornenie: '),
+                                'Tím sa odstráni z tejto ubytovne, ale zostane v systéme a bude možné ho priradiť do inej ubytovne.'
+                            )
+                        )
                     ),
                     React.createElement(
                         'div',
