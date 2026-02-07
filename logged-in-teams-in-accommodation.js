@@ -491,7 +491,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     oldAccommodation: oldAccommodation,
                     newAccommodation: selectedPlace.name
                 });
-                notify(`Tím "${selectedTeam.teamName}" bol presunutý z "${oldAccommodation}" do "${selectedPlace.name}"`, 'success');
+                notify(`Tím ${selectedTeam.teamName} bol presunutý z ${oldAccommodation} do ${selectedPlace.name}`, 'success');
             } else {
                 await createAccommodationNotification('assign_accommodation', {
                     teamName: selectedTeam.teamName,
@@ -501,7 +501,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     totalPeople: selectedTeam.totalPeople,
                     accommodationName: selectedPlace.name
                 });
-                notify(`Tím "${selectedTeam.teamName}" bol priradený do "${selectedPlace.name}"`, 'success');
+                notify(`Tím ${selectedTeam.teamName} bol priradený do ${selectedPlace.name}`, 'success');
             }
 
             window.showGlobalNotification(
@@ -574,7 +574,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 `Priradenie tímu "${teamToRemove.teamName}" bolo odstránené`,
                 'success'
             );
-            notify(`Tím "${teamToRemove.teamName}" bol odstránený z ubytovne "${teamToRemove.assignedPlace}"`, 'success');
+            notify(`Tím ${teamToRemove.teamName} bol odstránený z ubytovne ${teamToRemove.assignedPlace}`, 'success');
 
             setIsRemoveModalOpen(false);
             setTeamToRemove(null);
