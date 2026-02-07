@@ -674,15 +674,18 @@ const AddGroupsApp = ({ userProfileData }) => {
         try {
             const oldName = selectedPlace.name;
             const newName = editName.trim();
+            let totalTransferredTeams = 0; // Počítadlo prenesených tímov
             
             // Ak sa mení názov ubytovne, aktualizuj všetky priradené tímy
             if (oldName !== newName && editType === 'ubytovanie') {
                 // 1. Nájdite všetky tímy priradené k starému názvu ubytovne
                 const allUsers = await getDocs(collection(window.db, 'users'));
+                const userUpdates = []; // Zoznam používateľov ktorí potrebujú aktualizáciu
                 
                 for (const userDoc of allUsers.docs) {
                     const userData = userDoc.data();
                     const teams = userData.teams || {};
+                    let userTransferredCount = 0;
                     let needsUpdate = false;
                     const updatedTeams = { ...teams };
                     
@@ -694,6 +697,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         const updatedTeamArray = teamArray.map(team => {
                             if (team.accommodation?.name === oldName) {
                                 needsUpdate = true;
+                                userTransferredCount++;
                                 return {
                                     ...team,
                                     accommodation: {
@@ -710,23 +714,23 @@ const AddGroupsApp = ({ userProfileData }) => {
                         }
                     }
                     
-                    // Ak boli zmeny, aktualizuj dokument používateľa
+                    // Ak boli zmeny, priprav aktualizáciu
                     if (needsUpdate) {
-                        await updateDoc(doc(window.db, 'users', userDoc.id), {
-                            teams: updatedTeams
+                        userUpdates.push({
+                            userId: userDoc.id,
+                            teams: updatedTeams,
+                            transferredCount: userTransferredCount
                         });
-                        
-                        console.log(`[AUTOMATICKÁ AKTUALIZÁCIA] Tímy používateľa ${userDoc.id} boli prenesené z "${oldName}" na "${newName}"`);
-                        
-                        // Notifikácia o zmene
-                        await createPlaceChangeNotification('accommodation_name_updated', [
-                            `Automatická aktualizácia tímov: Tímy boli prenesené z ubytovne "${oldName}" na "${newName}"`
-                        ], {
-                            id: selectedPlace.id,
-                            name: newName,
-                            type: editType
-                        });
+                        totalTransferredTeams += userTransferredCount;
                     }
+                }
+                
+                // Vykonaj všetky aktualizácie
+                for (const update of userUpdates) {
+                    await updateDoc(doc(window.db, 'users', update.userId), {
+                        teams: update.teams
+                    });
+                    console.log(`[AUTOMATICKÁ AKTUALIZÁCIA] ${update.transferredCount} tímov používateľa ${update.userId} boli prenesené z "${oldName}" na "${newName}"`);
                 }
             }
     
@@ -796,10 +800,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                     `Zmena názvu miesta z '${original.name}' na '${updates.name}'`
                 );
                 
-                // Pridaj informáciu o automatickom prenesení tímov
-                if (editType === 'ubytovanie') {
+                // Pridaj informáciu o automatickom prenesení tímov IBA ak boli nejaké prenesené
+                if (editType === 'ubytovanie' && totalTransferredTeams > 0) {
                     changesList.push(
-                        `Automaticky prenesené všetky tímy z ubytovne '${original.name}' na '${updates.name}'`
+                        `Automaticky prenesených ${totalTransferredTeams} tímov z ubytovne '${original.name}' na '${updates.name}'`
                     );
                 }
             }
@@ -843,6 +847,17 @@ const AddGroupsApp = ({ userProfileData }) => {
                 });
             }
     
+            // Ak boli prenesené tímy, pošli samostatnú notifikáciu (iba raz)
+            if (totalTransferredTeams > 0) {
+                await createPlaceChangeNotification('accommodation_name_updated', [
+                    `Automatická aktualizácia tímov: ${totalTransferredTeams} tímov bolo prenesených z ubytovne "${oldName}" na "${newName}"`
+                ], {
+                    id: selectedPlace.id,
+                    name: newName,
+                    type: editType
+                });
+            }
+    
             // Aktualizácia lokálneho stavu
             setSelectedPlace(prev => ({
                 ...prev,
@@ -877,11 +892,17 @@ const AddGroupsApp = ({ userProfileData }) => {
                             accommodationType: updates.accommodationType || undefined,
                             note: updates.note || undefined
                           }
-                        : p
-                )
-            );
+                            : p
+                    )
+                );
     
-            window.showGlobalNotification('Údaje boli aktualizované a tímy automaticky prenesené', 'success');
+            // Upravená notifikácia pre používateľa
+            let successMessage = 'Údaje boli aktualizované';
+            if (totalTransferredTeams > 0) {
+                successMessage += ` a ${totalTransferredTeams} tímov bolo automaticky prenesených`;
+            }
+            window.showGlobalNotification(successMessage, 'success');
+            
             setIsEditingNameAndType(false);
             setEditCapacity('');
             setEditNote('');
