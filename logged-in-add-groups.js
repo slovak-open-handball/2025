@@ -918,12 +918,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                 'div',
                 { className: `w-full flex flex-col items-center justify-center mb-6` },
                 React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Vytvorenie skupín'),
-                // PRIDANÉ: Informácia o načítaných dátach
-                usersDataLoaded && React.createElement(
-                    'div',
-                    { className: 'mt-2 text-sm text-gray-500' },
-                    'Dáta boli načítané do konzoly'
-                )
             ),
             React.createElement(
                 'div',
