@@ -9,13 +9,13 @@ const { useState, useEffect, useRef, useSyncExternalStore } = React;
  */
 const loadAndLogAllUsersData = async () => {
     try {
-        console.log("=== NAČÍTAVANIE TÍMOV Z DATABÁZY ===");
+//        console.log("=== NAČÍTAVANIE TÍMOV Z DATABÁZY ===");
         
         // 1. Načítanie všetkých používateľských dokumentov
         const usersCollectionRef = collection(window.db, 'users');
         const querySnapshot = await getDocs(usersCollectionRef);
         
-        console.log(`Počet používateľov v databáze: ${querySnapshot.size}`);
+//        console.log(`Počet používateľov v databáze: ${querySnapshot.size}`);
         
         let allTeams = [];
         
@@ -55,18 +55,18 @@ const loadAndLogAllUsersData = async () => {
         });
         
         // Vypíšeme všetky tímy v požadovanom formáte
-        console.log("\n--- VŠETKY TÍMY ---");
-        if (allTeams.length === 0) {
-            console.log("Žiadne tímy v databáze.");
-        } else {
-            allTeams.forEach(team => {
-                console.log(`${team.category}: "${team.teamName}" ("${team.groupName}")`);
-            });
-        }
+//        console.log("\n--- VŠETKY TÍMY ---");
+//        if (allTeams.length === 0) {
+//            console.log("Žiadne tímy v databáze.");
+//        } else {
+//            allTeams.forEach(team => {
+//                console.log(`${team.category}: "${team.teamName}" ("${team.groupName}")`);
+//            });
+//        }
         
-        console.log("\n=== SÚHRN ===");
-        console.log(`Celkový počet používateľov: ${querySnapshot.size}`);
-        console.log(`Celkový počet tímov: ${allTeams.length}`);
+//        console.log("\n=== SÚHRN ===");
+//        console.log(`Celkový počet používateľov: ${querySnapshot.size}`);
+//        console.log(`Celkový počet tímov: ${allTeams.length}`);
         
         // Zoskupenie tímov podľa kategórie pre štatistiky
         const teamsByCategory = {};
@@ -77,12 +77,12 @@ const loadAndLogAllUsersData = async () => {
             teamsByCategory[team.category].push(team);
         });
         
-        console.log("\nPočet tímov podľa kategórie:");
-        Object.keys(teamsByCategory).sort().forEach(category => {
-            console.log(`  ${category}: ${teamsByCategory[category].length} tímov`);
-        });
+//        console.log("\nPočet tímov podľa kategórie:");
+//        Object.keys(teamsByCategory).sort().forEach(category => {
+//            console.log(`  ${category}: ${teamsByCategory[category].length} tímov`);
+//        });
         
-        console.log("=== KONIEC NAČÍTAVANIA ÚDAJOV ===");
+//        console.log("=== KONIEC NAČÍTAVANIA ÚDAJOV ===");
         
         return { querySnapshot, allTeams, teamsByCategory };
     } catch (error) {
@@ -97,23 +97,23 @@ const loadAndLogAllUsersData = async () => {
  */
 const loadAndLogSuperstructureTeams = async () => {
     try {
-        console.log("\n=== NAČÍTAVANIE SUPERŠTRUKTÚROVÝCH TÍMOV ===");
-        console.log("Hľadám dokument 'superstructureGroups' v kolekcii 'settings'...");
+//        console.log("\n=== NAČÍTAVANIE SUPERŠTRUKTÚROVÝCH TÍMOV ===");
+//        console.log("Hľadám dokument 'superstructureGroups' v kolekcii 'settings'...");
         
         // Načítanie dokumentu superstructureGroups z kolekcie settings
         const superstructureDocRef = doc(window.db, 'settings', 'superstructureGroups');
         const docSnap = await getDoc(superstructureDocRef);
         
         if (!docSnap.exists()) {
-            console.log("❌ Dokument 'superstructureGroups' nebol nájdený v kolekcii 'settings'.");
-            console.log("Skúšam alternatívny názov dokumentu 'superstructureGroups'...");
+//            console.log("❌ Dokument 'superstructureGroups' nebol nájdený v kolekcii 'settings'.");
+//            console.log("Skúšam alternatívny názov dokumentu 'superstructureGroups'...");
             
             // Skúsime alternatívny názov dokumentu
             const altSuperstructureDocRef = doc(window.db, 'settings', 'superstructureGroups');
             const altDocSnap = await getDoc(altSuperstructureDocRef);
             
             if (!altDocSnap.exists()) {
-                console.log("❌ Ani dokument 'superstructureGroups' nebol nájdený.");
+//                console.log("❌ Ani dokument 'superstructureGroups' nebol nájdený.");
                 return [];
             }
             
@@ -134,8 +134,8 @@ const loadAndLogSuperstructureTeams = async () => {
  * Pomocná funkcia na spracovanie dát superštruktúrových tímov
  */
 const processSuperstructureData = (superstructureData) => {
-    console.log("✅ Dokument bol úspešne načítaný.");
-    console.log("Štruktúra dokumentu:", Object.keys(superstructureData));
+//    console.log("✅ Dokument bol úspešne načítaný.");
+//    console.log("Štruktúra dokumentu:", Object.keys(superstructureData));
     
     let allSuperstructureTeams = [];
     
@@ -143,11 +143,11 @@ const processSuperstructureData = (superstructureData) => {
     Object.keys(superstructureData).forEach(categoryId => {
         const categoryData = superstructureData[categoryId];
         
-        console.log(`\n📂 Kategória: ${categoryId}`);
+//        console.log(`\n📂 Kategória: ${categoryId}`);
         
         // Kontrolujeme, či kategória obsahuje pole (array)
         if (Array.isArray(categoryData)) {
-            console.log(`  Typ: Pole s ${categoryData.length} prvkami`);
+//            console.log(`  Typ: Pole s ${categoryData.length} prvkami`);
             
             categoryData.forEach((teamItem, index) => {
                 // TeamItem môže byť objekt so štyrmi poliami
@@ -157,7 +157,7 @@ const processSuperstructureData = (superstructureData) => {
                     const order = teamItem.order || teamItem.position || index + 1;
                     
                     // Vypíšeme tím v požadovanom formáte
-                    console.log(`${categoryId}: "${teamName}" ("${groupName}")`);
+//                    console.log(`${categoryId}: "${teamName}" ("${groupName}")`);
                     
                     allSuperstructureTeams.push({
                         category: categoryId,
@@ -167,11 +167,11 @@ const processSuperstructureData = (superstructureData) => {
                         allFields: teamItem
                     });
                 } else {
-                    console.log(`  Prvok ${index + 1}:`, teamItem);
+//                    console.log(`  Prvok ${index + 1}:`, teamItem);
                 }
             });
         } else if (typeof categoryData === 'object' && categoryData !== null) {
-            console.log(`  Typ: Objekt s ${Object.keys(categoryData).length} poliami`);
+//            console.log(`  Typ: Objekt s ${Object.keys(categoryData).length} poliami`);
             
             // Ak je to objekt, môže obsahovať ďalšie polia
             Object.keys(categoryData).forEach(key => {
@@ -183,7 +183,7 @@ const processSuperstructureData = (superstructureData) => {
                     const order = item.order || item.position || 0;
                     
                     // Vypíšeme tím v požadovanom formáte
-                    console.log(`${categoryId}: "${teamName}" ("${groupName}")`);
+//                    console.log(`${categoryId}: "${teamName}" ("${groupName}")`);
                     
                     allSuperstructureTeams.push({
                         category: categoryId,
@@ -196,7 +196,7 @@ const processSuperstructureData = (superstructureData) => {
                 }
             });
         } else {
-            console.log(`  Typ: ${typeof categoryData}, Hodnota:`, categoryData);
+//            console.log(`  Typ: ${typeof categoryData}, Hodnota:`, categoryData);
         }
     });
     
@@ -215,18 +215,18 @@ const processSuperstructureData = (superstructureData) => {
     });
     
     // Vypíšeme súhrn superštruktúrových tímov v požadovanom formáte
-    console.log("\n=== SÚHRN SUPERŠTRUKTÚROVÝCH TÍMOV (formátované) ===");
+//    console.log("\n=== SÚHRN SUPERŠTRUKTÚROVÝCH TÍMOV (formátované) ===");
     if (allSuperstructureTeams.length === 0) {
-        console.log("❌ V dokumente neboli nájdené žiadne tímy.");
+//        console.log("❌ V dokumente neboli nájdené žiadne tímy.");
     } else {
-        console.log(`✅ Celkový počet superštruktúrových tímov: ${allSuperstructureTeams.length}`);
-        console.log("\n--- Všetky tímy ---");
+//        console.log(`✅ Celkový počet superštruktúrových tímov: ${allSuperstructureTeams.length}`);
+//        console.log("\n--- Všetky tímy ---");
         
         // Vypíšeme všetky tímy v požadovanom formáte
         allSuperstructureTeams.forEach(team => {
             const teamName = team.teamName || "Názov tímu neznámy";
             const groupName = team.groupName || "Skupina neznáma";
-            console.log(`${team.category}: "${teamName}" ("${groupName}")`);
+//            console.log(`${team.category}: "${teamName}" ("${groupName}")`);
         });
         
         // Zoskupenie podľa kategórie pre štatistiky
@@ -238,14 +238,14 @@ const processSuperstructureData = (superstructureData) => {
             teamsByCategory[team.category].push(team);
         });
         
-        console.log("\n=== Štatistika ===");
-        console.log("Počet tímov podľa kategórie:");
+//        console.log("\n=== Štatistika ===");
+//        console.log("Počet tímov podľa kategórie:");
         Object.keys(teamsByCategory).sort().forEach(category => {
-            console.log(`  ${category}: ${teamsByCategory[category].length} tímov`);
+//            console.log(`  ${category}: ${teamsByCategory[category].length} tímov`);
         });
     }
     
-    console.log("\n=== KONIEC NAČÍTAVANIA SUPERŠTRUKTÚROVÝCH TÍMOV ===");
+//    console.log("\n=== KONIEC NAČÍTAVANIA SUPERŠTRUKTÚROVÝCH TÍMOV ===");
     
     return allSuperstructureTeams;
 };
@@ -255,12 +255,12 @@ const processSuperstructureData = (superstructureData) => {
  */
 const setupRealTimeUsersListener = () => {
     try {
-        console.log("Nastavujem sledovanie v reálnom čase pre kolekciu 'users'...");
+//        console.log("Nastavujem sledovanie v reálnom čase pre kolekciu 'users'...");
         
         const usersCollectionRef = collection(window.db, 'users');
         
         const unsubscribe = onSnapshot(usersCollectionRef, (snapshot) => {
-            console.log(`\n=== ZMENA V REÁLNOM ČASE ===`);
+//            console.log(`\n=== ZMENA V REÁLNOM ČASE ===`);
             
             let newTeams = [];
             
@@ -295,16 +295,16 @@ const setupRealTimeUsersListener = () => {
             });
             
             // Vypíšeme zmeny
-            console.log(`Počet tímov po zmene: ${newTeams.length}`);
-            console.log("Aktuálny stav tímov:");
+//            console.log(`Počet tímov po zmene: ${newTeams.length}`);
+//            console.log("Aktuálny stav tímov:");
             
-            if (newTeams.length === 0) {
-                console.log("Žiadne tímy v databáze.");
-            } else {
-                newTeams.forEach(team => {
-                    console.log(`${team.category}: "${team.teamName}" ("${team.groupName}")`);
-                });
-            }
+//            if (newTeams.length === 0) {
+//                console.log("Žiadne tímy v databáze.");
+//            } else {
+//                newTeams.forEach(team => {
+//                    console.log(`${team.category}: "${team.teamName}" ("${team.groupName}")`);
+//                });
+//            }
             
             // Zobrazenie zmien
             snapshot.docChanges().forEach((change) => {
@@ -697,7 +697,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         const unsubscribeCategories = onSnapshot(doc(window.db, 'settings', 'categories'), (docSnap) => {
                 if (docSnap.exists()) {
                     const categoriesData = docSnap.data();
-                    console.log("DEBUG: Všetky kategórie z databázy:", categoriesData);
+//                    console.log("DEBUG: Všetky kategórie z databázy:", categoriesData);
                     
                     const loadedCategories = Object.keys(categoriesData).map(id => ({
                         id: id,
@@ -708,11 +708,11 @@ const AddGroupsApp = ({ userProfileData }) => {
             
                     // Debug: Vypíšeme ID a názvy
                     loadedCategories.forEach(cat => {
-                        console.log(`DEBUG Kategória: id="${cat.id}", name="${cat.name}"`);
+//                        console.log(`DEBUG Kategória: id="${cat.id}", name="${cat.name}"`);
                     });
                 } else {
                     setCategories([]);
-                    console.log("Dokument 'categories' nebol nájdený v 'settings'.");
+//                    console.log("Dokument 'categories' nebol nájdený v 'settings'.");
                 }
             }, (error) => {
                 console.error("Chyba pri načítavaní kategórií v reálnom čase:", error);
@@ -788,7 +788,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         
         // Získame názov kategórie z ID
         const categoryName = getCategoryNameById(categoryId);
-        console.log(`DEBUG isGroupUsedInDatabase: Hľadám ${categoryName} ("${groupName}")`);
+//        console.log(`DEBUG isGroupUsedInDatabase: Hľadám ${categoryName} ("${groupName}")`);
         
         // Skontrolujeme, či existuje aspoň jeden tím v tejto kategórii s danou skupinou
         const found = databaseTeams.some(team => {
@@ -800,9 +800,9 @@ const AddGroupsApp = ({ userProfileData }) => {
         });
         
         // DEBUG log
-        if (found) {
-            console.log(`DEBUG: Nájdený tím v databáze: ${categoryName} - "${groupName}"`);
-        }
+//        if (found) {
+//            console.log(`DEBUG: Nájdený tím v databáze: ${categoryName} - "${groupName}"`);
+//        }
         
         return found;
     };
@@ -815,7 +815,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         
         // Získame názov kategórie z ID
         const categoryName = getCategoryNameById(categoryId);
-        console.log(`DEBUG isGroupInSuperstructure: Hľadám ${categoryName} ("${groupName}")`);
+//        console.log(`DEBUG isGroupInSuperstructure: Hľadám ${categoryName} ("${groupName}")`);
         
         // Skontrolujeme, či existuje aspoň jeden superštruktúrový tím v tejto kategórii s danou skupinou
         const found = superstructureTeams.some(team => {
@@ -827,9 +827,9 @@ const AddGroupsApp = ({ userProfileData }) => {
         });
         
         // DEBUG log
-        if (found) {
-            console.log(`DEBUG: Nájdený superštruktúrový tím: ${categoryName} - "${groupName}"`);
-        }
+//        if (found) {
+//            console.log(`DEBUG: Nájdený superštruktúrový tím: ${categoryName} - "${groupName}"`);
+//        }
         
         return found;
     };
@@ -837,16 +837,16 @@ const AddGroupsApp = ({ userProfileData }) => {
     // PRIDANÉ: Kombinovaná funkcia na kontrolu, či skupina je používaná
     const isGroupUsed = (categoryId, groupName) => {
         const categoryName = getCategoryNameById(categoryId);
-        console.log(`DEBUG isGroupUsed: Kontrolujem ${categoryName} (ID: ${categoryId}) - "${groupName}"`);
-        console.log(`DEBUG: databaseTeams dĺžka: ${databaseTeams ? databaseTeams.length : 'null'}`);
-        console.log(`DEBUG: superstructureTeams dĺžka: ${superstructureTeams ? superstructureTeams.length : 'null'}`);
+//        console.log(`DEBUG isGroupUsed: Kontrolujem ${categoryName} (ID: ${categoryId}) - "${groupName}"`);
+//        console.log(`DEBUG: databaseTeams dĺžka: ${databaseTeams ? databaseTeams.length : 'null'}`);
+//        console.log(`DEBUG: superstructureTeams dĺžka: ${superstructureTeams ? superstructureTeams.length : 'null'}`);
         
         const usedInDatabase = isGroupUsedInDatabase(categoryId, groupName);
         const usedInSuperstructure = isGroupInSuperstructure(categoryId, groupName);
         const isUsed = usedInDatabase || usedInSuperstructure;
         
         // Log pre debug
-        console.log(`DEBUG isGroupUsed výsledok pre ${categoryName} - "${groupName}": ${isUsed} (DB: ${usedInDatabase}, Super: ${usedInSuperstructure})`);
+//        console.log(`DEBUG isGroupUsed výsledok pre ${categoryName} - "${groupName}": ${isUsed} (DB: ${usedInDatabase}, Super: ${usedInSuperstructure})`);
         
         return isUsed;
     };
@@ -985,13 +985,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                                             {
                                                 className: `transition-colors duration-200 ${isUsed ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-red-500'}`,
                                                 onClick: () => {
-                                                    console.log(`DEBUG: Klik na zmazanie skupiny: ${group.name} v ${category.id}`);
-                                                    console.log(`DEBUG: isUsed hodnota: ${isUsed}`);
+//                                                    console.log(`DEBUG: Klik na zmazanie skupiny: ${group.name} v ${category.id}`);
+//                                                    console.log(`DEBUG: isUsed hodnota: ${isUsed}`);
                                                     if (isUsed) {
-                                                        console.log(`DEBUG: Skupina je používaná, zobrazujem notifikáciu`);
+//                                                        console.log(`DEBUG: Skupina je používaná, zobrazujem notifikáciu`);
                                                         window.showGlobalNotification(`Skupinu "${group.name}" nie je možné zmazať, pretože je priradená k existujúcim tímom.`, 'error');
                                                     } else {
-                                                        console.log(`DEBUG: Skupina nie je používaná, volám handleDeleteClick`);
+//                                                        console.log(`DEBUG: Skupina nie je používaná, volám handleDeleteClick`);
                                                         handleDeleteClick(group, category.id);
                                                     }
                                                 },
@@ -1086,7 +1086,7 @@ const handleDataUpdateAndRender = (event) => {
         // Ak sa dáta načítali, nastavíme poslucháča na synchronizáciu e-mailu, ak ešte nebol nastavený
         // Používame window.auth a window.db, ktoré by mali byť nastavené pri načítaní aplikácie.
         if (window.auth && window.db && !isEmailSyncListenerSetup) {
-            console.log("logged-in-add-groups.js: Nastavujem poslucháča na synchronizáciu e-mailu.");
+//            console.log("logged-in-add-groups.js: Nastavujem poslucháča na synchronizáciu e-mailu.");
             
             onAuthStateChanged(window.auth, async (user) => {
                 if (user) {
@@ -1097,7 +1097,7 @@ const handleDataUpdateAndRender = (event) => {
                         if (docSnap.exists()) {
                             const firestoreEmail = docSnap.data().email;
                             if (user.email !== firestoreEmail) {
-                                console.log(`logged-in-add-groups.js: E-mail v autentifikácii (${user.email}) sa líši od e-mailu vo Firestore (${firestoreEmail}). Aktualizujem...`);
+//                                console.log(`logged-in-add-groups.js: E-mail v autentifikácii (${user.email}) sa líši od e-mailu vo Firestore (${firestoreEmail}). Aktualizujem...`);
                                 
                                 await updateDoc(userProfileRef, {
                                     email: user.email
@@ -1112,7 +1112,7 @@ const handleDataUpdateAndRender = (event) => {
                                 });
                                 
                                 window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');
-                                console.log("logged-in-add-groups.js: E-mail vo Firestore bol aktualizovaný a notifikácia vytvorená.");
+//                                console.log("logged-in-add-groups.js: E-mail vo Firestore bol aktualizovaný a notifikácia vytvorená.");
             
                             } else {
                                 console.log("logged-in-add-groups.js: E-maily sú synchronizované, nie je potrebné nič aktualizovať.");
@@ -1130,7 +1130,7 @@ const handleDataUpdateAndRender = (event) => {
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(AddGroupsApp, { userProfileData }));
-            console.log("logged-in-add-groups.js: Aplikácia bola vykreslená po udalosti 'globalDataUpdated'.");
+//            console.log("logged-in-add-groups.js: Aplikácia bola vykreslená po udalosti 'globalDataUpdated'.");
         } else {
             console.error("logged-in-add-groups.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
         }
@@ -1151,14 +1151,14 @@ const handleDataUpdateAndRender = (event) => {
 };
 
 // Zaregistrujeme poslucháča udalosti 'globalDataUpdated'.
-console.log("logged-in-add-groups.js: Registrujem poslucháča pre 'globalDataUpdated'.");
+//console.log("logged-in-add-groups.js: Registrujem poslucháča pre 'globalDataUpdated'.");
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
 // Aby sme predišli premeškaniu udalosti, ak sa načíta skôr, ako sa tento poslucháč zaregistruje,
 // skontrolujeme, či sú dáta už dostupné.
-console.log("logged-in-add-groups.js: Kontrolujem, či existujú globálne dáta.");
+//console.log("logged-in-add-groups.js: Kontrolujem, či existujú globálne dáta.");
 if (window.globalUserProfileData) {
-    console.log("logged-in-add-groups.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
+//    console.log("logged-in-add-groups.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 } else {
     // Ak dáta nie sú dostupné, čakáme na event listener, zatiaľ zobrazíme loader
