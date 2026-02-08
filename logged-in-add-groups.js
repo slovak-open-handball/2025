@@ -369,13 +369,47 @@ window.showGlobalNotification = (message, type = 'success') => {
 const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingGroups, onUpdate }) => {
     const [groupName, setGroupName] = useState(groupToEdit?.name || '');
     const [groupType, setGroupType] = useState(groupToEdit?.type || 'základná skupina');
+    // Pridaný stav pre sledovanie chybového hlásenia
+    const [nameError, setNameError] = useState('');
 
     useEffect(() => {
         if (groupToEdit) {
             setGroupName(groupToEdit.name);
             setGroupType(groupToEdit.type);
+            setNameError('');
         }
     }, [groupToEdit]);
+
+    // Funkcia na kontrolu duplicity názvu skupiny
+    const checkGroupNameDuplicate = () => {
+        if (!categoryId || !groupName.trim()) {
+            setNameError('');
+            return false;
+        }
+
+        const groupsInCategory = existingGroups[categoryId] || [];
+        const isDuplicate = groupsInCategory.some(group => 
+            group.name.toLowerCase() === groupName.trim().toLowerCase() && 
+            group.name.toLowerCase() !== groupToEdit.name.toLowerCase()
+        );
+
+        if (isDuplicate) {
+            setNameError('Názov skupiny už v tejto kategórii existuje.');
+            return true;
+        } else {
+            setNameError('');
+            return false;
+        }
+    };
+
+    // Pridané: Kontrola duplicity pri zmene názvu skupiny
+    useEffect(() => {
+        if (groupName.trim() && categoryId && groupToEdit) {
+            checkGroupNameDuplicate();
+        } else {
+            setNameError('');
+        }
+    }, [groupName, categoryId]);
 
     if (!isVisible || !groupToEdit) return null;
 
@@ -385,18 +419,17 @@ const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingG
             return;
         }
 
-        const groupsInCategory = existingGroups[categoryId] || [];
-        const isDuplicate = groupsInCategory.some(group => group.name.toLowerCase() === groupName.toLowerCase() && group.name.toLowerCase() !== groupToEdit.name.toLowerCase());
-
+        // Kontrola duplicity pred odoslaním
+        const isDuplicate = checkGroupNameDuplicate();
         if (isDuplicate) {
-            window.showGlobalNotification('Skupina s týmto názvom už v tejto kategórii existuje.', 'error');
+            // Správa sa už zobrazuje pod inputom, netreba ďalšiu notifikáciu
             return;
         }
 
         try {
             const groupsDocRef = doc(window.db, 'settings', 'groups');
             const newGroup = {
-                name: groupName,
+                name: groupName.trim(),
                 type: groupType,
             };
 
@@ -437,11 +470,17 @@ const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingG
                             'input',
                             {
                                 type: 'text',
-                                className: 'mt-1 block w-full pl-3 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm',
+                                className: `mt-1 block w-full pl-3 pr-3 py-2 border ${nameError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'} rounded-md shadow-sm focus:outline-none sm:text-sm`,
                                 value: groupName,
                                 onChange: (e) => setGroupName(e.target.value),
                                 placeholder: 'Zadajte názov skupiny'
                             }
+                        ),
+                        // Pridané: Zobrazenie chybového hlásenia
+                        nameError && React.createElement(
+                            'p',
+                            { className: 'mt-1 text-sm text-red-600 text-left' },
+                            nameError
                         )
                     ),
                     React.createElement(
@@ -466,8 +505,9 @@ const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingG
                     React.createElement(
                         'button',
                         {
-                            className: 'flex-1 w-full px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:ml-3',
-                            onClick: handleUpdateGroup
+                            className: `flex-1 w-full px-4 py-2 text-white text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 sm:ml-3 ${nameError ? 'bg-gray-400 hover:bg-gray-400 focus:ring-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 focus:ring-blue-500'}`,
+                            onClick: handleUpdateGroup,
+                            disabled: !!nameError // Tlačidlo je zakázané ak je chyba
                         },
                         'Aktualizovať'
                     ),
@@ -535,8 +575,49 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [groupName, setGroupName] = useState('');
     const [groupType, setGroupType] = useState('základná skupina');
+    // Pridaný stav pre sledovanie chybového hlásenia
+    const [nameError, setNameError] = useState('');
 
     if (!isVisible) return null;
+
+    // Funkcia na kontrolu duplicity názvu skupiny
+    const checkGroupNameDuplicate = () => {
+        if (!selectedCategoryId || !groupName.trim()) {
+            setNameError('');
+            return false;
+        }
+
+        const groupsInCategory = existingGroups[selectedCategoryId] || [];
+        const isDuplicate = groupsInCategory.some(group => 
+            group.name.toLowerCase() === groupName.trim().toLowerCase()
+        );
+
+        if (isDuplicate) {
+            setNameError('Názov skupiny už v tejto kategórii existuje.');
+            return true;
+        } else {
+            setNameError('');
+            return false;
+        }
+    };
+
+    // Pridané: Kontrola duplicity pri zmene názvu skupiny
+    useEffect(() => {
+        if (groupName.trim() && selectedCategoryId) {
+            checkGroupNameDuplicate();
+        } else {
+            setNameError('');
+        }
+    }, [groupName, selectedCategoryId]);
+
+    // Pridané: Kontrola duplicity pri zmene kategórie
+    useEffect(() => {
+        if (selectedCategoryId && groupName.trim()) {
+            checkGroupNameDuplicate();
+        } else {
+            setNameError('');
+        }
+    }, [selectedCategoryId]);
 
     const handleCreateGroup = async () => {
         if (!selectedCategoryId || !groupName || !groupType) {
@@ -544,19 +625,17 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
             return;
         }
         
-        // Kontrola, či názov skupiny už existuje v danej kategórii
-        const groupsInCategory = existingGroups[selectedCategoryId] || [];
-        const isDuplicate = groupsInCategory.some(group => group.name.toLowerCase() === groupName.toLowerCase());
-
+        // Kontrola duplicity pred odoslaním
+        const isDuplicate = checkGroupNameDuplicate();
         if (isDuplicate) {
-            window.showGlobalNotification('Skupina s týmto názvom už v tejto kategórii existuje.', 'error');
+            // Správa sa už zobrazuje pod inputom, netreba ďalšiu notifikáciu
             return;
         }
 
         try {
             const groupsDocRef = doc(window.db, 'settings', 'groups');
             const newGroup = {
-                name: groupName,
+                name: groupName.trim(),
                 type: groupType,
             };
 
@@ -565,19 +644,29 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
             });
 
             window.showGlobalNotification('Skupina bola úspešne vytvorená.', 'success');
+            // Reset formulára po úspešnom vytvorení
+            setSelectedCategoryId('');
+            setGroupName('');
+            setGroupType('základná skupina');
+            setNameError('');
             onClose(); // Zatvorenie modálneho okna po úspešnom uložení
         } catch (e) {
             // Ak dokument 'groups' neexistuje, vytvoríme ho
             if (e.code === 'not-found') {
                 const groupsDocRef = doc(window.db, 'settings', 'groups');
                 const newGroup = {
-                    name: groupName,
+                    name: groupName.trim(),
                     type: groupType,
                 };
                 await setDoc(groupsDocRef, {
                     [selectedCategoryId]: [newGroup]
                 });
                 window.showGlobalNotification('Skupina bola úspešne vytvorená.', 'success');
+                // Reset formulára po úspešnom vytvorení
+                setSelectedCategoryId('');
+                setGroupName('');
+                setGroupType('základná skupina');
+                setNameError('');
                 onClose();
             } else {
                 console.error("Chyba pri pridávaní skupiny: ", e);
@@ -624,11 +713,17 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
                             'input',
                             {
                                 type: 'text',
-                                className: 'mt-1 block w-full pl-3 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm',
+                                className: `mt-1 block w-full pl-3 pr-3 py-2 border ${nameError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'} rounded-md shadow-sm focus:outline-none sm:text-sm`,
                                 value: groupName,
                                 onChange: (e) => setGroupName(e.target.value),
                                 placeholder: 'Zadajte názov skupiny'
                             }
+                        ),
+                        // Pridané: Zobrazenie chybového hlásenia
+                        nameError && React.createElement(
+                            'p',
+                            { className: 'mt-1 text-sm text-red-600 text-left' },
+                            nameError
                         )
                     ),
                     React.createElement(
@@ -653,8 +748,9 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
                     React.createElement(
                         'button',
                         {
-                            className: 'flex-1 w-full px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:ml-3',
-                            onClick: handleCreateGroup
+                            className: `flex-1 w-full px-4 py-2 text-white text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 sm:ml-3 ${nameError ? 'bg-gray-400 hover:bg-gray-400 focus:ring-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 focus:ring-blue-500'}`,
+                            onClick: handleCreateGroup,
+                            disabled: !!nameError // Tlačidlo je zakázané ak je chyba
                         },
                         'Vytvoriť'
                     ),
@@ -662,7 +758,14 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
                         'button',
                         {
                             className: 'flex-1 mt-2 w-full px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 sm:mt-0',
-                            onClick: onClose
+                            onClick: () => {
+                                // Reset formulára pri zatvorení
+                                setSelectedCategoryId('');
+                                setGroupName('');
+                                setGroupType('základná skupina');
+                                setNameError('');
+                                onClose();
+                            }
                         },
                         'Zrušiť'
                     )
