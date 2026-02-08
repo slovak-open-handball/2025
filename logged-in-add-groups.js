@@ -810,17 +810,16 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     // PRIDANÉ: Kombinovaná funkcia na kontrolu, či skupina je používaná
     const isGroupUsed = (categoryId, groupName) => {
+        console.log(`DEBUG isGroupUsed: Kontrolujem ${categoryId} - "${groupName}"`);
+        console.log(`DEBUG: databaseTeams dĺžka: ${databaseTeams ? databaseTeams.length : 'null'}`);
+        console.log(`DEBUG: superstructureTeams dĺžka: ${superstructureTeams ? superstructureTeams.length : 'null'}`);
+        
         const usedInDatabase = isGroupUsedInDatabase(categoryId, groupName);
         const usedInSuperstructure = isGroupInSuperstructure(categoryId, groupName);
         const isUsed = usedInDatabase || usedInSuperstructure;
-    
+        
         // Log pre debug
-        if (isUsed) {
-            console.log(`DEBUG: Skupina "${groupName}" v kategórii ${categoryId} je používaná:`);
-            console.log(`  - V databáze používateľov: ${usedInDatabase}`);
-            console.log(`  - V superštruktúre: ${usedInSuperstructure}`);
-            console.log(`  - Celkovo: ${isUsed}`);
-        }
+        console.log(`DEBUG isGroupUsed výsledok: ${isUsed} (DB: ${usedInDatabase}, Super: ${usedInSuperstructure})`);
         
         return isUsed;
     };
@@ -958,17 +957,24 @@ const AddGroupsApp = ({ userProfileData }) => {
                                             'button',
                                             {
                                                 className: `transition-colors duration-200 ${isUsed ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-red-500'}`,
-                                                onClick: isUsed ? () => {
-                                                    // PRIDANÉ: Explicitné zobrazenie notifikácie pri pokuse o kliknutie
-                                                    window.showGlobalNotification('Túto skupinu nie je možné zmazať, pretože je priradená k existujúcim tímom.', 'error');
-                                                } : () => handleDeleteClick(group, category.id),
+                                                onClick: () => {
+                                                    console.log(`DEBUG: Klik na zmazanie skupiny: ${group.name} v ${category.id}`);
+                                                    console.log(`DEBUG: isUsed hodnota: ${isUsed}`);
+                                                    if (isUsed) {
+                                                        console.log(`DEBUG: Skupina je používaná, zobrazujem notifikáciu`);
+                                                        window.showGlobalNotification(`Skupinu "${group.name}" nie je možné zmazať, pretože je priradená k existujúcim tímom.`, 'error');
+                                                    } else {
+                                                        console.log(`DEBUG: Skupina nie je používaná, volám handleDeleteClick`);
+                                                        handleDeleteClick(group, category.id);
+                                                    }
+                                                },
                                                 disabled: isUsed,
-                                                title: isUsed ? 'Skupina obsahuje tímy v databáze a nie je možné ju zmazať' : 'Zmazať skupinu'
+                                                title: isUsed ? `Skupina "${group.name}" obsahuje tímy v databáze a nie je možné ju zmazať` : `Zmazať skupinu "${group.name}"`
                                             },
                                             React.createElement(
                                                 'svg',
                                                 {
-                                                    xmlns: 'http://www.w3.org/2000/svg',
+                                                    xmlns: 'http://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js',
                                                     className: 'h-4 w-4',
                                                     viewBox: '0 0 20 20',
                                                     fill: 'currentColor'
