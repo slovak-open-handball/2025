@@ -505,9 +505,9 @@ const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingG
                     React.createElement(
                         'button',
                         {
-                            className: `flex-1 w-full px-4 py-2 text-white text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 sm:ml-3 ${nameError ? 'bg-gray-400 hover:bg-gray-400 focus:ring-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 focus:ring-blue-500'}`,
+                            className: `flex-1 w-full px-4 py-2 text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 sm:ml-3 ${nameError ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 text-white focus:ring-blue-500'}`,
                             onClick: handleUpdateGroup,
-                            disabled: !!nameError // Tlačidlo je zakázané ak je chyba
+                            disabled: !!nameError
                         },
                         'Aktualizovať'
                     ),
@@ -748,12 +748,12 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
                     React.createElement(
                         'button',
                         {
-                            className: `flex-1 w-full px-4 py-2 text-white text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 sm:ml-3 ${nameError ? 'bg-gray-400 hover:bg-gray-400 focus:ring-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 focus:ring-blue-500'}`,
+                            className: `flex-1 w-full px-4 py-2 text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 sm:ml-3 ${nameError ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 text-white focus:ring-blue-500'}`,
                             onClick: handleCreateGroup,
-                            disabled: !!nameError // Tlačidlo je zakázané ak je chyba
+                            disabled: !!nameError
                         },
                         'Vytvoriť'
-                    ),
+                    )
                     React.createElement(
                         'button',
                         {
