@@ -2,11 +2,6 @@
 import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, getDocs, setDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-
-// Import zoznamu predvolieb
-import { countryDialCodes } from "./countryDialCodes.js";
-
-
 const { useState, useEffect, useRef, useSyncExternalStore } = React;
 
 /**
@@ -98,161 +93,194 @@ const loadAndLogAllUsersData = async () => {
 };
 
 /**
- * Funkcia na načítanie a vypísanie superštruktúrových tímov
+ * Funkcia na načítanie a vypísanie superštruktúrových tímov z dokumentu superstructuredGroups
  */
 const loadAndLogSuperstructureTeams = async () => {
     try {
         console.log("\n=== NAČÍTAVANIE SUPERŠTRUKTÚROVÝCH TÍMOV ===");
+        console.log("Hľadám dokument 'superstructuredGroups' v kolekcii 'settings'...");
         
-        let allSuperstructureTeams = [];
+        // Načítanie dokumentu superstructuredGroups z kolekcie settings
+        const superstructureDocRef = doc(window.db, 'settings', 'superstructuredGroups');
+        const docSnap = await getDoc(superstructureDocRef);
         
-        // Preddefinované kolekcie, ktoré chceme skontrolovať
-        const superstructureCollections = [
-            "superstructureGroups"
-        ];
-        
-        console.log("Skúšam nájsť superštruktúrové tímy v nasledujúcich kolekciách:");
-        superstructureCollections.forEach(coll => console.log(`  - ${coll}`));
-        
-        for (const collectionName of superstructureCollections) {
-            try {
-                const collectionRef = collection(window.db, collectionName);
-                const querySnapshot = await getDocs(collectionRef);
-                
-                if (querySnapshot.size > 0) {
-                    console.log(`\n✅ Nájdená kolekcia: ${collectionName}`);
-                    console.log(`Počet dokumentov: ${querySnapshot.size}`);
-                    
-                    querySnapshot.forEach((docSnap) => {
-                        const teamData = docSnap.data();
-                        const teamName = teamData.teamName || "Názov tímu neznámy";
-                        const groupName = teamData.groupName || "Skupina neznáma";
-                        const order = teamData.order || 0;
-                        
-                        console.log(`  Dokument ID: ${docSnap.id}`);
-                        console.log(`    Tím: "${teamName}"`);
-                        console.log(`    Skupina: "${groupName}"`);
-                        console.log(`    Poradie: ${order}`);
-                        
-                        // Uložíme tím do zoznamu
-                        allSuperstructureTeams.push({
-                            collection: collectionName,
-                            documentId: docSnap.id,
-                            teamName: teamName,
-                            groupName: groupName,
-                            order: order
-                        });
-                    });
-                } else {
-                    console.log(`\nℹ️ Kolekcia "${collectionName}" existuje, ale je prázdna.`);
-                }
-            } catch (error) {
-                // Kolekcia neexistuje alebo nie je prístupná
-                console.log(`\n❌ Kolekcia "${collectionName}" neexistuje alebo nie je prístupná.`);
+        if (!docSnap.exists()) {
+            console.log("❌ Dokument 'superstructuredGroups' nebol nájdený v kolekcii 'settings'.");
+            console.log("Skúšam alternatívny názov dokumentu 'superstructureGroups'...");
+            
+            // Skúsime alternatívny názov dokumentu
+            const altSuperstructureDocRef = doc(window.db, 'settings', 'superstructureGroups');
+            const altDocSnap = await getDoc(altSuperstructureDocRef);
+            
+            if (!altDocSnap.exists()) {
+                console.log("❌ Ani dokument 'superstructureGroups' nebol nájdený.");
+                return [];
             }
+            
+            return processSuperstructureData(altDocSnap.data());
         }
         
-        // Ak sme nenašli žiadne tímy v preddefinovaných kolekciách,
-        // skúsime nájsť ďalšie možné kolekcie
-        if (allSuperstructureTeams.length === 0) {
-            console.log("\n🔄 Hľadám ďalšie možné kolekcie so superštruktúrovými tímami...");
-            
-            // Zoznam ďalších možných názvov kolekcií
-            const additionalCollections = [
-                "superstructure",
-                "superstructureTeams",
-                "playoff_teams",
-                "final_teams",
-                "playoff",
-                "finals",
-                "knockout_stage"
-            ];
-            
-            for (const collName of additionalCollections) {
-                try {
-                    const collectionRef = collection(window.db, collName);
-                    const querySnapshot = await getDocs(collectionRef);
-                    
-                    if (querySnapshot.size > 0) {
-                        console.log(`\n✅ Nájdená ďalšia kolekcia: ${collName}`);
-                        console.log(`Počet dokumentov: ${querySnapshot.size}`);
-                        
-                        querySnapshot.forEach((docSnap) => {
-                            const teamData = docSnap.data();
-                            const teamName = teamData.teamName || teamData.name || "Názov tímu neznámy";
-                            const groupName = teamData.groupName || teamData.group || "Skupina neznáma";
-                            const order = teamData.order || teamData.position || 0;
-                            
-                            console.log(`  Dokument ID: ${docSnap.id}`);
-                            console.log(`    Tím: "${teamName}"`);
-                            console.log(`    Skupina: "${groupName}"`);
-                            console.log(`    Poradie: ${order}`);
-                            
-                            allSuperstructureTeams.push({
-                                collection: collName,
-                                documentId: docSnap.id,
-                                teamName: teamName,
-                                groupName: groupName,
-                                order: order
-                            });
-                        });
-                    }
-                } catch (error) {
-                    // Kolekcia neexistuje, preskočíme ju
-                }
-            }
-        }
+        return processSuperstructureData(docSnap.data());
         
-        // Zoradenie tímov podľa kolekcie a poradia
-        allSuperstructureTeams.sort((a, b) => {
-            if (a.collection !== b.collection) {
-                return a.collection.localeCompare(b.collection);
-            }
-            if (a.order !== b.order) {
-                return a.order - b.order;
-            }
-            return a.teamName.localeCompare(b.teamName);
-        });
-        
-        // Vypíšeme súhrn superštruktúrových tímov
-        console.log("\n=== SÚHRN SUPERŠTRUKTÚROVÝCH TÍMOV ===");
-        if (allSuperstructureTeams.length === 0) {
-            console.log("❌ Nenašli sa žiadne superštruktúrové tímy.");
-            console.log("Tip: Skontrolujte, či kolekcia 'superstructureGroups' existuje vo vašej databáze.");
-        } else {
-            console.log(`✅ Celkový počet superštruktúrových tímov: ${allSuperstructureTeams.length}`);
-            
-            // Zoskupenie podľa kolekcie
-            const teamsByCollection = {};
-            allSuperstructureTeams.forEach(team => {
-                if (!teamsByCollection[team.collection]) {
-                    teamsByCollection[team.collection] = [];
-                }
-                teamsByCollection[team.collection].push(team);
-            });
-            
-            console.log("\nSuperštruktúrové tímy podľa kolekcie:");
-            Object.keys(teamsByCollection).sort().forEach(collectionName => {
-                console.log(`\n📂 ${collectionName}: ${teamsByCollection[collectionName].length} tímov`);
-                
-                // Zoradenie tímov v rámci kolekcie podľa poradia
-                teamsByCollection[collectionName]
-                    .sort((a, b) => a.order - b.order)
-                    .forEach(team => {
-                        console.log(`  🏆 Poradie ${team.order}: "${team.teamName}" ("${team.groupName}")`);
-                    });
-            });
-        }
-        
-        console.log("\n=== KONIEC NAČÍTAVANIA SUPERŠTRUKTÚROVÝCH TÍMOV ===");
-        
-        return allSuperstructureTeams;
     } catch (error) {
         console.error("Chyba pri načítavaní superštruktúrových tímov:", error);
         console.error("Detail chyby:", error.message);
         window.showGlobalNotification('Nastala chyba pri načítavaní superštruktúrových tímov.', 'error');
-        throw error;
+        return [];
     }
+};
+
+/**
+ * Pomocná funkcia na spracovanie dát superštruktúrových tímov
+ */
+const processSuperstructureData = (superstructureData) => {
+    console.log("✅ Dokument bol úspešne načítaný.");
+    console.log("Štruktúra dokumentu:", Object.keys(superstructureData));
+    
+    let allSuperstructureTeams = [];
+    
+    // Prechádzame cez všetky polia v dokumente (kategórie)
+    Object.keys(superstructureData).forEach(categoryId => {
+        const categoryData = superstructureData[categoryId];
+        
+        console.log(`\n📂 Kategória: ${categoryId}`);
+        
+        // Kontrolujeme, či kategória obsahuje pole (array)
+        if (Array.isArray(categoryData)) {
+            console.log(`  Typ: Pole s ${categoryData.length} prvkami`);
+            
+            categoryData.forEach((teamItem, index) => {
+                // TeamItem môže byť objekt so štyrmi poliami
+                if (typeof teamItem === 'object' && teamItem !== null) {
+                    const teamName = teamItem.teamName || teamItem.name || `Tím ${index + 1}`;
+                    const groupName = teamItem.groupName || teamItem.group || "Skupina neznáma";
+                    const order = teamItem.order || teamItem.position || index + 1;
+                    
+                    console.log(`  Prvok ${index + 1}:`);
+                    console.log(`    Tím: "${teamName}"`);
+                    console.log(`    Skupina: "${groupName}"`);
+                    console.log(`    Poradie: ${order}`);
+                    console.log(`    Všetky polia:`, Object.keys(teamItem));
+                    
+                    // Vypíšeme všetky polia pre tento prvok
+                    Object.keys(teamItem).forEach(key => {
+                        console.log(`      ${key}: ${JSON.stringify(teamItem[key])}`);
+                    });
+                    
+                    allSuperstructureTeams.push({
+                        category: categoryId,
+                        teamName: teamName,
+                        groupName: groupName,
+                        order: order,
+                        allFields: teamItem
+                    });
+                } else {
+                    console.log(`  Prvok ${index + 1}:`, teamItem);
+                }
+            });
+        } else if (typeof categoryData === 'object' && categoryData !== null) {
+            console.log(`  Typ: Objekt s ${Object.keys(categoryData).length} poliami`);
+            
+            // Ak je to objekt, môže obsahovať ďalšie polia
+            Object.keys(categoryData).forEach(key => {
+                const item = categoryData[key];
+                console.log(`  Pole "${key}":`, item);
+                
+                if (typeof item === 'object' && item !== null) {
+                    const teamName = item.teamName || item.name || key;
+                    const groupName = item.groupName || item.group || "Skupina neznáma";
+                    const order = item.order || item.position || 0;
+                    
+                    allSuperstructureTeams.push({
+                        category: categoryId,
+                        subCategory: key,
+                        teamName: teamName,
+                        groupName: groupName,
+                        order: order,
+                        allFields: item
+                    });
+                }
+            });
+        } else {
+            console.log(`  Typ: ${typeof categoryData}, Hodnota:`, categoryData);
+        }
+    });
+    
+    // Zoradenie tímov podľa kategórie a poradia
+    allSuperstructureTeams.sort((a, b) => {
+        if (a.category !== b.category) {
+            return a.category.localeCompare(b.category);
+        }
+        if (a.subCategory !== b.subCategory) {
+            return (a.subCategory || '').localeCompare(b.subCategory || '');
+        }
+        if (a.order !== b.order) {
+            return a.order - b.order;
+        }
+        return a.teamName.localeCompare(b.teamName);
+    });
+    
+    // Vypíšeme súhrn superštruktúrových tímov
+    console.log("\n=== SÚHRN SUPERŠTRUKTÚROVÝCH TÍMOV ===");
+    if (allSuperstructureTeams.length === 0) {
+        console.log("❌ V dokumente neboli nájdené žiadne tímy.");
+        console.log("Štruktúra dokumentu by mala vyzerať takto:");
+        console.log("  U10_D: [");
+        console.log("    { teamName: 'HK Senec A', groupName: 'Finálová skupina A', order: 1, ... },");
+        console.log("    { teamName: 'HK Senec B', groupName: 'Finálová skupina A', order: 2, ... }");
+        console.log("  ]");
+    } else {
+        console.log(`✅ Celkový počet superštruktúrových tímov: ${allSuperstructureTeams.length}`);
+        
+        // Zoskupenie podľa kategórie
+        const teamsByCategory = {};
+        allSuperstructureTeams.forEach(team => {
+            if (!teamsByCategory[team.category]) {
+                teamsByCategory[team.category] = [];
+            }
+            teamsByCategory[team.category].push(team);
+        });
+        
+        console.log("\nSuperštruktúrové tímy podľa kategórie:");
+        Object.keys(teamsByCategory).sort().forEach(category => {
+            console.log(`\n🏆 ${category}: ${teamsByCategory[category].length} tímov`);
+            
+            // Zoskupenie podľa podkategórie (ak existuje)
+            const teamsBySubCategory = {};
+            teamsByCategory[category].forEach(team => {
+                const subCat = team.subCategory || 'Hlavná skupina';
+                if (!teamsBySubCategory[subCat]) {
+                    teamsBySubCategory[subCat] = [];
+                }
+                teamsBySubCategory[subCat].push(team);
+            });
+            
+            Object.keys(teamsBySubCategory).sort().forEach(subCategory => {
+                if (subCategory !== 'Hlavná skupina') {
+                    console.log(`  📁 ${subCategory}:`);
+                }
+                
+                // Zoradenie tímov v rámci kategórie podľa poradia
+                teamsBySubCategory[subCategory]
+                    .sort((a, b) => a.order - b.order)
+                    .forEach(team => {
+                        console.log(`    🏅 Poradie ${team.order}: "${team.teamName}" ("${team.groupName}")`);
+                        
+                        // Vypíšeme ďalšie polia (okrem základných)
+                        const basicFields = ['teamName', 'groupName', 'order', 'category', 'subCategory'];
+                        Object.keys(team.allFields || {}).forEach(key => {
+                            if (!basicFields.includes(key)) {
+                                console.log(`      📝 ${key}: ${JSON.stringify(team.allFields[key])}`);
+                            }
+                        });
+                    });
+            });
+        });
+    }
+    
+    console.log("\n=== KONIEC NAČÍTAVANIA SUPERŠTRUKTÚROVÝCH TÍMOV ===");
+    
+    return allSuperstructureTeams;
 };
 
 /**
@@ -523,7 +551,7 @@ const DeleteConfirmationModal = ({ isVisible, onClose, onConfirm, groupName }) =
                     React.createElement(
                         'button',
                         {
-                            className: 'flex-1 mt-2 w-full px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 sm:mt-0',
+                            className: 'flex-1 mt-2 w-full px-4 py-2 bg-gray-500 text-white text-base fontmedium rounded-md shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 sm:mt-0',
                             onClick: onClose
                         },
                         'Zrušiť'
