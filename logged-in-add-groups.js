@@ -93,19 +93,19 @@ const loadAndLogAllUsersData = async () => {
 };
 
 /**
- * Funkcia na načítanie a vypísanie superštruktúrových tímov z dokumentu superstructuredGroups
+ * Funkcia na načítanie a vypísanie superštruktúrových tímov z dokumentu superstructureGroups
  */
 const loadAndLogSuperstructureTeams = async () => {
     try {
         console.log("\n=== NAČÍTAVANIE SUPERŠTRUKTÚROVÝCH TÍMOV ===");
-        console.log("Hľadám dokument 'superstructuredGroups' v kolekcii 'settings'...");
+        console.log("Hľadám dokument 'superstructureGroups' v kolekcii 'settings'...");
         
-        // Načítanie dokumentu superstructuredGroups z kolekcie settings
-        const superstructureDocRef = doc(window.db, 'settings', 'superstructuredGroups');
+        // Načítanie dokumentu superstructureGroups z kolekcie settings
+        const superstructureDocRef = doc(window.db, 'settings', 'superstructureGroups');
         const docSnap = await getDoc(superstructureDocRef);
         
         if (!docSnap.exists()) {
-            console.log("❌ Dokument 'superstructuredGroups' nebol nájdený v kolekcii 'settings'.");
+            console.log("❌ Dokument 'superstructureGroups' nebol nájdený v kolekcii 'settings'.");
             console.log("Skúšam alternatívny názov dokumentu 'superstructureGroups'...");
             
             // Skúsime alternatívny názov dokumentu
