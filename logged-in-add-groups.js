@@ -158,14 +158,6 @@ const setupRealTimeUsersListener = () => {
                 const userData = change.doc.data();
                 const userEmail = userData.email || "N/A";
                 const userName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || "N/A";
-                
-                if (change.type === 'added') {
-                    console.log(`💾 Nový používateľ: ${userEmail} (${userName})`);
-                } else if (change.type === 'modified') {
-                    console.log(`✏️ Aktualizovaný používateľ: ${userEmail} (${userName})`);
-                } else if (change.type === 'removed') {
-                    console.log(`🗑️ Odstránený používateľ: ID ${change.doc.id}`);
-                }
             });
         }, (error) => {
             console.error("Chyba pri sledovaní zmien v reálnom čase:", error);
