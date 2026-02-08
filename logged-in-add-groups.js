@@ -770,17 +770,19 @@ const AddGroupsApp = ({ userProfileData }) => {
         
         // Skontrolujeme, či existuje aspoň jeden tím v tejto kategórii s danou skupinou
         // Dôležité: Porovnávame presné názvy skupín
-        return databaseTeams.some(team => {
+        const found = databaseTeams.some(team => {
             const teamCategory = team.category;
             const teamGroup = team.groupName;
-            
-            // Debug log pre kontrolu
-            if (teamCategory === categoryId && teamGroup === groupName) {
-                console.log(`DEBUG: Nájdený tím v databáze: ${teamCategory} - "${team.teamName}" ("${teamGroup}")`);
-            }
-            
+        
             return teamCategory === categoryId && teamGroup === groupName;
         });
+        
+        // DEBUG log
+        if (found) {
+            console.log(`DEBUG: Nájdený tím v databáze: ${categoryId} - "${groupName}"`);
+        }
+        
+        return found;
     };
 
     // PRIDANÉ: Funkcia na kontrolu, či skupina je v superštruktúre
@@ -788,34 +790,39 @@ const AddGroupsApp = ({ userProfileData }) => {
         if (!superstructureTeams || superstructureTeams.length === 0) {
             return false;
         }
-        
+    
         // Skontrolujeme, či existuje aspoň jeden superštruktúrový tím v tejto kategórii s danou skupinou
-        return superstructureTeams.some(team => {
+        const found = superstructureTeams.some(team => {
             const teamCategory = team.category;
             const teamGroup = team.groupName;
-            
-            // Debug log pre kontrolu
-            if (teamCategory === categoryId && teamGroup === groupName) {
-                console.log(`DEBUG: Nájdený superštruktúrový tím: ${teamCategory} - "${team.teamName}" ("${teamGroup}")`);
-            }
-            
+        
             return teamCategory === categoryId && teamGroup === groupName;
         });
+        
+        // DEBUG log
+        if (found) {
+            console.log(`DEBUG: Nájdený superštruktúrový tím: ${categoryId} - "${groupName}"`);
+        }
+        
+        return found;
     };
+
 
     // PRIDANÉ: Kombinovaná funkcia na kontrolu, či skupina je používaná
     const isGroupUsed = (categoryId, groupName) => {
         const usedInDatabase = isGroupUsedInDatabase(categoryId, groupName);
         const usedInSuperstructure = isGroupInSuperstructure(categoryId, groupName);
-        
+        const isUsed = usedInDatabase || usedInSuperstructure;
+    
         // Log pre debug
-        if (usedInDatabase || usedInSuperstructure) {
+        if (isUsed) {
             console.log(`DEBUG: Skupina "${groupName}" v kategórii ${categoryId} je používaná:`);
             console.log(`  - V databáze používateľov: ${usedInDatabase}`);
             console.log(`  - V superštruktúre: ${usedInSuperstructure}`);
+            console.log(`  - Celkovo: ${isUsed}`);
         }
         
-        return usedInDatabase || usedInSuperstructure;
+        return isUsed;
     };
 
     const handleEditClick = (group, categoryId) => {
