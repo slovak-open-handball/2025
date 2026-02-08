@@ -689,6 +689,8 @@ const AddGroupsApp = ({ userProfileData }) => {
     
     // PRIDANÉ: stav pre ukladanie tímov z databázy
     const [databaseTeams, setDatabaseTeams] = useState([]);
+    // PRIDANÉ: stav pre ukladanie superštruktúrových tímov
+    const [superstructureTeams, setSuperstructureTeams] = useState([]);
 
     useEffect(() => {
         // Načítanie kategórií v reálnom čase
@@ -739,7 +741,8 @@ const AddGroupsApp = ({ userProfileData }) => {
         // PRIDANÉ: Načítame superštruktúrové tímy
         const loadSuperstructureTeams = async () => {
             try {
-                await loadAndLogSuperstructureTeams();
+                const teams = await loadAndLogSuperstructureTeams();
+                setSuperstructureTeams(teams);
             } catch (error) {
                 console.error("Chyba pri načítavaní superštruktúrových tímov:", error);
             }
@@ -766,10 +769,53 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
         
         // Skontrolujeme, či existuje aspoň jeden tím v tejto kategórii s danou skupinou
-        return databaseTeams.some(team => 
-            team.category === categoryId && 
-            team.groupName === groupName
-        );
+        // Dôležité: Porovnávame presné názvy skupín
+        return databaseTeams.some(team => {
+            const teamCategory = team.category;
+            const teamGroup = team.groupName;
+            
+            // Debug log pre kontrolu
+            if (teamCategory === categoryId && teamGroup === groupName) {
+                console.log(`DEBUG: Nájdený tím v databáze: ${teamCategory} - "${team.teamName}" ("${teamGroup}")`);
+            }
+            
+            return teamCategory === categoryId && teamGroup === groupName;
+        });
+    };
+
+    // PRIDANÉ: Funkcia na kontrolu, či skupina je v superštruktúre
+    const isGroupInSuperstructure = (categoryId, groupName) => {
+        if (!superstructureTeams || superstructureTeams.length === 0) {
+            return false;
+        }
+        
+        // Skontrolujeme, či existuje aspoň jeden superštruktúrový tím v tejto kategórii s danou skupinou
+        return superstructureTeams.some(team => {
+            const teamCategory = team.category;
+            const teamGroup = team.groupName;
+            
+            // Debug log pre kontrolu
+            if (teamCategory === categoryId && teamGroup === groupName) {
+                console.log(`DEBUG: Nájdený superštruktúrový tím: ${teamCategory} - "${team.teamName}" ("${teamGroup}")`);
+            }
+            
+            return teamCategory === categoryId && teamGroup === groupName;
+        });
+    };
+
+    // PRIDANÉ: Kombinovaná funkcia na kontrolu, či skupina je používaná
+    const isGroupUsed = (categoryId, groupName) => {
+        const usedInDatabase = isGroupUsedInDatabase(categoryId, groupName);
+        const usedInSuperstructure = isGroupInSuperstructure(categoryId, groupName);
+        
+        // Log pre debug
+        if (usedInDatabase || usedInSuperstructure) {
+            console.log(`DEBUG: Skupina "${groupName}" v kategórii ${categoryId} je používaná:`);
+            console.log(`  - V databáze používateľov: ${usedInDatabase}`);
+            console.log(`  - V superštruktúre: ${usedInSuperstructure}`);
+        }
+        
+        return usedInDatabase || usedInSuperstructure;
     };
 
     const handleEditClick = (group, categoryId) => {
@@ -779,9 +825,9 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
 
     const handleDeleteClick = (group, categoryId) => {
-        // PRIDANÉ: Kontrola, či sa skupina používa v databáze
-        if (isGroupUsedInDatabase(categoryId, group.name)) {
-            window.showGlobalNotification('Túto skupinu nie je možné zmazať, pretože obsahuje tímy v databáze.', 'error');
+        // PRIDANÉ: Kontrola, či sa skupina používa
+        if (isGroupUsed(categoryId, group.name)) {
+            window.showGlobalNotification('Túto skupinu nie je možné zmazať, pretože je priradená k existujúcim tímom.', 'error');
             return;
         }
         
@@ -792,6 +838,15 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     const handleConfirmDelete = async () => {
         if (!groupToDelete || !categoryOfGroupToDelete) return;
+
+        // PRIDANÉ: Kontrola, či sa skupina používa
+        if (isGroupUsed(categoryOfGroupToDelete, groupToDelete.name)) {
+            window.showGlobalNotification('Túto skupinu nie je možné zmazať, pretože je priradená k existujúcim tímom.', 'error');
+            setDeleteModalVisible(false);
+            setGroupToDelete(null);
+            setCategoryOfGroupToDelete('');
+            return;
+        }
 
         try {
             const groupsDocRef = doc(window.db, 'settings', 'groups');
@@ -848,8 +903,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                         React.createElement('h3', { className: 'text-lg font-semibold mb-2' }, category.name),
                         React.createElement('ul', { className: 'w-full' },
                             sortedGroups.map((group, groupIndex) => {
-                                // PRIDANÉ: Kontrola, či sa skupina používa v databáze
-                                const isUsed = isGroupUsedInDatabase(category.id, group.name);
+                                // PRIDANÉ: Kontrola, či sa skupina používa
+                                const isUsed = isGroupUsed(category.id, group.name);
                                 
                                 return React.createElement('li', {
                                     key: groupIndex,
@@ -891,7 +946,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                                             'button',
                                             {
                                                 className: `transition-colors duration-200 ${isUsed ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-red-500'}`,
-                                                onClick: isUsed ? null : () => handleDeleteClick(group, category.id),
+                                                onClick: isUsed ? () => {
+                                                    // PRIDANÉ: Explicitné zobrazenie notifikácie pri pokuse o kliknutie
+                                                    window.showGlobalNotification('Túto skupinu nie je možné zmazať, pretože je priradená k existujúcim tímom.', 'error');
+                                                } : () => handleDeleteClick(group, category.id),
                                                 disabled: isUsed,
                                                 title: isUsed ? 'Skupina obsahuje tímy v databáze a nie je možné ju zmazať' : 'Zmazať skupinu'
                                             },
