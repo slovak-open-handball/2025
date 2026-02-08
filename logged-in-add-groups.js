@@ -955,11 +955,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                                         React.createElement('div', { className: 'font-semibold' }, group.name),
                                         React.createElement('div', { className: 'text-gray-500 text-xs' }, group.type),
                                         // PRIDANÉ: Zobrazenie indikátora, ak je skupina používaná
-                                        isUsed && React.createElement(
-                                            'div',
-                                            { className: 'text-xs text-red-500 mt-1' },
-                                            'Obsahuje tímy v databáze'
-                                        )
+//                                        isUsed && React.createElement(
+//                                            'div',
+//                                            { className: 'text-xs text-red-500 mt-1' },
+//                                            'Obsahuje tímy v databáze'
+//                                        )
                                     ),
                                     React.createElement('div', { className: 'flex gap-2' },
                                         React.createElement(
