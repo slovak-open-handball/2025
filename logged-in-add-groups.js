@@ -159,9 +159,6 @@ const processSuperstructureData = (superstructureData) => {
                     // Vypíšeme tím v požadovanom formáte
                     console.log(`${categoryId}: "${teamName}" ("${groupName}")`);
                     
-                    // Vypíšeme aj podrobnosti pre kontrolu
-                    console.log(`    Poradie: ${order}, ID: ${teamItem.id || 'žiadne'}`);
-                    
                     allSuperstructureTeams.push({
                         category: categoryId,
                         teamName: teamName,
