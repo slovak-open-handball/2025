@@ -2,6 +2,11 @@
 import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, getDocs, setDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
+
+// Import zoznamu predvolieb
+import { countryDialCodes } from "./countryDialCodes.js";
+
+
 const { useState, useEffect, useRef, useSyncExternalStore } = React;
 
 /**
@@ -92,16 +97,22 @@ const loadAndLogAllUsersData = async () => {
     }
 };
 
+/**
+ * Funkcia na načítanie a vypísanie superštruktúrových tímov
+ */
 const loadAndLogSuperstructureTeams = async () => {
     try {
         console.log("\n=== NAČÍTAVANIE SUPERŠTRUKTÚROVÝCH TÍMOV ===");
         
-        const collections = await getDocs(collection(window.db, '').parent);        
         let allSuperstructureTeams = [];
         
+        // Preddefinované kolekcie, ktoré chceme skontrolovať
         const superstructureCollections = [
             "superstructureGroups"
         ];
+        
+        console.log("Skúšam nájsť superštruktúrové tímy v nasledujúcich kolekciách:");
+        superstructureCollections.forEach(coll => console.log(`  - ${coll}`));
         
         for (const collectionName of superstructureCollections) {
             try {
@@ -109,7 +120,7 @@ const loadAndLogSuperstructureTeams = async () => {
                 const querySnapshot = await getDocs(collectionRef);
                 
                 if (querySnapshot.size > 0) {
-                    console.log(`\nKolekcia: ${collectionName}`);
+                    console.log(`\n✅ Nájdená kolekcia: ${collectionName}`);
                     console.log(`Počet dokumentov: ${querySnapshot.size}`);
                     
                     querySnapshot.forEach((docSnap) => {
@@ -132,31 +143,38 @@ const loadAndLogSuperstructureTeams = async () => {
                             order: order
                         });
                     });
+                } else {
+                    console.log(`\nℹ️ Kolekcia "${collectionName}" existuje, ale je prázdna.`);
                 }
             } catch (error) {
-                // Kolekcia neexistuje, preskočíme ju
-                console.log(`Kolekcia "${collectionName}" neexistuje alebo nie je prístupná.`);
+                // Kolekcia neexistuje alebo nie je prístupná
+                console.log(`\n❌ Kolekcia "${collectionName}" neexistuje alebo nie je prístupná.`);
             }
         }
         
         // Ak sme nenašli žiadne tímy v preddefinovaných kolekciách,
-        // skúsime nájsť všetky kolekcie, ktoré obsahujú "superstructure" v názve
+        // skúsime nájsť ďalšie možné kolekcie
         if (allSuperstructureTeams.length === 0) {
-            console.log("\nHľadám všetky kolekcie so superštruktúrovými tímami...");
+            console.log("\n🔄 Hľadám ďalšie možné kolekcie so superštruktúrovými tímami...");
             
-            const knownSuperstructureCollections = [];            
-            
-            const possibleCollections = [
-                "superstructureGroups"
+            // Zoznam ďalších možných názvov kolekcií
+            const additionalCollections = [
+                "superstructure",
+                "superstructureTeams",
+                "playoff_teams",
+                "final_teams",
+                "playoff",
+                "finals",
+                "knockout_stage"
             ];
             
-            for (const collName of possibleCollections) {
+            for (const collName of additionalCollections) {
                 try {
                     const collectionRef = collection(window.db, collName);
                     const querySnapshot = await getDocs(collectionRef);
                     
                     if (querySnapshot.size > 0) {
-                        console.log(`\nNájdená kolekcia: ${collName}`);
+                        console.log(`\n✅ Nájdená ďalšia kolekcia: ${collName}`);
                         console.log(`Počet dokumentov: ${querySnapshot.size}`);
                         
                         querySnapshot.forEach((docSnap) => {
@@ -199,9 +217,10 @@ const loadAndLogSuperstructureTeams = async () => {
         // Vypíšeme súhrn superštruktúrových tímov
         console.log("\n=== SÚHRN SUPERŠTRUKTÚROVÝCH TÍMOV ===");
         if (allSuperstructureTeams.length === 0) {
-            console.log("Nenašli sa žiadne superštruktúrové tímy.");
+            console.log("❌ Nenašli sa žiadne superštruktúrové tímy.");
+            console.log("Tip: Skontrolujte, či kolekcia 'superstructureGroups' existuje vo vašej databáze.");
         } else {
-            console.log(`Celkový počet superštruktúrových tímov: ${allSuperstructureTeams.length}`);
+            console.log(`✅ Celkový počet superštruktúrových tímov: ${allSuperstructureTeams.length}`);
             
             // Zoskupenie podľa kolekcie
             const teamsByCollection = {};
@@ -214,13 +233,13 @@ const loadAndLogSuperstructureTeams = async () => {
             
             console.log("\nSuperštruktúrové tímy podľa kolekcie:");
             Object.keys(teamsByCollection).sort().forEach(collectionName => {
-                console.log(`\n${collectionName}: ${teamsByCollection[collectionName].length} tímov`);
+                console.log(`\n📂 ${collectionName}: ${teamsByCollection[collectionName].length} tímov`);
                 
                 // Zoradenie tímov v rámci kolekcie podľa poradia
                 teamsByCollection[collectionName]
                     .sort((a, b) => a.order - b.order)
                     .forEach(team => {
-                        console.log(`  Poradie ${team.order}: "${team.teamName}" ("${team.groupName}")`);
+                        console.log(`  🏆 Poradie ${team.order}: "${team.teamName}" ("${team.groupName}")`);
                     });
             });
         }
@@ -230,6 +249,7 @@ const loadAndLogSuperstructureTeams = async () => {
         return allSuperstructureTeams;
     } catch (error) {
         console.error("Chyba pri načítavaní superštruktúrových tímov:", error);
+        console.error("Detail chyby:", error.message);
         window.showGlobalNotification('Nastala chyba pri načítavaní superštruktúrových tímov.', 'error');
         throw error;
     }
