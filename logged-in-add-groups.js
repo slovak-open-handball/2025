@@ -2,7 +2,7 @@
 import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, getDocs, setDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-const { useState, useEffect, useRef, useSyncExternalStore } = React;
+const { useState, useEffect, useRef, useSyncExternalStore, useCallback } = React;
 
 /**
  * Funkcia na načítanie a vypísanie všetkých údajov z dokumentu users
