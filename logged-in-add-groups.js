@@ -753,7 +753,7 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
                             disabled: !!nameError
                         },
                         'Vytvoriť'
-                    )
+                    ),
                     React.createElement(
                         'button',
                         {
