@@ -1523,7 +1523,6 @@ const AddGroupsApp = ({ userProfileData }) => {
               capacity: data.capacity || null,
               accommodationType: data.accommodationType || null,
               pricePerNight: data.pricePerNight || null,
-              // NOVÉ: Načítanie cien stravovania
               breakfastPrice: data.breakfastPrice || null,
               lunchPrice: data.lunchPrice || null,
               dinnerPrice: data.dinnerPrice || null,
@@ -1555,6 +1554,7 @@ const AddGroupsApp = ({ userProfileData }) => {
               color: '#6b7280'
             };
      
+            // Normálna ikona (BIELE pozadie, FARBENÝ okraj a ikona)
             const normalHtml = `
               <div style="
                 background: white;
@@ -1581,6 +1581,7 @@ const AddGroupsApp = ({ userProfileData }) => {
               iconAnchor: [19, 19]
             });
      
+            // Vybraná ikona (FARBENÉ pozadie, BIELE okraj a ikona) - OPAČNÉ FARBY
             const selectedHtml = `
               <div style="
                 background: ${typeConfig.color};
@@ -1607,11 +1608,27 @@ const AddGroupsApp = ({ userProfileData }) => {
               iconAnchor: [19, 19]
             });
      
-            const marker = L.marker([place.lat, place.lng], { icon: normalIcon });
+            const marker = L.marker([place.lat, place.lng], { 
+              icon: normalIcon,
+              zIndexOffset: 0
+            });
      
             marker.on('click', (e) => {
-                setSelectedPlace(place);
-                setPlaceHash(place.id);
+              // Reset všetkých markerov
+              Object.keys(markersRef.current).forEach(placeId => {
+                const markerObj = markersRef.current[placeId];
+                if (markerObj && markerObj.marker) {
+                  markerObj.marker.setIcon(markerObj.normalIcon);
+                  markerObj.marker.setZIndexOffset(0);
+                }
+              });
+              
+              // Nastav vybraný marker
+              marker.setIcon(selectedIcon);
+              marker.setZIndexOffset(1000);
+              
+              setSelectedPlace(place);
+              setPlaceHash(place.id);
             });
      
             placesLayerRef.current.addLayer(marker);
@@ -1622,6 +1639,15 @@ const AddGroupsApp = ({ userProfileData }) => {
               selectedIcon
             };
           });
+          
+          // Po pridaní všetkých markerov, nastav vybraný marker (ak existuje)
+          if (selectedPlace && markersRef.current[selectedPlace.id]) {
+            const selectedMarker = markersRef.current[selectedPlace.id];
+            if (selectedMarker && selectedMarker.marker) {
+              selectedMarker.marker.setIcon(selectedMarker.selectedIcon);
+              selectedMarker.marker.setZIndexOffset(1000);
+            }
+          }
         }, err => console.error("onSnapshot error:", err));
       }
       return () => {
@@ -1629,6 +1655,29 @@ const AddGroupsApp = ({ userProfileData }) => {
         if (placesLayerRef.current) placesLayerRef.current.clearLayers();
       };
     }, [activeFilter]);
+    
+    // Dodatočný useEffect pre správnu aktualizáciu ikony pri zmene selectedPlace
+    useEffect(() => {
+      if (!leafletMap.current || !placesLayerRef.current) return;
+    
+      // Reset všetkých markerov na normálnu ikonu
+      Object.keys(markersRef.current).forEach(placeId => {
+        const markerObj = markersRef.current[placeId];
+        if (markerObj && markerObj.marker) {
+          markerObj.marker.setIcon(markerObj.normalIcon);
+          markerObj.marker.setZIndexOffset(0);
+        }
+      });
+    
+      // Nastav vybranému markeru selected ikonu
+      if (selectedPlace && markersRef.current[selectedPlace.id]) {
+        const selectedMarker = markersRef.current[selectedPlace.id];
+        if (selectedMarker && selectedMarker.marker) {
+          selectedMarker.marker.setIcon(selectedMarker.selectedIcon);
+          selectedMarker.marker.setZIndexOffset(1000);
+        }
+      }
+    }, [selectedPlace]);
     
     const addFreeCapacity = useMemo(() => {
       if (newPlaceType !== 'ubytovanie' || !selectedAccommodationType) return null;
