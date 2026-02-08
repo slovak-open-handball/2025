@@ -97,57 +97,145 @@ const loadAndLogAllUsersData = async () => {
     }
 };
 
-/**
- * Funkcia na načítanie a vypísanie údajov z dokumentu superstructureGroups
- */
-const loadAndLogSuperstructureGroups = async () => {
+const loadAndLogSuperstructureTeams = async () => {
     try {
-        console.log("\n=== NAČÍTAVANIE NADSTAVBOVÝCH SKUPÍN ===");
+        console.log("\n=== NAČÍTAVANIE SUPERŠTRUKTÚROVÝCH TÍMOV ===");
         
-        // Načítanie dokumentu superstructureGroups z kolekcie settings
-        const superstructureGroupsDocRef = doc(window.db, 'settings', 'superstructureGroups');
-        const docSnap = await getDoc(superstructureGroupsDocRef);
+        const collections = await getDocs(collection(window.db, '').parent);        
+        let allSuperstructureTeams = [];
         
-        if (docSnap.exists()) {
-            const superstructureGroupsData = docSnap.data();
-            console.log("Dáta z dokumentu 'superstructureGroups':");
-            
-            // Prechádzame cez všetky polia v dokumente
-            Object.keys(superstructureGroupsData).forEach(categoryId => {
-                const groupsInCategory = superstructureGroupsData[categoryId] || [];
+        const superstructureCollections = [
+            "superstructureGroups"
+        ];
+        
+        for (const collectionName of superstructureCollections) {
+            try {
+                const collectionRef = collection(window.db, collectionName);
+                const querySnapshot = await getDocs(collectionRef);
                 
-                console.log(`\nKategória: ${categoryId}`);
-                console.log(`Počet nadstavbových skupín: ${groupsInCategory.length}`);
-                
-                if (groupsInCategory.length > 0) {
-                    console.log("Nadstavbové skupiny:");
-                    groupsInCategory.forEach((group, index) => {
-                        console.log(`  ${index + 1}. "${group}"`);
+                if (querySnapshot.size > 0) {
+                    console.log(`\nKolekcia: ${collectionName}`);
+                    console.log(`Počet dokumentov: ${querySnapshot.size}`);
+                    
+                    querySnapshot.forEach((docSnap) => {
+                        const teamData = docSnap.data();
+                        const teamName = teamData.teamName || "Názov tímu neznámy";
+                        const groupName = teamData.groupName || "Skupina neznáma";
+                        const order = teamData.order || 0;
+                        
+                        console.log(`  Dokument ID: ${docSnap.id}`);
+                        console.log(`    Tím: "${teamName}"`);
+                        console.log(`    Skupina: "${groupName}"`);
+                        console.log(`    Poradie: ${order}`);
+                        
+                        // Uložíme tím do zoznamu
+                        allSuperstructureTeams.push({
+                            collection: collectionName,
+                            documentId: docSnap.id,
+                            teamName: teamName,
+                            groupName: groupName,
+                            order: order
+                        });
                     });
-                } else {
-                    console.log("  Žiadne nadstavbové skupiny");
                 }
-            });
-            
-            // Celkový súhrn
-            let totalSuperstructureGroups = 0;
-            Object.keys(superstructureGroupsData).forEach(categoryId => {
-                totalSuperstructureGroups += (superstructureGroupsData[categoryId] || []).length;
-            });
-            
-            console.log(`\nCelkový počet nadstavbových skupín: ${totalSuperstructureGroups}`);
-            console.log(`Počet kategórií s nadstavbovými skupinami: ${Object.keys(superstructureGroupsData).length}`);
-            
-        } else {
-            console.log("Dokument 'superstructureGroups' nebol nájdený v kolekcii 'settings'.");
+            } catch (error) {
+                // Kolekcia neexistuje, preskočíme ju
+                console.log(`Kolekcia "${collectionName}" neexistuje alebo nie je prístupná.`);
+            }
         }
         
-        console.log("=== KONIEC NAČÍTAVANIA NADSTAVBOVÝCH SKUPÍN ===");
+        // Ak sme nenašli žiadne tímy v preddefinovaných kolekciách,
+        // skúsime nájsť všetky kolekcie, ktoré obsahujú "superstructure" v názve
+        if (allSuperstructureTeams.length === 0) {
+            console.log("\nHľadám všetky kolekcie so superštruktúrovými tímami...");
+            
+            const knownSuperstructureCollections = [];            
+            
+            const possibleCollections = [
+                "superstructureGroups"
+            ];
+            
+            for (const collName of possibleCollections) {
+                try {
+                    const collectionRef = collection(window.db, collName);
+                    const querySnapshot = await getDocs(collectionRef);
+                    
+                    if (querySnapshot.size > 0) {
+                        console.log(`\nNájdená kolekcia: ${collName}`);
+                        console.log(`Počet dokumentov: ${querySnapshot.size}`);
+                        
+                        querySnapshot.forEach((docSnap) => {
+                            const teamData = docSnap.data();
+                            const teamName = teamData.teamName || teamData.name || "Názov tímu neznámy";
+                            const groupName = teamData.groupName || teamData.group || "Skupina neznáma";
+                            const order = teamData.order || teamData.position || 0;
+                            
+                            console.log(`  Dokument ID: ${docSnap.id}`);
+                            console.log(`    Tím: "${teamName}"`);
+                            console.log(`    Skupina: "${groupName}"`);
+                            console.log(`    Poradie: ${order}`);
+                            
+                            allSuperstructureTeams.push({
+                                collection: collName,
+                                documentId: docSnap.id,
+                                teamName: teamName,
+                                groupName: groupName,
+                                order: order
+                            });
+                        });
+                    }
+                } catch (error) {
+                    // Kolekcia neexistuje, preskočíme ju
+                }
+            }
+        }
         
-        return docSnap.exists() ? docSnap.data() : null;
+        // Zoradenie tímov podľa kolekcie a poradia
+        allSuperstructureTeams.sort((a, b) => {
+            if (a.collection !== b.collection) {
+                return a.collection.localeCompare(b.collection);
+            }
+            if (a.order !== b.order) {
+                return a.order - b.order;
+            }
+            return a.teamName.localeCompare(b.teamName);
+        });
+        
+        // Vypíšeme súhrn superštruktúrových tímov
+        console.log("\n=== SÚHRN SUPERŠTRUKTÚROVÝCH TÍMOV ===");
+        if (allSuperstructureTeams.length === 0) {
+            console.log("Nenašli sa žiadne superštruktúrové tímy.");
+        } else {
+            console.log(`Celkový počet superštruktúrových tímov: ${allSuperstructureTeams.length}`);
+            
+            // Zoskupenie podľa kolekcie
+            const teamsByCollection = {};
+            allSuperstructureTeams.forEach(team => {
+                if (!teamsByCollection[team.collection]) {
+                    teamsByCollection[team.collection] = [];
+                }
+                teamsByCollection[team.collection].push(team);
+            });
+            
+            console.log("\nSuperštruktúrové tímy podľa kolekcie:");
+            Object.keys(teamsByCollection).sort().forEach(collectionName => {
+                console.log(`\n${collectionName}: ${teamsByCollection[collectionName].length} tímov`);
+                
+                // Zoradenie tímov v rámci kolekcie podľa poradia
+                teamsByCollection[collectionName]
+                    .sort((a, b) => a.order - b.order)
+                    .forEach(team => {
+                        console.log(`  Poradie ${team.order}: "${team.teamName}" ("${team.groupName}")`);
+                    });
+            });
+        }
+        
+        console.log("\n=== KONIEC NAČÍTAVANIA SUPERŠTRUKTÚROVÝCH TÍMOV ===");
+        
+        return allSuperstructureTeams;
     } catch (error) {
-        console.error("Chyba pri načítavaní nadstavbových skupín:", error);
-        window.showGlobalNotification('Nastala chyba pri načítavaní nadstavbových skupín.', 'error');
+        console.error("Chyba pri načítavaní superštruktúrových tímov:", error);
+        window.showGlobalNotification('Nastala chyba pri načítavaní superštruktúrových tímov.', 'error');
         throw error;
     }
 };
@@ -633,17 +721,17 @@ const AddGroupsApp = ({ userProfileData }) => {
             }
         };
         
-        // PRIDANÉ: Načítame nadstavbové skupiny
-        const loadSuperstructureGroups = async () => {
+        // PRIDANÉ: Načítame superštruktúrové tímy
+        const loadSuperstructureTeams = async () => {
             try {
-                await loadAndLogSuperstructureGroups();
+                await loadAndLogSuperstructureTeams();
             } catch (error) {
-                console.error("Chyba pri načítavaní nadstavbových skupín:", error);
+                console.error("Chyba pri načítavaní superštruktúrových tímov:", error);
             }
         };
         
         loadUsersData();
-        loadSuperstructureGroups();
+        loadSuperstructureTeams();
 
         return () => {
             unsubscribeCategories();
