@@ -514,8 +514,8 @@ const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingG
                             'p',
                             { className: 'mt-1 text-sm text-gray-500 text-left' },
                             groupName.trim() ? 
-                                `Názov bude formátovaný do tvaru ${formatGroupName(groupName)}` : 
-                                'Názov bude formátovaný do tvaru skupina X'
+                                `Názov skupiny bude ${formatGroupName(groupName)}` : 
+                                'Názov skupiny bude skupina X'
                         ),
                         nameError && React.createElement(
                             'p',
@@ -803,8 +803,8 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
                             'p',
                             { className: 'mt-1 text-sm text-gray-500 text-left' },
                             groupName.trim() ? 
-                                `Názov bude formátovaný do tvaru ${formatGroupName(groupName)}` : 
-                                'Názov bude formátovaný do tvaru skupina X'
+                                `Názov skupiny bude ${formatGroupName(groupName)}` : 
+                                'Názov skupiny bude skupina X'
                         ),
                         nameError && React.createElement(
                             'p',
