@@ -695,21 +695,28 @@ const AddGroupsApp = ({ userProfileData }) => {
     useEffect(() => {
         // Načítanie kategórií v reálnom čase
         const unsubscribeCategories = onSnapshot(doc(window.db, 'settings', 'categories'), (docSnap) => {
-            if (docSnap.exists()) {
-                const categoriesData = docSnap.data();
-                const loadedCategories = Object.keys(categoriesData).map(id => ({
-                    id: id,
-                    name: categoriesData[id].name
-                }));
-                loadedCategories.sort((a, b) => a.name.localeCompare(b.name));
-                setCategories(loadedCategories);
-            } else {
-                setCategories([]);
-                console.log("Dokument 'categories' nebol nájdený v 'settings'.");
-            }
-        }, (error) => {
-            console.error("Chyba pri načítavaní kategórií v reálnom čase:", error);
-        });
+                if (docSnap.exists()) {
+                    const categoriesData = docSnap.data();
+                    console.log("DEBUG: Všetky kategórie z databázy:", categoriesData);
+                    
+                    const loadedCategories = Object.keys(categoriesData).map(id => ({
+                        id: id,
+                        name: categoriesData[id].name
+                    }));
+                    loadedCategories.sort((a, b) => a.name.localeCompare(b.name));
+                    setCategories(loadedCategories);
+            
+                    // Debug: Vypíšeme ID a názvy
+                    loadedCategories.forEach(cat => {
+                        console.log(`DEBUG Kategória: id="${cat.id}", name="${cat.name}"`);
+                    });
+                } else {
+                    setCategories([]);
+                    console.log("Dokument 'categories' nebol nájdený v 'settings'.");
+                }
+            }, (error) => {
+                console.error("Chyba pri načítavaní kategórií v reálnom čase:", error);
+            });
 
         // Načítanie skupín v reálnom čase
         const unsubscribeGroups = onSnapshot(doc(window.db, 'settings', 'groups'), (docSnap) => {
@@ -762,55 +769,75 @@ const AddGroupsApp = ({ userProfileData }) => {
         };
     }, []);
 
+    const getCategoryNameById = (categoryId) => {
+        const category = categories.find(cat => cat.id === categoryId);
+        return category ? category.name : categoryId;
+    };
+
+    // PRIDANÉ: Funkcia na získanie ID kategórie z názvu
+    const getCategoryIdByName = (categoryName) => {
+        const category = categories.find(cat => cat.name === categoryName);
+        return category ? category.id : categoryName;
+    };
+
     // PRIDANÉ: Funkcia na kontrolu, či skupina má tímy v databáze
     const isGroupUsedInDatabase = (categoryId, groupName) => {
         if (!databaseTeams || databaseTeams.length === 0) {
             return false;
         }
         
+        // Získame názov kategórie z ID
+        const categoryName = getCategoryNameById(categoryId);
+        console.log(`DEBUG isGroupUsedInDatabase: Hľadám ${categoryName} ("${groupName}")`);
+        
         // Skontrolujeme, či existuje aspoň jeden tím v tejto kategórii s danou skupinou
-        // Dôležité: Porovnávame presné názvy skupín
         const found = databaseTeams.some(team => {
             const teamCategory = team.category;
             const teamGroup = team.groupName;
-        
-            return teamCategory === categoryId && teamGroup === groupName;
+            
+            // Porovnávame názvy kategórií, nie ID!
+            return teamCategory === categoryName && teamGroup === groupName;
         });
         
         // DEBUG log
         if (found) {
-            console.log(`DEBUG: Nájdený tím v databáze: ${categoryId} - "${groupName}"`);
+            console.log(`DEBUG: Nájdený tím v databáze: ${categoryName} - "${groupName}"`);
         }
         
         return found;
     };
-
+    
     // PRIDANÉ: Funkcia na kontrolu, či skupina je v superštruktúre
     const isGroupInSuperstructure = (categoryId, groupName) => {
         if (!superstructureTeams || superstructureTeams.length === 0) {
             return false;
         }
-    
+        
+        // Získame názov kategórie z ID
+        const categoryName = getCategoryNameById(categoryId);
+        console.log(`DEBUG isGroupInSuperstructure: Hľadám ${categoryName} ("${groupName}")`);
+        
         // Skontrolujeme, či existuje aspoň jeden superštruktúrový tím v tejto kategórii s danou skupinou
         const found = superstructureTeams.some(team => {
             const teamCategory = team.category;
             const teamGroup = team.groupName;
-        
-            return teamCategory === categoryId && teamGroup === groupName;
+            
+            // Porovnávame názvy kategórií, nie ID!
+            return teamCategory === categoryName && teamGroup === groupName;
         });
         
         // DEBUG log
         if (found) {
-            console.log(`DEBUG: Nájdený superštruktúrový tím: ${categoryId} - "${groupName}"`);
+            console.log(`DEBUG: Nájdený superštruktúrový tím: ${categoryName} - "${groupName}"`);
         }
         
         return found;
     };
-
-
+    
     // PRIDANÉ: Kombinovaná funkcia na kontrolu, či skupina je používaná
     const isGroupUsed = (categoryId, groupName) => {
-        console.log(`DEBUG isGroupUsed: Kontrolujem ${categoryId} - "${groupName}"`);
+        const categoryName = getCategoryNameById(categoryId);
+        console.log(`DEBUG isGroupUsed: Kontrolujem ${categoryName} (ID: ${categoryId}) - "${groupName}"`);
         console.log(`DEBUG: databaseTeams dĺžka: ${databaseTeams ? databaseTeams.length : 'null'}`);
         console.log(`DEBUG: superstructureTeams dĺžka: ${superstructureTeams ? superstructureTeams.length : 'null'}`);
         
@@ -819,7 +846,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         const isUsed = usedInDatabase || usedInSuperstructure;
         
         // Log pre debug
-        console.log(`DEBUG isGroupUsed výsledok: ${isUsed} (DB: ${usedInDatabase}, Super: ${usedInSuperstructure})`);
+        console.log(`DEBUG isGroupUsed výsledok pre ${categoryName} - "${groupName}": ${isUsed} (DB: ${usedInDatabase}, Super: ${usedInSuperstructure})`);
         
         return isUsed;
     };
