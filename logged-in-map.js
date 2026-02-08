@@ -94,6 +94,11 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [isModalOpening, setIsModalOpening] = useState(false);
     const [newPlaceNote, setNewPlaceNote] = useState('');
     const [editNote, setEditNote] = useState('');
+    // NOVÉ: Premenné pre cenu
+    const [newPricePerNight, setNewPricePerNight] = useState('');
+    const [editPricePerNight, setEditPricePerNight] = useState('');
+    const [priceError, setPriceError] = useState(null);
+
 // Memo pre editáciu (berie do úvahy aktuálnu kapacitu vybraného miesta)
 
     const waitForMarkerRender = () => {
@@ -183,6 +188,8 @@ const AddGroupsApp = ({ userProfileData }) => {
       setSelectedAccommodationType('');
       setNameTypeError(null);
       setCapacityError(null);
+      setNewPricePerNight(''); // NOVÉ: Vynulovať cenu
+      setPriceError(null);
     
       setIsAddingPlace(false);
       window.lastAddedPosition = pos;
@@ -391,13 +398,24 @@ const AddGroupsApp = ({ userProfileData }) => {
                 lat: position.lat,
                 lng: position.lng,
             };
+            
+            // NOVÉ: Pridanie ceny pre ubytovanie
             if (newPlaceType === 'ubytovanie') {
                 if (!selectedAccommodationType) {
                     window.showGlobalNotification('Vyberte typ ubytovania', 'error');
                     return;
                 }
                 placeData.accommodationType = selectedAccommodationType;
+                
+                // Validácia ceny
+                const price = parseFloat(newPricePerNight);
+                if (isNaN(price) || price <= 0) {
+                    setPriceError('Cena musí byť kladné číslo');
+                    return;
+                }
+                placeData.pricePerNight = price;
             }
+            
             // kapacita...
             let cap = parseInt(newCapacity, 10);
             if (newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') {
@@ -421,10 +439,17 @@ const AddGroupsApp = ({ userProfileData }) => {
             if (!isNaN(cap) && cap > 0) {
                 placeData.capacity = cap;
             }
+            
+            // NOVÉ: Pridanie poznámky
+            if (newPlaceNote.trim()) {
+                placeData.note = newPlaceNote.trim();
+            }
+            
             const newPlaceDoc = await addDoc(collection(window.db, 'places'), placeData);
             const addMessage = `Vytvorené nové miesto: '''${newPlaceName.trim()} (${typeLabels[newPlaceType] || newPlaceType})'` +
                 (placeData.capacity != null ? `, kapacita: ${placeData.capacity}` : '') +
                 (placeData.accommodationType ? `, typ ubytovania: ${placeData.accommodationType}` : '') +
+                (placeData.pricePerNight != null ? `, cena: ${placeData.pricePerNight}€/os/noc` : '') + // NOVÉ: Zobrazenie ceny
                 (placeData.note ? `, poznámka: ${placeData.note}` : '');
           
             await createPlaceChangeNotification('place_created', [addMessage], {
@@ -443,6 +468,8 @@ const AddGroupsApp = ({ userProfileData }) => {
             setTempAddPosition(null);
             setSelectedAddPosition(null);
             window.lastAddedPosition = null;
+            setNewPricePerNight(''); // NOVÉ: Vynulovať cenu
+            setNewPlaceNote('');
             if (tempMarkerRef.current) {
                 tempMarkerRef.current.remove();
                 tempMarkerRef.current = null;
@@ -505,6 +532,37 @@ const AddGroupsApp = ({ userProfileData }) => {
             setCapacityError(null);
         }
     }, [editCapacity, editAccommodationType, editType, isEditingNameAndType, accommodationAvailabilityEdit]);
+    
+    // NOVÝ: Validácia ceny pre pridávanie
+    useEffect(() => {
+        if (newPlaceType !== 'ubytovanie' || !newPricePerNight) {
+            setPriceError(null);
+            return;
+        }
+ 
+        const price = parseFloat(newPricePerNight);
+        if (isNaN(price) || price <= 0) {
+            setPriceError('Cena musí byť kladné číslo');
+        } else {
+            setPriceError(null);
+        }
+    }, [newPricePerNight, newPlaceType]);
+    
+    // NOVÝ: Validácia ceny pre editáciu
+    useEffect(() => {
+        if (!isEditingNameAndType || editType !== 'ubytovanie' || !editPricePerNight) {
+            setPriceError(null);
+            return;
+        }
+ 
+        const price = parseFloat(editPricePerNight);
+        if (isNaN(price) || price <= 0) {
+            setPriceError('Cena musí byť kladné číslo');
+        } else {
+            setPriceError(null);
+        }
+    }, [editPricePerNight, editType, isEditingNameAndType]);
+    
     useEffect(() => {
       if (!window.db) return;
  
@@ -553,6 +611,8 @@ const AddGroupsApp = ({ userProfileData }) => {
             setNameTypeError(null);
             setCapacityError(null);
             setNewPlaceNote('');
+            setNewPricePerNight(''); // NOVÉ: Vynulovať cenu
+            setPriceError(null);
         }
     }, [showModal, isAddingPlace]);
     useEffect(() => {
@@ -569,9 +629,6 @@ const AddGroupsApp = ({ userProfileData }) => {
         );
     
         if (duplicate) {
-            // ──────────────────────────────────────────────
-            // Tu je zmena – rozdelíme text na časti a dáme bold
-            // ──────────────────────────────────────────────
             setNameTypeError(
                 React.createElement('span', null,
                     "Miesto s názvom ",
@@ -648,6 +705,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         setIsEditingNameAndType(false);
         setEditCapacity('');
         setEditNote('');
+        setEditPricePerNight(''); // NOVÉ: Vynulovať cenu
         if (editMarkerRef.current) {
             if (editMarkerRef.current._clickHandler) {
                 leafletMap.current.off('click', editMarkerRef.current._clickHandler);
@@ -669,6 +727,15 @@ const AddGroupsApp = ({ userProfileData }) => {
         if (editType === 'ubytovanie' && !editAccommodationType) {
             window.showGlobalNotification('Vyberte typ ubytovania', 'error');
             return;
+        }
+        
+        // NOVÉ: Validácia ceny pre ubytovanie
+        if (editType === 'ubytovanie') {
+            const price = parseFloat(editPricePerNight);
+            if (isNaN(price) || price <= 0) {
+                setPriceError('Cena musí byť kladné číslo');
+                return;
+            }
         }
     
         try {
@@ -728,7 +795,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 // Vykonaj všetky aktualizácie
                 for (const update of userUpdates) {
                     await updateDoc(doc(window.db, 'users', update.userId), {
-                        teams: update.teams
+                        teams: updatedTeams
                     });
                     console.log(`[AUTOMATICKÁ AKTUALIZÁCIA] ${update.transferredCount} tímov používateľa ${update.userId} boli prenesené z "${oldName}" na "${newName}"`);
                 }
@@ -742,8 +809,14 @@ const AddGroupsApp = ({ userProfileData }) => {
     
             if (editType === 'ubytovanie') {
                 updates.accommodationType = editAccommodationType || null;
+                // NOVÉ: Uloženie ceny
+                const price = parseFloat(editPricePerNight);
+                if (!isNaN(price) && price > 0) {
+                    updates.pricePerNight = price;
+                }
             } else {
                 updates.accommodationType = null;
+                updates.pricePerNight = null; // NOVÉ: Nulovať cenu pre iné typy
             }
     
             let cap = parseInt(editCapacity, 10);
@@ -776,7 +849,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             } else {
                 updates.capacity = null;
             }
-    
+
             updates.note = editNote.trim() || null;
     
             const placeRef = doc(window.db, 'places', selectedPlace.id);
@@ -785,6 +858,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 type: selectedPlace.type || '',
                 capacity: selectedPlace.capacity != null ? selectedPlace.capacity : null,
                 accommodationType: selectedPlace.accommodationType || null,
+                pricePerNight: selectedPlace.pricePerNight != null ? selectedPlace.pricePerNight : null, // NOVÉ
                 note: selectedPlace.note || null,
             };
     
@@ -829,6 +903,15 @@ const AddGroupsApp = ({ userProfileData }) => {
                     `Zmena typu ubytovania z '${oldAcc}' na '${newAcc}'`
                 );
             }
+            
+            // NOVÉ: Zmena ceny
+            if (original.pricePerNight !== updates.pricePerNight) {
+                const oldPriceStr = original.pricePerNight != null ? `${original.pricePerNight}€` : '–';
+                const newPriceStr = updates.pricePerNight != null ? `${updates.pricePerNight}€` : '–';
+                changesList.push(
+                    `Zmena ceny z '${oldPriceStr}/os/noc' na '${newPriceStr}/os/noc'`
+                );
+            }
     
             if (original.note !== updates.note) {
                 const oldNote = original.note ? `${original.note}` : '–';
@@ -865,6 +948,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 type: updates.type,
                 capacity: updates.capacity,
                 accommodationType: updates.accommodationType || undefined,
+                pricePerNight: updates.pricePerNight || undefined, // NOVÉ
                 note: updates.note || undefined,
             }));
     
@@ -876,6 +960,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             type: updates.type, 
                             capacity: updates.capacity, 
                             accommodationType: updates.accommodationType || undefined,
+                            pricePerNight: updates.pricePerNight || undefined, // NOVÉ
                             note: updates.note || undefined
                           }
                         : p
@@ -890,6 +975,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             type: updates.type, 
                             capacity: updates.capacity, 
                             accommodationType: updates.accommodationType || undefined,
+                            pricePerNight: updates.pricePerNight || undefined, // NOVÉ
                             note: updates.note || undefined
                           }
                             : p
@@ -906,6 +992,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             setIsEditingNameAndType(false);
             setEditCapacity('');
             setEditNote('');
+            setEditPricePerNight(''); // NOVÉ: Vynulovať cenu
     
         } catch (err) {
             console.error("Chyba pri ukladaní:", err);
@@ -993,6 +1080,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             const deleteMessage = `Odstránené miesto: '''${place.name} (${typeLabels[place.type] || place.type})'` +
                 (place.capacity != null ? `, kapacita: ${place.capacity}` : '') +
                 (place.accommodationType ? `, typ ubytovania: ${place.accommodationType}` : '') +
+                (place.pricePerNight != null ? `, cena: ${place.pricePerNight}€/os/noc` : '') + // NOVÉ
                 (place.note ? `, poznámka: ${place.note}` : '');
             await createPlaceChangeNotification('place_deleted', [deleteMessage], {
                 id: place.id,
@@ -1173,6 +1261,7 @@ const AddGroupsApp = ({ userProfileData }) => {
               createdAt: data.createdAt,
               capacity: data.capacity || null,
               accommodationType: data.accommodationType || null,
+              pricePerNight: data.pricePerNight || null, // NOVÉ
               note: data.note || null,
             });
           });
@@ -1398,6 +1487,14 @@ const AddGroupsApp = ({ userProfileData }) => {
                   ),
                   selectedPlace.capacity
                 ),
+              // NOVÉ: Zobrazenie ceny v detaile miesta
+              selectedPlace.pricePerNight && selectedPlace.type === 'ubytovanie' &&
+                React.createElement('p', { className: 'text-gray-600 mb-3 flex items-center gap-2' },
+                  React.createElement('strong', null, 'Cena: '),
+                  React.createElement('span', { className: 'text-blue-600 font-semibold' },
+                    `${selectedPlace.pricePerNight} €/os/noc`
+                  )
+                ),
               React.createElement('p', { className: 'text-gray-600 mb-3' },
                 React.createElement('strong', null, 'Súradnice: '),
                 tempLocation
@@ -1433,12 +1530,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                   setEditType(selectedPlace.type || '');
                   setEditCapacity(selectedPlace.capacity != null ? String(selectedPlace.capacity) : '');
                   setEditAccommodationType(selectedPlace.accommodationType || '');
+                  setEditPricePerNight(selectedPlace.pricePerNight != null ? String(selectedPlace.pricePerNight) : ''); // NOVÉ
                   setEditNote(selectedPlace.note || '');
                 },
                 className: 'w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition'
               },
                 (selectedPlace?.type === 'ubytovanie' || selectedPlace?.type === 'stravovanie')
-                  ? 'Upraviť názov/typ/kapacitu/poznámku'
+                  ? 'Upraviť názov/typ/kapacitu/cenu/poznámku'
                   : 'Upraviť názov/typ/poznámku'
               ),
               isEditingLocation
@@ -1486,7 +1584,7 @@ const AddGroupsApp = ({ userProfileData }) => {
           ),
  
           // ──────────────────────────────────────────────
-          // Edit modál (názov, typ, kapacita, typ ubytovania)
+          // Edit modál (názov, typ, kapacita, cena, typ ubytovania)
           // ──────────────────────────────────────────────
           isEditingNameAndType && React.createElement(
             'div',
@@ -1565,7 +1663,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 })()
               ),
               // Kapacita + chyba
-              (editType === 'ubytovanie' || editType === 'stravovanie') && React.createElement('div', { className: 'mb-6' },
+              (editType === 'ubytovanie' || editType === 'stravovanie') && React.createElement('div', { className: 'mb-5' },
                 React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' },
                   editType === 'ubytovanie' ? 'Počet lôžok' : 'Kapacita (miesta / porcie)'
                 ),
@@ -1579,6 +1677,26 @@ const AddGroupsApp = ({ userProfileData }) => {
                 }),
                 capacityError && React.createElement('p', { className: 'mt-2 text-sm text-red-600' }, capacityError)
               ),
+              // NOVÉ: Pole pre cenu (iba pre ubytovanie)
+              editType === 'ubytovanie' && React.createElement('div', { className: 'mb-5' },
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' },
+                  'Cena za osobu/noc (€)'
+                ),
+                React.createElement('div', { className: 'relative' },
+                  React.createElement('input', {
+                    type: 'number',
+                    step: '0.01',
+                    min: '0.01',
+                    value: editPricePerNight,
+                    onChange: e => setEditPricePerNight(e.target.value),
+                    placeholder: 'napr. 25.50',
+                    className: 'w-full px-4 py-3 pl-10 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
+                  }),
+                  React.createElement('span', { className: 'absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium' }, '€')
+                ),
+                priceError && React.createElement('p', { className: 'mt-2 text-sm text-red-600' }, priceError)
+              ),
+              // Poznámka
               React.createElement('div', { className: 'mb-6' },
                 React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Poznámka'),
                 React.createElement('textarea', {
@@ -1600,6 +1718,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                   disabled: !editName.trim() ||
                            !editType ||
                            !!capacityError ||
+                           !!priceError ||
                            (editType === 'ubytovanie' && !editAccommodationType),
                   className: 'px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-medium'
                 }, 'Uložiť zmeny')
@@ -1691,7 +1810,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                   nameTypeError
               ),
               // Kapacita
-              (newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') && React.createElement('div', { className: 'mb-6' },
+              (newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') && React.createElement('div', { className: 'mb-5' },
                 React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' },
                   newPlaceType === 'ubytovanie' ? 'Počet lôžok' : 'Kapacita'
                 ),
@@ -1705,6 +1824,26 @@ const AddGroupsApp = ({ userProfileData }) => {
                 }),
                 capacityError && React.createElement('p', { className: 'mt-2 text-sm text-red-600' }, capacityError)
               ),
+              // NOVÉ: Pole pre cenu (iba pre ubytovanie)
+              newPlaceType === 'ubytovanie' && React.createElement('div', { className: 'mb-5' },
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' },
+                  'Cena za osobu/noc (€)'
+                ),
+                React.createElement('div', { className: 'relative' },
+                  React.createElement('input', {
+                    type: 'number',
+                    step: '0.01',
+                    min: '0.01',
+                    value: newPricePerNight,
+                    onChange: e => setNewPricePerNight(e.target.value),
+                    placeholder: 'napr. 25.50',
+                    className: 'w-full px-4 py-3 pl-10 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
+                  }),
+                  React.createElement('span', { className: 'absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium' }, '€')
+                ),
+                priceError && React.createElement('p', { className: 'mt-2 text-sm text-red-600' }, priceError)
+              ),
+              // Poznámka
               React.createElement('div', { className: 'mb-6' },
                 React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Poznámka (voliteľné)'),
                 React.createElement('textarea', {
@@ -1728,19 +1867,25 @@ const AddGroupsApp = ({ userProfileData }) => {
                     !newPlaceType ||
                     !!nameTypeError ||
                     !!capacityError ||
+                    !!priceError ||
                     (newPlaceType === 'ubytovanie' && !selectedAccommodationType) ||
                     ((newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') && 
-                     (!newCapacity.trim() || parseInt(newCapacity, 10) <= 0 || isNaN(parseInt(newCapacity, 10)))),
+                     (!newCapacity.trim() || parseInt(newCapacity, 10) <= 0 || isNaN(parseInt(newCapacity, 10)))) ||
+                    (newPlaceType === 'ubytovanie' && 
+                     (!newPricePerNight.trim() || parseFloat(newPricePerNight) <= 0 || isNaN(parseFloat(newPricePerNight)))),
               
                   className: `
                     px-6 py-2.5 rounded-lg font-medium transition duration-150 border-2
                     ${(!newPlaceName.trim() || 
                        !newPlaceType || 
                        !!nameTypeError || 
-                       !!capacityError || 
+                       !!capacityError ||
+                       !!priceError ||
                        (newPlaceType === 'ubytovanie' && !selectedAccommodationType) ||
                        ((newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') && 
-                        (!newCapacity.trim() || parseInt(newCapacity, 10) <= 0 || isNaN(parseInt(newCapacity, 10)))))
+                        (!newCapacity.trim() || parseInt(newCapacity, 10) <= 0 || isNaN(parseInt(newCapacity, 10)))) ||
+                       (newPlaceType === 'ubytovanie' && 
+                        (!newPricePerNight.trim() || parseFloat(newPricePerNight) <= 0 || isNaN(parseFloat(newPricePerNight)))))
                       ? 'bg-white text-blue-600 border-blue-600 cursor-not-allowed opacity-60'
                       : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:border-blue-700 active:bg-blue-800 active:border-blue-800'
                     }`
