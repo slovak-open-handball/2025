@@ -10,6 +10,93 @@ import { countryDialCodes } from "./countryDialCodes.js";
 const { useState, useEffect, useRef, useSyncExternalStore } = React;
 
 /**
+ * Funkcia na načítanie a vypísanie všetkých údajov z dokumentu users
+ */
+const loadAndLogAllUsersData = async () => {
+    try {
+        console.log("=== NAČÍTAVANIE VŠETKÝCH ÚDAJOV Z DATABÁZY (users) ===");
+        
+        // 1. Načítanie všetkých používateľských dokumentov
+        const usersCollectionRef = collection(window.db, 'users');
+        const querySnapshot = await getDocs(usersCollectionRef);
+        
+        console.log(`Počet používateľov v databáze: ${querySnapshot.size}`);
+        
+        // 2. Prechádzanie všetkých dokumentov
+        querySnapshot.forEach((docSnap) => {
+            const userData = docSnap.data();
+            console.log(`\n--- Používateľ ID: ${docSnap.id} ---`);
+            console.log("Dáta:", JSON.stringify(userData, null, 2));
+            
+            // Môžeme tiež vypísať konkrétne polia
+            console.log("Email:", userData.email || "N/A");
+            console.log("Admin status:", userData.isAdmin || false);
+            console.log("Vytvorené:", userData.createdAt || "N/A");
+            console.log("Aktualizované:", userData.updatedAt || "N/A");
+            
+            // Ďalšie polia, ktoré môžu existovať
+            Object.keys(userData).forEach(key => {
+                if (!['email', 'isAdmin', 'createdAt', 'updatedAt'].includes(key)) {
+                    console.log(`${key}:`, userData[key]);
+                }
+            });
+        });
+        
+        console.log("=== KONIEC NAČÍTAVANIA ÚDAJOV Z DATABÁZY ===");
+        
+        return querySnapshot;
+    } catch (error) {
+        console.error("Chyba pri načítavaní údajov z databázy:", error);
+        window.showGlobalNotification('Nastala chyba pri načítavaní údajov z databázy.', 'error');
+        throw error;
+    }
+};
+
+/**
+ * Funkcia na sledovanie zmien v reálnom čase pre všetkých používateľov
+ */
+const setupRealTimeUsersListener = () => {
+    try {
+        console.log("Nastavujem sledovanie v reálnom čase pre kolekciu 'users'...");
+        
+        const usersCollectionRef = collection(window.db, 'users');
+        
+        const unsubscribe = onSnapshot(usersCollectionRef, (snapshot) => {
+            console.log(`\n=== ZMENA V REÁLNOM ČASE - Počet dokumentov: ${snapshot.size} ===`);
+            
+            snapshot.docChanges().forEach((change) => {
+                const userData = change.doc.data();
+                console.log(`\nZmena typu: ${change.type}`);
+                console.log(`ID dokumentu: ${change.doc.id}`);
+                console.log("Dáta:", JSON.stringify(userData, null, 2));
+                
+                if (change.type === 'added') {
+                    console.log("💾 Nový používateľ pridaný do databázy");
+                } else if (change.type === 'modified') {
+                    console.log("✏️ Používateľ aktualizovaný");
+                } else if (change.type === 'removed') {
+                    console.log("🗑️ Používateľ odstránený z databázy");
+                }
+            });
+            
+            // Celkový prehľad
+            console.log("\n--- CELKOVÝ PREHĽAD POUŽÍVATEĽOV ---");
+            snapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                console.log(`${docSnap.id}: ${data.email || 'N/A'} (admin: ${data.isAdmin || false})`);
+            });
+        }, (error) => {
+            console.error("Chyba pri sledovaní zmien v reálnom čase:", error);
+        });
+        
+        // Vrátime unsubscribe funkciu pre možnosť zastaviť sledovanie
+        return unsubscribe;
+    } catch (error) {
+        console.error("Chyba pri nastavovaní sledovania v reálnom čase:", error);
+    }
+};
+
+/**
  * Globálna funkcia pre zobrazenie notifikácií
  */
 window.showGlobalNotification = (message, type = 'success') => {
@@ -368,6 +455,10 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [categoryOfGroupToEdit, setCategoryOfGroupToEdit] = useState('');
     const [groupToDelete, setGroupToDelete] = useState(null);
     const [categoryOfGroupToDelete, setCategoryOfGroupToDelete] = useState('');
+    
+    // Pridané: stav pre sledovanie, či sa majú načítať údaje
+    const [usersDataLoaded, setUsersDataLoaded] = useState(false);
+    const [realTimeListener, setRealTimeListener] = useState(null);
 
     useEffect(() => {
         // Načítanie kategórií v reálnom čase
@@ -398,10 +489,50 @@ const AddGroupsApp = ({ userProfileData }) => {
         }, (error) => {
             console.error("Chyba pri načítavaní skupín v reálnom čase:", error);
         });
+        
+        // PRIDANÉ: Automaticky načítame údaje o používateľoch pri načítaní komponentu
+        const loadUsersData = async () => {
+            try {
+                await loadAndLogAllUsersData();
+                setUsersDataLoaded(true);
+                
+                // Nastavíme sledovanie v reálnom čase
+                const unsubscribe = setupRealTimeUsersListener();
+                setRealTimeListener(() => unsubscribe);
+                
+                // Vytvoríme tlačidlo pre manuálne načítanie
+                const reloadButton = document.getElementById('reload-users-data');
+                if (!reloadButton) {
+                    const button = document.createElement('button');
+                    button.id = 'reload-users-data';
+                    button.textContent = '🔄 Načítať všetkých používateľov';
+                    button.className = 'fixed bottom-20 right-4 bg-purple-500 text-white rounded-md px-4 py-2 shadow-lg hover:bg-purple-600 transition-colors duration-300 text-sm';
+                    button.onclick = async () => {
+                        await loadAndLogAllUsersData();
+                    };
+                    document.body.appendChild(button);
+                }
+            } catch (error) {
+                console.error("Chyba pri automatickom načítavaní údajov používateľov:", error);
+            }
+        };
+        
+        loadUsersData();
 
         return () => {
             unsubscribeCategories();
             unsubscribeGroups();
+            
+            // PRIDANÉ: Zastavíme sledovanie v reálnom čase pri odstránení komponentu
+            if (realTimeListener) {
+                realTimeListener();
+            }
+            
+            // Odstránime tlačidlo
+            const reloadButton = document.getElementById('reload-users-data');
+            if (reloadButton) {
+                reloadButton.remove();
+            }
         };
     }, []);
 
@@ -451,7 +582,13 @@ const AddGroupsApp = ({ userProfileData }) => {
             React.createElement(
                 'div',
                 { className: `w-full flex flex-col items-center justify-center mb-6` },
-                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Vytvorenie skupín')
+                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Vytvorenie skupín'),
+                // PRIDANÉ: Informácia o načítaných dátach
+                usersDataLoaded && React.createElement(
+                    'div',
+                    { className: 'mt-2 text-sm text-gray-500' },
+                    'Dáta používateľov boli načítané do konzoly'
+                )
             ),
             React.createElement(
                 'div',
