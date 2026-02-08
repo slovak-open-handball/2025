@@ -449,7 +449,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             const addMessage = `Vytvorené nové miesto: '''${newPlaceName.trim()} (${typeLabels[newPlaceType] || newPlaceType})'` +
                 (placeData.capacity != null ? `, kapacita: ${placeData.capacity}` : '') +
                 (placeData.accommodationType ? `, typ ubytovania: ${placeData.accommodationType}` : '') +
-                (placeData.pricePerNight != null ? `, cena: ${placeData.pricePerNight}€/os/noc` : '') + // NOVÉ: Zobrazenie ceny
+                (placeData.pricePerNight != null ? `, cena: ${placeData.pricePerNight.toFixed(2)} €/os/noc` : '')
                 (placeData.note ? `, poznámka: ${placeData.note}` : '');
           
             await createPlaceChangeNotification('place_created', [addMessage], {
@@ -906,8 +906,8 @@ const AddGroupsApp = ({ userProfileData }) => {
             
             // NOVÉ: Zmena ceny
             if (original.pricePerNight !== updates.pricePerNight) {
-                const oldPriceStr = original.pricePerNight != null ? `${original.pricePerNight}€` : '–';
-                const newPriceStr = updates.pricePerNight != null ? `${updates.pricePerNight}€` : '–';
+                const oldPriceStr = original.pricePerNight != null ? `${original.pricePerNight.toFixed(2)}€` : '–';
+                const newPriceStr = updates.pricePerNight != null ? `${updates.pricePerNight.toFixed(2)}€` : '–';
                 changesList.push(
                     `Zmena ceny z '${oldPriceStr}/os/noc' na '${newPriceStr}/os/noc'`
                 );
@@ -1080,7 +1080,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             const deleteMessage = `Odstránené miesto: '''${place.name} (${typeLabels[place.type] || place.type})'` +
                 (place.capacity != null ? `, kapacita: ${place.capacity}` : '') +
                 (place.accommodationType ? `, typ ubytovania: ${place.accommodationType}` : '') +
-                (place.pricePerNight != null ? `, cena: ${place.pricePerNight}€/os/noc` : '') + // NOVÉ
+                (place.pricePerNight != null ? `, cena: ${place.pricePerNight.toFixed(2)} €/os/noc` : '')
                 (place.note ? `, poznámka: ${place.note}` : '');
             await createPlaceChangeNotification('place_deleted', [deleteMessage], {
                 id: place.id,
