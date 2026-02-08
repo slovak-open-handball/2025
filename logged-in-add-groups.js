@@ -825,12 +825,15 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
 
     const handleDeleteClick = (group, categoryId) => {
-        // PRIDANÉ: Kontrola, či sa skupina používa
-        if (isGroupUsed(categoryId, group.name)) {
+        // Kontrola, či je skupina používaná v databáze alebo superštruktúre
+        const isUsed = isGroupUsed(categoryId, group.name);
+        
+        if (isUsed) {
             window.showGlobalNotification('Túto skupinu nie je možné zmazať, pretože je priradená k existujúcim tímom.', 'error');
-            return;
+            return; // Ukončíme funkciu, neukážeme dialógové okno
         }
         
+        // Ak skupina nie je používaná, zobrazíme dialógové okno na potvrdenie
         setGroupToDelete(group);
         setCategoryOfGroupToDelete(categoryId);
         setDeleteModalVisible(true);
@@ -839,9 +842,11 @@ const AddGroupsApp = ({ userProfileData }) => {
     const handleConfirmDelete = async () => {
         if (!groupToDelete || !categoryOfGroupToDelete) return;
 
-        // PRIDANÉ: Kontrola, či sa skupina používa
-        if (isGroupUsed(categoryOfGroupToDelete, groupToDelete.name)) {
-            window.showGlobalNotification('Túto skupinu nie je možné zmazať, pretože je priradená k existujúcim tímom.', 'error');
+        // Dvojitá kontrola - ale táto by už nemala byť potrebná
+        // pretože sme zabránili zobrazeniu dialógového okna pre používané skupiny
+        const isUsed = isGroupUsed(categoryOfGroupToDelete, groupToDelete.name);
+        if (isUsed) {
+            window.showGlobalNotification('Túto skupinu nie je možné zmazať, pretože obsahuje apoň jeden tím.', 'error');
             setDeleteModalVisible(false);
             setGroupToDelete(null);
             setCategoryOfGroupToDelete('');
