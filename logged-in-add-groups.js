@@ -367,13 +367,13 @@ window.showGlobalNotification = (message, type = 'success') => {
 
 // Modal pre úpravu skupiny
 const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingGroups, onUpdate }) => {
-    const [groupName, setGroupName] = useState(groupToEdit?.name || '');
-    const [groupType, setGroupType] = useState(groupToEdit?.type || 'základná skupina');
-
+    const [groupName, setGroupName] = useState('');
+    const [groupType, setGroupType] = useState('');
+    
     useEffect(() => {
         if (groupToEdit) {
-            setGroupName(groupToEdit.name);
-            setGroupType(groupToEdit.type);
+            setGroupName(groupToEdit.name || '');
+            setGroupType(groupToEdit.type || 'základná skupina');
         }
     }, [groupToEdit]);
 
@@ -415,6 +415,36 @@ const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingG
             window.showGlobalNotification('Nastala chyba pri aktualizácii skupiny.', 'error');
         }
     };
+
+    useEffect(() => {
+        const handleEscape = (e) => {
+            if (e.key === 'Escape' && isVisible) {
+                onClose();
+            }
+        };
+        
+        const handleClickOutside = (e) => {
+            if (isVisible && e.target.classList.contains('fixed')) {
+                onClose();
+            }
+        };
+        
+        if (isVisible) {
+            document.addEventListener('keydown', handleEscape);
+            document.addEventListener('click', handleClickOutside);
+            
+            // Zablokujte scroll na pozadí
+            document.body.style.overflow = 'hidden';
+        }
+        
+        return () => {
+            document.removeEventListener('keydown', handleEscape);
+            document.removeEventListener('click', handleClickOutside);
+            document.body.style.overflow = 'auto';
+        };
+    }, [isVisible, onClose]);
+    
+    if (!isVisible || !groupToEdit) return null;
 
     return React.createElement(
         'div',
@@ -672,7 +702,7 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
     );
 };
 
-const AddGroupsApp = ({ userProfileData }) => {
+const AddGroupsApp = React.memo(({ userProfileData }) => {
     const [categories, setCategories] = useState([]);
     const [groups, setGroups] = useState({});
     const [isCreateModalVisible, setCreateModalVisible] = useState(false);
@@ -693,81 +723,84 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [superstructureTeams, setSuperstructureTeams] = useState([]);
 
     useEffect(() => {
-        // Načítanie kategórií v reálnom čase
-        const unsubscribeCategories = onSnapshot(doc(window.db, 'settings', 'categories'), (docSnap) => {
-                if (docSnap.exists()) {
-                    const categoriesData = docSnap.data();
-                    console.log("DEBUG: Všetky kategórie z databázy:", categoriesData);
+        let isMounted = true;
+        let unsubscribeCategories = null;
+        let unsubscribeGroups = null;
+        let realTimeUnsubscribe = null;
+        
+        const setupListeners = async () => {
+            if (!isMounted) return;
+            
+            try {
+                // 1. Nastavíme listener pre kategórie
+                unsubscribeCategories = onSnapshot(doc(window.db, 'settings', 'categories'), (docSnap) => {
+                    if (!isMounted) return;
                     
-                    const loadedCategories = Object.keys(categoriesData).map(id => ({
-                        id: id,
-                        name: categoriesData[id].name
-                    }));
-                    loadedCategories.sort((a, b) => a.name.localeCompare(b.name));
-                    setCategories(loadedCategories);
-            
-                    // Debug: Vypíšeme ID a názvy
-                    loadedCategories.forEach(cat => {
-                        console.log(`DEBUG Kategória: id="${cat.id}", name="${cat.name}"`);
-                    });
-                } else {
-                    setCategories([]);
-                    console.log("Dokument 'categories' nebol nájdený v 'settings'.");
-                }
-            }, (error) => {
-                console.error("Chyba pri načítavaní kategórií v reálnom čase:", error);
-            });
-
-        // Načítanie skupín v reálnom čase
-        const unsubscribeGroups = onSnapshot(doc(window.db, 'settings', 'groups'), (docSnap) => {
-            if (docSnap.exists()) {
-                setGroups(docSnap.data());
-            } else {
-                setGroups({});
-            }
-        }, (error) => {
-            console.error("Chyba pri načítavaní skupín v reálnom čase:", error);
-        });
-        
-        // PRIDANÉ: Automaticky načítame údaje o používateľoch pri načítaní komponentu
-        const loadUsersData = async () => {
-            try {
-                const { allTeams } = await loadAndLogAllUsersData();
-                // Uložíme tímy z databázy do stavu
-                setDatabaseTeams(allTeams);
-                setUsersDataLoaded(true);
+                    if (docSnap.exists()) {
+                        const categoriesData = docSnap.data();
+                        const loadedCategories = Object.keys(categoriesData).map(id => ({
+                            id: id,
+                            name: categoriesData[id].name
+                        }));
+                        loadedCategories.sort((a, b) => a.name.localeCompare(b.name));
+                        setCategories(loadedCategories);
+                    } else {
+                        setCategories([]);
+                    }
+                }, (error) => {
+                    console.error("Chyba pri načítavaní kategórií:", error);
+                });
                 
-                // Nastavíme sledovanie v reálnom čase
-                const unsubscribe = setupRealTimeUsersListener();
-                setRealTimeListener(() => unsubscribe);
-            } catch (error) {
-                console.error("Chyba pri automatickom načítavaní údajov používateľov:", error);
-            }
-        };
-        
-        // PRIDANÉ: Načítame superštruktúrové tímy
-        const loadSuperstructureTeams = async () => {
-            try {
+                // 2. Nastavíme listener pre skupiny
+                unsubscribeGroups = onSnapshot(doc(window.db, 'settings', 'groups'), (docSnap) => {
+                    if (!isMounted) return;
+                    
+                    if (docSnap.exists()) {
+                        setGroups(docSnap.data());
+                    } else {
+                        setGroups({});
+                    }
+                }, (error) => {
+                    console.error("Chyba pri načítavaní skupín:", error);
+                });
+                
+                // 3. Načítame údaje (iba raz)
+                const { allTeams } = await loadAndLogAllUsersData();
+                if (isMounted) {
+                    setDatabaseTeams(allTeams);
+                    setUsersDataLoaded(true);
+                }
+                
+                // 4. Nastavíme real-time listener pre používateľov
+                realTimeUnsubscribe = setupRealTimeUsersListener();
+                
+                // 5. Načítame superštruktúrové tímy
                 const teams = await loadAndLogSuperstructureTeams();
-                setSuperstructureTeams(teams);
+                if (isMounted) {
+                    setSuperstructureTeams(teams);
+                }
+                
             } catch (error) {
-                console.error("Chyba pri načítavaní superštruktúrových tímov:", error);
+                console.error("Chyba pri inicializácii:", error);
             }
         };
         
-        loadUsersData();
-        loadSuperstructureTeams();
-
+        setupListeners();
+        
         return () => {
-            unsubscribeCategories();
-            unsubscribeGroups();
+            isMounted = false;
             
-            // PRIDANÉ: Zastavíme sledovanie v reálnom čase pri odstránení komponentu
-            if (realTimeListener) {
-                realTimeListener();
+            if (unsubscribeCategories) unsubscribeCategories();
+            if (unsubscribeGroups) unsubscribeGroups();
+            if (realTimeUnsubscribe) realTimeUnsubscribe();
+            
+            // Vymažeme aj globálny listener, ak existuje
+            const existingListener = window.removeEventListener;
+            if (existingListener) {
+                window.removeEventListener('globalDataUpdated', handleDataUpdateAndRender);
             }
         };
-    }, []);
+    }, []); // Prázdne dependency - len raz pri mounte
 
     const getCategoryNameById = (categoryId) => {
         const category = categories.find(cat => cat.id === categoryId);
@@ -788,7 +821,6 @@ const AddGroupsApp = ({ userProfileData }) => {
         
         // Získame názov kategórie z ID
         const categoryName = getCategoryNameById(categoryId);
-        console.log(`DEBUG isGroupUsedInDatabase: Hľadám ${categoryName} ("${groupName}")`);
         
         // Skontrolujeme, či existuje aspoň jeden tím v tejto kategórii s danou skupinou
         const found = databaseTeams.some(team => {
@@ -799,10 +831,6 @@ const AddGroupsApp = ({ userProfileData }) => {
             return teamCategory === categoryName && teamGroup === groupName;
         });
         
-        // DEBUG log
-        if (found) {
-            console.log(`DEBUG: Nájdený tím v databáze: ${categoryName} - "${groupName}"`);
-        }
         
         return found;
     };
@@ -815,7 +843,6 @@ const AddGroupsApp = ({ userProfileData }) => {
         
         // Získame názov kategórie z ID
         const categoryName = getCategoryNameById(categoryId);
-        console.log(`DEBUG isGroupInSuperstructure: Hľadám ${categoryName} ("${groupName}")`);
         
         // Skontrolujeme, či existuje aspoň jeden superštruktúrový tím v tejto kategórii s danou skupinou
         const found = superstructureTeams.some(team => {
@@ -826,20 +853,15 @@ const AddGroupsApp = ({ userProfileData }) => {
             return teamCategory === categoryName && teamGroup === groupName;
         });
         
-        // DEBUG log
-        if (found) {
-            console.log(`DEBUG: Nájdený superštruktúrový tím: ${categoryName} - "${groupName}"`);
-        }
-        
         return found;
     };
     
     // PRIDANÉ: Kombinovaná funkcia na kontrolu, či skupina je používaná
     const isGroupUsed = (categoryId, groupName) => {
         const categoryName = getCategoryNameById(categoryId);
-        console.log(`DEBUG isGroupUsed: Kontrolujem ${categoryName} (ID: ${categoryId}) - "${groupName}"`);
-        console.log(`DEBUG: databaseTeams dĺžka: ${databaseTeams ? databaseTeams.length : 'null'}`);
-        console.log(`DEBUG: superstructureTeams dĺžka: ${superstructureTeams ? superstructureTeams.length : 'null'}`);
+//        console.log(`DEBUG isGroupUsed: Kontrolujem ${categoryName} (ID: ${categoryId}) - "${groupName}"`);
+//        console.log(`DEBUG: databaseTeams dĺžka: ${databaseTeams ? databaseTeams.length : 'null'}`);
+//        console.log(`DEBUG: superstructureTeams dĺžka: ${superstructureTeams ? superstructureTeams.length : 'null'}`);
         
         const usedInDatabase = isGroupUsedInDatabase(categoryId, groupName);
         const usedInSuperstructure = isGroupInSuperstructure(categoryId, groupName);
@@ -851,26 +873,28 @@ const AddGroupsApp = ({ userProfileData }) => {
         return isUsed;
     };
 
-    const handleEditClick = (group, categoryId) => {
+    const handleEditClick = useCallback((group, categoryId) => {
         setGroupToEdit(group);
         setCategoryOfGroupToEdit(categoryId);
         setEditModalVisible(true);
-    };
+    }, []);
 
-    const handleDeleteClick = (group, categoryId) => {
-        // Kontrola, či je skupina používaná v databáze alebo superštruktúre
+    const handleDeleteClick = useCallback((group, categoryId) => {
+        // Optimalizovaná verzia s memoizáciou
         const isUsed = isGroupUsed(categoryId, group.name);
         
         if (isUsed) {
-            window.showGlobalNotification('Túto skupinu nie je možné zmazať, pretože je priradená k existujúcim tímom.', 'error');
-            return; // Ukončíme funkciu, neukážeme dialógové okno
+            window.showGlobalNotification(
+                'Túto skupinu nie je možné zmazať, pretože je priradená k existujúcim tímom.', 
+                'error'
+            );
+            return;
         }
         
-        // Ak skupina nie je používaná, zobrazíme dialógové okno na potvrdenie
         setGroupToDelete(group);
         setCategoryOfGroupToDelete(categoryId);
         setDeleteModalVisible(true);
-    };
+    }, [isGroupUsed]);
 
     const handleConfirmDelete = async () => {
         if (!groupToDelete || !categoryOfGroupToDelete) return;
@@ -903,10 +927,12 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
     
     // Vytvorenie mapy pre rýchle vyhľadávanie názvov kategórií
-    const categoryNamesMap = categories.reduce((map, category) => {
-        map[category.id] = category.name;
-        return map;
-    }, {});
+    const categoryNamesMap = useMemo(() => {
+        return categories.reduce((map, category) => {
+            map[category.id] = category.name;
+            return map;
+        }, {});
+    }, [categories]);
 
     return React.createElement(
         'div',
