@@ -371,6 +371,12 @@ const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingG
     const [groupType, setGroupType] = useState(groupToEdit?.type || 'základná skupina');
     // Pridaný stav pre sledovanie chybového hlásenia
     const [nameError, setNameError] = useState('');
+    const [allFieldsFilled, setAllFieldsFilled] = useState(false);
+
+    useEffect(() => {
+        const fieldsFilled = groupName.trim() !== '' && groupType !== '';
+        setAllFieldsFilled(fieldsFilled);
+    }, [groupName, groupType]);
 
     useEffect(() => {
         if (groupToEdit) {
@@ -379,6 +385,8 @@ const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingG
             setNameError('');
         }
     }, [groupToEdit]);
+
+    const isButtonDisabled = !allFieldsFilled || !!nameError;
 
     // Funkcia na kontrolu duplicity názvu skupiny
     const checkGroupNameDuplicate = () => {
@@ -505,9 +513,9 @@ const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingG
                     React.createElement(
                         'button',
                         {
-                            className: `flex-1 w-full px-4 py-2 text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 sm:ml-3 ${nameError ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 text-white focus:ring-blue-500'}`,
+                            className: `flex-1 w-full px-4 py-2 text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 sm:ml-3 ${isButtonDisabled ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed hover:cursor-default' : 'bg-blue-500 hover:bg-blue-700 text-white focus:ring-blue-500'}`,
                             onClick: handleUpdateGroup,
-                            disabled: !!nameError
+                            disabled: isButtonDisabled
                         },
                         'Aktualizovať'
                     ),
@@ -577,6 +585,7 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
     const [groupType, setGroupType] = useState('základná skupina');
     // Pridaný stav pre sledovanie chybového hlásenia
     const [nameError, setNameError] = useState('');
+    const [allFieldsFilled, setAllFieldsFilled] = useState(false);
 
     // Funkcia na kontrolu duplicity názvu skupiny
     const checkGroupNameDuplicate = useCallback(() => {
@@ -598,6 +607,13 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
             return false;
         }
     }, [selectedCategoryId, groupName, existingGroups]);
+
+    const isButtonDisabled = !allFieldsFilled || !!nameError;
+
+    useEffect(() => {
+        const fieldsFilled = selectedCategoryId !== '' && groupName.trim() !== '' && groupType !== '';
+        setAllFieldsFilled(fieldsFilled);
+    }, [selectedCategoryId, groupName, groupType]);
 
     // Pridané: Kontrola duplicity pri zmene názvu skupiny
     useEffect(() => {
@@ -748,9 +764,9 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
                     React.createElement(
                         'button',
                         {
-                            className: `flex-1 w-full px-4 py-2 text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 sm:ml-3 ${nameError ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-700 text-white focus:ring-blue-500'}`,
+                            className: `flex-1 w-full px-4 py-2 text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 sm:ml-3 ${isButtonDisabled ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed hover:cursor-default' : 'bg-blue-500 hover:bg-blue-700 text-white focus:ring-blue-500'}`,
                             onClick: handleCreateGroup,
-                            disabled: !!nameError
+                            disabled: isButtonDisabled
                         },
                         'Vytvoriť'
                     ),
