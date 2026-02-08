@@ -686,6 +686,9 @@ const AddGroupsApp = ({ userProfileData }) => {
     // Pridané: stav pre sledovanie, či sa majú načítať údaje
     const [usersDataLoaded, setUsersDataLoaded] = useState(false);
     const [realTimeListener, setRealTimeListener] = useState(null);
+    
+    // PRIDANÉ: stav pre ukladanie tímov z databázy
+    const [databaseTeams, setDatabaseTeams] = useState([]);
 
     useEffect(() => {
         // Načítanie kategórií v reálnom čase
@@ -720,7 +723,9 @@ const AddGroupsApp = ({ userProfileData }) => {
         // PRIDANÉ: Automaticky načítame údaje o používateľoch pri načítaní komponentu
         const loadUsersData = async () => {
             try {
-                await loadAndLogAllUsersData();
+                const { allTeams } = await loadAndLogAllUsersData();
+                // Uložíme tímy z databázy do stavu
+                setDatabaseTeams(allTeams);
                 setUsersDataLoaded(true);
                 
                 // Nastavíme sledovanie v reálnom čase
@@ -754,6 +759,19 @@ const AddGroupsApp = ({ userProfileData }) => {
         };
     }, []);
 
+    // PRIDANÉ: Funkcia na kontrolu, či skupina má tímy v databáze
+    const isGroupUsedInDatabase = (categoryId, groupName) => {
+        if (!databaseTeams || databaseTeams.length === 0) {
+            return false;
+        }
+        
+        // Skontrolujeme, či existuje aspoň jeden tím v tejto kategórii s danou skupinou
+        return databaseTeams.some(team => 
+            team.category === categoryId && 
+            team.groupName === groupName
+        );
+    };
+
     const handleEditClick = (group, categoryId) => {
         setGroupToEdit(group);
         setCategoryOfGroupToEdit(categoryId);
@@ -761,6 +779,12 @@ const AddGroupsApp = ({ userProfileData }) => {
     };
 
     const handleDeleteClick = (group, categoryId) => {
+        // PRIDANÉ: Kontrola, či sa skupina používa v databáze
+        if (isGroupUsedInDatabase(categoryId, group.name)) {
+            window.showGlobalNotification('Túto skupinu nie je možné zmazať, pretože obsahuje tímy v databáze.', 'error');
+            return;
+        }
+        
         setGroupToDelete(group);
         setCategoryOfGroupToDelete(categoryId);
         setDeleteModalVisible(true);
@@ -823,8 +847,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                         { key: category.id, className: 'w-1/5 bg-white rounded-lg shadow-md p-4 flex flex-col items-center text-center' },
                         React.createElement('h3', { className: 'text-lg font-semibold mb-2' }, category.name),
                         React.createElement('ul', { className: 'w-full' },
-                            sortedGroups.map((group, groupIndex) =>
-                                React.createElement('li', {
+                            sortedGroups.map((group, groupIndex) => {
+                                // PRIDANÉ: Kontrola, či sa skupina používa v databáze
+                                const isUsed = isGroupUsedInDatabase(category.id, group.name);
+                                
+                                return React.createElement('li', {
                                     key: groupIndex,
                                     className: `
                                         ${group.type === 'nadstavbová skupina' ? 'bg-blue-100' : 'bg-gray-100'}
@@ -833,7 +860,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 }, 
                                     React.createElement('div', { className: 'flex-1 text-left' },
                                         React.createElement('div', { className: 'font-semibold' }, group.name),
-                                        React.createElement('div', { className: 'text-gray-500 text-xs' }, group.type)
+                                        React.createElement('div', { className: 'text-gray-500 text-xs' }, group.type),
+                                        // PRIDANÉ: Zobrazenie indikátora, ak je skupina používaná
+                                        isUsed && React.createElement(
+                                            'div',
+                                            { className: 'text-xs text-red-500 mt-1' },
+                                            'Obsahuje tímy v databáze'
+                                        )
                                     ),
                                     React.createElement('div', { className: 'flex gap-2' },
                                         React.createElement(
@@ -857,8 +890,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                                         React.createElement(
                                             'button',
                                             {
-                                                className: 'text-gray-500 hover:text-red-500 transition-colors duration-200',
-                                                onClick: () => handleDeleteClick(group, category.id)
+                                                className: `transition-colors duration-200 ${isUsed ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-red-500'}`,
+                                                onClick: isUsed ? null : () => handleDeleteClick(group, category.id),
+                                                disabled: isUsed,
+                                                title: isUsed ? 'Skupina obsahuje tímy v databáze a nie je možné ju zmazať' : 'Zmazať skupinu'
                                             },
                                             React.createElement(
                                                 'svg',
@@ -872,8 +907,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                                             )
                                         )
                                     )
-                                )
-                            )
+                                );
+                            })
                         )
                     )
                 })
