@@ -578,10 +578,8 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
     // Pridaný stav pre sledovanie chybového hlásenia
     const [nameError, setNameError] = useState('');
 
-    if (!isVisible) return null;
-
     // Funkcia na kontrolu duplicity názvu skupiny
-    const checkGroupNameDuplicate = () => {
+    const checkGroupNameDuplicate = useCallback(() => {
         if (!selectedCategoryId || !groupName.trim()) {
             setNameError('');
             return false;
@@ -599,7 +597,7 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
             setNameError('');
             return false;
         }
-    };
+    }, [selectedCategoryId, groupName, existingGroups]);
 
     // Pridané: Kontrola duplicity pri zmene názvu skupiny
     useEffect(() => {
@@ -608,7 +606,7 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
         } else {
             setNameError('');
         }
-    }, [groupName, selectedCategoryId]);
+    }, [groupName, selectedCategoryId, checkGroupNameDuplicate]);
 
     // Pridané: Kontrola duplicity pri zmene kategórie
     useEffect(() => {
@@ -617,7 +615,19 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
         } else {
             setNameError('');
         }
-    }, [selectedCategoryId]);
+    }, [selectedCategoryId, groupName.trim(), checkGroupNameDuplicate]);
+
+    // Reset formulára pri otvorení/zatvorení modálu
+    useEffect(() => {
+        if (!isVisible) {
+            setSelectedCategoryId('');
+            setGroupName('');
+            setGroupType('základná skupina');
+            setNameError('');
+        }
+    }, [isVisible]);
+
+    if (!isVisible) return null;
 
     const handleCreateGroup = async () => {
         if (!selectedCategoryId || !groupName || !groupType) {
@@ -644,11 +654,6 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
             });
 
             window.showGlobalNotification('Skupina bola úspešne vytvorená.', 'success');
-            // Reset formulára po úspešnom vytvorení
-            setSelectedCategoryId('');
-            setGroupName('');
-            setGroupType('základná skupina');
-            setNameError('');
             onClose(); // Zatvorenie modálneho okna po úspešnom uložení
         } catch (e) {
             // Ak dokument 'groups' neexistuje, vytvoríme ho
@@ -662,11 +667,6 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
                     [selectedCategoryId]: [newGroup]
                 });
                 window.showGlobalNotification('Skupina bola úspešne vytvorená.', 'success');
-                // Reset formulára po úspešnom vytvorení
-                setSelectedCategoryId('');
-                setGroupName('');
-                setGroupType('základná skupina');
-                setNameError('');
                 onClose();
             } else {
                 console.error("Chyba pri pridávaní skupiny: ", e);
