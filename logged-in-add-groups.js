@@ -14,7 +14,7 @@ const { useState, useEffect, useRef, useSyncExternalStore } = React;
  */
 const loadAndLogAllUsersData = async () => {
     try {
-        console.log("=== NAČÍTAVANIE VŠETKÝCH ÚDAJOV Z DATABÁZY (users) ===");
+        console.log("=== NAČÍTAVANIE TÍMOV Z DATABÁZY ===");
         
         // 1. Načítanie všetkých používateľských dokumentov
         const usersCollectionRef = collection(window.db, 'users');
@@ -22,104 +22,74 @@ const loadAndLogAllUsersData = async () => {
         
         console.log(`Počet používateľov v databáze: ${querySnapshot.size}`);
         
+        let allTeams = [];
+        
         // 2. Prechádzanie všetkých dokumentov
         querySnapshot.forEach((docSnap) => {
             const userData = docSnap.data();
             
-            // Získame základné informácie o používateľovi
-            const userEmail = userData.email || "N/A";
-            const userName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || "N/A";
-            const clubName = userData.billing?.clubName || "N/A";
-            
-            console.log(`\n--- Používateľ ID: ${docSnap.id} ---`);
-            console.log(`Email: ${userEmail}`);
-            console.log(`Meno: ${userName}`);
-            console.log(`Klub: ${clubName}`);
-            
-            // Získame kategórie a tímy používateľa
-            const categories = userData.categories || {};
+            // Získame tímy používateľa
             const teams = userData.teams || {};
             
-            console.log("Kategórie a tímy:");
-            
             // Prechádzame cez všetky kategórie používateľa
-            Object.keys(categories).forEach(categoryId => {
-                const categoryInfo = categories[categoryId];
-                const numberOfTeams = categoryInfo.numberOfTeams || 0;
-                
-                console.log(`  • Kategória: ${categoryId}`);
-                console.log(`    Počet tímov: ${numberOfTeams}`);
-                
-                // Získame tímy pre túto kategóriu
+            Object.keys(teams).forEach(categoryId => {
                 const teamsInCategory = teams[categoryId] || [];
                 
-                if (teamsInCategory.length > 0) {
-                    teamsInCategory.forEach((team, index) => {
-                        const teamName = team.teamName || "Názov tímu neznámy";
-                        const groupName = team.groupName || "Skupina neznáma";
-                        
-                        console.log(`    Tím ${index + 1}: ${teamName}`);
-                        console.log(`      Skupina: ${groupName}`);
+                teamsInCategory.forEach((team) => {
+                    const teamName = team.teamName || "Názov tímu neznámy";
+                    const groupName = team.groupName || "Skupina neznáma";
+                    
+                    // Uložíme tím do zoznamu
+                    allTeams.push({
+                        category: categoryId,
+                        teamName: teamName,
+                        groupName: groupName,
+                        userId: docSnap.id,
+                        userName: `${userData.firstName || ''} ${userData.lastName || ''}`.trim()
                     });
-                } else {
-                    console.log(`    Žiadne tímy v tejto kategórii`);
-                }
-            });
-            
-            // Ak používateľ nemá žiadne kategórie, ale má tímy
-            if (Object.keys(categories).length === 0 && Object.keys(teams).length > 0) {
-                console.log("  Používateľ má tímy, ale nie sú priradené ku kategóriám:");
-                Object.keys(teams).forEach(categoryId => {
-                    const teamsInCategory = teams[categoryId] || [];
-                    if (teamsInCategory.length > 0) {
-                        console.log(`  • Kategória z tímov: ${categoryId}`);
-                        teamsInCategory.forEach((team, index) => {
-                            const teamName = team.teamName || "Názov tímu neznámy";
-                            const groupName = team.groupName || "Skupina neznáma";
-                            
-                            console.log(`    Tím ${index + 1}: ${teamName}`);
-                            console.log(`      Skupina: ${groupName}`);
-                        });
-                    }
                 });
-            }
-            
-            // Ak používateľ nemá žiadne kategórie ani tímy
-            if (Object.keys(categories).length === 0 && Object.keys(teams).length === 0) {
-                console.log("  Používateľ nemá žiadne kategórie ani tímy");
-            }
-            
-            console.log("--- Koniec údajov používateľa ---");
+            });
         });
+        
+        // Zoradenie tímov podľa kategórie a názvu tímu
+        allTeams.sort((a, b) => {
+            if (a.category !== b.category) {
+                return a.category.localeCompare(b.category);
+            }
+            return a.teamName.localeCompare(b.teamName);
+        });
+        
+        // Vypíšeme všetky tímy v požadovanom formáte
+        console.log("\n--- VŠETKY TÍMY ---");
+        if (allTeams.length === 0) {
+            console.log("Žiadne tímy v databáze.");
+        } else {
+            allTeams.forEach(team => {
+                console.log(`${team.category}: "${team.teamName}" ("${team.groupName}")`);
+            });
+        }
         
         console.log("\n=== SÚHRN ===");
         console.log(`Celkový počet používateľov: ${querySnapshot.size}`);
+        console.log(`Celkový počet tímov: ${allTeams.length}`);
         
-        // Spočítame celkový počet tímov
-        let totalTeams = 0;
-        let usersWithTeams = 0;
-        
-        querySnapshot.forEach((docSnap) => {
-            const userData = docSnap.data();
-            const teams = userData.teams || {};
-            
-            let userTeamsCount = 0;
-            Object.keys(teams).forEach(categoryId => {
-                userTeamsCount += (teams[categoryId] || []).length;
-            });
-            
-            if (userTeamsCount > 0) {
-                usersWithTeams++;
-                totalTeams += userTeamsCount;
+        // Zoskupenie tímov podľa kategórie pre štatistiky
+        const teamsByCategory = {};
+        allTeams.forEach(team => {
+            if (!teamsByCategory[team.category]) {
+                teamsByCategory[team.category] = [];
             }
+            teamsByCategory[team.category].push(team);
         });
         
-        console.log(`Počet používateľov s aspoň jedným tímom: ${usersWithTeams}`);
-        console.log(`Celkový počet tímov: ${totalTeams}`);
+        console.log("\nPočet tímov podľa kategórie:");
+        Object.keys(teamsByCategory).sort().forEach(category => {
+            console.log(`  ${category}: ${teamsByCategory[category].length} tímov`);
+        });
         
-        console.log("=== KONIEC NAČÍTAVANIA ÚDAJOV Z DATABÁZY ===");
+        console.log("=== KONIEC NAČÍTAVANIA ÚDAJOV ===");
         
-        return querySnapshot;
+        return { querySnapshot, allTeams, teamsByCategory };
     } catch (error) {
         console.error("Chyba pri načítavaní údajov z databázy:", error);
         window.showGlobalNotification('Nastala chyba pri načítavaní údajov z databázy.', 'error');
@@ -137,69 +107,66 @@ const setupRealTimeUsersListener = () => {
         const usersCollectionRef = collection(window.db, 'users');
         
         const unsubscribe = onSnapshot(usersCollectionRef, (snapshot) => {
-            console.log(`\n=== ZMENA V REÁLNOM ČASE - Počet dokumentov: ${snapshot.size} ===`);
+            console.log(`\n=== ZMENA V REÁLNOM ČASE ===`);
             
+            let newTeams = [];
+            
+            // Získame všetky tímy po zmene
+            snapshot.forEach((docSnap) => {
+                const userData = docSnap.data();
+                const teams = userData.teams || {};
+                
+                Object.keys(teams).forEach(categoryId => {
+                    const teamsInCategory = teams[categoryId] || [];
+                    
+                    teamsInCategory.forEach((team) => {
+                        const teamName = team.teamName || "Názov tímu neznámy";
+                        const groupName = team.groupName || "Skupina neznáma";
+                        
+                        newTeams.push({
+                            category: categoryId,
+                            teamName: teamName,
+                            groupName: groupName,
+                            userId: docSnap.id
+                        });
+                    });
+                });
+            });
+            
+            // Zoradenie
+            newTeams.sort((a, b) => {
+                if (a.category !== b.category) {
+                    return a.category.localeCompare(b.category);
+                }
+                return a.teamName.localeCompare(b.teamName);
+            });
+            
+            // Vypíšeme zmeny
+            console.log(`Počet tímov po zmene: ${newTeams.length}`);
+            console.log("Aktuálny stav tímov:");
+            
+            if (newTeams.length === 0) {
+                console.log("Žiadne tímy v databáze.");
+            } else {
+                newTeams.forEach(team => {
+                    console.log(`${team.category}: "${team.teamName}" ("${team.groupName}")`);
+                });
+            }
+            
+            // Zobrazenie zmien
             snapshot.docChanges().forEach((change) => {
                 const userData = change.doc.data();
                 const userEmail = userData.email || "N/A";
                 const userName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || "N/A";
                 
-                console.log(`\nZmena typu: ${change.type}`);
-                console.log(`ID dokumentu: ${change.doc.id}`);
-                console.log(`Email: ${userEmail}`);
-                console.log(`Meno: ${userName}`);
-                
-                // Vypíšeme zmeny v tímoch
-                const categories = userData.categories || {};
-                const teams = userData.teams || {};
-                
-                if (Object.keys(categories).length > 0) {
-                    console.log("Aktualizované tímy:");
-                    Object.keys(categories).forEach(categoryId => {
-                        const teamsInCategory = teams[categoryId] || [];
-                        if (teamsInCategory.length > 0) {
-                            console.log(`  Kategória: ${categoryId}`);
-                            teamsInCategory.forEach((team, index) => {
-                                const teamName = team.teamName || "Názov tímu neznámy";
-                                const groupName = team.groupName || "Skupina neznáma";
-                                
-                                console.log(`    Tím: ${teamName} (Skupina: ${groupName})`);
-                            });
-                        }
-                    });
-                }
-                
                 if (change.type === 'added') {
-                    console.log("💾 Nový používateľ pridaný do databázy");
+                    console.log(`💾 Nový používateľ: ${userEmail} (${userName})`);
                 } else if (change.type === 'modified') {
-                    console.log("✏️ Používateľ aktualizovaný");
+                    console.log(`✏️ Aktualizovaný používateľ: ${userEmail} (${userName})`);
                 } else if (change.type === 'removed') {
-                    console.log("🗑️ Používateľ odstránený z databázy");
+                    console.log(`🗑️ Odstránený používateľ: ID ${change.doc.id}`);
                 }
             });
-            
-            // Celkový prehľad
-            console.log("\n--- CELKOVÝ PREHĽAD POUŽÍVATEĽOV ---");
-            let totalTeams = 0;
-            
-            snapshot.forEach((docSnap) => {
-                const data = docSnap.data();
-                const userEmail = data.email || 'N/A';
-                const userName = `${data.firstName || ''} ${data.lastName || ''}`.trim() || 'N/A';
-                const categories = data.categories || {};
-                const teams = data.teams || {};
-                
-                let userTeamsCount = 0;
-                Object.keys(teams).forEach(categoryId => {
-                    userTeamsCount += (teams[categoryId] || []).length;
-                });
-                
-                totalTeams += userTeamsCount;
-                
-                console.log(`${docSnap.id}: ${userEmail} (${userName}) - tímov: ${userTeamsCount}`);
-            });
-            
-            console.log(`\nCelkový počet tímov všetkých používateľov: ${totalTeams}`);
         }, (error) => {
             console.error("Chyba pri sledovaní zmien v reálnom čase:", error);
         });
@@ -683,7 +650,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 usersDataLoaded && React.createElement(
                     'div',
                     { className: 'mt-2 text-sm text-gray-500' },
-                    'Dáta používateľov boli načítané do konzoly'
+                    'Tímy boli načítané do konzoly'
                 )
             ),
             React.createElement(
