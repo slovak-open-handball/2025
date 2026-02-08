@@ -98,6 +98,61 @@ const loadAndLogAllUsersData = async () => {
 };
 
 /**
+ * Funkcia na načítanie a vypísanie údajov z dokumentu superstructureGroups
+ */
+const loadAndLogSuperstructureGroups = async () => {
+    try {
+        console.log("\n=== NAČÍTAVANIE NADSTAVBOVÝCH SKUPÍN ===");
+        
+        // Načítanie dokumentu superstructureGroups z kolekcie settings
+        const superstructureGroupsDocRef = doc(window.db, 'settings', 'superstructureGroups');
+        const docSnap = await getDoc(superstructureGroupsDocRef);
+        
+        if (docSnap.exists()) {
+            const superstructureGroupsData = docSnap.data();
+            console.log("Dáta z dokumentu 'superstructureGroups':");
+            
+            // Prechádzame cez všetky polia v dokumente
+            Object.keys(superstructureGroupsData).forEach(categoryId => {
+                const groupsInCategory = superstructureGroupsData[categoryId] || [];
+                
+                console.log(`\nKategória: ${categoryId}`);
+                console.log(`Počet nadstavbových skupín: ${groupsInCategory.length}`);
+                
+                if (groupsInCategory.length > 0) {
+                    console.log("Nadstavbové skupiny:");
+                    groupsInCategory.forEach((group, index) => {
+                        console.log(`  ${index + 1}. "${group}"`);
+                    });
+                } else {
+                    console.log("  Žiadne nadstavbové skupiny");
+                }
+            });
+            
+            // Celkový súhrn
+            let totalSuperstructureGroups = 0;
+            Object.keys(superstructureGroupsData).forEach(categoryId => {
+                totalSuperstructureGroups += (superstructureGroupsData[categoryId] || []).length;
+            });
+            
+            console.log(`\nCelkový počet nadstavbových skupín: ${totalSuperstructureGroups}`);
+            console.log(`Počet kategórií s nadstavbovými skupinami: ${Object.keys(superstructureGroupsData).length}`);
+            
+        } else {
+            console.log("Dokument 'superstructureGroups' nebol nájdený v kolekcii 'settings'.");
+        }
+        
+        console.log("=== KONIEC NAČÍTAVANIA NADSTAVBOVÝCH SKUPÍN ===");
+        
+        return docSnap.exists() ? docSnap.data() : null;
+    } catch (error) {
+        console.error("Chyba pri načítavaní nadstavbových skupín:", error);
+        window.showGlobalNotification('Nastala chyba pri načítavaní nadstavbových skupín.', 'error');
+        throw error;
+    }
+};
+
+/**
  * Funkcia na sledovanie zmien v reálnom čase pre všetkých používateľov
  */
 const setupRealTimeUsersListener = () => {
@@ -578,7 +633,17 @@ const AddGroupsApp = ({ userProfileData }) => {
             }
         };
         
+        // PRIDANÉ: Načítame nadstavbové skupiny
+        const loadSuperstructureGroups = async () => {
+            try {
+                await loadAndLogSuperstructureGroups();
+            } catch (error) {
+                console.error("Chyba pri načítavaní nadstavbových skupín:", error);
+            }
+        };
+        
         loadUsersData();
+        loadSuperstructureGroups();
 
         return () => {
             unsubscribeCategories();
@@ -642,7 +707,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 usersDataLoaded && React.createElement(
                     'div',
                     { className: 'mt-2 text-sm text-gray-500' },
-                    'Tímy boli načítané do konzoly'
+                    'Dáta boli načítané do konzoly'
                 )
             ),
             React.createElement(
