@@ -1491,7 +1491,7 @@ const AddGroupsApp = ({ userProfileData }) => {
               selectedPlace.pricePerNight && selectedPlace.type === 'ubytovanie' &&
                 React.createElement('p', { className: 'text-gray-600 mb-3 flex items-center gap-2' },
                   React.createElement('strong', null, 'Cena: '),
-                  `${selectedPlace.pricePerNight} €/os/noc`
+                  `${selectedPlace.pricePerNight.toFixed(2)} €/os/noc`
                 ),
               React.createElement('p', { className: 'text-gray-600 mb-3' },
                 React.createElement('strong', null, 'Súradnice: '),
