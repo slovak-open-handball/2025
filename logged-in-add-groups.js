@@ -996,7 +996,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                     }
                                                 },
                                                 disabled: isUsed,
-                                                title: isUsed ? `Skupina "${group.name}" obsahuje tímy v databáze a nie je možné ju zmazať` : `Zmazať skupinu "${group.name}"`
+                                                title: isUsed ? `Skupina ${group.name} obsahuje tímy v databáze a nie je možné ju zmazať.` : `Zmazať skupinu ${group.name}`
                                             },
                                             React.createElement(
                                                 'svg',
