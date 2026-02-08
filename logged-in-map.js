@@ -470,7 +470,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     .reduce((sum, p) => sum + (p.capacity || 0), 0);
                 const free = total - occupied;
                 if (cap > free) {
-                    window.showGlobalNotification(`Prekročená dostupná kapacita pre typ "${selectedAccommodationType}" (max ${free})`, 'error');
+                    window.showGlobalNotification(`Prekročená dostupná kapacita pre typ ${selectedAccommodationType} (max ${free})`, 'error');
                     return;
                 }
             }
@@ -948,7 +948,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     await updateDoc(doc(window.db, 'users', update.userId), {
                         teams: updatedTeams
                     });
-                    console.log(`[AUTOMATICKÁ AKTUALIZÁCIA] ${update.transferredCount} tímov používateľa ${update.userId} bolo prenesené z "${oldName}" na "${newName}"`);
+                    console.log(`[AUTOMATICKÁ AKTUALIZÁCIA] ${update.transferredCount} tímov používateľa ${update.userId} bolo prenesené z '${oldName}' na '${newName}'`);
                 }
             }
     
@@ -1021,7 +1021,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 }
                 const free = total - occupied;
                 if (cap > free) {
-                    window.showGlobalNotification(`Prekročená dostupná kapacita pre typ "${editAccommodationType}" (max ${free})`, 'error');
+                    window.showGlobalNotification(`Prekročená dostupná kapacita pre typ ${editAccommodationType} (max ${free})`, 'error');
                     return;
                 }
             }
@@ -2294,7 +2294,7 @@ const AddGroupsApp = ({ userProfileData }) => {
               React.createElement('p', { className: 'text-gray-700 mb-8 text-center' },
                 'Naozaj chcete natrvalo odstrániť miesto',
                 React.createElement('br', null),
-                React.createElement('strong', { className: 'text-gray-900 text-xl' }, `"${placeToDelete?.name || 'bez názvu'}"`),
+                React.createElement('strong', { className: 'text-gray-900 text-xl' }, `${placeToDelete?.name || 'bez názvu'}`),
                 ' ?'
               ),
               React.createElement('div', { className: 'flex justify-end gap-4' },
