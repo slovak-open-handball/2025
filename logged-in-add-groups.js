@@ -156,16 +156,11 @@ const processSuperstructureData = (superstructureData) => {
                     const groupName = teamItem.groupName || teamItem.group || "Skupina neznáma";
                     const order = teamItem.order || teamItem.position || index + 1;
                     
-                    console.log(`  Prvok ${index + 1}:`);
-                    console.log(`    Tím: "${teamName}"`);
-                    console.log(`    Skupina: "${groupName}"`);
-                    console.log(`    Poradie: ${order}`);
-                    console.log(`    Všetky polia:`, Object.keys(teamItem));
+                    // Vypíšeme tím v požadovanom formáte
+                    console.log(`${categoryId}: "${teamName}" ("${groupName}")`);
                     
-                    // Vypíšeme všetky polia pre tento prvok
-                    Object.keys(teamItem).forEach(key => {
-                        console.log(`      ${key}: ${JSON.stringify(teamItem[key])}`);
-                    });
+                    // Vypíšeme aj podrobnosti pre kontrolu
+                    console.log(`    Poradie: ${order}, ID: ${teamItem.id || 'žiadne'}`);
                     
                     allSuperstructureTeams.push({
                         category: categoryId,
@@ -184,12 +179,14 @@ const processSuperstructureData = (superstructureData) => {
             // Ak je to objekt, môže obsahovať ďalšie polia
             Object.keys(categoryData).forEach(key => {
                 const item = categoryData[key];
-                console.log(`  Pole "${key}":`, item);
                 
                 if (typeof item === 'object' && item !== null) {
                     const teamName = item.teamName || item.name || key;
                     const groupName = item.groupName || item.group || "Skupina neznáma";
                     const order = item.order || item.position || 0;
+                    
+                    // Vypíšeme tím v požadovanom formáte
+                    console.log(`${categoryId}: "${teamName}" ("${groupName}")`);
                     
                     allSuperstructureTeams.push({
                         category: categoryId,
@@ -220,19 +217,22 @@ const processSuperstructureData = (superstructureData) => {
         return a.teamName.localeCompare(b.teamName);
     });
     
-    // Vypíšeme súhrn superštruktúrových tímov
-    console.log("\n=== SÚHRN SUPERŠTRUKTÚROVÝCH TÍMOV ===");
+    // Vypíšeme súhrn superštruktúrových tímov v požadovanom formáte
+    console.log("\n=== SÚHRN SUPERŠTRUKTÚROVÝCH TÍMOV (formátované) ===");
     if (allSuperstructureTeams.length === 0) {
         console.log("❌ V dokumente neboli nájdené žiadne tímy.");
-        console.log("Štruktúra dokumentu by mala vyzerať takto:");
-        console.log("  U10_D: [");
-        console.log("    { teamName: 'HK Senec A', groupName: 'Finálová skupina A', order: 1, ... },");
-        console.log("    { teamName: 'HK Senec B', groupName: 'Finálová skupina A', order: 2, ... }");
-        console.log("  ]");
     } else {
         console.log(`✅ Celkový počet superštruktúrových tímov: ${allSuperstructureTeams.length}`);
+        console.log("\n--- Všetky tímy ---");
         
-        // Zoskupenie podľa kategórie
+        // Vypíšeme všetky tímy v požadovanom formáte
+        allSuperstructureTeams.forEach(team => {
+            const teamName = team.teamName || "Názov tímu neznámy";
+            const groupName = team.groupName || "Skupina neznáma";
+            console.log(`${team.category}: "${teamName}" ("${groupName}")`);
+        });
+        
+        // Zoskupenie podľa kategórie pre štatistiky
         const teamsByCategory = {};
         allSuperstructureTeams.forEach(team => {
             if (!teamsByCategory[team.category]) {
@@ -241,40 +241,10 @@ const processSuperstructureData = (superstructureData) => {
             teamsByCategory[team.category].push(team);
         });
         
-        console.log("\nSuperštruktúrové tímy podľa kategórie:");
+        console.log("\n=== Štatistika ===");
+        console.log("Počet tímov podľa kategórie:");
         Object.keys(teamsByCategory).sort().forEach(category => {
-            console.log(`\n🏆 ${category}: ${teamsByCategory[category].length} tímov`);
-            
-            // Zoskupenie podľa podkategórie (ak existuje)
-            const teamsBySubCategory = {};
-            teamsByCategory[category].forEach(team => {
-                const subCat = team.subCategory || 'Hlavná skupina';
-                if (!teamsBySubCategory[subCat]) {
-                    teamsBySubCategory[subCat] = [];
-                }
-                teamsBySubCategory[subCat].push(team);
-            });
-            
-            Object.keys(teamsBySubCategory).sort().forEach(subCategory => {
-                if (subCategory !== 'Hlavná skupina') {
-                    console.log(`  📁 ${subCategory}:`);
-                }
-                
-                // Zoradenie tímov v rámci kategórie podľa poradia
-                teamsBySubCategory[subCategory]
-                    .sort((a, b) => a.order - b.order)
-                    .forEach(team => {
-                        console.log(`    🏅 Poradie ${team.order}: "${team.teamName}" ("${team.groupName}")`);
-                        
-                        // Vypíšeme ďalšie polia (okrem základných)
-                        const basicFields = ['teamName', 'groupName', 'order', 'category', 'subCategory'];
-                        Object.keys(team.allFields || {}).forEach(key => {
-                            if (!basicFields.includes(key)) {
-                                console.log(`      📝 ${key}: ${JSON.stringify(team.allFields[key])}`);
-                            }
-                        });
-                    });
-            });
+            console.log(`  ${category}: ${teamsByCategory[category].length} tímov`);
         });
     }
     
