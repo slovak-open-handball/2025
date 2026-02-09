@@ -1147,8 +1147,16 @@ const AddGroupsApp = ({ userProfileData }) => {
                                         React.createElement(
                                             'button',
                                             {
-                                                className: 'text-gray-500 hover:text-blue-500 transition-colors duration-200',
-                                                onClick: () => handleEditClick(group, category.id)
+                                                className: `${isUsed ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-blue-500'} transition-colors duration-200`,
+                                                onClick: () => {
+                                                    if (isUsed) {
+                                                        window.showGlobalNotification(`Skupinu "${group.name}" nie je možné upravovať, pretože je priradená k existujúcim tímom.`, 'error');
+                                                    } else {
+                                                        handleEditClick(group, category.id);
+                                                    }
+                                                },
+                                                disabled: isUsed,
+                                                title: isUsed ? `${group.name.charAt(0).toUpperCase() + group.name.slice(1)} obsahuje tímy v databáze a nie je možné ju upravovať.` : `Upraviť skupinu ${group.name}`
                                             },
                                             React.createElement(
                                                 'svg',
@@ -1165,15 +1173,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                                         React.createElement(
                                             'button',
                                             {
-                                                className: `transition-colors duration-200 ${isUsed ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-red-500'}`,
+                                                className: `${isUsed ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-red-500'} transition-colors duration-200`,
                                                 onClick: () => {
-//                                                    console.log(`DEBUG: Klik na zmazanie skupiny: ${group.name} v ${category.id}`);
-//                                                    console.log(`DEBUG: isUsed hodnota: ${isUsed}`);
                                                     if (isUsed) {
-//                                                        console.log(`DEBUG: Skupina je používaná, zobrazujem notifikáciu`);
                                                         window.showGlobalNotification(`Skupinu "${group.name}" nie je možné zmazať, pretože je priradená k existujúcim tímom.`, 'error');
                                                     } else {
-//                                                        console.log(`DEBUG: Skupina nie je používaná, volám handleDeleteClick`);
                                                         handleDeleteClick(group, category.id);
                                                     }
                                                 },
@@ -1183,7 +1187,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'svg',
                                                 {
-                                                    xmlns: 'http://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js',
+                                                    xmlns: 'http://www.w3.org/2000/svg',
                                                     className: 'h-4 w-4',
                                                     viewBox: '0 0 20 20',
                                                     fill: 'currentColor'
