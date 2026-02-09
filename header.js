@@ -149,15 +149,15 @@ const handleLogout = async () => {
     try {
         const auth = getAuth();
         await signOut(auth);
-        console.log("header.js: Používateľ bol úspešne odhlásený.");
+//        console.log("header.js: Používateľ bol úspešne odhlásený.");
         if (unsubscribeFromNotifications) {
             unsubscribeFromNotifications();
             unsubscribeFromNotifications = null;
-            console.log("header.js: Listener notifikácií zrušený.");
+//            console.log("header.js: Listener notifikácií zrušený.");
         }
         window.location.href = 'login.html';
     } catch (error) {
-        console.error("header.js: Chyba pri odhlásení:", error);
+//        console.error("header.js: Chyba pri odhlásení:", error);
         window.showGlobalNotification('Chyba pri odhlásení. Skúste to znova.', 'error');
     }
 };
@@ -186,7 +186,7 @@ const updateHeaderLinks = (userProfileData) => {
     const headerElement = document.querySelector('header');
     
     if (!authLink || !profileLink || !logoutButton || !headerElement) {
-        console.error("header.js: Niektoré elementy hlavičky neboli nájdené.");
+//        console.error("header.js: Niektoré elementy hlavičky neboli nájdené.");
         return;
     }
 
@@ -218,7 +218,7 @@ const updateHeaderLinks = (userProfileData) => {
                 if (unsubscribeFromNotifications) {
                     unsubscribeFromNotifications();
                     unsubscribeFromNotifications = null;
-                    console.log("header.js: Listener notifikácií zrušený, pretože používateľ nie je admin.");
+//                    console.log("header.js: Listener notifikácií zrušený, pretože používateľ nie je admin.");
                 }
             }
         } else {
@@ -229,7 +229,7 @@ const updateHeaderLinks = (userProfileData) => {
             if (unsubscribeFromNotifications) {
                 unsubscribeFromNotifications();
                 unsubscribeFromNotifications = null;
-                console.log("header.js: Listener notifikácií zrušený pri odhlásení.");
+//                console.log("header.js: Listener notifikácií zrušený pri odhlásení.");
             }
         }
 
@@ -265,7 +265,7 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
 
 const setupNotificationListenerForAdmin = (userProfileData) => {
     if (!window.db) {
-        console.warn("header.js: Firestore databáza nie je inicializovaná pre notifikácie.");
+//        console.warn("header.js: Firestore databáza nie je inicializovaná pre notifikácie.");
         return;
     }
 
@@ -296,7 +296,7 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
         if (window.globalUserProfileData) {
             window.globalUserProfileData.unreadNotificationCount = unreadCount;
             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
-            console.log("header.js: GlobalUserProfileData aktualizované s počtom neprečítaných notifikácií:", unreadCount);
+//            console.log("header.js: GlobalUserProfileData aktualizované s počtom neprečítaných notifikácií:", unreadCount);
         }
 
         if (userProfileData.displayNotifications) {
@@ -319,7 +319,7 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                     
                     const seenBy = newNotification.seenBy || [];
                     if (!seenBy.includes(userId)) {
-                        console.log("header.js: Nová notifikácia prijatá a nebola videná používateľom:", newNotification);
+//                        console.log("header.js: Nová notifikácia prijatá a nebola videná používateľom:", newNotification);
                         
                         let changesMessage = '';
                         if (Array.isArray(newNotification.changes) && newNotification.changes.length > 0) {
@@ -343,27 +343,27 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                                 seenBy: arrayUnion(userId)
                             });
                         } catch (e) {
-                            console.error("header.js: Chyba pri aktualizácii notifikácie 'seenBy':", e);
+//                            console.error("header.js: Chyba pri aktualizácii notifikácie 'seenBy':", e);
                         }
                     }
                 }
             });
         }
     }, (error) => {
-            console.error("header.js: Chyba pri počúvaní notifikácií:", error);
+//            console.error("header.js: Chyba pri počúvaní notifikácií:", error);
     });
 
-    console.log("header.js: Listener pre notifikácie admina nastavený.");
+//    console.log("header.js: Listener pre notifikácie admina nastavený.");
 };
 
 const setupFirestoreListeners = () => {
     if (!window.db) {
-        console.warn("header.js: Firestore databáza nie je inicializovaná. Odkladám nastavenie listenerov.");
+//        console.warn("header.js: Firestore databáza nie je inicializovaná. Odkladám nastavenie listenerov.");
         return;
     }
 
     if (isFirestoreListenersSetup) {
-        console.log("header.js: Listenery Firestore sú už nastavené.");
+//        console.log("header.js: Listenery Firestore sú už nastavené.");
         return;
     }
 
@@ -372,15 +372,15 @@ const setupFirestoreListeners = () => {
         onSnapshot(registrationDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 window.registrationDates = docSnap.data();
-                console.log("header.js: Dáta o registrácii aktualizované (onSnapshot).", window.registrationDates);
+//                console.log("header.js: Dáta o registrácii aktualizované (onSnapshot).", window.registrationDates);
             } else {
                 window.registrationDates = null;
-                console.warn("header.js: Dokument 'settings/registration' nebol nájdený!");
+//                console.warn("header.js: Dokument 'settings/registration' nebol nájdený!");
             }
             window.isRegistrationDataLoaded = true; 
             updateHeaderLinks(window.globalUserProfileData);
         }, (error) => {
-            console.error("header.js: Chyba pri počúvaní dát o registrácii:", error);
+//            console.error("header.js: Chyba pri počúvaní dát o registrácii:", error);
             window.isRegistrationDataLoaded = true; 
             updateHeaderLinks(window.globalUserProfileData);
         });
@@ -390,22 +390,22 @@ const setupFirestoreListeners = () => {
             if (docSnap.exists()) {
                 const categories = docSnap.data();
                 window.hasCategories = Object.keys(categories).length > 0;
-                console.log(`header.js: Dáta kategórií aktualizované (onSnapshot). Počet kategórií: ${Object.keys(categories).length}`);
+//                console.log(`header.js: Dáta kategórií aktualizované (onSnapshot). Počet kategórií: ${Object.keys(categories).length}`);
             } else {
                 window.hasCategories = false;
-                console.warn("header.js: Dokument 'settings/categories' nebol nájdený!");
+//                console.warn("header.js: Dokument 'settings/categories' nebol nájdený!");
             }
             window.isCategoriesDataLoaded = true;
             window.areCategoriesLoaded = true;
             window.dispatchEvent(new CustomEvent('categoriesLoaded'));
-            console.log("header.js: Odoslaná udalosť 'categoriesLoaded'.");
+//            console.log("header.js: Odoslaná udalosť 'categoriesLoaded'.");
             updateHeaderLinks(window.globalUserProfileData);
         }, (error) => {
-            console.error("header.js: Chyba pri počúvaní dát o kategóriách:", error);
+//            console.error("header.js: Chyba pri počúvaní dát o kategóriách:", error);
             window.isCategoriesDataLoaded = true; 
             window.areCategoriesLoaded = true;
             window.dispatchEvent(new CustomEvent('categoriesLoaded'));
-            console.log("header.js: Odoslaná udalosť 'categoriesLoaded' (s chybou).");
+//            console.log("header.js: Odoslaná udalosť 'categoriesLoaded' (s chybou).");
             updateHeaderLinks(window.globalUserProfileData);
         });
 
@@ -417,7 +417,7 @@ const setupFirestoreListeners = () => {
                 updateRegistrationLinkVisibility(window.globalUserProfileData);
             }
         }, 1000); 
-        console.log("header.js: Časovač pre kontrolu registrácie spustený.");
+//        console.log("header.js: Časovač pre kontrolu registrácie spustený.");
         
         window.addEventListener('beforeunload', () => {
             if (registrationCheckIntervalId) {
@@ -427,10 +427,10 @@ const setupFirestoreListeners = () => {
         });
 
         isFirestoreListenersSetup = true;
-        console.log("header.js: Firestore listenery boli úspešne nastavené.");
+//        console.log("header.js: Firestore listenery boli úspešne nastavené.");
 
     } catch (error) {
-        console.error("header.js: Chyba pri inicializácii listenerov Firestore:", error);
+//        console.error("header.js: Chyba pri inicializácii listenerov Firestore:", error);
     }
 };
 
@@ -449,24 +449,24 @@ window.loadHeaderAndScripts = async () => {
         const logoutButton = document.getElementById('logout-button');
         if (logoutButton) {
             logoutButton.addEventListener('click', handleLogout);
-            console.log("header.js: Listener pre tlačidlo odhlásenia bol pridaný.");
+//            console.log("header.js: Listener pre tlačidlo odhlásenia bol pridaný.");
         }
 
         window.addEventListener('globalDataUpdated', (event) => {
-            console.log('header.js: Prijatá udalosť "globalDataUpdated". Aktualizujem hlavičku.');
+//            console.log('header.js: Prijatá udalosť "globalDataUpdated". Aktualizujem hlavičku.');
             window.isGlobalAuthReady = true; 
             setupFirestoreListeners();
             updateHeaderLinks(event.detail);
         });
 
         if (window.isGlobalAuthReady) {
-             console.log('header.js: Autentifikačné dáta sú už načítané, spúšťam listenery Firestore.');
+//             console.log('header.js: Autentifikačné dáta sú už načítané, spúšťam listenery Firestore.');
              setupFirestoreListeners();
              updateHeaderLinks(window.globalUserProfileData);
         }
 
     } catch (error) {
-        console.error("header.js: Chyba pri inicializácii hlavičky:", error);
+//        console.error("header.js: Chyba pri inicializácii hlavičky:", error);
     }
 };
 
