@@ -1434,7 +1434,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             });
     
             // Fallback vrstva (len pre prípad potreby)
-            const fallbackLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            const fallbackLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 maxZoom: 19,
                 attribution: '© OpenStreetMap, © CartoDB'
             });
