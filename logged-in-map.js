@@ -1429,14 +1429,21 @@ const AddGroupsApp = ({ userProfileData }) => {
             const mainLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                detectRetina: true,
-                crossOrigin: true
+                detectRetina: false, // Zmena z true na false
+                crossOrigin: 'anonymous', // Upresnenie crossOrigin
+                noWrap: true, // Zabrániť opakovaniu dlaždíc
+                errorTileUrl: '', // Prázdna URL pre chybové dlaždice
+                updateWhenIdle: true, // Optimizácia aktualizácie
+                reuseTiles: false, // Zmena z true na false
+                updateWhenZooming: false // Zmena z true na false
             });
     
             // Fallback vrstva (len pre prípad potreby)
-            const fallbackLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            const fallbackLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
-                attribution: '© OpenStreetMap, © CartoDB'
+                attribution: '© OpenStreetMap contributors',
+                subdomains: ['a', 'b', 'c'], // Pridané subdomény pre lepšiu dostupnosť
+                detectRetina: false
             });
     
             // Skúste pridať hlavnú vrstvu
@@ -1444,10 +1451,18 @@ const AddGroupsApp = ({ userProfileData }) => {
             
             // Ak hlavná vrstva zlyhá, prepnite na fallback
             mainLayer.on('tileerror', function(e) {
-                console.warn('Tile error on main layer, switching to fallback');
-                leafletMap.current.removeLayer(mainLayer);
-                fallbackLayer.addTo(leafletMap.current);
-            });          
+                console.warn('Tile error on main layer, tile:', e.tile.src);
+                
+                // Vytvor novú dlaždicu na chybovú
+                const errorImg = e.tile;
+                errorImg.onload = null;
+                errorImg.onerror = null;
+                
+                // Skús alternatívnu URL
+                const originalSrc = e.tile.src;
+                const altSrc = originalSrc.replace('tile.openstreetmap.org', '{s}.tile.openstreetmap.org');
+                e.tile.src = altSrc.replace('{s}', 'a');
+            });  
             
             // Custom Zoom + Home control
             L.Control.ZoomHome = L.Control.extend({
