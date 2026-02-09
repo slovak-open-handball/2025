@@ -172,14 +172,37 @@ const AddGroupsApp = ({ userProfileData }) => {
         return result;
       }, [accommodationTypes, places]);
     
+    // Ref pre kontajner zoznamu miest
+    const placesListRef = useRef(null);
+    
+    // Funkcia na scrollovanie k vybranému miestu v zozname
+    const scrollToSelectedPlace = useCallback(() => {
+        if (!selectedPlace || !placesListRef.current) return;
+        
+        // Počkáme na renderovanie DOM
+        setTimeout(() => {
+            const selectedElement = placesListRef.current.querySelector(`[data-place-id="${selectedPlace.id}"]`);
+            if (selectedElement) {
+                selectedElement.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center',
+                    inline: 'nearest'
+                });
+            }
+        }, 100);
+    }, [selectedPlace]);
+    
     // Funkcia na kliknutie na miesto (používa sa pri kliknutí na kartu aj na mape)
-    const handlePlaceClick = (place) => {
+    const handlePlaceClick = useCallback((place) => {
         setSelectedPlace(place);
         setPlaceHash(place.id);
         if (leafletMap.current) {
             leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
         }
-    };
+        
+        // Scrollujeme k vybranému miestu v zozname
+        setTimeout(scrollToSelectedPlace, 200);
+    }, [scrollToSelectedPlace]);
     
     // Samostatná funkcia – vytvorí sa iba raz
     const handleAddClick = useCallback(async (e) => {
@@ -797,6 +820,14 @@ const AddGroupsApp = ({ userProfileData }) => {
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, [places]);
     
+    // Pridaný useEffect pre scrollovanie po načítaní miesta z URL
+    useEffect(() => {
+        if (selectedPlace && hashProcessed) {
+            // Počkáme kým sa renderuje zoznam miest
+            setTimeout(scrollToSelectedPlace, 300);
+        }
+    }, [selectedPlace, hashProcessed, scrollToSelectedPlace]);
+    
     useEffect(() => {
         window.goToDefaultView = () => {
             if (leafletMap.current) {
@@ -1050,7 +1081,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 type: selectedPlace.type || '',
                 capacity: selectedPlace.capacity != null ? selectedPlace.capacity : null,
                 accommodationType: selectedPlace.accommodationType || null,
-                pricePerNight: selectedPlace.pricePerNight != null ? selectedPlace.pricePerNight : null,
+                pricePerNight = selectedPlace.pricePerNight != null ? selectedPlace.pricePerNight : null,
                 breakfastPrice: selectedPlace.breakfastPrice != null ? selectedPlace.breakfastPrice : null,
                 lunchPrice: selectedPlace.lunchPrice != null ? selectedPlace.lunchPrice : null,
                 dinnerPrice: selectedPlace.dinnerPrice != null ? selectedPlace.dinnerPrice : null,
@@ -1650,7 +1681,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         if (unsubscribePlaces) unsubscribePlaces();
         if (placesLayerRef.current) placesLayerRef.current.clearLayers();
       };
-    }, [activeFilter]);
+    }, [activeFilter, handlePlaceClick]);
     
     // Dodatočný useEffect pre správnu aktualizáciu ikony pri zmene selectedPlace
     useEffect(() => {
@@ -1673,7 +1704,10 @@ const AddGroupsApp = ({ userProfileData }) => {
           selectedMarker.marker.setZIndexOffset(1000);
         }
       }
-    }, [selectedPlace]);
+      
+      // Scrollujeme k vybranému miestu v zozname
+      scrollToSelectedPlace();
+    }, [selectedPlace, scrollToSelectedPlace]);
     
     const addFreeCapacity = useMemo(() => {
       if (newPlaceType !== 'ubytovanie' || !selectedAccommodationType) return null;
@@ -1993,13 +2027,17 @@ const AddGroupsApp = ({ userProfileData }) => {
                     React.createElement('i', { className: 'fa-solid fa-map-pin text-4xl mb-3 opacity-50' }),
                     React.createElement('p', null, 'Žiadne miesta na zobrazenie')
                   ) :
-                  React.createElement('div', { className: 'overflow-y-auto h-[60vh] md:h-[60vh] min-h-[300px] pr-2' },
+                  React.createElement('div', { 
+                    ref: placesListRef,
+                    className: 'overflow-y-auto h-[60vh] md:h-[60vh] min-h-[300px] pr-2'
+                  },
                     (activeFilter ? allPlaces.filter(p => p.type === activeFilter) : allPlaces)
                       .sort((a, b) => a.name.localeCompare(b.name))
                       .map(place => {
                         const typeConfig = typeIcons[place.type] || { icon: 'fa-map-pin', color: '#6b7280' };
                         return React.createElement('div', { 
                           key: place.id, 
+                          'data-place-id': place.id,
                           className: `mb-3 p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer ${selectedPlace?.id === place.id ? 'border-blue-300 bg-blue-50' : ''}`,
                           onClick: () => handlePlaceClick(place)
                         },
@@ -2210,7 +2248,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                       value: editLunchPrice,
                       onChange: e => setEditLunchPrice(e.target.value),
                       placeholder: 'napr. 8.90',
-                      className: 'w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition pl-8'
+                      className = 'w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition pl-8'
                     }),
                     React.createElement('span', { className: 'absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm' }, '€')
                   )
@@ -2225,7 +2263,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                       value: editDinnerPrice,
                       onChange: e => setEditDinnerPrice(e.target.value),
                       placeholder: 'napr. 7.50',
-                      className: 'w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition pl-8'
+                      className = 'w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition pl-8'
                     }),
                     React.createElement('span', { className: 'absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm' }, '€')
                   )
