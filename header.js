@@ -171,7 +171,7 @@ const showDatabaseNotification = (message, type = 'info') => {
     notificationElement.className = `
         bg-gray-800 text-white p-4 pr-10 rounded-lg shadow-lg
         transform translate-x-full transition-all duration-500 ease-out
-        flex items-center space-x-2 z-[999999999]"
+        flex items-center space-x-2"
     `;
 
     const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔'; // Použijeme zvonček pre info notifikácie
