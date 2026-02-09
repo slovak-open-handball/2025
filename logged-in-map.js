@@ -1709,11 +1709,11 @@ const AddGroupsApp = ({ userProfileData }) => {
     }, [editType, editAccommodationType, accommodationTypes, places, selectedPlace]);
     
     // RENDER
-    return React.createElement('div', { className: 'flex-grow flex justify-center items-center p-2 sm:p-4 relative' },
-      React.createElement('div', { className: 'w-full max-w-[1920px] mx-auto bg-white rounded-xl shadow-2xl p-4 sm:p-6 lg:p-10' },
+    return React.createElement('div', { className: 'flex-grow flex justify-center items-center p-0 sm:p-2 relative' },
+      React.createElement('div', { className: 'w-full max-w-[1920px] mx-auto bg-white rounded-xl shadow-2xl p-2 sm:p-4 lg:p-6' },
         // NADPIS A ŠTATISTIKY PREHĽADU
-        React.createElement('div', { className: 'flex flex-col items-center justify-center mb-5 md:mb-7 p-4 -mx-3 sm:-mx-6 -mt-3 sm:-mt-6 md:-mt-8 rounded-t-xl bg-white text-black' },
-          React.createElement('h2', { className: 'text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center mb-6' }, 'Mapa'),
+        React.createElement('div', { className: 'flex flex-col items-center justify-center mb-2 md:mb-3 p-3 -mx-2 sm:-mx-4 -mt-2 sm:-mt-4 rounded-t-xl bg-white text-black' },
+          React.createElement('h2', { className: 'text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-center mb-3' }, 'Mapa'),
           
           // ŠTATISTIKY PREHĽADU (nahradili tlačidlá filtrov)
           React.createElement('div', { className: 'w-full mb-6' },
@@ -1822,7 +1822,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         ),
 
         // ZMENENÉ: Main content s flex layoutom
-        React.createElement('div', { className: 'flex flex-col lg:flex-row gap-6 lg:gap-8' },
+        React.createElement('div', { className: 'flex flex-col lg:flex-row gap-3 lg:gap-4' },
           // Ľavá časť - Mapa a jej kontroly
           React.createElement('div', { className: 'lg:w-2/3 relative' },
             React.createElement('div', { className: 'relative' },
