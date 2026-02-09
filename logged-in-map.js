@@ -180,29 +180,27 @@ const AddGroupsApp = ({ userProfileData }) => {
         if (!selectedPlace || !placesListRef.current) return;
         
         // Počkáme na renderovanie DOM
-        setTimeout(() => {
-            const selectedElement = placesListRef.current.querySelector(`[data-place-id="${selectedPlace.id}"]`);
-            if (selectedElement) {
-                selectedElement.scrollIntoView({ 
+          setTimeout(() => {
+              if (placesListRef.current) {
+                const selectedElement = placesListRef.current.querySelector(`[data-place-id="${place.id}"]`);
+                if (selectedElement) {
+                  selectedElement.scrollIntoView({ 
                     behavior: 'smooth', 
                     block: 'center',
                     inline: 'nearest'
-                });
-            }
-        }, 100);
-    }, [selectedPlace]);
+                  });
+                }
+              }
+            }, 200);
+          }, []);
     
     // Funkcia na kliknutie na miesto (používa sa pri kliknutí na kartu aj na mape)
     const handlePlaceClick = useCallback((place) => {
-        setSelectedPlace(place);
-        setPlaceHash(place.id);
-        if (leafletMap.current) {
-            leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
-        }
-        
-        // Scrollujeme k vybranému miestu v zozname
-        setTimeout(scrollToSelectedPlace, 200);
-    }, [scrollToSelectedPlace]);
+      setSelectedPlace(place);
+      setPlaceHash(place.id);
+      if (leafletMap.current) {
+        leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
+    }
     
     // Samostatná funkcia – vytvorí sa iba raz
     const handleAddClick = useCallback(async (e) => {
@@ -820,14 +818,6 @@ const AddGroupsApp = ({ userProfileData }) => {
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, [places]);
     
-    // Pridaný useEffect pre scrollovanie po načítaní miesta z URL
-    useEffect(() => {
-        if (selectedPlace && hashProcessed) {
-            // Počkáme kým sa renderuje zoznam miest
-            setTimeout(scrollToSelectedPlace, 300);
-        }
-    }, [selectedPlace, hashProcessed, scrollToSelectedPlace]);
-    
     useEffect(() => {
         window.goToDefaultView = () => {
             if (leafletMap.current) {
@@ -891,6 +881,14 @@ const AddGroupsApp = ({ userProfileData }) => {
             leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
         }
         setPlaceHash(null);
+
+        Object.keys(markersRef.current).forEach(placeId => {
+            const markerObj = markersRef.current[placeId];
+            if (markerObj && markerObj.marker) {
+              markerObj.marker.setIcon(markerObj.normalIcon);
+              markerObj.marker.setZIndexOffset(0);
+            }
+        });
     };
     
     const handleSaveNameAndType = async () => {
@@ -1579,7 +1577,8 @@ const AddGroupsApp = ({ userProfileData }) => {
           }
           setPlaces(filteredPlaces);
           
-          if (!leafletMap.current) return;
+          // Přidejte podmínku - nerefreshujte markery pokud máme otevřený detail
+          if (!leafletMap.current || selectedPlace) return;
           
           if (placesLayerRef.current) {
             placesLayerRef.current.clearLayers();
@@ -1595,7 +1594,6 @@ const AddGroupsApp = ({ userProfileData }) => {
               color: '#6b7280'
             };
      
-            // Normálna ikona (BIELE pozadie, FARBENÝ okraj a ikona)
             const normalHtml = `
               <div style="
                 background: white;
@@ -1622,7 +1620,6 @@ const AddGroupsApp = ({ userProfileData }) => {
               iconAnchor: [19, 19]
             });
      
-            // Vybraná ikona (FARBENÉ pozadie, BIELE okraj a ikona) - OPAČNÉ FARBY
             const selectedHtml = `
               <div style="
                 background: ${typeConfig.color};
@@ -1679,13 +1676,16 @@ const AddGroupsApp = ({ userProfileData }) => {
       }
       return () => {
         if (unsubscribePlaces) unsubscribePlaces();
-        if (placesLayerRef.current) placesLayerRef.current.clearLayers();
+        // Nemažeme vrstvu pokud máme otevřený detail
+        if (placesLayerRef.current && !selectedPlace) {
+          placesLayerRef.current.clearLayers();
+        }
       };
-    }, [activeFilter, handlePlaceClick]);
+    }, [activeFilter]); // Odstraňte handlePlaceClick z dependency array
     
-    // Dodatočný useEffect pre správnu aktualizáciu ikony pri zmene selectedPlace
+    // Potom přidejte samostatný efekt pro aktualizaci ikon při změně selectedPlace:
     useEffect(() => {
-      if (!leafletMap.current || !placesLayerRef.current) return;
+      if (!leafletMap.current || !placesLayerRef.current || !selectedPlace) return;
     
       // Reset všetkých markerov na normálnu ikonu
       Object.keys(markersRef.current).forEach(placeId => {
