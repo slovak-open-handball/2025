@@ -1594,6 +1594,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             );
                         })
                 ),
+            )
     
         isColorModalOpen &&
         React.createElement(
