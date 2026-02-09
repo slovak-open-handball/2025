@@ -8,7 +8,6 @@
 // Úpravy: Zlepšenie formátovania notifikácií a zabezpečenie, aby sa nové notifikácie zobrazovali pod staršími.
 // Fix: Zabezpečenie viditeľnosti hlavičky pri prvom načítaní stránky.
 // Nová úprava: Pridáva funkciu na formátovanie telefónnych čísiel v notifikáciách pre lepšiu čitateľnosť.
-// NOVÁ FUNKCIONALITA: Automatické nastavenie zoomu stránky na 80% pri načítaní
 
 // Importy pre potrebné Firebase funkcie
 import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -26,87 +25,6 @@ let isFirestoreListenersSetup = false; // Nový flag pre sledovanie, či sú lis
 // NOVINKA: Pridaná globálna premenná na indikáciu, že kategórie sú načítané
 window.areCategoriesLoaded = false;
 
-/**
- * NOVÁ FUNKCIA: Nastaví zoom stránky na 80% - ekvivalent Ctrl+(-) 2x.
- * Funguje manipuláciou s CSS transform vlastnosťou.
- */
-const setPageZoomTo80Percent = () => {
-    try {
-        // Vytvoríme štýlový element, ak ešte neexistuje
-        let zoomStyle = document.getElementById('page-zoom-style');
-        if (!zoomStyle) {
-            zoomStyle = document.createElement('style');
-            zoomStyle.id = 'page-zoom-style';
-            document.head.appendChild(zoomStyle);
-        }
-        
-        // Nastavíme transform: scale(0.8) na celú stránku
-        // Použijeme !important aby sme prekonali existujúce štýly
-        zoomStyle.textContent = `
-            html {
-                transform: scale(0.8) !important;
-                transform-origin: top center !important;
-                width: 125% !important; /* Kompenzácia pre zmenšenie */
-                height: 125% !important;
-                overflow-x: hidden !important;
-            }
-            
-            body {
-                min-height: 125vh !important;
-                overflow-x: hidden !important;
-            }
-            
-            /* Zabezpečíme, že hlavička a obsah sa správne zobrazia */
-            header, main, footer {
-                transform-origin: top center !important;
-            }
-            
-            /* Zabezpečíme, že modálne okná sa zobrazia na správnom mieste */
-            .modal, .fixed, .absolute {
-                transform-origin: center !important;
-            }
-        `;
-        
-        console.log("header.js: Zoom stránky nastavený na 80%");
-        
-        // Pridáme tiež možnosť obnoviť pôvodné zobrazenie pomocou Ctrl+0
-        document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === '0') {
-                zoomStyle.textContent = '';
-                console.log("header.js: Zoom obnovený na pôvodnú veľkosť (Ctrl+0)");
-            }
-        });
-        
-    } catch (error) {
-        console.error("header.js: Chyba pri nastavovaní zoomu stránky:", error);
-    }
-};
-
-/**
- * ALTERNATÍVNA FUNKCIA: Nastaví zoom pomocou viewport meta tagu
- * (menej agresívna metóda, ale nie vždy funguje vo všetkých prehliadačoch)
- */
-const setZoomViaViewport = () => {
-    try {
-        // Pokúsime sa nájsť existujúci viewport meta tag
-        let viewportMeta = document.querySelector('meta[name="viewport"]');
-        
-        if (!viewportMeta) {
-            // Ak neexistuje, vytvoríme nový
-            viewportMeta = document.createElement('meta');
-            viewportMeta.name = 'viewport';
-            document.head.appendChild(viewportMeta);
-        }
-        
-        // Nastavíme initial-scale na 0.8 pre 80% zoom
-        viewportMeta.content = 'width=device-width, initial-scale=0.8, maximum-scale=0.8, user-scalable=no';
-        
-        console.log("header.js: Zoom nastavený cez viewport meta tag na 80%");
-        
-    } catch (error) {
-        console.error("header.js: Chyba pri nastavovaní zoomu cez viewport:", error);
-    }
-};
 
 // Globálna funkcia pre zobrazenie notifikácií
 // Vytvorí a spravuje modálne okno pre správy o úspechu alebo chybách
@@ -631,13 +549,6 @@ window.loadHeaderAndScripts = async () => {
         if (headerPlaceholder) {
             headerPlaceholder.innerHTML = headerHtml;
         }
-
-        // NOVÉ: Nastavíme zoom stránky na 80% po načítaní hlavičky
-        // Počkáme chvíľu, aby sa DOM úplne načítal
-        setTimeout(() => {
-            setPageZoomTo80Percent();
-            // Alternatívne môžete použiť: setZoomViaViewport();
-        }, 100);
 
         // Po načítaní hlavičky pridáme event listener na tlačidlo odhlásenia
         const logoutButton = document.getElementById('logout-button');
