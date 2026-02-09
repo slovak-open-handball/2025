@@ -893,7 +893,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                             }, `${team.category}: ${team.teamName}`),
                                             React.createElement('span', { 
                                                 className: 'text-gray-500 ml-3 text-sm whitespace-nowrap'
-                                            }, `(${team.totalPeople} osôb)`)
+                                            }, `(${team.totalPeople})`)
                                         ),
                                         React.createElement(
                                             'div',
@@ -998,7 +998,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                 React.createElement('div', { 
                                                     className: 'text-xs opacity-90 mt-1 whitespace-nowrap overflow-visible',
                                                     style: { textOverflow: 'clip' }
-                                                }, `${place.allAssignedTeams.length} tímov • ${place.usedCapacity} osôb`)
+                                                }, `${place.allAssignedTeams.length} tímov • ${place.usedCapacity}`)
                                             ),
                                             React.createElement(
                                                 'button',
@@ -1055,7 +1055,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                                 style: { textOverflow: 'clip' }
                                                             },
                                                             React.createElement('span', { className: 'font-semibold' }, 'Kapacita: '),
-                                                            `${place.usedCapacity} / ${place.capacity} osôb`
+                                                            `${place.usedCapacity} / ${place.capacity}`
                                                         ),
                                                     place.remainingCapacity !== null &&
                                                         React.createElement(
@@ -1065,7 +1065,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                                 style: { textOverflow: 'clip' },
                                                             },
                                                             React.createElement('span', { className: 'font-semibold' }, 'Zostáva: '),
-                                                            `${place.remainingCapacity} osôb`
+                                                            `${place.remainingCapacity}`
                                                         )
                                                 ),
                                                 
@@ -1079,7 +1079,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                             className: 'font-semibold text-gray-800 mb-2 text-sm flex-shrink-0 whitespace-nowrap overflow-visible',
                                                             style: { textOverflow: 'clip' }
                                                         },
-                                                        `Priradené tímy ${selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter ? '(filtrované)' : ''} (${place.filteredAssignedTeams.length}${selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter ? '/' + getFilteredTeamsPeopleCount(place.filteredAssignedTeams) + ' osôb' : ''})`
+                                                        `Priradené tímy ${selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter ? '(filtrované)' : ''} (${place.filteredAssignedTeams.length}${selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter ? '/' + getFilteredTeamsPeopleCount(place.filteredAssignedTeams) + '' : ''})`
                                                     ),
                                                     React.createElement(
                                                         'ul',
@@ -1100,7 +1100,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                                     }, `${team.category}: ${team.teamName}`),
                                                                     React.createElement('span', { 
                                                                         className: 'text-gray-500 text-xs ml-2 whitespace-nowrap flex-shrink-0'
-                                                                    }, `(${team.totalPeople} osôb)`)
+                                                                    }, `(${team.totalPeople})`)
                                                                 ),
                                                                 React.createElement(
                                                                     'div',
@@ -1400,7 +1400,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         `Typ ubytovania tímu: ${selectedTeam?.accommodation}`
                     ),
                     React.createElement('p', { className: 'text-sm text-gray-600' },
-                        `Počet osôb v tíme: ${selectedTeam?.totalPeople || 0}`
+                        `Počet v tíme: ${selectedTeam?.totalPeople || 0}`
                     )
                 ),
     
@@ -1502,14 +1502,14 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                             }`,
                                                             style: { textOverflow: 'clip' }
                                                         },
-                                                        `Kapacita: ${actualCapacity.used}/${place.capacity} osôb`,
+                                                        `Kapacita: ${actualCapacity.used}/${place.capacity}`,
                                                         actualCapacity.remaining !== null && (
                                                             React.createElement(
                                                                 'span',
                                                                 { className: 'ml-2' },
                                                                 actualCapacity.remaining >= 0 ? 
-                                                                    `(zostáva ${actualCapacity.remaining} osôb)` :
-                                                                    `(prekročená o ${Math.abs(actualCapacity.remaining)} osôb)`
+                                                                    `(zostáva ${actualCapacity.remaining})` :
+                                                                    `(prekročená o ${Math.abs(actualCapacity.remaining)})`
                                                             )
                                                         )
                                                     )
@@ -1518,7 +1518,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                     React.createElement(
                                                         'div',
                                                         { className: 'text-sm text-red-600 mt-1 font-medium whitespace-nowrap' },
-                                                        `Nedostatočná kapacita pre tím (${selectedTeam?.totalPeople || 0} osôb)`
+                                                        `Nedostatočná kapacita pre tím (${selectedTeam?.totalPeople || 0})`
                                                     )
                                                 )
                                             )
