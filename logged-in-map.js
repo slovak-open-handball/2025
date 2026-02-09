@@ -2072,14 +2072,15 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     React.createElement('span', { className: 'font-medium' }, 'Ceny: '),
                                     (place.breakfastPrice || place.lunchPrice || place.dinnerPrice) ?
                                       React.createElement('span', null,
-                                        place.breakfastPrice && `Raňajky: ${formatPrice(place.breakfastPrice)}€ `,
-                                        place.lunchPrice && `Obed: ${formatPrice(place.lunchPrice)}€ `,
-                                        place.dinnerPrice && `Večera: ${formatPrice(place.dinnerPrice)}€`
+                                        place.breakfastPrice ? `Raňajky: ${formatPrice(place.breakfastPrice)}€ ` : '',
+                                        place.lunchPrice ? `Obed: ${formatPrice(place.lunchPrice)}€ ` : '',
+                                        place.dinnerPrice ? `Večera: ${formatPrice(place.dinnerPrice)}€` : ''
                                       ) :
                                       React.createElement('span', { className: 'text-gray-400' }, '–')
                                   )
                                 )
-                              ),
+                              )
+                            ),
                             
                             React.createElement('button', {
                               onClick: () => {
