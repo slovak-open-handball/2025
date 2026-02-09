@@ -424,26 +424,6 @@ window.testFixedElements = () => {
     });
 };
 
-// Pridanie klávesovej skratky
-document.addEventListener('keydown', (e) => {
-    // Ctrl+8 pre 80%
-    if (e.ctrlKey && e.key === '8') {
-        e.preventDefault();
-        // Zobraziť biely prekryvný obdĺžnik pred zmenou priblíženia
-        createWhiteOverlay();
-        updateSpinnerText("Nastavujem priblíženie na 80%...");
-        setZoomTo80Percent();
-    }
-    // Ctrl+0 pre reset
-    if (e.ctrlKey && e.key === '0') {
-        e.preventDefault();
-        // Zobraziť biely prekryvný obdĺžnik pred resetom
-        createWhiteOverlay();
-        updateSpinnerText("Resetujem priblíženie...");
-        resetZoom();
-    }
-});
-
 // Ostatný kód zostáva rovnaký...
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
