@@ -9,7 +9,7 @@ window.showGlobalLoader = () => {
   if (!loaderElement) {
     loaderElement = document.createElement('div');
     loaderElement.id = 'global-loader';
-    loaderElement.className = 'fixed inset-0 bg-white flex items-center justify-center z-[999999999999] transition-opacity duration-300 ease-in-out';
+    loaderElement.className = 'fixed inset-0 bg-white flex items-center justify-center z-[1000000000000] transition-opacity duration-300 ease-in-out';
     loaderElement.innerHTML = `
       <div id="loader-content" class="flex flex-col items-center justify-center">
         <div class="relative">
