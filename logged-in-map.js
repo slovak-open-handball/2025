@@ -178,29 +178,34 @@ const AddGroupsApp = ({ userProfileData }) => {
     // Funkcia na scrollovanie k vybranému miestu v zozname
     const scrollToSelectedPlace = useCallback(() => {
         if (!selectedPlace || !placesListRef.current) return;
-        
+    
         // Počkáme na renderovanie DOM
-          setTimeout(() => {
-              if (placesListRef.current) {
-                const selectedElement = placesListRef.current.querySelector(`[data-place-id="${place.id}"]`);
+        setTimeout(() => {
+            if (placesListRef.current) {
+                const selectedElement = placesListRef.current.querySelector(`[data-place-id="${selectedPlace.id}"]`);
                 if (selectedElement) {
-                  selectedElement.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'center',
-                    inline: 'nearest'
-                  });
+                    selectedElement.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center',
+                        inline: 'nearest'
+                    });
                 }
-              }
-            }, 200);
-          }, []);
+            }
+        }, 200);
+    }, [selectedPlace]);
+
+    useEffect(() => {
+        scrollToSelectedPlace();
+    }, [selectedPlace, scrollToSelectedPlace]);
     
     // Funkcia na kliknutie na miesto (používa sa pri kliknutí na kartu aj na mape)
     const handlePlaceClick = useCallback((place) => {
-      setSelectedPlace(place);
-      setPlaceHash(place.id);
-      if (leafletMap.current) {
-        leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
-      }
+        setSelectedPlace(place);
+        setPlaceHash(place.id);
+        if (leafletMap.current) {
+            leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
+        }
+        // Scroll se automaticky spustí díky useEffect nad
     }, []);
     
     // Samostatná funkcia – vytvorí sa iba raz
@@ -1686,29 +1691,26 @@ const AddGroupsApp = ({ userProfileData }) => {
     
     // Potom přidejte samostatný efekt pro aktualizaci ikon při změně selectedPlace:
     useEffect(() => {
-      if (!leafletMap.current || !placesLayerRef.current || !selectedPlace) return;
+        if (!leafletMap.current || !placesLayerRef.current || !selectedPlace) return;
+
+        // Reset všetkých markerov na normálnu ikonu
+        Object.keys(markersRef.current).forEach(placeId => {
+            const markerObj = markersRef.current[placeId];
+            if (markerObj && markerObj.marker) {
+                markerObj.marker.setIcon(markerObj.normalIcon);
+                markerObj.marker.setZIndexOffset(0);
+            }
+        });
     
-      // Reset všetkých markerov na normálnu ikonu
-      Object.keys(markersRef.current).forEach(placeId => {
-        const markerObj = markersRef.current[placeId];
-        if (markerObj && markerObj.marker) {
-          markerObj.marker.setIcon(markerObj.normalIcon);
-          markerObj.marker.setZIndexOffset(0);
+        // Nastav vybranému markeru selected ikonu
+        if (selectedPlace && markersRef.current[selectedPlace.id]) {
+            const selectedMarker = markersRef.current[selectedPlace.id];
+            if (selectedMarker && selectedMarker.marker) {
+                selectedMarker.marker.setIcon(selectedMarker.selectedIcon);
+                selectedMarker.marker.setZIndexOffset(1000);
+            }
         }
-      });
-    
-      // Nastav vybranému markeru selected ikonu
-      if (selectedPlace && markersRef.current[selectedPlace.id]) {
-        const selectedMarker = markersRef.current[selectedPlace.id];
-        if (selectedMarker && selectedMarker.marker) {
-          selectedMarker.marker.setIcon(selectedMarker.selectedIcon);
-          selectedMarker.marker.setZIndexOffset(1000);
-        }
-      }
-      
-      // Scrollujeme k vybranému miestu v zozname
-      scrollToSelectedPlace();
-    }, [selectedPlace, scrollToSelectedPlace]);
+    }, [selectedPlace]);
     
     const addFreeCapacity = useMemo(() => {
       if (newPlaceType !== 'ubytovanie' || !selectedAccommodationType) return null;
