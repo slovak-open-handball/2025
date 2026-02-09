@@ -9,9 +9,97 @@ window.isCategoriesDataLoaded = false;
 let isFirestoreListenersSetup = false; 
 window.areCategoriesLoaded = false;
 
+// Pridané premenné a funkcie pre biely prekryv
+let whiteOverlay = null;
+let isZoomApplied = false;
+
+// Funkcia pre vytvorenie a zobrazenie bieleho prekryvu
+const showWhiteOverlay = () => {
+    if (whiteOverlay) {
+        whiteOverlay.remove();
+    }
+    
+    whiteOverlay = document.createElement('div');
+    whiteOverlay.id = 'white-zoom-overlay';
+    whiteOverlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: white;
+        z-index: 9999999;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        opacity: 1;
+        transition: opacity 0.5s ease;
+    `;
+    
+    // Pridanie správy pre používateľa
+    const message = document.createElement('div');
+    message.textContent = 'Stránka sa zmenšuje na 80%...';
+    message.style.cssText = `
+        font-size: 24px;
+        color: #333;
+        margin-bottom: 20px;
+        font-weight: bold;
+        text-align: center;
+        padding: 0 20px;
+    `;
+    
+    // Pridanie indikátora načítania
+    const loader = document.createElement('div');
+    loader.style.cssText = `
+        width: 50px;
+        height: 50px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #47b3ff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    `;
+    
+    // Pridanie CSS animácie
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    `;
+    
+    whiteOverlay.appendChild(style);
+    whiteOverlay.appendChild(message);
+    whiteOverlay.appendChild(loader);
+    document.body.appendChild(whiteOverlay);
+    
+    console.log("Biely prekryv zobrazený");
+};
+
+// Funkcia pre skrytie bieleho prekryvu
+const hideWhiteOverlay = () => {
+    if (whiteOverlay) {
+        whiteOverlay.style.opacity = '0';
+        
+        setTimeout(() => {
+            if (whiteOverlay && whiteOverlay.parentElement) {
+                whiteOverlay.remove();
+                whiteOverlay = null;
+            }
+            console.log("Biely prekryv skrytý");
+        }, 500);
+    }
+};
+
 // Funkcia pre nastavenie priblíženia na 80% (skutočná simulácia Ctrl+-)
 const setZoomTo80Percent = () => {
     console.log("Nastavujem priblíženie na 80% (simulácia Ctrl+-)");
+    
+    // Zobraziť biely prekryv pred zmenou priblíženia
+    if (!isZoomApplied) {
+        showWhiteOverlay();
+    }
     
     // Metóda 1: CSS zoom property (podporované v Chrome, Edge)
     const setZoomWithCSS = () => {
@@ -116,41 +204,6 @@ const setZoomTo80Percent = () => {
         return true;
     };
     
-    // Metóda 3: Priamy zápis do document (experimentálne)
-    const setZoomWithDocumentWrite = () => {
-        // Táto metóda je radikálna, ale funguje
-        const targetZoom = 80;
-        localStorage.setItem('pageZoom', targetZoom);
-        
-        // Zmeníme veľkosť písma v root elemente
-        document.documentElement.style.fontSize = `${targetZoom}%`;
-        
-        // Zmeníme všetky rozmery
-        const scaleElements = () => {
-            const allElements = document.querySelectorAll('*:not(script):not(style):not(meta):not(link)');
-            allElements.forEach(el => {
-                const style = window.getComputedStyle(el);
-                
-                // Škálujeme veľkosti, ktoré sú v px
-                ['width', 'height', 'padding', 'margin', 'fontSize', 'top', 'right', 'bottom', 'left'].forEach(prop => {
-                    const value = style[prop];
-                    if (value && value.includes('px')) {
-                        const numValue = parseFloat(value);
-                        if (!isNaN(numValue)) {
-                            el.style[prop] = `${numValue * (targetZoom / 100)}px`;
-                        }
-                    }
-                });
-            });
-        };
-        
-        // Spustíme po malom oneskorení
-        setTimeout(scaleElements, 100);
-        
-        console.log("Použitá priama škálovacia metóda");
-        return true;
-    };
-    
     // Skúsime najprv CSS zoom
     let success = setZoomWithCSS();
     
@@ -159,16 +212,26 @@ const setZoomTo80Percent = () => {
         success = setZoomWithViewport();
     }
     
-    // Zobrazíme spätnú väzbu
+    // Zobraziť spätnú väzbu a skryť biely prekryv po úspešnej zmene
     showZoomFeedback(80);
     
-    // Pre istotu pridáme aj event listener pre resize
-    window.dispatchEvent(new Event('resize'));
+    // Označiť, že priblíženie bolo aplikované
+    isZoomApplied = true;
+    
+    // Skryť biely prekryv s oneskorením, aby sa používateľ videl zmenu
+    setTimeout(() => {
+        hideWhiteOverlay();
+        // Pre istotu pridáme aj event listener pre resize
+        window.dispatchEvent(new Event('resize'));
+    }, 1000);
 };
 
 // Funkcia pre obnovenie pôvodného priblíženia
 const resetZoom = () => {
     localStorage.setItem('pageZoom', 100);
+    
+    // Zobraziť biely prekryv pred resetom
+    showWhiteOverlay();
     
     // Reset všetkých metód
     document.body.style.transform = '';
@@ -204,7 +267,16 @@ const resetZoom = () => {
     });
     
     console.log("Priblíženie obnovené na 100%");
+    
+    // Označiť, že priblíženie už nie je aplikované
+    isZoomApplied = false;
+    
+    // Zobraziť spätnú väzbu a skryť biely prekryv
     showZoomFeedback(100);
+    
+    setTimeout(() => {
+        hideWhiteOverlay();
+    }, 1000);
 };
 
 // Funkcia pre vizuálnu spätnú väzbu
@@ -243,9 +315,13 @@ const showZoomFeedback = (zoomLevel) => {
 // Inicializácia priblíženia pri načítaní stránky
 const initializeZoom = () => {
     const savedZoom = localStorage.getItem('pageZoom');
+    console.log(`Inicializácia priblíženia: Nájdené nastavenie ${savedZoom}%`);
+    
     if (savedZoom && parseFloat(savedZoom) !== 100) {
-        // Neskôr aplikujeme v load evente
-        console.log(`Nájdené priblíženie: ${savedZoom}%`);
+        // Ak už je nastavené na 80%, označiť to
+        if (parseFloat(savedZoom) === 80) {
+            isZoomApplied = true;
+        }
     }
 };
 
@@ -275,20 +351,6 @@ window.testFixedElements = () => {
         });
     });
 };
-
-// Pridanie klávesovej skratky
-document.addEventListener('keydown', (e) => {
-    // Ctrl+8 pre 80%
-    if (e.ctrlKey && e.key === '8') {
-        e.preventDefault();
-        setZoomTo80Percent();
-    }
-    // Ctrl+0 pre reset
-    if (e.ctrlKey && e.key === '0') {
-        e.preventDefault();
-        resetZoom();
-    }
-});
 
 // Ostatný kód zostáva rovnaký...
 window.showGlobalNotification = (message, type = 'success') => {
@@ -756,16 +818,31 @@ window.loadHeaderAndScripts = async () => {
 window.addEventListener('load', () => {
     initializeZoom();
     
-    // Nastavíme na 80% po načítaní
-    setTimeout(() => {
-        const savedZoom = localStorage.getItem('pageZoom');
-        if (!savedZoom || parseFloat(savedZoom) !== 80) {
+    // Skontrolovať, či už máme správne priblíženie
+    const savedZoom = localStorage.getItem('pageZoom');
+    
+    if (!savedZoom || parseFloat(savedZoom) !== 80) {
+        // Ak nie je 80%, zobraziť biely prekryv a nastaviť priblíženie
+        showWhiteOverlay();
+        
+        setTimeout(() => {
             setZoomTo80Percent();
-        } else {
-            // Ak už je na 80%, len re-aplikujeme
-            setZoomTo80Percent();
-        }
-    }, 1000);
+        }, 500);
+    } else {
+        // Ak už je 80%, len skontrolovať a re-aplikovať ak je potrebné
+        isZoomApplied = true;
+        
+        // Skontrolovať, či je priblíženie naozaj aplikované
+        setTimeout(() => {
+            const computedZoom = parseFloat(localStorage.getItem('pageZoom') || '100');
+            if (computedZoom !== 80) {
+                showWhiteOverlay();
+                setTimeout(() => {
+                    setZoomTo80Percent();
+                }, 500);
+            }
+        }, 100);
+    }
 });
 
 if (document.readyState === 'loading') {
