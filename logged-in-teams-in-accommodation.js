@@ -1288,11 +1288,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                 : // Nové zobrazenie podľa kategórií
                 React.createElement(
                     'div',
-                    { className: 'space-y-6' },
+                    { className: 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6' },
                     filteredCategoriesData.length === 0
                         ? React.createElement(
                             'div',
-                            { className: 'bg-white rounded-xl shadow-lg p-8 text-center' },
+                            { className: 'col-span-full bg-white rounded-xl shadow-lg p-8 text-center' },
                             React.createElement('p', { className: 'text-gray-500 text-lg' }, 
                                 selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter
                                     ? 'Žiadne kategórie pre zvolené filtre'
@@ -1300,9 +1300,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                             )
                         )
                         : filteredCategoriesData.map(category => {
-                            const baseHeight = 200;
-                            const teamItemHeight = 60;
-                            const minHeight = 400;
+                            const baseHeight = 220;
+                            const teamItemHeight = 52;
+                            const minHeight = 320;
+                            const maxHeight = 600;
                             
                             // Počet tímov na zobrazenie
                             let teamsToShow = 0;
@@ -1324,41 +1325,41 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 teamsToShow = category.teams.length;
                             }
                             
-                            const calculatedHeight = Math.max(
-                                minHeight, 
-                                baseHeight + (teamsToShow * teamItemHeight)
+                            const calculatedHeight = Math.min(
+                                maxHeight,
+                                Math.max(minHeight, baseHeight + (teamsToShow * teamItemHeight))
                             );
                             
                             return React.createElement(
                                 'div',
                                 { 
                                     key: category.name, 
-                                    className: 'bg-white rounded-xl shadow-lg overflow-hidden'
+                                    className: 'bg-white rounded-xl shadow-lg overflow-hidden flex flex-col min-w-0 h-full'
                                 },
                                 // Hlavička kategórie
                                 React.createElement(
                                     'div',
                                     {
-                                        className: 'bg-blue-600 text-white px-5 py-4 flex items-center justify-between'
+                                        className: 'bg-blue-600 text-white px-4 py-3 flex items-center justify-between flex-shrink-0 min-w-0'
                                     },
                                     React.createElement(
                                         'div',
                                         { className: 'flex-grow min-w-0 overflow-hidden' },
                                         React.createElement('h3', { 
-                                            className: 'text-xl font-bold whitespace-nowrap overflow-visible',
+                                            className: 'text-lg font-bold whitespace-nowrap overflow-visible',
                                             style: { textOverflow: 'clip' },
                                         }, category.name),
                                         React.createElement('div', { 
-                                            className: 'text-sm opacity-90 mt-1 whitespace-nowrap overflow-visible',
+                                            className: 'text-xs opacity-90 mt-0.5 whitespace-nowrap overflow-visible',
                                             style: { textOverflow: 'clip' }
                                         }, 
-                                        `${category.assignedTeamsCount} z ${category.totalTeams} tímov priradených • `,
-                                        `${category.assignedPeople} z ${category.totalPeople} osôb ubytovaných`
+                                        `${category.assignedTeamsCount} z ${category.totalTeams} tímov • `,
+                                        `${category.assignedPeople} z ${category.totalPeople} osôb`
                                         )
                                     ),
                                     React.createElement(
                                         'div',
-                                        { className: 'flex-shrink-0 ml-3 text-sm font-medium bg-white text-blue-600 px-3 py-1 rounded-full' },
+                                        { className: 'flex-shrink-0 ml-2 text-xs font-medium bg-white text-blue-600 px-2 py-1 rounded-full whitespace-nowrap' },
                                         `${category.totalTeams} tímov`
                                     )
                                 ),
@@ -1367,10 +1368,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 React.createElement(
                                     'div',
                                     { 
-                                        className: 'p-5',
+                                        className: 'p-4 flex-grow overflow-hidden flex flex-col min-w-0',
                                         style: { 
-                                            height: `${calculatedHeight - 80}px`,
-                                            overflowY: 'auto'
+                                            height: `${calculatedHeight - 68}px`
                                         }
                                     },
                                     // Nepriradené tímy
@@ -1383,17 +1383,18 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     ) &&
                                     React.createElement(
                                         'div',
-                                        { className: 'mb-6' },
+                                        { className: 'mb-4 flex-shrink-0 min-w-0' },
                                         React.createElement(
                                             'h4',
                                             { 
-                                                className: 'font-semibold text-gray-800 mb-3 pb-2 border-b border-gray-200 text-sm'
+                                                className: 'font-semibold text-gray-800 mb-2 pb-1 border-b border-gray-200 text-xs whitespace-nowrap overflow-visible',
+                                                style: { textOverflow: 'clip' }
                                             },
-                                            `Nepriradené tímy (${category.unassignedTeamsCount})`
+                                            `Nepriradené (${category.unassignedTeamsCount})`
                                         ),
                                         React.createElement(
                                             'ul',
-                                            { className: 'space-y-2' },
+                                            { className: 'space-y-1.5 min-w-0' },
                                             category.unassignedTeams
                                                 .filter(team => 
                                                     !selectedTeamNameFilter || teamMatchesFilter(team, selectedTeamNameFilter)
@@ -1403,29 +1404,30 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                         'li',
                                                         {
                                                             key: `${team.teamId}-${index}`,
-                                                            className: 'py-2 px-3 bg-gray-50 rounded border border-gray-200 flex justify-between items-center hover:bg-gray-100 group'
+                                                            className: 'py-1.5 px-2.5 bg-gray-50 rounded border border-gray-200 flex justify-between items-center hover:bg-gray-100 group min-w-0'
                                                         },
                                                         React.createElement(
                                                             'div',
-                                                            { className: 'min-w-0 flex-grow flex items-center' },
+                                                            { className: 'min-w-0 flex-grow flex items-center overflow-hidden' },
                                                             React.createElement('span', { 
-                                                                className: 'font-medium text-sm whitespace-nowrap overflow-visible flex-shrink-0',
+                                                                className: 'font-medium text-xs whitespace-nowrap overflow-visible flex-shrink-0',
                                                                 style: { textOverflow: 'clip' },
                                                             }, team.teamName),
                                                             React.createElement('span', { 
-                                                                className: 'text-gray-500 text-xs ml-2 whitespace-nowrap flex-shrink-0'
-                                                            }, `(${team.totalPeople} osôb)`)
+                                                                className: 'text-gray-500 text-xs ml-1.5 whitespace-nowrap flex-shrink-0'
+                                                            }, `(${team.totalPeople})`
+                                                            )
                                                         ),
                                                         React.createElement(
                                                             'div',
-                                                            { className: 'flex items-center gap-1 flex-shrink-0 ml-2' },
+                                                            { className: 'flex items-center gap-0.5 flex-shrink-0 ml-1.5' },
                                                             React.createElement(
                                                                 'button',
                                                                 {
                                                                     onClick: () => openAssignModal(team),
-                                                                    className: 'px-3 py-1 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors'
+                                                                    className: 'px-2 py-0.5 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors whitespace-nowrap'
                                                                 },
-                                                                'Priradiť ubytovňu'
+                                                                'Priradiť'
                                                             )
                                                         )
                                                     )
@@ -1451,17 +1453,18 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     ) &&
                                     React.createElement(
                                         'div',
-                                        { className: 'mt-4' },
+                                        { className: 'flex-grow overflow-hidden flex flex-col min-w-0' },
                                         React.createElement(
                                             'h4',
                                             { 
-                                                className: 'font-semibold text-gray-800 mb-3 text-sm'
+                                                className: 'font-semibold text-gray-800 mb-2 text-xs whitespace-nowrap overflow-visible flex-shrink-0',
+                                                style: { textOverflow: 'clip' }
                                             },
-                                            `Priradené tímy (${category.assignedTeamsCount})`
+                                            `Priradené (${category.assignedTeamsCount})`
                                         ),
                                         React.createElement(
                                             'ul',
-                                            { className: 'space-y-2' },
+                                            { className: 'space-y-1.5 flex-grow overflow-y-auto pr-1 min-w-0' },
                                             category.assignedTeams
                                                 .filter(team => {
                                                     if (selectedAccommodationFilter) {
@@ -1489,62 +1492,69 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                         'li',
                                                         {
                                                             key: `${team.teamId}-${index}`,
-                                                            className: 'py-2 px-3 bg-gray-50 rounded border border-gray-200 flex justify-between items-center hover:bg-gray-100 group'
+                                                            className: 'py-1.5 px-2.5 bg-gray-50 rounded border border-gray-200 flex justify-between items-center hover:bg-gray-100 group min-w-0'
                                                         },
                                                         React.createElement(
                                                             'div',
-                                                            { className: 'min-w-0 flex-grow flex flex-col' },
+                                                            { className: 'min-w-0 flex-grow flex flex-col overflow-hidden' },
                                                             React.createElement(
                                                                 'div',
-                                                                { className: 'flex items-center' },
+                                                                { className: 'flex items-center min-w-0' },
                                                                 React.createElement('span', { 
-                                                                    className: 'font-medium text-sm whitespace-nowrap overflow-visible flex-shrink-0',
+                                                                    className: 'font-medium text-xs whitespace-nowrap overflow-visible flex-shrink-0',
                                                                     style: { 
                                                                         textOverflow: 'clip',
                                                                         color: teamColor || 'inherit'
                                                                     },
                                                                 }, team.teamName),
                                                                 React.createElement('span', { 
-                                                                    className: 'text-xs ml-2 whitespace-nowrap flex-shrink-0 font-medium',
+                                                                    className: 'text-xs ml-1.5 whitespace-nowrap flex-shrink-0 font-medium',
                                                                     style: { 
                                                                         color: teamColor || '#6b7280'
                                                                     }
-                                                                }, `(${team.totalPeople} osôb)`)
+                                                                }, `(${team.totalPeople})`
+                                                                )
                                                             ),
                                                             React.createElement(
                                                                 'div',
                                                                 { 
-                                                                    className: 'text-xs text-gray-600 mt-1 flex items-center gap-1'
+                                                                    className: 'text-xs text-gray-600 mt-0.5 flex items-center gap-0.5 min-w-0'
                                                                 },
                                                                 React.createElement(
                                                                     'span',
                                                                     {
-                                                                        className: 'inline-block w-2 h-2 rounded-full',
+                                                                        className: 'inline-block w-1.5 h-1.5 rounded-full flex-shrink-0',
                                                                         style: { backgroundColor: teamColor || '#6b7280' }
                                                                     }
                                                                 ),
-                                                                React.createElement('span', null, team.assignedPlace),
+                                                                React.createElement('span', { 
+                                                                    className: 'whitespace-nowrap overflow-visible flex-shrink-0',
+                                                                    style: { textOverflow: 'clip' }
+                                                                }, team.assignedPlace),
                                                                 accommodation && accommodation.accommodationType && 
                                                                 React.createElement(
                                                                     'span',
-                                                                    { className: 'ml-2 text-gray-500' },
+                                                                    { 
+                                                                        className: 'ml-1 text-gray-500 whitespace-nowrap flex-shrink-0',
+                                                                        style: { textOverflow: 'clip' }
+                                                                    },
                                                                     `(${accommodation.accommodationType})`
                                                                 )
                                                             )
                                                         ),
                                                         React.createElement(
                                                             'div',
-                                                            { className: 'flex items-center gap-1 flex-shrink-0 ml-2' },
+                                                            { className: 'flex items-center gap-0.5 flex-shrink-0 ml-1.5' },
                                                             React.createElement(
                                                                 'button',
                                                                 {
                                                                     onClick: () => openAssignModal(team),
-                                                                    className: 'p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors opacity-0 group-hover:opacity-100'
+                                                                    className: 'p-0.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors opacity-0 group-hover:opacity-100'
                                                                 },
                                                                 React.createElement(
                                                                     'svg',
                                                                     { 
-                                                                        className: 'w-3.5 h-3.5', 
+                                                                        className: 'w-3 h-3', 
                                                                         fill: 'none', 
                                                                         stroke: 'currentColor', 
                                                                         viewBox: '0 0 24 24',
@@ -1561,12 +1571,12 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                                 'button',
                                                                 {
                                                                     onClick: () => openRemoveConfirmation(team),
-                                                                    className: 'p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100'
+                                                                    className: 'p-0.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100'
                                                                 },
                                                                 React.createElement(
                                                                     'svg',
                                                                     { 
-                                                                        className: 'w-3.5 h-3.5', 
+                                                                        className: 'w-3 h-3', 
                                                                         fill: 'none', 
                                                                         stroke: 'currentColor', 
                                                                         viewBox: '0 0 24 24',
