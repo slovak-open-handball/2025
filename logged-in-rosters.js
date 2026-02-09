@@ -2811,7 +2811,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
 
         if (changes.length > 0 && userEmail) {
             const prefixedChanges = changes.map(ch =>
-                `${memberName} – ${memberToEdit.type} – tím „${teamName}“ (${category}): ${ch}`
+                `${memberName} – ${memberToEdit.type} – tím ${teamName} (${category}): ${ch}`
             );
 
             const notificationsRef = collection(db, 'notifications');
