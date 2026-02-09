@@ -1721,85 +1721,101 @@ const AddGroupsApp = ({ userProfileData }) => {
               React.createElement('i', { className: 'fa-solid fa-chart-bar mr-3' }),
               'Prehľad miest'
             ),
-            React.createElement('div', { className: 'grid grid-cols-2 sm:grid-cols-4 gap-4' },
+            React.createElement('div', { className: 'grid grid-cols-2 sm:grid-cols-4 gap-3' },
               // Športové haly
               React.createElement('button', {
                 onClick: () => { setActiveFilter(activeFilter === 'sportova_hala' ? null : 'sportova_hala'); setSelectedPlace(null); setPlaceHash(null); },
-                className: `p-4 rounded-lg border-2 transition-all duration-200 flex flex-col items-center justify-center shadow-sm ${
+                className: `p-3 rounded-lg border-2 transition-all duration-200 flex items-start shadow-sm h-24 ${
                   activeFilter === 'sportova_hala'
                     ? 'bg-red-50 border-red-300 scale-105'
                     : 'bg-white border-gray-200 hover:bg-red-50 hover:border-red-200'
                 }`
               },
-                React.createElement('div', { className: 'w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-2' },
-                  React.createElement('i', { className: 'fa-solid fa-futbol text-red-600 text-xl' })
-                ),
-                React.createElement('p', { className: 'text-2xl font-bold text-gray-800' }, 
-                  allPlaces.filter(p => p.type === 'sportova_hala').length
-                ),
-                React.createElement('p', { className: `text-sm font-medium ${
-                  activeFilter === 'sportova_hala' ? 'text-red-700' : 'text-gray-600'
-                }` }, 'Športové haly')
+                React.createElement('div', { className: 'flex items-start w-full' },
+                  React.createElement('div', { className: 'w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3 mt-1' },
+                    React.createElement('i', { className: 'fa-solid fa-futbol text-red-600 text-lg' })
+                  ),
+                  React.createElement('div', { className: 'flex-1 text-left' },
+                    React.createElement('p', { className: 'text-2xl font-bold text-gray-800 leading-tight' }, 
+                      allPlaces.filter(p => p.type === 'sportova_hala').length
+                    ),
+                    React.createElement('p', { className: `text-xs font-medium mt-1 leading-tight ${
+                      activeFilter === 'sportova_hala' ? 'text-red-700' : 'text-gray-600'
+                    }` }, 'Športové haly')
+                  )
+                )
               ),
               
               // Ubytovanie
               React.createElement('button', {
                 onClick: () => { setActiveFilter(activeFilter === 'ubytovanie' ? null : 'ubytovanie'); setSelectedPlace(null); setPlaceHash(null); },
-                className: `p-4 rounded-lg border-2 transition-all duration-200 flex flex-col items-center justify-center shadow-sm ${
+                className: `p-3 rounded-lg border-2 transition-all duration-200 flex items-start shadow-sm h-24 ${
                   activeFilter === 'ubytovanie'
                     ? 'bg-gray-50 border-gray-300 scale-105'
                     : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                 }`
               },
-                React.createElement('div', { className: 'w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-2' },
-                  React.createElement('i', { className: 'fa-solid fa-bed text-gray-600 text-xl' })
-                ),
-                React.createElement('p', { className: 'text-2xl font-bold text-gray-800' }, 
-                  allPlaces.filter(p => p.type === 'ubytovanie').length
-                ),
-                React.createElement('p', { className: `text-sm font-medium ${
-                  activeFilter === 'ubytovanie' ? 'text-gray-700' : 'text-gray-600'
-                }` }, 'Ubytovanie')
+                React.createElement('div', { className: 'flex items-start w-full' },
+                  React.createElement('div', { className: 'w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mr-3 mt-1' },
+                    React.createElement('i', { className: 'fa-solid fa-bed text-gray-600 text-lg' })
+                  ),
+                  React.createElement('div', { className: 'flex-1 text-left' },
+                    React.createElement('p', { className: 'text-2xl font-bold text-gray-800 leading-tight' }, 
+                      allPlaces.filter(p => p.type === 'ubytovanie').length
+                    ),
+                    React.createElement('p', { className: `text-xs font-medium mt-1 leading-tight ${
+                      activeFilter === 'ubytovanie' ? 'text-gray-700' : 'text-gray-600'
+                    }` }, 'Ubytovanie')
+                  )
+                )
               ),
               
               // Stravovanie
               React.createElement('button', {
                 onClick: () => { setActiveFilter(activeFilter === 'stravovanie' ? null : 'stravovanie'); setSelectedPlace(null); setPlaceHash(null); },
-                className: `p-4 rounded-lg border-2 transition-all duration-200 flex flex-col items-center justify-center shadow-sm ${
+                className: `p-3 rounded-lg border-2 transition-all duration-200 flex items-start shadow-sm h-24 ${
                   activeFilter === 'stravovanie'
                     ? 'bg-green-50 border-green-300 scale-105'
                     : 'bg-white border-gray-200 hover:bg-green-50 hover:border-green-200'
                 }`
               },
-                React.createElement('div', { className: 'w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-2' },
-                  React.createElement('i', { className: 'fa-solid fa-utensils text-green-600 text-xl' })
-                ),
-                React.createElement('p', { className: 'text-2xl font-bold text-gray-800' }, 
-                  allPlaces.filter(p => p.type === 'stravovanie').length
-                ),
-                React.createElement('p', { className: `text-sm font-medium ${
-                  activeFilter === 'stravovanie' ? 'text-green-700' : 'text-gray-600'
-                }` }, 'Stravovanie')
+                React.createElement('div', { className: 'flex items-start w-full' },
+                  React.createElement('div', { className: 'w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3 mt-1' },
+                    React.createElement('i', { className: 'fa-solid fa-utensils text-green-600 text-lg' })
+                  ),
+                  React.createElement('div', { className: 'flex-1 text-left' },
+                    React.createElement('p', { className: 'text-2xl font-bold text-gray-800 leading-tight' }, 
+                      allPlaces.filter(p => p.type === 'stravovanie').length
+                    ),
+                    React.createElement('p', { className: `text-xs font-medium mt-1 leading-tight ${
+                      activeFilter === 'stravovanie' ? 'text-green-700' : 'text-gray-600'
+                    }` }, 'Stravovanie')
+                  )
+                )
               ),
               
               // Zastávky
               React.createElement('button', {
                 onClick: () => { setActiveFilter(activeFilter === 'zastavka' ? null : 'zastavka'); setSelectedPlace(null); setPlaceHash(null); },
-                className: `p-4 rounded-lg border-2 transition-all duration-200 flex flex-col items-center justify-center shadow-sm ${
+                className: `p-3 rounded-lg border-2 transition-all duration-200 flex items-start shadow-sm h-24 ${
                   activeFilter === 'zastavka'
                     ? 'bg-blue-50 border-blue-300 scale-105'
                     : 'bg-white border-gray-200 hover:bg-blue-50 hover:border-blue-200'
                 }`
               },
-                React.createElement('div', { className: 'w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-2' },
-                  React.createElement('i', { className: 'fa-solid fa-bus text-blue-600 text-xl' })
-                ),
-                React.createElement('p', { className: 'text-2xl font-bold text-gray-800' }, 
-                  allPlaces.filter(p => p.type === 'zastavka').length
-                ),
-                React.createElement('p', { className: `text-sm font-medium ${
-                  activeFilter === 'zastavka' ? 'text-blue-700' : 'text-gray-600'
-                }` }, 'Zastávky')
+                React.createElement('div', { className: 'flex items-start w-full' },
+                  React.createElement('div', { className: 'w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3 mt-1' },
+                    React.createElement('i', { className: 'fa-solid fa-bus text-blue-600 text-lg' })
+                  ),
+                  React.createElement('div', { className: 'flex-1 text-left' },
+                    React.createElement('p', { className: 'text-2xl font-bold text-gray-800 leading-tight' }, 
+                      allPlaces.filter(p => p.type === 'zastavka').length
+                    ),
+                    React.createElement('p', { className: `text-xs font-medium mt-1 leading-tight ${
+                      activeFilter === 'zastavka' ? 'text-blue-700' : 'text-gray-600'
+                    }` }, 'Zastávky')
+                  )
+                )
               )
             )
           )
