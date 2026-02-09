@@ -8,10 +8,19 @@ window.isRegistrationDataLoaded = false;
 window.isCategoriesDataLoaded = false;
 let isFirestoreListenersSetup = false; 
 window.areCategoriesLoaded = false;
+let zoomAlreadyApplied = false; // Nová premenná na sledovanie stavu
 
 // Funkcia pre nastavenie priblíženia na 80% (skutočná simulácia Ctrl+-)
 const setZoomTo80Percent = () => {
+    // Kontrola, či už nie je nastavené na 80%
+    const currentZoom = parseFloat(localStorage.getItem('pageZoom')) || 100;
+    if (currentZoom === 80 && zoomAlreadyApplied) {
+        console.log("Zoom už je nastavený na 80%, preskakujem.");
+        return;
+    }
+    
     console.log("Nastavujem priblíženie na 80% (simulácia Ctrl+-)");
+    zoomAlreadyApplied = true;
     
     // Metóda 1: CSS zoom property (podporované v Chrome, Edge)
     const setZoomWithCSS = () => {
@@ -116,41 +125,6 @@ const setZoomTo80Percent = () => {
         return true;
     };
     
-    // Metóda 3: Priamy zápis do document (experimentálne)
-    const setZoomWithDocumentWrite = () => {
-        // Táto metóda je radikálna, ale funguje
-        const targetZoom = 80;
-        localStorage.setItem('pageZoom', targetZoom);
-        
-        // Zmeníme veľkosť písma v root elemente
-        document.documentElement.style.fontSize = `${targetZoom}%`;
-        
-        // Zmeníme všetky rozmery
-        const scaleElements = () => {
-            const allElements = document.querySelectorAll('*:not(script):not(style):not(meta):not(link)');
-            allElements.forEach(el => {
-                const style = window.getComputedStyle(el);
-                
-                // Škálujeme veľkosti, ktoré sú v px
-                ['width', 'height', 'padding', 'margin', 'fontSize', 'top', 'right', 'bottom', 'left'].forEach(prop => {
-                    const value = style[prop];
-                    if (value && value.includes('px')) {
-                        const numValue = parseFloat(value);
-                        if (!isNaN(numValue)) {
-                            el.style[prop] = `${numValue * (targetZoom / 100)}px`;
-                        }
-                    }
-                });
-            });
-        };
-        
-        // Spustíme po malom oneskorení
-        setTimeout(scaleElements, 100);
-        
-        console.log("Použitá priama škálovacia metóda");
-        return true;
-    };
-    
     // Skúsime najprv CSS zoom
     let success = setZoomWithCSS();
     
@@ -159,8 +133,10 @@ const setZoomTo80Percent = () => {
         success = setZoomWithViewport();
     }
     
-    // Zobrazíme spätnú väzbu
-    showZoomFeedback(80);
+    // Zobrazíme spätnú väzbu len pri prvom nastavení
+    if (currentZoom !== 80) {
+        showZoomFeedback(80);
+    }
     
     // Pre istotu pridáme aj event listener pre resize
     window.dispatchEvent(new Event('resize'));
@@ -169,6 +145,7 @@ const setZoomTo80Percent = () => {
 // Funkcia pre obnovenie pôvodného priblíženia
 const resetZoom = () => {
     localStorage.setItem('pageZoom', 100);
+    zoomAlreadyApplied = false;
     
     // Reset všetkých metód
     document.body.style.transform = '';
@@ -244,8 +221,41 @@ const showZoomFeedback = (zoomLevel) => {
 const initializeZoom = () => {
     const savedZoom = localStorage.getItem('pageZoom');
     if (savedZoom && parseFloat(savedZoom) !== 100) {
-        // Neskôr aplikujeme v load evente
         console.log(`Nájdené priblíženie: ${savedZoom}%`);
+        
+        // Ak už je uložené na 80%, nastavíme premennú
+        if (parseFloat(savedZoom) === 80) {
+            zoomAlreadyApplied = true;
+        }
+    }
+};
+
+// Funkcia pre rýchle aplikovanie zoomu bez blikania
+const applyZoomImmediately = () => {
+    const savedZoom = localStorage.getItem('pageZoom');
+    
+    // Ak už je nastavené na 80% a ešte sme to neaplikovali
+    if (savedZoom && parseFloat(savedZoom) === 80 && !zoomAlreadyApplied) {
+        // Použijeme priamu metódu bez animácie
+        const targetZoom = 80;
+        zoomAlreadyApplied = true;
+        
+        // Použijeme najrýchlejšiu metódu
+        const htmlElement = document.documentElement;
+        
+        // Skúsime CSS zoom
+        if ('zoom' in htmlElement.style) {
+            htmlElement.style.zoom = `${targetZoom}%`;
+        } else {
+            // Alebo rýchly CSS transform
+            document.body.style.transform = `scale(${targetZoom / 100})`;
+            document.body.style.transformOrigin = 'top center';
+            document.body.style.width = '125%';
+            document.body.style.marginLeft = '-12.5%';
+            document.body.style.overflowX = 'hidden';
+        }
+        
+        console.log("Zoom 80% aplikovaný okamžite po načítaní");
     }
 };
 
@@ -752,20 +762,23 @@ window.loadHeaderAndScripts = async () => {
     }
 };
 
-// Inicializácia priblíženia pri načítaní stránky
-window.addEventListener('load', () => {
+// Inicializácia priblíženia - aplikujeme čo najskôr
+document.addEventListener('DOMContentLoaded', () => {
     initializeZoom();
     
-    // Nastavíme na 80% po načítaní
-    setTimeout(() => {
+    // Aplikujeme zoom hneď po načítaní DOM, nie až po load
+    applyZoomImmediately();
+});
+
+// Inicializácia priblíženia pri načítaní stránky - pre prípad, že DOMContentLoaded už prebehol
+window.addEventListener('load', () => {
+    // Doplňujeme, ak sa DOMContentLoaded nestihol
+    if (!zoomAlreadyApplied) {
         const savedZoom = localStorage.getItem('pageZoom');
-        if (!savedZoom || parseFloat(savedZoom) !== 80) {
-            setZoomTo80Percent();
-        } else {
-            // Ak už je na 80%, len re-aplikujeme
+        if (savedZoom && parseFloat(savedZoom) === 80) {
             setZoomTo80Percent();
         }
-    }, 1000);
+    }
 });
 
 if (document.readyState === 'loading') {
