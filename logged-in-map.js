@@ -32,18 +32,6 @@ const typeLabels = {
     zastavka: "Zastávka",
 };
 
-useEffect(() => {
-    window.goToDefaultView = () => {
-        if (leafletMap.current) {
-            console.log("Klik na domček → idem na:", defaultCenter, defaultZoom);
-            leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
-        }
-    };
-    return () => {
-        delete window.goToDefaultView;
-    };
-}, [defaultCenter, defaultZoom]);
-
 // Global notification helper
 window.showGlobalNotification = (message, type = 'success') => {
     let el = document.getElementById('global-notification');
@@ -206,6 +194,18 @@ const AddGroupsApp = ({ userProfileData }) => {
             }
         }, 200);
     }, [selectedPlace]);
+
+    useEffect(() => {
+        window.goToDefaultView = () => {
+            if (leafletMap.current) {
+                console.log("Klik na domček → idem na:", defaultCenter, defaultZoom);
+                leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
+            }
+        };
+        return () => {
+            delete window.goToDefaultView;
+        };
+    }, [defaultCenter, defaultZoom]);
 
     useEffect(() => {
         scrollToSelectedPlace();
