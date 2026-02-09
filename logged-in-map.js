@@ -2054,22 +2054,20 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 )
                               ),
                               
-                              <div className="text-sm text-gray-600 space-y-1">
-                                {place.capacity && (place.type === 'ubytovanie' || place.type === 'stravovanie') &&
+                              React.createElement('div', { className: "text-sm text-gray-600 space-y-1" },
+                                place.capacity && (place.type === 'ubytovanie' || place.type === 'stravovanie') &&
                                   React.createElement('div', null,
                                     React.createElement('span', { className: 'font-medium' }, place.type === 'ubytovanie' ? 'Lôžok: ' : 'Kapacita: '),
                                     place.capacity
-                                  )
-                                }
+                                  ),
                                 
-                                {place.type === 'ubytovanie' && place.pricePerNight &&
+                                place.type === 'ubytovanie' && place.pricePerNight &&
                                   React.createElement('div', null,
                                     React.createElement('span', { className: 'font-medium' }, 'Cena: '),
                                     `${formatPrice(place.pricePerNight)} €/os/noc`
-                                  )
-                                }
+                                  ),
                                 
-                                {place.type === 'stravovanie' && (
+                                place.type === 'stravovanie' && (
                                   React.createElement('div', null,
                                     React.createElement('span', { className: 'font-medium' }, 'Ceny: '),
                                     (place.breakfastPrice || place.lunchPrice || place.dinnerPrice) ?
@@ -2080,9 +2078,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                                       ) :
                                       React.createElement('span', { className: 'text-gray-400' }, '–')
                                   )
-                                )}
-                              </div>
-                            ),
+                                )
+                              ),
                             
                             React.createElement('button', {
                               onClick: () => {
