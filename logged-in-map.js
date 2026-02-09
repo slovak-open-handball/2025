@@ -1866,7 +1866,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         // ZMENENÉ: Main content s flex layoutom
         React.createElement('div', { className: 'flex flex-col lg:flex-row gap-3 lg:gap-4' },
           // Ľavá časť - Mapa a jej kontroly
-          React.createElement('div', { className: 'lg:w-2/3 relative' },
+          React.createElement('div', { className: 'lg:w-3/4 relative' },
             React.createElement('div', { className: 'relative' },
               // Mapa
               React.createElement('div', {
@@ -2022,7 +2022,7 @@ const AddGroupsApp = ({ userProfileData }) => {
           ),
           
           // Pravá časť - ZOZNAM MIEST (teraz už bez štatistík)
-          React.createElement('div', { className: 'lg:w-1/3' },
+          React.createElement('div', { className: 'lg:w-1/4' },
             React.createElement('div', { className: 'bg-gray-50 rounded-xl p-6 shadow-inner h-full flex flex-col' },
               
               // ZOZNAM MIEST
