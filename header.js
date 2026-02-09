@@ -9,63 +9,99 @@ window.isCategoriesDataLoaded = false;
 let isFirestoreListenersSetup = false; 
 window.areCategoriesLoaded = false;
 
-// **UPRAVENÉ: Funkcia pre nastavenie priblíženia na 80% - optimalizovaná pre celú stránku**
 const setZoomTo80Percent = () => {
-    console.log("Nastavujem priblíženie na 80% pre celú stránku");
+    console.log("Nastavujem priblíženie na 80% (bez skrývania obsahu)");
     
     const targetZoom = 80;
     localStorage.setItem('pageZoom', targetZoom);
     
-    // **Kritická zmena: Použijeme viewport meta tag, ktorý ovplyvňuje celú stránku**
+    // **Odstrániť predchádzajúce štýly, ktoré by mohli skrývať obsah**
+    const oldStyles = document.getElementById('global-zoom-styles');
+    if (oldStyles) oldStyles.remove();
+    
+    // **Použijeme kombináciu transform a zoom s opatrnými nastaveniami**
+    const style = document.createElement('style');
+    style.id = 'global-zoom-styles';
+    
+    // **Kritická zmena: Používame transform-origin a width, ktoré zachovávajú obsah**
+    style.textContent = `
+        /* Aplikujeme priblíženie na celú stránku */
+        html {
+            zoom: 0.8;
+            -moz-transform: scale(0.8);
+            -moz-transform-origin: 0 0;
+            -o-transform: scale(0.8);
+            -o-transform-origin: 0 0;
+            -webkit-transform: scale(0.8);
+            -webkit-transform-origin: 0 0;
+        }
+        
+        /* Pre prehliadače, ktoré nepodporujú zoom na html */
+        body {
+            transform: scale(0.8);
+            transform-origin: top left;
+            width: 125%; /* Kompenzácia: 100/0.8 = 125 */
+            height: auto;
+            min-height: 125vh;
+        }
+        
+        /* ZABEZPEČENIE VIDITEĽNOSTI HEADER */
+        header, #header-placeholder, [id*="header"] {
+            transform: scale(1) !important; /* Header zobrazujeme v plnej veľkosti */
+            width: 100% !important;
+            position: relative !important;
+            z-index: 1000 !important;
+        }
+        
+        /* Zabezpečíme, že všetok obsah je viditeľný */
+        * {
+            box-sizing: border-box !important;
+        }
+        
+        /* Pre mobilné zariadenia - menej agresívne nastavenia */
+        @media (max-width: 768px) {
+            html {
+                zoom: 1;
+                transform: none !important;
+            }
+            
+            body {
+                transform: none !important;
+                width: 100% !important;
+                min-height: 100vh !important;
+            }
+        }
+    `;
+    
+    document.head.appendChild(style);
+    
+    // **Pridáme viewport meta tag pre mobilné zariadenia**
     let viewport = document.querySelector('meta[name="viewport"]');
     if (!viewport) {
         viewport = document.createElement('meta');
         viewport.name = 'viewport';
-        document.head.insertBefore(viewport, document.head.firstChild);
+        document.head.appendChild(viewport);
     }
-    viewport.content = 'width=device-width, initial-scale=0.8, maximum-scale=0.8, user-scalable=yes';
+    viewport.content = 'width=device-width, initial-scale=0.8, maximum-scale=1.5, user-scalable=yes';
     
-    // **Pridáme globálne CSS pre celú stránku**
-    if (!document.getElementById('global-zoom-styles')) {
-        const style = document.createElement('style');
-        style.id = 'global-zoom-styles';
-        style.textContent = `
-            /* Reset predchádzajúcich štýlov */
-            html, body {
-                transform: none !important;
-                width: 100% !important;
-                height: auto !important;
-                margin: 0 !important;
-                padding: 0 !important;
-            }
-            
-            /* Aplikujeme priblíženie cez zoom property ak je podporovaná */
-            html {
-                zoom: 0.8;
-            }
-            
-            /* Alternatíva pre prehliadače, ktoré nepodporujú zoom */
-            body {
-                transform: scale(0.8);
-                transform-origin: top center;
-                width: 125%;
-                margin-left: -12.5%;
-                position: relative;
-            }
-            
-            /* Pre mobilné zariadenia - necháme viewport robiť prácu */
-            @media (max-width: 768px) {
-                body {
-                    transform: none !important;
-                    width: 100% !important;
-                    margin-left: 0 !important;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
+    console.log("Priblíženie na 80% aplikované (header viditeľný)");
     
-    console.log("Priblíženie na 80% aplikované na celú stránku");
+    // **Uistíme sa, že header je viditeľný**
+    setTimeout(() => {
+        const header = document.querySelector('header');
+        const headerPlaceholder = document.getElementById('header-placeholder');
+        
+        if (header) {
+            header.style.visibility = 'visible';
+            header.style.opacity = '1';
+        }
+        
+        if (headerPlaceholder) {
+            headerPlaceholder.style.visibility = 'visible';
+            headerPlaceholder.style.opacity = '1';
+        }
+    }, 100);
+    
     return true;
 };
 
@@ -82,14 +118,19 @@ const resetZoom = () => {
     // Reset viewport
     const viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) {
-        viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes';
+        viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes';
     }
     
-    // Reset štýlov na html a body
+    // Reset štýlov
     document.documentElement.style.cssText = '';
     document.body.style.cssText = '';
     
-    console.log("Priblíženie obnovené na 100% pre celú stránku");
+    // Zobraziť všetok obsah
+    document.querySelectorAll('header, #header-placeholder, [id*="header"]').forEach(el => {
+        el.style.cssText = '';
+    });
+    
+    console.log("Priblíženie obnovené na 100%");
 };
 
 // Funkcia pre vizuálnu spätnú väzbu (zostáva rovnaká)
@@ -125,57 +166,42 @@ const showZoomFeedback = (zoomLevel) => {
     }, 2000);
 };
 
-// **UPRAVENÉ: Inicializácia priblíženia - volá sa OKAMŽITE**
+// **UPRAVENÉ: Inicializácia priblíženia - s oneskorením pre lepšiu kompatibilitu**
 const initializeZoom = () => {
     // Skontrolujeme, či máme uložené priblíženie
     const savedZoom = localStorage.getItem('pageZoom');
     const shouldApply80Percent = !savedZoom || parseFloat(savedZoom) !== 80;
     
-    // **Funkcia, ktorá aplikuje zoom čo najskôr**
-    const applyZoomImmediately = () => {
+    // **Funkcia, ktorá aplikuje zoom s oneskorením pre lepšiu stabilitu**
+    const applyZoom = () => {
+        // Najprv uistíme sa, že dokument je pripravený
+        if (!document.body) {
+            setTimeout(applyZoom, 50);
+            return;
+        }
+        
         if (shouldApply80Percent) {
+            console.log("Aplikujem priblíženie 80% (prvýkrát)");
             setZoomTo80Percent();
         } else if (parseFloat(savedZoom) === 80) {
-            setZoomTo80Percent(); // Re-aplikujeme pre konzistenciu
+            console.log("Re-aplikujem priblíženie 80% (už bolo nastavené)");
+            setZoomTo80Percent();
         }
+        
+        // Zobrazíme spätnú väzbu
+        showZoomFeedback(savedZoom ? parseFloat(savedZoom) : 80);
     };
     
-    // **Aplikujeme zoom čo najskôr**
-    if (document.readyState === 'loading') {
-        // Aplikujeme ihneď po načítaní HTML (pred obrázkami a štýlmi)
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(applyZoomImmediately, 0);
-        });
-        
-        // **Kritická časť: Skúsime aplikovať ešte skôr pomocou MutationObserver**
-        if (document.head) {
-            const observer = new MutationObserver((mutations) => {
-                // Keď sa objaví body element, aplikujeme zoom
-                if (document.body) {
-                    applyZoomImmediately();
-                    observer.disconnect();
-                }
-            });
-            
-            observer.observe(document.documentElement, {
-                childList: true,
-                subtree: true
-            });
-        }
-    } else {
-        // Dokument je už načítaný - aplikujeme ihneď
-        setTimeout(applyZoomImmediately, 0);
-    }
+    // **Spustíme aplikáciu zoom s malým oneskorením**
+    setTimeout(applyZoom, 100);
     
     console.log(`Inicializácia priblíženia. Saved zoom: ${savedZoom}, Apply 80%: ${shouldApply80Percent}`);
 };
 
-// **UPRAVENÉ: Spustíme inicializáciu priblíženia IHNEĎ po načítaní skriptu**
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeZoom);
-} else {
+// **UPRAVENÉ: Spustíme inicializáciu priblíženia po načítaní dokumentu**
+document.addEventListener('DOMContentLoaded', () => {
     initializeZoom();
-}
+});
 
 // Funkcie pre konzolu
 window.setZoom80 = () => {
@@ -201,7 +227,9 @@ window.testFixedElements = () => {
             top: style.top,
             right: style.right,
             bottom: style.bottom,
-            left: style.left
+            left: style.left,
+            visibility: style.visibility,
+            opacity: style.opacity
         });
     });
 };
@@ -222,59 +250,465 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// **ODSTRÁNENÉ: load event listener - už nie je potrebný**
-
-// Ostatný kód zostáva rovnaký...
 window.showGlobalNotification = (message, type = 'success') => {
-    // ... (pôvodný kód ostáva) ...
+    let notificationElement = document.getElementById('global-notification');
+
+    if (!notificationElement) {
+        notificationElement = document.createElement('div');
+        notificationElement.id = 'global-notification';
+        notificationElement.className = `
+            fixed top-4 left-1/2 transform -translate-x-1/2 z-[100]
+            p-4 rounded-lg shadow-lg text-white font-semibold transition-all duration-300 ease-in-out
+            flex items-center space-x-2
+            opacity-0 pointer-events-none
+        `;
+        document.body.appendChild(notificationElement);
+    }
+
+    notificationElement.classList.remove('bg-red-600', 'bg-[#3A8D41]');
+    
+    if (type === 'success') {
+        notificationElement.classList.add('bg-[#3A8D41]');
+    } else {
+        notificationElement.classList.add('bg-red-600');
+    }
+
+    setTimeout(() => {
+        notificationElement.classList.add('opacity-100', 'pointer-events-auto');
+    }, 10);
+
+    setTimeout(() => {
+        notificationElement.classList.remove('opacity-100', 'pointer-events-auto');
+    }, 7500);
 };
 
 const formatPhoneNumber = (phoneNumber) => {
-    // ... (pôvodný kód ostáva) ...
+    const cleaned = phoneNumber.replace(/[^+\d]/g, '');
+    let number = cleaned;
+
+    const sortedDialCodes = countryDialCodes.sort((a, b) => b.dialCode.length - a.dialCode.length);
+    let dialCode = '';
+
+    for (const code of sortedDialCodes) {
+        if (number.startsWith(code.dialCode)) {
+            dialCode = code.dialCode;
+            number = number.substring(dialCode.length);
+            break;
+        }
+    }
+
+    if (!dialCode) {
+        return phoneNumber;
+    }
+
+    number = number.replace(/\s/g, '');
+
+    let formattedNumber = '';
+    while (number.length > 0) {
+        formattedNumber += number.substring(0, 3);
+        number = number.substring(3);
+        if (number.length > 0) {
+            formattedNumber += ' ';
+        }
+    }
+
+    return `${dialCode} ${formattedNumber}`.trim();
 };
 
 const formatNotificationMessage = (text) => {
-    // ... (pôvodný kód ostáva) ...
+    const firstApostrophe = text.indexOf("'");
+    const secondApostrophe = text.indexOf("'", firstApostrophe + 1);
+    const thirdApostrophe = text.indexOf("'", secondApostrophe + 1);
+    const fourthApostrophe = text.indexOf("'", thirdApostrophe + 1);
+
+    if (firstApostrophe !== -1 && secondApostrophe !== -1 && thirdApostrophe !== -1 && fourthApostrophe !== -1) {
+        let oldText = text.substring(firstApostrophe + 1, secondApostrophe);
+        let newText = text.substring(thirdApostrophe + 1, fourthApostrophe);
+
+        if (oldText.startsWith('+') && newText.startsWith('+')) {
+            oldText = formatPhoneNumber(oldText);
+            newText = formatPhoneNumber(newText);
+        }
+
+        let formattedText = text.substring(0, firstApostrophe);
+        formattedText += `<em>${oldText}</em>`;
+        formattedText += text.substring(secondApostrophe + 1, thirdApostrophe);
+        formattedText += `<strong>${newText}</strong>`;
+        formattedText += text.substring(fourthApostrophe + 1);
+        
+        return formattedText;
+    }
+    
+    return text;
 };
 
 const showDatabaseNotification = (message, type = 'info') => {
-    // ... (pôvodný kód ostáva) ...
+    let notificationContainer = document.getElementById('notification-container');
+    if (!notificationContainer) {
+        notificationContainer = document.createElement('div');
+        notificationContainer.id = 'notification-container';
+        notificationContainer.className = `
+            fixed top-4 right-4 z-[100]
+            flex flex-col space-y-2
+        `;
+        document.body.appendChild(notificationContainer);
+    }
+    
+    const notificationId = `db-notification-${Date.now()}`;
+    const notificationElement = document.createElement('div');
+    
+    notificationElement.id = notificationId;
+    notificationElement.className = `
+        bg-gray-800 text-white p-4 pr-10 rounded-lg shadow-lg
+        transform translate-x-full transition-all duration-500 ease-out
+        flex items-center space-x-2"
+    `;
+
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔';
+    
+    const formattedMessage = message.replace(/\n/g, '<br>');
+
+    notificationElement.innerHTML = `
+        <span>${icon}</span>
+        <span>${formattedMessage}</span>
+        <button onclick="document.getElementById('${notificationId}').remove()" class="absolute top-1 right-1 text-gray-400 hover:text-white">&times;</button>
+    `;
+
+    notificationContainer.appendChild(notificationElement);
+
+    setTimeout(() => {
+        notificationElement.classList.remove('translate-x-full');
+    }, 10);
+
+    setTimeout(() => {
+        notificationElement.classList.add('translate-x-full');
+        setTimeout(() => notificationElement.remove(), 500);
+    }, 7000);
 };
 
 const handleLogout = async () => {
-    // ... (pôvodný kód ostáva) ...
+    try {
+        const auth = getAuth();
+        await signOut(auth);
+        console.log("header.js: Používateľ bol úspešne odhlásený.");
+        if (unsubscribeFromNotifications) {
+            unsubscribeFromNotifications();
+            unsubscribeFromNotifications = null;
+            console.log("header.js: Listener notifikácií zrušený.");
+        }
+        window.location.href = 'login.html';
+    } catch (error) {
+        console.error("header.js: Chyba pri odhlásení:", error);
+        window.showGlobalNotification('Chyba pri odhlásení. Skúste to znova.', 'error');
+    }
 };
 
 const getHeaderColorByRole = (role) => {
-    // ... (pôvodný kód ostáva) ...
-};
+    switch (role) {
+        case 'admin':
+            return '#47b3ff';
+        case 'hall':
+            return '#b06835';
+        case 'club':
+            return '#9333EA';
+        case 'referee':
+            return '#007800';
+        case 'volunteer':
+            return '#FFAC1C';
+        default:
+            return '#1D4ED8';
+    }
+}
 
 const updateHeaderLinks = (userProfileData) => {
-    // ... (pôvodný kód ostáva) ...
+    const authLink = document.getElementById('auth-link');
+    const profileLink = document.getElementById('profile-link');
+    const logoutButton = document.getElementById('logout-button');
+    const headerElement = document.querySelector('header');
+    
+    if (!authLink || !profileLink || !logoutButton || !headerElement) {
+        console.error("header.js: Niektoré elementy hlavičky neboli nájdené.");
+        return;
+    }
+
+    if (window.location.pathname.includes('register.html')) {
+        headerElement.style.backgroundColor = '#1D4ED8';
+        headerElement.classList.remove('invisible');
+        authLink.classList.remove('hidden');
+        profileLink.classList.add('hidden');
+        logoutButton.classList.add('hidden');
+        const registerLink = document.getElementById('register-link');
+        if (registerLink) {
+            registerLink.classList.add('hidden');
+        }
+        return;
+    }
+
+    if (window.isGlobalAuthReady && window.isRegistrationDataLoaded && window.isCategoriesDataLoaded) {
+        if (userProfileData) {
+            authLink.classList.add('hidden');
+            profileLink.classList.remove('hidden');
+            logoutButton.classList.remove('hidden');
+            headerElement.style.backgroundColor = getHeaderColorByRole(userProfileData.role);
+
+            if (userProfileData.role === 'admin') {
+                if (!unsubscribeFromNotifications) {
+                    setupNotificationListenerForAdmin(userProfileData);
+                }
+            } else {
+                if (unsubscribeFromNotifications) {
+                    unsubscribeFromNotifications();
+                    unsubscribeFromNotifications = null;
+                    console.log("header.js: Listener notifikácií zrušený, pretože používateľ nie je admin.");
+                }
+            }
+        } else {
+            authLink.classList.remove('hidden');
+            profileLink.classList.add('hidden');
+            logoutButton.classList.add('hidden');
+            headerElement.style.backgroundColor = getHeaderColorByRole(null);
+            if (unsubscribeFromNotifications) {
+                unsubscribeFromNotifications();
+                unsubscribeFromNotifications = null;
+                console.log("header.js: Listener notifikácií zrušený pri odhlásení.");
+            }
+        }
+
+        updateRegistrationLinkVisibility(userProfileData);
+
+        headerElement.classList.remove('invisible');
+    }
 };
 
 const updateRegistrationLinkVisibility = (userProfileData) => {
-    // ... (pôvodný kód ostáva) ...
+    const registerLink = document.getElementById('register-link');
+    if (!registerLink) return;
+
+    if (userProfileData) {
+        registerLink.classList.add('hidden');
+        return; 
+    }
+
+    const isRegistrationOpen = window.registrationDates && new Date() >= window.registrationDates.registrationStartDate.toDate() && new Date() <= window.registrationDates.registrationEndDate.toDate();
+    const hasCategories = window.hasCategories;
+
+    if (isRegistrationOpen && hasCategories) {
+        registerLink.classList.remove('hidden');
+        if (userProfileData) { 
+            registerLink.href = 'logged-in-registration.html';
+        } else {
+            registerLink.href = 'register.html';
+        }
+    } else {
+        registerLink.classList.add('hidden');
+    }
 };
 
 const setupNotificationListenerForAdmin = (userProfileData) => {
-    // ... (pôvodný kód ostáva) ...
+    if (!window.db) {
+        console.warn("header.js: Firestore databáza nie je inicializovaná pre notifikácie.");
+        return;
+    }
+
+    if (unsubscribeFromNotifications) {
+        unsubscribeFromNotifications();
+    }
+    
+    const notificationsCollectionRef = collection(window.db, "notifications");
+    
+    unsubscribeFromNotifications = onSnapshot(notificationsCollectionRef, (snapshot) => {
+        const auth = getAuth();
+        const userId = auth.currentUser ? auth.currentUser.uid : null;
+
+        if (!userId) {
+            return;
+        }
+
+        let unreadCount = 0;
+        const allNotifications = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+
+        allNotifications.forEach(notification => {
+            const seenBy = notification.data.seenBy || [];
+            if (!seenBy.includes(userId)) {
+                unreadCount++;
+            }
+        });
+
+        if (window.globalUserProfileData) {
+            window.globalUserProfileData.unreadNotificationCount = unreadCount;
+            window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
+            console.log("header.js: GlobalUserProfileData aktualizované s počtom neprečítaných notifikácií:", unreadCount);
+        }
+
+        if (userProfileData.displayNotifications) {
+            if (unreadCount >= 3) {
+                let message = '';
+                if (unreadCount >= 5) {
+                    message = `Máte ${unreadCount} nových neprečítaných upozornení.`;
+                } else {
+                    message = `Máte ${unreadCount} nové neprečítané upozornenia.`;
+                }
+                showDatabaseNotification(message, 'info');
+
+                return; 
+            }
+
+            snapshot.docChanges().forEach(async (change) => {
+                if (change.type === "added") {
+                    const newNotification = change.doc.data();
+                    const notificationId = change.doc.id;
+                    
+                    const seenBy = newNotification.seenBy || [];
+                    if (!seenBy.includes(userId)) {
+                        console.log("header.js: Nová notifikácia prijatá a nebola videná používateľom:", newNotification);
+                        
+                        let changesMessage = '';
+                        if (Array.isArray(newNotification.changes) && newNotification.changes.length > 0) {
+                            const changeLabel = newNotification.changes.length > 1 ? " zmenil tieto údaje:" : "zmenil tento údaj:";
+                            changesMessage = `Používateľ ${newNotification.userEmail} ${changeLabel}\n`;
+                            
+                            const formattedChanges = newNotification.changes.map(changeString => formatNotificationMessage(changeString));
+                            
+                            changesMessage += formattedChanges.join('<br>');
+                        } else if (typeof newNotification.changes === 'string') {
+                            changesMessage = `Používateľ ${newNotification.userEmail} zmenil tento údaj:\n${formatNotificationMessage(newNotification.changes)}`;
+                        } else {
+                            changesMessage = `Používateľ ${newNotification.userEmail} vykonal zmenu.`;
+                        }
+                        
+                        showDatabaseNotification(changesMessage, newNotification.type || 'info');
+                        
+                        const notificationDocRef = doc(window.db, "notifications", notificationId);
+                        try {
+                            await updateDoc(notificationDocRef, {
+                                seenBy: arrayUnion(userId)
+                            });
+                        } catch (e) {
+                            console.error("header.js: Chyba pri aktualizácii notifikácie 'seenBy':", e);
+                        }
+                    }
+                }
+            });
+        }
+    }, (error) => {
+        console.error("header.js: Chyba pri počúvaní notifikácií:", error);
+    });
+
+    console.log("header.js: Listener pre notifikácie admina nastavený.");
 };
 
 const setupFirestoreListeners = () => {
-    // ... (pôvodný kód ostáva) ...
+    if (!window.db) {
+        console.warn("header.js: Firestore databáza nie je inicializovaná. Odkladám nastavenie listenerov.");
+        return;
+    }
+
+    if (isFirestoreListenersSetup) {
+        console.log("header.js: Listenery Firestore sú už nastavené.");
+        return;
+    }
+
+    try {
+        const registrationDocRef = doc(window.db, "settings", "registration");
+        onSnapshot(registrationDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                window.registrationDates = docSnap.data();
+                console.log("header.js: Dáta o registrácii aktualizované (onSnapshot).", window.registrationDates);
+            } else {
+                window.registrationDates = null;
+                console.warn("header.js: Dokument 'settings/registration' nebol nájdený!");
+            }
+            window.isRegistrationDataLoaded = true; 
+            updateHeaderLinks(window.globalUserProfileData);
+        }, (error) => {
+            console.error("header.js: Chyba pri počúvaní dát o registrácii:", error);
+            window.isRegistrationDataLoaded = true; 
+            updateHeaderLinks(window.globalUserProfileData);
+        });
+
+        const categoriesDocRef = doc(window.db, "settings", "categories");
+        onSnapshot(categoriesDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const categories = docSnap.data();
+                window.hasCategories = Object.keys(categories).length > 0;
+                console.log(`header.js: Dáta kategórií aktualizované (onSnapshot). Počet kategórií: ${Object.keys(categories).length}`);
+            } else {
+                window.hasCategories = false;
+                console.warn("header.js: Dokument 'settings/categories' nebol nájdený!");
+            }
+            window.isCategoriesDataLoaded = true;
+            window.areCategoriesLoaded = true;
+            window.dispatchEvent(new CustomEvent('categoriesLoaded'));
+            console.log("header.js: Odoslaná udalosť 'categoriesLoaded'.");
+            updateHeaderLinks(window.globalUserProfileData);
+        }, (error) => {
+            console.error("header.js: Chyba pri počúvaní dát o kategóriách:", error);
+            window.isCategoriesDataLoaded = true; 
+            window.areCategoriesLoaded = true;
+            window.dispatchEvent(new CustomEvent('categoriesLoaded'));
+            console.log("header.js: Odoslaná udalosť 'categoriesLoaded' (s chybou).");
+            updateHeaderLinks(window.globalUserProfileData);
+        });
+
+        if (registrationCheckIntervalId) {
+            clearInterval(registrationCheckIntervalId);
+        }
+        registrationCheckIntervalId = setInterval(() => {
+            if (window.registrationDates) {
+                updateRegistrationLinkVisibility(window.globalUserProfileData);
+            }
+        }, 1000); 
+        console.log("header.js: Časovač pre kontrolu registrácie spustený.");
+        
+        window.addEventListener('beforeunload', () => {
+            if (registrationCheckIntervalId) {
+                clearInterval(registrationCheckIntervalId);
+                console.log("header.js: Časovač pre kontrolu registrácie zrušený.");
+            }
+        });
+
+        isFirestoreListenersSetup = true;
+        console.log("header.js: Firestore listenery boli úspešne nastavené.");
+
+    } catch (error) {
+        console.error("header.js: Chyba pri inicializácii listenerov Firestore:", error);
+    }
 };
 
+// **UPRAVENÉ: Funkcia pre načítanie header s lepším časovaním**
 window.loadHeaderAndScripts = async () => {
     try {
+        // **Čakáme kým bude dokument pripravený**
+        if (!document.body) {
+            setTimeout(window.loadHeaderAndScripts, 100);
+            return;
+        }
+        
         const headerPlaceholder = document.getElementById('header-placeholder');
+        if (!headerPlaceholder) {
+            console.error("header.js: header-placeholder nebol nájdený");
+            return;
+        }
+        
+        // **Najprv uistíme sa, že header-placeholder je viditeľný**
+        headerPlaceholder.style.visibility = 'visible';
+        headerPlaceholder.style.opacity = '1';
+        headerPlaceholder.style.position = 'relative';
+        headerPlaceholder.style.zIndex = '1000';
+        
         const response = await fetch('header.html');
         
         if (!response.ok) throw new Error('Chyba pri načítaní header.html');
         const headerHtml = await response.text();
         
-        if (headerPlaceholder) {
-            headerPlaceholder.innerHTML = headerHtml;
+        headerPlaceholder.innerHTML = headerHtml;
+        
+        // **Uistíme sa, že nový header je viditeľný**
+        const newHeader = headerPlaceholder.querySelector('header');
+        if (newHeader) {
+            newHeader.style.visibility = 'visible';
+            newHeader.style.opacity = '1';
+            newHeader.style.position = 'relative';
         }
 
         const logoutButton = document.getElementById('logout-button');
@@ -301,18 +735,19 @@ window.loadHeaderAndScripts = async () => {
     }
 };
 
-// **UPRAVENÉ: Spustíme inicializáciu hlavičky**
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', window.loadHeaderAndScripts);
-} else {
-    window.loadHeaderAndScripts();
-}
+// **UPRAVENÉ: Spustíme načítanie header s oneskorením, aby bol viditeľný**
+setTimeout(() => {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', window.loadHeaderAndScripts);
+    } else {
+        window.loadHeaderAndScripts();
+    }
+}, 200);
 
-// **Pridáme automatickú aplikáciu zoom pri resize (pre istotu)**
+// **Pridáme listener pre resize, ktorý re-aplikuje zoom a zabezpečí viditeľnosť**
 window.addEventListener('resize', () => {
     const savedZoom = localStorage.getItem('pageZoom');
     if (savedZoom && parseFloat(savedZoom) === 80) {
-        // Pre istotu re-aplikujeme zoom
         setTimeout(setZoomTo80Percent, 100);
     }
 });
