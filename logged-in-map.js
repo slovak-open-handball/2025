@@ -64,6 +64,22 @@ const AddGroupsApp = ({ userProfileData }) => {
                 image-rendering: -webkit-optimize-contrast;
                 image-rendering: crisp-edges;
             }
+            /* ÚPLNÉ ODSTRÁNENIE MŔEŽKY */
+            .leaflet-container {
+                -webkit-backface-visibility: hidden;
+                -webkit-transform: translateZ(0);
+            }
+            .leaflet-tile {
+                image-rendering: pixelated !important;
+                image-rendering: -moz-crisp-edges !important;
+                image-rendering: crisp-edges !important;
+                -ms-interpolation-mode: nearest-neighbor !important;
+            }
+            /* Odstránenie akýchkoľvek borderov/čiar */
+            .leaflet-tile-container img {
+                border: none !important;
+                outline: none !important;
+            }
         `;
         document.head.appendChild(style);
         return () => document.head.removeChild(style);
