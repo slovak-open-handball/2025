@@ -1801,10 +1801,10 @@ const AddGroupsApp = ({ userProfileData }) => {
           
           // ŠTATISTIKY PREHĽADU (nahradili tlačidlá filtrov)
           React.createElement('div', { className: 'w-full mb-2' },
-            React.createElement('h3', { className: 'text-2xl font-bold mb-4 text-gray-800' }, 
-              React.createElement('i', { className: 'fa-solid fa-chart-bar mr-3' }),
-              'Prehľad miest'
-            ),
+//            React.createElement('h3', { className: 'text-2xl font-bold mb-4 text-gray-800' }, 
+//              React.createElement('i', { className: 'fa-solid fa-chart-bar mr-3' }),
+//              'Prehľad miest'
+//            ),
             React.createElement('div', { className: 'grid grid-cols-2 sm:grid-cols-4 gap-3' },
               // Športové haly
               React.createElement('button', {
