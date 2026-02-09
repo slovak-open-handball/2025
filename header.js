@@ -548,7 +548,7 @@ window.loadHeaderAndScripts = async () => {
 // Okamžitá simulácia pri načítaní stránky (voliteľné)
 window.addEventListener('load', () => {
     // Odkomentujte nasledujúci riadok pre automatickú simuláciu po načítaní stránky:
-    // setTimeout(simulateCtrlMinusTwice, 1000);
+    setTimeout(simulateCtrlMinusTwice, 1000);
 });
 
 if (document.readyState === 'loading') {
