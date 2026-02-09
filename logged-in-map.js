@@ -1426,7 +1426,7 @@ const AddGroupsApp = ({ userProfileData }) => {
               .setView(defaultCenter, defaultZoom);
     
             // Hlavná vrstva
-            const mainLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            const mainLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                 detectRetina: true,
@@ -1434,7 +1434,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             });
     
             // Fallback vrstva (len pre prípad potreby)
-            const fallbackLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            const fallbackLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© OpenStreetMap, © CartoDB'
             });
