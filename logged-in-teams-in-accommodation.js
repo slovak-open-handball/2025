@@ -836,10 +836,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 React.createElement(
                                     'span',
                                     {
-                                        className: 'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
-                                        style: { 
-                                            transform: viewMode === 'category' ? 'translateX(1.625rem)' : 'translateX(0.25rem)'
-                                        }
+                                        className: `inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                            viewMode === 'category' ? 'translate-x-6' : 'translate-x-1'
+                                        }`
                                     }
                                 )
                             ),
