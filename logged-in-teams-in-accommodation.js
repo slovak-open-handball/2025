@@ -132,7 +132,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [selectedPlaceForEdit, setSelectedPlaceForEdit] = useState(null);
     const [isColorModalOpen, setIsColorModalOpen] = useState(false);
     const [newHeaderColor, setNewHeaderColor] = useState('#1e40af');
-    const [newHeaderTextColor, setNewHeaderTextColor] = useState('#ffffff');
+    const [newHeaderTextColor, setNewHeaderTextColor] = useState('#000000');
     
     const [selectedTeam, setSelectedTeam] = useState(null);
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
@@ -165,7 +165,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         accommodationType: data.accommodationType || null,
                         capacity: data.capacity ?? null,
                         headerColor: data.headerColor || '#1e40af',
-                        headerTextColor: data.headerTextColor || '#ffffff',
+                        headerTextColor: data.headerTextColor || '#000000',
                         assignedTeams: []
                     });
                 });
@@ -385,6 +385,15 @@ const AddGroupsApp = ({ userProfileData }) => {
         return accommodation.headerColor || '#1e40af';
     };
 
+    const getTeamAccommodationTextColor = (team) => {
+        if (!team.assignedPlace) return null;
+    
+        const accommodation = accommodations.find(place => place.name === team.assignedPlace);
+        if (!accommodation) return null;
+        
+        return accommodation.headerTextColor || '#ffffff';
+    };
+
     // Pridané: Logika pre režim kategórií
     const categoriesData = categories.map(category => {
         const teamsInCategory = allTeams.filter(team => team.category === category);
@@ -433,7 +442,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     const openEditModal = (place) => {
         setSelectedPlaceForEdit(place);
         setNewHeaderColor(place.headerColor || '#1e40af');
-        setNewHeaderTextColor(place.headerTextColor || '#ffffff');
+        setNewHeaderTextColor(place.headerTextColor || '#000000');
         setIsColorModalOpen(true);
     };
 
@@ -1108,7 +1117,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                     className: 'text-white px-5 py-3 relative flex items-center justify-between flex-shrink-0 min-w-0',
                                                     style: { 
                                                         backgroundColor: place.headerColor,
-                                                        color: place.headerTextColor || '#ffffff'
+                                                        color: place.headerTextColor || '#000000'
                                                     }
                                                 },
                                                 React.createElement(
@@ -1478,9 +1487,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                             React.createElement(
                                                                 'div',
                                                                 { 
-                                                                    className: 'w-8 flex-shrink-0 flex items-center justify-center text-xs font-bold text-white',
+                                                                    className: 'w-8 flex-shrink-0 flex items-center justify-center text-xs font-bold',
                                                                     style: { 
-                                                                        backgroundColor: teamColor || '#6b7280'
+                                                                        backgroundColor: teamColor || '#6b7280',
+                                                                        color: getTeamAccommodationTextColor(team) || '#000000'
                                                                     }
                                                                 },
                                                                 team.totalPeople
@@ -1600,13 +1610,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                             'button',
                             {
                                 type: 'button',
-                                onClick: () => setNewHeaderTextColor('#ffffff'),
+                                onClick: () => setNewHeaderTextColor('#000000'),
                                 className: `flex-1 px-5 py-3 rounded-lg border text-center font-medium transition-all ${
-                                    newHeaderTextColor === '#ffffff'
+                                    newHeaderTextColor === '#000000'
                                         ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
                                         : 'border-gray-300 hover:bg-gray-50'
                                 }`,
-                                style: { backgroundColor: '#ffffff', color: '#000000' }
+                                style: { backgroundColor: '#000000', color: '#000000' }
                             },
                             'Biela'
                         ),
@@ -1620,7 +1630,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                         ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
                                         : 'border-gray-300 hover:bg-gray-50'
                                 }`,
-                                style: { backgroundColor: '#000000', color: '#ffffff' }
+                                style: { backgroundColor: '#000000', color: '#000000' }
                             },
                             'Čierna'
                         )
