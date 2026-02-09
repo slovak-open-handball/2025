@@ -52,39 +52,6 @@ window.showGlobalNotification = (message, type = 'success') => {
     setTimeout(() => el.className = `${base} ${cls} opacity-0 scale-95`, 5000);
 };
 const AddGroupsApp = ({ userProfileData }) => {
-
-    useEffect(() => {
-        const style = document.createElement('style');
-        style.textContent = `
-            .leaflet-container .leaflet-tile {
-                filter: none !important;
-                -webkit-filter: none !important;
-            }
-            .leaflet-tile-loaded {
-                image-rendering: -webkit-optimize-contrast;
-                image-rendering: crisp-edges;
-            }
-            /* ÚPLNÉ ODSTRÁNENIE MŔEŽKY */
-            .leaflet-container {
-                -webkit-backface-visibility: hidden;
-                -webkit-transform: translateZ(0);
-            }
-            .leaflet-tile {
-                image-rendering: pixelated !important;
-                image-rendering: -moz-crisp-edges !important;
-                image-rendering: crisp-edges !important;
-                -ms-interpolation-mode: nearest-neighbor !important;
-            }
-            /* Odstránenie akýchkoľvek borderov/čiar */
-            .leaflet-tile-container img {
-                border: none !important;
-                outline: none !important;
-            }
-        `;
-        document.head.appendChild(style);
-        return () => document.head.removeChild(style);
-    }, []);
-  
     const mapRef = useRef(null);
     const leafletMap = useRef(null);
     const placesLayerRef = useRef(null);
@@ -1459,10 +1426,7 @@ const AddGroupsApp = ({ userProfileData }) => {
               .setView(defaultCenter, defaultZoom)
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
-                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                noWrap: true,
-                detectRetina: false,
-                crossOrigin: true
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(leafletMap.current);
             
             // Custom Zoom + Home control
