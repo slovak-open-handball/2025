@@ -1412,7 +1412,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                             React.createElement('span', { 
                                                                 className: 'font-medium text-xs whitespace-nowrap overflow-visible flex-shrink-0',
                                                                 style: { textOverflow: 'clip' },
-                                                            }, team.teamName),
+                                                            }, `${team.category}: ${team.teamName}`), // Zmena tu - pridať kategóriu pred názov
                                                             React.createElement('span', { 
                                                                 className: 'text-gray-500 text-xs ml-1.5 whitespace-nowrap flex-shrink-0'
                                                             }, `(${team.totalPeople})`
