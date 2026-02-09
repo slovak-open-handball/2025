@@ -147,6 +147,9 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
     const [teamToRemove, setTeamToRemove] = useState(null);
 
+    // Nový stav pre prepínač režimov
+    const [viewMode, setViewMode] = useState('accommodation'); // 'accommodation' alebo 'category'
+
     useEffect(() => {
         if (!window.db) return;
         const unsubscribe = onSnapshot(
@@ -232,8 +235,6 @@ const AddGroupsApp = ({ userProfileData }) => {
         );
         return () => unsubscribe();
     }, []);
-
-    
 
     // Funkcia na odstránenie veľkého písmenka na konci názvu tímu (A, B, C)
     const normalizeTeamName = (teamName) => {
@@ -373,6 +374,61 @@ const AddGroupsApp = ({ userProfileData }) => {
             }
             return true;
         });
+
+    // Pridané: Funkcia na získanie farby ubytovne pre tím
+    const getTeamAccommodationColor = (team) => {
+        if (!team.assignedPlace) return null;
+        
+        const accommodation = accommodations.find(place => place.name === team.assignedPlace);
+        if (!accommodation) return null;
+        
+        return accommodation.headerColor || '#1e40af';
+    };
+
+    // Pridané: Logika pre režim kategórií
+    const categoriesData = categories.map(category => {
+        const teamsInCategory = allTeams.filter(team => team.category === category);
+        const assignedTeamsInCategory = teamsInCategory.filter(team => team.assignedPlace);
+        const unassignedTeamsInCategory = teamsInCategory.filter(team => !team.assignedPlace);
+        
+        // Spočítať osoby
+        const totalPeople = teamsInCategory.reduce((sum, team) => sum + (team.totalPeople || 0), 0);
+        const assignedPeople = assignedTeamsInCategory.reduce((sum, team) => sum + (team.totalPeople || 0), 0);
+        const unassignedPeople = unassignedTeamsInCategory.reduce((sum, team) => sum + (team.totalPeople || 0), 0);
+        
+        return {
+            name: category,
+            teams: teamsInCategory,
+            assignedTeams: assignedTeamsInCategory,
+            unassignedTeams: unassignedTeamsInCategory,
+            totalTeams: teamsInCategory.length,
+            totalPeople,
+            assignedPeople,
+            unassignedPeople,
+            assignedTeamsCount: assignedTeamsInCategory.length,
+            unassignedTeamsCount: unassignedTeamsInCategory.length
+        };
+    });
+
+    // Pridané: Filtrovanie kategórií podľa vybraných filtrov
+    const filteredCategoriesData = categoriesData.filter(categoryData => {
+        if (selectedCategory && categoryData.name !== selectedCategory) return false;
+        if (selectedTeamNameFilter) {
+            const hasMatchingTeam = categoryData.teams.some(team => 
+                teamMatchesFilter(team, selectedTeamNameFilter)
+            );
+            if (!hasMatchingTeam) return false;
+        }
+        if (selectedAccommodationFilter) {
+            const selectedAccommodation = accommodations.find(a => a.id === selectedAccommodationFilter);
+            if (!selectedAccommodation) return false;
+            const hasTeamInAccommodation = categoryData.assignedTeams.some(team => 
+                team.assignedPlace === selectedAccommodation.name
+            );
+            if (!hasTeamInAccommodation) return false;
+        }
+        return true;
+    });
 
     const openEditModal = (place) => {
         setSelectedPlaceForEdit(place);
@@ -691,6 +747,70 @@ const AddGroupsApp = ({ userProfileData }) => {
         React.createElement(
             'div',
             { className: 'max-w-7xl mx-auto h-full' },
+
+            // Pridané: Prepínač režimov
+            React.createElement(
+                'div',
+                { className: 'mb-6 bg-white rounded-xl shadow-lg p-4' },
+                React.createElement(
+                    'div',
+                    { className: 'flex flex-col sm:flex-row sm:items-center justify-between gap-4' },
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-3' },
+                        React.createElement(
+                            'span',
+                            { className: 'text-lg font-semibold text-gray-700' },
+                            'Režim zobrazenia:'
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'flex items-center gap-2' },
+                            React.createElement(
+                                'span',
+                                { 
+                                    className: `text-sm font-medium ${viewMode === 'accommodation' ? 'text-blue-600' : 'text-gray-500'}` 
+                                },
+                                'Ubytovní'
+                            ),
+                            React.createElement(
+                                'button',
+                                {
+                                    onClick: () => setViewMode(viewMode === 'accommodation' ? 'category' : 'accommodation'),
+                                    className: 'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+                                    style: { 
+                                        backgroundColor: viewMode === 'category' ? '#3b82f6' : '#d1d5db'
+                                    }
+                                },
+                                React.createElement(
+                                    'span',
+                                    {
+                                        className: 'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                                        style: { 
+                                            transform: viewMode === 'category' ? 'translateX(6px)' : 'translateX(1px)'
+                                        }
+                                    }
+                                )
+                            ),
+                            React.createElement(
+                                'span',
+                                { 
+                                    className: `text-sm font-medium ${viewMode === 'category' ? 'text-blue-600' : 'text-gray-500'}` 
+                                },
+                                'Kategórií'
+                            )
+                        )
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'text-sm text-gray-600' },
+                        viewMode === 'accommodation' 
+                            ? 'Zobrazenie podľa ubytovní'
+                            : 'Zobrazenie podľa kategórií'
+                    )
+                )
+            ),
+            
             React.createElement(
                 'div',
                 { className: 'mb-8 bg-white rounded-xl shadow-lg p-6' },
@@ -848,79 +968,83 @@ const AddGroupsApp = ({ userProfileData }) => {
                 )
             ),
     
-            React.createElement(
-                'div',
-                { 
-                    className: filteredUnassignedTeams.length > 0 
-                        ? 'flex flex-col lg:flex-row gap-8 lg:gap-10 h-full' 
-                        : 'grid grid-cols-1 h-full'
-                },
-    
-                filteredUnassignedTeams.length > 0 && React.createElement(
+            // Hlavný obsah - podmienené vykreslenie podľa režimu
+            viewMode === 'accommodation' 
+                ? // Pôvodné zobrazenie podľa ubytovní
+                React.createElement(
                     'div',
-                    { className: 'lg:w-[48%] xl:w-[46%] h-full flex flex-col' },
-                    React.createElement(
+                    { 
+                        className: filteredUnassignedTeams.length > 0 
+                            ? 'flex flex-col lg:flex-row gap-8 lg:gap-10 h-full' 
+                            : 'grid grid-cols-1 h-full'
+                    },
+    
+                    filteredUnassignedTeams.length > 0 && React.createElement(
                         'div',
-                        { className: 'bg-white rounded-xl shadow-lg overflow-hidden h-full flex flex-col' },
+                        { className: 'lg:w-[48%] xl:w-[46%] h-full flex flex-col' },
                         React.createElement(
                             'div',
-                            { className: 'bg-green-700 text-white px-6 py-4' },
-                            React.createElement('h2', { className: 'text-xl font-bold' }, 
-                                (selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter)
-                                    ? `Tímy bez priradenia ${getFilterDescription() ? `(${getFilterDescription()})` : ''} (${filteredUnassignedTeams.length})`
-                                    : `Tímy bez priradenia (${filteredUnassignedTeams.length})`
-                            )
-                        ),
-                        React.createElement(
-                            'div',
-                            { className: 'p-6 flex-grow overflow-y-auto' },
+                            { className: 'bg-white rounded-xl shadow-lg overflow-hidden h-full flex flex-col' },
                             React.createElement(
-                                'ul',
-                                { className: 'space-y-3' },
-                                filteredUnassignedTeams.map((team, i) =>
-                                    React.createElement(
-                                        'li',
-                                        {
-                                            key: i,
-                                            className: 'py-3 px-4 bg-gray-50 rounded border-l-4 border-green-500 flex justify-between items-center'
-                                        },
+                                'div',
+                                { className: 'bg-green-700 text-white px-6 py-4' },
+                                React.createElement('h2', { className: 'text-xl font-bold' }, 
+                                    (selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter)
+                                        ? `Tímy bez priradenia ${getFilterDescription() ? `(${getFilterDescription()})` : ''} (${filteredUnassignedTeams.length})`
+                                        : `Tímy bez priradenia (${filteredUnassignedTeams.length})`
+                                )
+                            ),
+                            React.createElement(
+                                'div',
+                                { className: 'p-6 flex-grow overflow-y-auto' },
+                                React.createElement(
+                                    'ul',
+                                    { className: 'space-y-3' },
+                                    filteredUnassignedTeams.map((team, i) =>
                                         React.createElement(
-                                            'div',
-                                            { className: 'flex-grow min-w-0' },
-                                            React.createElement('span', { 
-                                                className: 'font-medium whitespace-nowrap overflow-visible',
-                                                style: { textOverflow: 'clip' }
-                                            }, `${team.category}: ${team.teamName}`),
-                                            React.createElement('span', { 
-                                                className: 'text-gray-500 ml-3 text-sm whitespace-nowrap'
-                                            }, `(${team.totalPeople})`)
-                                        ),
-                                        React.createElement(
-                                            'div',
-                                            { className: 'flex items-center gap-3 flex-shrink-0' },
-                                            React.createElement('span', { 
-                                                className: 'font-medium text-green-700 whitespace-nowrap'
-                                            }, team.accommodation),
+                                            'li',
+                                            {
+                                                key: i,
+                                                className: 'py-3 px-4 bg-gray-50 rounded border-l-4 border-green-500 flex justify-between items-center'
+                                            },
                                             React.createElement(
-                                                'button',
-                                                {
-                                                    onClick: () => openAssignModal(team),
-                                                    className: 'p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors flex-shrink-0',
-                                                },
+                                                'div',
+                                                { className: 'flex-grow min-w-0' },
+                                                React.createElement('span', { 
+                                                    className: 'font-medium whitespace-nowrap overflow-visible',
+                                                    style: { textOverflow: 'clip' }
+                                                }, `${team.category}: ${team.teamName}`),
+                                                React.createElement('span', { 
+                                                    className: 'text-gray-500 ml-3 text-sm whitespace-nowrap'
+                                                }, `(${team.totalPeople} osôb)`)
+                                            ),
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex items-center gap-3 flex-shrink-0' },
+                                                React.createElement('span', { 
+                                                    className: 'font-medium text-green-700 whitespace-nowrap'
+                                                }, team.accommodation),
                                                 React.createElement(
-                                                    'svg',
-                                                    { 
-                                                        className: 'w-5 h-5', 
-                                                        fill: 'none', 
-                                                        stroke: 'currentColor', 
-                                                        viewBox: '0 0 24 24',
-                                                        strokeWidth: '2'
+                                                    'button',
+                                                    {
+                                                        onClick: () => openAssignModal(team),
+                                                        className: 'p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors flex-shrink-0',
                                                     },
-                                                    React.createElement('path', {
-                                                        strokeLinecap: 'round',
-                                                        strokeLinejoin: 'round',
-                                                        d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
-                                                    })
+                                                    React.createElement(
+                                                        'svg',
+                                                        { 
+                                                            className: 'w-5 h-5', 
+                                                            fill: 'none', 
+                                                            stroke: 'currentColor', 
+                                                            viewBox: '0 0 24 24',
+                                                            strokeWidth: '2'
+                                                        },
+                                                        React.createElement('path', {
+                                                            strokeLinecap: 'round',
+                                                            strokeLinejoin: 'round',
+                                                            d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
+                                                        })
+                                                    )
                                                 )
                                             )
                                         )
@@ -928,225 +1052,225 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 )
                             )
                         )
-                    )
-                ),
+                    ),
     
-                React.createElement(
-                    'div',
-                    { 
-                        className: filteredUnassignedTeams.length > 0 
-                            ? 'lg:w-[52%] xl:w-[54%] h-full flex flex-col' 
-                            : 'w-full h-full flex flex-col'
-                    },
                     React.createElement(
                         'div',
-                        { className: 'h-full flex flex-col' },
-                        filteredUnassignedTeams.length === 0 && React.createElement(
-                            'h2',
-                            { className: 'text-2xl font-bold text-gray-800 mb-4' },
-                            (selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter)
-                                ? `Ubytovacie miesta ${getFilterDescription() ? `(${getFilterDescription()})` : ''}`
-                                : 'Ubytovacie miesta s priradenými tímami'
-                        ),
-                        accommodationsWithTeams.length === 0
-                            ? React.createElement(
-                                'div',
-                                { className: 'bg-white rounded-xl shadow-lg p-8 text-center flex-grow' },
-                                React.createElement('p', { className: 'text-gray-500 text-lg' }, 
-                                    selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter
-                                        ? `Žiadne ubytovacie miesta pre zvolené filtre`
-                                        : 'Zatiaľ žiadne ubytovacie miesta...'
-                                )
-                              )
-                            : React.createElement(
-                                'div',
-                                { 
-                                    className: filteredUnassignedTeams.length > 0
-                                        ? 'space-y-6'
-                                        : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6'
-                                },
-                                accommodationsWithTeams.map((place) => {
-                                    const baseHeight = 200;
-                                    const teamItemHeight = 60;
-                                    const minHeight = 400;
+                        { 
+                            className: filteredUnassignedTeams.length > 0 
+                                ? 'lg:w-[52%] xl:w-[54%] h-full flex flex-col' 
+                                : 'w-full h-full flex flex-col'
+                        },
+                        React.createElement(
+                            'div',
+                            { className: 'h-full flex flex-col' },
+                            filteredUnassignedTeams.length === 0 && React.createElement(
+                                'h2',
+                                { className: 'text-2xl font-bold text-gray-800 mb-4' },
+                                (selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter)
+                                    ? `Ubytovacie miesta ${getFilterDescription() ? `(${getFilterDescription()})` : ''}`
+                                    : 'Ubytovacie miesta s priradenými tímami'
+                            ),
+                            accommodationsWithTeams.length === 0
+                                ? React.createElement(
+                                    'div',
+                                    { className: 'bg-white rounded-xl shadow-lg p-8 text-center flex-grow' },
+                                    React.createElement('p', { className: 'text-gray-500 text-lg' }, 
+                                        selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter
+                                            ? `Žiadne ubytovacie miesta pre zvolené filtre`
+                                            : 'Zatiaľ žiadne ubytovacie miesta...'
+                                    )
+                                  )
+                                : React.createElement(
+                                    'div',
+                                    { 
+                                        className: filteredUnassignedTeams.length > 0
+                                            ? 'space-y-6'
+                                            : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6'
+                                    },
+                                    accommodationsWithTeams.map((place) => {
+                                        const baseHeight = 200;
+                                        const teamItemHeight = 60;
+                                        const minHeight = 400;
 
-                                    const teamsToShow = place.filteredAssignedTeams.length;
-                                    const calculatedHeight = Math.max(minHeight, baseHeight + (teamsToShow * teamItemHeight));
-                                    
-                                    return React.createElement(
-                                        'div',
-                                        { 
-                                            key: place.id, 
-                                            className: 'bg-white rounded-xl shadow-lg overflow-hidden flex flex-col min-w-0'
-                                        },
-                                        React.createElement(
-                                            'div',
-                                            {
-                                                className: 'text-white px-5 py-3 relative flex items-center justify-between flex-shrink-0 min-w-0',
-                                                style: { 
-                                                    backgroundColor: place.headerColor,
-                                                    color: place.headerTextColor || '#ffffff'
-                                                }
-                                            },
-                                            React.createElement(
-                                                'div',
-                                                { className: 'flex-grow min-w-0 overflow-hidden' },
-                                                React.createElement('h3', { 
-                                                    className: 'text-lg font-bold whitespace-nowrap overflow-visible',
-                                                    style: { textOverflow: 'clip' },
-                                                }, place.name || 'Ubytovacie miesto'),
-                                                React.createElement('div', { 
-                                                    className: 'text-xs opacity-90 mt-1 whitespace-nowrap overflow-visible',
-                                                    style: { textOverflow: 'clip' }
-                                                }, `${place.allAssignedTeams.length} • ${place.usedCapacity}`)
-                                            ),
-                                            React.createElement(
-                                                'button',
-                                                {
-                                                    onClick: () => openEditModal(place),
-                                                    className: 'flex-shrink-0 ml-3 flex items-center gap-1 px-3 py-1 bg-white text-black hover:bg-gray-100 active:bg-gray-200 transition-colors text-xs font-medium rounded-full border border-gray-300 shadow-sm whitespace-nowrap',
-                                                },
-                                                React.createElement(
-                                                    'svg',
-                                                    { 
-                                                        className: 'w-3 h-3', 
-                                                        fill: 'none', 
-                                                        stroke: 'currentColor', 
-                                                        viewBox: '0 0 24 24',
-                                                        strokeWidth: '2'
-                                                    },
-                                                    React.createElement('path', {
-                                                        strokeLinecap: 'round',
-                                                        strokeLinejoin: 'round',
-                                                        d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
-                                                    })
-                                                ),
-                                                React.createElement('span', null, 'Upraviť')
-                                            )
-                                        ),
-                                        React.createElement(
+                                        const teamsToShow = place.filteredAssignedTeams.length;
+                                        const calculatedHeight = Math.max(minHeight, baseHeight + (teamsToShow * teamItemHeight));
+                                        
+                                        return React.createElement(
                                             'div',
                                             { 
-                                                className: 'p-5 flex-grow overflow-hidden flex flex-col min-w-0',
-                                                style: { 
-                                                    height: `${calculatedHeight - 80}px`
-                                                }
+                                                key: place.id, 
+                                                className: 'bg-white rounded-xl shadow-lg overflow-hidden flex flex-col min-w-0'
                                             },
                                             React.createElement(
                                                 'div',
-                                                { className: 'space-y-4 flex-grow flex flex-col min-w-0' },
+                                                {
+                                                    className: 'text-white px-5 py-3 relative flex items-center justify-between flex-shrink-0 min-w-0',
+                                                    style: { 
+                                                        backgroundColor: place.headerColor,
+                                                        color: place.headerTextColor || '#ffffff'
+                                                    }
+                                                },
                                                 React.createElement(
                                                     'div',
-                                                    { className: 'space-y-2 flex-shrink-0 min-w-0' },
+                                                    { className: 'flex-grow min-w-0 overflow-hidden' },
+                                                    React.createElement('h3', { 
+                                                        className: 'text-lg font-bold whitespace-nowrap overflow-visible',
+                                                        style: { textOverflow: 'clip' },
+                                                    }, place.name || 'Ubytovacie miesto'),
+                                                    React.createElement('div', { 
+                                                        className: 'text-xs opacity-90 mt-1 whitespace-nowrap overflow-visible',
+                                                        style: { textOverflow: 'clip' }
+                                                    }, `${place.allAssignedTeams.length} tímov • ${place.usedCapacity} osôb`)
+                                                ),
+                                                React.createElement(
+                                                    'button',
+                                                    {
+                                                        onClick: () => openEditModal(place),
+                                                        className: 'flex-shrink-0 ml-3 flex items-center gap-1 px-3 py-1 bg-white text-black hover:bg-gray-100 active:bg-gray-200 transition-colors text-xs font-medium rounded-full border border-gray-300 shadow-sm whitespace-nowrap',
+                                                    },
                                                     React.createElement(
-                                                        'p',
+                                                        'svg',
                                                         { 
-                                                            className: 'text-gray-700 text-sm whitespace-nowrap overflow-visible min-w-0',
-                                                            style: { textOverflow: 'clip' }
+                                                            className: 'w-3 h-3', 
+                                                            fill: 'none', 
+                                                            stroke: 'currentColor', 
+                                                            viewBox: '0 0 24 24',
+                                                            strokeWidth: '2'
                                                         },
-                                                        React.createElement('span', { className: 'font-semibold' }, 'Typ: '),
-                                                        place.accommodationType || 'neurčený'
+                                                        React.createElement('path', {
+                                                            strokeLinecap: 'round',
+                                                            strokeLinejoin: 'round',
+                                                            d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
+                                                        })
                                                     ),
-                                                    place.capacity !== null &&
+                                                    React.createElement('span', null, 'Upraviť')
+                                                )
+                                            ),
+                                            React.createElement(
+                                                'div',
+                                                { 
+                                                    className: 'p-5 flex-grow overflow-hidden flex flex-col min-w-0',
+                                                    style: { 
+                                                        height: `${calculatedHeight - 80}px`
+                                                    }
+                                                },
+                                                React.createElement(
+                                                    'div',
+                                                    { className: 'space-y-4 flex-grow flex flex-col min-w-0' },
+                                                    React.createElement(
+                                                        'div',
+                                                        { className: 'space-y-2 flex-shrink-0 min-w-0' },
                                                         React.createElement(
-                                                            'div',
+                                                            'p',
                                                             { 
                                                                 className: 'text-gray-700 text-sm whitespace-nowrap overflow-visible min-w-0',
                                                                 style: { textOverflow: 'clip' }
                                                             },
-                                                            React.createElement('span', { className: 'font-semibold' }, 'Kapacita: '),
-                                                            `${place.usedCapacity} / ${place.capacity}`
+                                                            React.createElement('span', { className: 'font-semibold' }, 'Typ: '),
+                                                            place.accommodationType || 'neurčený'
                                                         ),
-                                                    place.remainingCapacity !== null &&
-                                                        React.createElement(
-                                                            'p',
-                                                            { 
-                                                                className: `text-sm whitespace-nowrap overflow-visible min-w-0 ${place.remainingCapacity < 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`,
-                                                                style: { textOverflow: 'clip' },
-                                                            },
-                                                            React.createElement('span', { className: 'font-semibold' }, 'Zostáva: '),
-                                                            `${place.remainingCapacity}`
-                                                        )
-                                                ),
-                                                
-                                                place.filteredAssignedTeams.length > 0 &&
-                                                React.createElement(
-                                                    'div',
-                                                    { className: 'mt-2 flex-grow overflow-hidden flex flex-col min-w-0' },
-                                                    React.createElement(
-                                                        'h4',
-                                                        { 
-                                                            className: 'font-semibold text-gray-800 mb-2 text-sm flex-shrink-0 whitespace-nowrap overflow-visible',
-                                                            style: { textOverflow: 'clip' }
-                                                        },
-                                                        `Priradené tímy ${selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter ? '(filtrované)' : ''} (${place.filteredAssignedTeams.length}${selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter ? '/' + getFilteredTeamsPeopleCount(place.filteredAssignedTeams) + '' : ''})`
-                                                    ),
-                                                    React.createElement(
-                                                        'ul',
-                                                        { className: 'space-y-1.5 flex-grow overflow-y-auto pr-1 min-w-0' },
-                                                        place.filteredAssignedTeams.map((team, index) =>
+                                                        place.capacity !== null &&
                                                             React.createElement(
-                                                                'li',
-                                                                {
-                                                                    key: index,
-                                                                    className: 'py-1.5 px-2.5 bg-gray-50 rounded border border-gray-200 flex justify-between items-center hover:bg-gray-100 group flex-shrink-0 min-w-0'
+                                                                'div',
+                                                                { 
+                                                                    className: 'text-gray-700 text-sm whitespace-nowrap overflow-visible min-w-0',
+                                                                    style: { textOverflow: 'clip' }
                                                                 },
+                                                                React.createElement('span', { className: 'font-semibold' }, 'Kapacita: '),
+                                                                `${place.usedCapacity} / ${place.capacity} osôb`
+                                                            ),
+                                                        place.remainingCapacity !== null &&
+                                                            React.createElement(
+                                                                'p',
+                                                                { 
+                                                                    className: `text-sm whitespace-nowrap overflow-visible min-w-0 ${place.remainingCapacity < 0 ? 'text-red-600 font-semibold' : 'text-gray-700'}`,
+                                                                    style: { textOverflow: 'clip' },
+                                                                },
+                                                                React.createElement('span', { className: 'font-semibold' }, 'Zostáva: '),
+                                                                `${place.remainingCapacity} osôb`
+                                                            )
+                                                    ),
+                                                    
+                                                    place.filteredAssignedTeams.length > 0 &&
+                                                    React.createElement(
+                                                        'div',
+                                                        { className: 'mt-2 flex-grow overflow-hidden flex flex-col min-w-0' },
+                                                        React.createElement(
+                                                            'h4',
+                                                            { 
+                                                                className: 'font-semibold text-gray-800 mb-2 text-sm flex-shrink-0 whitespace-nowrap overflow-visible',
+                                                                style: { textOverflow: 'clip' }
+                                                            },
+                                                            `Priradené tímy ${selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter ? '(filtrované)' : ''} (${place.filteredAssignedTeams.length}${selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter ? '/' + getFilteredTeamsPeopleCount(place.filteredAssignedTeams) + ' osôb' : ''})`
+                                                        ),
+                                                        React.createElement(
+                                                            'ul',
+                                                            { className: 'space-y-1.5 flex-grow overflow-y-auto pr-1 min-w-0' },
+                                                            place.filteredAssignedTeams.map((team, index) =>
                                                                 React.createElement(
-                                                                    'div',
-                                                                    { className: 'min-w-0 flex-grow flex items-center' },
-                                                                    React.createElement('span', { 
-                                                                        className: 'font-medium text-sm whitespace-nowrap overflow-visible flex-shrink-0',
-                                                                        style: { textOverflow: 'clip' },
-                                                                    }, `${team.category}: ${team.teamName}`),
-                                                                    React.createElement('span', { 
-                                                                        className: 'text-gray-500 text-xs ml-2 whitespace-nowrap flex-shrink-0'
-                                                                    }, `(${team.totalPeople})`)
-                                                                ),
-                                                                React.createElement(
-                                                                    'div',
-                                                                    { className: 'flex items-center gap-1 flex-shrink-0 ml-2' },
+                                                                    'li',
+                                                                    {
+                                                                        key: index,
+                                                                        className: 'py-1.5 px-2.5 bg-gray-50 rounded border border-gray-200 flex justify-between items-center hover:bg-gray-100 group flex-shrink-0 min-w-0'
+                                                                    },
                                                                     React.createElement(
-                                                                        'button',
-                                                                        {
-                                                                            onClick: () => openAssignModal(team),
-                                                                            className: 'p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors opacity-0 group-hover:opacity-100',
-                                                                        },
-                                                                        React.createElement(
-                                                                            'svg',
-                                                                            { 
-                                                                                className: 'w-3.5 h-3.5', 
-                                                                                fill: 'none', 
-                                                                                stroke: 'currentColor', 
-                                                                                viewBox: '0 0 24 24',
-                                                                                strokeWidth: '2'
-                                                                            },
-                                                                            React.createElement('path', {
-                                                                                strokeLinecap: 'round',
-                                                                                strokeLinejoin: 'round',
-                                                                                d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
-                                                                            })
-                                                                        )
+                                                                        'div',
+                                                                        { className: 'min-w-0 flex-grow flex items-center' },
+                                                                        React.createElement('span', { 
+                                                                            className: 'font-medium text-sm whitespace-nowrap overflow-visible flex-shrink-0',
+                                                                            style: { textOverflow: 'clip' },
+                                                                        }, `${team.category}: ${team.teamName}`),
+                                                                        React.createElement('span', { 
+                                                                            className: 'text-gray-500 text-xs ml-2 whitespace-nowrap flex-shrink-0'
+                                                                        }, `(${team.totalPeople} osôb)`)
                                                                     ),
                                                                     React.createElement(
-                                                                        'button',
-                                                                        {
-                                                                            onClick: () => openRemoveConfirmation(team),
-                                                                            className: 'p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100',
-                                                                        },
+                                                                        'div',
+                                                                        { className: 'flex items-center gap-1 flex-shrink-0 ml-2' },
                                                                         React.createElement(
-                                                                            'svg',
-                                                                            { 
-                                                                                className: 'w-3.5 h-3.5', 
-                                                                                fill: 'none', 
-                                                                                stroke: 'currentColor', 
-                                                                                viewBox: '0 0 24 24',
-                                                                                strokeWidth: '2'
+                                                                            'button',
+                                                                            {
+                                                                                onClick: () => openAssignModal(team),
+                                                                                className: 'p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors opacity-0 group-hover:opacity-100',
                                                                             },
-                                                                            React.createElement('path', {
-                                                                                strokeLinecap: 'round',
-                                                                                strokeLinejoin: 'round',
-                                                                                d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16'
-                                                                            })
+                                                                            React.createElement(
+                                                                                'svg',
+                                                                                { 
+                                                                                    className: 'w-3.5 h-3.5', 
+                                                                                    fill: 'none', 
+                                                                                    stroke: 'currentColor', 
+                                                                                    viewBox: '0 0 24 24',
+                                                                                    strokeWidth: '2'
+                                                                                },
+                                                                                React.createElement('path', {
+                                                                                    strokeLinecap: 'round',
+                                                                                    strokeLinejoin: 'round',
+                                                                                    d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
+                                                                                })
+                                                                            )
+                                                                        ),
+                                                                        React.createElement(
+                                                                            'button',
+                                                                            {
+                                                                                onClick: () => openRemoveConfirmation(team),
+                                                                                className: 'p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100',
+                                                                            },
+                                                                            React.createElement(
+                                                                                'svg',
+                                                                                { 
+                                                                                    className: 'w-3.5 h-3.5', 
+                                                                                    fill: 'none', 
+                                                                                    stroke: 'currentColor', 
+                                                                                    viewBox: '0 0 24 24',
+                                                                                    strokeWidth: '2'
+                                                                                },
+                                                                                React.createElement('path', {
+                                                                                    strokeLinecap: 'round',
+                                                                                    strokeLinejoin: 'round',
+                                                                                    d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16'
+                                                                                })
+                                                                            )
                                                                         )
                                                                     )
                                                                 )
@@ -1155,13 +1279,292 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                     )
                                                 )
                                             )
-                                        )
-                                    );
-                                })
-                            )
+                                        );
+                                    })
+                                )
+                        )
                     )
                 )
-            )
+                : // Nové zobrazenie podľa kategórií
+                React.createElement(
+                    'div',
+                    { className: 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6' },
+                    filteredCategoriesData.length === 0
+                        ? React.createElement(
+                            'div',
+                            { className: 'col-span-full bg-white rounded-xl shadow-lg p-8 text-center' },
+                            React.createElement('p', { className: 'text-gray-500 text-lg' }, 
+                                selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter
+                                    ? 'Žiadne kategórie pre zvolené filtre'
+                                    : 'Zatiaľ žiadne kategórie s tímami...'
+                            )
+                        )
+                        : filteredCategoriesData.map(category => {
+                            return React.createElement(
+                                'div',
+                                { 
+                                    key: category.name, 
+                                    className: 'bg-white rounded-xl shadow-lg overflow-hidden flex flex-col min-w-0'
+                                },
+                                // Hlavička kategórie
+                                React.createElement(
+                                    'div',
+                                    {
+                                        className: 'bg-blue-600 text-white px-4 py-3 flex items-center justify-between flex-shrink-0 min-w-0'
+                                    },
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex-grow min-w-0 overflow-hidden' },
+                                        React.createElement('h3', { 
+                                            className: 'text-lg font-bold whitespace-nowrap overflow-visible',
+                                            style: { textOverflow: 'clip' },
+                                        }, category.name),
+                                        React.createElement('div', { 
+                                            className: 'text-xs opacity-90 mt-0.5 whitespace-nowrap overflow-visible',
+                                            style: { textOverflow: 'clip' }
+                                        }, 
+                                        `${category.assignedTeamsCount} z ${category.totalTeams} tímov • `,
+                                        `${category.assignedPeople} z ${category.totalPeople} osôb`
+                                        )
+                                    ),
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex-shrink-0 ml-2 text-xs font-medium bg-white text-blue-600 px-2 py-1 rounded-full whitespace-nowrap' },
+                                        `${category.totalTeams} tímov`
+                                    )
+                                ),
+                                
+                                // Telo karty s tímami
+                                React.createElement(
+                                    'div',
+                                    { 
+                                        className: 'p-4 flex-grow overflow-visible flex flex-col min-w-0'
+                                    },
+                                    // Nepriradené tímy
+                                    category.unassignedTeams.length > 0 && 
+                                    (selectedTeamNameFilter ? 
+                                        category.unassignedTeams.filter(team => 
+                                            teamMatchesFilter(team, selectedTeamNameFilter)
+                                        ).length > 0 :
+                                        true
+                                    ) &&
+                                    React.createElement(
+                                        'div',
+                                        { className: 'mb-4 flex-shrink-0 min-w-0' },
+                                        React.createElement(
+                                            'h4',
+                                            { 
+                                                className: 'font-semibold text-gray-800 mb-2 pb-1 border-b border-gray-200 text-xs whitespace-nowrap overflow-visible',
+                                                style: { textOverflow: 'clip' }
+                                            },
+                                            `Nepriradené (${category.unassignedTeamsCount})`
+                                        ),
+                                        React.createElement(
+                                            'ul',
+                                            { className: 'space-y-1.5 min-w-0' },
+                                            category.unassignedTeams
+                                                .filter(team => 
+                                                    !selectedTeamNameFilter || teamMatchesFilter(team, selectedTeamNameFilter)
+                                                )
+                                                .map((team, index) =>
+                                                    React.createElement(
+                                                        'li',
+                                                        {
+                                                            key: `${team.teamId}-${index}`,
+                                                            className: 'py-1.5 px-2.5 bg-gray-50 rounded border border-gray-200 flex justify-between items-center hover:bg-gray-100 group min-w-0'
+                                                        },
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'min-w-0 flex-grow flex items-center overflow-hidden' },
+                                                            React.createElement('span', { 
+                                                                className: 'font-medium text-xs whitespace-nowrap overflow-visible flex-shrink-0',
+                                                                style: { textOverflow: 'clip' },
+                                                            }, `${team.category}: ${team.teamName}`),
+                                                            React.createElement('span', { 
+                                                                className: 'text-gray-500 text-xs ml-1.5 whitespace-nowrap flex-shrink-0'
+                                                            }, `(${team.totalPeople})`
+                                                            )
+                                                        ),
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'flex items-center gap-0.5 flex-shrink-0 ml-1.5' },
+                                                            React.createElement(
+                                                                'button',
+                                                                {
+                                                                    onClick: () => openAssignModal(team),
+                                                                    className: 'px-2 py-0.5 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors whitespace-nowrap'
+                                                                },
+                                                                'Priradiť'
+                                                            )
+                                                        )
+                                                    )
+                                                )
+                                        )
+                                    ),
+                                    
+                                    // Priradené tímy (bez nadpisov ubytovní)
+                                    category.assignedTeams.length > 0 && 
+                                    (selectedAccommodationFilter || selectedTeamNameFilter ? 
+                                        category.assignedTeams.filter(team => {
+                                            if (selectedAccommodationFilter) {
+                                                const selectedAccommodation = accommodations.find(a => a.id === selectedAccommodationFilter);
+                                                if (!selectedAccommodation) return false;
+                                                return team.assignedPlace === selectedAccommodation.name;
+                                            }
+                                            if (selectedTeamNameFilter) {
+                                                return teamMatchesFilter(team, selectedTeamNameFilter);
+                                            }
+                                            return true;
+                                        }).length > 0 :
+                                        true
+                                    ) &&
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex-grow overflow-visible flex flex-col min-w-0' },
+                                        React.createElement(
+                                            'h4',
+                                            { 
+                                                className: 'font-semibold text-gray-800 mb-2 text-xs whitespace-nowrap overflow-visible flex-shrink-0',
+                                                style: { textOverflow: 'clip' }
+                                            },
+                                            `Priradené (${category.assignedTeamsCount})`
+                                        ),
+                                        React.createElement(
+                                            'ul',
+                                            { className: 'space-y-1.5 flex-grow overflow-visible pr-1 min-w-0' },
+                                            category.assignedTeams
+                                                .filter(team => {
+                                                    if (selectedAccommodationFilter) {
+                                                        const selectedAccommodation = accommodations.find(a => a.id === selectedAccommodationFilter);
+                                                        if (!selectedAccommodation) return false;
+                                                        return team.assignedPlace === selectedAccommodation.name;
+                                                    }
+                                                    if (selectedTeamNameFilter) {
+                                                        return teamMatchesFilter(team, selectedTeamNameFilter);
+                                                    }
+                                                    return true;
+                                                })
+                                                .sort((a, b) => {
+                                                    // Najprv zoradiť podľa ubytovne, potom podľa názvu tímu
+                                                    if (a.assignedPlace !== b.assignedPlace) {
+                                                        return a.assignedPlace.localeCompare(b.assignedPlace, 'sk', { sensitivity: 'base' });
+                                                    }
+                                                    return a.teamName.localeCompare(b.teamName, 'sk', { sensitivity: 'base' });
+                                                })
+                                                .map((team, index) => {
+                                                    const teamColor = getTeamAccommodationColor(team);
+                                                    const accommodation = accommodations.find(place => place.name === team.assignedPlace);
+                                                    
+                                                    return React.createElement(
+                                                        'li',
+                                                        {
+                                                            key: `${team.teamId}-${index}`,
+                                                            className: 'py-1.5 px-2.5 bg-gray-50 rounded border border-gray-200 flex justify-between items-center hover:bg-gray-100 group min-w-0'
+                                                        },
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'min-w-0 flex-grow flex flex-col overflow-hidden' },
+                                                            React.createElement(
+                                                                'div',
+                                                                { className: 'flex items-center min-w-0' },
+                                                                React.createElement('span', { 
+                                                                    className: 'font-medium text-xs whitespace-nowrap overflow-visible flex-shrink-0',
+                                                                    style: { 
+                                                                        textOverflow: 'clip',
+                                                                        color: teamColor || 'inherit'
+                                                                    },
+                                                                }, `${team.category}: ${team.teamName}`),
+                                                                React.createElement('span', { 
+                                                                    className: 'text-xs ml-1.5 whitespace-nowrap flex-shrink-0 font-medium',
+                                                                    style: { 
+                                                                        color: teamColor || '#6b7280'
+                                                                    }
+                                                                }, `(${team.totalPeople})`
+                                                                )
+                                                            ),
+                                                            React.createElement(
+                                                                'div',
+                                                                { 
+                                                                    className: 'text-xs text-gray-600 mt-0.5 flex items-center gap-0.5 min-w-0'
+                                                                },
+                                                                React.createElement(
+                                                                    'span',
+                                                                    {
+                                                                        className: 'inline-block w-1.5 h-1.5 rounded-full flex-shrink-0',
+                                                                        style: { backgroundColor: teamColor || '#6b7280' }
+                                                                    }
+                                                                ),
+                                                                React.createElement('span', { 
+                                                                    className: 'whitespace-nowrap overflow-visible flex-shrink-0',
+                                                                    style: { textOverflow: 'clip' }
+                                                                }, team.assignedPlace),
+                                                                accommodation && accommodation.accommodationType && 
+                                                                React.createElement(
+                                                                    'span',
+                                                                    { 
+                                                                        className: 'ml-1 text-gray-500 whitespace-nowrap flex-shrink-0',
+                                                                        style: { textOverflow: 'clip' }
+                                                                    },
+                                                                    `(${accommodation.accommodationType})`
+                                                                )
+                                                            )
+                                                        ),
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'flex items-center gap-0.5 flex-shrink-0 ml-1.5' },
+                                                            React.createElement(
+                                                                'button',
+                                                                {
+                                                                    onClick: () => openAssignModal(team),
+                                                                    className: 'p-0.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors opacity-0 group-hover:opacity-100'
+                                                                },
+                                                                React.createElement(
+                                                                    'svg',
+                                                                    { 
+                                                                        className: 'w-3 h-3', 
+                                                                        fill: 'none', 
+                                                                        stroke: 'currentColor', 
+                                                                        viewBox: '0 0 24 24',
+                                                                        strokeWidth: '2'
+                                                                    },
+                                                                    React.createElement('path', {
+                                                                        strokeLinecap: 'round',
+                                                                        strokeLinejoin: 'round',
+                                                                        d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
+                                                                    })
+                                                                )
+                                                            ),
+                                                            React.createElement(
+                                                                'button',
+                                                                {
+                                                                    onClick: () => openRemoveConfirmation(team),
+                                                                    className: 'p-0.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100'
+                                                                },
+                                                                React.createElement(
+                                                                    'svg',
+                                                                    { 
+                                                                        className: 'w-3 h-3', 
+                                                                        fill: 'none', 
+                                                                        stroke: 'currentColor', 
+                                                                        viewBox: '0 0 24 24',
+                                                                        strokeWidth: '2'
+                                                                    },
+                                                                    React.createElement('path', {
+                                                                        strokeLinecap: 'round',
+                                                                        strokeLinejoin: 'round',
+                                                                        d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16'
+                                                                    })
+                                                                )
+                                                            )
+                                                        )
+                                                    );
+                                                })
+                                        )
+                                    )
+                                )
+                            );
+                        })
+                )
         ),
     
         isColorModalOpen &&
@@ -1400,7 +1803,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                         `Typ ubytovania tímu: ${selectedTeam?.accommodation}`
                     ),
                     React.createElement('p', { className: 'text-sm text-gray-600' },
-                        `Počet v tíme: ${selectedTeam?.totalPeople || 0}`
+                        `Počet osôb v tíme: ${selectedTeam?.totalPeople || 0}`
                     )
                 ),
     
@@ -1502,14 +1905,14 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                             }`,
                                                             style: { textOverflow: 'clip' }
                                                         },
-                                                        `Kapacita: ${actualCapacity.used}/${place.capacity}`,
+                                                        `Kapacita: ${actualCapacity.used}/${place.capacity} osôb`,
                                                         actualCapacity.remaining !== null && (
                                                             React.createElement(
                                                                 'span',
                                                                 { className: 'ml-2' },
                                                                 actualCapacity.remaining >= 0 ? 
-                                                                    `(zostáva ${actualCapacity.remaining})` :
-                                                                    `(prekročená o ${Math.abs(actualCapacity.remaining)})`
+                                                                    `(zostáva ${actualCapacity.remaining} osôb)` :
+                                                                    `(prekročená o ${Math.abs(actualCapacity.remaining)} osôb)`
                                                             )
                                                         )
                                                     )
@@ -1518,7 +1921,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                     React.createElement(
                                                         'div',
                                                         { className: 'text-sm text-red-600 mt-1 font-medium whitespace-nowrap' },
-                                                        `Nedostatočná kapacita pre tím (${selectedTeam?.totalPeople || 0})`
+                                                        `Nedostatočná kapacita pre tím (${selectedTeam?.totalPeople || 0} osôb)`
                                                     )
                                                 )
                                             )
