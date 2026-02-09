@@ -837,7 +837,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     'span',
                                     {
                                         className: `inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                            viewMode === 'category' ? 'translate-x-7' : 'translate-x-1'
+                                            viewMode === 'category' ? 'translate-x-6' : 'translate-x-1'
                                         }`
                                     }
                                 )
