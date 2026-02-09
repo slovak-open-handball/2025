@@ -9,109 +9,202 @@ window.isCategoriesDataLoaded = false;
 let isFirestoreListenersSetup = false; 
 window.areCategoriesLoaded = false;
 
-// **UPRAVENÉ: Funkcia pre nastavenie priblíženia na 80% - zachováva viditeľnosť**
+// Funkcia pre nastavenie priblíženia na 80% (skutočná simulácia Ctrl+-)
 const setZoomTo80Percent = () => {
-    console.log("Nastavujem priblíženie na 80%");
+    console.log("Nastavujem priblíženie na 80% (simulácia Ctrl+-)");
     
-    const targetZoom = 80;
-    localStorage.setItem('pageZoom', targetZoom);
-    
-    // **Odstrániť predchádzajúce štýly**
-    const oldStyles = document.getElementById('global-zoom-styles');
-    if (oldStyles) oldStyles.remove();
-    
-    // **Použijeme kombináciu transform a zoom s opatrnými nastaveniami**
-    const style = document.createElement('style');
-    style.id = 'global-zoom-styles';
-    
-    // **Kritická zmena: Používame transform-origin a width, ktoré zachovávajú obsah**
-    style.textContent = `
-        /* Aplikujeme priblíženie na celú stránku */
-        html {
-            zoom: 0.8;
+    // Metóda 1: CSS zoom property (podporované v Chrome, Edge)
+    const setZoomWithCSS = () => {
+        const targetZoom = 80;
+        localStorage.setItem('pageZoom', targetZoom);
+        
+        // Resetovať predchádzajúce transformácie
+        document.body.style.transform = '';
+        document.body.style.transformOrigin = '';
+        document.documentElement.style.transform = '';
+        document.documentElement.style.transformOrigin = '';
+        
+        // Skúsime rôzne metódy pre rôzne prehliadače
+        const htmlElement = document.documentElement;
+        const bodyElement = document.body;
+        
+        // Metóda A: CSS zoom (najlepšia pre Chrome)
+        if ('zoom' in htmlElement.style) {
+            htmlElement.style.zoom = `${targetZoom}%`;
+            console.log("Použitá CSS zoom property");
+            return true;
         }
         
-        /* Pre prehliadače, ktoré nepodporujú zoom na html - používame transform na body */
-        body {
-            transform: scale(0.8);
-            transform-origin: top left;
-            width: 125%;
-            min-height: 125vh;
-            position: relative;
-        }
+        // Metóda B: transform na body s viewport kompenzáciou
+        bodyElement.style.transform = `scale(${targetZoom / 100})`;
+        bodyElement.style.transformOrigin = 'top center';
+        bodyElement.style.width = '125%'; // Kompenzácia: 100/80 = 1.25
+        bodyElement.style.marginLeft = '-12.5%'; // Centrovanie
+        bodyElement.style.overflowX = 'hidden';
         
-        /* ZABEZPEČENIE VIDITEĽNOSTI HEADER A JEHO OBSAHU */
-        header, #header-placeholder {
-            transform: scale(1.25) !important; /* Reverzný efekt: 1/0.8 = 1.25 */
-            transform-origin: top left !important;
-            width: 80% !important;
-            position: relative !important;
-            z-index: 1000 !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-        }
-        
-        /* Obsah header - zabezpečíme správnu veľkosť */
-        header * {
-            transform: none !important;
-        }
-        
-        /* Pre mobilné zariadenia - menej agresívne nastavenia */
-        @media (max-width: 768px) {
-            html {
-                zoom: 1;
-            }
+        // Pre fixované elementy: musíme ich umiestniť relatívne
+        const fixedElements = document.querySelectorAll('*[style*="fixed"], .fixed, [class*="fixed"]');
+        fixedElements.forEach(el => {
+            const rect = el.getBoundingClientRect();
+            const computedStyle = window.getComputedStyle(el);
             
-            body {
-                transform: none !important;
-                width: 100% !important;
-                min-height: 100vh !important;
+            // Ak je element fixovaný
+            if (computedStyle.position === 'fixed') {
+                // Pre pravý dolný roh
+                if (computedStyle.right === '0px' || computedStyle.bottom === '0px') {
+                    // Pridáme wrapper pre fixované elementy
+                    if (!el.parentElement.classList.contains('zoom-fixed-wrapper')) {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'zoom-fixed-wrapper';
+                        wrapper.style.position = 'fixed';
+                        wrapper.style.right = computedStyle.right;
+                        wrapper.style.bottom = computedStyle.bottom;
+                        wrapper.style.zIndex = computedStyle.zIndex;
+                        
+                        el.parentElement.insertBefore(wrapper, el);
+                        wrapper.appendChild(el);
+                        
+                        // Upravíme pozíciu vnútri wrappera
+                        el.style.position = 'absolute';
+                        el.style.right = '0';
+                        el.style.bottom = '0';
+                    }
+                }
             }
-            
-            header, #header-placeholder {
-                transform: none !important;
-                width: 100% !important;
-            }
+        });
+        
+        console.log("Použitá CSS transform metóda s kompenzáciou");
+        return false;
+    };
+    
+    // Metóda 2: Viewport meta tag manipulation (najlepšia pre všetky prehliadače)
+    const setZoomWithViewport = () => {
+        const targetZoom = 80;
+        localStorage.setItem('pageZoom', targetZoom);
+        
+        // Získame aktuálny viewport tag alebo vytvoríme nový
+        let viewport = document.querySelector('meta[name="viewport"]');
+        
+        if (!viewport) {
+            viewport = document.createElement('meta');
+            viewport.name = 'viewport';
+            document.head.appendChild(viewport);
         }
-    `;
+        
+        // Vypočítame scale pre viewport
+        const scale = targetZoom / 100;
+        
+        // Nastavíme viewport content
+        const initialScale = Math.min(scale, 1.0);
+        const maximumScale = Math.max(scale, 1.0);
+        const userScalable = scale !== 1.0 ? 'yes' : 'no';
+        
+        viewport.content = `width=device-width, initial-scale=${initialScale}, maximum-scale=${maximumScale}, user-scalable=${userScalable}`;
+        
+        // Pre desktop: použijeme aj CSS transform s viewport kompenzáciou
+        if (window.innerWidth > 768) { // Desktop
+            document.body.style.transform = `scale(${scale})`;
+            document.body.style.transformOrigin = 'top center';
+            
+            // Kompenzácia veľkosti
+            const scaleFactor = 1 / scale;
+            document.body.style.width = `${scaleFactor * 100}%`;
+            document.body.style.marginLeft = `${(scaleFactor - 1) * 50}%`;
+        }
+        
+        console.log("Použitá viewport metóda");
+        return true;
+    };
     
-    document.head.appendChild(style);
+    // Metóda 3: Priamy zápis do document (experimentálne)
+    const setZoomWithDocumentWrite = () => {
+        // Táto metóda je radikálna, ale funguje
+        const targetZoom = 80;
+        localStorage.setItem('pageZoom', targetZoom);
+        
+        // Zmeníme veľkosť písma v root elemente
+        document.documentElement.style.fontSize = `${targetZoom}%`;
+        
+        // Zmeníme všetky rozmery
+        const scaleElements = () => {
+            const allElements = document.querySelectorAll('*:not(script):not(style):not(meta):not(link)');
+            allElements.forEach(el => {
+                const style = window.getComputedStyle(el);
+                
+                // Škálujeme veľkosti, ktoré sú v px
+                ['width', 'height', 'padding', 'margin', 'fontSize', 'top', 'right', 'bottom', 'left'].forEach(prop => {
+                    const value = style[prop];
+                    if (value && value.includes('px')) {
+                        const numValue = parseFloat(value);
+                        if (!isNaN(numValue)) {
+                            el.style[prop] = `${numValue * (targetZoom / 100)}px`;
+                        }
+                    }
+                });
+            });
+        };
+        
+        // Spustíme po malom oneskorení
+        setTimeout(scaleElements, 100);
+        
+        console.log("Použitá priama škálovacia metóda");
+        return true;
+    };
     
-    // **Pridáme viewport meta tag pre mobilné zariadenia**
-    let viewport = document.querySelector('meta[name="viewport"]');
-    if (!viewport) {
-        viewport = document.createElement('meta');
-        viewport.name = 'viewport';
-        document.head.appendChild(viewport);
+    // Skúsime najprv CSS zoom
+    let success = setZoomWithCSS();
+    
+    // Ak nefunguje, skúsime viewport metódu
+    if (!success) {
+        success = setZoomWithViewport();
     }
-    viewport.content = 'width=device-width, initial-scale=0.8, maximum-scale=1.5, user-scalable=yes';
     
-    console.log("Priblíženie na 80% aplikované");
+    // Zobrazíme spätnú väzbu
+    showZoomFeedback(80);
     
-    return true;
+    // Pre istotu pridáme aj event listener pre resize
+    window.dispatchEvent(new Event('resize'));
 };
 
-// **UPRAVENÉ: Funkcia pre obnovenie pôvodného priblíženia**
+// Funkcia pre obnovenie pôvodného priblíženia
 const resetZoom = () => {
     localStorage.setItem('pageZoom', 100);
     
-    // Odstrániť globálne štýly
-    const zoomStyles = document.getElementById('global-zoom-styles');
-    if (zoomStyles) {
-        zoomStyles.remove();
-    }
+    // Reset všetkých metód
+    document.body.style.transform = '';
+    document.body.style.transformOrigin = '';
+    document.body.style.width = '';
+    document.body.style.marginLeft = '';
+    document.body.style.overflowX = '';
+    
+    document.documentElement.style.transform = '';
+    document.documentElement.style.transformOrigin = '';
+    document.documentElement.style.zoom = '';
+    document.documentElement.style.fontSize = '';
     
     // Reset viewport
     const viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) {
-        viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes';
+        viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
     }
     
-    // Reset štýlov
-    document.documentElement.style.cssText = '';
-    document.body.style.cssText = '';
+    // Odstrániť wrappery pre fixované elementy
+    document.querySelectorAll('.zoom-fixed-wrapper').forEach(wrapper => {
+        const child = wrapper.firstElementChild;
+        if (child) {
+            // Obnoviť pôvodné štýly
+            child.style.position = '';
+            child.style.right = '';
+            child.style.bottom = '';
+            
+            // Presunúť späť
+            wrapper.parentElement.insertBefore(child, wrapper);
+            wrapper.remove();
+        }
+    });
     
     console.log("Priblíženie obnovené na 100%");
+    showZoomFeedback(100);
 };
 
 // Funkcia pre vizuálnu spätnú väzbu
@@ -147,47 +240,22 @@ const showZoomFeedback = (zoomLevel) => {
     }, 2000);
 };
 
-// **UPRAVENÉ: Inicializácia priblíženia**
+// Inicializácia priblíženia pri načítaní stránky
 const initializeZoom = () => {
-    // Skontrolujeme, či máme uložené priblíženie
     const savedZoom = localStorage.getItem('pageZoom');
-    const shouldApply80Percent = !savedZoom || parseFloat(savedZoom) !== 80;
-    
-    // **Funkcia, ktorá aplikuje zoom**
-    const applyZoom = () => {
-        if (!document.body) {
-            setTimeout(applyZoom, 50);
-            return;
-        }
-        
-        if (shouldApply80Percent) {
-            console.log("Aplikujem priblíženie 80%");
-            setZoomTo80Percent();
-            showZoomFeedback(80);
-        } else if (parseFloat(savedZoom) === 80) {
-            console.log("Re-aplikujem priblíženie 80%");
-            setZoomTo80Percent();
-        }
-    };
-    
-    // **Spustíme aplikáciu zoom s oneskorením**
-    setTimeout(applyZoom, 300);
-    
-    console.log(`Inicializácia priblíženia. Saved zoom: ${savedZoom}`);
+    if (savedZoom && parseFloat(savedZoom) !== 100) {
+        // Neskôr aplikujeme v load evente
+        console.log(`Nájdené priblíženie: ${savedZoom}%`);
+    }
 };
-
-// **UPRAVENÉ: Spustíme inicializáciu priblíženia**
-document.addEventListener('DOMContentLoaded', initializeZoom);
 
 // Funkcie pre konzolu
 window.setZoom80 = () => {
     setZoomTo80Percent();
-    showZoomFeedback(80);
 };
 
 window.testResetZoom = () => {
     resetZoom();
-    showZoomFeedback(100);
 };
 
 // Testovacia funkcia pre fixované elementy
@@ -203,9 +271,7 @@ window.testFixedElements = () => {
             top: style.top,
             right: style.right,
             bottom: style.bottom,
-            left: style.left,
-            visibility: style.visibility,
-            opacity: style.opacity
+            left: style.left
         });
     });
 };
@@ -216,13 +282,11 @@ document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === '8') {
         e.preventDefault();
         setZoomTo80Percent();
-        showZoomFeedback(80);
     }
     // Ctrl+0 pre reset
     if (e.ctrlKey && e.key === '0') {
         e.preventDefault();
         resetZoom();
-        showZoomFeedback(100);
     }
 });
 
@@ -652,7 +716,6 @@ const setupFirestoreListeners = () => {
     }
 };
 
-// **UPRAVENÉ: Funkcia pre načítanie header**
 window.loadHeaderAndScripts = async () => {
     try {
         const headerPlaceholder = document.getElementById('header-placeholder');
@@ -689,19 +752,24 @@ window.loadHeaderAndScripts = async () => {
     }
 };
 
-// **UPRAVENÉ: Spustíme načítanie header s oneskorením**
-setTimeout(() => {
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', window.loadHeaderAndScripts);
-    } else {
-        window.loadHeaderAndScripts();
-    }
-}, 500);
-
-// **Pridáme automatickú aplikáciu zoom pri resize**
-window.addEventListener('resize', () => {
-    const savedZoom = localStorage.getItem('pageZoom');
-    if (savedZoom && parseFloat(savedZoom) === 80) {
-        setTimeout(setZoomTo80Percent, 100);
-    }
+// Inicializácia priblíženia pri načítaní stránky
+window.addEventListener('load', () => {
+    initializeZoom();
+    
+    // Nastavíme na 80% po načítaní
+    setTimeout(() => {
+        const savedZoom = localStorage.getItem('pageZoom');
+        if (!savedZoom || parseFloat(savedZoom) !== 80) {
+            setZoomTo80Percent();
+        } else {
+            // Ak už je na 80%, len re-aplikujeme
+            setZoomTo80Percent();
+        }
+    }, 1000);
 });
+
+if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', window.loadHeaderAndScripts);
+} else {
+    window.loadHeaderAndScripts();
+}
