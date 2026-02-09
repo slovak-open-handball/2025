@@ -1796,7 +1796,7 @@ const AddGroupsApp = ({ userProfileData }) => {
     return React.createElement('div', { className: 'flex-grow flex justify-center items-center p-0 sm:p-2 relative' },
       React.createElement('div', { className: 'w-full max-w-[1920px] mx-auto bg-white rounded-xl shadow-2xl p-2 sm:p-4 lg:p-6' },
         // NADPIS A ŠTATISTIKY PREHĽADU
-        React.createElement('div', { className: 'flex flex-col items-center justify-center mb-2 md:mb-3 p-3 -mx-2 sm:-mx-4 -mt-2 sm:-mt-4 rounded-t-xl bg-white text-black' },
+        React.createElement('div', { className: 'flex flex-col items-center justify-center mb-1 md:mb-2 p-3 -mx-2 sm:-mx-4 -mt-2 sm:-mt-4 rounded-t-xl bg-white text-black' },
           React.createElement('h2', { className: 'text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-center mb-3' }, 'Mapa'),
           
           // ŠTATISTIKY PREHĽADU (nahradili tlačidlá filtrov)
