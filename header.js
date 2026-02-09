@@ -276,20 +276,6 @@ window.testFixedElements = () => {
     });
 };
 
-// Pridanie klávesovej skratky
-document.addEventListener('keydown', (e) => {
-    // Ctrl+8 pre 80%
-    if (e.ctrlKey && e.key === '8') {
-        e.preventDefault();
-        setZoomTo80Percent();
-    }
-    // Ctrl+0 pre reset
-    if (e.ctrlKey && e.key === '0') {
-        e.preventDefault();
-        resetZoom();
-    }
-});
-
 // Ostatný kód zostáva rovnaký...
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
