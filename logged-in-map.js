@@ -2,23 +2,6 @@
 import { doc, getDoc, getDocs, onSnapshot, updateDoc, addDoc, collection, Timestamp, deleteDoc, GeoPoint, setDoc }
   from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-
-useEffect(() => {
-    const style = document.createElement('style');
-    style.textContent = `
-        .leaflet-container .leaflet-tile {
-            filter: none !important;
-            -webkit-filter: none !important;
-        }
-        .leaflet-tile-loaded {
-            image-rendering: -webkit-optimize-contrast;
-            image-rendering: crisp-edges;
-        }
-    `;
-    document.head.appendChild(style);
-    return () => document.head.removeChild(style);
-}, []);
-
 const { useState, useEffect, useRef, useCallback, useMemo } = React;
 // Leaflet + Font Awesome
 const leafletCSS = document.createElement('link');
@@ -211,6 +194,22 @@ const AddGroupsApp = ({ userProfileData }) => {
             }
         }, 200);
     }, [selectedPlace]);
+
+    useEffect(() => {
+      const style = document.createElement('style');
+      style.textContent = `
+          .leaflet-container .leaflet-tile {
+              filter: none !important;
+              -webkit-filter: none !important;
+          }
+          .leaflet-tile-loaded {
+              image-rendering: -webkit-optimize-contrast;
+              image-rendering: crisp-edges;
+          }
+      `;
+      document.head.appendChild(style);
+      return () => document.head.removeChild(style);
+    }, []);
 
     useEffect(() => {
         window.goToDefaultView = () => {
