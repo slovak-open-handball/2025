@@ -9,6 +9,41 @@ window.isCategoriesDataLoaded = false;
 let isFirestoreListenersSetup = false; 
 window.areCategoriesLoaded = false;
 
+// Vytvorenie bieleho prekryvného obdĺžnika
+const createWhiteOverlay = () => {
+    const overlay = document.createElement('div');
+    overlay.id = 'zoom-init-overlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: white;
+        z-index: 999999999999;
+        opacity: 1;
+        transition: opacity 0.5s ease;
+        pointer-events: none;
+    `;
+    document.body.appendChild(overlay);
+    console.log("Bielý prekryvný obdĺžnik vytvorený");
+    return overlay;
+};
+
+// Funkcia pre skrytie bieleho prekryvného obdĺžnika
+const hideWhiteOverlay = () => {
+    const overlay = document.getElementById('zoom-init-overlay');
+    if (overlay) {
+        overlay.style.opacity = '0';
+        setTimeout(() => {
+            if (overlay.parentElement) {
+                overlay.remove();
+                console.log("Bielý prekryvný obdĺžnik odstránený");
+            }
+        }, 500);
+    }
+};
+
 // Funkcia pre nastavenie priblíženia na 80% (skutočná simulácia Ctrl+-)
 const setZoomTo80Percent = () => {
     console.log("Nastavujem priblíženie na 80% (simulácia Ctrl+-)");
@@ -209,11 +244,13 @@ const resetZoom = () => {
 
 // Funkcia pre vizuálnu spätnú väzbu
 const showZoomFeedback = (zoomLevel) => {
+    // Najprv odstránime existujúcu spätnú väzbu, ak nejaká existuje
     const existingFeedback = document.getElementById('zoom-feedback');
     if (existingFeedback) {
         existingFeedback.remove();
     }
     
+    // Vytvoríme novú spätnú väzbu
     const feedback = document.createElement('div');
     feedback.id = 'zoom-feedback';
     feedback.textContent = `Priblíženie: ${zoomLevel}%`;
@@ -225,7 +262,7 @@ const showZoomFeedback = (zoomLevel) => {
         color: white;
         padding: 10px 20px;
         border-radius: 8px;
-        z-index: 99999;
+        z-index: 999999999999;
         font-size: 14px;
         font-weight: bold;
         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
@@ -233,28 +270,45 @@ const showZoomFeedback = (zoomLevel) => {
     `;
     document.body.appendChild(feedback);
     
+    // Po zobrazení spätnej väzby skryjeme biely prekryvný obdĺžnik
+    setTimeout(() => {
+        hideWhiteOverlay();
+        console.log("Spätná väzba o priblížení sa zobrazila, biely prekryvný obdĺžnik sa skrýva");
+    }, 100);
+    
+    // Postupne zmizne spätná väzba
     setTimeout(() => {
         feedback.style.opacity = '0';
         feedback.style.transition = 'opacity 0.5s ease';
-        setTimeout(() => feedback.remove(), 500);
+        setTimeout(() => {
+            if (feedback.parentElement) {
+                feedback.remove();
+            }
+        }, 500);
     }, 2000);
 };
 
 // Inicializácia priblíženia pri načítaní stránky
 const initializeZoom = () => {
+    // Vytvoríme biely prekryvný obdĺžnik hneď na začiatku
+    createWhiteOverlay();
+    
     const savedZoom = localStorage.getItem('pageZoom');
     if (savedZoom && parseFloat(savedZoom) !== 100) {
-        // Neskôr aplikujeme v load evente
         console.log(`Nájdené priblíženie: ${savedZoom}%`);
     }
 };
 
 // Funkcie pre konzolu
 window.setZoom80 = () => {
+    // Zobraziť biely prekryvný obdĺžnik pred zmenou priblíženia
+    createWhiteOverlay();
     setZoomTo80Percent();
 };
 
 window.testResetZoom = () => {
+    // Zobraziť biely prekryvný obdĺžnik pred resetom
+    createWhiteOverlay();
     resetZoom();
 };
 
@@ -275,6 +329,24 @@ window.testFixedElements = () => {
         });
     });
 };
+
+// Pridanie klávesovej skratky
+document.addEventListener('keydown', (e) => {
+    // Ctrl+8 pre 80%
+    if (e.ctrlKey && e.key === '8') {
+        e.preventDefault();
+        // Zobraziť biely prekryvný obdĺžnik pred zmenou priblíženia
+        createWhiteOverlay();
+        setZoomTo80Percent();
+    }
+    // Ctrl+0 pre reset
+    if (e.ctrlKey && e.key === '0') {
+        e.preventDefault();
+        // Zobraziť biely prekryvný obdĺžnik pred resetom
+        createWhiteOverlay();
+        resetZoom();
+    }
+});
 
 // Ostatný kód zostáva rovnaký...
 window.showGlobalNotification = (message, type = 'success') => {
