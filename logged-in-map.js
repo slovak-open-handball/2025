@@ -1424,10 +1424,46 @@ const AddGroupsApp = ({ userProfileData }) => {
                 wheelPxPerZoomLevel: 100
               })
               .setView(defaultCenter, defaultZoom)
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(leafletMap.current);
+//            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+//                maxZoom: 19,
+//                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+//            }).addTo(leafletMap.current);
+
+              const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                  maxZoom: 19,
+                  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              });
+              
+              // Fallback vrstva
+              const cartoLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                  maxZoom: 19,
+                  attribution: '© OpenStreetMap, © CartoDB'
+              });
+              
+              // Pridajte prípadne tretiu možnosť
+              const hyddaLayer = L.tileLayer('https://{s}.tile.openstreetmap.se/hydda/full/{z}/{x}/{y}.png', {
+                  maxZoom: 18,
+                  attribution: '© OpenStreetMap contributors'
+              });
+              
+              // Vytvorte vrstvy s prepínačom alebo použite fallback
+              osmLayer.addTo(leafletMap.current);
+              
+              // Alebo len pridajte fallback (jednoduchšie):
+              L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                  maxZoom: 19,
+                  attribution: '© OpenStreetMap contributors',
+                  // Pridajte tieto možnosti:
+                  detectRetina: true,
+                  crossOrigin: true,
+                  // Fallback URL ak prvý zlyhá
+                  errorTileUrl: 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png'
+              }).addTo(leafletMap.current);
+
+
+
+
+          
             
             // Custom Zoom + Home control
             L.Control.ZoomHome = L.Control.extend({
