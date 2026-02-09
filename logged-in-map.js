@@ -882,7 +882,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             editMarkerRef.current.remove();
             editMarkerRef.current = null;
         }
-        
+    
         if (leafletMap.current) {
             leafletMap.current.setView(defaultCenter, defaultZoom, { animate: true });
         }
@@ -895,6 +895,16 @@ const AddGroupsApp = ({ userProfileData }) => {
               markerObj.marker.setZIndexOffset(0);
             }
         });
+    
+        // NOVÉ: Scroll na začátek seznamu míst
+        setTimeout(() => {
+            if (placesListRef.current) {
+                placesListRef.current.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            }
+        }, 100);
     };
     
     const handleSaveNameAndType = async () => {
