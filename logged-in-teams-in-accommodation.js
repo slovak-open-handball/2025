@@ -1500,6 +1500,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                             React.createElement(
                                                                 'div',
                                                                 { className: 'flex items-center min-w-0' },
+                                                                // Pridaná kategória pred názov tímu (biela na modrom pozadí)
+                                                                React.createElement('span', { 
+                                                                    className: 'text-xs font-medium text-white bg-blue-500 px-1.5 py-0.5 rounded mr-1.5 whitespace-nowrap flex-shrink-0'
+                                                                }, team.category),
                                                                 React.createElement('span', { 
                                                                     className: 'font-medium text-xs whitespace-nowrap overflow-visible flex-shrink-0',
                                                                     style: { 
