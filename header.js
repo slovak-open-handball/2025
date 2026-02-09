@@ -9,6 +9,104 @@ window.isCategoriesDataLoaded = false;
 let isFirestoreListenersSetup = false; 
 window.areCategoriesLoaded = false;
 
+const setPageZoomTo80Percent = () => {
+    try {
+        console.log("header.js: Nastavujem zoom stránky na 80%");
+        
+        // Vytvoríme štýlový element pre zoom
+        let zoomStyle = document.getElementById('page-zoom-style');
+        if (!zoomStyle) {
+            zoomStyle = document.createElement('style');
+            zoomStyle.id = 'page-zoom-style';
+            document.head.appendChild(zoomStyle);
+        }
+        
+        // Nastavíme CSS pre 80% zoom so správnym centrovaním
+        zoomStyle.textContent = `
+            /* Nastavenie zoomu na 80% pre celú stránku */
+            html {
+                zoom: 80%;
+                -moz-transform: scale(0.8);
+                -moz-transform-origin: 0 0;
+                -o-transform: scale(0.8);
+                -o-transform-origin: 0 0;
+                -webkit-transform: scale(0.8);
+                -webkit-transform-origin: 0 0;
+                transform: scale(0.8);
+                transform-origin: 0 0;
+                width: 125%; /* Kompenzácia pre zmenšenie na 80% (100/0.8 = 125) */
+                height: 125%;
+                overflow-x: hidden;
+            }
+            
+            /* Zabezpečíme, že body zaberá celú dostupnú plochu */
+            body {
+                width: 100%;
+                min-height: 100vh;
+                margin: 0;
+                padding: 0;
+                overflow-x: hidden;
+            }
+            
+            /* Zabezpečíme správne zobrazenie hlavičky a obsahu */
+            #header-placeholder,
+            #header-placeholder > header,
+            main,
+            .container,
+            .mx-auto {
+                width: 100% !important;
+                max-width: 100% !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+            }
+            
+            /* Oprava pre modálne okná a fixné elementy */
+            .modal,
+            .fixed,
+            .absolute {
+                transform-origin: top left !important;
+            }
+            
+            /* Oprava pre notifikácie */
+            #notification-container,
+            #global-notification {
+                transform-origin: top right !important;
+            }
+            
+            /* Zabezpečíme, že obsah nie je orezaný */
+            .overflow-hidden {
+                overflow: visible !important;
+            }
+            
+            /* Zvýšime z-index pre zabezpečenie správneho vrstvenia */
+            header {
+                z-index: 50 !important;
+            }
+        `;
+        
+        // Alternatívna metóda pre prehliadače, ktoré podporujú zoom property
+        document.documentElement.style.zoom = "80%";
+        
+        console.log("header.js: Zoom úspešne nastavený na 80%");
+        
+        // Pridáme listener pre obnovenie pôvodného zoomu pomocou Ctrl+0
+        const resetZoomHandler = (e) => {
+            if (e.ctrlKey && e.key === '0') {
+                e.preventDefault();
+                zoomStyle.textContent = '';
+                document.documentElement.style.zoom = "100%";
+                console.log("header.js: Zoom obnovený na 100% (Ctrl+0)");
+                document.removeEventListener('keydown', resetZoomHandler);
+            }
+        };
+        
+        document.addEventListener('keydown', resetZoomHandler);
+        
+    } catch (error) {
+        console.error("header.js: Chyba pri nastavovaní zoomu stránky:", error);
+    }
+};
+
 window.showGlobalNotification = (message, type = 'success') => {
   let notificationElement = document.getElementById('global-notification');
 
@@ -445,6 +543,10 @@ window.loadHeaderAndScripts = async () => {
         if (headerPlaceholder) {
             headerPlaceholder.innerHTML = headerHtml;
         }
+
+        setTimeout(() => {
+            setPageZoomTo80Percent();
+        }, 100);
 
         const logoutButton = document.getElementById('logout-button');
         if (logoutButton) {
