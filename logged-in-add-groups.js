@@ -1211,6 +1211,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             groupToEdit: groupToEdit,
             categoryId: categoryOfGroupToEdit,
             existingGroups: groups,
+            categories: categories,
             onUpdate: () => {
                 // Toto sa volá po aktualizácii, aby sa zabezpečilo, že stav je čistý
                 setGroupToEdit(null);
