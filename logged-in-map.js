@@ -1540,8 +1540,14 @@ const AddGroupsApp = ({ userProfileData }) => {
         
         if (window.L) {
             initMap();
-        } else if (leafletJS) {
-            leafletJS.onload = initMap;
+        } else {
+            // Pridajte listener pre načítanie scriptu
+            leafletJS.onload = () => {
+                console.log("Leaflet script načítaný");
+                setTimeout(() => {
+                    if (window.L) initMap();
+                }, 100);
+            };
         }
         
         return () => {
