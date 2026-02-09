@@ -385,8 +385,8 @@ const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingG
             if (oldGroupName === formattedGroupName && oldGroupType === groupType) {
                 changesList.length = 0; // Vymažeme predchádzajúce správy
                 changesList.push(`Skupina v kategórii '''${categoryName}' bola upravená`);
-                changesList.push(`• Názov skupiny zostáva '${formattedGroupName}'`);
-                changesList.push(`• Typ skupiny zostáva '${groupType}'`);
+                changesList.push(`Názov skupiny '''${formattedGroupName}'`);
+                changesList.push(`Typ skupiny '''${groupType}'`);
             }
     
             await createGroupChangeNotification('group_updated', 
