@@ -2248,7 +2248,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                       value: editLunchPrice,
                       onChange: e => setEditLunchPrice(e.target.value),
                       placeholder: 'napr. 8.90',
-                      className = 'w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition pl-8'
+                      className: 'w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition pl-8'
                     }),
                     React.createElement('span', { className: 'absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm' }, '€')
                   )
@@ -2263,7 +2263,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                       value: editDinnerPrice,
                       onChange: e => setEditDinnerPrice(e.target.value),
                       placeholder: 'napr. 7.50',
-                      className = 'w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition pl-8'
+                      className: 'w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition pl-8'
                     }),
                     React.createElement('span', { className: 'absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm' }, '€')
                   )
