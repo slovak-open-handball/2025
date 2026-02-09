@@ -362,7 +362,7 @@ const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingG
                 type: groupType,
             };
     
-            const categoryName = categories.find(c => c.id === categoryId)?.name || categoryId;
+            const categoryName = categories && categories.find ? categories.find(c => c.id === categoryId)?.name || categoryId : categoryId;
             const oldGroupName = groupToEdit.name;
             const oldGroupType = groupToEdit.type;
             
