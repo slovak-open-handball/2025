@@ -1427,6 +1427,8 @@ const AddGroupsApp = ({ userProfileData }) => {
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                subdomains: ['a', 'b', 'c'], // Pridané subdomény
+                errorTileUrl: 'https://via.placeholder.com/256/eee/ccc?text=Loading...'
             }).addTo(leafletMap.current);
             
             // Custom Zoom + Home control
@@ -1523,6 +1525,18 @@ const AddGroupsApp = ({ userProfileData }) => {
         } else if (leafletJS) {
             leafletJS.onload = initMap;
         }
+
+        setTimeout(() => {
+            if (mapRef.current && window.L) {
+                initMap();
+                // Dajte mape čas na vykreslenie
+                setTimeout(() => {
+                    if (leafletMap.current) {
+                        leafletMap.current.invalidateSize();
+                    }
+                }, 500);
+            }
+        }, 100);
         
         return () => {
             if (leafletMap.current) {
