@@ -1300,41 +1300,39 @@ const AddGroupsApp = ({ userProfileData }) => {
                             )
                         )
                         : filteredCategoriesData.map(category => {
-                            const baseHeight = 220;
-                            const teamItemHeight = 52;
-                            const minHeight = 320;
-                            const maxHeight = 600;
+                            // ODSTRÁNIŤ tieto výškové konštanty:
+                            // const baseHeight = 220;
+                            // const teamItemHeight = 52;
+                            // const minHeight = 320;
+                            // const maxHeight = 600;
                             
-                            // Počet tímov na zobrazenie
-                            let teamsToShow = 0;
-                            if (selectedAccommodationFilter) {
-                                // Ak je filter na ubytovňu, zobrazíme len tímy v tej ubytovni
-                                const selectedAccommodation = accommodations.find(a => a.id === selectedAccommodationFilter);
-                                if (selectedAccommodation) {
-                                    teamsToShow = category.teams.filter(team => 
-                                        team.assignedPlace === selectedAccommodation.name
-                                    ).length;
-                                }
-                            } else if (selectedTeamNameFilter) {
-                                // Ak je filter na názov tímu
-                                teamsToShow = category.teams.filter(team => 
-                                    teamMatchesFilter(team, selectedTeamNameFilter)
-                                ).length;
-                            } else {
-                                // Všetky tímy v kategórii
-                                teamsToShow = category.teams.length;
-                            }
+                            // Odstrániť celý výpočet pre calculatedHeight
+                            // let teamsToShow = 0;
+                            // if (selectedAccommodationFilter) {
+                            //     const selectedAccommodation = accommodations.find(a => a.id === selectedAccommodationFilter);
+                            //     if (selectedAccommodation) {
+                            //         teamsToShow = category.teams.filter(team => 
+                            //             team.assignedPlace === selectedAccommodation.name
+                            //         ).length;
+                            //     }
+                            // } else if (selectedTeamNameFilter) {
+                            //     teamsToShow = category.teams.filter(team => 
+                            //         teamMatchesFilter(team, selectedTeamNameFilter)
+                            //     ).length;
+                            // } else {
+                            //     teamsToShow = category.teams.length;
+                            // }
                             
-                            const calculatedHeight = Math.min(
-                                maxHeight,
-                                Math.max(minHeight, baseHeight + (teamsToShow * teamItemHeight))
-                            );
+                            // const calculatedHeight = Math.min(
+                            //     maxHeight,
+                            //     Math.max(minHeight, baseHeight + (teamsToShow * teamItemHeight))
+                            // );
                             
                             return React.createElement(
                                 'div',
                                 { 
                                     key: category.name, 
-                                    className: 'bg-white rounded-xl shadow-lg overflow-hidden flex flex-col min-w-0 h-full'
+                                    className: 'bg-white rounded-xl shadow-lg overflow-hidden flex flex-col min-w-0' // ODSTRÁNIŤ h-full
                                 },
                                 // Hlavička kategórie
                                 React.createElement(
@@ -1364,14 +1362,12 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     )
                                 ),
                                 
-                                // Telo karty s tímami
+                                // Telo karty s tímami - ZMENIŤ CSS classy pre výšku
                                 React.createElement(
                                     'div',
                                     { 
-                                        className: 'p-4 flex-grow overflow-hidden flex flex-col min-w-0',
-                                        style: { 
-                                            height: `${calculatedHeight - 68}px`
-                                        }
+                                        className: 'p-4 flex-grow overflow-visible flex flex-col min-w-0', // Zmeniť overflow-hidden na overflow-visible
+                                        // ODSTRÁNIŤ inline style pre výšku
                                     },
                                     // Nepriradené tímy
                                     category.unassignedTeams.length > 0 && 
@@ -1412,7 +1408,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                             React.createElement('span', { 
                                                                 className: 'font-medium text-xs whitespace-nowrap overflow-visible flex-shrink-0',
                                                                 style: { textOverflow: 'clip' },
-                                                            }, `${team.category}: ${team.teamName}`), // Zmena tu - pridať kategóriu pred názov
+                                                            }, `${team.category}: ${team.teamName}`),
                                                             React.createElement('span', { 
                                                                 className: 'text-gray-500 text-xs ml-1.5 whitespace-nowrap flex-shrink-0'
                                                             }, `(${team.totalPeople})`
@@ -1435,7 +1431,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                         )
                                     ),
                                     
-                                    // Priradené tímy (bez nadpisov ubytovní)
+                                    // Priradené tímy (bez nadpisov ubytovní) - ZMENIŤ CSS classy
                                     category.assignedTeams.length > 0 && 
                                     (selectedAccommodationFilter || selectedTeamNameFilter ? 
                                         category.assignedTeams.filter(team => {
@@ -1453,7 +1449,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     ) &&
                                     React.createElement(
                                         'div',
-                                        { className: 'flex-grow overflow-hidden flex flex-col min-w-0' },
+                                        { className: 'flex-grow overflow-visible flex flex-col min-w-0' }, // Zmeniť overflow-hidden na overflow-visible
                                         React.createElement(
                                             'h4',
                                             { 
@@ -1464,7 +1460,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                         ),
                                         React.createElement(
                                             'ul',
-                                            { className: 'space-y-1.5 flex-grow overflow-y-auto pr-1 min-w-0' },
+                                            { className: 'space-y-1.5 flex-grow overflow-visible pr-1 min-w-0' }, // Zmeniť overflow-y-auto na overflow-visible
                                             category.assignedTeams
                                                 .filter(team => {
                                                     if (selectedAccommodationFilter) {
@@ -1500,18 +1496,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                             React.createElement(
                                                                 'div',
                                                                 { className: 'flex items-center min-w-0' },
-                                                                // ODSTRÁNIŤ tento štítok:
-                                                                // React.createElement('span', { 
-                                                                //     className: 'text-xs font-medium text-white bg-blue-500 px-1.5 py-0.5 rounded mr-1.5 whitespace-nowrap flex-shrink-0'
-                                                                // }, team.category),
-                                                                // PRIDAŤ názov kategórie pred názov tímu:
                                                                 React.createElement('span', { 
                                                                     className: 'font-medium text-xs whitespace-nowrap overflow-visible flex-shrink-0',
                                                                     style: { 
                                                                         textOverflow: 'clip',
                                                                         color: teamColor || 'inherit'
                                                                     },
-                                                                }, `${team.category}: ${team.teamName}`), // Zmena tu
+                                                                }, `${team.category}: ${team.teamName}`),
                                                                 React.createElement('span', { 
                                                                     className: 'text-xs ml-1.5 whitespace-nowrap flex-shrink-0 font-medium',
                                                                     style: { 
@@ -1602,8 +1593,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 )
                             );
                         })
-                )
-        ),
+                ),
     
         isColorModalOpen &&
         React.createElement(
