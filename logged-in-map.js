@@ -460,6 +460,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     window.showGlobalNotification('Kapacita musí byť kladné číslo', 'error');
                     return;
                 }
+                placeData.capacity = cap;
             }
             
             if (newPlaceType === 'ubytovanie' && selectedAccommodationType) {
@@ -2377,6 +2378,64 @@ const AddGroupsApp = ({ userProfileData }) => {
         
         // +++ NOVÝ ZOZNAM MIEST POD MAPOU +++
         React.createElement('div', { className: 'mt-8 bg-gray-50 rounded-xl p-6 shadow-inner' },
+          
+          // +++ ŠTATISTIKY NAD ZOZNAMOM MIEST +++
+          React.createElement('div', { className: 'mb-6 grid grid-cols-1 md:grid-cols-4 gap-4' },
+            React.createElement('div', { className: 'bg-white p-4 rounded-lg border border-gray-200 shadow-sm' },
+              React.createElement('div', { className: 'flex items-center' },
+                React.createElement('div', { className: 'w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3' },
+                  React.createElement('i', { className: 'fa-solid fa-futbol text-red-600' })
+                ),
+                React.createElement('div', null,
+                  React.createElement('p', { className: 'text-2xl font-bold text-gray-800' }, 
+                    allPlaces.filter(p => p.type === 'sportova_hala').length
+                  ),
+                  React.createElement('p', { className: 'text-gray-600 text-sm' }, 'Športové haly')
+                )
+              )
+            ),
+            React.createElement('div', { className: 'bg-white p-4 rounded-lg border border-gray-200 shadow-sm' },
+              React.createElement('div', { className: 'flex items-center' },
+                React.createElement('div', { className: 'w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mr-3' },
+                  React.createElement('i', { className: 'fa-solid fa-bed text-gray-600' })
+                ),
+                React.createElement('div', null,
+                  React.createElement('p', { className: 'text-2xl font-bold text-gray-800' }, 
+                    allPlaces.filter(p => p.type === 'ubytovanie').length
+                  ),
+                  React.createElement('p', { className: 'text-gray-600 text-sm' }, 'Ubytovanie')
+                )
+              )
+            ),
+            React.createElement('div', { className: 'bg-white p-4 rounded-lg border border-gray-200 shadow-sm' },
+              React.createElement('div', { className: 'flex items-center' },
+                React.createElement('div', { className: 'w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3' },
+                  React.createElement('i', { className: 'fa-solid fa-utensils text-green-600' })
+                ),
+                React.createElement('div', null,
+                  React.createElement('p', { className: 'text-2xl font-bold text-gray-800' }, 
+                    allPlaces.filter(p => p.type === 'stravovanie').length
+                  ),
+                  React.createElement('p', { className: 'text-gray-600 text-sm' }, 'Stravovanie')
+                )
+              )
+            ),
+            React.createElement('div', { className: 'bg-white p-4 rounded-lg border border-gray-200 shadow-sm' },
+              React.createElement('div', { className: 'flex items-center' },
+                React.createElement('div', { className: 'w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3' },
+                  React.createElement('i', { className: 'fa-solid fa-bus text-blue-600' })
+                ),
+                React.createElement('div', null,
+                  React.createElement('p', { className: 'text-2xl font-bold text-gray-800' }, 
+                    allPlaces.filter(p => p.type === 'zastavka').length
+                  ),
+                  React.createElement('p', { className: 'text-gray-600 text-sm' }, 'Zastávky')
+                )
+              )
+            )
+          ),
+          // --- KONIEC ŠTATISTÍK ---
+          
           React.createElement('h3', { className: 'text-2xl font-bold mb-6 text-gray-800 border-b pb-3' }, 
             React.createElement('i', { className: 'fa-solid fa-list mr-3' }),
             'Zoznam všetkých miest',
@@ -2483,70 +2542,14 @@ const AddGroupsApp = ({ userProfileData }) => {
                             className: 'px-4 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition text-sm font-medium'
                           },
                             React.createElement('i', { className: 'fa-solid fa-map-pin mr-1' }),
-                            'Ukázať'
+                            'Ukázať na mape'
                           )
                         )
                       );
                     })
                 )
               )
-            ),
-            
-          // Štatistiky
-          React.createElement('div', { className: 'mt-6 grid grid-cols-1 md:grid-cols-4 gap-4' },
-            React.createElement('div', { className: 'bg-white p-4 rounded-lg border border-gray-200 shadow-sm' },
-              React.createElement('div', { className: 'flex items-center' },
-                React.createElement('div', { className: 'w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3' },
-                  React.createElement('i', { className: 'fa-solid fa-futbol text-red-600' })
-                ),
-                React.createElement('div', null,
-                  React.createElement('p', { className: 'text-2xl font-bold text-gray-800' }, 
-                    allPlaces.filter(p => p.type === 'sportova_hala').length
-                  ),
-                  React.createElement('p', { className: 'text-gray-600 text-sm' }, 'Športové haly')
-                )
-              )
-            ),
-            React.createElement('div', { className: 'bg-white p-4 rounded-lg border border-gray-200 shadow-sm' },
-              React.createElement('div', { className: 'flex items-center' },
-                React.createElement('div', { className: 'w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mr-3' },
-                  React.createElement('i', { className: 'fa-solid fa-bed text-gray-600' })
-                ),
-                React.createElement('div', null,
-                  React.createElement('p', { className: 'text-2xl font-bold text-gray-800' }, 
-                    allPlaces.filter(p => p.type === 'ubytovanie').length
-                  ),
-                  React.createElement('p', { className: 'text-gray-600 text-sm' }, 'Ubytovanie')
-                )
-              )
-            ),
-            React.createElement('div', { className: 'bg-white p-4 rounded-lg border border-gray-200 shadow-sm' },
-              React.createElement('div', { className: 'flex items-center' },
-                React.createElement('div', { className: 'w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3' },
-                  React.createElement('i', { className: 'fa-solid fa-utensils text-green-600' })
-                ),
-                React.createElement('div', null,
-                  React.createElement('p', { className: 'text-2xl font-bold text-gray-800' }, 
-                    allPlaces.filter(p => p.type === 'stravovanie').length
-                  ),
-                  React.createElement('p', { className: 'text-gray-600 text-sm' }, 'Stravovanie')
-                )
-              )
-            ),
-            React.createElement('div', { className: 'bg-white p-4 rounded-lg border border-gray-200 shadow-sm' },
-              React.createElement('div', { className: 'flex items-center' },
-                React.createElement('div', { className: 'w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3' },
-                  React.createElement('i', { className: 'fa-solid fa-bus text-blue-600' })
-                ),
-                React.createElement('div', null,
-                  React.createElement('p', { className: 'text-2xl font-bold text-gray-800' }, 
-                    allPlaces.filter(p => p.type === 'zastavka').length
-                  ),
-                  React.createElement('p', { className: 'text-gray-600 text-sm' }, 'Zastávky')
-                )
-              )
             )
-          )
         )
         // --- KONIEC NOVÉHO ZOZNAMU MIEST ---
       )
