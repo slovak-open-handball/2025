@@ -52,6 +52,23 @@ window.showGlobalNotification = (message, type = 'success') => {
     setTimeout(() => el.className = `${base} ${cls} opacity-0 scale-95`, 5000);
 };
 const AddGroupsApp = ({ userProfileData }) => {
+
+    useEffect(() => {
+        const style = document.createElement('style');
+        style.textContent = `
+            .leaflet-container .leaflet-tile {
+                filter: none !important;
+                -webkit-filter: none !important;
+            }
+            .leaflet-tile-loaded {
+                image-rendering: -webkit-optimize-contrast;
+                image-rendering: crisp-edges;
+            }
+        `;
+        document.head.appendChild(style);
+        return () => document.head.removeChild(style);
+    }, []);
+  
     const mapRef = useRef(null);
     const leafletMap = useRef(null);
     const placesLayerRef = useRef(null);
@@ -194,22 +211,6 @@ const AddGroupsApp = ({ userProfileData }) => {
             }
         }, 200);
     }, [selectedPlace]);
-
-    useEffect(() => {
-      const style = document.createElement('style');
-      style.textContent = `
-          .leaflet-container .leaflet-tile {
-              filter: none !important;
-              -webkit-filter: none !important;
-          }
-          .leaflet-tile-loaded {
-              image-rendering: -webkit-optimize-contrast;
-              image-rendering: crisp-edges;
-          }
-      `;
-      document.head.appendChild(style);
-      return () => document.head.removeChild(style);
-    }, []);
 
     useEffect(() => {
         window.goToDefaultView = () => {
