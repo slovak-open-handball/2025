@@ -700,7 +700,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 type: item.type.trim(),
                 capacity: Number(item.capacity) || 0
               }));
- 
+
             setAccommodationTypes(validTypes);
          
           console.log("Načítané typy ubytovania:", validTypes);
@@ -2373,7 +2373,182 @@ const AddGroupsApp = ({ userProfileData }) => {
           },
             React.createElement('i', { className: isAddingPlace ? 'fa-solid fa-xmark' : 'fa-solid fa-plus' })
           )
+        ),
+        
+        // +++ NOVÝ ZOZNAM MIEST POD MAPOU +++
+        React.createElement('div', { className: 'mt-8 bg-gray-50 rounded-xl p-6 shadow-inner' },
+          React.createElement('h3', { className: 'text-2xl font-bold mb-6 text-gray-800 border-b pb-3' }, 
+            React.createElement('i', { className: 'fa-solid fa-list mr-3' }),
+            'Zoznam všetkých miest',
+            React.createElement('span', { className: 'ml-3 text-lg font-normal text-gray-600' }, 
+              `(${allPlaces.length} ${allPlaces.length === 1 ? 'miesto' : allPlaces.length < 5 ? 'miesta' : 'miest'})`
+            )
+          ),
+          
+          activeFilter ? 
+            React.createElement('div', { className: 'mb-4' },
+              React.createElement('span', { className: 'text-gray-600' }, 'Zobrazené sú len miesta typu: '),
+              React.createElement('span', { className: 'font-bold text-gray-800' }, 
+                typeLabels[activeFilter] || activeFilter
+              ),
+              React.createElement('button', {
+                onClick: () => setActiveFilter(null),
+                className: 'ml-3 px-3 py-1 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm'
+              }, 'Zobraziť všetko')
+            ) : null,
+          
+          allPlaces.length === 0 ? 
+            React.createElement('div', { className: 'text-center py-8 text-gray-500' },
+              React.createElement('i', { className: 'fa-solid fa-map-pin text-4xl mb-3 opacity-50' }),
+              React.createElement('p', null, 'Žiadne miesta na zobrazenie')
+            ) :
+            React.createElement('div', { className: 'overflow-x-auto rounded-lg border border-gray-200' },
+              React.createElement('table', { className: 'w-full' },
+                React.createElement('thead', { className: 'bg-gray-100' },
+                  React.createElement('tr', null,
+                    React.createElement('th', { className: 'py-3 px-4 text-left text-gray-700 font-semibold border-b w-1/3' }, 'Názov'),
+                    React.createElement('th', { className: 'py-3 px-4 text-left text-gray-700 font-semibold border-b w-1/4' }, 'Typ'),
+                    React.createElement('th', { className: 'py-3 px-4 text-left text-gray-700 font-semibold border-b w-1/4' }, 'Kapacita'),
+                    React.createElement('th', { className: 'py-3 px-4 text-left text-gray-700 font-semibold border-b w-1/4' }, 'Cena'),
+                    React.createElement('th', { className: 'py-3 px-4 text-left text-gray-700 font-semibold border-b w-1/6' }, 'Akcie')
+                  )
+                ),
+                React.createElement('tbody', { className: 'divide-y divide-gray-100' },
+                  (activeFilter ? allPlaces.filter(p => p.type === activeFilter) : allPlaces)
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map(place => {
+                      const typeConfig = typeIcons[place.type] || { icon: 'fa-map-pin', color: '#6b7280' };
+                      return React.createElement('tr', { 
+                        key: place.id, 
+                        className: `hover:bg-gray-50 transition ${selectedPlace?.id === place.id ? 'bg-blue-50' : ''}` 
+                      },
+                        React.createElement('td', { className: 'py-3 px-4 font-medium' },
+                          React.createElement('div', { className: 'flex items-center' },
+                            React.createElement('div', { 
+                              className: 'w-8 h-8 rounded-full flex items-center justify-center mr-3',
+                              style: { 
+                                backgroundColor: typeConfig.color + '20',
+                                color: typeConfig.color,
+                                border: `2px solid ${typeConfig.color}`
+                              }
+                            },
+                              React.createElement('i', { className: `fa-solid ${typeConfig.icon} text-sm` })
+                            ),
+                            place.name
+                          )
+                        ),
+                        React.createElement('td', { className: 'py-3 px-4' },
+                          React.createElement('span', { 
+                            className: 'px-3 py-1 rounded-full text-sm font-medium',
+                            style: { 
+                              backgroundColor: typeConfig.color + '20',
+                              color: typeConfig.color
+                            }
+                          },
+                            typeLabels[place.type] || place.type
+                          )
+                        ),
+                        React.createElement('td', { className: 'py-3 px-4' },
+                          place.capacity && (place.type === 'ubytovanie' || place.type === 'stravovanie') ?
+                            React.createElement('span', { className: 'font-medium' },
+                              place.capacity,
+                              place.type === 'ubytovanie' ? ' lôžok' : ' miest'
+                            ) :
+                            React.createElement('span', { className: 'text-gray-400' }, '–')
+                        ),
+                        React.createElement('td', { className: 'py-3 px-4' },
+                          place.type === 'ubytovanie' && place.pricePerNight ?
+                            React.createElement('span', { className: 'font-medium text-green-600' },
+                              `${formatPrice(place.pricePerNight)} €/os/noc`
+                            ) :
+                          place.type === 'stravovanie' ?
+                            React.createElement('div', { className: 'text-sm' },
+                              place.breakfastPrice && React.createElement('div', null, `Raňajky: ${formatPrice(place.breakfastPrice)} €`),
+                              place.lunchPrice && React.createElement('div', null, `Obed: ${formatPrice(place.lunchPrice)} €`),
+                              place.dinnerPrice && React.createElement('div', null, `Večera: ${formatPrice(place.dinnerPrice)} €`),
+                              (!place.breakfastPrice && !place.lunchPrice && !place.dinnerPrice) &&
+                                React.createElement('span', { className: 'text-gray-400' }, '–')
+                            ) :
+                            React.createElement('span', { className: 'text-gray-400' }, '–')
+                        ),
+                        React.createElement('td', { className: 'py-3 px-4' },
+                          React.createElement('button', {
+                            onClick: () => {
+                              setSelectedPlace(place);
+                              setPlaceHash(place.id);
+                              if (leafletMap.current) {
+                                leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
+                              }
+                            },
+                            className: 'px-4 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition text-sm font-medium'
+                          },
+                            React.createElement('i', { className: 'fa-solid fa-map-pin mr-1' }),
+                            'Ukázať na mape'
+                          )
+                        )
+                      );
+                    })
+                )
+              )
+            ),
+            
+          // Štatistiky
+          React.createElement('div', { className: 'mt-6 grid grid-cols-1 md:grid-cols-4 gap-4' },
+            React.createElement('div', { className: 'bg-white p-4 rounded-lg border border-gray-200 shadow-sm' },
+              React.createElement('div', { className: 'flex items-center' },
+                React.createElement('div', { className: 'w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3' },
+                  React.createElement('i', { className: 'fa-solid fa-futbol text-red-600' })
+                ),
+                React.createElement('div', null,
+                  React.createElement('p', { className: 'text-2xl font-bold text-gray-800' }, 
+                    allPlaces.filter(p => p.type === 'sportova_hala').length
+                  ),
+                  React.createElement('p', { className: 'text-gray-600 text-sm' }, 'Športové haly')
+                )
+              )
+            ),
+            React.createElement('div', { className: 'bg-white p-4 rounded-lg border border-gray-200 shadow-sm' },
+              React.createElement('div', { className: 'flex items-center' },
+                React.createElement('div', { className: 'w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mr-3' },
+                  React.createElement('i', { className: 'fa-solid fa-bed text-gray-600' })
+                ),
+                React.createElement('div', null,
+                  React.createElement('p', { className: 'text-2xl font-bold text-gray-800' }, 
+                    allPlaces.filter(p => p.type === 'ubytovanie').length
+                  ),
+                  React.createElement('p', { className: 'text-gray-600 text-sm' }, 'Ubytovanie')
+                )
+              )
+            ),
+            React.createElement('div', { className: 'bg-white p-4 rounded-lg border border-gray-200 shadow-sm' },
+              React.createElement('div', { className: 'flex items-center' },
+                React.createElement('div', { className: 'w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3' },
+                  React.createElement('i', { className: 'fa-solid fa-utensils text-green-600' })
+                ),
+                React.createElement('div', null,
+                  React.createElement('p', { className: 'text-2xl font-bold text-gray-800' }, 
+                    allPlaces.filter(p => p.type === 'stravovanie').length
+                  ),
+                  React.createElement('p', { className: 'text-gray-600 text-sm' }, 'Stravovanie')
+                )
+              )
+            ),
+            React.createElement('div', { className: 'bg-white p-4 rounded-lg border border-gray-200 shadow-sm' },
+              React.createElement('div', { className: 'flex items-center' },
+                React.createElement('div', { className: 'w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3' },
+                  React.createElement('i', { className: 'fa-solid fa-bus text-blue-600' })
+                ),
+                React.createElement('div', null,
+                  React.createElement('p', { className: 'text-2xl font-bold text-gray-800' }, 
+                    allPlaces.filter(p => p.type === 'zastavka').length
+                  ),
+                  React.createElement('p', { className: 'text-gray-600 text-sm' }, 'Zastávky')
+                )
+              )
+            )
+          )
         )
+        // --- KONIEC NOVÉHO ZOZNAMU MIEST ---
       )
     );
 }
