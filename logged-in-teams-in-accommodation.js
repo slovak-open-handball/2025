@@ -998,7 +998,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                 React.createElement('div', { 
                                                     className: 'text-xs opacity-90 mt-1 whitespace-nowrap overflow-visible',
                                                     style: { textOverflow: 'clip' }
-                                                }, `${place.allAssignedTeams.length} tímov • ${place.usedCapacity}`)
+                                                }, `${place.allAssignedTeams.length} • ${place.usedCapacity}`)
                                             ),
                                             React.createElement(
                                                 'button',
