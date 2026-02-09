@@ -2566,7 +2566,7 @@ const AddGroupsApp = ({ userProfileData }) => {
           React.createElement('i', { className: isAddingPlace ? 'fa-solid fa-xmark' : 'fa-solid fa-plus' })
         )
     )
-  );
+  )
 };
 
 const createPlaceChangeNotification = async (actionType, changesArray, placeData) => {
