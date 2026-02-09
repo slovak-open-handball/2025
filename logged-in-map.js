@@ -200,6 +200,7 @@ const AddGroupsApp = ({ userProfileData }) => {
       setPlaceHash(place.id);
       if (leafletMap.current) {
         leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
+      }
     }, []);
     
     // Samostatná funkcia – vytvorí sa iba raz
