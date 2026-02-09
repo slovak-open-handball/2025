@@ -1081,7 +1081,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 type: selectedPlace.type || '',
                 capacity: selectedPlace.capacity != null ? selectedPlace.capacity : null,
                 accommodationType: selectedPlace.accommodationType || null,
-                pricePerNight = selectedPlace.pricePerNight != null ? selectedPlace.pricePerNight : null,
+                pricePerNight: selectedPlace.pricePerNight != null ? selectedPlace.pricePerNight : null,
                 breakfastPrice: selectedPlace.breakfastPrice != null ? selectedPlace.breakfastPrice : null,
                 lunchPrice: selectedPlace.lunchPrice != null ? selectedPlace.lunchPrice : null,
                 dinnerPrice: selectedPlace.dinnerPrice != null ? selectedPlace.dinnerPrice : null,
