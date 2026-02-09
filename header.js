@@ -9,6 +9,30 @@ window.isCategoriesDataLoaded = false;
 let isFirestoreListenersSetup = false; 
 window.areCategoriesLoaded = false;
 
+// Funkcia pre načítanie loader.js súboru
+const loadLoaderScript = () => {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'loader.js';
+        script.type = 'text/javascript';
+        script.async = false; // Načítanie synchronne, aby sa vykonal pred ďalším kódom
+        
+        script.onload = () => {
+            console.log("loader.js úspešne načítaný");
+            resolve();
+        };
+        
+        script.onerror = (error) => {
+            console.warn("Chyba pri načítaní loader.js:", error);
+            // Aj keď loader.js sa nenájde, pokračujeme ďalej
+            resolve();
+        };
+        
+        // Vložíme script na začiatok body, aby sa načítal čo najskôr
+        document.head.appendChild(script);
+    });
+};
+
 // Vytvorenie bieleho prekryvného obdĺžnika
 const createWhiteOverlay = () => {
     const overlay = document.createElement('div');
@@ -289,8 +313,13 @@ const showZoomFeedback = (zoomLevel) => {
 };
 
 // Inicializácia priblíženia pri načítaní stránky
-const initializeZoom = () => {
-    // Vytvoríme biely prekryvný obdĺžnik hneď na začiatku
+const initializeZoom = async () => {
+    // Najprv načítame loader.js
+    console.log("Začínam načítanie loader.js...");
+    await loadLoaderScript();
+    console.log("loader.js načítaný, pokračujem s priblížením...");
+    
+    // Potom vytvoríme biely prekryvný obdĺžnik
     createWhiteOverlay();
     
     const savedZoom = localStorage.getItem('pageZoom');
@@ -300,14 +329,18 @@ const initializeZoom = () => {
 };
 
 // Funkcie pre konzolu
-window.setZoom80 = () => {
-    // Zobraziť biely prekryvný obdĺžnik pred zmenou priblíženia
+window.setZoom80 = async () => {
+    // Najprv načítame loader.js
+    await loadLoaderScript();
+    // Potom zobrazíme biely prekryvný obdĺžnik pred zmenou priblíženia
     createWhiteOverlay();
     setZoomTo80Percent();
 };
 
-window.testResetZoom = () => {
-    // Zobraziť biely prekryvný obdĺžnik pred resetom
+window.testResetZoom = async () => {
+    // Najprv načítame loader.js
+    await loadLoaderScript();
+    // Potom zobrazíme biely prekryvný obdĺžnik pred resetom
     createWhiteOverlay();
     resetZoom();
 };
@@ -331,18 +364,22 @@ window.testFixedElements = () => {
 };
 
 // Pridanie klávesovej skratky
-document.addEventListener('keydown', (e) => {
+document.addEventListener('keydown', async (e) => {
     // Ctrl+8 pre 80%
     if (e.ctrlKey && e.key === '8') {
         e.preventDefault();
-        // Zobraziť biely prekryvný obdĺžnik pred zmenou priblíženia
+        // Najprv načítame loader.js
+        await loadLoaderScript();
+        // Potom zobrazíme biely prekryvný obdĺžnik pred zmenou priblíženia
         createWhiteOverlay();
         setZoomTo80Percent();
     }
     // Ctrl+0 pre reset
     if (e.ctrlKey && e.key === '0') {
         e.preventDefault();
-        // Zobraziť biely prekryvný obdĺžnik pred resetom
+        // Najprv načítame loader.js
+        await loadLoaderScript();
+        // Potom zobrazíme biely prekryvný obdĺžnik pred resetom
         createWhiteOverlay();
         resetZoom();
     }
@@ -812,18 +849,25 @@ window.loadHeaderAndScripts = async () => {
 
 // Inicializácia priblíženia pri načítaní stránky
 window.addEventListener('load', () => {
-    initializeZoom();
-    
-    // Nastavíme na 80% po načítaní
-    setTimeout(() => {
-        const savedZoom = localStorage.getItem('pageZoom');
-        if (!savedZoom || parseFloat(savedZoom) !== 80) {
+    // Spustíme inicializáciu priblíženia asynchrónne
+    initializeZoom().then(() => {
+        // Nastavíme na 80% po načítaní
+        setTimeout(() => {
+            const savedZoom = localStorage.getItem('pageZoom');
+            if (!savedZoom || parseFloat(savedZoom) !== 80) {
+                setZoomTo80Percent();
+            } else {
+                // Ak už je na 80%, len re-aplikujeme
+                setZoomTo80Percent();
+            }
+        }, 1000);
+    }).catch(error => {
+        console.error("Chyba pri inicializácii priblíženia:", error);
+        // Aj v prípade chyby pokračujeme
+        setTimeout(() => {
             setZoomTo80Percent();
-        } else {
-            // Ak už je na 80%, len re-aplikujeme
-            setZoomTo80Percent();
-        }
-    }, 1000);
+        }, 1000);
+    });
 });
 
 if (document.readyState === 'loading') {
