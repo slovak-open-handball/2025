@@ -297,6 +297,9 @@ const showZoomFeedback = (zoomLevel) => {
     // Po zobrazení spätnej väzby skryjeme biely prekryvný obdĺžnik
     setTimeout(() => {
         hideWhiteOverlay();
+        if (window.hideGlobalLoader) {
+            window.hideGlobalLoader();
+        }
         console.log("Spätná väzba o priblížení sa zobrazila, biely prekryvný obdĺžnik sa skrýva");
     }, 100);
     
@@ -318,6 +321,12 @@ const initializeZoom = async () => {
     console.log("Začínam načítanie loader.js...");
     await loadLoaderScript();
     console.log("loader.js načítaný, pokračujem s priblížením...");
+    
+    // ZOBRAZIŤ LOADER PRED BIELYM PREKRYVOM
+    if (window.showGlobalLoader) {
+        window.showGlobalLoader();
+        window.setLoaderText('Nastavujem priblíženie...');
+    }
     
     // Potom vytvoríme biely prekryvný obdĺžnik
     createWhiteOverlay();
