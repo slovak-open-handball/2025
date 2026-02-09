@@ -1,33 +1,14 @@
-// header.js
-// Tento súbor spravuje dynamické zobrazenie navigačných odkazov v hlavičke
-// a obsluhuje akcie ako odhlásenie používateľa.
-// Bol upravený tak, aby reagoval na zmeny v dátach registrácie a kategórií v reálnom čase,
-// a zároveň aby pravidelne kontroloval aktuálny čas, aby sa odkaz zobrazil alebo skryl
-// presne v momente, keď sa prekročí dátum otvorenia alebo uzavretia registrácie.
-// Nová funkcionalita: Pridáva listener pre zobrazovanie notifikácií z databázy pre administrátorov.
-// Úpravy: Zlepšenie formátovania notifikácií a zabezpečenie, aby sa nové notifikácie zobrazovali pod staršími.
-// Fix: Zabezpečenie viditeľnosti hlavičky pri prvom načítaní stránky.
-// Nová úprava: Pridáva funkciu na formátovanie telefónnych čísiel v notifikáciách pre lepšiu čitateľnosť.
-
-// Importy pre potrebné Firebase funkcie
 import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, onSnapshot, collection, query, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-// Import zoznamu predvolieb
 import { countryDialCodes } from "./countryDialCodes.js";
 
-// Globálna premenná na uloženie ID intervalu, aby sme ho mohli neskôr zrušiť
 let registrationCheckIntervalId = null;
-let unsubscribeFromNotifications = null; // Nová globálna premenná pre listener notifikácií
-// Nové premenné na sledovanie stavu načítania dát
+let unsubscribeFromNotifications = null; 
 window.isRegistrationDataLoaded = false;
 window.isCategoriesDataLoaded = false;
-let isFirestoreListenersSetup = false; // Nový flag pre sledovanie, či sú listenery Firestore nastavené
-// NOVINKA: Pridaná globálna premenná na indikáciu, že kategórie sú načítané
+let isFirestoreListenersSetup = false; 
 window.areCategoriesLoaded = false;
 
-
-// Globálna funkcia pre zobrazenie notifikácií
-// Vytvorí a spravuje modálne okno pre správy o úspechu alebo chybách
 window.showGlobalNotification = (message, type = 'success') => {
   let notificationElement = document.getElementById('global-notification');
 
@@ -43,7 +24,6 @@ window.showGlobalNotification = (message, type = 'success') => {
     document.body.appendChild(notificationElement);
   }
 
-  // Odstránime predchádzajúce triedy farby a pridáme novú na základe typu
   notificationElement.classList.remove('bg-red-600', 'bg-[#3A8D41]');
   
   if (type === 'success') {
@@ -52,29 +32,19 @@ window.showGlobalNotification = (message, type = 'success') => {
     notificationElement.classList.add('bg-red-600');
   }
 
-    // Zobrazenie notifikácie
     setTimeout(() => {
         notificationElement.classList.add('opacity-100', 'pointer-events-auto');
     }, 10);
 
-    // Skrytie notifikácie po 5 sekundách
     setTimeout(() => {
         notificationElement.classList.remove('opacity-100', 'pointer-events-auto');
     }, 7500);
 };
 
-/**
- * NOVÁ FUNKCIA: Formátuje telefónne číslo na základe predvolieb.
- * @param {string} phoneNumber - Neformátované telefónne číslo.
- * @returns {string} Naformátované telefónne číslo.
- */
 const formatPhoneNumber = (phoneNumber) => {
-    // Odstránime všetky nečíslicové znaky, okrem '+' na začiatku
     const cleaned = phoneNumber.replace(/[^+\d]/g, '');
     let number = cleaned;
 
-    // Nájdeme predvoľbu
-    // Zoznam predvolieb je zoradený zostupne podľa dĺžky, aby sa našla najpresnejšia zhoda
     const sortedDialCodes = countryDialCodes.sort((a, b) => b.dialCode.length - a.dialCode.length);
     let dialCode = '';
 
@@ -86,15 +56,12 @@ const formatPhoneNumber = (phoneNumber) => {
         }
     }
 
-    // Ak sa nenašla žiadna predvoľba, vrátime pôvodné číslo
     if (!dialCode) {
         return phoneNumber;
     }
 
-    // Odstránime medzery, ktoré tam mohli zostať
     number = number.replace(/\s/g, '');
 
-    // Rozdelíme zvyšok čísla do skupín po troch čísliciach
     let formattedNumber = '';
     while (number.length > 0) {
         formattedNumber += number.substring(0, 3);
@@ -107,31 +74,21 @@ const formatPhoneNumber = (phoneNumber) => {
     return `${dialCode} ${formattedNumber}`.trim();
 };
 
-/**
- * Nová funkcia na formátovanie reťazca notifikácie s bold a italic textom.
- * Hľadá štyri apostrofy a formátuje text medzi nimi.
- * @param {string} text - Pôvodný reťazec.
- * @returns {string} Naformátovaný reťazec.
- */
 const formatNotificationMessage = (text) => {
-    // Nájdeme indexy apostrofov
     const firstApostrophe = text.indexOf("'");
     const secondApostrophe = text.indexOf("'", firstApostrophe + 1);
     const thirdApostrophe = text.indexOf("'", secondApostrophe + 1);
     const fourthApostrophe = text.indexOf("'", thirdApostrophe + 1);
 
-    // Ak nájdeme všetky štyri apostrofy, naformátujeme text
     if (firstApostrophe !== -1 && secondApostrophe !== -1 && thirdApostrophe !== -1 && fourthApostrophe !== -1) {
         let oldText = text.substring(firstApostrophe + 1, secondApostrophe);
         let newText = text.substring(thirdApostrophe + 1, fourthApostrophe);
 
-        // Skontrolujeme, či ide o telefónne číslo a naformátujeme ho
         if (oldText.startsWith('+') && newText.startsWith('+')) {
             oldText = formatPhoneNumber(oldText);
             newText = formatPhoneNumber(newText);
         }
 
-        // Nahradíme pôvodné časti novými s HTML tagmi
         let formattedText = text.substring(0, firstApostrophe);
         formattedText += `<em>${oldText}</em>`;
         formattedText += text.substring(secondApostrophe + 1, thirdApostrophe);
@@ -141,18 +98,10 @@ const formatNotificationMessage = (text) => {
         return formattedText;
     }
     
-    // Ak sa formát nezhoduje, vrátime pôvodný text
     return text;
 };
 
-/**
- * Nová funkcia na zobrazenie notifikácie z databázy v pravom hornom rohu.
- * Vytvorí a spravuje dočasný element, ktorý sa objaví a po čase zmizne.
- * @param {string} message - Správa notifikácie.
- * @param {string} type - Typ notifikácie ('success', 'error', 'info').
- */
 const showDatabaseNotification = (message, type = 'info') => {
-    // Vytvoríme kontajner pre notifikácie, ak ešte neexistuje
     let notificationContainer = document.getElementById('notification-container');
     if (!notificationContainer) {
         notificationContainer = document.createElement('div');
@@ -174,7 +123,7 @@ const showDatabaseNotification = (message, type = 'info') => {
         flex items-center space-x-2"
     `;
 
-    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔'; // Použijeme zvonček pre info notifikácie
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔';
     
     const formattedMessage = message.replace(/\n/g, '<br>');
 
@@ -184,30 +133,23 @@ const showDatabaseNotification = (message, type = 'info') => {
         <button onclick="document.getElementById('${notificationId}').remove()" class="absolute top-1 right-1 text-gray-400 hover:text-white">&times;</button>
     `;
 
-    // Pridáme novú notifikáciu na koniec kontajnera
     notificationContainer.appendChild(notificationElement);
 
-    // Animácia vstupu notifikácie
     setTimeout(() => {
         notificationElement.classList.remove('translate-x-full');
     }, 10);
 
-    // Animácia zmiznutia po 7 sekundách
     setTimeout(() => {
         notificationElement.classList.add('translate-x-full');
         setTimeout(() => notificationElement.remove(), 500);
     }, 7000);
 };
 
-/**
- * Funkcia na odhlásenie používateľa
- */
 const handleLogout = async () => {
     try {
         const auth = getAuth();
         await signOut(auth);
         console.log("header.js: Používateľ bol úspešne odhlásený.");
-//        window.showGlobalNotification('Úspešne ste sa odhlásili.', 'success');
         if (unsubscribeFromNotifications) {
             unsubscribeFromNotifications();
             unsubscribeFromNotifications = null;
@@ -237,11 +179,6 @@ const getHeaderColorByRole = (role) => {
     }
 }
 
-/**
- * Funkcia na aktualizáciu viditeľnosti odkazov a farby hlavičky na základe stavu autentifikácie.
- * Táto funkcia tiež kontroluje, či sú načítané všetky potrebné dáta, a až potom zruší triedu "invisible".
- * @param {object} userProfileData - Dáta profilu používateľa.
- */
 const updateHeaderLinks = (userProfileData) => {
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
@@ -253,23 +190,19 @@ const updateHeaderLinks = (userProfileData) => {
         return;
     }
 
-    // NOVÁ PODMIENKA: Ak je stránka register.html, zachováme pôvodnú farbu hlavičky
     if (window.location.pathname.includes('register.html')) {
-        headerElement.style.backgroundColor = '#1D4ED8'; // Nastavte pevnú farbu (napr. pôvodnú modrú)
-        headerElement.classList.remove('invisible'); // Zabezpečiť, že hlavička je viditeľná
-        // Zobrazenie/skrytie odkazov pre registračnú stránku
+        headerElement.style.backgroundColor = '#1D4ED8';
+        headerElement.classList.remove('invisible');
         authLink.classList.remove('hidden');
         profileLink.classList.add('hidden');
         logoutButton.classList.add('hidden');
-        // Skryť odkaz "Registrácia na turnaj" na samotnej registračnej stránke, aby sa necyklovalo
         const registerLink = document.getElementById('register-link');
         if (registerLink) {
             registerLink.classList.add('hidden');
         }
-        return; // Ukončíme funkciu, aby sa nepoužila dynamická farba a logika pre ostatné stránky
+        return;
     }
 
-    // Podmienka pre zobrazenie hlavičky pre ostatné stránky
     if (window.isGlobalAuthReady && window.isRegistrationDataLoaded && window.isCategoriesDataLoaded) {
         if (userProfileData) {
             authLink.classList.add('hidden');
@@ -277,10 +210,9 @@ const updateHeaderLinks = (userProfileData) => {
             logoutButton.classList.remove('hidden');
             headerElement.style.backgroundColor = getHeaderColorByRole(userProfileData.role);
 
-            // VŽDY NASTAVIŤ LISTENER PRE NOTIFIKÁCIE PRE ADMINA, ABY SA AKTUALIZOVAL POČET
             if (userProfileData.role === 'admin') {
                 if (!unsubscribeFromNotifications) {
-                    setupNotificationListenerForAdmin(userProfileData); // Preposielame userProfileData
+                    setupNotificationListenerForAdmin(userProfileData);
                 }
             } else {
                 if (unsubscribeFromNotifications) {
@@ -307,20 +239,13 @@ const updateHeaderLinks = (userProfileData) => {
     }
 };
 
-/**
- * Funkcia na aktualizáciu viditeľnosti odkazu "Registrácia na turnaj" na základe
- * aktuálneho dátumu a existencie kategórií.
- * Odkaz sa zobrazí len vtedy, ak obe podmienky platia súčasne.
- * @param {object} userProfileData - Dáta profilu používateľa.
- */
 const updateRegistrationLinkVisibility = (userProfileData) => {
     const registerLink = document.getElementById('register-link');
     if (!registerLink) return;
 
-    // Ak je používateľ prihlásený (userProfileData existuje), skryjeme odkaz "Registrácia na turnaj"
     if (userProfileData) {
         registerLink.classList.add('hidden');
-        return; // Ukončíme funkciu, aby sa neriešili ďalšie podmienky
+        return; 
     }
 
     const isRegistrationOpen = window.registrationDates && new Date() >= window.registrationDates.registrationStartDate.toDate() && new Date() <= window.registrationDates.registrationEndDate.toDate();
@@ -328,7 +253,7 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
 
     if (isRegistrationOpen && hasCategories) {
         registerLink.classList.remove('hidden');
-        if (userProfileData) { // Táto podmienka je teraz redundantná, ale ponechávam pre istotu
+        if (userProfileData) { 
             registerLink.href = 'logged-in-registration.html';
         } else {
             registerLink.href = 'register.html';
@@ -338,11 +263,6 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
     }
 };
 
-/**
- * NOVÁ FUNKCIA: Nastaví listener pre notifikácie admina.
- * Počúva na zmeny v kolekcii /notifications a zobrazuje nové správy.
- * @param {object} userProfileData - Dáta profilu používateľa (potrebné pre displayNotifications).
- */
 const setupNotificationListenerForAdmin = (userProfileData) => {
     if (!window.db) {
         console.warn("header.js: Firestore databáza nie je inicializovaná pre notifikácie.");
@@ -359,15 +279,13 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
         const auth = getAuth();
         const userId = auth.currentUser ? auth.currentUser.uid : null;
 
-        if (!userId) { // Ak nie je prihlásený používateľ, nemá zmysel spracovávať notifikácie
+        if (!userId) {
             return;
         }
 
         let unreadCount = 0;
-        // Načítame všetky notifikácie pre správne spočítanie neprečítaných
         const allNotifications = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
 
-        // Spočítame neprečítané správy pre aktuálneho používateľa
         allNotifications.forEach(notification => {
             const seenBy = notification.data.seenBy || [];
             if (!seenBy.includes(userId)) {
@@ -375,39 +293,32 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
             }
         });
 
-        // VŽDY AKTUALIZUJEME globalUserProfileData s novým počtom neprečítaných notifikácií
         if (window.globalUserProfileData) {
             window.globalUserProfileData.unreadNotificationCount = unreadCount;
-            // Odošleme udalosť, aby sa zmeny prejavili v ľavom menu
             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
             console.log("header.js: GlobalUserProfileData aktualizované s počtom neprečítaných notifikácií:", unreadCount);
         }
 
-        // Zobrazenie vyskakovacích notifikácií je podmienené nastavením displayNotifications
         if (userProfileData.displayNotifications) {
-            // Zobrazíme súhrnnú notifikáciu o neprečítaných správach, ak sú splnené podmienky
             if (unreadCount >= 3) {
                 let message = '';
                 if (unreadCount >= 5) {
                     message = `Máte ${unreadCount} nových neprečítaných upozornení.`;
-                } else { // unreadCount je 3 alebo 4
+                } else {
                     message = `Máte ${unreadCount} nové neprečítané upozornenia.`;
                 }
                 showDatabaseNotification(message, 'info');
 
-                // Ukončíme spracovanie, aby sa nezobrazovali individuálne notifikácie,
-                // a správy sa neoznačujú ako prečítané, ak je súhrnná notifikácia.
                 return; 
             }
 
-            // Ak unreadCount je menší ako 3 (alebo displayNotifications je true), spracujeme jednotlivé nové notifikácie
             snapshot.docChanges().forEach(async (change) => {
                 if (change.type === "added") {
                     const newNotification = change.doc.data();
                     const notificationId = change.doc.id;
                     
                     const seenBy = newNotification.seenBy || [];
-                    if (!seenBy.includes(userId)) { // Spracujeme len tie, ktoré používateľ ešte nevidel
+                    if (!seenBy.includes(userId)) {
                         console.log("header.js: Nová notifikácia prijatá a nebola videná používateľom:", newNotification);
                         
                         let changesMessage = '';
@@ -417,7 +328,7 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                             
                             const formattedChanges = newNotification.changes.map(changeString => formatNotificationMessage(changeString));
                             
-                            changesMessage += formattedChanges.join('<br>'); // Používame <br> pre zalomenie riadkov
+                            changesMessage += formattedChanges.join('<br>');
                         } else if (typeof newNotification.changes === 'string') {
                             changesMessage = `Používateľ ${newNotification.userEmail} zmenil tento údaj:\n${formatNotificationMessage(newNotification.changes)}`;
                         } else {
@@ -428,7 +339,6 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                         
                         const notificationDocRef = doc(window.db, "notifications", notificationId);
                         try {
-                            // Tieto individuálne notifikácie sa označia ako videné
                             await updateDoc(notificationDocRef, {
                                 seenBy: arrayUnion(userId)
                             });
@@ -446,23 +356,18 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
     console.log("header.js: Listener pre notifikácie admina nastavený.");
 };
 
-
-// Počúva na zmeny v dokumentoch Firestore a aktualizuje stav registrácie
 const setupFirestoreListeners = () => {
-    // Kontrolujeme, či je window.db už inicializované
     if (!window.db) {
         console.warn("header.js: Firestore databáza nie je inicializovaná. Odkladám nastavenie listenerov.");
-        return; // Ak window.db nie je dostupné, ukončíme funkciu
+        return;
     }
 
-    // Ak už sú listenery nastavené, nebudeme ich nastavovať znova
     if (isFirestoreListenersSetup) {
         console.log("header.js: Listenery Firestore sú už nastavené.");
         return;
     }
 
     try {
-        // Listener pre registračné dáta
         const registrationDocRef = doc(window.db, "settings", "registration");
         onSnapshot(registrationDocRef, (docSnap) => {
             if (docSnap.exists()) {
@@ -472,15 +377,14 @@ const setupFirestoreListeners = () => {
                 window.registrationDates = null;
                 console.warn("header.js: Dokument 'settings/registration' nebol nájdený!");
             }
-            window.isRegistrationDataLoaded = true; // Dáta o registrácii sú načítané
+            window.isRegistrationDataLoaded = true; 
             updateHeaderLinks(window.globalUserProfileData);
         }, (error) => {
             console.error("header.js: Chyba pri počúvaní dát o registrácii:", error);
-            window.isRegistrationDataLoaded = true; // Označíme ako načítané aj pri chybe, aby sa hlavička mohla zobraziť
+            window.isRegistrationDataLoaded = true; 
             updateHeaderLinks(window.globalUserProfileData);
         });
 
-        // Listener pre kategórie
         const categoriesDocRef = doc(window.db, "settings", "categories");
         onSnapshot(categoriesDocRef, (docSnap) => {
             if (docSnap.exists()) {
@@ -491,34 +395,30 @@ const setupFirestoreListeners = () => {
                 window.hasCategories = false;
                 console.warn("header.js: Dokument 'settings/categories' nebol nájdený!");
             }
-            window.isCategoriesDataLoaded = true; // Dáta o kategóriách sú načítané
-            // NOVINKA: Odoslanie udalosti, že kategórie boli načítané
+            window.isCategoriesDataLoaded = true;
             window.areCategoriesLoaded = true;
             window.dispatchEvent(new CustomEvent('categoriesLoaded'));
             console.log("header.js: Odoslaná udalosť 'categoriesLoaded'.");
             updateHeaderLinks(window.globalUserProfileData);
         }, (error) => {
             console.error("header.js: Chyba pri počúvaní dát o kategóriách:", error);
-            window.isCategoriesDataLoaded = true; // Označíme ako načítané aj pri chybe
+            window.isCategoriesDataLoaded = true; 
             window.areCategoriesLoaded = true;
             window.dispatchEvent(new CustomEvent('categoriesLoaded'));
             console.log("header.js: Odoslaná udalosť 'categoriesLoaded' (s chybou).");
             updateHeaderLinks(window.globalUserProfileData);
         });
 
-        // Spustíme časovač, ktorý každú sekundu kontroluje aktuálny čas a aktualizuje viditeľnosť odkazu
         if (registrationCheckIntervalId) {
             clearInterval(registrationCheckIntervalId);
         }
         registrationCheckIntervalId = setInterval(() => {
-            // Kontrola beží každú sekundu, ale len ak máme potrebné dáta
             if (window.registrationDates) {
                 updateRegistrationLinkVisibility(window.globalUserProfileData);
             }
-        }, 1000); // 1000 ms = 1 sekunda
+        }, 1000); 
         console.log("header.js: Časovač pre kontrolu registrácie spustený.");
         
-        // Zabezpečíme, že sa časovač zruší, keď používateľ opustí stránku
         window.addEventListener('beforeunload', () => {
             if (registrationCheckIntervalId) {
                 clearInterval(registrationCheckIntervalId);
@@ -526,7 +426,7 @@ const setupFirestoreListeners = () => {
             }
         });
 
-        isFirestoreListenersSetup = true; // Označíme, že listenery sú nastavené
+        isFirestoreListenersSetup = true;
         console.log("header.js: Firestore listenery boli úspešne nastavené.");
 
     } catch (error) {
@@ -534,10 +434,6 @@ const setupFirestoreListeners = () => {
     }
 };
 
-/**
- * Hlavná funkcia na načítanie hlavičky a pripojenie skriptov.
- * Načítava header.html a vkladá ho do placeholderu.
- */
 window.loadHeaderAndScripts = async () => {
     try {
         const headerPlaceholder = document.getElementById('header-placeholder');
@@ -550,14 +446,12 @@ window.loadHeaderAndScripts = async () => {
             headerPlaceholder.innerHTML = headerHtml;
         }
 
-        // Po načítaní hlavičky pridáme event listener na tlačidlo odhlásenia
         const logoutButton = document.getElementById('logout-button');
         if (logoutButton) {
             logoutButton.addEventListener('click', handleLogout);
             console.log("header.js: Listener pre tlačidlo odhlásenia bol pridaný.");
         }
 
-        // Pridáme listener na udalosť, ktorú posiela 'authentication.js'
         window.addEventListener('globalDataUpdated', (event) => {
             console.log('header.js: Prijatá udalosť "globalDataUpdated". Aktualizujem hlavičku.');
             window.isGlobalAuthReady = true; 
@@ -565,7 +459,6 @@ window.loadHeaderAndScripts = async () => {
             updateHeaderLinks(event.detail);
         });
 
-        // Ak už je autentifikácia pripravená pri načítaní tohto skriptu, spustíme listenery manuálne.
         if (window.isGlobalAuthReady) {
              console.log('header.js: Autentifikačné dáta sú už načítané, spúšťam listenery Firestore.');
              setupFirestoreListeners();
@@ -577,7 +470,6 @@ window.loadHeaderAndScripts = async () => {
     }
 };
 
-// Spustenie načítania hlavičky, ak DOM už bol načítaný
 if (document.readyState === 'loading') {
     window.addEventListener('DOMContentLoaded', window.loadHeaderAndScripts);
 } else {
