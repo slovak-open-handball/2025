@@ -1463,46 +1463,24 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                         React.createElement(
                                                             'div',
                                                             { 
-                                                                className: 'min-w-0 flex-grow flex items-center overflow-hidden',
-                                                                style: { 
-                                                                    backgroundColor: teamColor || '#f3f4f6',
-                                                                    borderRight: '4px solid ' + (teamColor || '#1e40af')
-                                                                }
+                                                                className: 'min-w-0 flex-grow flex items-center overflow-hidden'
                                                             },
                                                             React.createElement(
                                                                 'div',
                                                                 { 
-                                                                    className: 'flex-grow min-w-0 pl-2.5 pr-1 py-1.5 flex flex-col'
+                                                                    className: 'flex-grow min-w-0 pl-2.5 pr-1 py-1.5'
                                                                 },
                                                                 React.createElement('span', { 
-                                                                    className: 'font-medium text-xs whitespace-nowrap overflow-visible flex-shrink-0 text-black',
+                                                                    className: 'font-medium text-xs whitespace-nowrap overflow-visible flex-shrink-0 text-gray-800',
                                                                     style: { textOverflow: 'clip' },
-                                                                }, `${team.category}: ${team.teamName}`),
-                                                                // ODSTRÁNIŤ zobrazenie ubytovne
-                                                                // React.createElement(
-                                                                //     'div',
-                                                                //     { 
-                                                                //         className: 'text-xs text-gray-600 mt-0.5 flex items-center gap-0.5 min-w-0'
-                                                                //     },
-                                                                //     React.createElement(
-                                                                //         'span',
-                                                                //         {
-                                                                //             className: 'inline-block w-1.5 h-1.5 rounded-full flex-shrink-0',
-                                                                //             style: { backgroundColor: teamColor || '#6b7280' }
-                                                                //         }
-                                                                //     ),
-                                                                //     React.createElement('span', { 
-                                                                //         className: 'whitespace-nowrap overflow-visible flex-shrink-0',
-                                                                //         style: { textOverflow: 'clip' }
-                                                                //     }, team.assignedPlace)
-                                                                // )
+                                                                }, `${team.category}: ${team.teamName}`)
                                                             ),
                                                             React.createElement(
                                                                 'div',
                                                                 { 
-                                                                    className: 'w-8 flex-shrink-0 flex items-center justify-center text-xs font-bold text-black',
+                                                                    className: 'w-8 flex-shrink-0 flex items-center justify-center text-xs font-bold text-white',
                                                                     style: { 
-                                                                        backgroundColor: teamColor || '#f3f4f6'
+                                                                        backgroundColor: teamColor || '#6b7280'
                                                                     }
                                                                 },
                                                                 team.totalPeople
