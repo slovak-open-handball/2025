@@ -9,64 +9,6 @@ window.isCategoriesDataLoaded = false;
 let isFirestoreListenersSetup = false; 
 window.areCategoriesLoaded = false;
 
-const setPageZoomTo80Percent = () => {
-    try {
-        console.log("header.js: Nastavujem zoom stránky na 80%");
-        
-        // Počkáme kým sa DOM úplne načíta
-        setTimeout(() => {
-            // Vytvoríme štýlový element
-            let zoomStyle = document.getElementById('page-zoom-style');
-            if (!zoomStyle) {
-                zoomStyle = document.createElement('style');
-                zoomStyle.id = 'page-zoom-style';
-                document.head.appendChild(zoomStyle);
-            }
-            
-            // Nastavíme jednoduchý CSS pre zoom
-            zoomStyle.textContent = `
-                /* Nastavenie zoomu na 80% */
-                body {
-                    transform: scale(0.8);
-                    transform-origin: top center;
-                    width: 125%;
-                    margin-left: -12.5%;
-                    min-height: 125vh;
-                    overflow-x: hidden;
-                }
-                
-                /* Zabezpečíme správnu šírku pre hlavné kontajnery */
-                .container,
-                .mx-auto {
-                    max-width: 100% !important;
-                }
-                
-                /* Zabezpečíme, že fixné elementy sú správne pozicionované */
-                header,
-                .fixed,
-                .absolute {
-                    transform-origin: top center;
-                }
-            `;
-            
-            console.log("header.js: Zoom úspešne nastavený na 80%");
-            
-            // Pridáme možnosť resetovať zoom pomocou Ctrl+0
-            const resetZoomHandler = (e) => {
-                if (e.ctrlKey && e.key === '0') {
-                    e.preventDefault();
-                    zoomStyle.textContent = '';
-                    console.log("header.js: Zoom obnovený na 100% (Ctrl+0)");
-                }
-            };
-            
-            document.addEventListener('keydown', resetZoomHandler);
-        }, 300); // Väčší delay, aby sa všetko načítalo
-    } catch (error) {
-        console.error("header.js: Chyba pri nastavovaní zoomu stránky:", error);
-    }
-};
-
 window.showGlobalNotification = (message, type = 'success') => {
   let notificationElement = document.getElementById('global-notification');
 
@@ -504,9 +446,6 @@ window.loadHeaderAndScripts = async () => {
             headerPlaceholder.innerHTML = headerHtml;
         }
 
-        // Pridané: Nastavíme zoom stránky na 80%
-        setPageZoomTo80Percent();
-
         const logoutButton = document.getElementById('logout-button');
         if (logoutButton) {
             logoutButton.addEventListener('click', handleLogout);
@@ -531,18 +470,8 @@ window.loadHeaderAndScripts = async () => {
     }
 };
 
-
 if (document.readyState === 'loading') {
     window.addEventListener('DOMContentLoaded', window.loadHeaderAndScripts);
 } else {
     window.loadHeaderAndScripts();
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-        // Skontrolujeme, či už nebol zoom nastavený
-        if (!document.getElementById('page-zoom-style')) {
-            setPageZoomTo80Percent();
-        }
-    }, 500);
-});
