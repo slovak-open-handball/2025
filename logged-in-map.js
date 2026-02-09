@@ -1716,7 +1716,7 @@ const AddGroupsApp = ({ userProfileData }) => {
           React.createElement('h2', { className: 'text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-center mb-3' }, 'Mapa'),
           
           // ŠTATISTIKY PREHĽADU (nahradili tlačidlá filtrov)
-          React.createElement('div', { className: 'w-full mb-6' },
+          React.createElement('div', { className: 'w-full mb-2' },
             React.createElement('h3', { className: 'text-2xl font-bold mb-4 text-gray-800' }, 
               React.createElement('i', { className: 'fa-solid fa-chart-bar mr-3' }),
               'Prehľad miest'
