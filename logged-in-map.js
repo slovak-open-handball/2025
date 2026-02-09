@@ -2567,7 +2567,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         )
     )
   );
-}
+};
 
 const createPlaceChangeNotification = async (actionType, changesArray, placeData) => {
     if (!window.db || !changesArray?.length) return;
