@@ -9,28 +9,96 @@ window.isCategoriesDataLoaded = false;
 let isFirestoreListenersSetup = false; 
 window.areCategoriesLoaded = false;
 
-window.showGlobalNotification = (message, type = 'success') => {
-  let notificationElement = document.getElementById('global-notification');
-
-  if (!notificationElement) {
-    notificationElement = document.createElement('div');
-    notificationElement.id = 'global-notification';
-    notificationElement.className = `
-      fixed top-4 left-1/2 transform -translate-x-1/2 z-[100]
-      p-4 rounded-lg shadow-lg text-white font-semibold transition-all duration-300 ease-in-out
-      flex items-center space-x-2
-      opacity-0 pointer-events-none
+// Funkcia pre simuláciu stlačenia Ctrl + - 2x
+const simulateCtrlMinusTwice = () => {
+    console.log("Simulujem stlačenie Ctrl + - 2x");
+    
+    // Vytvorenie keyboard eventov pre Ctrl + -
+    const keyDownEvent = new KeyboardEvent('keydown', {
+        key: '-',
+        code: 'Minus',
+        keyCode: 189,
+        which: 189,
+        ctrlKey: true,
+        altKey: false,
+        shiftKey: false,
+        metaKey: false,
+        bubbles: true
+    });
+    
+    const keyUpEvent = new KeyboardEvent('keyup', {
+        key: '-',
+        code: 'Minus',
+        keyCode: 189,
+        which: 189,
+        ctrlKey: true,
+        altKey: false,
+        shiftKey: false,
+        metaKey: false,
+        bubbles: true
+    });
+    
+    // Simulácia 2x stlačenia
+    for (let i = 0; i < 2; i++) {
+        document.dispatchEvent(keyDownEvent);
+        document.dispatchEvent(keyUpEvent);
+        
+        // Malá pauza medzi stlačeniami
+        if (i === 0) {
+            setTimeout(() => {
+                document.dispatchEvent(keyDownEvent);
+                document.dispatchEvent(keyUpEvent);
+            }, 100);
+        }
+    }
+    
+    // Voliteľné: Pridanie vizuálnej spätnej väzby
+    const feedback = document.createElement('div');
+    feedback.textContent = 'Simulácia Ctrl + - 2x';
+    feedback.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        z-index: 9999;
+        font-size: 14px;
     `;
-    document.body.appendChild(notificationElement);
-  }
+    document.body.appendChild(feedback);
+    
+    setTimeout(() => feedback.remove(), 1000);
+};
 
-  notificationElement.classList.remove('bg-red-600', 'bg-[#3A8D41]');
-  
-  if (type === 'success') {
-    notificationElement.classList.add('bg-[#3A8D41]');
-  } else {
-    notificationElement.classList.add('bg-red-600');
-  }
+// Funkcia pre testovanie (môže byť volaná z konzoly)
+window.testCtrlMinus = () => {
+    simulateCtrlMinusTwice();
+};
+
+window.showGlobalNotification = (message, type = 'success') => {
+    let notificationElement = document.getElementById('global-notification');
+
+    if (!notificationElement) {
+        notificationElement = document.createElement('div');
+        notificationElement.id = 'global-notification';
+        notificationElement.className = `
+            fixed top-4 left-1/2 transform -translate-x-1/2 z-[100]
+            p-4 rounded-lg shadow-lg text-white font-semibold transition-all duration-300 ease-in-out
+            flex items-center space-x-2
+            opacity-0 pointer-events-none
+        `;
+        document.body.appendChild(notificationElement);
+    }
+
+    notificationElement.classList.remove('bg-red-600', 'bg-[#3A8D41]');
+    
+    if (type === 'success') {
+        notificationElement.classList.add('bg-[#3A8D41]');
+    } else {
+        notificationElement.classList.add('bg-red-600');
+    }
 
     setTimeout(() => {
         notificationElement.classList.add('opacity-100', 'pointer-events-auto');
@@ -163,19 +231,19 @@ const handleLogout = async () => {
 };
 
 const getHeaderColorByRole = (role) => {
-  switch (role) {
-    case 'admin':
-      return '#47b3ff';
-    case 'hall':
-      return '#b06835';
-    case 'club':
-      return '#9333EA';
-    case 'referee':
-      return '#007800';
-    case 'volunteer':
-      return '#FFAC1C';
-    default:
-      return '#1D4ED8';
+    switch (role) {
+        case 'admin':
+            return '#47b3ff';
+        case 'hall':
+            return '#b06835';
+        case 'club':
+            return '#9333EA';
+        case 'referee':
+            return '#007800';
+        case 'volunteer':
+            return '#FFAC1C';
+        default:
+            return '#1D4ED8';
     }
 }
 
@@ -350,7 +418,7 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
             });
         }
     }, (error) => {
-            console.error("header.js: Chyba pri počúvaní notifikácií:", error);
+        console.error("header.js: Chyba pri počúvaní notifikácií:", error);
     });
 
     console.log("header.js: Listener pre notifikácie admina nastavený.");
@@ -460,15 +528,28 @@ window.loadHeaderAndScripts = async () => {
         });
 
         if (window.isGlobalAuthReady) {
-             console.log('header.js: Autentifikačné dáta sú už načítané, spúšťam listenery Firestore.');
-             setupFirestoreListeners();
-             updateHeaderLinks(window.globalUserProfileData);
+            console.log('header.js: Autentifikačné dáta sú už načítané, spúšťam listenery Firestore.');
+            setupFirestoreListeners();
+            updateHeaderLinks(window.globalUserProfileData);
         }
+
+        // Pridanie klávesovej skratky pre testovanie (napr. Ctrl+Shift+M)
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey && e.key === 'M') {
+                simulateCtrlMinusTwice();
+            }
+        });
 
     } catch (error) {
         console.error("header.js: Chyba pri inicializácii hlavičky:", error);
     }
 };
+
+// Okamžitá simulácia pri načítaní stránky (voliteľné)
+window.addEventListener('load', () => {
+    // Odkomentujte nasledujúci riadok pre automatickú simuláciu po načítaní stránky:
+    // setTimeout(simulateCtrlMinusTwice, 1000);
+});
 
 if (document.readyState === 'loading') {
     window.addEventListener('DOMContentLoaded', window.loadHeaderAndScripts);
