@@ -9,44 +9,58 @@ window.isCategoriesDataLoaded = false;
 let isFirestoreListenersSetup = false; 
 window.areCategoriesLoaded = false;
 
-// Zjednodušená funkcia pre simuláciu stlačenia Ctrl + - 2x
-const simulateCtrlMinusTwice = () => {
-    console.log("Simulujem stlačenie Ctrl + - 2x");
+// Funkcia pre nastavenie priblíženia na 80%
+const setZoomTo80Percent = () => {
+    console.log("Nastavujem priblíženie na 80%");
     
-    // Metóda 1: Najjednoduchšie - priame nastavenie CSS
-    const zoomOutTwice = () => {
-        // Skontrolujme, či už máme priblíženie uložené
-        let currentZoom = parseFloat(localStorage.getItem('pageZoom')) || 100;
-        
-        // Zmenšenie o 20% (ako 2x Ctrl+-)
-        currentZoom = Math.max(currentZoom - 20, 50); // Minimálne 50%
-        
-        // Uloženie
-        localStorage.setItem('pageZoom', currentZoom);
-        
-        // Aplikovanie priblíženia na celú stránku
-        const zoomValue = currentZoom / 100;
-        
-        // Aplikujme transform na html element namiesto body
-        const htmlElement = document.documentElement;
-        htmlElement.style.transform = `scale(${zoomValue})`;
-        htmlElement.style.transformOrigin = 'top center';
-        htmlElement.style.width = '100%';
-        htmlElement.style.overflowX = 'hidden';
-        
-        // Pre body pridáme padding-top aby sa obsah neprekrýval s headerom
-        document.body.style.paddingTop = '60px';
-        document.body.style.transform = 'none';
-        document.body.style.transformOrigin = 'unset';
-        
-        console.log(`Priblíženie zmenené na: ${currentZoom}%`);
-        
-        // Zobrazme vizuálnu spätnú väzbu
-        showZoomFeedback(currentZoom);
-    };
+    // Nastavenie pevného priblíženia na 80%
+    const targetZoom = 80;
+    localStorage.setItem('pageZoom', targetZoom);
     
-    // Okamžite vykonáme
-    zoomOutTwice();
+    // Aplikovanie priblíženia na celú stránku
+    const zoomValue = targetZoom / 100;
+    
+    // Aplikujme transform na html element
+    const htmlElement = document.documentElement;
+    htmlElement.style.transform = `scale(${zoomValue})`;
+    htmlElement.style.transformOrigin = 'top center';
+    htmlElement.style.width = '100%';
+    htmlElement.style.overflowX = 'hidden';
+    htmlElement.style.height = '100%';
+    
+    // Pre body pridáme padding-top aby sa obsah neprekrýval s headerom
+    document.body.style.paddingTop = '60px';
+    document.body.style.minHeight = '100vh';
+    document.body.style.transform = 'none';
+    document.body.style.transformOrigin = 'unset';
+    
+    console.log(`Priblíženie nastavené na: ${targetZoom}%`);
+    
+    // Zobrazme vizuálnu spätnú väzbu
+    showZoomFeedback(targetZoom);
+};
+
+// Funkcia pre obnovenie pôvodného priblíženia
+const resetZoom = () => {
+    localStorage.setItem('pageZoom', 100);
+    
+    // Obnovenie štýlov
+    const htmlElement = document.documentElement;
+    htmlElement.style.transform = 'scale(1)';
+    htmlElement.style.transformOrigin = '';
+    htmlElement.style.width = '';
+    htmlElement.style.overflowX = '';
+    htmlElement.style.height = '';
+    
+    document.body.style.paddingTop = '';
+    document.body.style.minHeight = '';
+    document.body.style.transform = '';
+    document.body.style.transformOrigin = '';
+    
+    console.log("Priblíženie obnovené na 100%");
+    
+    // Zobrazenie spätnej väzby
+    showZoomFeedback(100);
 };
 
 // Funkcia pre vizuálnu spätnú väzbu
@@ -85,74 +99,49 @@ const showZoomFeedback = (zoomLevel) => {
     }, 2000);
 };
 
-// Funkcia pre obnovenie pôvodného priblíženia
-const resetZoom = () => {
-    localStorage.setItem('pageZoom', 100);
-    
-    // Obnovenie štýlov
-    const htmlElement = document.documentElement;
-    htmlElement.style.transform = 'scale(1)';
-    htmlElement.style.transformOrigin = '';
-    htmlElement.style.width = '';
-    htmlElement.style.overflowX = '';
-    
-    document.body.style.paddingTop = '';
-    document.body.style.transform = '';
-    document.body.style.transformOrigin = '';
-    
-    console.log("Priblíženie obnovené na 100%");
-    
-    // Zobrazenie spätnej väzby
-    showZoomFeedback(100);
-};
-
 // Inicializácia priblíženia pri načítaní stránky
 const initializeZoom = () => {
     const savedZoom = localStorage.getItem('pageZoom');
     if (savedZoom) {
         const zoomValue = parseFloat(savedZoom);
-        if (zoomValue !== 100) {
-            const htmlElement = document.documentElement;
-            htmlElement.style.transform = `scale(${zoomValue / 100})`;
-            htmlElement.style.transformOrigin = 'top center';
-            htmlElement.style.width = '100%';
-            htmlElement.style.overflowX = 'hidden';
-            
-            document.body.style.paddingTop = '60px';
-            
-            console.log(`Priblíženie obnovené na ${zoomValue}%`);
-        }
+        const htmlElement = document.documentElement;
+        
+        // Vždy aplikujeme uložené priblíženie
+        htmlElement.style.transform = `scale(${zoomValue / 100})`;
+        htmlElement.style.transformOrigin = 'top center';
+        htmlElement.style.width = '100%';
+        htmlElement.style.overflowX = 'hidden';
+        htmlElement.style.height = '100%';
+        
+        document.body.style.paddingTop = '60px';
+        document.body.style.minHeight = '100vh';
+        
+        console.log(`Priblíženie obnovené na ${zoomValue}%`);
     }
 };
 
 // Funkcia pre testovanie (môže byť volaná z konzoly)
-window.testCtrlMinus = () => {
-    simulateCtrlMinusTwice();
+window.setZoom80 = () => {
+    setZoomTo80Percent();
 };
 
 window.testResetZoom = () => {
     resetZoom();
 };
 
-/*
-// Pridanie klávesovej skratky pre testovanie
+// Pridanie klávesovej skratky pre testovanie (odkomentovať ak je potrebné)
 document.addEventListener('keydown', (e) => {
-    // Ctrl+Shift+M pre simuláciu Ctrl+-
-    if (e.ctrlKey && e.shiftKey && e.key === 'M') {
+    // Ctrl+Shift+8 pre nastavenie na 80%
+    if (e.ctrlKey && e.shiftKey && e.key === '8') {
         e.preventDefault();
-        simulateCtrlMinusTwice();
+        setZoomTo80Percent();
     }
-    // Ctrl+Shift+R pre reset
-    if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+    // Ctrl+Shift+0 pre reset
+    if (e.ctrlKey && e.shiftKey && e.key === '0') {
         e.preventDefault();
         resetZoom();
     }
-    // Reálne Ctrl+- pre porovnanie
-    if (e.ctrlKey && e.key === '-') {
-        console.log("Reálne Ctrl+- stlačené");
-    }
 });
-*/
 
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
@@ -617,9 +606,19 @@ window.loadHeaderAndScripts = async () => {
 
 // Inicializácia priblíženia pri načítaní stránky
 window.addEventListener('load', () => {
+    // Najprv inicializujeme uložené priblíženie (ak existuje)
     initializeZoom();
-    // Simulácia po načítaní stránky - odkomentovať pre test
-    setTimeout(simulateCtrlMinusTwice, 1000);
+    
+    // Potom vždy nastavíme na 80% pri načítaní stránky
+    // Môžeme pridať malé oneskorenie, aby sa to aplikovalo po načítaní všetkého
+    setTimeout(() => {
+        // Nastavíme na 80%, ale iba ak už nie je iná hodnota uložená
+        // Ak chceme VŽDY na 80%, odstránime podmienku
+        const savedZoom = localStorage.getItem('pageZoom');
+        if (!savedZoom || parseFloat(savedZoom) !== 80) {
+            setZoomTo80Percent();
+        }
+    }, 500);
 });
 
 if (document.readyState === 'loading') {
