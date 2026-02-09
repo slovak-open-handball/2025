@@ -2469,7 +2469,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     React.createElement('th', { className: 'py-3 px-4 text-left text-gray-700 font-semibold border-b w-1/4' }, 'Typ'),
                     React.createElement('th', { className: 'py-3 px-4 text-left text-gray-700 font-semibold border-b w-1/4' }, 'Kapacita'),
                     React.createElement('th', { className: 'py-3 px-4 text-left text-gray-700 font-semibold border-b w-1/4' }, 'Cena'),
-                    React.createElement('th', { className: 'py-3 px-4 text-left text-gray-700 font-semibold border-b w-1/6' }, 'Akcie')
+                    React.createElement('th', { className: 'py-3 px-4 text-left text-gray-700 font-semibold border-b w-1/6' }, '')
                   )
                 ),
                 React.createElement('tbody', { className: 'divide-y divide-gray-100' },
