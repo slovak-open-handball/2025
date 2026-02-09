@@ -200,7 +200,7 @@ const AddGroupsApp = ({ userProfileData }) => {
       setPlaceHash(place.id);
       if (leafletMap.current) {
         leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
-    }
+    }, []);
     
     // Samostatná funkcia – vytvorí sa iba raz
     const handleAddClick = useCallback(async (e) => {
@@ -2566,7 +2566,7 @@ const AddGroupsApp = ({ userProfileData }) => {
           React.createElement('i', { className: isAddingPlace ? 'fa-solid fa-xmark' : 'fa-solid fa-plus' })
         )
     )
-  )
+  );
 };
 
 const createPlaceChangeNotification = async (actionType, changesArray, placeData) => {
