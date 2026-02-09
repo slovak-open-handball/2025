@@ -26,8 +26,6 @@ let isFirestoreListenersSetup = false; // Nový flag pre sledovanie, či sú lis
 window.areCategoriesLoaded = false;
 
 
-
-
 // Globálna funkcia pre zobrazenie notifikácií
 // Vytvorí a spravuje modálne okno pre správy o úspechu alebo chybách
 window.showGlobalNotification = (message, type = 'success') => {
