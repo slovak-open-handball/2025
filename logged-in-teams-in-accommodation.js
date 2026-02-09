@@ -1500,17 +1500,18 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                             React.createElement(
                                                                 'div',
                                                                 { className: 'flex items-center min-w-0' },
-                                                                // Pridaná kategória pred názov tímu (biela na modrom pozadí)
-                                                                React.createElement('span', { 
-                                                                    className: 'text-xs font-medium text-white bg-blue-500 px-1.5 py-0.5 rounded mr-1.5 whitespace-nowrap flex-shrink-0'
-                                                                }, team.category),
+                                                                // ODSTRÁNIŤ tento štítok:
+                                                                // React.createElement('span', { 
+                                                                //     className: 'text-xs font-medium text-white bg-blue-500 px-1.5 py-0.5 rounded mr-1.5 whitespace-nowrap flex-shrink-0'
+                                                                // }, team.category),
+                                                                // PRIDAŤ názov kategórie pred názov tímu:
                                                                 React.createElement('span', { 
                                                                     className: 'font-medium text-xs whitespace-nowrap overflow-visible flex-shrink-0',
                                                                     style: { 
                                                                         textOverflow: 'clip',
                                                                         color: teamColor || 'inherit'
                                                                     },
-                                                                }, team.teamName),
+                                                                }, `${team.category}: ${team.teamName}`), // Zmena tu
                                                                 React.createElement('span', { 
                                                                     className: 'text-xs ml-1.5 whitespace-nowrap flex-shrink-0 font-medium',
                                                                     style: { 
