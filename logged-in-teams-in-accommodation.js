@@ -150,6 +150,45 @@ const AddGroupsApp = ({ userProfileData }) => {
     // Nový stav pre prepínač režimov
     const [viewMode, setViewMode] = useState('accommodation'); // 'accommodation' alebo 'category'
 
+    // Funkcie pre správu URL hash
+    const getViewModeFromHash = () => {
+        const hash = window.location.hash.replace('#', '');
+        if (hash === 'category' || hash === 'accommodation') {
+            return hash;
+        }
+        return 'accommodation'; // predvolená hodnota
+    };
+
+    const updateHash = (mode) => {
+        window.location.hash = mode;
+    };
+
+    // Inicializácia viewMode z URL hash pri prvom renderi
+    useEffect(() => {
+        const initialMode = getViewModeFromHash();
+        setViewMode(initialMode);
+    }, []);
+
+    // Aktualizácia URL hash pri zmene viewMode
+    useEffect(() => {
+        updateHash(viewMode);
+    }, [viewMode]);
+
+    // Pridanie poslucháča na zmeny hash v URL
+    useEffect(() => {
+        const handleHashChange = () => {
+            const newMode = getViewModeFromHash();
+            if (newMode !== viewMode) {
+                setViewMode(newMode);
+            }
+        };
+
+        window.addEventListener('hashchange', handleHashChange);
+        return () => {
+            window.removeEventListener('hashchange', handleHashChange);
+        };
+    }, [viewMode]);
+
     useEffect(() => {
         if (!window.db) return;
         const unsubscribe = onSnapshot(
@@ -785,7 +824,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                             React.createElement(
                                 'button',
                                 {
-                                    onClick: () => setViewMode(viewMode === 'accommodation' ? 'category' : 'accommodation'),
+                                    onClick: () => {
+                                        const newMode = viewMode === 'accommodation' ? 'category' : 'accommodation';
+                                        setViewMode(newMode);
+                                    },
                                     className: 'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
                                     style: { 
                                         backgroundColor: viewMode === 'category' ? '#3b82f6' : '#d1d5db'
