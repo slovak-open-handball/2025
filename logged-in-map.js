@@ -2014,7 +2014,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     React.createElement('i', { className: 'fa-solid fa-map-pin text-4xl mb-3 opacity-50' }),
                     React.createElement('p', null, 'Žiadne miesta na zobrazenie')
                   ) :
-                  React.createElement('div', { className: 'overflow-y-auto max-h-[500px] pr-2' },
+                  React.createElement('div', { className: 'overflow-y-auto h-[68vh] md:h-[68vh] min-h-[450px] pr-2' },
                     (activeFilter ? allPlaces.filter(p => p.type === activeFilter) : allPlaces)
                       .sort((a, b) => a.name.localeCompare(b.name))
                       .map(place => {
