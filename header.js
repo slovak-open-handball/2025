@@ -3,34 +3,316 @@ import { getFirestore, doc, onSnapshot, collection, query, updateDoc, arrayUnion
 import { countryDialCodes } from "./countryDialCodes.js";
 
 let registrationCheckIntervalId = null;
-let unsubscribeFromNotifications = null;
+let unsubscribeFromNotifications = null; 
 window.isRegistrationDataLoaded = false;
 window.isCategoriesDataLoaded = false;
-let isFirestoreListenersSetup = false;
+let isFirestoreListenersSetup = false; 
 window.areCategoriesLoaded = false;
 
-window.showGlobalNotification = (message, type = 'success') => {
-  let notificationElement = document.getElementById('global-notification');
+// Funkcia pre nastavenie priblíženia na 80% (skutočná simulácia Ctrl+-)
+const setZoomTo80Percent = () => {
+    console.log("Nastavujem priblíženie na 80% (simulácia Ctrl+-)");
+    
+    // Metóda 1: CSS zoom property (podporované v Chrome, Edge)
+    const setZoomWithCSS = () => {
+        const targetZoom = 80;
+        localStorage.setItem('pageZoom', targetZoom);
+        
+        // Resetovať predchádzajúce transformácie
+        document.body.style.transform = '';
+        document.body.style.transformOrigin = '';
+        document.documentElement.style.transform = '';
+        document.documentElement.style.transformOrigin = '';
+        
+        // Skúsime rôzne metódy pre rôzne prehliadače
+        const htmlElement = document.documentElement;
+        const bodyElement = document.body;
+        
+        // Metóda A: CSS zoom (najlepšia pre Chrome)
+        if ('zoom' in htmlElement.style) {
+            htmlElement.style.zoom = `${targetZoom}%`;
+            console.log("Použitá CSS zoom property");
+            return true;
+        }
+        
+        // Metóda B: transform na body s viewport kompenzáciou
+        bodyElement.style.transform = `scale(${targetZoom / 100})`;
+        bodyElement.style.transformOrigin = 'top center';
+        bodyElement.style.width = '125%'; // Kompenzácia: 100/80 = 1.25
+        bodyElement.style.marginLeft = '-12.5%'; // Centrovanie
+        bodyElement.style.overflowX = 'hidden';
+        
+        // Pre fixované elementy: musíme ich umiestniť relatívne
+        const fixedElements = document.querySelectorAll('*[style*="fixed"], .fixed, [class*="fixed"]');
+        fixedElements.forEach(el => {
+            const rect = el.getBoundingClientRect();
+            const computedStyle = window.getComputedStyle(el);
+            
+            // Ak je element fixovaný
+            if (computedStyle.position === 'fixed') {
+                // Pre pravý dolný roh
+                if (computedStyle.right === '0px' || computedStyle.bottom === '0px') {
+                    // Pridáme wrapper pre fixované elementy
+                    if (!el.parentElement.classList.contains('zoom-fixed-wrapper')) {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'zoom-fixed-wrapper';
+                        wrapper.style.position = 'fixed';
+                        wrapper.style.right = computedStyle.right;
+                        wrapper.style.bottom = computedStyle.bottom;
+                        wrapper.style.zIndex = computedStyle.zIndex;
+                        
+                        el.parentElement.insertBefore(wrapper, el);
+                        wrapper.appendChild(el);
+                        
+                        // Upravíme pozíciu vnútri wrappera
+                        el.style.position = 'absolute';
+                        el.style.right = '0';
+                        el.style.bottom = '0';
+                    }
+                }
+            }
+        });
+        
+        console.log("Použitá CSS transform metóda s kompenzáciou");
+        return false;
+    };
+    
+    // Metóda 2: Viewport meta tag manipulation (najlepšia pre všetky prehliadače)
+    const setZoomWithViewport = () => {
+        const targetZoom = 80;
+        localStorage.setItem('pageZoom', targetZoom);
+        
+        // Získame aktuálny viewport tag alebo vytvoríme nový
+        let viewport = document.querySelector('meta[name="viewport"]');
+        
+        if (!viewport) {
+            viewport = document.createElement('meta');
+            viewport.name = 'viewport';
+            document.head.appendChild(viewport);
+        }
+        
+        // Vypočítame scale pre viewport
+        const scale = targetZoom / 100;
+        
+        // Nastavíme viewport content
+        const initialScale = Math.min(scale, 1.0);
+        const maximumScale = Math.max(scale, 1.0);
+        const userScalable = scale !== 1.0 ? 'yes' : 'no';
+        
+        viewport.content = `width=device-width, initial-scale=${initialScale}, maximum-scale=${maximumScale}, user-scalable=${userScalable}`;
+        
+        // Pre desktop: použijeme aj CSS transform s viewport kompenzáciou
+        if (window.innerWidth > 768) { // Desktop
+            document.body.style.transform = `scale(${scale})`;
+            document.body.style.transformOrigin = 'top center';
+            
+            // Kompenzácia veľkosti
+            const scaleFactor = 1 / scale;
+            document.body.style.width = `${scaleFactor * 100}%`;
+            document.body.style.marginLeft = `${(scaleFactor - 1) * 50}%`;
+        }
+        
+        console.log("Použitá viewport metóda");
+        return true;
+    };
+    
+    // Metóda 3: Priamy zápis do document (experimentálne)
+    const setZoomWithDocumentWrite = () => {
+        // Táto metóda je radikálna, ale funguje
+        const targetZoom = 80;
+        localStorage.setItem('pageZoom', targetZoom);
+        
+        // Zmeníme veľkosť písma v root elemente
+        document.documentElement.style.fontSize = `${targetZoom}%`;
+        
+        // Zmeníme všetky rozmery
+        const scaleElements = () => {
+            const allElements = document.querySelectorAll('*:not(script):not(style):not(meta):not(link)');
+            allElements.forEach(el => {
+                const style = window.getComputedStyle(el);
+                
+                // Škálujeme veľkosti, ktoré sú v px
+                ['width', 'height', 'padding', 'margin', 'fontSize', 'top', 'right', 'bottom', 'left'].forEach(prop => {
+                    const value = style[prop];
+                    if (value && value.includes('px')) {
+                        const numValue = parseFloat(value);
+                        if (!isNaN(numValue)) {
+                            el.style[prop] = `${numValue * (targetZoom / 100)}px`;
+                        }
+                    }
+                });
+            });
+        };
+        
+        // Spustíme po malom oneskorení
+        setTimeout(scaleElements, 100);
+        
+        console.log("Použitá priama škálovacia metóda");
+        return true;
+    };
+    
+    // Skúsime najprv CSS zoom
+    let success = setZoomWithCSS();
+    
+    // Ak nefunguje, skúsime viewport metódu
+    if (!success) {
+        success = setZoomWithViewport();
+    }
+    
+    // Zobrazíme spätnú väzbu
+    showZoomFeedback(80);
+    
+    // Pre istotu pridáme aj event listener pre resize
+    window.dispatchEvent(new Event('resize'));
+};
 
-  if (!notificationElement) {
-    notificationElement = document.createElement('div');
-    notificationElement.id = 'global-notification';
-    notificationElement.className = `
-      fixed top-4 left-1/2 transform -translate-x-1/2 z-[100]
-      p-4 rounded-lg shadow-lg text-white font-semibold transition-all duration-300 ease-in-out
-      flex items-center space-x-2
-      opacity-0 pointer-events-none
+// Funkcia pre obnovenie pôvodného priblíženia
+const resetZoom = () => {
+    localStorage.setItem('pageZoom', 100);
+    
+    // Reset všetkých metód
+    document.body.style.transform = '';
+    document.body.style.transformOrigin = '';
+    document.body.style.width = '';
+    document.body.style.marginLeft = '';
+    document.body.style.overflowX = '';
+    
+    document.documentElement.style.transform = '';
+    document.documentElement.style.transformOrigin = '';
+    document.documentElement.style.zoom = '';
+    document.documentElement.style.fontSize = '';
+    
+    // Reset viewport
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) {
+        viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+    }
+    
+    // Odstrániť wrappery pre fixované elementy
+    document.querySelectorAll('.zoom-fixed-wrapper').forEach(wrapper => {
+        const child = wrapper.firstElementChild;
+        if (child) {
+            // Obnoviť pôvodné štýly
+            child.style.position = '';
+            child.style.right = '';
+            child.style.bottom = '';
+            
+            // Presunúť späť
+            wrapper.parentElement.insertBefore(child, wrapper);
+            wrapper.remove();
+        }
+    });
+    
+    console.log("Priblíženie obnovené na 100%");
+    showZoomFeedback(100);
+};
+
+// Funkcia pre vizuálnu spätnú väzbu
+const showZoomFeedback = (zoomLevel) => {
+    const existingFeedback = document.getElementById('zoom-feedback');
+    if (existingFeedback) {
+        existingFeedback.remove();
+    }
+    
+    const feedback = document.createElement('div');
+    feedback.id = 'zoom-feedback';
+    feedback.textContent = `Priblíženie: ${zoomLevel}%`;
+    feedback.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(0,0,0,0.85);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        z-index: 99999;
+        font-size: 14px;
+        font-weight: bold;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        border: 2px solid #47b3ff;
     `;
-    document.body.appendChild(notificationElement);
-  }
+    document.body.appendChild(feedback);
+    
+    setTimeout(() => {
+        feedback.style.opacity = '0';
+        feedback.style.transition = 'opacity 0.5s ease';
+        setTimeout(() => feedback.remove(), 500);
+    }, 2000);
+};
 
-  notificationElement.classList.remove('bg-red-600', 'bg-[#3A8D41]');
-  
-  if (type === 'success') {
-    notificationElement.classList.add('bg-[#3A8D41]');
-  } else {
-    notificationElement.classList.add('bg-red-600');
-  }
+// Inicializácia priblíženia pri načítaní stránky
+const initializeZoom = () => {
+    const savedZoom = localStorage.getItem('pageZoom');
+    if (savedZoom && parseFloat(savedZoom) !== 100) {
+        // Neskôr aplikujeme v load evente
+        console.log(`Nájdené priblíženie: ${savedZoom}%`);
+    }
+};
+
+// Funkcie pre konzolu
+window.setZoom80 = () => {
+    setZoomTo80Percent();
+};
+
+window.testResetZoom = () => {
+    resetZoom();
+};
+
+// Testovacia funkcia pre fixované elementy
+window.testFixedElements = () => {
+    const fixedElements = document.querySelectorAll('[style*="fixed"], .fixed, [class*="fixed"]');
+    console.log(`Nájdené fixované elementy: ${fixedElements.length}`);
+    fixedElements.forEach((el, i) => {
+        const style = window.getComputedStyle(el);
+        console.log(`Element ${i}:`, {
+            tag: el.tagName,
+            class: el.className,
+            position: style.position,
+            top: style.top,
+            right: style.right,
+            bottom: style.bottom,
+            left: style.left
+        });
+    });
+};
+
+// Pridanie klávesovej skratky
+document.addEventListener('keydown', (e) => {
+    // Ctrl+8 pre 80%
+    if (e.ctrlKey && e.key === '8') {
+        e.preventDefault();
+        setZoomTo80Percent();
+    }
+    // Ctrl+0 pre reset
+    if (e.ctrlKey && e.key === '0') {
+        e.preventDefault();
+        resetZoom();
+    }
+});
+
+// Ostatný kód zostáva rovnaký...
+window.showGlobalNotification = (message, type = 'success') => {
+    let notificationElement = document.getElementById('global-notification');
+
+    if (!notificationElement) {
+        notificationElement = document.createElement('div');
+        notificationElement.id = 'global-notification';
+        notificationElement.className = `
+            fixed top-4 left-1/2 transform -translate-x-1/2 z-[100]
+            p-4 rounded-lg shadow-lg text-white font-semibold transition-all duration-300 ease-in-out
+            flex items-center space-x-2
+            opacity-0 pointer-events-none
+        `;
+        document.body.appendChild(notificationElement);
+    }
+
+    notificationElement.classList.remove('bg-red-600', 'bg-[#3A8D41]');
+    
+    if (type === 'success') {
+        notificationElement.classList.add('bg-[#3A8D41]');
+    } else {
+        notificationElement.classList.add('bg-red-600');
+    }
 
     setTimeout(() => {
         notificationElement.classList.add('opacity-100', 'pointer-events-auto');
@@ -163,19 +445,19 @@ const handleLogout = async () => {
 };
 
 const getHeaderColorByRole = (role) => {
-  switch (role) {
-    case 'admin':
-      return '#47b3ff';
-    case 'hall':
-      return '#b06835';
-    case 'club':
-      return '#9333EA';
-    case 'referee':
-      return '#007800';
-    case 'volunteer':
-      return '#FFAC1C';
-    default:
-      return '#1D4ED8';
+    switch (role) {
+        case 'admin':
+            return '#47b3ff';
+        case 'hall':
+            return '#b06835';
+        case 'club':
+            return '#9333EA';
+        case 'referee':
+            return '#007800';
+        case 'volunteer':
+            return '#FFAC1C';
+        default:
+            return '#1D4ED8';
     }
 }
 
@@ -200,7 +482,7 @@ const updateHeaderLinks = (userProfileData) => {
         if (registerLink) {
             registerLink.classList.add('hidden');
         }
-        return; 
+        return;
     }
 
     if (window.isGlobalAuthReady && window.isRegistrationDataLoaded && window.isCategoriesDataLoaded) {
@@ -212,7 +494,7 @@ const updateHeaderLinks = (userProfileData) => {
 
             if (userProfileData.role === 'admin') {
                 if (!unsubscribeFromNotifications) {
-                    setupNotificationListenerForAdmin(userProfileData); 
+                    setupNotificationListenerForAdmin(userProfileData);
                 }
             } else {
                 if (unsubscribeFromNotifications) {
@@ -245,7 +527,7 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
 
     if (userProfileData) {
         registerLink.classList.add('hidden');
-        return;
+        return; 
     }
 
     const isRegistrationOpen = window.registrationDates && new Date() >= window.registrationDates.registrationStartDate.toDate() && new Date() <= window.registrationDates.registrationEndDate.toDate();
@@ -295,7 +577,6 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
 
         if (window.globalUserProfileData) {
             window.globalUserProfileData.unreadNotificationCount = unreadCount;
-            // Odošleme udalosť, aby sa zmeny prejavili v ľavom menu
             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
             console.log("header.js: GlobalUserProfileData aktualizované s počtom neprečítaných notifikácií:", unreadCount);
         }
@@ -305,7 +586,7 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                 let message = '';
                 if (unreadCount >= 5) {
                     message = `Máte ${unreadCount} nových neprečítaných upozornení.`;
-                } else { 
+                } else {
                     message = `Máte ${unreadCount} nové neprečítané upozornenia.`;
                 }
                 showDatabaseNotification(message, 'info');
@@ -319,7 +600,7 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                     const notificationId = change.doc.id;
                     
                     const seenBy = newNotification.seenBy || [];
-                    if (!seenBy.includes(userId)) { // Spracujeme len tie, ktoré používateľ ešte nevidel
+                    if (!seenBy.includes(userId)) {
                         console.log("header.js: Nová notifikácia prijatá a nebola videná používateľom:", newNotification);
                         
                         let changesMessage = '';
@@ -329,7 +610,7 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                             
                             const formattedChanges = newNotification.changes.map(changeString => formatNotificationMessage(changeString));
                             
-                            changesMessage += formattedChanges.join('<br>'); // Používame <br> pre zalomenie riadkov
+                            changesMessage += formattedChanges.join('<br>');
                         } else if (typeof newNotification.changes === 'string') {
                             changesMessage = `Používateľ ${newNotification.userEmail} zmenil tento údaj:\n${formatNotificationMessage(newNotification.changes)}`;
                         } else {
@@ -340,7 +621,6 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                         
                         const notificationDocRef = doc(window.db, "notifications", notificationId);
                         try {
-                            // Tieto individuálne notifikácie sa označia ako videné
                             await updateDoc(notificationDocRef, {
                                 seenBy: arrayUnion(userId)
                             });
@@ -352,17 +632,16 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
             });
         }
     }, (error) => {
-            console.error("header.js: Chyba pri počúvaní notifikácií:", error);
+        console.error("header.js: Chyba pri počúvaní notifikácií:", error);
     });
 
     console.log("header.js: Listener pre notifikácie admina nastavený.");
 };
 
-
 const setupFirestoreListeners = () => {
     if (!window.db) {
         console.warn("header.js: Firestore databáza nie je inicializovaná. Odkladám nastavenie listenerov.");
-        return; 
+        return;
     }
 
     if (isFirestoreListenersSetup) {
@@ -384,7 +663,7 @@ const setupFirestoreListeners = () => {
             updateHeaderLinks(window.globalUserProfileData);
         }, (error) => {
             console.error("header.js: Chyba pri počúvaní dát o registrácii:", error);
-            window.isRegistrationDataLoaded = true;
+            window.isRegistrationDataLoaded = true; 
             updateHeaderLinks(window.globalUserProfileData);
         });
 
@@ -398,7 +677,7 @@ const setupFirestoreListeners = () => {
                 window.hasCategories = false;
                 console.warn("header.js: Dokument 'settings/categories' nebol nájdený!");
             }
-            window.isCategoriesDataLoaded = true; 
+            window.isCategoriesDataLoaded = true;
             window.areCategoriesLoaded = true;
             window.dispatchEvent(new CustomEvent('categoriesLoaded'));
             console.log("header.js: Odoslaná udalosť 'categoriesLoaded'.");
@@ -429,7 +708,7 @@ const setupFirestoreListeners = () => {
             }
         });
 
-        isFirestoreListenersSetup = true; // Označíme, že listenery sú nastavené
+        isFirestoreListenersSetup = true;
         console.log("header.js: Firestore listenery boli úspešne nastavené.");
 
     } catch (error) {
@@ -449,7 +728,6 @@ window.loadHeaderAndScripts = async () => {
             headerPlaceholder.innerHTML = headerHtml;
         }
 
-        // Po načítaní hlavičky pridáme event listener na tlačidlo odhlásenia
         const logoutButton = document.getElementById('logout-button');
         if (logoutButton) {
             logoutButton.addEventListener('click', handleLogout);
@@ -464,15 +742,31 @@ window.loadHeaderAndScripts = async () => {
         });
 
         if (window.isGlobalAuthReady) {
-             console.log('header.js: Autentifikačné dáta sú už načítané, spúšťam listenery Firestore.');
-             setupFirestoreListeners();
-             updateHeaderLinks(window.globalUserProfileData);
+            console.log('header.js: Autentifikačné dáta sú už načítané, spúšťam listenery Firestore.');
+            setupFirestoreListeners();
+            updateHeaderLinks(window.globalUserProfileData);
         }
 
     } catch (error) {
         console.error("header.js: Chyba pri inicializácii hlavičky:", error);
     }
 };
+
+// Inicializácia priblíženia pri načítaní stránky
+window.addEventListener('load', () => {
+    initializeZoom();
+    
+    // Nastavíme na 80% po načítaní
+    setTimeout(() => {
+        const savedZoom = localStorage.getItem('pageZoom');
+        if (!savedZoom || parseFloat(savedZoom) !== 80) {
+            setZoomTo80Percent();
+        } else {
+            // Ak už je na 80%, len re-aplikujeme
+            setZoomTo80Percent();
+        }
+    }, 1000);
+});
 
 if (document.readyState === 'loading') {
     window.addEventListener('DOMContentLoaded', window.loadHeaderAndScripts);
