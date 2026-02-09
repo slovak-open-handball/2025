@@ -1725,7 +1725,7 @@ const AddGroupsApp = ({ userProfileData }) => {
               // Športové haly
               React.createElement('button', {
                 onClick: () => { setActiveFilter(activeFilter === 'sportova_hala' ? null : 'sportova_hala'); setSelectedPlace(null); setPlaceHash(null); },
-                className: `p-3 rounded-lg border-2 transition-all duration-200 flex items-start shadow-sm h-24 ${
+                className: `p-3 rounded-lg border-2 transition-all duration-200 flex items-start shadow-sm h-18 ${
                   activeFilter === 'sportova_hala'
                     ? 'bg-red-50 border-red-300 scale-105'
                     : 'bg-white border-gray-200 hover:bg-red-50 hover:border-red-200'
@@ -1749,7 +1749,7 @@ const AddGroupsApp = ({ userProfileData }) => {
               // Ubytovanie
               React.createElement('button', {
                 onClick: () => { setActiveFilter(activeFilter === 'ubytovanie' ? null : 'ubytovanie'); setSelectedPlace(null); setPlaceHash(null); },
-                className: `p-3 rounded-lg border-2 transition-all duration-200 flex items-start shadow-sm h-24 ${
+                className: `p-3 rounded-lg border-2 transition-all duration-200 flex items-start shadow-sm h-18 ${
                   activeFilter === 'ubytovanie'
                     ? 'bg-gray-50 border-gray-300 scale-105'
                     : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
@@ -1773,7 +1773,7 @@ const AddGroupsApp = ({ userProfileData }) => {
               // Stravovanie
               React.createElement('button', {
                 onClick: () => { setActiveFilter(activeFilter === 'stravovanie' ? null : 'stravovanie'); setSelectedPlace(null); setPlaceHash(null); },
-                className: `p-3 rounded-lg border-2 transition-all duration-200 flex items-start shadow-sm h-24 ${
+                className: `p-3 rounded-lg border-2 transition-all duration-200 flex items-start shadow-sm h-18 ${
                   activeFilter === 'stravovanie'
                     ? 'bg-green-50 border-green-300 scale-105'
                     : 'bg-white border-gray-200 hover:bg-green-50 hover:border-green-200'
@@ -1797,7 +1797,7 @@ const AddGroupsApp = ({ userProfileData }) => {
               // Zastávky
               React.createElement('button', {
                 onClick: () => { setActiveFilter(activeFilter === 'zastavka' ? null : 'zastavka'); setSelectedPlace(null); setPlaceHash(null); },
-                className: `p-3 rounded-lg border-2 transition-all duration-200 flex items-start shadow-sm h-24 ${
+                className: `p-3 rounded-lg border-2 transition-all duration-200 flex items-start shadow-sm h-18 ${
                   activeFilter === 'zastavka'
                     ? 'bg-blue-50 border-blue-300 scale-105'
                     : 'bg-white border-gray-200 hover:bg-blue-50 hover:border-blue-200'
