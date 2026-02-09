@@ -1043,8 +1043,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                 accommodationType: selectedPlace.accommodationType || null,
                 pricePerNight: selectedPlace.pricePerNight != null ? selectedPlace.pricePerNight : null,
                 breakfastPrice: selectedPlace.breakfastPrice != null ? selectedPlace.breakfastPrice : null,
-                lunchPrice = selectedPlace.lunchPrice != null ? selectedPlace.lunchPrice : null,
-                dinnerPrice = selectedPlace.dinnerPrice != null ? selectedPlace.dinnerPrice : null,
+                lunchPrice: selectedPlace.lunchPrice != null ? selectedPlace.lunchPrice : null,
+                dinnerPrice: selectedPlace.dinnerPrice != null ? selectedPlace.dinnerPrice : null,
                 note: selectedPlace.note || null,
             };
     
