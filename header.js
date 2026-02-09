@@ -134,6 +134,7 @@ window.testResetZoom = () => {
     resetZoom();
 };
 
+/*
 // Pridanie klávesovej skratky pre testovanie
 document.addEventListener('keydown', (e) => {
     // Ctrl+Shift+M pre simuláciu Ctrl+-
@@ -151,6 +152,7 @@ document.addEventListener('keydown', (e) => {
         console.log("Reálne Ctrl+- stlačené");
     }
 });
+*/
 
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
