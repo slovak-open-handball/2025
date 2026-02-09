@@ -9,6 +9,37 @@ window.isCategoriesDataLoaded = false;
 let isFirestoreListenersSetup = false; 
 window.areCategoriesLoaded = false;
 
+// Funkcia pre načítanie loader.js súboru
+const loadLoaderScript = () => {
+    return new Promise((resolve, reject) => {
+        // Skontrolujeme, či už nebol načítaný
+        if (window.showGlobalLoader && window.hideGlobalLoader) {
+            console.log("loader.js už bol načítaný");
+            resolve();
+            return;
+        }
+        
+        const script = document.createElement('script');
+        script.src = 'loader.js';
+        script.type = 'text/javascript';
+        script.async = false; // Načítanie synchronne, aby sa vykonal pred ďalším kódom
+        
+        script.onload = () => {
+            console.log("loader.js úspešne načítaný");
+            resolve();
+        };
+        
+        script.onerror = (error) => {
+            console.warn("Chyba pri načítaní loader.js:", error);
+            // Aj keď loader.js sa nenájde, pokračujeme ďalej
+            resolve();
+        };
+        
+        // Vložíme script na začiatok head, aby sa načítal čo najskôr
+        document.head.appendChild(script);
+    });
+};
+
 // Vytvorenie bieleho prekryvného obdĺžnika
 const createWhiteOverlay = () => {
     const overlay = document.createElement('div');
@@ -44,9 +75,38 @@ const hideWhiteOverlay = () => {
     }
 };
 
+// Funkcia pre zobrazenie loaderu s bielym prekryvom
+const showLoaderWithOverlay = async () => {
+    // Načítame loader.js ak ešte nebol načítaný
+    await loadLoaderScript();
+    
+    // Zobrazíme loader
+    if (window.showGlobalLoader) {
+        window.showGlobalLoader();
+        window.setLoaderText('Nastavujem priblíženie...');
+    }
+    
+    // Vytvoríme biely prekryvný obdĺžnik
+    createWhiteOverlay();
+};
+
+// Funkcia pre skrytie loaderu s bielym prekryvom
+const hideLoaderWithOverlay = () => {
+    // Skryjeme biely prekryv
+    hideWhiteOverlay();
+    
+    // Skryjeme loader
+    if (window.hideGlobalLoader) {
+        window.hideGlobalLoader();
+    }
+};
+
 // Funkcia pre nastavenie priblíženia na 80% (skutočná simulácia Ctrl+-)
-const setZoomTo80Percent = () => {
+const setZoomTo80Percent = async () => {
     console.log("Nastavujem priblíženie na 80% (simulácia Ctrl+-)");
+    
+    // Zobrazíme loader a biely prekryv
+    await showLoaderWithOverlay();
     
     // Metóda 1: CSS zoom property (podporované v Chrome, Edge)
     const setZoomWithCSS = () => {
@@ -194,7 +254,7 @@ const setZoomTo80Percent = () => {
         success = setZoomWithViewport();
     }
     
-    // Zobrazíme spätnú väzbu
+    // Zobrazíme spätnú väzbu a skryjeme loader s prekryvom
     showZoomFeedback(80);
     
     // Pre istotu pridáme aj event listener pre resize
@@ -202,7 +262,10 @@ const setZoomTo80Percent = () => {
 };
 
 // Funkcia pre obnovenie pôvodného priblíženia
-const resetZoom = () => {
+const resetZoom = async () => {
+    // Zobrazíme loader a biely prekryv
+    await showLoaderWithOverlay();
+    
     localStorage.setItem('pageZoom', 100);
     
     // Reset všetkých metód
@@ -239,6 +302,8 @@ const resetZoom = () => {
     });
     
     console.log("Priblíženie obnovené na 100%");
+    
+    // Zobrazíme spätnú väzbu a skryjeme loader s prekryvom
     showZoomFeedback(100);
 };
 
@@ -262,36 +327,44 @@ const showZoomFeedback = (zoomLevel) => {
         color: white;
         padding: 10px 20px;
         border-radius: 8px;
-        z-index: 999999999999;
+        z-index: 1000000000001;
         font-size: 14px;
         font-weight: bold;
         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         border: 2px solid #47b3ff;
+        opacity: 0;
+        transition: opacity 0.3s ease;
     `;
     document.body.appendChild(feedback);
     
-    // Po zobrazení spätnej väzby skryjeme biely prekryvný obdĺžnik
+    // Zobrazíme spätnú väzbu s oneskorením
     setTimeout(() => {
-        hideWhiteOverlay();
-        console.log("Spätná väzba o priblížení sa zobrazila, biely prekryvný obdĺžnik sa skrýva");
-    }, 100);
+        feedback.style.opacity = '1';
+    }, 10);
+    
+    // Po krátkom čase skryjeme loader a biely prekryv
+    setTimeout(() => {
+        hideLoaderWithOverlay();
+        console.log("Spätná väzba o priblížení sa zobrazila, loader a biely prekryv sa skrývajú");
+    }, 500);
     
     // Postupne zmizne spätná väzba
     setTimeout(() => {
         feedback.style.opacity = '0';
-        feedback.style.transition = 'opacity 0.5s ease';
         setTimeout(() => {
             if (feedback.parentElement) {
                 feedback.remove();
             }
-        }, 500);
-    }, 2000);
+        }, 300);
+    }, 2500);
 };
 
 // Inicializácia priblíženia pri načítaní stránky
-const initializeZoom = () => {
-    // Vytvoríme biely prekryvný obdĺžnik hneď na začiatku
-    createWhiteOverlay();
+const initializeZoom = async () => {
+    // Najprv načítame loader.js
+    console.log("Začínam načítanie loader.js...");
+    await loadLoaderScript();
+    console.log("loader.js načítaný, pokračujem s priblížením...");
     
     const savedZoom = localStorage.getItem('pageZoom');
     if (savedZoom && parseFloat(savedZoom) !== 100) {
@@ -300,16 +373,12 @@ const initializeZoom = () => {
 };
 
 // Funkcie pre konzolu
-window.setZoom80 = () => {
-    // Zobraziť biely prekryvný obdĺžnik pred zmenou priblíženia
-    createWhiteOverlay();
-    setZoomTo80Percent();
+window.setZoom80 = async () => {
+    await setZoomTo80Percent();
 };
 
-window.testResetZoom = () => {
-    // Zobraziť biely prekryvný obdĺžnik pred resetom
-    createWhiteOverlay();
-    resetZoom();
+window.testResetZoom = async () => {
+    await resetZoom();
 };
 
 // Testovacia funkcia pre fixované elementy
@@ -331,20 +400,16 @@ window.testFixedElements = () => {
 };
 
 // Pridanie klávesovej skratky
-document.addEventListener('keydown', (e) => {
+document.addEventListener('keydown', async (e) => {
     // Ctrl+8 pre 80%
     if (e.ctrlKey && e.key === '8') {
         e.preventDefault();
-        // Zobraziť biely prekryvný obdĺžnik pred zmenou priblíženia
-        createWhiteOverlay();
-        setZoomTo80Percent();
+        await setZoomTo80Percent();
     }
     // Ctrl+0 pre reset
     if (e.ctrlKey && e.key === '0') {
         e.preventDefault();
-        // Zobraziť biely prekryvný obdĺžnik pred resetom
-        createWhiteOverlay();
-        resetZoom();
+        await resetZoom();
     }
 });
 
@@ -812,18 +877,25 @@ window.loadHeaderAndScripts = async () => {
 
 // Inicializácia priblíženia pri načítaní stránky
 window.addEventListener('load', () => {
-    initializeZoom();
-    
-    // Nastavíme na 80% po načítaní
-    setTimeout(() => {
-        const savedZoom = localStorage.getItem('pageZoom');
-        if (!savedZoom || parseFloat(savedZoom) !== 80) {
+    // Spustíme inicializáciu priblíženia asynchrónne
+    initializeZoom().then(() => {
+        // Nastavíme na 80% po načítaní
+        setTimeout(() => {
+            const savedZoom = localStorage.getItem('pageZoom');
+            if (!savedZoom || parseFloat(savedZoom) !== 80) {
+                setZoomTo80Percent();
+            } else {
+                // Ak už je na 80%, len re-aplikujeme
+                setZoomTo80Percent();
+            }
+        }, 1000);
+    }).catch(error => {
+        console.error("Chyba pri inicializácii priblíženia:", error);
+        // Aj v prípade chyby pokračujeme
+        setTimeout(() => {
             setZoomTo80Percent();
-        } else {
-            // Ak už je na 80%, len re-aplikujeme
-            setZoomTo80Percent();
-        }
-    }, 1000);
+        }, 1000);
+    });
 });
 
 if (document.readyState === 'loading') {
