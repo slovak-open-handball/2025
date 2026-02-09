@@ -1993,21 +1993,21 @@ const AddGroupsApp = ({ userProfileData }) => {
                   )
                 ),
                 
-                activeFilter ? 
-                  React.createElement('div', { className: 'mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200' },
-                    React.createElement('div', { className: 'flex justify-between items-center' },
-                      React.createElement('span', { className: 'text-gray-700' },
-                        'Filtrovanie: ',
-                        React.createElement('span', { className: 'font-bold text-gray-800' }, 
-                          typeLabels[activeFilter] || activeFilter
-                        )
-                      ),
-                      React.createElement('button', {
-                        onClick: () => setActiveFilter(null),
-                        className: 'px-3 py-1 bg-white text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-50 transition text-sm'
-                      }, 'Zobraziť všetko')
-                    )
-                  ) : null,
+//                activeFilter ? 
+//                  React.createElement('div', { className: 'mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200' },
+//                    React.createElement('div', { className: 'flex justify-between items-center' },
+//                      React.createElement('span', { className: 'text-gray-700' },
+//                        'Filtrovanie: ',
+//                        React.createElement('span', { className: 'font-bold text-gray-800' }, 
+//                          typeLabels[activeFilter] || activeFilter
+//                        )
+//                      ),
+//                      React.createElement('button', {
+//                        onClick: () => setActiveFilter(null),
+//                        className: 'px-3 py-1 bg-white text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-50 transition text-sm'
+//                      }, 'Zobraziť všetko')
+//                    )
+//                  ) : null,
                 
                 allPlaces.length === 0 ? 
                   React.createElement('div', { className: 'text-center py-8 text-gray-500' },
