@@ -8,6 +8,7 @@
 // Úpravy: Zlepšenie formátovania notifikácií a zabezpečenie, aby sa nové notifikácie zobrazovali pod staršími.
 // Fix: Zabezpečenie viditeľnosti hlavičky pri prvom načítaní stránky.
 // Nová úprava: Pridáva funkciu na formátovanie telefónnych čísiel v notifikáciách pre lepšiu čitateľnosť.
+// ÚPRAVA: Automatické nastavenie zoomu stránky na 80%
 
 // Importy pre potrebné Firebase funkcie
 import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -25,8 +26,47 @@ let isFirestoreListenersSetup = false; // Nový flag pre sledovanie, či sú lis
 // NOVINKA: Pridaná globálna premenná na indikáciu, že kategórie sú načítané
 window.areCategoriesLoaded = false;
 
-
-
+// FUNKCIA NA NASTAVENIE ZOOMU STRÁNKY NA 80%
+const setPageZoomTo80Percent = () => {
+    // Vytvoríme špecifický CSS pre nastavenie zoomu
+    const zoomStyle = document.createElement('style');
+    zoomStyle.id = 'page-zoom-style';
+    zoomStyle.textContent = `
+        html {
+            transform: scale(0.8);
+            transform-origin: top left;
+            width: 125%; /* Kompenzácia pre transformáciu scale(0.8) - 100/0.8 = 125 */
+            height: 125%;
+            overflow-x: hidden;
+        }
+        
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        /* Pre móduľové okná a notifikácie - zabezpečíme, že budú na správnej pozícii */
+        .modal, #notification-container, #global-notification {
+            transform: scale(1.25); /* Kompenzácia - 1/0.8 = 1.25 */
+            transform-origin: top center;
+        }
+        
+        /* Upravíme pozíciu notifikácií */
+        #notification-container {
+            right: 5% !important;
+        }
+        
+        #global-notification {
+            left: 50% !important;
+            transform: translateX(-50%) scale(1.25) !important;
+        }
+    `;
+    
+    // Pridáme štýl do hlavičky dokumentu
+    document.head.appendChild(zoomStyle);
+    console.log("header.js: Zoom stránky nastavený na 80%");
+};
 
 // Globálna funkcia pre zobrazenie notifikácií
 // Vytvorí a spravuje modálne okno pre správy o úspechu alebo chybách
@@ -96,7 +136,7 @@ const formatPhoneNumber = (phoneNumber) => {
     // Odstránime medzery, ktoré tam mohli zostať
     number = number.replace(/\s/g, '');
 
-    // Rozdelíme zvyšok čísla do skupín po troch čísliciach
+    // Rozdelíme zvyšok čísla do skupín po troch číslicách
     let formattedNumber = '';
     while (number.length > 0) {
         formattedNumber += number.substring(0, 3);
@@ -173,7 +213,7 @@ const showDatabaseNotification = (message, type = 'info') => {
     notificationElement.className = `
         bg-gray-800 text-white p-4 pr-10 rounded-lg shadow-lg
         transform translate-x-full transition-all duration-500 ease-out
-        flex items-center space-x-2"
+        flex items-center space-x-2
     `;
 
     const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔'; // Použijeme zvonček pre info notifikácie
@@ -209,7 +249,6 @@ const handleLogout = async () => {
         const auth = getAuth();
         await signOut(auth);
         console.log("header.js: Používateľ bol úspešne odhlásený.");
-//        window.showGlobalNotification('Úspešne ste sa odhlásili.', 'success');
         if (unsubscribeFromNotifications) {
             unsubscribeFromNotifications();
             unsubscribeFromNotifications = null;
@@ -448,7 +487,6 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
     console.log("header.js: Listener pre notifikácie admina nastavený.");
 };
 
-
 // Počúva na zmeny v dokumentoch Firestore a aktualizuje stav registrácie
 const setupFirestoreListeners = () => {
     // Kontrolujeme, či je window.db už inicializované
@@ -542,6 +580,9 @@ const setupFirestoreListeners = () => {
  */
 window.loadHeaderAndScripts = async () => {
     try {
+        // NASTAVENIE ZOOMU STRÁNKY NA 80% PRED NAČÍTANÍM HLAVIČKY
+        setPageZoomTo80Percent();
+        
         const headerPlaceholder = document.getElementById('header-placeholder');
         const response = await fetch('header.html');
         
