@@ -272,7 +272,7 @@ window.showGlobalNotification = (message, type = 'success') => {
 };
 
 // Modal pre úpravu skupiny
-const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingGroups, onUpdate }) => {
+const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingGroups, onUpdate, categories }) => {
     const [groupName, setGroupName] = useState(groupToEdit?.name || '');
     const [groupType, setGroupType] = useState(groupToEdit?.type || 'základná skupina');
     const [nameError, setNameError] = useState('');
