@@ -2542,7 +2542,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                             className: 'px-4 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition text-sm font-medium'
                           },
                             React.createElement('i', { className: 'fa-solid fa-map-pin mr-1' }),
-                            'Ukázať na mape'
+                            'Ukázať'
                           )
                         )
                       );
