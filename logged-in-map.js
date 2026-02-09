@@ -1914,7 +1914,7 @@ const AddGroupsApp = ({ userProfileData }) => {
               React.createElement('div', {
                 id: 'map',
                 ref: mapRef,
-                className: 'w-full rounded-xl shadow-inner border border-gray-200 h-[68vh] md:h-[68vh] min-h-[450px]'
+                className: 'w-full rounded-xl shadow-inner border border-gray-200 h-[68vh] md:h-[68vh] min-h-[450px] z-0'
               }),
 
               // Detail vybraného miesta (sidebar)
