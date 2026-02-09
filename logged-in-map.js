@@ -172,6 +172,15 @@ const AddGroupsApp = ({ userProfileData }) => {
         return result;
       }, [accommodationTypes, places]);
     
+    // Funkcia na kliknutie na miesto (používa sa pri kliknutí na kartu aj na mape)
+    const handlePlaceClick = (place) => {
+        setSelectedPlace(place);
+        setPlaceHash(place.id);
+        if (leafletMap.current) {
+            leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
+        }
+    };
+    
     // Samostatná funkcia – vytvorí sa iba raz
     const handleAddClick = useCallback(async (e) => {
       console.log("CLICK NA MAPE zachytený!", e.latlng);
@@ -1615,21 +1624,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             });
      
             marker.on('click', (e) => {
-              // Reset všetkých markerov
-              Object.keys(markersRef.current).forEach(placeId => {
-                const markerObj = markersRef.current[placeId];
-                if (markerObj && markerObj.marker) {
-                  markerObj.marker.setIcon(markerObj.normalIcon);
-                  markerObj.marker.setZIndexOffset(0);
-                }
-              });
-              
-              // Nastav vybraný marker
-              marker.setIcon(selectedIcon);
-              marker.setZIndexOffset(1000);
-              
-              setSelectedPlace(place);
-              setPlaceHash(place.id);
+              handlePlaceClick(place);
             });
      
             placesLayerRef.current.addLayer(marker);
@@ -1993,22 +1988,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                   )
                 ),
                 
-//                activeFilter ? 
-//                  React.createElement('div', { className: 'mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200' },
-//                    React.createElement('div', { className: 'flex justify-between items-center' },
-//                      React.createElement('span', { className: 'text-gray-700' },
-//                        'Filtrovanie: ',
-//                        React.createElement('span', { className: 'font-bold text-gray-800' }, 
-//                          typeLabels[activeFilter] || activeFilter
-//                        )
-//                      ),
-//                      React.createElement('button', {
-//                        onClick: () => setActiveFilter(null),
-//                        className: 'px-3 py-1 bg-white text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-50 transition text-sm'
-//                      }, 'Zobraziť všetko')
-//                    )
-//                  ) : null,
-                
                 allPlaces.length === 0 ? 
                   React.createElement('div', { className: 'text-center py-8 text-gray-500' },
                     React.createElement('i', { className: 'fa-solid fa-map-pin text-4xl mb-3 opacity-50' }),
@@ -2021,7 +2000,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                         const typeConfig = typeIcons[place.type] || { icon: 'fa-map-pin', color: '#6b7280' };
                         return React.createElement('div', { 
                           key: place.id, 
-                          className: `mb-3 p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow ${selectedPlace?.id === place.id ? 'border-blue-300 bg-blue-50' : ''}` 
+                          className: `mb-3 p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer ${selectedPlace?.id === place.id ? 'border-blue-300 bg-blue-50' : ''}`,
+                          onClick: () => handlePlaceClick(place)
                         },
                           React.createElement('div', { className: 'flex justify-between items-start' },
                             React.createElement('div', { className: 'flex-1' },
@@ -2078,19 +2058,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                               )
                             ),
                             
-                            React.createElement('button', {
-                              onClick: () => {
-                                setSelectedPlace(place);
-                                setPlaceHash(place.id);
-                                if (leafletMap.current) {
-                                  leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
-                                }
-                              },
-                              className: 'ml-3 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition text-sm font-medium whitespace-nowrap'
-                            },
-                              React.createElement('i', { className: 'fa-solid fa-map-pin mr-1' }),
-                              'Na mape'
-                            )
+                            // Odstránené tlačidlo "Na mape"
                           )
                         );
                       })
