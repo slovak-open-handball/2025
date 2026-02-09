@@ -373,15 +373,20 @@ const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingG
                 [categoryId]: arrayUnion(newGroup)
             });
     
+            // VŽDY generujeme notifikáciu o zmene skupiny
             const changesList = [];
+            
+            // Vždy uvádzame kategóriu, starý a nový názov, starý a nový typ
             changesList.push(`Úprava skupiny v kategórii '''${categoryName}'`);
-            
-            if (oldGroupName !== formattedGroupName) {
-                changesList.push(`Zmena názvu skupiny z '${oldGroupName}' na '${formattedGroupName}'`);
-            }
-            
-            if (oldGroupType !== groupType) {
-                changesList.push(`Zmena typu skupiny z '${oldGroupType}' na '${groupType}'`);
+            changesList.push(`• Názov: z '${oldGroupName}' na '${formattedGroupName}'`);
+            changesList.push(`• Typ: z '${oldGroupType}' na '${groupType}'`);
+    
+            // Ak sa nič nezmenilo, upravíme notifikáciu
+            if (oldGroupName === formattedGroupName && oldGroupType === groupType) {
+                changesList.length = 0; // Vymažeme predchádzajúce správy
+                changesList.push(`Skupina v kategórii '''${categoryName}' bola upravená`);
+                changesList.push(`• Názov skupiny zostáva '${formattedGroupName}'`);
+                changesList.push(`• Typ skupiny zostáva '${groupType}'`);
             }
     
             await createGroupChangeNotification('group_updated', 
