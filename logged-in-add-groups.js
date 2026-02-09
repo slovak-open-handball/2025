@@ -378,8 +378,8 @@ const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingG
             
             // Vždy uvádzame kategóriu, starý a nový názov, starý a nový typ
             changesList.push(`Úprava skupiny v kategórii '''${categoryName}'`);
-            changesList.push(`• Názov: z '${oldGroupName}' na '${formattedGroupName}'`);
-            changesList.push(`• Typ: z '${oldGroupType}' na '${groupType}'`);
+            changesList.push(`Názov: z '${oldGroupName}' na '${formattedGroupName}'`);
+            changesList.push(`Typ: z '${oldGroupType}' na '${groupType}'`);
     
             // Ak sa nič nezmenilo, upravíme notifikáciu
             if (oldGroupName === formattedGroupName && oldGroupType === groupType) {
