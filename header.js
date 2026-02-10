@@ -328,6 +328,12 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
 
         snapshot.docChanges().forEach(async (change) => {
             if (change.type === "added") {
+                // POKRAČOVAŤ LEN AK MAJÚ ZAPNUTÉ NOTIFIKÁCIE
+                if (!userProfileData.displayNotifications) {
+                    console.log("header.js: Notifikácie sú vypnuté, preskakujem novú notifikáciu.");
+                    return; // <-- Preskočiť túto notifikáciu
+                }
+                
                 const newNotification = change.doc.data();
                 const notificationId = change.doc.id;
                 
@@ -335,20 +341,6 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                 // Skontrolovať, či používateľ ešte nevidí túto notifikáciu
                 if (!seenBy.includes(userId)) {
                     console.log("header.js: Nová notifikácia prijatá a nebola videná používateľom:", newNotification);
-                    
-                    let changesMessage = '';
-                    if (Array.isArray(newNotification.changes) && newNotification.changes.length > 0) {
-                        const changeLabel = newNotification.changes.length > 1 ? " zmenil tieto údaje:" : "zmenil tento údaj:";
-                        changesMessage = `Používateľ ${newNotification.userEmail} ${changeLabel}\n`;
-                        
-                        const formattedChanges = newNotification.changes.map(changeString => formatNotificationMessage(changeString));
-                        
-                        changesMessage += formattedChanges.join('<br>');
-                    } else if (typeof newNotification.changes === 'string') {
-                        changesMessage = `Používateľ ${newNotification.userEmail} zmenil tento údaj:\n${formatNotificationMessage(newNotification.changes)}`;
-                    } else {
-                        changesMessage = `Používateľ ${newNotification.userEmail} vykonal zmenu.`;
-                    }
                     
                     // ZOBRAZIŤ NOTIFIKÁCIU
                     showDatabaseNotification(changesMessage, newNotification.type || 'info');
