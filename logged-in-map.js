@@ -2006,7 +2006,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                           }`
                       },
                           React.createElement('span', { 
-                              className: `font-medium ${!selectedAccommodationTypeFilter ? 'text-gray-800' : 'text-gray-600'}`
+                              className: `text-base font-medium ${!selectedAccommodationTypeFilter ? 'text-gray-800' : 'text-gray-600'}`
                           }, 'Všetky typy'),
                           React.createElement('span', { className: 'text-gray-500 text-sm' },
                               allPlaces.filter(p => p.type === 'ubytovanie').length
@@ -2031,7 +2031,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                               }`
                           },
                               React.createElement('span', { 
-                                  className: `font-medium ${isSelected ? 'text-gray-800' : 'text-gray-600'}`
+                                  className: `text-base font-medium ${isSelected ? 'text-gray-800' : 'text-gray-600'}`
                               }, item.type),
                               React.createElement('span', { className: 'text-gray-500 text-sm' },
                                   count
