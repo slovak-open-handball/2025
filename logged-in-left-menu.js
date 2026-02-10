@@ -32,11 +32,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const mapLink = document.getElementById('map-link'); // NOVINKA: Odkaz na mapu
     const teamsAccommodationLink = document.getElementById('teams-accommodation-link');
     
-    // Získať všetky SVG ikony v menu
-    const menuIcons = document.querySelectorAll('#left-menu svg');
-    // Získať všetky texty v menu okrem textu "Menu"
-    const allMenuTexts = document.querySelectorAll('#left-menu .whitespace-nowrap');
-    
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
         console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo menu spacer po vložení HTML.");
         return;
@@ -49,13 +44,65 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const highlightActiveMenuLink = () => {
         const currentPath = window.location.pathname;
         const menuLinks = document.querySelectorAll('#left-menu a');
+        const role = userProfileData?.role || 'default';
+        
+        // Definícia farieb pre pozadie (bledšie) a text (plné farby) podľa roly
+        const getRoleColors = (role) => {
+            switch (role) {
+                case 'admin':
+                    return { 
+                        bg: 'bg-blue-100 dark:bg-blue-900/30', 
+                        text: 'text-blue-600 dark:text-blue-400'
+                    };
+                case 'hall':
+                    return { 
+                        bg: 'bg-[#b06835]/20 dark:bg-[#b06835]/10', 
+                        text: 'text-[#b06835] dark:text-[#b06835]/80'
+                    };
+                case 'club':
+                    return { 
+                        bg: 'bg-[#9333EA]/20 dark:bg-[#9333EA]/10', 
+                        text: 'text-[#9333EA] dark:text-[#9333EA]/80'
+                    };
+                case 'referee':
+                    return { 
+                        bg: 'bg-[#007800]/20 dark:bg-[#007800]/10', 
+                        text: 'text-[#007800] dark:text-[#007800]/80'
+                    };
+                case 'volunteer':
+                    return { 
+                        bg: 'bg-[#FFAC1C]/20 dark:bg-[#FFAC1C]/10', 
+                        text: 'text-[#FFAC1C] dark:text-[#FFAC1C]/80'
+                    };
+                default:
+                    return { 
+                        bg: 'bg-[#1D4ED8]/20 dark:bg-[#1D4ED8]/10', 
+                        text: 'text-[#1D4ED8] dark:text-[#1D4ED8]/80'
+                    };
+            }
+        };
+        
+        const roleColors = getRoleColors(role);
 
         menuLinks.forEach(link => {
             // Získanie cesty z href atribútu
             const href = link.getAttribute('href');
             if (href) {
-                // Odstránenie triedy aktívneho stavu
-                link.classList.remove('bg-blue-100', 'dark:bg-blue-900', 'text-blue-600', 'dark:text-blue-300');
+                // Odstránenie všetkých farieb pozadia a textu
+                link.classList.remove(
+                    'bg-blue-100', 'dark:bg-blue-900', 
+                    'text-blue-600', 'dark:text-blue-300',
+                    'bg-[#b06835]/20', 'dark:bg-[#b06835]/10',
+                    'text-[#b06835]', 'dark:text-[#b06835]/80',
+                    'bg-[#9333EA]/20', 'dark:bg-[#9333EA]/10',
+                    'text-[#9333EA]', 'dark:text-[#9333EA]/80',
+                    'bg-[#007800]/20', 'dark:bg-[#007800]/10',
+                    'text-[#007800]', 'dark:text-[#007800]/80',
+                    'bg-[#FFAC1C]/20', 'dark:bg-[#FFAC1C]/10',
+                    'text-[#FFAC1C]', 'dark:text-[#FFAC1C]/80',
+                    'bg-[#1D4ED8]/20', 'dark:bg-[#1D4ED8]/10',
+                    'text-[#1D4ED8]', 'dark:text-[#1D4ED8]/80'
+                );
                 
                 // Kontrola, či aktuálna stránka zodpovedá href odkazu
                 if (currentPath.includes(href) || 
@@ -69,12 +116,13 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
                     (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
                     (href === 'logged-in-notifications.html' && currentPath.includes('notifications'))) {
-                    link.classList.add('bg-blue-100', 'dark:bg-blue-900', 'text-blue-600', 'dark:text-blue-300');
+                    // Pridanie farieb pozadia a textu podľa roly
+                    link.classList.add(roleColors.bg, roleColors.text);
                 }
             }
         });
     };
-    
+
     // NOVINKA: Funkcia na získanie farby podľa roly
     const getColorForRole = (role) => {
         switch (role) {
@@ -92,66 +140,39 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                 return '#1D4ED8';
         }
     };
-    
-    // NOVINKA: Funkcia na aplikovanie farieb podľa roly
-    const applyRoleColors = () => {
-        const role = userProfileData?.role || 'default';
-        const roleColor = getColorForRole(role);
-        
-        // Vždy aplikovať farbu na ikonu a text "Menu"
-        if (menuIcon) {
-            menuIcon.style.color = roleColor;
-        }
-        if (menuText) {
-            menuText.style.color = roleColor;
-        }
-        
-        // Ak je menu zbalené, farby sa aplikujú len na hlavnú ikonu a text "Menu"
-        // Ak je menu rozbalené, farby sa aplikujú na všetky ikony a texty
-        if (isMenuToggled) {
-            // Aplikovať farby na všetky SVG ikony v menu
-            menuIcons.forEach(icon => {
-                icon.style.color = roleColor;
-            });
-            
-            // Aplikovať farby na všetky texty v menu (okrem "Menu", ktoré už má farbu)
-            allMenuTexts.forEach(text => {
-                if (text !== menuText) { // Nepoužiť na text "Menu" dvakrát
-                    text.style.color = roleColor;
-                }
-            });
-        } else {
-            // V zbalenom stave resetovať farby na ostatných ikonách a textoch
-            menuIcons.forEach(icon => {
-                if (icon !== menuIcon) { // Zachovať farbu len na hlavnej ikone
-                    icon.style.color = '';
-                }
-            });
-            
-            allMenuTexts.forEach(text => {
-                if (text !== menuText) { // Zachovať farbu len na texte "Menu"
-                    text.style.color = '';
-                }
-            });
-        }
-    };
 
     /**
      * Funkcia na aplikovanie stavu menu (pre počiatočné načítanie)
      */
     const applyMenuState = () => {
+        const role = userProfileData?.role || 'default';
+        const roleColor = getColorForRole(role);
+
         if (isMenuToggled) {
             leftMenu.classList.remove('w-16');
             leftMenu.classList.add('w-64');
             menuSpacer.classList.remove('w-16');
             menuSpacer.classList.add('w-64');
+            // NOVINKA: Nastavenie farby ikony a textu v rozbalenom stave
+            if (menuIcon) {
+                menuIcon.style.color = roleColor;
+            }
+            if (menuText) {
+                menuText.style.color = roleColor;
+            }
         } else {
             leftMenu.classList.remove('w-64');
             leftMenu.classList.add('w-16');
             menuSpacer.classList.remove('w-64');
             menuSpacer.classList.add('w-16');
+            // NOVINKA: Reset farby v zbalenom stave
+            if (menuIcon) {
+                menuIcon.style.color = ''; // Reset na pôvodnú farbu
+            }
+            if (menuText) {
+                menuText.style.color = ''; // Reset na pôvodnú farbu
+            }
         }
-        
         menuTexts.forEach(span => {
             if (isMenuToggled) {
                 span.classList.remove('opacity-0');
@@ -159,9 +180,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                 span.classList.add('opacity-0');
             }
         });
-        
-        // NOVINKA: Vždy aplikovať farby podľa roly
-        applyRoleColors();
     };
     
     // Nová funkcia na dynamickú zmenu textu menu
@@ -296,8 +314,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             menuSpacer.classList.remove('w-16');
             menuSpacer.classList.add('w-64');
             menuTexts.forEach(span => span.classList.remove('opacity-0'));
-            // Aplikovať farby pri rozbalení
-            applyRoleColors();
+            // Zrušenie zmeny farby textu "Menu" pri mouseenter, keď je zbalené
             // Aktualizovať zvýraznenie
             setTimeout(highlightActiveMenuLink, 100);
         }
@@ -310,12 +327,11 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             menuSpacer.classList.remove('w-64');
             menuSpacer.classList.add('w-16');
             menuTexts.forEach(span => span.classList.add('opacity-0'));
-            // Resetovať farby na pôvodné pri zbalení (zachovať len farbu "Menu")
-            applyRoleColors();
+            // Zrušenie resetu farby textu "Menu" pri mouseleave, keď je zbalené
         }
     });
 };
-    
+
 const loadLeftMenu = async (userProfileData) => {
     // Kontrola, či existujú dáta používateľa, bez nich nemá menu zmysel
     if (userProfileData && userProfileData.id) {
@@ -347,32 +363,80 @@ const loadLeftMenu = async (userProfileData) => {
             window.addEventListener('popstate', () => {
                 setTimeout(() => {
                     // Znovu inicializovať zvýraznenie menu po zmene stránky
-                    const highlightActiveMenuLink = () => {
-                        const currentPath = window.location.pathname;
-                        const menuLinks = document.querySelectorAll('#left-menu a');
-                
-                        menuLinks.forEach(link => {
-                            const href = link.getAttribute('href');
-                            if (href) {
-                                link.classList.remove('bg-blue-100', 'dark:bg-blue-900', 'text-blue-600', 'dark:text-blue-300');
-                                
-                                if (currentPath.includes(href) || 
-                                    (href === 'logged-in-my-data.html' && currentPath.includes('my-data')) ||
-                                    (href === 'logged-in-rosters.html' && currentPath.includes('rosters')) ||
-                                    (href === 'logged-in-add-categories.html' && currentPath.includes('add-categories')) ||
-                                    (href === 'logged-in-add-groups.html' && currentPath.includes('add-groups')) ||
-                                    (href === 'logged-in-teams-in-accommodation.html' && currentPath.includes('teams-in-accommodation')) ||
-                                    (href === 'logged-in-map.html' && currentPath.includes('map')) ||
-                                    (href === 'logged-in-tournament-settings.html' && currentPath.includes('logged-in-tournament-settings')) ||
-                                    (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
-                                    (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
-                                    (href === 'logged-in-notifications.html' && currentPath.includes('notifications'))) {
-                                    link.classList.add('bg-blue-100', 'dark:bg-blue-900', 'text-blue-600', 'dark:text-blue-300');
-                                }
-                            }
-                        });
+                    const currentPath = window.location.pathname;
+                    const menuLinks = document.querySelectorAll('#left-menu a');
+                    const role = userProfileData?.role || 'default';
+                    
+                    const getRoleColors = (role) => {
+                        switch (role) {
+                            case 'admin':
+                                return { 
+                                    bg: 'bg-blue-100 dark:bg-blue-900/30', 
+                                    text: 'text-blue-600 dark:text-blue-400'
+                                };
+                            case 'hall':
+                                return { 
+                                    bg: 'bg-[#b06835]/20 dark:bg-[#b06835]/10', 
+                                    text: 'text-[#b06835] dark:text-[#b06835]/80'
+                                };
+                            case 'club':
+                                return { 
+                                    bg: 'bg-[#9333EA]/20 dark:bg-[#9333EA]/10', 
+                                    text: 'text-[#9333EA] dark:text-[#9333EA]/80'
+                                };
+                            case 'referee':
+                                return { 
+                                    bg: 'bg-[#007800]/20 dark:bg-[#007800]/10', 
+                                    text: 'text-[#007800] dark:text-[#007800]/80'
+                                };
+                            case 'volunteer':
+                                return { 
+                                    bg: 'bg-[#FFAC1C]/20 dark:bg-[#FFAC1C]/10', 
+                                    text: 'text-[#FFAC1C] dark:text-[#FFAC1C]/80'
+                                };
+                            default:
+                                return { 
+                                    bg: 'bg-[#1D4ED8]/20 dark:bg-[#1D4ED8]/10', 
+                                    text: 'text-[#1D4ED8] dark:text-[#1D4ED8]/80'
+                                };
+                        }
                     };
-                    highlightActiveMenuLink();
+                    
+                    const roleColors = getRoleColors(role);
+
+                    menuLinks.forEach(link => {
+                        const href = link.getAttribute('href');
+                        if (href) {
+                            link.classList.remove(
+                                'bg-blue-100', 'dark:bg-blue-900', 
+                                'text-blue-600', 'dark:text-blue-300',
+                                'bg-[#b06835]/20', 'dark:bg-[#b06835]/10',
+                                'text-[#b06835]', 'dark:text-[#b06835]/80',
+                                'bg-[#9333EA]/20', 'dark:bg-[#9333EA]/10',
+                                'text-[#9333EA]', 'dark:text-[#9333EA]/80',
+                                'bg-[#007800]/20', 'dark:bg-[#007800]/10',
+                                'text-[#007800]', 'dark:text-[#007800]/80',
+                                'bg-[#FFAC1C]/20', 'dark:bg-[#FFAC1C]/10',
+                                'text-[#FFAC1C]', 'dark:text-[#FFAC1C]/80',
+                                'bg-[#1D4ED8]/20', 'dark:bg-[#1D4ED8]/10',
+                                'text-[#1D4ED8]', 'dark:text-[#1D4ED8]/80'
+                            );
+                            
+                            if (currentPath.includes(href) || 
+                                (href === 'logged-in-my-data.html' && currentPath.includes('my-data')) ||
+                                (href === 'logged-in-rosters.html' && currentPath.includes('rosters')) ||
+                                (href === 'logged-in-add-categories.html' && currentPath.includes('add-categories')) ||
+                                (href === 'logged-in-add-groups.html' && currentPath.includes('add-groups')) ||
+                                (href === 'logged-in-teams-in-accommodation.html' && currentPath.includes('teams-in-accommodation')) ||
+                                (href === 'logged-in-map.html' && currentPath.includes('map')) ||
+                                (href === 'logged-in-tournament-settings.html' && currentPath.includes('logged-in-tournament-settings')) ||
+                                (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
+                                (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
+                                (href === 'logged-in-notifications.html' && currentPath.includes('notifications'))) {
+                                link.classList.add(roleColors.bg, roleColors.text);
+                            }
+                        }
+                    });
                 }, 100);
             });
 
@@ -387,6 +451,56 @@ const loadLeftMenu = async (userProfileData) => {
         console.log("left-menu.js: Globálne dáta používateľa nie sú dostupné. Menu sa skryje.");
     }
 };
+
+// Pridanie CSS štýlov pre lepšiu podporu premenlivých farieb
+const addCustomStyles = () => {
+    if (!document.getElementById('left-menu-custom-styles')) {
+        const style = document.createElement('style');
+        style.id = 'left-menu-custom-styles';
+        style.textContent = `
+            /* Animácia pre plynulý prechod farieb */
+            #left-menu a {
+                transition: background-color 200ms ease, color 200ms ease;
+            }
+            
+            /* Bledšie farby pozadia pre rôzne roly */
+            .bg-\\[\\#b06835\\]\\/20 { background-color: rgba(176, 104, 53, 0.2); }
+            .dark .dark\\:bg-\\[\\#b06835\\]\\/10 { background-color: rgba(176, 104, 53, 0.1); }
+            
+            .bg-\\[\\#9333EA\\]\\/20 { background-color: rgba(147, 51, 234, 0.2); }
+            .dark .dark\\:bg-\\[\\#9333EA\\]\\/10 { background-color: rgba(147, 51, 234, 0.1); }
+            
+            .bg-\\[\\#007800\\]\\/20 { background-color: rgba(0, 120, 0, 0.2); }
+            .dark .dark\\:bg-\\[\\#007800\\]\\/10 { background-color: rgba(0, 120, 0, 0.1); }
+            
+            .bg-\\[\\#FFAC1C\\]\\/20 { background-color: rgba(255, 172, 28, 0.2); }
+            .dark .dark\\:bg-\\[\\#FFAC1C\\]\\/10 { background-color: rgba(255, 172, 28, 0.1); }
+            
+            .bg-\\[\\#1D4ED8\\]\\/20 { background-color: rgba(29, 78, 216, 0.2); }
+            .dark .dark\\:bg-\\[\\#1D4ED8\\]\\/10 { background-color: rgba(29, 78, 216, 0.1); }
+            
+            /* Farby textu pre rôzne roly */
+            .text-\\[\\#b06835\\] { color: #b06835; }
+            .dark .dark\\:text-\\[\\#b06835\\]\\/80 { color: rgba(176, 104, 53, 0.8); }
+            
+            .text-\\[\\#9333EA\\] { color: #9333EA; }
+            .dark .dark\\:text-\\[\\#9333EA\\]\\/80 { color: rgba(147, 51, 234, 0.8); }
+            
+            .text-\\[\\#007800\\] { color: #007800; }
+            .dark .dark\\:text-\\[\\#007800\\]\\/80 { color: rgba(0, 120, 0, 0.8); }
+            
+            .text-\\[\\#FFAC1C\\] { color: #FFAC1C; }
+            .dark .dark\\:text-\\[\\#FFAC1C\\]\\/80 { color: rgba(255, 172, 28, 0.8); }
+            
+            .text-\\[\\#1D4ED8\\] { color: #1D4ED8; }
+            .dark .dark\\:text-\\[\\#1D4ED8\\]\\/80 { color: rgba(29, 78, 216, 0.8); }
+        `;
+        document.head.appendChild(style);
+    }
+};
+
+// Pripočítame CSS štýly hneď po načítaní
+addCustomStyles();
 
 // Počúvanie udalosti globalDataUpdated, ktorá je odoslaná, keď sú dáta používateľa k dispozícii
 window.addEventListener('globalDataUpdated', (event) => {
