@@ -1936,7 +1936,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                   React.createElement('h4', { className: 'text-xl font-semibold mb-4' }, selectedPlace.name || '(bez názvu)'),
                   React.createElement('p', { className: 'text-gray-600 mb-3' },
                     React.createElement('strong', null, 'Typ: '),
-                    electedPlace.type === 'ubytovanie' && selectedPlace.accommodationType ? `${typeLabels[selectedPlace.type]} (${selectedPlace.accommodationType})` : typeLabels[selectedPlace.type] || selectedPlace.type || '(nevyplnený)'
+                    selectedPlace.type === 'ubytovanie' && selectedPlace.accommodationType ? `${typeLabels[selectedPlace.type]} (${selectedPlace.accommodationType})` : typeLabels[selectedPlace.type] || selectedPlace.type || '(nevyplnený)'
                   ),
                   (selectedPlace.capacity && (selectedPlace.type === 'ubytovanie' || selectedPlace.type === 'stravovanie')) &&
                     React.createElement('p', { className: 'text-gray-600 mb-3 flex items-center gap-2' },
