@@ -151,12 +151,14 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     if (icon) {
                         icon.style.color = '#1F2937';
                         icon.classList.add('dark:text-[#1F2937]/90');
+                        icon.classList.add('hover:text-white', 'hover:dark:text-white');
                     }
                 } else {
                     const icon = link.querySelector('svg');
                     if (icon) {
                         icon.style.color = '';
                         icon.classList.remove('dark:text-[#1F2937]/90');
+                        icon.classList.remove('hover:text-white', 'hover:dark:text-white');
                     }
                 }
             }
@@ -453,6 +455,11 @@ const addCustomStyles = () => {
                 transition: background-color 200ms ease, color 200ms ease;
             }
             
+            /* Animácia pre ikony */
+            #left-menu a svg {
+                transition: color 200ms ease;
+            }
+            
             /* #F9FAFB pozadie pre aktívny odkaz */
             .bg-\\[\\#F9FAFB\\] { background-color: #F9FAFB; }
             .dark .dark\\:bg-gray-800\\/30 { background-color: rgba(31, 41, 55, 0.3); }
@@ -464,6 +471,14 @@ const addCustomStyles = () => {
             /* Biele texty pri hover na aktívnej stránke */
             .hover\\:text-white:hover { color: white; }
             .dark .hover\\:dark\\:text-white:hover { color: white; }
+            
+            /* Biele ikony pri hover na aktívnej stránke */
+            #left-menu a:hover svg.hover\\:text-white {
+                color: white !important;
+            }
+            .dark #left-menu a:hover svg.hover\\:dark\\:text-white {
+                color: white !important;
+            }
             
             /* Bledšie farby pozadia pre rôzne roly */
             .bg-\\[\\#b06835\\]\\/20 { background-color: rgba(176, 104, 53, 0.2); }
