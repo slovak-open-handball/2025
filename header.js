@@ -303,7 +303,9 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
         // AK MAJÚ VYPUNUTÉ NOTIFIKÁCIE, UKONČIŤ - NIE označiť ako seen!
         if (!userProfileData.displayNotifications) {
             console.log("header.js: Notifikácie sú vypnuté, nezobrazujem nové upozornenia.");
-            return; // Iba ukončiť, NIE označiť ako seen!
+            console.log("header.js: displayNotifications hodnota:", userProfileData.displayNotifications);
+            console.log("header.js: Typ hodnoty:", typeof userProfileData.displayNotifications);
+            return;!
         }
 
         // POKRAČOVAŤ LEN AK MAJÚ ZAPNUTÉ NOTIFIKÁCIE
