@@ -2010,7 +2010,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                           );
                       })
                   )
-              )
+              ),
               
               // Stravovanie
               React.createElement('button', {
