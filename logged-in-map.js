@@ -1435,10 +1435,15 @@ const AddGroupsApp = ({ userProfileData }) => {
     // NOVÉ: Upravené funkcie pre tlačidlo Ubytovanie
     const handleAccommodationButtonClick = () => {
         if (activeFilter === 'ubytovanie') {
-            // Ak už je filter aktívny, zobraz dropdown
-            setShowAccommodationTypesDropdown(!showAccommodationTypesDropdown);
-        } else {
-            // Ak filter nie je aktívny, najprv aktivuj filter
+            // Ak už je filter aktívny, zruš ho (zobraz všetky miesta)
+            setActiveFilter(null);
+            setSelectedAccommodationTypeFilter(null);
+            setShowAccommodationTypesDropdown(false);
+            setSelectedPlace(null);
+            setPlaceHash(null);
+            window.goToDefaultView?.();
+        } else {  
+            // Ak filter nie je aktívny, aktivuj filter ubytovanie (všetky typy)
             setActiveFilter('ubytovanie');
             setSelectedAccommodationTypeFilter(null);
             setShowAccommodationTypesDropdown(false);
@@ -1447,6 +1452,12 @@ const AddGroupsApp = ({ userProfileData }) => {
             window.goToDefaultView?.();
         }
     };
+
+    // NOVÉ: Funkcia pre kliknutie na šipku (len rozbalenie/zatvorenie dropdownu)
+    const handleAccommodationArrowClick = (e) => {
+        e.stopPropagation(); // Zastaví event aby sa nespustil handleAccommodationButtonClick
+      setShowAccommodationTypesDropdown(!showAccommodationTypesDropdown);
+    };  
 
     // NOVÉ: Funkcia pre výber všetkých ubytovní
     const handleSelectAllAccommodations = () => {
@@ -1466,7 +1477,6 @@ const AddGroupsApp = ({ userProfileData }) => {
         } else {
             setSelectedAccommodationTypeFilter(type);
         }
-        setShowAccommodationTypesDropdown(false);
         setSelectedPlace(null);
         setPlaceHash(null);
         window.goToDefaultView?.();
@@ -1937,11 +1947,16 @@ const AddGroupsApp = ({ userProfileData }) => {
                                           ? `Ubytovanie (${getSelectedAccommodationTypeLabel()})`
                                           : 'Ubytovanie'
                                   ),
-                                  activeFilter === 'ubytovanie' && React.createElement('i', { 
-                                      className: `fas fa-chevron-down text-xs ml-2 ${
+                                  React.createElement('button', {
+                                      onClick: handleAccommodationArrowClick,
+                                      className: `ml-2 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors ${
                                           activeFilter === 'ubytovanie' ? 'text-gray-700' : 'text-gray-600'
                                       }`
-                                  })
+                                  },
+                                      React.createElement('i', { 
+                                          className: `fas fa-chevron-down text-lg transition-transform ${showAccommodationTypesDropdown ? 'transform rotate-180' : ''}`
+                                      })
+                                  )
                               )
                           )
                       )
@@ -1953,7 +1968,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                   },
                       // Položka "Všetky typy"
                       React.createElement('button', {
-                          onClick: handleSelectAllAccommodations,
+                          onClick: () => {
+                              handleSelectAllAccommodations();
+                              setShowAccommodationTypesDropdown(false);
+                          },
                           className: `w-full px-4 py-3 text-left hover:bg-gray-50 flex justify-between items-center ${
                               !selectedAccommodationTypeFilter ? 'bg-gray-100' : ''
                           }`
@@ -1975,7 +1993,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                           const isSelected = selectedAccommodationTypeFilter === item.type;
                           return React.createElement('button', {
                               key: index,
-                              onClick: () => handleSelectAccommodationTypeFilter(item.type),
+                              onClick: () => {
+                                  handleSelectAccommodationTypeFilter(item.type);
+                                  setShowAccommodationTypesDropdown(false);
+                              },
                               className: `w-full px-4 py-3 text-left hover:bg-gray-50 flex justify-between items-center ${
                                   isSelected ? 'bg-gray-100' : ''
                               }`
@@ -1989,7 +2010,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                           );
                       })
                   )
-              ),
+              )
               
               // Stravovanie
               React.createElement('button', {
