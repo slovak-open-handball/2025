@@ -241,7 +241,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             teamsInGroupsLink.classList.remove('hidden');
             mapLink?.classList.remove('hidden');
             teamsAccommodationLink?.classList.remove('hidden');
-
+    
             const unreadCount = userProfileData.unreadNotificationCount || 0;
             if (notificationsTextWithCount) {
                 if (unreadCount > 0) {
@@ -250,7 +250,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     notificationsTextWithCount.textContent = 'Upozornenia';
                 }
             }
-
+    
             if (notificationBadgeCount) {
                 if (unreadCount > 0) {
                     notificationBadgeCount.textContent = unreadCount.toString();
@@ -259,7 +259,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     notificationBadgeCount.classList.add('hidden');
                 }
             }
-
+    
         } else if (userProfileData.role === 'club') {
             addCategoriesLink.classList.add('hidden');
             addGroupsLink.classList.add('hidden');
@@ -297,7 +297,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                 notificationBadgeCount.classList.add('hidden');
             }
         }
-    };    
+    };
 
     const saveMenuState = async () => {
         if (!userId) {
