@@ -319,6 +319,7 @@ const loadLeftMenu = async (userProfileData) => {
                     // Kontrola, či aktuálna stránka zodpovedá href odkazu
                     if (currentPath.includes(href) || 
                         (href === 'logged-in-my-data.html' && currentPath.includes('my-data')) ||
+                        (href === 'logged-in-rosters.html' && currentPath.includes('rosters')) ||
                         (href === 'logged-in-add-categories.html' && currentPath.includes('add-categories')) ||
                         (href === 'logged-in-add-groups.html' && currentPath.includes('add-groups')) ||
                         (href === 'logged-in-teams-in-accommodation.html' && currentPath.includes('teams-in-accommodation')) ||
