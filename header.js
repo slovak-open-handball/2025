@@ -3,463 +3,58 @@ import { getFirestore, doc, onSnapshot, collection, query, updateDoc, arrayUnion
 import { countryDialCodes } from "./countryDialCodes.js";
 
 let registrationCheckIntervalId = null;
-let unsubscribeFromNotifications = null; 
+let unsubscribeFromNotifications = null;
 window.isRegistrationDataLoaded = false;
 window.isCategoriesDataLoaded = false;
 let isFirestoreListenersSetup = false; 
 window.areCategoriesLoaded = false;
 
-// Vytvorenie bieleho prekryvného obdĺžnika s animovaným kolieskom
-const createWhiteOverlay = () => {
-    // Skontrolujeme, či už existuje
-    const existingOverlay = document.getElementById('zoom-init-overlay');
-    if (existingOverlay) {
-        existingOverlay.remove();
-    }
-    
-    const overlay = document.createElement('div');
-    overlay.id = 'zoom-init-overlay';
-    overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: white;
-        z-index: 999999999999;
-        opacity: 1;
-        transition: opacity 0.5s ease;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    `;
-    
-    // Vytvorenie animovaného kolieska
-    const spinner = document.createElement('div');
-    spinner.id = 'zoom-spinner';
-    spinner.style.cssText = `
-        width: 60px;
-        height: 60px;
-        border: 5px solid #f3f3f3;
-        border-top: 5px solid #47b3ff;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        z-index: 999999999999;
-        box-shadow: 0 4px 20px rgba(71, 179, 255, 0.3);
-    `;
-    
-    // Pridanie CSS animácie
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
-            to { opacity: 1; transform: translateX(-50%) translateY(0); }
-        }
-        
-        @keyframes pulse {
-            0% { opacity: 0.6; }
-            50% { opacity: 1; }
-            100% { opacity: 0.6; }
-        }
-    `;
-    
-    document.head.appendChild(style);
-    overlay.appendChild(spinner);
-    document.body.appendChild(overlay);
-    
-    console.log("Bielý prekryvný obdĺžnik s animovaným kolieskom vytvorený");
-    return overlay;
-};
-
-// Funkcia pre skrytie bieleho prekryvného obdĺžnika
-const hideWhiteOverlay = () => {
-    const overlay = document.getElementById('zoom-init-overlay');
-    const spinner = document.getElementById('zoom-spinner');
-    const spinnerText = document.getElementById('spinner-text');
-    
-    if (spinner) {
-        spinner.style.opacity = '0';
-        spinner.style.transition = 'opacity 0.3s ease';
-    }
-    
-    if (spinnerText) {
-        spinnerText.style.opacity = '0';
-        spinnerText.style.transition = 'opacity 0.3s ease';
-    }
-    
-    if (overlay) {
-        overlay.style.opacity = '0';
-        setTimeout(() => {
-            if (overlay.parentElement) {
-                overlay.remove();
-                console.log("Bielý prekryvný obdĺžnik odstránený");
-            }
-        }, 500);
-    }
-};
-
-// Funkcia pre aktualizáciu textu kolieska (voliteľné)
-const updateSpinnerText = (text) => {
-    const overlay = document.getElementById('zoom-init-overlay');
-    if (!overlay) return;
-    
-    // Odstrániť starý text, ak existuje
-    const oldText = document.getElementById('spinner-text');
-    if (oldText) {
-        oldText.remove();
-    }
-    
-    if (text) {
-        const textElement = document.createElement('div');
-        textElement.id = 'spinner-text';
-        textElement.textContent = text;
-        textElement.style.cssText = `
-            position: absolute;
-            top: calc(50% + 50px);
-            left: 50%;
-            transform: translateX(-50%);
-            color: #47b3ff;
-            font-size: 14px;
-            font-weight: 600;
-            text-align: center;
-            z-index: 999999999999;
-            animation: fadeIn 0.5s ease, pulse 2s ease-in-out infinite;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 8px 16px;
-            border-radius: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        `;
-        
-        overlay.appendChild(textElement);
-    }
-};
-
-// Funkcia pre nastavenie priblíženia na 80% (skutočná simulácia Ctrl+-)
-const setZoomTo80Percent = () => {
-    
-    // Aktualizovať text kolieska
-    updateSpinnerText("Načítava sa...");
-    
-    // Metóda 1: CSS zoom property (podporované v Chrome, Edge)
-    const setZoomWithCSS = () => {
-        const targetZoom = 80;
-        localStorage.setItem('pageZoom', targetZoom);
-        
-        // Resetovať predchádzajúce transformácie
-        document.body.style.transform = '';
-        document.body.style.transformOrigin = '';
-        document.documentElement.style.transform = '';
-        document.documentElement.style.transformOrigin = '';
-        
-        // Skúsime rôzne metódy pre rôzne prehliadače
-        const htmlElement = document.documentElement;
-        const bodyElement = document.body;
-        
-        // Metóda A: CSS zoom (najlepšia pre Chrome)
-        if ('zoom' in htmlElement.style) {
-            htmlElement.style.zoom = `${targetZoom}%`;
-            console.log("Použitá CSS zoom property");
-            return true;
-        }
-        
-        // Metóda B: transform na body s viewport kompenzáciou
-        bodyElement.style.transform = `scale(${targetZoom / 100})`;
-        bodyElement.style.transformOrigin = 'top center';
-        bodyElement.style.width = '125%'; // Kompenzácia: 100/80 = 1.25
-        bodyElement.style.marginLeft = '-12.5%'; // Centrovanie
-        bodyElement.style.overflowX = 'hidden';
-        
-        // Pre fixované elementy: musíme ich umiestniť relatívne
-        const fixedElements = document.querySelectorAll('*[style*="fixed"], .fixed, [class*="fixed"]');
-        fixedElements.forEach(el => {
-            const rect = el.getBoundingClientRect();
-            const computedStyle = window.getComputedStyle(el);
-            
-            // Ak je element fixovaný
-            if (computedStyle.position === 'fixed') {
-                // Pre pravý dolný roh
-                if (computedStyle.right === '0px' || computedStyle.bottom === '0px') {
-                    // Pridáme wrapper pre fixované elementy
-                    if (!el.parentElement.classList.contains('zoom-fixed-wrapper')) {
-                        const wrapper = document.createElement('div');
-                        wrapper.className = 'zoom-fixed-wrapper';
-                        wrapper.style.position = 'fixed';
-                        wrapper.style.right = computedStyle.right;
-                        wrapper.style.bottom = computedStyle.bottom;
-                        wrapper.style.zIndex = computedStyle.zIndex;
-                        
-                        el.parentElement.insertBefore(wrapper, el);
-                        wrapper.appendChild(el);
-                        
-                        // Upravíme pozíciu vnútri wrappera
-                        el.style.position = 'absolute';
-                        el.style.right = '0';
-                        el.style.bottom = '0';
-                    }
-                }
-            }
-        });
-        
-        console.log("Použitá CSS transform metóda s kompenzáciou");
-        return false;
-    };
-    
-    // Metóda 2: Viewport meta tag manipulation (najlepšia pre všetky prehliadače)
-    const setZoomWithViewport = () => {
-        const targetZoom = 80;
-        localStorage.setItem('pageZoom', targetZoom);
-        
-        // Získame aktuálny viewport tag alebo vytvoríme nový
-        let viewport = document.querySelector('meta[name="viewport"]');
-        
-        if (!viewport) {
-            viewport = document.createElement('meta');
-            viewport.name = 'viewport';
-            document.head.appendChild(viewport);
-        }
-        
-        // Vypočítame scale pre viewport
-        const scale = targetZoom / 100;
-        
-        // Nastavíme viewport content
-        const initialScale = Math.min(scale, 1.0);
-        const maximumScale = Math.max(scale, 1.0);
-        const userScalable = scale !== 1.0 ? 'yes' : 'no';
-        
-        viewport.content = `width=device-width, initial-scale=${initialScale}, maximum-scale=${maximumScale}, user-scalable=${userScalable}`;
-        
-        // Pre desktop: použijeme aj CSS transform s viewport kompenzáciou
-        if (window.innerWidth > 768) { // Desktop
-            document.body.style.transform = `scale(${scale})`;
-            document.body.style.transformOrigin = 'top center';
-            
-            // Kompenzácia veľkosti
-            const scaleFactor = 1 / scale;
-            document.body.style.width = `${scaleFactor * 100}%`;
-            document.body.style.marginLeft = `${(scaleFactor - 1) * 50}%`;
-        }
-        
-        console.log("Použitá viewport metóda");
-        return true;
-    };
-    
-    // Skúsime najprv CSS zoom
-    let success = setZoomWithCSS();
-    
-    // Ak nefunguje, skúsime viewport metódu
-    if (!success) {
-        setTimeout(() => {
-            updateSpinnerText("Načítava sa...");
-            setTimeout(() => {
-                success = setZoomWithViewport();
-            }, 300);
-        }, 300);
-    }
-    
-    // Aktualizovať text pred dokončením
-    setTimeout(() => {
-        updateSpinnerText("Načítava sa...");
-    }, 600);
-    
-    // Zobrazíme spätnú väzbu
-    setTimeout(() => {
-        showZoomFeedback(80);
-    }, 800);
-    
-    // Pre istotu pridáme aj event listener pre resize
-    setTimeout(() => {
-        window.dispatchEvent(new Event('resize'));
-    }, 300);
-};
-
-// Funkcia pre obnovenie pôvodného priblíženia
-const resetZoom = () => {
-    // Aktualizovať text kolieska
-    updateSpinnerText("Načítava sa...");
-    
-    localStorage.setItem('pageZoom', 100);
-    
-    // Reset všetkých metód
-    document.body.style.transform = '';
-    document.body.style.transformOrigin = '';
-    document.body.style.width = '';
-    document.body.style.marginLeft = '';
-    document.body.style.overflowX = '';
-    
-    document.documentElement.style.transform = '';
-    document.documentElement.style.transformOrigin = '';
-    document.documentElement.style.zoom = '';
-    document.documentElement.style.fontSize = '';
-    
-    // Reset viewport
-    const viewport = document.querySelector('meta[name="viewport"]');
-    if (viewport) {
-        viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
-    }
-    
-    // Odstrániť wrappery pre fixované elementy
-    document.querySelectorAll('.zoom-fixed-wrapper').forEach(wrapper => {
-        const child = wrapper.firstElementChild;
-        if (child) {
-            // Obnoviť pôvodné štýly
-            child.style.position = '';
-            child.style.right = '';
-            child.style.bottom = '';
-            
-            // Presunúť späť
-            wrapper.parentElement.insertBefore(child, wrapper);
-            wrapper.remove();
-        }
-    });
-    
-    console.log("Priblíženie obnovené na 100%");
-    
-    // Aktualizovať text pred dokončením
-    setTimeout(() => {
-        updateSpinnerText("Načítava sa...");
-    }, 500);
-    
-    setTimeout(() => {
-        showZoomFeedback(100);
-    }, 800);
-};
-
-// Funkcia pre vizuálnu spätnú väzbu
-const showZoomFeedback = (zoomLevel) => {
-    // Najprv odstránime existujúcu spätnú väzbu, ak nejaká existuje
-    const existingFeedback = document.getElementById('zoom-feedback');
-    if (existingFeedback) {
-        existingFeedback.remove();
-    }
-    
-    // Vytvoríme novú spätnú väzbu
-    const feedback = document.createElement('div');
-    feedback.id = 'zoom-feedback';
-    feedback.textContent = `Priblíženie: ${zoomLevel}%`;
-    feedback.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        background: rgba(0,0,0,0.85);
-        color: white;
-        padding: 10px 20px;
-        border-radius: 8px;
-        z-index: 999999999999;
-        font-size: 14px;
-        font-weight: bold;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        border: 2px solid #47b3ff;
-        animation: fadeIn 0.5s ease;
-    `;
-    document.body.appendChild(feedback);
-    
-    // Po zobrazení spätnej väzby skryjeme biely prekryvný obdĺžnik
-    setTimeout(() => {
-        hideWhiteOverlay();
-        console.log("Spätná väzba o priblížení sa zobrazila, biely prekryvný obdĺžnik sa skrýva");
-    }, 300);
-    
-    // Postupne zmizne spätná väzba
-    setTimeout(() => {
-        feedback.style.opacity = '0';
-        feedback.style.transition = 'opacity 0.5s ease';
-        setTimeout(() => {
-            if (feedback.parentElement) {
-                feedback.remove();
-            }
-        }, 500);
-    }, 2000);
-};
-
-// Inicializácia priblíženia pri načítaní stránky
-const initializeZoom = () => {
-    // Vytvoríme biely prekryvný obdĺžnik s animovaným kolieskom hneď na začiatku
-    createWhiteOverlay();
-    
-    const savedZoom = localStorage.getItem('pageZoom');
-    if (savedZoom && parseFloat(savedZoom) !== 100) {
-        console.log(`Nájdené priblíženie: ${savedZoom}%`);
-        updateSpinnerText(`Načítava sa...`);
-    } else {
-        updateSpinnerText("Načítava sa...");
-    }
-};
-
-// Funkcie pre konzolu
-window.setZoom80 = () => {
-    // Zobraziť biely prekryvný obdĺžnik s animovaným kolieskom pred zmenou priblíženia
-    createWhiteOverlay();
-    updateSpinnerText("Načítava sa...");
-    setZoomTo80Percent();
-};
-
-window.testResetZoom = () => {
-    // Zobraziť biely prekryvný obdĺžnik s animovaným kolieskom pred resetom
-    createWhiteOverlay();
-    updateSpinnerText("Načítava sa...");
-    resetZoom();
-};
-
-// Testovacia funkcia pre fixované elementy
-window.testFixedElements = () => {
-    const fixedElements = document.querySelectorAll('[style*="fixed"], .fixed, [class*="fixed"]');
-    console.log(`Nájdené fixované elementy: ${fixedElements.length}`);
-    fixedElements.forEach((el, i) => {
-        const style = window.getComputedStyle(el);
-        console.log(`Element ${i}:`, {
-            tag: el.tagName,
-            class: el.className,
-            position: style.position,
-            top: style.top,
-            right: style.right,
-            bottom: style.bottom,
-            left: style.left
-        });
-    });
-};
-
-// Ostatný kód zostáva rovnaký...
 window.showGlobalNotification = (message, type = 'success') => {
-    let notificationElement = document.getElementById('global-notification');
+  let notificationElement = document.getElementById('global-notification');
 
-    if (!notificationElement) {
-        notificationElement = document.createElement('div');
-        notificationElement.id = 'global-notification';
-        notificationElement.className = `
-            fixed top-4 left-1/2 transform -translate-x-1/2 z-[100]
-            p-4 rounded-lg shadow-lg text-white font-semibold transition-all duration-300 ease-in-out
-            flex items-center space-x-2
-            opacity-0 pointer-events-none
-        `;
-        document.body.appendChild(notificationElement);
-    }
+  if (!notificationElement) {
+    notificationElement = document.createElement('div');
+    notificationElement.id = 'global-notification';
+    notificationElement.className = `
+      fixed top-4 left-1/2 transform -translate-x-1/2 z-[100]
+      p-4 rounded-lg shadow-lg text-white font-semibold transition-all duration-300 ease-in-out
+      flex items-center space-x-2
+      opacity-0 pointer-events-none
+    `;
+    document.body.appendChild(notificationElement);
+  }
 
-    notificationElement.classList.remove('bg-red-600', 'bg-[#3A8D41]');
-    
-    if (type === 'success') {
-        notificationElement.classList.add('bg-[#3A8D41]');
-    } else {
-        notificationElement.classList.add('bg-red-600');
-    }
+  notificationElement.classList.remove('bg-red-600', 'bg-[#3A8D41]');
+  
+  if (type === 'success') {
+    notificationElement.classList.add('bg-[#3A8D41]');
+  } else {
+    notificationElement.classList.add('bg-red-600');
+  }
 
+    // Zobrazenie notifikácie
     setTimeout(() => {
         notificationElement.classList.add('opacity-100', 'pointer-events-auto');
     }, 10);
 
+    // Skrytie notifikácie po 5 sekundách
     setTimeout(() => {
         notificationElement.classList.remove('opacity-100', 'pointer-events-auto');
     }, 7500);
 };
 
+/**
+ * NOVÁ FUNKCIA: Formátuje telefónne číslo na základe predvolieb.
+ * @param {string} phoneNumber - Neformátované telefónne číslo.
+ * @returns {string} Naformátované telefónne číslo.
+ */
 const formatPhoneNumber = (phoneNumber) => {
+    // Odstránime všetky nečíslicové znaky, okrem '+' na začiatku
     const cleaned = phoneNumber.replace(/[^+\d]/g, '');
     let number = cleaned;
 
+    // Nájdeme predvoľbu
+    // Zoznam predvolieb je zoradený zostupne podľa dĺžky, aby sa našla najpresnejšia zhoda
     const sortedDialCodes = countryDialCodes.sort((a, b) => b.dialCode.length - a.dialCode.length);
     let dialCode = '';
 
@@ -471,12 +66,15 @@ const formatPhoneNumber = (phoneNumber) => {
         }
     }
 
+    // Ak sa nenašla žiadna predvoľba, vrátime pôvodné číslo
     if (!dialCode) {
         return phoneNumber;
     }
 
+    // Odstránime medzery, ktoré tam mohli zostať
     number = number.replace(/\s/g, '');
 
+    // Rozdelíme zvyšok čísla do skupín po troch čísliciach
     let formattedNumber = '';
     while (number.length > 0) {
         formattedNumber += number.substring(0, 3);
@@ -489,21 +87,31 @@ const formatPhoneNumber = (phoneNumber) => {
     return `${dialCode} ${formattedNumber}`.trim();
 };
 
+/**
+ * Nová funkcia na formátovanie reťazca notifikácie s bold a italic textom.
+ * Hľadá štyri apostrofy a formátuje text medzi nimi.
+ * @param {string} text - Pôvodný reťazec.
+ * @returns {string} Naformátovaný reťazec.
+ */
 const formatNotificationMessage = (text) => {
+    // Nájdeme indexy apostrofov
     const firstApostrophe = text.indexOf("'");
     const secondApostrophe = text.indexOf("'", firstApostrophe + 1);
     const thirdApostrophe = text.indexOf("'", secondApostrophe + 1);
     const fourthApostrophe = text.indexOf("'", thirdApostrophe + 1);
 
+    // Ak nájdeme všetky štyri apostrofy, naformátujeme text
     if (firstApostrophe !== -1 && secondApostrophe !== -1 && thirdApostrophe !== -1 && fourthApostrophe !== -1) {
         let oldText = text.substring(firstApostrophe + 1, secondApostrophe);
         let newText = text.substring(thirdApostrophe + 1, fourthApostrophe);
 
+        // Skontrolujeme, či ide o telefónne číslo a naformátujeme ho
         if (oldText.startsWith('+') && newText.startsWith('+')) {
             oldText = formatPhoneNumber(oldText);
             newText = formatPhoneNumber(newText);
         }
 
+        // Nahradíme pôvodné časti novými s HTML tagmi
         let formattedText = text.substring(0, firstApostrophe);
         formattedText += `<em>${oldText}</em>`;
         formattedText += text.substring(secondApostrophe + 1, thirdApostrophe);
@@ -513,10 +121,18 @@ const formatNotificationMessage = (text) => {
         return formattedText;
     }
     
+    // Ak sa formát nezhoduje, vrátime pôvodný text
     return text;
 };
 
+/**
+ * Nová funkcia na zobrazenie notifikácie z databázy v pravom hornom rohu.
+ * Vytvorí a spravuje dočasný element, ktorý sa objaví a po čase zmizne.
+ * @param {string} message - Správa notifikácie.
+ * @param {string} type - Typ notifikácie ('success', 'error', 'info').
+ */
 const showDatabaseNotification = (message, type = 'info') => {
+    // Vytvoríme kontajner pre notifikácie, ak ešte neexistuje
     let notificationContainer = document.getElementById('notification-container');
     if (!notificationContainer) {
         notificationContainer = document.createElement('div');
@@ -535,10 +151,10 @@ const showDatabaseNotification = (message, type = 'info') => {
     notificationElement.className = `
         bg-gray-800 text-white p-4 pr-10 rounded-lg shadow-lg
         transform translate-x-full transition-all duration-500 ease-out
-        flex items-center space-x-2"
+        flex items-center space-x-2
     `;
 
-    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔';
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔'; // Použijeme zvonček pre info notifikácie
     
     const formattedMessage = message.replace(/\n/g, '<br>');
 
@@ -548,23 +164,30 @@ const showDatabaseNotification = (message, type = 'info') => {
         <button onclick="document.getElementById('${notificationId}').remove()" class="absolute top-1 right-1 text-gray-400 hover:text-white">&times;</button>
     `;
 
+    // Pridáme novú notifikáciu na koniec kontajnera
     notificationContainer.appendChild(notificationElement);
 
+    // Animácia vstupu notifikácie
     setTimeout(() => {
         notificationElement.classList.remove('translate-x-full');
     }, 10);
 
+    // Animácia zmiznutia po 7 sekundách
     setTimeout(() => {
         notificationElement.classList.add('translate-x-full');
         setTimeout(() => notificationElement.remove(), 500);
     }, 7000);
 };
 
+/**
+ * Funkcia na odhlásenie používateľa
+ */
 const handleLogout = async () => {
     try {
         const auth = getAuth();
         await signOut(auth);
         console.log("header.js: Používateľ bol úspešne odhlásený.");
+//        window.showGlobalNotification('Úspešne ste sa odhlásili.', 'success');
         if (unsubscribeFromNotifications) {
             unsubscribeFromNotifications();
             unsubscribeFromNotifications = null;
@@ -578,22 +201,27 @@ const handleLogout = async () => {
 };
 
 const getHeaderColorByRole = (role) => {
-    switch (role) {
-        case 'admin':
-            return '#47b3ff';
-        case 'hall':
-            return '#b06835';
-        case 'club':
-            return '#9333EA';
-        case 'referee':
-            return '#007800';
-        case 'volunteer':
-            return '#FFAC1C';
-        default:
-            return '#1D4ED8';
+  switch (role) {
+    case 'admin':
+      return '#47b3ff';
+    case 'hall':
+      return '#b06835';
+    case 'club':
+      return '#9333EA';
+    case 'referee':
+      return '#007800';
+    case 'volunteer':
+      return '#FFAC1C';
+    default:
+      return '#1D4ED8';
     }
 }
 
+/**
+ * Funkcia na aktualizáciu viditeľnosti odkazov a farby hlavičky na základe stavu autentifikácie.
+ * Táto funkcia tiež kontroluje, či sú načítané všetky potrebné dáta, a až potom zruší triedu "invisible".
+ * @param {object} userProfileData - Dáta profilu používateľa.
+ */
 const updateHeaderLinks = (userProfileData) => {
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
@@ -605,19 +233,23 @@ const updateHeaderLinks = (userProfileData) => {
         return;
     }
 
+    // NOVÁ PODMIENKA: Ak je stránka register.html, zachováme pôvodnú farbu hlavičky
     if (window.location.pathname.includes('register.html')) {
-        headerElement.style.backgroundColor = '#1D4ED8';
-        headerElement.classList.remove('invisible');
+        headerElement.style.backgroundColor = '#1D4ED8'; // Nastavte pevnú farbu (napr. pôvodnú modrú)
+        headerElement.classList.remove('invisible'); // Zabezpečiť, že hlavička je viditeľná
+        // Zobrazenie/skrytie odkazov pre registračnú stránku
         authLink.classList.remove('hidden');
         profileLink.classList.add('hidden');
         logoutButton.classList.add('hidden');
+        // Skryť odkaz "Registrácia na turnaj" na samotnej registračnej stránke, aby sa necyklovalo
         const registerLink = document.getElementById('register-link');
         if (registerLink) {
             registerLink.classList.add('hidden');
         }
-        return;
+        return; // Ukončíme funkciu, aby sa nepoužila dynamická farba a logika pre ostatné stránky
     }
 
+    // Podmienka pre zobrazenie hlavičky pre ostatné stránky
     if (window.isGlobalAuthReady && window.isRegistrationDataLoaded && window.isCategoriesDataLoaded) {
         if (userProfileData) {
             authLink.classList.add('hidden');
@@ -625,9 +257,10 @@ const updateHeaderLinks = (userProfileData) => {
             logoutButton.classList.remove('hidden');
             headerElement.style.backgroundColor = getHeaderColorByRole(userProfileData.role);
 
+            // VŽDY NASTAVIŤ LISTENER PRE NOTIFIKÁCIE PRE ADMINA, ABY SA AKTUALIZOVAL POČET
             if (userProfileData.role === 'admin') {
                 if (!unsubscribeFromNotifications) {
-                    setupNotificationListenerForAdmin(userProfileData);
+                    setupNotificationListenerForAdmin(userProfileData); // Preposielame userProfileData
                 }
             } else {
                 if (unsubscribeFromNotifications) {
@@ -654,13 +287,20 @@ const updateHeaderLinks = (userProfileData) => {
     }
 };
 
+/**
+ * Funkcia na aktualizáciu viditeľnosti odkazu "Registrácia na turnaj" na základe
+ * aktuálneho dátumu a existencie kategórií.
+ * Odkaz sa zobrazí len vtedy, ak obe podmienky platia súčasne.
+ * @param {object} userProfileData - Dáta profilu používateľa.
+ */
 const updateRegistrationLinkVisibility = (userProfileData) => {
     const registerLink = document.getElementById('register-link');
     if (!registerLink) return;
 
+    // Ak je používateľ prihlásený (userProfileData existuje), skryjeme odkaz "Registrácia na turnaj"
     if (userProfileData) {
         registerLink.classList.add('hidden');
-        return; 
+        return; // Ukončíme funkciu, aby sa neriešili ďalšie podmienky
     }
 
     const isRegistrationOpen = window.registrationDates && new Date() >= window.registrationDates.registrationStartDate.toDate() && new Date() <= window.registrationDates.registrationEndDate.toDate();
@@ -668,7 +308,7 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
 
     if (isRegistrationOpen && hasCategories) {
         registerLink.classList.remove('hidden');
-        if (userProfileData) { 
+        if (userProfileData) { // Táto podmienka je teraz redundantná, ale ponechávam pre istotu
             registerLink.href = 'logged-in-registration.html';
         } else {
             registerLink.href = 'register.html';
@@ -678,6 +318,11 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
     }
 };
 
+/**
+ * NOVÁ FUNKCIA: Nastaví listener pre notifikácie admina.
+ * Počúva na zmeny v kolekcii /notifications a zobrazuje nové správy.
+ * @param {object} userProfileData - Dáta profilu používateľa (potrebné pre displayNotifications).
+ */
 const setupNotificationListenerForAdmin = (userProfileData) => {
     if (!window.db) {
         console.warn("header.js: Firestore databáza nie je inicializovaná pre notifikácie.");
@@ -694,13 +339,15 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
         const auth = getAuth();
         const userId = auth.currentUser ? auth.currentUser.uid : null;
 
-        if (!userId) {
+        if (!userId) { // Ak nie je prihlásený používateľ, nemá zmysel spracovávať notifikácie
             return;
         }
 
         let unreadCount = 0;
+        // Načítame všetky notifikácie pre správne spočítanie neprečítaných
         const allNotifications = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
 
+        // Spočítame neprečítané správy pre aktuálneho používateľa
         allNotifications.forEach(notification => {
             const seenBy = notification.data.seenBy || [];
             if (!seenBy.includes(userId)) {
@@ -708,32 +355,39 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
             }
         });
 
+        // VŽDY AKTUALIZUJEME globalUserProfileData s novým počtom neprečítaných notifikácií
         if (window.globalUserProfileData) {
             window.globalUserProfileData.unreadNotificationCount = unreadCount;
+            // Odošleme udalosť, aby sa zmeny prejavili v ľavom menu
             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
             console.log("header.js: GlobalUserProfileData aktualizované s počtom neprečítaných notifikácií:", unreadCount);
         }
 
+        // Zobrazenie vyskakovacích notifikácií je podmienené nastavením displayNotifications
         if (userProfileData.displayNotifications) {
+            // Zobrazíme súhrnnú notifikáciu o neprečítaných správach, ak sú splnené podmienky
             if (unreadCount >= 3) {
                 let message = '';
                 if (unreadCount >= 5) {
                     message = `Máte ${unreadCount} nových neprečítaných upozornení.`;
-                } else {
+                } else { // unreadCount je 3 alebo 4
                     message = `Máte ${unreadCount} nové neprečítané upozornenia.`;
                 }
                 showDatabaseNotification(message, 'info');
 
+                // Ukončíme spracovanie, aby sa nezobrazovali individuálne notifikácie,
+                // a správy sa neoznačujú ako prečítané, ak je súhrnná notifikácia.
                 return; 
             }
 
+            // Ak unreadCount je menší ako 3 (alebo displayNotifications je true), spracujeme jednotlivé nové notifikácie
             snapshot.docChanges().forEach(async (change) => {
                 if (change.type === "added") {
                     const newNotification = change.doc.data();
                     const notificationId = change.doc.id;
                     
                     const seenBy = newNotification.seenBy || [];
-                    if (!seenBy.includes(userId)) {
+                    if (!seenBy.includes(userId)) { // Spracujeme len tie, ktoré používateľ ešte nevidel
                         console.log("header.js: Nová notifikácia prijatá a nebola videná používateľom:", newNotification);
                         
                         let changesMessage = '';
@@ -743,7 +397,7 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                             
                             const formattedChanges = newNotification.changes.map(changeString => formatNotificationMessage(changeString));
                             
-                            changesMessage += formattedChanges.join('<br>');
+                            changesMessage += formattedChanges.join('<br>'); // Používame <br> pre zalomenie riadkov
                         } else if (typeof newNotification.changes === 'string') {
                             changesMessage = `Používateľ ${newNotification.userEmail} zmenil tento údaj:\n${formatNotificationMessage(newNotification.changes)}`;
                         } else {
@@ -754,6 +408,7 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                         
                         const notificationDocRef = doc(window.db, "notifications", notificationId);
                         try {
+                            // Tieto individuálne notifikácie sa označia ako videné
                             await updateDoc(notificationDocRef, {
                                 seenBy: arrayUnion(userId)
                             });
@@ -765,24 +420,29 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
             });
         }
     }, (error) => {
-        console.error("header.js: Chyba pri počúvaní notifikácií:", error);
+            console.error("header.js: Chyba pri počúvaní notifikácií:", error);
     });
 
     console.log("header.js: Listener pre notifikácie admina nastavený.");
 };
 
+
+// Počúva na zmeny v dokumentoch Firestore a aktualizuje stav registrácie
 const setupFirestoreListeners = () => {
+    // Kontrolujeme, či je window.db už inicializované
     if (!window.db) {
         console.warn("header.js: Firestore databáza nie je inicializovaná. Odkladám nastavenie listenerov.");
-        return;
+        return; // Ak window.db nie je dostupné, ukončíme funkciu
     }
 
+    // Ak už sú listenery nastavené, nebudeme ich nastavovať znova
     if (isFirestoreListenersSetup) {
         console.log("header.js: Listenery Firestore sú už nastavené.");
         return;
     }
 
     try {
+        // Listener pre registračné dáta
         const registrationDocRef = doc(window.db, "settings", "registration");
         onSnapshot(registrationDocRef, (docSnap) => {
             if (docSnap.exists()) {
@@ -792,14 +452,15 @@ const setupFirestoreListeners = () => {
                 window.registrationDates = null;
                 console.warn("header.js: Dokument 'settings/registration' nebol nájdený!");
             }
-            window.isRegistrationDataLoaded = true; 
+            window.isRegistrationDataLoaded = true; // Dáta o registrácii sú načítané
             updateHeaderLinks(window.globalUserProfileData);
         }, (error) => {
             console.error("header.js: Chyba pri počúvaní dát o registrácii:", error);
-            window.isRegistrationDataLoaded = true; 
+            window.isRegistrationDataLoaded = true; // Označíme ako načítané aj pri chybe, aby sa hlavička mohla zobraziť
             updateHeaderLinks(window.globalUserProfileData);
         });
 
+        // Listener pre kategórie
         const categoriesDocRef = doc(window.db, "settings", "categories");
         onSnapshot(categoriesDocRef, (docSnap) => {
             if (docSnap.exists()) {
@@ -810,30 +471,34 @@ const setupFirestoreListeners = () => {
                 window.hasCategories = false;
                 console.warn("header.js: Dokument 'settings/categories' nebol nájdený!");
             }
-            window.isCategoriesDataLoaded = true;
+            window.isCategoriesDataLoaded = true; // Dáta o kategóriách sú načítané
+            // NOVINKA: Odoslanie udalosti, že kategórie boli načítané
             window.areCategoriesLoaded = true;
             window.dispatchEvent(new CustomEvent('categoriesLoaded'));
             console.log("header.js: Odoslaná udalosť 'categoriesLoaded'.");
             updateHeaderLinks(window.globalUserProfileData);
         }, (error) => {
             console.error("header.js: Chyba pri počúvaní dát o kategóriách:", error);
-            window.isCategoriesDataLoaded = true; 
+            window.isCategoriesDataLoaded = true; // Označíme ako načítané aj pri chybe
             window.areCategoriesLoaded = true;
             window.dispatchEvent(new CustomEvent('categoriesLoaded'));
             console.log("header.js: Odoslaná udalosť 'categoriesLoaded' (s chybou).");
             updateHeaderLinks(window.globalUserProfileData);
         });
 
+        // Spustíme časovač, ktorý každú sekundu kontroluje aktuálny čas a aktualizuje viditeľnosť odkazu
         if (registrationCheckIntervalId) {
             clearInterval(registrationCheckIntervalId);
         }
         registrationCheckIntervalId = setInterval(() => {
+            // Kontrola beží každú sekundu, ale len ak máme potrebné dáta
             if (window.registrationDates) {
                 updateRegistrationLinkVisibility(window.globalUserProfileData);
             }
-        }, 1000); 
+        }, 1000); // 1000 ms = 1 sekunda
         console.log("header.js: Časovač pre kontrolu registrácie spustený.");
         
+        // Zabezpečíme, že sa časovač zruší, keď používateľ opustí stránku
         window.addEventListener('beforeunload', () => {
             if (registrationCheckIntervalId) {
                 clearInterval(registrationCheckIntervalId);
@@ -841,7 +506,7 @@ const setupFirestoreListeners = () => {
             }
         });
 
-        isFirestoreListenersSetup = true;
+        isFirestoreListenersSetup = true; // Označíme, že listenery sú nastavené
         console.log("header.js: Firestore listenery boli úspešne nastavené.");
 
     } catch (error) {
@@ -849,6 +514,10 @@ const setupFirestoreListeners = () => {
     }
 };
 
+/**
+ * Hlavná funkcia na načítanie hlavičky a pripojenie skriptov.
+ * Načítava header.html a vkladá ho do placeholderu.
+ */
 window.loadHeaderAndScripts = async () => {
     try {
         const headerPlaceholder = document.getElementById('header-placeholder');
@@ -861,12 +530,14 @@ window.loadHeaderAndScripts = async () => {
             headerPlaceholder.innerHTML = headerHtml;
         }
 
+        // Po načítaní hlavičky pridáme event listener na tlačidlo odhlásenia
         const logoutButton = document.getElementById('logout-button');
         if (logoutButton) {
             logoutButton.addEventListener('click', handleLogout);
             console.log("header.js: Listener pre tlačidlo odhlásenia bol pridaný.");
         }
 
+        // Pridáme listener na udalosť, ktorú posiela 'authentication.js'
         window.addEventListener('globalDataUpdated', (event) => {
             console.log('header.js: Prijatá udalosť "globalDataUpdated". Aktualizujem hlavičku.');
             window.isGlobalAuthReady = true; 
@@ -874,10 +545,11 @@ window.loadHeaderAndScripts = async () => {
             updateHeaderLinks(event.detail);
         });
 
+        // Ak už je autentifikácia pripravená pri načítaní tohto skriptu, spustíme listenery manuálne.
         if (window.isGlobalAuthReady) {
-            console.log('header.js: Autentifikačné dáta sú už načítané, spúšťam listenery Firestore.');
-            setupFirestoreListeners();
-            updateHeaderLinks(window.globalUserProfileData);
+             console.log('header.js: Autentifikačné dáta sú už načítané, spúšťam listenery Firestore.');
+             setupFirestoreListeners();
+             updateHeaderLinks(window.globalUserProfileData);
         }
 
     } catch (error) {
@@ -885,26 +557,7 @@ window.loadHeaderAndScripts = async () => {
     }
 };
 
-// Inicializácia priblíženia pri načítaní stránky
-window.addEventListener('load', () => {
-    initializeZoom();
-    
-    // Nastavíme na 80% po načítaní
-    setTimeout(() => {
-        const savedZoom = localStorage.getItem('pageZoom');
-        if (!savedZoom || parseFloat(savedZoom) !== 80) {
-            updateSpinnerText("Načítava sa...");
-            setZoomTo80Percent();
-        } else {
-            // Ak už je na 80%, len re-aplikujeme a skryjeme koliesko rýchlejšie
-            updateSpinnerText("Načítava sa...");
-            setTimeout(() => {
-                setZoomTo80Percent();
-            }, 500);
-        }
-    }, 800);
-});
-
+// Spustenie načítania hlavičky, ak DOM už bol načítaný
 if (document.readyState === 'loading') {
     window.addEventListener('DOMContentLoaded', window.loadHeaderAndScripts);
 } else {
