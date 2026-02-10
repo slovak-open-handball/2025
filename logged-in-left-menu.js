@@ -92,6 +92,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                 link.classList.remove(
                     'bg-blue-100', 'dark:bg-blue-900', 
                     'text-blue-600', 'dark:text-blue-300',
+                    'text-[#1F2937]', 'dark:text-[#1F2937]/90',
                     'bg-[#b06835]/20', 'dark:bg-[#b06835]/10',
                     'text-[#b06835]', 'dark:text-[#b06835]/80',
                     'bg-[#9333EA]/20', 'dark:bg-[#9333EA]/10',
@@ -123,7 +124,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
         });
     };
 
-    // NOVINKA: Funkcia na zvýraznenie aktívneho odkazu v menu - BLEDOSIVÉ POZADIE PRE VŠETKÝCH
+    // NOVINKA: Funkcia na zvýraznenie aktívneho odkazu v menu - BLEDOSIVÉ POZADIE A #1F2937 TEXT PRE VŠETKÝCH
     const highlightActiveMenuLinkGray = () => {
         const currentPath = window.location.pathname;
         const menuLinks = document.querySelectorAll('#left-menu a');
@@ -145,7 +146,8 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     'bg-[#FFAC1C]/20', 'dark:bg-[#FFAC1C]/10',
                     'text-[#FFAC1C]', 'dark:text-[#FFAC1C]/80',
                     'bg-[#1D4ED8]/20', 'dark:bg-[#1D4ED8]/10',
-                    'text-[#1D4ED8]', 'dark:text-[#1D4ED8]/80'
+                    'text-[#1D4ED8]', 'dark:text-[#1D4ED8]/80',
+                    'text-[#1F2937]', 'dark:text-[#1F2937]/90'
                 );
                 
                 // Kontrola, či aktuálna stránka zodpovedá href odkazu
@@ -160,8 +162,22 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
                     (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
                     (href === 'logged-in-notifications.html' && currentPath.includes('notifications'))) {
-                    // Pridanie bledosivého pozadia pre všetkých
-                    link.classList.add('bg-gray-100', 'dark:bg-gray-700/30');
+                    // Pridanie bledosivého pozadia a #1F2937 textu pre všetkých
+                    link.classList.add('bg-gray-100', 'dark:bg-gray-700/30', 'text-[#1F2937]', 'dark:text-[#1F2937]/90');
+                    
+                    // Zmeniť farbu SVG ikonky na #1F2937
+                    const icon = link.querySelector('svg');
+                    if (icon) {
+                        icon.style.color = '#1F2937';
+                        icon.classList.add('dark:text-[#1F2937]/90');
+                    }
+                } else {
+                    // Resetovať farbu SVG ikonky pre neaktívne odkazy
+                    const icon = link.querySelector('svg');
+                    if (icon) {
+                        icon.style.color = '';
+                        icon.classList.remove('dark:text-[#1F2937]/90');
+                    }
                 }
             }
         });
@@ -338,7 +354,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     updateMenuText();
     // Zobrazíme odkazy na základe roly
     showRoleBasedLinks();
-    // Zvýrazníme aktívny odkaz - POUŽIJEME BLEDOSIVÉ POZADIE
+    // Zvýrazníme aktívny odkaz - POUŽIJEME BLEDOSIVÉ POZADIE A #1F2937 TEXT
     setTimeout(highlightActiveMenuLinkGray, 100);
     
     // Obsluha kliknutia na tlačidlo
@@ -346,7 +362,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
         isMenuToggled = !isMenuToggled;
         applyMenuState();
         saveMenuState();
-        // Re-apply highlighting after menu animation completes - POUŽIJEME BLEDOSIVÉ POZADIE
+        // Re-apply highlighting after menu animation completes - POUŽIJEME BLEDOSIVÉ POZADIE A #1F2937 TEXT
         setTimeout(highlightActiveMenuLinkGray, 300);
     });
 
@@ -359,7 +375,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             menuSpacer.classList.add('w-64');
             menuTexts.forEach(span => span.classList.remove('opacity-0'));
             // Zrušenie zmeny farby textu "Menu" pri mouseenter, keď je zbalené
-            // Aktualizovať zvýraznenie - POUŽIJEME BLEDOSIVÉ POZADIE
+            // Aktualizovať zvýraznenie - POUŽIJEME BLEDOSIVÉ POZADIE A #1F2937 TEXT
             setTimeout(highlightActiveMenuLinkGray, 100);
         }
     });
@@ -406,7 +422,7 @@ const loadLeftMenu = async (userProfileData) => {
             // Pridanie event listener pre zmenu stránky (popstate)
             window.addEventListener('popstate', () => {
                 setTimeout(() => {
-                    // Znovu inicializovať zvýraznenie menu po zmene stránky - POUŽIJEME BLEDOSIVÉ POZADIE
+                    // Znovu inicializovať zvýraznenie menu po zmene stránky - POUŽIJEME BLEDOSIVÉ POZADIE A #1F2937 TEXT
                     const currentPath = window.location.pathname;
                     const menuLinks = document.querySelectorAll('#left-menu a');
 
@@ -425,7 +441,8 @@ const loadLeftMenu = async (userProfileData) => {
                                 'bg-[#FFAC1C]/20', 'dark:bg-[#FFAC1C]/10',
                                 'text-[#FFAC1C]', 'dark:text-[#FFAC1C]/80',
                                 'bg-[#1D4ED8]/20', 'dark:bg-[#1D4ED8]/10',
-                                'text-[#1D4ED8]', 'dark:text-[#1D4ED8]/80'
+                                'text-[#1D4ED8]', 'dark:text-[#1D4ED8]/80',
+                                'text-[#1F2937]', 'dark:text-[#1F2937]/90'
                             );
                             
                             if (currentPath.includes(href) || 
@@ -439,8 +456,22 @@ const loadLeftMenu = async (userProfileData) => {
                                 (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
                                 (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
                                 (href === 'logged-in-notifications.html' && currentPath.includes('notifications'))) {
-                                // Pridanie bledosivého pozadia pre všetkých
-                                link.classList.add('bg-gray-100', 'dark:bg-gray-700/30');
+                                // Pridanie bledosivého pozadia a #1F2937 textu pre všetkých
+                                link.classList.add('bg-gray-100', 'dark:bg-gray-700/30', 'text-[#1F2937]', 'dark:text-[#1F2937]/90');
+                                
+                                // Zmeniť farbu SVG ikonky na #1F2937
+                                const icon = link.querySelector('svg');
+                                if (icon) {
+                                    icon.style.color = '#1F2937';
+                                    icon.classList.add('dark:text-[#1F2937]/90');
+                                }
+                            } else {
+                                // Resetovať farbu SVG ikonky pre neaktívne odkazy
+                                const icon = link.querySelector('svg');
+                                if (icon) {
+                                    icon.style.color = '';
+                                    icon.classList.remove('dark:text-[#1F2937]/90');
+                                }
                             }
                         }
                     });
@@ -473,6 +504,10 @@ const addCustomStyles = () => {
             /* Bledosivé pozadie pre aktívny odkaz */
             .bg-gray-100 { background-color: rgba(243, 244, 246, 1); }
             .dark .dark\\:bg-gray-700\\/30 { background-color: rgba(55, 65, 81, 0.3); }
+            
+            /* Farby textu #1F2937 */
+            .text-\\[\\#1F2937\\] { color: #1F2937; }
+            .dark .dark\\:text-\\[\\#1F2937\\]\\/90 { color: rgba(31, 41, 55, 0.9); }
             
             /* Bledšie farby pozadia pre rôzne roly */
             .bg-\\[\\#b06835\\]\\/20 { background-color: rgba(176, 104, 53, 0.2); }
