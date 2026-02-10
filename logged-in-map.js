@@ -1931,8 +1931,8 @@ const AddGroupsApp = ({ userProfileData }) => {
               },
 
                 React.createElement('div', { className: 'flex items-start w-full' },
-                  React.createElement('div', { className: 'w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3 mt-1' },
-                    React.createElement('i', { className: 'fa-solid fa-futbol text-red-600 text-2xl' })
+                  React.createElement('div', { className: 'w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mr-3 mt-1' },
+                    React.createElement('i', { className: 'fa-solid fa-futbol text-red-600 text-3xl' })
                   ),
                   React.createElement('div', { className: 'flex-1 text-left' },
                     React.createElement('p', { className: 'text-3xl font-bold text-gray-800 leading-tight' }, 
@@ -1959,8 +1959,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                       }`
                   },
                       React.createElement('div', { className: 'flex items-start w-full' },
-                          React.createElement('div', { className: 'w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mr-3 mt-1' },
-                              React.createElement('i', { className: 'fa-solid fa-bed text-gray-600 text-2xl' })
+                          React.createElement('div', { className: 'w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mr-3 mt-1' },
+                              React.createElement('i', { className: 'fa-solid fa-bed text-gray-600 text-3xl' })
                           ),
                           React.createElement('div', { className: 'flex-1 text-left' },
                               React.createElement('p', { className: 'text-3xl font-bold text-gray-800 leading-tight' }, 
@@ -2058,8 +2058,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                 }`
               },
                 React.createElement('div', { className: 'flex items-start w-full' },
-                  React.createElement('div', { className: 'w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3 mt-1' },
-                    React.createElement('i', { className: 'fa-solid fa-utensils text-green-600 text-2xl' })
+                  React.createElement('div', { className: 'w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mr-3 mt-1' },
+                    React.createElement('i', { className: 'fa-solid fa-utensils text-green-600 text-3xl' })
                   ),
                   React.createElement('div', { className: 'flex-1 text-left' },
                     React.createElement('p', { className: 'text-3xl font-bold text-gray-800 leading-tight' }, 
@@ -2089,8 +2089,8 @@ const AddGroupsApp = ({ userProfileData }) => {
                 }`
               },
                 React.createElement('div', { className: 'flex items-start w-full' },
-                  React.createElement('div', { className: 'w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3 mt-1' },
-                    React.createElement('i', { className: 'fa-solid fa-bus text-blue-600 text-2xl' })
+                  React.createElement('div', { className: 'w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mr-3 mt-1' },
+                    React.createElement('i', { className: 'fa-solid fa-bus text-blue-600 text-3xl' })
                   ),
                   React.createElement('div', { className: 'flex-1 text-left' },
                     React.createElement('p', { className: 'text-3xl font-bold text-gray-800 leading-tight' }, 
