@@ -1917,8 +1917,8 @@ const AddGroupsApp = ({ userProfileData }) => {
               React.createElement('button', {
                 onClick: () => { 
                   setActiveFilter(activeFilter === 'sportova_hala' ? null : 'sportova_hala'); 
-                  setSelectedAccommodationTypeFilter(null); // NOVÉ: reset typu ubytovania
-                  setShowAccommodationTypesDropdown(false); // NOVÉ: zatvoriť dropdown
+                  setSelectedAccommodationTypeFilter(null);
+                  setShowAccommodationTypesDropdown(false);
                   setSelectedPlace(null); 
                   setPlaceHash(null); 
                   window.goToDefaultView?.(); 
@@ -1932,13 +1932,13 @@ const AddGroupsApp = ({ userProfileData }) => {
 
                 React.createElement('div', { className: 'flex items-start w-full' },
                   React.createElement('div', { className: 'w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3 mt-1' },
-                    React.createElement('i', { className: 'fa-solid fa-futbol text-red-600 text-lg' })
+                    React.createElement('i', { className: 'fa-solid fa-futbol text-red-600 text-2xl' })
                   ),
                   React.createElement('div', { className: 'flex-1 text-left' },
-                    React.createElement('p', { className: 'text-2xl font-bold text-gray-800 leading-tight' }, 
+                    React.createElement('p', { className: 'text-3xl font-bold text-gray-800 leading-tight' }, 
                       allPlaces.filter(p => p.type === 'sportova_hala').length
                     ),
-                    React.createElement('p', { className: `text-xs font-medium mt-1 leading-tight ${
+                    React.createElement('p', { className: `text-lg font-medium mt-1 leading-tight ${
                       activeFilter === 'sportova_hala' ? 'text-red-700' : 'text-gray-600'
                     }` }, 'Športové haly')
                   )
@@ -1960,16 +1960,16 @@ const AddGroupsApp = ({ userProfileData }) => {
                   },
                       React.createElement('div', { className: 'flex items-start w-full' },
                           React.createElement('div', { className: 'w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mr-3 mt-1' },
-                              React.createElement('i', { className: 'fa-solid fa-bed text-gray-600 text-lg' })
+                              React.createElement('i', { className: 'fa-solid fa-bed text-gray-600 text-2xl' })
                           ),
                           React.createElement('div', { className: 'flex-1 text-left' },
-                              React.createElement('p', { className: 'text-2xl font-bold text-gray-800 leading-tight' }, 
+                              React.createElement('p', { className: 'text-3xl font-bold text-gray-800 leading-tight' }, 
                                   selectedAccommodationTypeFilter 
                                       ? allPlaces.filter(p => p.type === 'ubytovanie' && p.accommodationType === selectedAccommodationTypeFilter).length
                                       : allPlaces.filter(p => p.type === 'ubytovanie').length
                               ),
                               React.createElement('div', { className: 'flex justify-between items-center' },
-                                  React.createElement('p', { className: `text-xs font-medium mt-1 leading-tight ${
+                                  React.createElement('p', { className: `text-lg font-medium mt-1 leading-tight ${
                                       activeFilter === 'ubytovanie' ? 'text-gray-700' : 'text-gray-600'
                                   }` }, 
                                       selectedAccommodationTypeFilter 
@@ -2059,13 +2059,13 @@ const AddGroupsApp = ({ userProfileData }) => {
               },
                 React.createElement('div', { className: 'flex items-start w-full' },
                   React.createElement('div', { className: 'w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3 mt-1' },
-                    React.createElement('i', { className: 'fa-solid fa-utensils text-green-600 text-lg' })
+                    React.createElement('i', { className: 'fa-solid fa-utensils text-green-600 text-2xl' })
                   ),
                   React.createElement('div', { className: 'flex-1 text-left' },
-                    React.createElement('p', { className: 'text-2xl font-bold text-gray-800 leading-tight' }, 
+                    React.createElement('p', { className: 'text-3xl font-bold text-gray-800 leading-tight' }, 
                       allPlaces.filter(p => p.type === 'stravovanie').length
                     ),
-                    React.createElement('p', { className: `text-xs font-medium mt-1 leading-tight ${
+                    React.createElement('p', { className: `text-lg font-medium mt-1 leading-tight ${
                       activeFilter === 'stravovanie' ? 'text-green-700' : 'text-gray-600'
                     }` }, 'Stravovanie')
                   )
@@ -2090,13 +2090,13 @@ const AddGroupsApp = ({ userProfileData }) => {
               },
                 React.createElement('div', { className: 'flex items-start w-full' },
                   React.createElement('div', { className: 'w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3 mt-1' },
-                    React.createElement('i', { className: 'fa-solid fa-bus text-blue-600 text-lg' })
+                    React.createElement('i', { className: 'fa-solid fa-bus text-blue-600 text-2xl' })
                   ),
                   React.createElement('div', { className: 'flex-1 text-left' },
-                    React.createElement('p', { className: 'text-2xl font-bold text-gray-800 leading-tight' }, 
+                    React.createElement('p', { className: 'text-3xl font-bold text-gray-800 leading-tight' }, 
                       allPlaces.filter(p => p.type === 'zastavka').length
                     ),
-                    React.createElement('p', { className: `text-xs font-medium mt-1 leading-tight ${
+                    React.createElement('p', { className: `text-lg font-medium mt-1 leading-tight ${
                       activeFilter === 'zastavka' ? 'text-blue-700' : 'text-gray-600'
                     }` }, 'Zastávky')
                   )
