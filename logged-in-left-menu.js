@@ -305,7 +305,7 @@ const loadLeftMenu = async (userProfileData) => {
 
 
 
-            const highlightActiveMenuLink = () => {
+        const highlightActiveMenuLink = () => {
             const currentPath = window.location.pathname;
             const menuLinks = document.querySelectorAll('#left-menu a');
     
@@ -326,8 +326,8 @@ const loadLeftMenu = async (userProfileData) => {
                         (href === 'logged-in-map.html' && currentPath.includes('map')) ||
                         (href === 'logged-in-tournament-settings.html' && currentPath.includes('logged-in-tournament-settings')) ||
                         (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
-                        (href === 'logged-in-users.html' && currentPath.includes('users')) ||                        
-                        (href === 'logged-in-notifications.html' && currentPath.includes('notifications'))) || {
+                        (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
+                        (href === 'logged-in-notifications.html' && currentPath.includes('notifications')) || {
                         link.classList.add('bg-blue-100', 'dark:bg-blue-900', 'text-blue-600', 'dark:text-blue-300');
                     }
                 }
