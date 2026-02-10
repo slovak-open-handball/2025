@@ -12,6 +12,8 @@ let unsubscribeUserSettings = null;
 let customTooltip = null;
 let observer = null;
 let currentUserId = null;
+let currentHoverElement = null; // Nové: sledujeme aktuálny hover element
+let pendingTooltipRequest = null; // Nové: sledujeme čakajúce požiadavky
 
 // === GLOBÁLNE NASTAVENIE ZOBRAZOVANIA BUBLÍN ===
 function setupTeamBubblesListener() {
@@ -53,7 +55,7 @@ function setupTeamBubblesListener() {
             // AK JE VYPNUTÉ, OKAMŽITE ODSTRÁNIME VŠETKY BUBLINKY A LISTENERY
             if (!shouldShowTeamBubbles) {
                 console.log("[team-info] Bublinky vypnuté - odstraňujem tooltip a listenery");
-                hideTooltip();
+                hideTooltipImmediately(); // Použijeme okamžité skrytie
                 removeAllHoverListeners();
                 
                 // Zastaviť observer
@@ -75,18 +77,27 @@ function setupTeamBubblesListener() {
 
 // === FUNKCIA NA ODSTRÁNENIE VŠETKÝCH HOVER LISTENEROV ===
 function removeAllHoverListeners() {
-    // Odstrániť tooltip
-    hideTooltip();
+    // Zrušiť čakajúcu požiadavku
+    if (pendingTooltipRequest) {
+        clearTimeout(pendingTooltipRequest);
+        pendingTooltipRequest = null;
+    }
+    
+    // Odstrániť tooltip OKAMŽITE
+    hideTooltipImmediately();
+    
     if (customTooltip && customTooltip.parentNode) {
         customTooltip.parentNode.removeChild(customTooltip);
         customTooltip = null;
     }
     
+    // Resetovať aktuálny hover element
+    currentHoverElement = null;
+    
     // Odstrániť všetky listenery
     const elements = document.querySelectorAll('[data-hover-listener-added]');
     elements.forEach(el => {
-        el.removeAttribute('data-hover-listener-added');
-        // Vytvoríme nový element bez listenerov
+        // Odstrániť event listenery
         const newEl = el.cloneNode(true);
         if (el.parentNode) {
             el.parentNode.replaceChild(newEl, el);
@@ -214,6 +225,8 @@ function createOrGetTooltip() {
         customTooltip.style.whiteSpace = 'pre-wrap';
         customTooltip.style.display = 'none';
         customTooltip.style.border = '1px solid #81dca3';
+        customTooltip.style.opacity = '0';
+        customTooltip.style.transition = 'opacity 0.15s ease';
         document.body.appendChild(customTooltip);
     }
     return customTooltip;
@@ -222,7 +235,12 @@ function createOrGetTooltip() {
 function showTooltipUnderElement(text, element) {
     // SKONTROLUJEME, CI MÔŽEME ZOBRAZOVAŤ BUBLINKY
     if (!shouldShowTeamBubbles) {
-        return; // Ak sú bublinky vypnuté, nevytvárame tooltip
+        return;
+    }
+    
+    // Kontrola, či sme stále nad tým istým elementom
+    if (currentHoverElement !== element) {
+        return;
     }
     
     const tt = createOrGetTooltip();
@@ -236,12 +254,35 @@ function showTooltipUnderElement(text, element) {
     tt.style.left = finalLeft + 'px';
     tt.style.top = tooltipTop + 'px';
     tt.style.display = 'block';
+    
+    // Animácia plynulého zobrazenia
+    requestAnimationFrame(() => {
+        tt.style.opacity = '1';
+    });
 }
 
-function hideTooltip() {
+// NOVÁ FUNKCIA: Okamžité skrytie tooltipu
+function hideTooltipImmediately() {
     if (customTooltip) {
-        customTooltip.style.display = 'none';
+        customTooltip.style.opacity = '0';
+        setTimeout(() => {
+            if (customTooltip && customTooltip.style.opacity === '0') {
+                customTooltip.style.display = 'none';
+            }
+        }, 150); // Čas zodpovedá trvaniu prechodu
+        currentHoverElement = null;
+        
+        // Zrušiť čakajúcu požiadavku
+        if (pendingTooltipRequest) {
+            clearTimeout(pendingTooltipRequest);
+            pendingTooltipRequest = null;
+        }
     }
+}
+
+// PÔVODNÁ FUNKCIA (pre spätnú kompatibilitu)
+function hideTooltip() {
+    hideTooltipImmediately();
 }
 
 // === PRIORITNÁ FUNKCIA NA ZÍSKANIE KATEGÓRIE Z DOM ===
@@ -555,110 +596,138 @@ function getElementDistance(el1, el2) {
     
     return distance;
 }
+
 // === VYLEPŠENÁ FUNKCIA NA PRIRADENIE LISTENERA ===
 function addHoverListener(element) {
     // SKONTROLUJEME, CI MÁME POVOLENÉ BUBLINKY
     if (!shouldShowTeamBubbles) {
-        return; // Ak sú bublinky vypnuté, nepridávame listenery
+        return;
     }
     
     if (element.dataset.hoverListenerAdded) return;
     element.dataset.hoverListenerAdded = 'true';
 
+    let elementHoverTimeout = null;
+    let isElementHovered = false;
+
     element.addEventListener('mouseover', async e => {
+        // Kontrola, či sme už nad týmto elementom
+        if (isElementHovered) return;
+        
+        isElementHovered = true;
+        currentHoverElement = element;
+        
+        // Zrušiť predchádzajúci timeout
+        if (elementHoverTimeout) {
+            clearTimeout(elementHoverTimeout);
+        }
+        
         // DVOJITÁ KONTROLA PRE ZABEZPEČENIE
         if (!shouldShowTeamBubbles) {
-            hideTooltip();
+            hideTooltipImmediately();
+            isElementHovered = false;
+            currentHoverElement = null;
             return;
         }
         
-        // Získame text z elementu
-        let visibleText = e.target.textContent.trim();
-        let teamName = visibleText.replace(/^\d+\.\s*/, '').trim();
-        
-        // Odstráňme prípadný prefix kategórie (napr. "Kategória: ")
-        const colonIndex = visibleText.indexOf(':');
-        if (colonIndex !== -1 && colonIndex < visibleText.length - 1) {
-            const beforeColon = visibleText.substring(0, colonIndex).trim();
-            const afterColon = visibleText.substring(colonIndex + 1).trim();
-            
-            // Ak je pred dvojbodkou krátky text (pravdepodobne kategória)
-            if (beforeColon.length < 20 && afterColon.length > 1) {
-                teamName = afterColon.replace(/^\d+\.\s*/, '').trim();
+        // Pridáme malé oneskorenie pre stabilitu
+        elementHoverTimeout = setTimeout(async () => {
+            // Kontrola, či sme stále nad elementom
+            if (!isElementHovered || currentHoverElement !== element) {
+                return;
             }
-        }
-        
-        // Získame rodičovský li element
-        const li = e.target.closest('li');
-        if (!li) return;
-        
-        // ZÍSKAME KATEGÓRIU - VYLEPŠENÁ VERZIA
-        let category = getCategoryFromDOM(li);
-        
-        // Ak máme kategóriu v texte, použijeme ju
-        if (colonIndex !== -1) {
-            const potentialCategory = visibleText.substring(0, colonIndex).trim();
-            if (potentialCategory && potentialCategory.length < 30) {
-                category = potentialCategory;
+            
+            // Získame text z elementu
+            let visibleText = e.target.textContent.trim();
+            let teamName = visibleText.replace(/^\d+\.\s*/, '').trim();
+            
+            // Odstráňme prípadný prefix kategórie (napr. "Kategória: ")
+            const colonIndex = visibleText.indexOf(':');
+            if (colonIndex !== -1 && colonIndex < visibleText.length - 1) {
+                const beforeColon = visibleText.substring(0, colonIndex).trim();
+                const afterColon = visibleText.substring(colonIndex + 1).trim();
+                
+                // Ak je pred dvojbodkou krátky text (pravdepodobne kategória)
+                if (beforeColon.length < 20 && afterColon.length > 1) {
+                    teamName = afterColon.replace(/^\d+\.\s*/, '').trim();
+                }
             }
-        }
-        
-        // Skupina + typ podľa farby
-        let group = 'bez skupiny';
-        let type = 'tím v základnej skupine';
-        
-        const groupHeader = li.closest('.zoom-group-box')?.querySelector('h3, h4');
-        if (groupHeader) group = groupHeader.textContent.trim();
-        
-        if (li.classList.contains('bg-yellow-50')) {
-            type = 'SUPERSTRUCTURE / nadstavbový tím';
-        } else if (li.closest('.bg-blue-100')) {
-            type = 'tím v nadstavbovej skupine';
-        } else if (li.closest('.bg-gray-100')) {
-            type = 'tím v základnej skupine';
-        }
-        
-        // Konzolový výpis
-        console.groupCollapsed(`%c${teamName || '(bez názvu)'}`, 'color:#10b981; font-weight:bold;');
-        console.log(`Viditeľný text: ${visibleText}`);
-        console.log(`Vyčistený názov: ${teamName}`);
-        console.log(`Kategória: ${category}`);
-        console.log(`Skupina: ${group}`);
-        console.log(`Typ: ${type}`);
-        
-        // Získame údaje o tíme
-        const teamData = await lookupTeamInFirestore(teamName, category, group);
-        
-        // Zobraziť bublinu IBA ak sa našli údaje A SÚ POVOLENÉ BUBLINKY
-        if (teamData && shouldShowTeamBubbles) {
-            const playerCount = (teamData.playerDetails || []).length;
-            const womenCount = (teamData.womenTeamMemberDetails || []).length;
-            const menCount = (teamData.menTeamMemberDetails || []).length;
-            const driverMaleCount = (teamData.driverDetailsMale || []).length;
-            const driverFemaleCount = (teamData.driverDetailsFemale || []).length;
             
-            const totalPeople = playerCount + womenCount + menCount + driverMaleCount + driverFemaleCount;
-            const packageName = teamData.packageDetails?.name || '—';
-            const accommodation = teamData.accommodation?.type || '—';
-            const accommodationName = teamData.accommodation?.name || '—'; // Nová premenná pre názov ubytovne
-            const arrivalType = teamData.arrival?.type || '—';
-            const arrivalTime = teamData.arrival?.time ? ` (${teamData.arrival.time})` : '';
-            const displayCategory = teamData.category || category || 'bez kategórie';
+            // Získame rodičovský li element
+            const li = e.target.closest('li');
+            if (!li) {
+                isElementHovered = false;
+                currentHoverElement = null;
+                return;
+            }
             
-            // Zostavíme text tooltipu
-            const teamMemberLines = [];
-            if (playerCount > 0) teamMemberLines.push(`  • hráči: ${playerCount}`);
-            if (womenCount > 0) teamMemberLines.push(`  • člen RT (ženy): ${womenCount}`);
-            if (menCount > 0) teamMemberLines.push(`  • člen RT (muži): ${menCount}`);
-            if (driverMaleCount > 0) teamMemberLines.push(`  • šofér (muži): ${driverMaleCount}`);
-            if (driverFemaleCount > 0) teamMemberLines.push(`  • šofér (ženy): ${driverFemaleCount}`);
+            // ZÍSKAME KATEGÓRIU - VYLEPŠENÁ VERZIA
+            let category = getCategoryFromDOM(li);
             
-            const membersText = teamMemberLines.length > 0 
-                ? teamMemberLines.join('\n')
-                : '  (žiadni členovia tímu v databáze)';
+            // Ak máme kategóriu v texte, použijeme ju
+            if (colonIndex !== -1) {
+                const potentialCategory = visibleText.substring(0, colonIndex).trim();
+                if (potentialCategory && potentialCategory.length < 30) {
+                    category = potentialCategory;
+                }
+            }
             
-            // Upravený text tooltipu s novým riadkom "Ubytovňa:"
-            const tooltipText = `${displayCategory} → ${teamName}
+            // Skupina + typ podľa farby
+            let group = 'bez skupiny';
+            let type = 'tím v základnej skupine';
+            
+            const groupHeader = li.closest('.zoom-group-box')?.querySelector('h3, h4');
+            if (groupHeader) group = groupHeader.textContent.trim();
+            
+            if (li.classList.contains('bg-yellow-50')) {
+                type = 'SUPERSTRUCTURE / nadstavbový tím';
+            } else if (li.closest('.bg-blue-100')) {
+                type = 'tím v nadstavbovej skupine';
+            } else if (li.closest('.bg-gray-100')) {
+                type = 'tím v základnej skupine';
+            }
+            
+            // Konzolový výpis
+            console.groupCollapsed(`%c${teamName || '(bez názvu)'}`, 'color:#10b981; font-weight:bold;');
+            console.log(`Viditeľný text: ${visibleText}`);
+            console.log(`Vyčistený názov: ${teamName}`);
+            console.log(`Kategória: ${category}`);
+            console.log(`Skupina: ${group}`);
+            console.log(`Typ: ${type}`);
+            
+            // Získame údaje o tíme
+            const teamData = await lookupTeamInFirestore(teamName, category, group);
+            
+            // Zobraziť bublinu IBA ak sa našli údaje A SÚ POVOLENÉ BUBLINKY A stále sme nad elementom
+            if (teamData && shouldShowTeamBubbles && isElementHovered && currentHoverElement === element) {
+                const playerCount = (teamData.playerDetails || []).length;
+                const womenCount = (teamData.womenTeamMemberDetails || []).length;
+                const menCount = (teamData.menTeamMemberDetails || []).length;
+                const driverMaleCount = (teamData.driverDetailsMale || []).length;
+                const driverFemaleCount = (teamData.driverDetailsFemale || []).length;
+                
+                const totalPeople = playerCount + womenCount + menCount + driverMaleCount + driverFemaleCount;
+                const packageName = teamData.packageDetails?.name || '—';
+                const accommodation = teamData.accommodation?.type || '—';
+                const accommodationName = teamData.accommodation?.name || '—';
+                const arrivalType = teamData.arrival?.type || '—';
+                const arrivalTime = teamData.arrival?.time ? ` (${teamData.arrival.time})` : '';
+                const displayCategory = teamData.category || category || 'bez kategórie';
+                
+                // Zostavíme text tooltipu
+                const teamMemberLines = [];
+                if (playerCount > 0) teamMemberLines.push(`  • hráči: ${playerCount}`);
+                if (womenCount > 0) teamMemberLines.push(`  • člen RT (ženy): ${womenCount}`);
+                if (menCount > 0) teamMemberLines.push(`  • člen RT (muži): ${menCount}`);
+                if (driverMaleCount > 0) teamMemberLines.push(`  • šofér (muži): ${driverMaleCount}`);
+                if (driverFemaleCount > 0) teamMemberLines.push(`  • šofér (ženy): ${driverFemaleCount}`);
+                
+                const membersText = teamMemberLines.length > 0 
+                    ? teamMemberLines.join('\n')
+                    : '  (žiadni členovia tímu v databáze)';
+                
+                // Upravený text tooltipu s novým riadkom "Ubytovňa:"
+                const tooltipText = `${displayCategory} → ${teamName}
 Počet osôb celkom: ${totalPeople}
 ${membersText}
 
@@ -666,21 +735,55 @@ Balík: ${packageName}
 Ubytovanie: ${accommodation}
 Ubytovňa: ${accommodationName}
 Doprava: ${arrivalType}${arrivalTime}`;
+                
+                showTooltipUnderElement(tooltipText, li);
+            } else if (!shouldShowTeamBubbles) {
+                // Ak sú bublinky vypnuté, nespustíme nič
+                console.log("Bublinky sú vypnuté - nezobrazujem tooltip");
+            } else if (!isElementHovered || currentHoverElement !== element) {
+                // Ak už nie sme nad elementom
+                console.log("Už nie sme nad elementom - preskakujem");
+            } else {
+                // Ak sa tím nenašiel v databáze
+                console.log("→ Tím sa nenašiel v databáze - bublina sa nezobrazí");
+            }
             
-            showTooltipUnderElement(tooltipText, li);
-        } else if (!shouldShowTeamBubbles) {
-            // Ak sú bublinky vypnuté, nespustíme nič
-            console.log("Bublinky sú vypnuté - nezobrazujem tooltip");
-        } else {
-            // Ak sa tím nenašiel v databáze
-            console.log("→ Tím sa nenašiel v databáze - bublina sa nezobrazí");
-        }
-        
-        console.groupEnd();
+            console.groupEnd();
+        }, 50); // Malé oneskorenie pre stabilitu
     });
 
-    element.addEventListener('mouseout', hideTooltip);
-    element.addEventListener('mouseleave', hideTooltip);
+    element.addEventListener('mouseout', (e) => {
+        // Označíme, že už nie sme nad elementom
+        isElementHovered = false;
+        
+        // Zrušiť timeout
+        if (elementHoverTimeout) {
+            clearTimeout(elementHoverTimeout);
+            elementHoverTimeout = null;
+        }
+        
+        // Kontrola, či sa kurzor presunul do tooltipu
+        const relatedTarget = e.relatedTarget;
+        if (relatedTarget && customTooltip && customTooltip.contains(relatedTarget)) {
+            return; // Nechať tooltip zobrazený, ak sa kurzor presunul do neho
+        }
+        
+        // Skryť tooltip
+        hideTooltipImmediately();
+    });
+
+    element.addEventListener('mouseleave', (e) => {
+        // Rýchle skrytie pri opustení elementu
+        isElementHovered = false;
+        currentHoverElement = null;
+        
+        if (elementHoverTimeout) {
+            clearTimeout(elementHoverTimeout);
+            elementHoverTimeout = null;
+        }
+        
+        hideTooltipImmediately();
+    });
 }
 
 // === OPTIMIZOVANÁ INICIALIZÁCIA ===
@@ -692,6 +795,13 @@ function initTeamHoverListeners() {
         console.log("Bublinky sú vypnuté - preskakujem inicializáciu listenerov");
         removeAllHoverListeners();
         return;
+    }
+    
+    // Resetovať stav
+    currentHoverElement = null;
+    if (pendingTooltipRequest) {
+        clearTimeout(pendingTooltipRequest);
+        pendingTooltipRequest = null;
     }
     
     // Odstránime staré listenery
@@ -730,6 +840,10 @@ function initTeamHoverListeners() {
     if (shouldShowTeamBubbles) {
         allTeams.forEach(addHoverListener);
     }
+    
+    // Pridáme listener na tooltip
+    createOrGetTooltip();
+    customTooltip.addEventListener('mouseleave', hideTooltipImmediately);
     
     // Nastavíme MutationObserver pre dynamické zmeny IBA AK SÚ POVOLENÉ BUBLINKY
     if (!observer && shouldShowTeamBubbles) {
