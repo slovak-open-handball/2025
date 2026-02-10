@@ -1456,8 +1456,19 @@ const AddGroupsApp = ({ userProfileData }) => {
     // NOVÉ: Funkcia pre kliknutie na šipku (len rozbalenie/zatvorenie dropdownu)
     const handleAccommodationArrowClick = (e) => {
         e.stopPropagation(); // Zastaví event aby sa nespustil handleAccommodationButtonClick
-      setShowAccommodationTypesDropdown(!showAccommodationTypesDropdown);
-    };  
+        
+        // Ak filter ešte nie je aktivovaný, aktivuj ho
+        if (activeFilter !== 'ubytovanie') {
+            setActiveFilter('ubytovanie');
+            setSelectedAccommodationTypeFilter(null);
+            setSelectedPlace(null);
+            setPlaceHash(null);
+            window.goToDefaultView?.();
+        }
+        
+        // Toggle dropdown menu
+        setShowAccommodationTypesDropdown(!showAccommodationTypesDropdown);
+    }; 
 
     // NOVÉ: Funkcia pre výber všetkých ubytovní
     const handleSelectAllAccommodations = () => {
@@ -1963,7 +1974,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                   ),
                   
                   // Rozbaľovacie menu typov ubytovania (zobrazené iba keď je filter aktívny)
-                  showAccommodationTypesDropdown && activeFilter === 'ubytovanie' && React.createElement('div', {
+                  showAccommodationTypesDropdown && React.createElement('div', {
                       className: 'absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto'
                   },
                       // Položka "Všetky typy"
