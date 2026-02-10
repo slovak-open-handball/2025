@@ -310,7 +310,7 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
             console.log("header.js: Notifikácie sú vypnuté, nezobrazujem nové upozornenia.");
             console.log("header.js: displayNotifications hodnota:", userProfileData.displayNotifications);
             console.log("header.js: Typ hodnoty:", typeof userProfileData.displayNotifications);
-            return;!
+            return;
         }
 
         // POKRAČOVAŤ LEN AK MAJÚ ZAPNUTÉ NOTIFIKÁCIE
