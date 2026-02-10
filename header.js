@@ -337,6 +337,7 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                         
                         showDatabaseNotification(changesMessage, newNotification.type || 'info');
                         
+                        // Pridať používateľa do seenBy LEN AK sú notifikácie zapnuté
                         const notificationDocRef = doc(window.db, "notifications", notificationId);
                         try {
                             await updateDoc(notificationDocRef, {
@@ -349,6 +350,8 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                 }
             });
         }
+        // Ak sú notifikácie vypnuté, NEpridávať používateľa do seenBy
+        // Notifikácie ostanú ako neprečítané
     }, (error) => {
             console.error("header.js: Chyba pri počúvaní notifikácií:", error);
     });
