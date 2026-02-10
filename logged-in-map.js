@@ -236,11 +236,18 @@ const AddGroupsApp = ({ userProfileData }) => {
     const handlePlaceClick = useCallback((place) => {
         setSelectedPlace(place);
         setPlaceHash(place.id);
-        if (leafletMap.current) {
-            leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
+    
+        // Reset filtrov, ak klikáme na miesto
+        if (activeFilter !== place.type) {
+            setActiveFilter(null);
+            setSelectedAccommodationTypeFilter(null);
+            setShowAccommodationTypesDropdown(false);
         }
-        // Scroll se automaticky spustí díky useEffect nad
-    }, []);
+        
+        if (leafletMap.current) {
+          leafletMap.current.setView([place.lat, place.lng], 18, { animate: true });
+        }  
+    }, [activeFilter]);
     
     // Samostatná funkcia – vytvorí sa iba raz
     const handleAddClick = useCallback(async (e) => {
@@ -896,6 +903,9 @@ const AddGroupsApp = ({ userProfileData }) => {
         setEditLunchPrice('');
         setEditDinnerPrice('');
         setMealPriceError(null);
+        setActiveFilter(null);
+        setSelectedAccommodationTypeFilter(null);
+        setShowAccommodationTypesDropdown(false);
         
         if (editMarkerRef.current) {
             if (editMarkerRef.current._clickHandler) {
@@ -1905,7 +1915,14 @@ const AddGroupsApp = ({ userProfileData }) => {
             React.createElement('div', { className: 'grid grid-cols-2 sm:grid-cols-4 gap-3' },
               // Športové haly
               React.createElement('button', {
-                onClick: () => { setActiveFilter(activeFilter === 'sportova_hala' ? null : 'sportova_hala'); setSelectedPlace(null); setPlaceHash(null); window.goToDefaultView?.(); },
+                onClick: () => { 
+                  setActiveFilter(activeFilter === 'sportova_hala' ? null : 'sportova_hala'); 
+                  setSelectedAccommodationTypeFilter(null); 
+                  setShowAccommodationTypesDropdown(false);
+                  setSelectedPlace(null); 
+                  setPlaceHash(null); 
+                  window.goToDefaultView?.(); 
+                }
                 className: `p-3 rounded-lg border-2 transition-all duration-200 flex items-start shadow-sm h-18 ${
                   activeFilter === 'sportova_hala'
                     ? 'bg-red-50 border-red-300 scale-105'
@@ -2025,7 +2042,14 @@ const AddGroupsApp = ({ userProfileData }) => {
               
               // Stravovanie
               React.createElement('button', {
-                onClick: () => { setActiveFilter(activeFilter === 'stravovanie' ? null : 'stravovanie'); setSelectedPlace(null); setPlaceHash(null); window.goToDefaultView?.(); },
+                onClick: () => { 
+                  setActiveFilter(activeFilter === 'stravovanie' ? null : 'stravovanie'); 
+                  setSelectedAccommodationTypeFilter(null); 
+                  setShowAccommodationTypesDropdown(false); 
+                  setSelectedPlace(null); 
+                  setPlaceHash(null); 
+                  window.goToDefaultView?.(); 
+                }
                 className: `p-3 rounded-lg border-2 transition-all duration-200 flex items-start shadow-sm h-18 ${
                   activeFilter === 'stravovanie'
                     ? 'bg-green-50 border-green-300 scale-105'
@@ -2049,7 +2073,14 @@ const AddGroupsApp = ({ userProfileData }) => {
               
               // Zastávky
               React.createElement('button', {
-                onClick: () => { setActiveFilter(activeFilter === 'zastavka' ? null : 'zastavka'); setSelectedPlace(null); setPlaceHash(null); window.goToDefaultView?.(); },
+                onClick: () => { 
+                  setActiveFilter(activeFilter === 'zastavka' ? null : 'zastavka'); 
+                  setSelectedAccommodationTypeFilter(null); 
+                  setShowAccommodationTypesDropdown(false); 
+                  setSelectedPlace(null); 
+                  setPlaceHash(null); 
+                  window.goToDefaultView?.(); 
+                }
                 className: `p-3 rounded-lg border-2 transition-all duration-200 flex items-start shadow-sm h-18 ${
                   activeFilter === 'zastavka'
                     ? 'bg-blue-50 border-blue-300 scale-105'
