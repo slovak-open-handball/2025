@@ -1938,7 +1938,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     React.createElement('p', { className: 'text-3xl font-bold text-gray-800 leading-tight' }, 
                       allPlaces.filter(p => p.type === 'sportova_hala').length
                     ),
-                    React.createElement('p', { className: `text-lg font-medium mt-1 leading-tight ${
+                    React.createElement('p', { className: `text-2xl font-medium mt-1 leading-tight ${
                       activeFilter === 'sportova_hala' ? 'text-red-700' : 'text-gray-600'
                     }` }, 'Športové haly')
                   )
@@ -1969,7 +1969,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                       : allPlaces.filter(p => p.type === 'ubytovanie').length
                               ),
                               React.createElement('div', { className: 'flex justify-between items-center' },
-                                  React.createElement('p', { className: `text-lg font-medium mt-1 leading-tight ${
+                                  React.createElement('p', { className: `text-2xl font-medium mt-1 leading-tight ${
                                       activeFilter === 'ubytovanie' ? 'text-gray-700' : 'text-gray-600'
                                   }` }, 
                                       selectedAccommodationTypeFilter 
@@ -2065,7 +2065,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     React.createElement('p', { className: 'text-3xl font-bold text-gray-800 leading-tight' }, 
                       allPlaces.filter(p => p.type === 'stravovanie').length
                     ),
-                    React.createElement('p', { className: `text-lg font-medium mt-1 leading-tight ${
+                    React.createElement('p', { className: `text-2xl font-medium mt-1 leading-tight ${
                       activeFilter === 'stravovanie' ? 'text-green-700' : 'text-gray-600'
                     }` }, 'Stravovanie')
                   )
@@ -2096,7 +2096,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     React.createElement('p', { className: 'text-3xl font-bold text-gray-800 leading-tight' }, 
                       allPlaces.filter(p => p.type === 'zastavka').length
                     ),
-                    React.createElement('p', { className: `text-lg font-medium mt-1 leading-tight ${
+                    React.createElement('p', { className: `text-2xl font-medium mt-1 leading-tight ${
                       activeFilter === 'zastavka' ? 'text-blue-700' : 'text-gray-600'
                     }` }, 'Zastávky')
                   )
