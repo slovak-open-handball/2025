@@ -51,33 +51,33 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             switch (role) {
                 case 'admin':
                     return { 
-                        bg: 'bg-blue-100 dark:bg-blue-900/30', 
-                        text: 'text-blue-600 dark:text-blue-400'
+                        bgClasses: ['bg-blue-100', 'dark:bg-blue-900/30'], 
+                        textClasses: ['text-blue-600', 'dark:text-blue-400']
                     };
                 case 'hall':
                     return { 
-                        bg: 'bg-[#b06835]/20 dark:bg-[#b06835]/10', 
-                        text: 'text-[#b06835] dark:text-[#b06835]/80'
+                        bgClasses: ['bg-[#b06835]/20', 'dark:bg-[#b06835]/10'], 
+                        textClasses: ['text-[#b06835]', 'dark:text-[#b06835]/80']
                     };
                 case 'club':
                     return { 
-                        bg: 'bg-[#9333EA]/20 dark:bg-[#9333EA]/10', 
-                        text: 'text-[#9333EA] dark:text-[#9333EA]/80'
+                        bgClasses: ['bg-[#9333EA]/20', 'dark:bg-[#9333EA]/10'], 
+                        textClasses: ['text-[#9333EA]', 'dark:text-[#9333EA]/80']
                     };
                 case 'referee':
                     return { 
-                        bg: 'bg-[#007800]/20 dark:bg-[#007800]/10', 
-                        text: 'text-[#007800] dark:text-[#007800]/80'
+                        bgClasses: ['bg-[#007800]/20', 'dark:bg-[#007800]/10'], 
+                        textClasses: ['text-[#007800]', 'dark:text-[#007800]/80']
                     };
                 case 'volunteer':
                     return { 
-                        bg: 'bg-[#FFAC1C]/20 dark:bg-[#FFAC1C]/10', 
-                        text: 'text-[#FFAC1C] dark:text-[#FFAC1C]/80'
+                        bgClasses: ['bg-[#FFAC1C]/20', 'dark:bg-[#FFAC1C]/10'], 
+                        textClasses: ['text-[#FFAC1C]', 'dark:text-[#FFAC1C]/80']
                     };
                 default:
                     return { 
-                        bg: 'bg-[#1D4ED8]/20 dark:bg-[#1D4ED8]/10', 
-                        text: 'text-[#1D4ED8] dark:text-[#1D4ED8]/80'
+                        bgClasses: ['bg-[#1D4ED8]/20', 'dark:bg-[#1D4ED8]/10'], 
+                        textClasses: ['text-[#1D4ED8]', 'dark:text-[#1D4ED8]/80']
                     };
             }
         };
@@ -116,8 +116,8 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
                     (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
                     (href === 'logged-in-notifications.html' && currentPath.includes('notifications'))) {
-                    // Pridanie farieb pozadia a textu podľa roly
-                    link.classList.add(roleColors.bg, roleColors.text);
+                    // Pridanie farieb pozadia a textu podľa roly - každú triedu zvlášť
+                    link.classList.add(...roleColors.bgClasses, ...roleColors.textClasses);
                 }
             }
         });
@@ -371,33 +371,33 @@ const loadLeftMenu = async (userProfileData) => {
                         switch (role) {
                             case 'admin':
                                 return { 
-                                    bg: 'bg-blue-100 dark:bg-blue-900/30', 
-                                    text: 'text-blue-600 dark:text-blue-400'
+                                    bgClasses: ['bg-blue-100', 'dark:bg-blue-900/30'], 
+                                    textClasses: ['text-blue-600', 'dark:text-blue-400']
                                 };
                             case 'hall':
                                 return { 
-                                    bg: 'bg-[#b06835]/20 dark:bg-[#b06835]/10', 
-                                    text: 'text-[#b06835] dark:text-[#b06835]/80'
+                                    bgClasses: ['bg-[#b06835]/20', 'dark:bg-[#b06835]/10'], 
+                                    textClasses: ['text-[#b06835]', 'dark:text-[#b06835]/80']
                                 };
                             case 'club':
                                 return { 
-                                    bg: 'bg-[#9333EA]/20 dark:bg-[#9333EA]/10', 
-                                    text: 'text-[#9333EA] dark:text-[#9333EA]/80'
+                                    bgClasses: ['bg-[#9333EA]/20', 'dark:bg-[#9333EA]/10'], 
+                                    textClasses: ['text-[#9333EA]', 'dark:text-[#9333EA]/80']
                                 };
                             case 'referee':
                                 return { 
-                                    bg: 'bg-[#007800]/20 dark:bg-[#007800]/10', 
-                                    text: 'text-[#007800] dark:text-[#007800]/80'
+                                    bgClasses: ['bg-[#007800]/20', 'dark:bg-[#007800]/10'], 
+                                    textClasses: ['text-[#007800]', 'dark:text-[#007800]/80']
                                 };
                             case 'volunteer':
                                 return { 
-                                    bg: 'bg-[#FFAC1C]/20 dark:bg-[#FFAC1C]/10', 
-                                    text: 'text-[#FFAC1C] dark:text-[#FFAC1C]/80'
+                                    bgClasses: ['bg-[#FFAC1C]/20', 'dark:bg-[#FFAC1C]/10'], 
+                                    textClasses: ['text-[#FFAC1C]', 'dark:text-[#FFAC1C]/80']
                                 };
                             default:
                                 return { 
-                                    bg: 'bg-[#1D4ED8]/20 dark:bg-[#1D4ED8]/10', 
-                                    text: 'text-[#1D4ED8] dark:text-[#1D4ED8]/80'
+                                    bgClasses: ['bg-[#1D4ED8]/20', 'dark:bg-[#1D4ED8]/10'], 
+                                    textClasses: ['text-[#1D4ED8]', 'dark:text-[#1D4ED8]/80']
                                 };
                         }
                     };
@@ -433,7 +433,8 @@ const loadLeftMenu = async (userProfileData) => {
                                 (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
                                 (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
                                 (href === 'logged-in-notifications.html' && currentPath.includes('notifications'))) {
-                                link.classList.add(roleColors.bg, roleColors.text);
+                                // Pridanie farieb pozadia a textu podľa roly - každú triedu zvlášť
+                                link.classList.add(...roleColors.bgClasses, ...roleColors.textClasses);
                             }
                         }
                     });
