@@ -1448,7 +1448,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         }
     };
 
-    // NOVÉ: Upravená funkcia pre výber všetkých ubytovní
+    // NOVÉ: Funkcia pre výber všetkých ubytovní
     const handleSelectAllAccommodations = () => {
         setSelectedAccommodationTypeFilter(null);
         setActiveFilter('ubytovanie');
@@ -1466,16 +1466,6 @@ const AddGroupsApp = ({ userProfileData }) => {
         } else {
             setSelectedAccommodationTypeFilter(type);
         }
-        setShowAccommodationTypesDropdown(false);
-        setSelectedPlace(null);
-        setPlaceHash(null);
-        window.goToDefaultView?.();
-    };
-    
-    // NOVÉ: Funkcia pre výber všetkých ubytovní
-    const handleSelectAllAccommodations = () => {
-        setSelectedAccommodationTypeFilter(null);
-        setActiveFilter('ubytovanie');
         setShowAccommodationTypesDropdown(false);
         setSelectedPlace(null);
         setPlaceHash(null);
