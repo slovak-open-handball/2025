@@ -8,6 +8,7 @@ window.isRegistrationDataLoaded = false;
 window.isCategoriesDataLoaded = false;
 let isFirestoreListenersSetup = false; 
 window.areCategoriesLoaded = false;
+let notificationListenerSetupCount = 0;
 
 window.showGlobalNotification = (message, type = 'success') => {
   let notificationElement = document.getElementById('global-notification');
