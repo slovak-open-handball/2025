@@ -480,3 +480,12 @@ if (document.readyState === 'loading') {
 } else {
     window.loadHeaderAndScripts();
 }
+
+window.addEventListener('globalDataUpdated', (event) => {
+    if (event.detail && event.detail.role === 'admin' && unsubscribeFromNotifications) {
+        console.log("header.js: Global data updated - reinitializing notification listener");
+        unsubscribeFromNotifications();
+        unsubscribeFromNotifications = null;
+        setupNotificationListenerForAdmin(event.detail);
+    }
+});
