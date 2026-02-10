@@ -40,6 +40,36 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     // Inicializujeme stav menu z dát používateľa alebo na false, ak nie je definovaný
     let isMenuToggled = userProfileData?.isMenuToggled || false;
     
+    // NOVINKA: Funkcia na zvýraznenie aktívneho odkazu v menu
+    const highlightActiveMenuLink = () => {
+        const currentPath = window.location.pathname;
+        const menuLinks = document.querySelectorAll('#left-menu a');
+
+        menuLinks.forEach(link => {
+            // Získanie cesty z href atribútu
+            const href = link.getAttribute('href');
+            if (href) {
+                // Odstránenie triedy aktívneho stavu
+                link.classList.remove('bg-blue-100', 'dark:bg-blue-900', 'text-blue-600', 'dark:text-blue-300');
+                
+                // Kontrola, či aktuálna stránka zodpovedá href odkazu
+                if (currentPath.includes(href) || 
+                    (href === 'logged-in-my-data.html' && currentPath.includes('my-data')) ||
+                    (href === 'logged-in-rosters.html' && currentPath.includes('rosters')) ||
+                    (href === 'logged-in-add-categories.html' && currentPath.includes('add-categories')) ||
+                    (href === 'logged-in-add-groups.html' && currentPath.includes('add-groups')) ||
+                    (href === 'logged-in-teams-in-accommodation.html' && currentPath.includes('teams-in-accommodation')) ||
+                    (href === 'logged-in-map.html' && currentPath.includes('map')) ||
+                    (href === 'logged-in-tournament-settings.html' && currentPath.includes('logged-in-tournament-settings')) ||
+                    (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
+                    (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
+                    (href === 'logged-in-notifications.html' && currentPath.includes('notifications'))) {
+                    link.classList.add('bg-blue-100', 'dark:bg-blue-900', 'text-blue-600', 'dark:text-blue-300');
+                }
+            }
+        });
+    };
+    
     // NOVINKA: Funkcia na získanie farby podľa roly
     const getColorForRole = (role) => {
         switch (role) {
@@ -211,37 +241,10 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     updateMenuText();
     // Zobrazíme odkazy na základe roly
     showRoleBasedLinks();
+    // Zvýrazníme aktívny odkaz
+    setTimeout(highlightActiveMenuLink, 100);
     
     // Obsluha kliknutia na tlačidlo
-    menuToggleButton.addEventListener('click', () => {
-        isMenuToggled = !isMenuToggled;
-        applyMenuState();
-        saveMenuState();
-    });
-
-    // Obsluha prechodu myšou pre automatické rozbalenie
-    leftMenu.addEventListener('mouseenter', () => {
-        if (!isMenuToggled) {
-            leftMenu.classList.remove('w-16');
-            leftMenu.classList.add('w-64');
-            menuSpacer.classList.remove('w-16');
-            menuSpacer.classList.add('w-64');
-            menuTexts.forEach(span => span.classList.remove('opacity-0'));
-            // Zrušenie zmeny farby textu "Menu" pri mouseenter, keď je zbalené
-        }
-    });
-
-    leftMenu.addEventListener('mouseleave', () => {
-        if (!isMenuToggled) {
-            leftMenu.classList.remove('w-64');
-            leftMenu.classList.add('w-16');
-            menuSpacer.classList.remove('w-64');
-            menuSpacer.classList.add('w-16');
-            menuTexts.forEach(span => span.classList.add('opacity-0'));
-            // Zrušenie resetu farby textu "Menu" pri mouseleave, keď je zbalené
-        }
-    });
-
     menuToggleButton.addEventListener('click', () => {
         isMenuToggled = !isMenuToggled;
         applyMenuState();
@@ -250,7 +253,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
         setTimeout(highlightActiveMenuLink, 300);
     });
 
-    // Tiež aktualizovať pri mouse events
+    // Obsluha prechodu myšou pre automatické rozbalenie
     leftMenu.addEventListener('mouseenter', () => {
         if (!isMenuToggled) {
             leftMenu.classList.remove('w-16');
@@ -303,44 +306,38 @@ const loadLeftMenu = async (userProfileData) => {
                 leftMenuElement.classList.remove('hidden');
             }
 
-
-
-        const highlightActiveMenuLink = () => {
-            const currentPath = window.location.pathname;
-            const menuLinks = document.querySelectorAll('#left-menu a');
-    
-            menuLinks.forEach(link => {
-                // Získanie cesty z href atribútu
-                const href = link.getAttribute('href');
-                if (href) {
-                    // Odstránenie triedy aktívneho stavu
-                    link.classList.remove('bg-blue-100', 'dark:bg-blue-900', 'text-blue-600', 'dark:text-blue-300');
-                    
-                    // Kontrola, či aktuálna stránka zodpovedá href odkazu
-                    if (currentPath.includes(href) || 
-                        (href === 'logged-in-my-data.html' && currentPath.includes('my-data')) ||
-                        (href === 'logged-in-rosters.html' && currentPath.includes('rosters')) ||
-                        (href === 'logged-in-add-categories.html' && currentPath.includes('add-categories')) ||
-                        (href === 'logged-in-add-groups.html' && currentPath.includes('add-groups')) ||
-                        (href === 'logged-in-teams-in-accommodation.html' && currentPath.includes('teams-in-accommodation')) ||
-                        (href === 'logged-in-map.html' && currentPath.includes('map')) ||
-                        (href === 'logged-in-tournament-settings.html' && currentPath.includes('logged-in-tournament-settings')) ||
-                        (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
-                        (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
-                        (href === 'logged-in-notifications.html' && currentPath.includes('notifications'))) {
-                        link.classList.add('bg-blue-100', 'dark:bg-blue-900', 'text-blue-600', 'dark:text-blue-300');
-                    }
-                }
+            // Pridanie event listener pre zmenu stránky (popstate)
+            window.addEventListener('popstate', () => {
+                setTimeout(() => {
+                    // Znovu inicializovať zvýraznenie menu po zmene stránky
+                    const highlightActiveMenuLink = () => {
+                        const currentPath = window.location.pathname;
+                        const menuLinks = document.querySelectorAll('#left-menu a');
+                
+                        menuLinks.forEach(link => {
+                            const href = link.getAttribute('href');
+                            if (href) {
+                                link.classList.remove('bg-blue-100', 'dark:bg-blue-900', 'text-blue-600', 'dark:text-blue-300');
+                                
+                                if (currentPath.includes(href) || 
+                                    (href === 'logged-in-my-data.html' && currentPath.includes('my-data')) ||
+                                    (href === 'logged-in-rosters.html' && currentPath.includes('rosters')) ||
+                                    (href === 'logged-in-add-categories.html' && currentPath.includes('add-categories')) ||
+                                    (href === 'logged-in-add-groups.html' && currentPath.includes('add-groups')) ||
+                                    (href === 'logged-in-teams-in-accommodation.html' && currentPath.includes('teams-in-accommodation')) ||
+                                    (href === 'logged-in-map.html' && currentPath.includes('map')) ||
+                                    (href === 'logged-in-tournament-settings.html' && currentPath.includes('logged-in-tournament-settings')) ||
+                                    (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
+                                    (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
+                                    (href === 'logged-in-notifications.html' && currentPath.includes('notifications'))) {
+                                    link.classList.add('bg-blue-100', 'dark:bg-blue-900', 'text-blue-600', 'dark:text-blue-300');
+                                }
+                            }
+                        });
+                    };
+                    highlightActiveMenuLink();
+                }, 100);
             });
-        };
-
-        // Spustenie zvýraznenia po načítaní menu
-        setTimeout(highlightActiveMenuLink, 100);
-        
-        // Aktualizácia zvýraznenia pri zmene stránky
-        window.addEventListener('popstate', highlightActiveMenuLink);
-
-            
 
         } catch (error) {
             console.error("left-menu.js: Chyba pri inicializácii ľavého menu:", error);
