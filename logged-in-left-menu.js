@@ -32,6 +32,11 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const mapLink = document.getElementById('map-link'); // NOVINKA: Odkaz na mapu
     const teamsAccommodationLink = document.getElementById('teams-accommodation-link');
     
+    // Získať všetky SVG ikony v menu
+    const menuIcons = document.querySelectorAll('#left-menu svg');
+    // Získať všetky texty v menu okrem textu "Menu"
+    const allMenuTexts = document.querySelectorAll('#left-menu .whitespace-nowrap');
+    
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
         console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo menu spacer po vložení HTML.");
         return;
@@ -87,39 +92,66 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                 return '#1D4ED8';
         }
     };
+    
+    // NOVINKA: Funkcia na aplikovanie farieb podľa roly
+    const applyRoleColors = () => {
+        const role = userProfileData?.role || 'default';
+        const roleColor = getColorForRole(role);
+        
+        // Vždy aplikovať farbu na ikonu a text "Menu"
+        if (menuIcon) {
+            menuIcon.style.color = roleColor;
+        }
+        if (menuText) {
+            menuText.style.color = roleColor;
+        }
+        
+        // Ak je menu zbalené, farby sa aplikujú len na hlavnú ikonu a text "Menu"
+        // Ak je menu rozbalené, farby sa aplikujú na všetky ikony a texty
+        if (isMenuToggled) {
+            // Aplikovať farby na všetky SVG ikony v menu
+            menuIcons.forEach(icon => {
+                icon.style.color = roleColor;
+            });
+            
+            // Aplikovať farby na všetky texty v menu (okrem "Menu", ktoré už má farbu)
+            allMenuTexts.forEach(text => {
+                if (text !== menuText) { // Nepoužiť na text "Menu" dvakrát
+                    text.style.color = roleColor;
+                }
+            });
+        } else {
+            // V zbalenom stave resetovať farby na ostatných ikonách a textoch
+            menuIcons.forEach(icon => {
+                if (icon !== menuIcon) { // Zachovať farbu len na hlavnej ikone
+                    icon.style.color = '';
+                }
+            });
+            
+            allMenuTexts.forEach(text => {
+                if (text !== menuText) { // Zachovať farbu len na texte "Menu"
+                    text.style.color = '';
+                }
+            });
+        }
+    };
 
     /**
      * Funkcia na aplikovanie stavu menu (pre počiatočné načítanie)
      */
     const applyMenuState = () => {
-        const role = userProfileData?.role || 'default';
-        const roleColor = getColorForRole(role);
-
         if (isMenuToggled) {
             leftMenu.classList.remove('w-16');
             leftMenu.classList.add('w-64');
             menuSpacer.classList.remove('w-16');
             menuSpacer.classList.add('w-64');
-            // NOVINKA: Nastavenie farby ikony a textu v rozbalenom stave
-            if (menuIcon) {
-                menuIcon.style.color = roleColor;
-            }
-            if (menuText) {
-                menuText.style.color = roleColor;
-            }
         } else {
             leftMenu.classList.remove('w-64');
             leftMenu.classList.add('w-16');
             menuSpacer.classList.remove('w-64');
             menuSpacer.classList.add('w-16');
-            // NOVINKA: Reset farby v zbalenom stave
-            if (menuIcon) {
-                menuIcon.style.color = ''; // Reset na pôvodnú farbu
-            }
-            if (menuText) {
-                menuText.style.color = ''; // Reset na pôvodnú farbu
-            }
         }
+        
         menuTexts.forEach(span => {
             if (isMenuToggled) {
                 span.classList.remove('opacity-0');
@@ -127,6 +159,9 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                 span.classList.add('opacity-0');
             }
         });
+        
+        // NOVINKA: Vždy aplikovať farby podľa roly
+        applyRoleColors();
     };
     
     // Nová funkcia na dynamickú zmenu textu menu
@@ -261,7 +296,8 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             menuSpacer.classList.remove('w-16');
             menuSpacer.classList.add('w-64');
             menuTexts.forEach(span => span.classList.remove('opacity-0'));
-            // Zrušenie zmeny farby textu "Menu" pri mouseenter, keď je zbalené
+            // Aplikovať farby pri rozbalení
+            applyRoleColors();
             // Aktualizovať zvýraznenie
             setTimeout(highlightActiveMenuLink, 100);
         }
@@ -274,7 +310,8 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             menuSpacer.classList.remove('w-64');
             menuSpacer.classList.add('w-16');
             menuTexts.forEach(span => span.classList.add('opacity-0'));
-            // Zrušenie resetu farby textu "Menu" pri mouseleave, keď je zbalené
+            // Resetovať farby na pôvodné pri zbalení (zachovať len farbu "Menu")
+            applyRoleColors();
         }
     });
 };
