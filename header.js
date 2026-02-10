@@ -299,7 +299,6 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
             console.log("header.js: GlobalUserProfileData aktualizované s počtom neprečítaných notifikácií:", unreadCount);
         }
 
-        // Kľúčová zmena: Tu kontrolujeme, či sú notifikácie zapnuté
         if (userProfileData.displayNotifications) {
             if (unreadCount >= 3) {
                 let message = '';
@@ -309,6 +308,8 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                     message = `Máte ${unreadCount} nové neprečítané upozornenia.`;
                 }
                 showDatabaseNotification(message, 'info');
+
+                return; 
             }
 
             snapshot.docChanges().forEach(async (change) => {
@@ -317,8 +318,6 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                     const notificationId = change.doc.id;
                     
                     const seenBy = newNotification.seenBy || [];
-                    
-                    // Dôležitá zmena: Táto logika sa vykonáva IBA AK sú notifikácie zapnuté
                     if (!seenBy.includes(userId)) {
                         console.log("header.js: Nová notifikácia prijatá a nebola videná používateľom:", newNotification);
                         
@@ -338,7 +337,6 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                         
                         showDatabaseNotification(changesMessage, newNotification.type || 'info');
                         
-                        // Toto sa vykoná IBA AK sú notifikácie zapnuté
                         const notificationDocRef = doc(window.db, "notifications", notificationId);
                         try {
                             await updateDoc(notificationDocRef, {
@@ -351,8 +349,6 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                 }
             });
         }
-        // Ak sú notifikácie vypnuté, NEpridávať používateľa do seenBy
-        // Notifikácie ostanú ako neprečítané
     }, (error) => {
             console.error("header.js: Chyba pri počúvaní notifikácií:", error);
     });
@@ -480,12 +476,3 @@ if (document.readyState === 'loading') {
 } else {
     window.loadHeaderAndScripts();
 }
-
-window.addEventListener('globalDataUpdated', (event) => {
-    if (event.detail && event.detail.role === 'admin' && unsubscribeFromNotifications) {
-        console.log("header.js: Global data updated - reinitializing notification listener");
-        unsubscribeFromNotifications();
-        unsubscribeFromNotifications = null;
-        setupNotificationListenerForAdmin(event.detail);
-    }
-});
