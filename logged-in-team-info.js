@@ -12,8 +12,8 @@ let unsubscribeUserSettings = null;
 let customTooltip = null;
 let observer = null;
 let currentUserId = null;
-let currentHoverElement = null; // Nové: sledujeme aktuálny hover element
-let pendingTooltipRequest = null; // Nové: sledujeme čakajúce požiadavky
+let currentHoverElement = null; // Sledujeme aktuálny hover element
+let pendingTooltipRequest = null;
 
 // === GLOBÁLNE NASTAVENIE ZOBRAZOVANIA BUBLÍN ===
 function setupTeamBubblesListener() {
@@ -55,7 +55,7 @@ function setupTeamBubblesListener() {
             // AK JE VYPNUTÉ, OKAMŽITE ODSTRÁNIME VŠETKY BUBLINKY A LISTENERY
             if (!shouldShowTeamBubbles) {
                 console.log("[team-info] Bublinky vypnuté - odstraňujem tooltip a listenery");
-                hideTooltipImmediately(); // Použijeme okamžité skrytie
+                hideTooltipImmediately();
                 removeAllHoverListeners();
                 
                 // Zastaviť observer
@@ -97,7 +97,8 @@ function removeAllHoverListeners() {
     // Odstrániť všetky listenery
     const elements = document.querySelectorAll('[data-hover-listener-added]');
     elements.forEach(el => {
-        // Odstrániť event listenery
+        el.removeAttribute('data-hover-listener-added');
+        // Vytvoríme nový element bez listenerov
         const newEl = el.cloneNode(true);
         if (el.parentNode) {
             el.parentNode.replaceChild(newEl, el);
@@ -238,8 +239,8 @@ function showTooltipUnderElement(text, element) {
         return;
     }
     
-    // Kontrola, či sme stále nad tým istým elementom
-    if (currentHoverElement !== element) {
+    // Kontrola, či sme stále nad tým istým elementom (porovnávame podľa ID alebo referencie)
+    if (!currentHoverElement || !element.contains(currentHoverElement)) {
         return;
     }
     
@@ -278,11 +279,6 @@ function hideTooltipImmediately() {
             pendingTooltipRequest = null;
         }
     }
-}
-
-// PÔVODNÁ FUNKCIA (pre spätnú kompatibilitu)
-function hideTooltip() {
-    hideTooltipImmediately();
 }
 
 // === PRIORITNÁ FUNKCIA NA ZÍSKANIE KATEGÓRIE Z DOM ===
@@ -609,13 +605,23 @@ function addHoverListener(element) {
 
     let elementHoverTimeout = null;
     let isElementHovered = false;
+    let currentLiElement = null; // Uložíme si referenciu na li element
 
     element.addEventListener('mouseover', async e => {
         // Kontrola, či sme už nad týmto elementom
         if (isElementHovered) return;
         
         isElementHovered = true;
-        currentHoverElement = element;
+        currentHoverElement = element; // Uložíme si span element
+        
+        // Získame li element
+        const li = e.target.closest('li');
+        if (!li) {
+            isElementHovered = false;
+            currentHoverElement = null;
+            return;
+        }
+        currentLiElement = li; // Uložíme si referenciu na li
         
         // Zrušiť predchádzajúci timeout
         if (elementHoverTimeout) {
@@ -627,6 +633,7 @@ function addHoverListener(element) {
             hideTooltipImmediately();
             isElementHovered = false;
             currentHoverElement = null;
+            currentLiElement = null;
             return;
         }
         
@@ -651,14 +658,6 @@ function addHoverListener(element) {
                 if (beforeColon.length < 20 && afterColon.length > 1) {
                     teamName = afterColon.replace(/^\d+\.\s*/, '').trim();
                 }
-            }
-            
-            // Získame rodičovský li element
-            const li = e.target.closest('li');
-            if (!li) {
-                isElementHovered = false;
-                currentHoverElement = null;
-                return;
             }
             
             // ZÍSKAME KATEGÓRIU - VYLEPŠENÁ VERZIA
@@ -770,12 +769,14 @@ Doprava: ${arrivalType}${arrivalTime}`;
         
         // Skryť tooltip
         hideTooltipImmediately();
+        currentLiElement = null;
     });
 
     element.addEventListener('mouseleave', (e) => {
         // Rýchle skrytie pri opustení elementu
         isElementHovered = false;
         currentHoverElement = null;
+        currentLiElement = null;
         
         if (elementHoverTimeout) {
             clearTimeout(elementHoverTimeout);
