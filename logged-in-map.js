@@ -1430,17 +1430,41 @@ const AddGroupsApp = ({ userProfileData }) => {
       
         setPlaceToDelete(selectedPlace);
         setShowDeleteConfirm(true);
-    };
+    };  
     
-    // NOVÉ: Funkcia pre výber typu ubytovania z rozbaľovacieho menu
+    // NOVÉ: Upravené funkcie pre tlačidlo Ubytovanie
+    const handleAccommodationButtonClick = () => {
+        if (activeFilter === 'ubytovanie') {
+            // Ak už je filter aktívny, zobraz dropdown
+            setShowAccommodationTypesDropdown(!showAccommodationTypesDropdown);
+        } else {
+            // Ak filter nie je aktívny, najprv aktivuj filter
+            setActiveFilter('ubytovanie');
+            setSelectedAccommodationTypeFilter(null);
+            setShowAccommodationTypesDropdown(false);
+            setSelectedPlace(null);
+            setPlaceHash(null);
+            window.goToDefaultView?.();
+        }
+    };
+
+    // NOVÉ: Upravená funkcia pre výber všetkých ubytovní
+    const handleSelectAllAccommodations = () => {
+        setSelectedAccommodationTypeFilter(null);
+        setActiveFilter('ubytovanie');
+        setShowAccommodationTypesDropdown(false);
+        setSelectedPlace(null);
+        setPlaceHash(null);
+        window.goToDefaultView?.();
+    };
+
+    // NOVÉ: Upravená funkcia pre výber typu ubytovania
     const handleSelectAccommodationTypeFilter = (type) => {
         if (type === selectedAccommodationTypeFilter) {
-            // Ak klikneme na už vybraný typ, zrušíme filter
+            // Ak klikneme na už vybraný typ, zrušíme filter typu, ale ponecháme filter ubytovanie
             setSelectedAccommodationTypeFilter(null);
-            setActiveFilter('ubytovanie');
         } else {
             setSelectedAccommodationTypeFilter(type);
-            setActiveFilter('ubytovanie');
         }
         setShowAccommodationTypesDropdown(false);
         setSelectedPlace(null);
@@ -1894,87 +1918,87 @@ const AddGroupsApp = ({ userProfileData }) => {
               
               // Ubytovanie (s rozbaľovacím menu)
               React.createElement('div', { 
-                ref: dropdownRef,
-                className: 'relative'
+                  ref: dropdownRef,
+                  className: 'relative'
               },
-                React.createElement('button', {
-                  onClick: () => setShowAccommodationTypesDropdown(!showAccommodationTypesDropdown),
-                  className: `p-3 rounded-lg border-2 transition-all duration-200 flex items-start shadow-sm h-18 w-full ${
-                    activeFilter === 'ubytovanie'
-                      ? 'bg-gray-50 border-gray-300 scale-105'
-                      : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
-                  }`
-                },
-                  React.createElement('div', { className: 'flex items-start w-full' },
-                    React.createElement('div', { className: 'w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mr-3 mt-1' },
-                      React.createElement('i', { className: 'fa-solid fa-bed text-gray-600 text-lg' })
-                    ),
-                    React.createElement('div', { className: 'flex-1 text-left' },
-                      React.createElement('p', { className: 'text-2xl font-bold text-gray-800 leading-tight' }, 
-                        selectedAccommodationTypeFilter 
-                          ? allPlaces.filter(p => p.type === 'ubytovanie' && p.accommodationType === selectedAccommodationTypeFilter).length
-                          : allPlaces.filter(p => p.type === 'ubytovanie').length
-                      ),
-                      React.createElement('div', { className: 'flex justify-between items-center' },
-                        React.createElement('p', { className: `text-xs font-medium mt-1 leading-tight ${
-                          activeFilter === 'ubytovanie' ? 'text-gray-700' : 'text-gray-600'
-                        }` }, 
-                          selectedAccommodationTypeFilter 
-                            ? `Ubytovanie (${getSelectedAccommodationTypeLabel()})`
-                            : 'Ubytovanie'
-                        ),
-                        React.createElement('i', { 
-                          className: `fas fa-chevron-down text-xs ml-2 ${
-                            activeFilter === 'ubytovanie' ? 'text-gray-700' : 'text-gray-600'
-                          }`
-                        })
-                      )
-                    )
-                  )
-                ),
-                
-                // Rozbaľovacie menu typov ubytovania
-                showAccommodationTypesDropdown && React.createElement('div', {
-                  className: 'absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto'
-                },
-                  // Položka "Všetky typy"
                   React.createElement('button', {
-                    onClick: handleSelectAllAccommodations,
-                    className: `w-full px-4 py-3 text-left hover:bg-gray-50 flex justify-between items-center ${
-                      !selectedAccommodationTypeFilter ? 'bg-gray-100' : ''
-                    }`
+                      onClick: handleAccommodationButtonClick,
+                      className: `p-3 rounded-lg border-2 transition-all duration-200 flex items-start shadow-sm h-18 w-full ${
+                          activeFilter === 'ubytovanie'
+                              ? 'bg-gray-50 border-gray-300 scale-105'
+                              : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                      }`
                   },
-                    React.createElement('span', { 
-                      className: `font-medium ${!selectedAccommodationTypeFilter ? 'text-gray-800' : 'text-gray-600'}`
-                    }, 'Všetky typy'),
-                    React.createElement('span', { className: 'text-gray-500 text-sm' },
-                      allPlaces.filter(p => p.type === 'ubytovanie').length
-                    )
+                      React.createElement('div', { className: 'flex items-start w-full' },
+                          React.createElement('div', { className: 'w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mr-3 mt-1' },
+                              React.createElement('i', { className: 'fa-solid fa-bed text-gray-600 text-lg' })
+                          ),
+                          React.createElement('div', { className: 'flex-1 text-left' },
+                              React.createElement('p', { className: 'text-2xl font-bold text-gray-800 leading-tight' }, 
+                                  selectedAccommodationTypeFilter 
+                                      ? allPlaces.filter(p => p.type === 'ubytovanie' && p.accommodationType === selectedAccommodationTypeFilter).length
+                                      : allPlaces.filter(p => p.type === 'ubytovanie').length
+                              ),
+                              React.createElement('div', { className: 'flex justify-between items-center' },
+                                  React.createElement('p', { className: `text-xs font-medium mt-1 leading-tight ${
+                                      activeFilter === 'ubytovanie' ? 'text-gray-700' : 'text-gray-600'
+                                  }` }, 
+                                      selectedAccommodationTypeFilter 
+                                          ? `Ubytovanie (${getSelectedAccommodationTypeLabel()})`
+                                          : 'Ubytovanie'
+                                  ),
+                                  activeFilter === 'ubytovanie' && React.createElement('i', { 
+                                      className: `fas fa-chevron-down text-xs ml-2 ${
+                                          activeFilter === 'ubytovanie' ? 'text-gray-700' : 'text-gray-600'
+                                      }`
+                                  })
+                              )
+                          )
+                      )
                   ),
                   
-                  // Oddeľovač
-                  React.createElement('div', { className: 'border-t border-gray-200' }),
-                  
-                  // Typy ubytovania
-                  accommodationTypes.map((item, index) => {
-                    const count = getAccommodationCountByType(item.type);
-                    const isSelected = selectedAccommodationTypeFilter === item.type;
-                    return React.createElement('button', {
-                      key: index,
-                      onClick: () => handleSelectAccommodationTypeFilter(item.type),
-                      className: `w-full px-4 py-3 text-left hover:bg-gray-50 flex justify-between items-center ${
-                        isSelected ? 'bg-gray-100' : ''
-                      }`
-                    },
-                      React.createElement('span', { 
-                        className: `font-medium ${isSelected ? 'text-gray-800' : 'text-gray-600'}`
-                      }, item.type),
-                      React.createElement('span', { className: 'text-gray-500 text-sm' },
-                        count
-                      )
-                    );
-                  })
-                )
+                  // Rozbaľovacie menu typov ubytovania (zobrazené iba keď je filter aktívny)
+                  showAccommodationTypesDropdown && activeFilter === 'ubytovanie' && React.createElement('div', {
+                      className: 'absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto'
+                  },
+                      // Položka "Všetky typy"
+                      React.createElement('button', {
+                          onClick: handleSelectAllAccommodations,
+                          className: `w-full px-4 py-3 text-left hover:bg-gray-50 flex justify-between items-center ${
+                              !selectedAccommodationTypeFilter ? 'bg-gray-100' : ''
+                          }`
+                      },
+                          React.createElement('span', { 
+                              className: `font-medium ${!selectedAccommodationTypeFilter ? 'text-gray-800' : 'text-gray-600'}`
+                          }, 'Všetky typy'),
+                          React.createElement('span', { className: 'text-gray-500 text-sm' },
+                              allPlaces.filter(p => p.type === 'ubytovanie').length
+                          )
+                      ),
+                      
+                      // Oddeľovač
+                      React.createElement('div', { className: 'border-t border-gray-200' }),
+                      
+                      // Typy ubytovania
+                      accommodationTypes.map((item, index) => {
+                          const count = getAccommodationCountByType(item.type);
+                          const isSelected = selectedAccommodationTypeFilter === item.type;
+                          return React.createElement('button', {
+                              key: index,
+                              onClick: () => handleSelectAccommodationTypeFilter(item.type),
+                              className: `w-full px-4 py-3 text-left hover:bg-gray-50 flex justify-between items-center ${
+                                  isSelected ? 'bg-gray-100' : ''
+                              }`
+                          },
+                              React.createElement('span', { 
+                                  className: `font-medium ${isSelected ? 'text-gray-800' : 'text-gray-600'}`
+                              }, item.type),
+                              React.createElement('span', { className: 'text-gray-500 text-sm' },
+                                  count
+                              )
+                          );
+                      })
+                  )
               ),
               
               // Stravovanie
