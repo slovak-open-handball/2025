@@ -1651,13 +1651,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                             'button',
                             {
                                 type: 'button',
-                                onClick: () => setNewHeaderTextColor('#000000'),
+                                onClick: () => setNewHeaderTextColor('#ffffff'), // Zmena na bielu
                                 className: `flex-1 px-5 py-3 rounded-lg border text-center font-medium transition-all ${
-                                    newHeaderTextColor === '#000000'
+                                    newHeaderTextColor === '#ffffff'
                                         ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
                                         : 'border-gray-300 hover:bg-gray-50'
                                 }`,
-                                style: { backgroundColor: '#000000', color: '#000000' }
+                                style: { backgroundColor: '#ffffff', color: '#000000' } // Biele pozadie, čierny text
                             },
                             'Biela'
                         ),
@@ -1665,13 +1665,13 @@ const AddGroupsApp = ({ userProfileData }) => {
                             'button',
                             {
                                 type: 'button',
-                                onClick: () => setNewHeaderTextColor('#000000'),
+                                onClick: () => setNewHeaderTextColor('#000000'), // Zmena na čiernu
                                 className: `flex-1 px-5 py-3 rounded-lg border text-center font-medium transition-all ${
                                     newHeaderTextColor === '#000000'
                                         ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
                                         : 'border-gray-300 hover:bg-gray-50'
                                 }`,
-                                style: { backgroundColor: '#000000', color: '#000000' }
+                                style: { backgroundColor: '#000000', color: '#ffffff' } // Čierne pozadie, biely text
                             },
                             'Čierna'
                         )
