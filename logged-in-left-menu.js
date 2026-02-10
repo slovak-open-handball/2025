@@ -241,8 +241,41 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             // Zrušenie resetu farby textu "Menu" pri mouseleave, keď je zbalené
         }
     });
-};
 
+    menuToggleButton.addEventListener('click', () => {
+        isMenuToggled = !isMenuToggled;
+        applyMenuState();
+        saveMenuState();
+        // Re-apply highlighting after menu animation completes
+        setTimeout(highlightActiveMenuLink, 300);
+    });
+
+    // Tiež aktualizovať pri mouse events
+    leftMenu.addEventListener('mouseenter', () => {
+        if (!isMenuToggled) {
+            leftMenu.classList.remove('w-16');
+            leftMenu.classList.add('w-64');
+            menuSpacer.classList.remove('w-16');
+            menuSpacer.classList.add('w-64');
+            menuTexts.forEach(span => span.classList.remove('opacity-0'));
+            // Zrušenie zmeny farby textu "Menu" pri mouseenter, keď je zbalené
+            // Aktualizovať zvýraznenie
+            setTimeout(highlightActiveMenuLink, 100);
+        }
+    });
+
+    leftMenu.addEventListener('mouseleave', () => {
+        if (!isMenuToggled) {
+            leftMenu.classList.remove('w-64');
+            leftMenu.classList.add('w-16');
+            menuSpacer.classList.remove('w-64');
+            menuSpacer.classList.add('w-16');
+            menuTexts.forEach(span => span.classList.add('opacity-0'));
+            // Zrušenie resetu farby textu "Menu" pri mouseleave, keď je zbalené
+        }
+    });
+};
+    
 const loadLeftMenu = async (userProfileData) => {
     // Kontrola, či existujú dáta používateľa, bez nich nemá menu zmysel
     if (userProfileData && userProfileData.id) {
@@ -269,6 +302,44 @@ const loadLeftMenu = async (userProfileData) => {
             if (leftMenuElement) {
                 leftMenuElement.classList.remove('hidden');
             }
+
+
+
+            const highlightActiveMenuLink = () => {
+            const currentPath = window.location.pathname;
+            const menuLinks = document.querySelectorAll('#left-menu a');
+    
+            menuLinks.forEach(link => {
+                // Získanie cesty z href atribútu
+                const href = link.getAttribute('href');
+                if (href) {
+                    // Odstránenie triedy aktívneho stavu
+                    link.classList.remove('bg-blue-100', 'dark:bg-blue-900', 'text-blue-600', 'dark:text-blue-300');
+                    
+                    // Kontrola, či aktuálna stránka zodpovedá href odkazu
+                    if (currentPath.includes(href) || 
+                        (href === 'logged-in-my-data.html' && currentPath.includes('my-data')) ||
+                        (href === 'logged-in-add-categories.html' && currentPath.includes('add-categories')) ||
+                        (href === 'logged-in-add-groups.html' && currentPath.includes('add-groups')) ||
+                        (href === 'logged-in-teams-in-accommodation.html' && currentPath.includes('teams-in-accommodation')) ||
+                        (href === 'logged-in-map.html' && currentPath.includes('map')) ||
+                        (href === 'logged-in-tournament-settings.html' && currentPath.includes('logged-in-tournament-settings')) ||
+                        (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
+                        (href === 'logged-in-users.html' && currentPath.includes('users')) ||                        
+                        (href === 'logged-in-notifications.html' && currentPath.includes('notifications'))) || {
+                        link.classList.add('bg-blue-100', 'dark:bg-blue-900', 'text-blue-600', 'dark:text-blue-300');
+                    }
+                }
+            });
+        };
+
+        // Spustenie zvýraznenia po načítaní menu
+        setTimeout(highlightActiveMenuLink, 100);
+        
+        // Aktualizácia zvýraznenia pri zmene stránky
+        window.addEventListener('popstate', highlightActiveMenuLink);
+
+            
 
         } catch (error) {
             console.error("left-menu.js: Chyba pri inicializácii ľavého menu:", error);
