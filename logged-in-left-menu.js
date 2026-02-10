@@ -1,35 +1,23 @@
-// logged-in-left-menu.js
-// Tento súbor spravuje logiku pre ľavé menu, vrátane jeho rozbalenia/zbalenia
-// a obsluhy udalostí pri kliknutí a prechode myšou.
-// Bola pridaná nová funkcionalita na ukladanie stavu menu do databázy používateľa.
-
-// Importy pre potrebné Firebase funkcie
 import { getFirestore, doc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-/**
- * Funkcia na zobrazenie/skrytie menu a uloženie stavu do databázy.
- * @param {object} userProfileData - Dáta o profile používateľa.
- * @param {object} db - Inštancia Firestore databázy.
- * @param {string} userId - ID aktuálneho používateľa.
- */
 const setupMenuListeners = (userProfileData, db, userId) => {
     const leftMenu = document.getElementById('left-menu');
     const menuToggleButton = document.getElementById('menu-toggle-button');
-    const menuTexts = document.querySelectorAll('#left-menu .whitespace-nowrap'); // Zmena selektora
-    const menuIcon = document.querySelector('#menu-toggle-button svg'); // NOVINKA: Získanie SVG ikony
-    const menuText = document.querySelector('#menu-toggle-button .whitespace-nowrap'); // NOVINKA: Získanie textu "Menu"
-    const menuSpacer = document.querySelector('#main-content-area > .flex-shrink-0'); // Nový element, ktorý sledujeme
-    const addCategoriesLink = document.getElementById('add-categories-link'); // Získanie odkazu na kategórie
-    const addGroupsLink = document.getElementById('add-groups-link'); // NOVINKA: Získanie odkazu na skupiny
-    const tournamentSettingsLink = document.getElementById('tournament-settings-link'); // NOVINKA: Získanie odkazu na nastavenia turnaja
-    const allRegistrationsLink = document.getElementById('all-registrations-link'); // NOVINKA: Získanie odkazu na všetky registrácie
-    const allUsersLink = document.getElementById('all-users-link'); // NOVINKA: Získanie odkazu na moje nastavenia
-    const notificationsLink = document.getElementById('notifications-link'); // NOVINKA: Získanie odkazu na upozornenia
-    const notificationsTextWithCount = document.getElementById('notifications-text-with-count'); // NOVINKA: Získanie elementu pre text Upozornenia s počtom
-    const notificationBadgeCount = document.getElementById('notification-badge-count'); // NOVINKA: Získanie elementu pre červený krúžok s počtom
-    const teamRostersLink = document.getElementById('team-rosters-link'); // NOVINKA: Získanie odkazu na súpisku tímov
-    const teamsInGroupsLink = document.getElementById('teams-in-groups-link'); // NOVINKA: Získanie odkazu na Tímy do skupín
-    const mapLink = document.getElementById('map-link'); // NOVINKA: Odkaz na mapu
+    const menuTexts = document.querySelectorAll('#left-menu .whitespace-nowrap');
+    const menuIcon = document.querySelector('#menu-toggle-button svg');
+    const menuText = document.querySelector('#menu-toggle-button .whitespace-nowrap');
+    const menuSpacer = document.querySelector('#main-content-area > .flex-shrink-0');
+    const addCategoriesLink = document.getElementById('add-categories-link');
+    const addGroupsLink = document.getElementById('add-groups-link'); 
+    const tournamentSettingsLink = document.getElementById('tournament-settings-link');
+    const allRegistrationsLink = document.getElementById('all-registrations-link');
+    const allUsersLink = document.getElementById('all-users-link');
+    const notificationsLink = document.getElementById('notifications-link');
+    const notificationsTextWithCount = document.getElementById('notifications-text-with-count');
+    const notificationBadgeCount = document.getElementById('notification-badge-count');
+    const teamRostersLink = document.getElementById('team-rosters-link');
+    const teamsInGroupsLink = document.getElementById('teams-in-groups-link');
+    const mapLink = document.getElementById('map-link'); 
     const teamsAccommodationLink = document.getElementById('teams-accommodation-link');
     
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
@@ -37,16 +25,13 @@ const setupMenuListeners = (userProfileData, db, userId) => {
         return;
     }
 
-    // Inicializujeme stav menu z dát používateľa alebo na false, ak nie je definovaný
     let isMenuToggled = userProfileData?.isMenuToggled || false;
     
-    // NOVINKA: Funkcia na zvýraznenie aktívneho odkazu v menu
     const highlightActiveMenuLink = () => {
         const currentPath = window.location.pathname;
         const menuLinks = document.querySelectorAll('#left-menu a');
         const role = userProfileData?.role || 'default';
         
-        // Definícia farieb pre pozadie (bledšie) a text (plné farby) podľa roly
         const getRoleColors = (role) => {
             switch (role) {
                 case 'admin':
@@ -85,10 +70,8 @@ const setupMenuListeners = (userProfileData, db, userId) => {
         const roleColors = getRoleColors(role);
 
         menuLinks.forEach(link => {
-            // Získanie cesty z href atribútu
             const href = link.getAttribute('href');
             if (href) {
-                // Odstránenie všetkých farieb pozadia a textu
                 link.classList.remove(
                     'bg-blue-100', 'dark:bg-blue-900', 
                     'text-blue-600', 'dark:text-blue-300',
@@ -102,10 +85,11 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     'bg-[#FFAC1C]/20', 'dark:bg-[#FFAC1C]/10',
                     'text-[#FFAC1C]', 'dark:text-[#FFAC1C]/80',
                     'bg-[#1D4ED8]/20', 'dark:bg-[#1D4ED8]/10',
-                    'text-[#1D4ED8]', 'dark:text-[#1D4ED8]/80'
+                    'text-[#1D4ED8]', 'dark:text-[#1D4ED8]/80',
+                    'text-white', 'dark:text-white',
+                    'hover:text-white', 'hover:dark:text-white'
                 );
                 
-                // Kontrola, či aktuálna stránka zodpovedá href odkazu
                 if (currentPath.includes(href) || 
                     (href === 'logged-in-my-data.html' && currentPath.includes('my-data')) ||
                     (href === 'logged-in-rosters.html' && currentPath.includes('rosters')) ||
@@ -117,23 +101,20 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
                     (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
                     (href === 'logged-in-notifications.html' && currentPath.includes('notifications'))) {
-                    // Pridanie farieb pozadia a textu podľa roly - každú triedu zvlášť
-                    link.classList.add(...roleColors.bgClasses, ...roleColors.textClasses);
+                    link.classList.add('bg-[#F9FAFB]', 'dark:bg-gray-800/30', 'text-[#1F2937]', 'dark:text-[#1F2937]/90');
+                    link.classList.add('hover:text-white', 'hover:dark:text-white');
                 }
             }
         });
     };
 
-    // NOVINKA: Funkcia na zvýraznenie aktívneho odkazu v menu - BLEDOSIVÉ POZADIE A #1F2937 TEXT PRE VŠETKÝCH
     const highlightActiveMenuLinkGray = () => {
         const currentPath = window.location.pathname;
         const menuLinks = document.querySelectorAll('#left-menu a');
 
         menuLinks.forEach(link => {
-            // Získanie cesty z href atribútu
             const href = link.getAttribute('href');
             if (href) {
-                // Odstránenie všetkých farieb pozadia a textu
                 link.classList.remove(
                     'bg-blue-100', 'dark:bg-blue-900', 
                     'text-blue-600', 'dark:text-blue-300',
@@ -147,10 +128,11 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     'text-[#FFAC1C]', 'dark:text-[#FFAC1C]/80',
                     'bg-[#1D4ED8]/20', 'dark:bg-[#1D4ED8]/10',
                     'text-[#1D4ED8]', 'dark:text-[#1D4ED8]/80',
-                    'text-[#1F2937]', 'dark:text-[#1F2937]/90'
+                    'text-[#1F2937]', 'dark:text-[#1F2937]/90',
+                    'text-white', 'dark:text-white',
+                    'hover:text-white', 'hover:dark:text-white'
                 );
                 
-                // Kontrola, či aktuálna stránka zodpovedá href odkazu
                 if (currentPath.includes(href) || 
                     (href === 'logged-in-my-data.html' && currentPath.includes('my-data')) ||
                     (href === 'logged-in-rosters.html' && currentPath.includes('rosters')) ||
@@ -162,17 +144,15 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                     (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
                     (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
                     (href === 'logged-in-notifications.html' && currentPath.includes('notifications'))) {
-                    // Pridanie bledosivého pozadia a #1F2937 textu pre všetkých
-                    link.classList.add('bg-gray-100', 'dark:bg-gray-700/30', 'text-[#1F2937]', 'dark:text-[#1F2937]/90');
+                    link.classList.add('bg-[#F9FAFB]', 'dark:bg-gray-800/30', 'text-[#1F2937]', 'dark:text-[#1F2937]/90');
+                    link.classList.add('hover:text-white', 'hover:dark:text-white');
                     
-                    // Zmeniť farbu SVG ikonky na #1F2937
                     const icon = link.querySelector('svg');
                     if (icon) {
                         icon.style.color = '#1F2937';
                         icon.classList.add('dark:text-[#1F2937]/90');
                     }
                 } else {
-                    // Resetovať farbu SVG ikonky pre neaktívne odkazy
                     const icon = link.querySelector('svg');
                     if (icon) {
                         icon.style.color = '';
@@ -183,7 +163,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
         });
     };
 
-    // NOVINKA: Funkcia na získanie farby podľa roly
     const getColorForRole = (role) => {
         switch (role) {
             case 'admin':
@@ -201,9 +180,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
         }
     };
 
-    /**
-     * Funkcia na aplikovanie stavu menu (pre počiatočné načítanie)
-     */
     const applyMenuState = () => {
         const role = userProfileData?.role || 'default';
         const roleColor = getColorForRole(role);
@@ -213,7 +189,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             leftMenu.classList.add('w-64');
             menuSpacer.classList.remove('w-16');
             menuSpacer.classList.add('w-64');
-            // NOVINKA: Nastavenie farby ikony a textu v rozbalenom stave
             if (menuIcon) {
                 menuIcon.style.color = roleColor;
             }
@@ -225,12 +200,11 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             leftMenu.classList.add('w-16');
             menuSpacer.classList.remove('w-64');
             menuSpacer.classList.add('w-16');
-            // NOVINKA: Reset farby v zbalenom stave
             if (menuIcon) {
-                menuIcon.style.color = ''; // Reset na pôvodnú farbu
+                menuIcon.style.color = '';
             }
             if (menuText) {
-                menuText.style.color = ''; // Reset na pôvodnú farbu
+                menuText.style.color = '';
             }
         }
         menuTexts.forEach(span => {
@@ -242,7 +216,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
         });
     };
     
-    // Nová funkcia na dynamickú zmenu textu menu
     const updateMenuText = () => {
         const myDataLinkSpan = document.querySelector('a[href="logged-in-my-data.html"] .whitespace-nowrap');
         if (myDataLinkSpan) {
@@ -254,7 +227,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
         }
     };
     
-    // Funkcia na podmienené zobrazenie odkazov pre admina a používateľa
     const showRoleBasedLinks = () => {
         if (userProfileData.role === 'admin') {
             addCategoriesLink.classList.remove('hidden');
@@ -305,7 +277,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
                 notificationBadgeCount.classList.add('hidden');
             }
         } else {
-            // Predvolene skryť všetky špecifické odkazy, ak rola nie je admin ani user
             addCategoriesLink.classList.add('hidden');
             addGroupsLink.classList.add('hidden');
             tournamentSettingsLink.classList.add('hidden');
@@ -326,9 +297,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
         }
     };    
 
-    /**
-     * Funkcia na uloženie stavu menu do databázy.
-     */
     const saveMenuState = async () => {
         if (!userId) {
             console.error("left-menu.js: Upozornenie: Chýba ID používateľa. Stav menu nebude uložený.");
@@ -341,32 +309,24 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             console.log("left-menu.js: Stav menu bol úspešne uložený do databázy.");
         } catch (error) {
             console.error("left-menu.js: Chyba pri ukladaní/vytváraní stavu menu:", error);
-            // Zobrazenie globálnej notifikácie, ak je funkcia dostupná
             if (window.showGlobalNotification) {
                 window.showGlobalNotification('Nepodarilo sa uložiť nastavenia menu. Skontrolujte oprávnenia.', 'error');
             }
         }
     };
 
-    // Aplikujeme počiatočný stav menu pri načítaní
     applyMenuState();
-    // Aplikujeme dynamický text menu
     updateMenuText();
-    // Zobrazíme odkazy na základe roly
     showRoleBasedLinks();
-    // Zvýrazníme aktívny odkaz - POUŽIJEME BLEDOSIVÉ POZADIE A #1F2937 TEXT
     setTimeout(highlightActiveMenuLinkGray, 100);
     
-    // Obsluha kliknutia na tlačidlo
     menuToggleButton.addEventListener('click', () => {
         isMenuToggled = !isMenuToggled;
         applyMenuState();
         saveMenuState();
-        // Re-apply highlighting after menu animation completes - POUŽIJEME BLEDOSIVÉ POZADIE A #1F2937 TEXT
         setTimeout(highlightActiveMenuLinkGray, 300);
     });
 
-    // Obsluha prechodu myšou pre automatické rozbalenie
     leftMenu.addEventListener('mouseenter', () => {
         if (!isMenuToggled) {
             leftMenu.classList.remove('w-16');
@@ -374,8 +334,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             menuSpacer.classList.remove('w-16');
             menuSpacer.classList.add('w-64');
             menuTexts.forEach(span => span.classList.remove('opacity-0'));
-            // Zrušenie zmeny farby textu "Menu" pri mouseenter, keď je zbalené
-            // Aktualizovať zvýraznenie - POUŽIJEME BLEDOSIVÉ POZADIE A #1F2937 TEXT
             setTimeout(highlightActiveMenuLinkGray, 100);
         }
     });
@@ -387,13 +345,11 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             menuSpacer.classList.remove('w-64');
             menuSpacer.classList.add('w-16');
             menuTexts.forEach(span => span.classList.add('opacity-0'));
-            // Zrušenie resetu farby textu "Menu" pri mouseleave, keď je zbalené
         }
     });
 };
 
 const loadLeftMenu = async (userProfileData) => {
-    // Kontrola, či existujú dáta používateľa, bez nich nemá menu zmysel
     if (userProfileData && userProfileData.id) {
         const menuPlaceholder = document.getElementById('menu-placeholder');
         if (!menuPlaceholder) {
@@ -410,7 +366,6 @@ const loadLeftMenu = async (userProfileData) => {
             menuPlaceholder.innerHTML = menuHtml;
             console.log("logged-in-left-menu-js: Obsah menu bol úspešne vložený do placeholderu.");
 
-            // Po úspešnom vložení HTML hneď nastavíme poslucháčov
             const db = window.db;
             const userId = userProfileData.id;
             setupMenuListeners(userProfileData, db, userId);
@@ -419,10 +374,8 @@ const loadLeftMenu = async (userProfileData) => {
                 leftMenuElement.classList.remove('hidden');
             }
 
-            // Pridanie event listener pre zmenu stránky (popstate)
             window.addEventListener('popstate', () => {
                 setTimeout(() => {
-                    // Znovu inicializovať zvýraznenie menu po zmene stránky - POUŽIJEME BLEDOSIVÉ POZADIE A #1F2937 TEXT
                     const currentPath = window.location.pathname;
                     const menuLinks = document.querySelectorAll('#left-menu a');
 
@@ -442,7 +395,9 @@ const loadLeftMenu = async (userProfileData) => {
                                 'text-[#FFAC1C]', 'dark:text-[#FFAC1C]/80',
                                 'bg-[#1D4ED8]/20', 'dark:bg-[#1D4ED8]/10',
                                 'text-[#1D4ED8]', 'dark:text-[#1D4ED8]/80',
-                                'text-[#1F2937]', 'dark:text-[#1F2937]/90'
+                                'text-[#1F2937]', 'dark:text-[#1F2937]/90',
+                                'text-white', 'dark:text-white',
+                                'hover:text-white', 'hover:dark:text-white'
                             );
                             
                             if (currentPath.includes(href) || 
@@ -456,17 +411,15 @@ const loadLeftMenu = async (userProfileData) => {
                                 (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
                                 (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
                                 (href === 'logged-in-notifications.html' && currentPath.includes('notifications'))) {
-                                // Pridanie bledosivého pozadia a #1F2937 textu pre všetkých
-                                link.classList.add('bg-gray-100', 'dark:bg-gray-700/30', 'text-[#1F2937]', 'dark:text-[#1F2937]/90');
+                                link.classList.add('bg-[#F9FAFB]', 'dark:bg-gray-800/30', 'text-[#1F2937]', 'dark:text-[#1F2937]/90');
+                                link.classList.add('hover:text-white', 'hover:dark:text-white');
                                 
-                                // Zmeniť farbu SVG ikonky na #1F2937
                                 const icon = link.querySelector('svg');
                                 if (icon) {
                                     icon.style.color = '#1F2937';
                                     icon.classList.add('dark:text-[#1F2937]/90');
                                 }
                             } else {
-                                // Resetovať farbu SVG ikonky pre neaktívne odkazy
                                 const icon = link.querySelector('svg');
                                 if (icon) {
                                     icon.style.color = '';
@@ -490,7 +443,6 @@ const loadLeftMenu = async (userProfileData) => {
     }
 };
 
-// Pridanie CSS štýlov pre lepšiu podporu premenlivých farieb
 const addCustomStyles = () => {
     if (!document.getElementById('left-menu-custom-styles')) {
         const style = document.createElement('style');
@@ -501,13 +453,17 @@ const addCustomStyles = () => {
                 transition: background-color 200ms ease, color 200ms ease;
             }
             
-            /* Bledosivé pozadie pre aktívny odkaz */
-            .bg-gray-100 { background-color: rgba(243, 244, 246, 1); }
-            .dark .dark\\:bg-gray-700\\/30 { background-color: rgba(55, 65, 81, 0.3); }
+            /* #F9FAFB pozadie pre aktívny odkaz */
+            .bg-\\[\\#F9FAFB\\] { background-color: #F9FAFB; }
+            .dark .dark\\:bg-gray-800\\/30 { background-color: rgba(31, 41, 55, 0.3); }
             
             /* Farby textu #1F2937 */
             .text-\\[\\#1F2937\\] { color: #1F2937; }
             .dark .dark\\:text-\\[\\#1F2937\\]\\/90 { color: rgba(31, 41, 55, 0.9); }
+            
+            /* Biele texty pri hover na aktívnej stránke */
+            .hover\\:text-white:hover { color: white; }
+            .dark .hover\\:dark\\:text-white:hover { color: white; }
             
             /* Bledšie farby pozadia pre rôzne roly */
             .bg-\\[\\#b06835\\]\\/20 { background-color: rgba(176, 104, 53, 0.2); }
@@ -545,16 +501,13 @@ const addCustomStyles = () => {
     }
 };
 
-// Pripočítame CSS štýly hneď po načítaní
 addCustomStyles();
 
-// Počúvanie udalosti globalDataUpdated, ktorá je odoslaná, keď sú dáta používateľa k dispozícii
 window.addEventListener('globalDataUpdated', (event) => {
     console.log('left-menu.js: Prijatá udalosť "globalDataUpdated". Kontrolujem dáta...');
     loadLeftMenu(event.detail);
 });
 
-// Kontrola pri prvom načítaní pre prípad, že event už prebehol
 if (window.globalUserProfileData) {
     console.log('left-menu.js: Globálne dáta už existujú. Vykresľujem menu okamžite.');
     loadLeftMenu(window.globalUserProfileData);
