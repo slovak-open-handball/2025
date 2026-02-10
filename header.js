@@ -283,6 +283,7 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
             return;
         }
 
+        // VYPOČÍTAŤ UNREAD COUNT - vždy sa kontroluje bez ohľadu na displayNotifications
         let unreadCount = 0;
         const allNotifications = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
 
@@ -299,56 +300,64 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
             console.log("header.js: GlobalUserProfileData aktualizované s počtom neprečítaných notifikácií:", unreadCount);
         }
 
-        if (userProfileData.displayNotifications) {
-            if (unreadCount >= 3) {
-                let message = '';
-                if (unreadCount >= 5) {
-                    message = `Máte ${unreadCount} nových neprečítaných upozornení.`;
-                } else { 
-                    message = `Máte ${unreadCount} nové neprečítané upozornenia.`;
-                }
-                showDatabaseNotification(message, 'info');
+        // AK MAJÚ VYPUNUTÉ NOTIFIKÁCIE, UKONČIŤ - NIE označiť ako seen!
+        if (!userProfileData.displayNotifications) {
+            console.log("header.js: Notifikácie sú vypnuté, nezobrazujem nové upozornenia.");
+            return; // Iba ukončiť, NIE označiť ako seen!
+        }
 
-                return; 
+        // POKRAČOVAŤ LEN AK MAJÚ ZAPNUTÉ NOTIFIKÁCIE
+        if (unreadCount >= 3) {
+            let message = '';
+            if (unreadCount >= 5) {
+                message = `Máte ${unreadCount} nových neprečítaných upozornení.`;
+            } else { 
+                message = `Máte ${unreadCount} nové neprečítané upozornenia.`;
             }
+            showDatabaseNotification(message, 'info');
+            return; 
+        }
 
-            snapshot.docChanges().forEach(async (change) => {
-                if (change.type === "added") {
-                    const newNotification = change.doc.data();
-                    const notificationId = change.doc.id;
+        snapshot.docChanges().forEach(async (change) => {
+            if (change.type === "added") {
+                const newNotification = change.doc.data();
+                const notificationId = change.doc.id;
+                
+                const seenBy = newNotification.seenBy || [];
+                // Skontrolovať, či používateľ ešte nevidí túto notifikáciu
+                if (!seenBy.includes(userId)) {
+                    console.log("header.js: Nová notifikácia prijatá a nebola videná používateľom:", newNotification);
                     
-                    const seenBy = newNotification.seenBy || [];
-                    if (!seenBy.includes(userId)) {
-                        console.log("header.js: Nová notifikácia prijatá a nebola videná používateľom:", newNotification);
+                    let changesMessage = '';
+                    if (Array.isArray(newNotification.changes) && newNotification.changes.length > 0) {
+                        const changeLabel = newNotification.changes.length > 1 ? " zmenil tieto údaje:" : "zmenil tento údaj:";
+                        changesMessage = `Používateľ ${newNotification.userEmail} ${changeLabel}\n`;
                         
-                        let changesMessage = '';
-                        if (Array.isArray(newNotification.changes) && newNotification.changes.length > 0) {
-                            const changeLabel = newNotification.changes.length > 1 ? " zmenil tieto údaje:" : "zmenil tento údaj:";
-                            changesMessage = `Používateľ ${newNotification.userEmail} ${changeLabel}\n`;
-                            
-                            const formattedChanges = newNotification.changes.map(changeString => formatNotificationMessage(changeString));
-                            
-                            changesMessage += formattedChanges.join('<br>');
-                        } else if (typeof newNotification.changes === 'string') {
-                            changesMessage = `Používateľ ${newNotification.userEmail} zmenil tento údaj:\n${formatNotificationMessage(newNotification.changes)}`;
-                        } else {
-                            changesMessage = `Používateľ ${newNotification.userEmail} vykonal zmenu.`;
-                        }
+                        const formattedChanges = newNotification.changes.map(changeString => formatNotificationMessage(changeString));
                         
-                        showDatabaseNotification(changesMessage, newNotification.type || 'info');
-                        
-                        const notificationDocRef = doc(window.db, "notifications", notificationId);
-                        try {
-                            await updateDoc(notificationDocRef, {
-                                seenBy: arrayUnion(userId)
-                            });
-                        } catch (e) {
-                            console.error("header.js: Chyba pri aktualizácii notifikácie 'seenBy':", e);
-                        }
+                        changesMessage += formattedChanges.join('<br>');
+                    } else if (typeof newNotification.changes === 'string') {
+                        changesMessage = `Používateľ ${newNotification.userEmail} zmenil tento údaj:\n${formatNotificationMessage(newNotification.changes)}`;
+                    } else {
+                        changesMessage = `Používateľ ${newNotification.userEmail} vykonal zmenu.`;
+                    }
+                    
+                    // ZOBRAZIŤ NOTIFIKÁCIU
+                    showDatabaseNotification(changesMessage, newNotification.type || 'info');
+                    
+                    // TERAZ až po zobrazení notifikácie pridať userId do seenBy
+                    const notificationDocRef = doc(window.db, "notifications", notificationId);
+                    try {
+                        await updateDoc(notificationDocRef, {
+                            seenBy: arrayUnion(userId)
+                        });
+                        console.log("header.js: Notifikácia označená ako 'seen' pre používateľa:", userId);
+                    } catch (e) {
+                        console.error("header.js: Chyba pri aktualizácii notifikácie 'seenBy':", e);
                     }
                 }
-            });
-        }
+            }
+        });
     }, (error) => {
             console.error("header.js: Chyba pri počúvaní notifikácií:", error);
     });
