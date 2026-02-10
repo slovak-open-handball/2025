@@ -123,6 +123,50 @@ const setupMenuListeners = (userProfileData, db, userId) => {
         });
     };
 
+    // NOVINKA: Funkcia na zvýraznenie aktívneho odkazu v menu - BLEDOSIVÉ POZADIE PRE VŠETKÝCH
+    const highlightActiveMenuLinkGray = () => {
+        const currentPath = window.location.pathname;
+        const menuLinks = document.querySelectorAll('#left-menu a');
+
+        menuLinks.forEach(link => {
+            // Získanie cesty z href atribútu
+            const href = link.getAttribute('href');
+            if (href) {
+                // Odstránenie všetkých farieb pozadia a textu
+                link.classList.remove(
+                    'bg-blue-100', 'dark:bg-blue-900', 
+                    'text-blue-600', 'dark:text-blue-300',
+                    'bg-[#b06835]/20', 'dark:bg-[#b06835]/10',
+                    'text-[#b06835]', 'dark:text-[#b06835]/80',
+                    'bg-[#9333EA]/20', 'dark:bg-[#9333EA]/10',
+                    'text-[#9333EA]', 'dark:text-[#9333EA]/80',
+                    'bg-[#007800]/20', 'dark:bg-[#007800]/10',
+                    'text-[#007800]', 'dark:text-[#007800]/80',
+                    'bg-[#FFAC1C]/20', 'dark:bg-[#FFAC1C]/10',
+                    'text-[#FFAC1C]', 'dark:text-[#FFAC1C]/80',
+                    'bg-[#1D4ED8]/20', 'dark:bg-[#1D4ED8]/10',
+                    'text-[#1D4ED8]', 'dark:text-[#1D4ED8]/80'
+                );
+                
+                // Kontrola, či aktuálna stránka zodpovedá href odkazu
+                if (currentPath.includes(href) || 
+                    (href === 'logged-in-my-data.html' && currentPath.includes('my-data')) ||
+                    (href === 'logged-in-rosters.html' && currentPath.includes('rosters')) ||
+                    (href === 'logged-in-add-categories.html' && currentPath.includes('add-categories')) ||
+                    (href === 'logged-in-add-groups.html' && currentPath.includes('add-groups')) ||
+                    (href === 'logged-in-teams-in-accommodation.html' && currentPath.includes('teams-in-accommodation')) ||
+                    (href === 'logged-in-map.html' && currentPath.includes('map')) ||
+                    (href === 'logged-in-tournament-settings.html' && currentPath.includes('logged-in-tournament-settings')) ||
+                    (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
+                    (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
+                    (href === 'logged-in-notifications.html' && currentPath.includes('notifications'))) {
+                    // Pridanie bledosivého pozadia pre všetkých
+                    link.classList.add('bg-gray-100', 'dark:bg-gray-700/30');
+                }
+            }
+        });
+    };
+
     // NOVINKA: Funkcia na získanie farby podľa roly
     const getColorForRole = (role) => {
         switch (role) {
@@ -294,16 +338,16 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     updateMenuText();
     // Zobrazíme odkazy na základe roly
     showRoleBasedLinks();
-    // Zvýrazníme aktívny odkaz
-    setTimeout(highlightActiveMenuLink, 100);
+    // Zvýrazníme aktívny odkaz - POUŽIJEME BLEDOSIVÉ POZADIE
+    setTimeout(highlightActiveMenuLinkGray, 100);
     
     // Obsluha kliknutia na tlačidlo
     menuToggleButton.addEventListener('click', () => {
         isMenuToggled = !isMenuToggled;
         applyMenuState();
         saveMenuState();
-        // Re-apply highlighting after menu animation completes
-        setTimeout(highlightActiveMenuLink, 300);
+        // Re-apply highlighting after menu animation completes - POUŽIJEME BLEDOSIVÉ POZADIE
+        setTimeout(highlightActiveMenuLinkGray, 300);
     });
 
     // Obsluha prechodu myšou pre automatické rozbalenie
@@ -315,8 +359,8 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             menuSpacer.classList.add('w-64');
             menuTexts.forEach(span => span.classList.remove('opacity-0'));
             // Zrušenie zmeny farby textu "Menu" pri mouseenter, keď je zbalené
-            // Aktualizovať zvýraznenie
-            setTimeout(highlightActiveMenuLink, 100);
+            // Aktualizovať zvýraznenie - POUŽIJEME BLEDOSIVÉ POZADIE
+            setTimeout(highlightActiveMenuLinkGray, 100);
         }
     });
 
@@ -362,47 +406,9 @@ const loadLeftMenu = async (userProfileData) => {
             // Pridanie event listener pre zmenu stránky (popstate)
             window.addEventListener('popstate', () => {
                 setTimeout(() => {
-                    // Znovu inicializovať zvýraznenie menu po zmene stránky
+                    // Znovu inicializovať zvýraznenie menu po zmene stránky - POUŽIJEME BLEDOSIVÉ POZADIE
                     const currentPath = window.location.pathname;
                     const menuLinks = document.querySelectorAll('#left-menu a');
-                    const role = userProfileData?.role || 'default';
-                    
-                    const getRoleColors = (role) => {
-                        switch (role) {
-                            case 'admin':
-                                return { 
-                                    bgClasses: ['bg-blue-100', 'dark:bg-blue-900/30'], 
-                                    textClasses: ['text-blue-600', 'dark:text-blue-400']
-                                };
-                            case 'hall':
-                                return { 
-                                    bgClasses: ['bg-[#b06835]/20', 'dark:bg-[#b06835]/10'], 
-                                    textClasses: ['text-[#b06835]', 'dark:text-[#b06835]/80']
-                                };
-                            case 'club':
-                                return { 
-                                    bgClasses: ['bg-[#9333EA]/20', 'dark:bg-[#9333EA]/10'], 
-                                    textClasses: ['text-[#9333EA]', 'dark:text-[#9333EA]/80']
-                                };
-                            case 'referee':
-                                return { 
-                                    bgClasses: ['bg-[#007800]/20', 'dark:bg-[#007800]/10'], 
-                                    textClasses: ['text-[#007800]', 'dark:text-[#007800]/80']
-                                };
-                            case 'volunteer':
-                                return { 
-                                    bgClasses: ['bg-[#FFAC1C]/20', 'dark:bg-[#FFAC1C]/10'], 
-                                    textClasses: ['text-[#FFAC1C]', 'dark:text-[#FFAC1C]/80']
-                                };
-                            default:
-                                return { 
-                                    bgClasses: ['bg-[#1D4ED8]/20', 'dark:bg-[#1D4ED8]/10'], 
-                                    textClasses: ['text-[#1D4ED8]', 'dark:text-[#1D4ED8]/80']
-                                };
-                        }
-                    };
-                    
-                    const roleColors = getRoleColors(role);
 
                     menuLinks.forEach(link => {
                         const href = link.getAttribute('href');
@@ -433,8 +439,8 @@ const loadLeftMenu = async (userProfileData) => {
                                 (href === 'logged-in-all-registrations.html' && currentPath.includes('all-registrations')) ||
                                 (href === 'logged-in-users.html' && currentPath.includes('users')) ||                       
                                 (href === 'logged-in-notifications.html' && currentPath.includes('notifications'))) {
-                                // Pridanie farieb pozadia a textu podľa roly - každú triedu zvlášť
-                                link.classList.add(...roleColors.bgClasses, ...roleColors.textClasses);
+                                // Pridanie bledosivého pozadia pre všetkých
+                                link.classList.add('bg-gray-100', 'dark:bg-gray-700/30');
                             }
                         }
                     });
@@ -463,6 +469,10 @@ const addCustomStyles = () => {
             #left-menu a {
                 transition: background-color 200ms ease, color 200ms ease;
             }
+            
+            /* Bledosivé pozadie pre aktívny odkaz */
+            .bg-gray-100 { background-color: rgba(243, 244, 246, 1); }
+            .dark .dark\\:bg-gray-700\\/30 { background-color: rgba(55, 65, 81, 0.3); }
             
             /* Bledšie farby pozadia pre rôzne roly */
             .bg-\\[\\#b06835\\]\\/20 { background-color: rgba(176, 104, 53, 0.2); }
