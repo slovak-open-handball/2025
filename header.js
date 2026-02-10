@@ -264,6 +264,11 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
 };
 
 const setupNotificationListenerForAdmin = (userProfileData) => {
+    notificationListenerSetupCount++;
+    console.log(`header.js: setupNotificationListenerForAdmin volané ${notificationListenerSetupCount}. krát`);
+    console.log("header.js: setupNotificationListenerForAdmin volané s userProfileData:", userProfileData);
+    console.log("header.js: displayNotifications hodnota:", userProfileData?.displayNotifications);
+    
     if (!window.db) {
         console.warn("header.js: Firestore databáza nie je inicializovaná pre notifikácie.");
         return;
