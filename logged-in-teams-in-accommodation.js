@@ -126,6 +126,63 @@ const createAccommodationNotification = async (action, data) => {
     }
 };
 
+// Funkcia na výpočet skutočného počtu osôb s ubytovaním v tíme
+const calculatePeopleWithAccommodation = (team) => {
+    if (!team || !team.fullTeamData) return 0;
+    
+    const teamData = team.fullTeamData;
+    let totalWithAccommodation = 0;
+    
+    // Funkcia na kontrolu, či má člen ubytovanie
+    const hasAccommodation = (member) => {
+        if (member.accommodation?.type && member.accommodation.type !== 'bez ubytovania') {
+            return true;
+        }
+        // Ak člen nemá vlastné ubytovanie, zdedí ubytovanie z tímu
+        if (teamData.accommodation?.type && teamData.accommodation.type !== 'bez ubytovania') {
+            return true;
+        }
+        return false;
+    };
+    
+    // Počítanie hráčov s ubytovaním
+    if (Array.isArray(teamData.playerDetails)) {
+        teamData.playerDetails.forEach(player => {
+            if (hasAccommodation(player)) totalWithAccommodation++;
+        });
+    }
+    
+    // Počítanie členov realizačného tímu (ženy) s ubytovaním
+    if (Array.isArray(teamData.womenTeamMemberDetails)) {
+        teamData.womenTeamMemberDetails.forEach(member => {
+            if (hasAccommodation(member)) totalWithAccommodation++;
+        });
+    }
+    
+    // Počítanie členov realizačného tímu (muži) s ubytovaním
+    if (Array.isArray(teamData.menTeamMemberDetails)) {
+        teamData.menTeamMemberDetails.forEach(member => {
+            if (hasAccommodation(member)) totalWithAccommodation++;
+        });
+    }
+    
+    // Počítanie šoférov (ženy) s ubytovaním
+    if (Array.isArray(teamData.driverDetailsFemale)) {
+        teamData.driverDetailsFemale.forEach(driver => {
+            if (hasAccommodation(driver)) totalWithAccommodation++;
+        });
+    }
+    
+    // Počítanie šoférov (muži) s ubytovaním
+    if (Array.isArray(teamData.driverDetailsMale)) {
+        teamData.driverDetailsMale.forEach(driver => {
+            if (hasAccommodation(driver)) totalWithAccommodation++;
+        });
+    }
+    
+    return totalWithAccommodation;
+};
+
 const AddGroupsApp = ({ userProfileData }) => {
     const [accommodations, setAccommodations] = useState([]);
     const [allTeams, setAllTeams] = useState([]);
@@ -243,12 +300,23 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 const femaleDrivers = Array.isArray(team.driverDetailsFemale) ? team.driverDetailsFemale.length : 0;
                                 const maleDrivers = Array.isArray(team.driverDetailsMale) ? team.driverDetailsMale.length : 0;
                                 const totalPeople = playerCount + womenRTCount + menRTCount + femaleDrivers + maleDrivers;
+                                
+                                // Výpočet počtu osôb s ubytovaním
+                                const peopleWithAccommodation = calculatePeopleWithAccommodation({
+                                    category,
+                                    teamName: team.teamName.trim(),
+                                    fullTeamData: team,
+                                    userId: doc.id,
+                                    teamId: team.teamId || team.teamName.toLowerCase().replace(/\s+/g, '-'),
+                                    assignedPlace: team.accommodation?.name || null
+                                });
 
                                 teams.push({
                                     category,
                                     teamName: team.teamName.trim(),
                                     accommodation: accomType,
                                     totalPeople,
+                                    peopleWithAccommodation, // Nové pole: počet ľudí s ubytovaním
                                     fullTeamData: team,
                                     userId: doc.id,
                                     teamId: team.teamId || team.teamName.toLowerCase().replace(/\s+/g, '-'),
@@ -363,7 +431,7 @@ const AddGroupsApp = ({ userProfileData }) => {
         if (!place) return { used: 0, remaining: null };
         
         const allTeamsInPlace = assignedTeams.filter(team => team.assignedPlace === place.name);
-        const usedCapacity = allTeamsInPlace.reduce((sum, team) => sum + team.totalPeople, 0);
+        const usedCapacity = allTeamsInPlace.reduce((sum, team) => sum + team.peopleWithAccommodation, 0);
         const remainingCapacity = place.capacity !== null ? place.capacity - usedCapacity : null;
         
         return {
@@ -374,6 +442,10 @@ const AddGroupsApp = ({ userProfileData }) => {
 
     const getFilteredTeamsPeopleCount = (teamsArray) => {
         return teamsArray.reduce((sum, team) => sum + (team.totalPeople || 0), 0);
+    };
+    
+    const getFilteredTeamsPeopleWithAccommodationCount = (teamsArray) => {
+        return teamsArray.reduce((sum, team) => sum + (team.peopleWithAccommodation || 0), 0);
     };
 
     const accommodationsWithTeams = accommodations
@@ -441,8 +513,9 @@ const AddGroupsApp = ({ userProfileData }) => {
         
         // Spočítať osoby
         const totalPeople = teamsInCategory.reduce((sum, team) => sum + (team.totalPeople || 0), 0);
-        const assignedPeople = assignedTeamsInCategory.reduce((sum, team) => sum + (team.totalPeople || 0), 0);
-        const unassignedPeople = unassignedTeamsInCategory.reduce((sum, team) => sum + (team.totalPeople || 0), 0);
+        const peopleWithAccommodation = teamsInCategory.reduce((sum, team) => sum + (team.peopleWithAccommodation || 0), 0);
+        const assignedPeople = assignedTeamsInCategory.reduce((sum, team) => sum + (team.peopleWithAccommodation || 0), 0);
+        const unassignedPeople = unassignedTeamsInCategory.reduce((sum, team) => sum + (team.peopleWithAccommodation || 0), 0);
         
         return {
             name: category,
@@ -451,6 +524,7 @@ const AddGroupsApp = ({ userProfileData }) => {
             unassignedTeams: unassignedTeamsInCategory,
             totalTeams: teamsInCategory.length,
             totalPeople,
+            peopleWithAccommodation,
             assignedPeople,
             unassignedPeople,
             assignedTeamsCount: assignedTeamsInCategory.length,
@@ -591,7 +665,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     category: selectedTeam.category,
                     teamId: selectedTeam.teamId,
                     userId: selectedTeam.userId,
-                    totalPeople: selectedTeam.totalPeople,
+                    totalPeople: selectedTeam.peopleWithAccommodation,
                     oldAccommodation: oldAccommodation,
                     newAccommodation: selectedPlace.name
                 });
@@ -602,7 +676,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                     category: selectedTeam.category,
                     teamId: selectedTeam.teamId,
                     userId: selectedTeam.userId,
-                    totalPeople: selectedTeam.totalPeople,
+                    totalPeople: selectedTeam.peopleWithAccommodation,
                     accommodationName: selectedPlace.name
                 });
                 notify(`Tím ${selectedTeam.teamName} bol priradený do ${selectedPlace.name}`, 'success');
@@ -670,7 +744,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                 category: teamToRemove.category,
                 teamId: teamToRemove.teamId,
                 userId: teamToRemove.userId,
-                totalPeople: teamToRemove.totalPeople,
+                totalPeople: teamToRemove.peopleWithAccommodation,
                 oldAccommodation: teamToRemove.assignedPlace
             });
 
@@ -1066,7 +1140,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                 }, `${team.category}: ${team.teamName}`),
                                                 React.createElement('span', { 
                                                     className: 'text-gray-500 ml-3 text-sm whitespace-nowrap'
-                                                }, `(${team.totalPeople} osôb)`)
+                                                }, `(${team.peopleWithAccommodation} z ${team.totalPeople} osôb)`)
                                             ),
                                             React.createElement(
                                                 'div',
@@ -1252,7 +1326,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                                 className: 'font-semibold text-gray-800 mb-2 text-sm flex-shrink-0 whitespace-nowrap overflow-visible',
                                                                 style: { textOverflow: 'clip' }
                                                             },
-                                                            `Priradené tímy ${selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter ? '(filtrované)' : ''} (${place.filteredAssignedTeams.length}${selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter ? '/' + getFilteredTeamsPeopleCount(place.filteredAssignedTeams) + ' osôb' : ''})`
+                                                            `Priradené tímy ${selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter ? '(filtrované)' : ''} (${place.filteredAssignedTeams.length}${selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter ? '/' + getFilteredTeamsPeopleWithAccommodationCount(place.filteredAssignedTeams) + ' osôb' : ''})`
                                                         ),
                                                         React.createElement(
                                                             'ul',
@@ -1273,7 +1347,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                                         }, `${team.category}: ${team.teamName}`),
                                                                         React.createElement('span', { 
                                                                             className: 'text-gray-500 text-xs ml-2 whitespace-nowrap flex-shrink-0'
-                                                                        }, `(${team.totalPeople} osôb)`)
+                                                                        }, `(${team.peopleWithAccommodation} z ${team.totalPeople} osôb)`)
                                                                     ),
                                                                     React.createElement(
                                                                         'div',
@@ -1374,7 +1448,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                             style: { textOverflow: 'clip' }
                                         }, 
                                         `${category.assignedTeamsCount} z ${category.totalTeams} tímov • `,
-                                        `${category.assignedPeople} z ${category.totalPeople} osôb`
+                                        `${category.assignedPeople} z ${category.peopleWithAccommodation} osôb s ubytovaním`
                                         )
                                     ),
                                     React.createElement(
@@ -1432,7 +1506,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                             }, `${team.category}: ${team.teamName}`),
                                                             React.createElement('span', { 
                                                                 className: 'text-gray-500 text-xs ml-1.5 whitespace-nowrap flex-shrink-0'
-                                                            }, `(${team.totalPeople})`
+                                                            }, `(${team.peopleWithAccommodation} z ${team.totalPeople})`
                                                             )
                                                         ),
                                                         React.createElement(
@@ -1534,7 +1608,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                                         color: getTeamAccommodationTextColor(team) || '#000000'
                                                                     }
                                                                 },
-                                                                team.totalPeople
+                                                                team.peopleWithAccommodation
                                                             )
                                                         ),
                                                         React.createElement(
@@ -1832,6 +1906,9 @@ const AddGroupsApp = ({ userProfileData }) => {
                     ),
                     React.createElement('p', { className: 'text-sm text-gray-600' },
                         `Počet osôb v tíme: ${selectedTeam?.totalPeople || 0}`
+                    ),
+                    React.createElement('p', { className: 'text-sm text-gray-600' },
+                        `Počet osôb s ubytovaním: ${selectedTeam?.peopleWithAccommodation || 0}`
                     )
                 ),
     
@@ -1857,7 +1934,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                 availableAccommodations.map(place => {
                                     const actualCapacity = getActualCapacity(place.id);
                                     const canAccommodate = place.capacity === null || 
-                                        (actualCapacity.remaining !== null && actualCapacity.remaining >= (selectedTeam?.totalPeople || 0));
+                                        (actualCapacity.remaining !== null && actualCapacity.remaining >= (selectedTeam?.peopleWithAccommodation || 0));
                                     
                                     return React.createElement(
                                         'div',
@@ -1928,7 +2005,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                         { 
                                                             className: `text-sm font-medium mt-1 whitespace-nowrap overflow-visible ${
                                                                 actualCapacity.remaining < 0 ? 'text-red-600' :
-                                                                actualCapacity.remaining < (selectedTeam?.totalPeople || 0) ? 'text-orange-600' :
+                                                                actualCapacity.remaining < (selectedTeam?.peopleWithAccommodation || 0) ? 'text-orange-600' :
                                                                 'text-green-600'
                                                             }`,
                                                             style: { textOverflow: 'clip' }
@@ -1949,7 +2026,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                                                     React.createElement(
                                                         'div',
                                                         { className: 'text-sm text-red-600 mt-1 font-medium whitespace-nowrap' },
-                                                        `Nedostatočná kapacita pre tím (${selectedTeam?.totalPeople || 0} osôb)`
+                                                        `Nedostatočná kapacita pre tím (${selectedTeam?.peopleWithAccommodation || 0} osôb s ubytovaním)`
                                                     )
                                                 )
                                             )
