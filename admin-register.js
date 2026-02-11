@@ -410,7 +410,7 @@ function App() {
                 message: notificationMessage,
                 timestamp: serverTimestamp(), // Corrected: Use serverTimestamp() from modular import
                 recipientId: notificationRecipientId,
-                performedBy: currentUserEmail || null,
+                performedBy: email || null,
                 read: false
             });
             console.log("Oznámenie o novej registrácii administrátora bolo úspešne uložené do Firestore do kolekcie /notifications/.");
