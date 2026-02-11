@@ -501,10 +501,71 @@ const formatDateToDMMYYYY = (dateString) => {
 
 
 // TeamDetailsContent Component - zobrazuje len vnútorné detaily jedného tímu (bez vonkajšieho CollapsibleSection)
-function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, showUsersChecked, showTeamsChecked, openEditModal, db, setUserNotificationMessage, onAddMember }) {
+// TeamDetailsContent Component - zobrazuje len vnútorné detaily jedného tímu (bez vonkajšieho CollapsibleSection)
+function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, showUsersChecked, showTeamsChecked, openEditModal, db, setUserNotificationMessage, onAddMember, allTeamsData }) {
     if (!team) {
         return React.createElement('div', { className: 'text-gray-600 p-4' }, 'Žiadne tímové registrácie.');
     }
+
+    // Získanie všetkých registračných čísel zo všetkých tímov
+    const getAllRegistrationNumbers = React.useMemo(() => {
+        const registrationNumbers = new Map(); // Mapa: registračné číslo -> { count, firstOccurrence }
+        
+        if (allTeamsData) {
+            allTeamsData.forEach(t => {
+                // Prehľadávanie hráčov
+                if (t.playerDetails) {
+                    t.playerDetails.forEach(player => {
+                        if (player.registrationNumber) {
+                            const regNum = String(player.registrationNumber).trim();
+                            if (!registrationNumbers.has(regNum)) {
+                                registrationNumbers.set(regNum, { 
+                                    count: 1, 
+                                    firstTeam: t.teamName || 'Bez názvu',
+                                    firstCategory: t._category || '-'
+                                });
+                            } else {
+                                const existing = registrationNumbers.get(regNum);
+                                existing.count += 1;
+                                registrationNumbers.set(regNum, existing);
+                            }
+                        }
+                    });
+                }
+                
+                // Prehľadávanie ostatných členov (pre prípad, že by mali registračné čísla)
+                ['menTeamMemberDetails', 'womenTeamMemberDetails', 'driverDetailsMale', 'driverDetailsFemale'].forEach(arrName => {
+                    if (t[arrName]) {
+                        t[arrName].forEach(member => {
+                            if (member.registrationNumber) {
+                                const regNum = String(member.registrationNumber).trim();
+                                if (!registrationNumbers.has(regNum)) {
+                                    registrationNumbers.set(regNum, { 
+                                        count: 1, 
+                                        firstTeam: t.teamName || 'Bez názvu',
+                                        firstCategory: t._category || '-'
+                                    });
+                                } else {
+                                    const existing = registrationNumbers.get(regNum);
+                                    existing.count += 1;
+                                    registrationNumbers.set(regNum, existing);
+                                }
+                            }
+                        });
+                    }
+                });
+            });
+        }
+        
+        return registrationNumbers;
+    }, [allTeamsData]);
+
+    const isRegistrationNumberDuplicate = (regNumber) => {
+        if (!regNumber) return false;
+        const regNumStr = String(regNumber).trim();
+        const entry = getAllRegistrationNumbers.get(regNumStr);
+        return entry && entry.count > 1;
+    };
 
     // Moved definitions to the top of the component
     const allConsolidatedMembers = [];
@@ -549,7 +610,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                 ...driver,
                 type: 'Šofér (muž)',
                 originalArray: 'driverDetailsMale',
-                originalIndex: index, // Použiť index, lebo je to pole
+                originalIndex: index,
                 uniqueId: `${team.teamName}-driver-male-${driver.firstName || ''}-${driver.lastName || ''}-${index}`
             });
         });
@@ -561,7 +622,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                 ...driver,
                 type: 'Šofér (žena)',
                 originalArray: 'driverDetailsFemale',
-                originalIndex: index, // Použiť index, lebo je to pole
+                originalIndex: index,
                 uniqueId: `${team.teamName}-driver-female-${driver.firstName || ''}-${driver.lastName || ''}-${index}`
             });
         });
@@ -579,12 +640,10 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         refreshment: 'Občerstvenie'
     };
 
-
-    const formatAddress = (member) => { // Zmenený názov z 'address' na 'member' pre väčšiu prehľadnosť
+    const formatAddress = (member) => {
         if (!member) return '-';
 
         let addressData = member;
-        // Ak existuje vnorený objekt 'address', použiť ho
         if (member.address && typeof member.address === 'object') {
             addressData = member.address;
         }
@@ -595,12 +654,11 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         const city = addressData.city || '';
         const country = addressData.country || '';
 
-        // Odstrániť prebytočné čiarky a medzery
         const parts = [
             `${street} ${houseNumber}`.trim(),
             `${postalCode} ${city}`.trim(),
             country.trim()
-        ].filter(p => p !== ''); // Odstrániť prázdne časti
+        ].filter(p => p !== '');
 
         return parts.join(', ');
     };
@@ -629,15 +687,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
             const memberArrayType = member.originalArray;
             const memberIndex = member.originalIndex;
 
-            console.log("DEBUG: Zmena ubytovania - Parametre:", {
-                teamCategory,
-                teamIndex,
-                memberArrayType,
-                memberIndex,
-                memberName: `${member.firstName} ${member.lastName}`,
-                isChecked
-            });
-
             // Deep clone relevant parts
             const updatedCategoryTeams = JSON.parse(JSON.stringify(teamsData[teamCategory] || []));
             const teamToUpdate = updatedCategoryTeams[teamIndex];
@@ -663,7 +712,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
             const teamName = team.teamName || 'Bez názvu';
 
             if (isChecked) {
-                // Priradenie ubytovania z tímu
                 if (teamToUpdate.accommodation?.type && teamToUpdate.accommodation.type !== 'bez ubytovania') {
                     changes.push(`Priradenie ubytovania pre ${memberName} (Tím: ${teamName}, ${teamCategory})`);
                     changes.push(`Typ ubytovania nastavený na '''${teamToUpdate.accommodation.type}'`);
@@ -673,7 +721,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                     return;
                 }
             } else {
-                // Odstránenie ubytovania
                 if (currentMemberAccommodation && currentMemberAccommodation !== 'bez ubytovania') {
                     changes.push(`Odstránenie ubytovania pre ${memberName} (Tím: ${teamName}, ${teamCategory})`);
                     changes.push(`Typ ubytovania zmenený z '${currentMemberAccommodation}' na 'bez ubytovania'`);
@@ -683,36 +730,24 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                     return;
                 }
             }
-            // --- End Notification Logic ---
 
-            // Nastaviť/odstrániť ubytovanie člena
             if (!memberToUpdate.accommodation) {
                 memberToUpdate.accommodation = {};
             }
 
             if (isChecked) {
-                // Priradiť ubytovanie z tímu
                 memberToUpdate.accommodation.type = teamToUpdate.accommodation.type;
                 if (teamToUpdate.accommodation.name) {
                     memberToUpdate.accommodation.name = teamToUpdate.accommodation.name;
                 }
             } else {
-                // Odstrániť ubytovanie
                 memberToUpdate.accommodation.type = 'bez ubytovania';
                 delete memberToUpdate.accommodation.name;
             }
 
-            console.log("DEBUG: Člen po úprave:", {
-                accommodation: memberToUpdate.accommodation,
-                memberData: memberToUpdate
-            });
-
-            // Aktualizovať celé pole pre danú kategóriu
             const updatePayload = {
                 [`teams.${teamCategory}`]: updatedCategoryTeams
             };
-
-            console.log("DEBUG: Update payload pre Firestore:", updatePayload);
 
             await updateDoc(userDocRef, updatePayload);
             setUserNotificationMessage(
@@ -722,7 +757,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                 'success'
             );
 
-            // --- Save Notification to Firestore ---
             if (changes.length > 0 && userEmail) {
                 const notificationsCollectionRef = collection(db, 'notifications');
                 await addDoc(notificationsCollectionRef, {
@@ -730,9 +764,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                     changes,
                     timestamp: serverTimestamp()
                 });
-                console.log("Notifikácia o zmene ubytovania uložená do Firestore.");
             }
-            // --- End Save Notification ---
 
         } catch (error) {
             console.error("Chyba pri zmene ubytovania v Firestore:", error);
@@ -766,15 +798,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
             const memberArrayType = member.originalArray;
             const memberIndex = member.originalIndex;
     
-            console.log("DEBUG: Odstránenie ubytovania - Parametre:", {
-                teamCategory,
-                teamIndex,
-                memberArrayType,
-                memberIndex,
-                memberName: `${member.firstName} ${member.lastName}`
-            });
-    
-            // Deep clone relevant parts
             const updatedCategoryTeams = JSON.parse(JSON.stringify(teamsData[teamCategory] || []));
             const teamToUpdate = updatedCategoryTeams[teamIndex];
     
@@ -790,17 +813,9 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
     
             const memberToUpdate = memberArrayToUpdate[memberIndex];
     
-            // Kontrola aktuálneho stavu ubytovania
             const teamAccommodation = team.accommodation?.type;
             const currentMemberAccommodation = memberToUpdate.accommodation?.type || teamAccommodation;
             
-            console.log("DEBUG: Aktuálne ubytovanie:", {
-                teamAccommodation,
-                currentMemberAccommodation,
-                memberAccommodationObj: memberToUpdate.accommodation
-            });
-    
-            // --- Notification Logic ---
             const userEmail = window.auth.currentUser?.email;
             const changes = [];
             
@@ -814,32 +829,20 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                 window.hideGlobalLoader();
                 return;
             }
-            // --- End Notification Logic ---
     
-            // Nastaviť ubytovanie člena na 'bez ubytovania'
             if (!memberToUpdate.accommodation) {
                 memberToUpdate.accommodation = {};
             }
             memberToUpdate.accommodation.type = 'bez ubytovania';
-            // Vymazať názov ubytovne, ak existuje
             delete memberToUpdate.accommodation.name;
     
-            console.log("DEBUG: Člen po úprave:", {
-                accommodation: memberToUpdate.accommodation,
-                memberData: memberToUpdate
-            });
-    
-            // Aktualizovať celé pole pre danú kategóriu
             const updatePayload = {
                 [`teams.${teamCategory}`]: updatedCategoryTeams
             };
     
-            console.log("DEBUG: Update payload pre Firestore:", updatePayload);
-    
             await updateDoc(userDocRef, updatePayload);
             setUserNotificationMessage(`Ubytovanie pre ${member.firstName} ${member.lastName} bolo odstránené.`, 'success');
     
-            // --- Save Notification to Firestore ---
             if (changes.length > 0 && userEmail) {
                 const notificationsCollectionRef = collection(db, 'notifications');
                 await addDoc(notificationsCollectionRef, {
@@ -847,9 +850,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                     changes,
                     timestamp: serverTimestamp()
                 });
-                console.log("Notifikácia o odstránení ubytovania uložená do Firestore.");
             }
-            // --- End Save Notification ---
     
         } catch (error) {
             console.error("Chyba pri odstraňovaní ubytovania v Firestore:", error);
@@ -878,21 +879,20 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
 
         try {
             const userDocRef = doc(db, 'users', team._userId);
-            const docSnapshot = await getDoc(userDocRef); // Fetch the entire user document
+            const docSnapshot = await getDoc(userDocRef);
 
             if (!docSnapshot.exists()) {
                 throw new Error("Používateľský dokument sa nenašiel.");
             }
 
             const userData = docSnapshot.data();
-            const teamsData = { ...userData.teams }; // Create a mutable copy of the teams object
+            const teamsData = { ...userData.teams };
 
             const teamCategory = team._category;
             const teamIndex = team._teamIndex;
             const memberArrayType = member.originalArray;
             const memberIndex = member.originalIndex;
 
-            // Deep clone the relevant parts to ensure immutability until update
             const updatedCategoryTeams = JSON.parse(JSON.stringify(teamsData[teamCategory] || []));
             const teamToUpdate = updatedCategoryTeams[teamIndex];
 
@@ -908,7 +908,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
 
             const memberToUpdate = memberArrayToUpdate[memberIndex];
 
-            // --- Notification Logic - Capture original value before modification ---
             const userEmail = window.auth.currentUser?.email;
             const changes = [];
             const originalMealValue = memberToUpdate.packageDetails?.meals?.[date]?.[mealType] === 1 ? 'Áno' : 'Nie';
@@ -920,19 +919,13 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                 changes.push(`Zmena stravovania pre ${memberName} (Tím: ${teamName}, ${teamCategory})`);
                 changes.push(`${formatDateToDMMYYYY(date)}, ${mealTypeLabels[mealType]}: z '${originalMealValue}' na '${newMealValue}'`);
             }
-            // --- End Notification Logic ---
 
-            // Ensure packageDetails.meals and packageDetails.meals[date] exist
             if (!memberToUpdate.packageDetails) memberToUpdate.packageDetails = {};
             if (!memberToUpdate.packageDetails.meals) memberToUpdate.packageDetails.meals = {};
             if (!memberToUpdate.packageDetails.meals[date]) memberToUpdate.packageDetails.meals[date] = {};
 
-            // Update the specific meal type for the member
             memberToUpdate.packageDetails.meals[date][mealType] = isChecked ? 1 : 0;
 
-            // Reconstruct the full path and update only the top-level array
-            // The path for updateDoc should be a valid top-level field or a nested map field, not an array element with index.
-            // We are updating the entire array for the specific category.
             const updatePayload = {
                 [`teams.${teamCategory}`]: updatedCategoryTeams
             };
@@ -940,7 +933,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
             await updateDoc(userDocRef, updatePayload);
             setUserNotificationMessage(`Stravovanie pre ${member.firstName} ${member.lastName} bolo aktualizované.`, 'success');
 
-            // --- Save Notification to Firestore ---
             if (changes.length > 0 && userEmail) {
                 const notificationsCollectionRef = collection(db, 'notifications');
                 await addDoc(notificationsCollectionRef, {
@@ -948,9 +940,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                     changes,
                     timestamp: serverTimestamp()
                 });
-                console.log("Notifikácia o zmene stravovania uložená do Firestore.");
             }
-            // --- End Save Notification ---
 
         } catch (error) {
             console.error("Chyba pri aktualizácii stravovania v Firestore:", error);
@@ -980,7 +970,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Reg. číslo'),
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Adresa'),
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Ubytovanie'),
-                    // Hlavičky stĺpcov pre jedlo sa generujú len pre platné dátumy
                     mealDates.map(date =>
                         React.createElement('th', { key: date, colSpan: 4, className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 whitespace-nowrap min-w-max' },
                             React.createElement('div', { className: 'font-bold mb-1 whitespace-nowrap' }, formatDateToDMMYYYY(date)),
@@ -998,8 +987,13 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
             React.createElement(
                 'tbody',
                 { className: 'bg-white divide-y divide-gray-200' },
-                allConsolidatedMembers.map((member) =>
-                    React.createElement(
+                allConsolidatedMembers.map((member) => {
+                    const isRegNumberDuplicate = isRegistrationNumberDuplicate(member.registrationNumber);
+                    const regNumberCellClass = isRegNumberDuplicate 
+                        ? 'px-4 py-2 whitespace-nowrap min-w-max font-bold text-red-600' 
+                        : 'px-4 py-2 whitespace-nowrap min-w-max';
+                    
+                    return React.createElement(
                         'tr',
                         {
                             key: member.uniqueId,
@@ -1033,7 +1027,13 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.lastName || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatDateToDMMYYYY(member.dateOfBirth)),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.jerseyNumber || '-'),
-                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.registrationNumber || '-'),
+                        React.createElement('td', { className: regNumberCellClass }, 
+                            member.registrationNumber || '-',
+                            isRegNumberDuplicate && React.createElement('span', {
+                                className: 'ml-1 text-xs text-red-500',
+                                title: `Duplicitné registračné číslo`
+                            }, '⚠️')
+                        ),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatAddress(member)),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' },
                             (() => {
@@ -1042,7 +1042,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                                 const canHaveAccommodation = team.accommodation?.type && team.accommodation.type !== 'bez ubytovania';
                                 
                                 return canHaveAccommodation ? (
-                                    // CHECKBOX pre ubytovanie, ak tím má ubytovanie
                                     React.createElement('input', {
                                         type: 'checkbox',
                                         checked: hasAccommodation,
@@ -1053,29 +1052,21 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                                             : `Priradiť tímové ubytovanie (${team.accommodation.type})`
                                     })
                                 ) : (
-                                    // Textové zobrazenie, ak tím nemá ubytovanie
                                     React.createElement('span', { 
                                         className: accommodationStatus === 'bez ubytovania' ? 'text-gray-400' : 'text-gray-800'
                                     }, accommodationStatus)
                                 );
                             })()
                         ),
-                        // Bunky s jedlom sa generujú len pre platné dátumy
                         mealDates.map(date =>
                             React.createElement('td', { key: `${member.uniqueId}-${date}-meals`, colSpan: 4, className: 'px-4 py-2 text-center border-l border-gray-200 whitespace-nowrap min-w-max' },
                                 React.createElement(
                                     'div',
                                     { className: 'flex justify-around' },
                                     mealTypes.map(type => {
-                                        // Získať stav z individuálneho nastavenia člena (ak existuje)
                                         const memberMealSetting = member.packageDetails?.meals?.[date]?.[type];
-                                        // Získať stav z balíka tímu (ak existuje)
                                         const teamPackageMealSetting = team.packageDetails?.meals?.[date]?.[type];
 
-                                        // Predvolený stav:
-                                        // 1. Ak existuje individuálne nastavenie člena (nie je undefined), použiť to.
-                                        // 2. Inak, ak existuje nastavenie z balíka, použiť to.
-                                        // 3. Inak, predvolene false (0).
                                         const isChecked = (memberMealSetting !== undefined)
                                             ? (memberMealSetting === 1)
                                             : (teamPackageMealSetting === 1);
@@ -1091,18 +1082,17 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                                 )
                             )
                         )
-                    )
-                )
+                    );
+                })
             )
         )
     );
 
     const collapsibleSectionTitle = generateTeamHeaderTitle(team, tshirtSizeOrder, true, showUsersChecked, showTeamsChecked);
 
-    // Create the edit button for the team itself
     const teamEditButtonElement = React.createElement('button', {
         onClick: (e) => {
-            e.stopPropagation(); // Prevent the collapsible section from toggling
+            e.stopPropagation();
             const targetDocRefForTeam = doc(db, 'users', team._userId);
             const teamPathForSaving = `teams.${team._category}[${team._teamIndex}]`;
             const resolvedTitle = `Upraviť tím: ${team.teamName}`;
@@ -1117,7 +1107,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
     }, '⚙️');
 
-
     if (showDetailsAsCollapsible) {
         return React.createElement(
             CollapsibleSection,
@@ -1131,8 +1120,8 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                 React.createElement('button', {
                     className: 'w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50',
                     onClick: (e) => {
-                        e.stopPropagation(); // Zabrániť prepínaniu sekcie
-                        onAddMember(team); // Zavolať funkciu na pridanie člena pre konkrétny tím
+                        e.stopPropagation();
+                        onAddMember(team);
                     }
                 }, '+')
             )
@@ -1148,8 +1137,8 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                 React.createElement('button', {
                     className: 'w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50',
                     onClick: (e) => {
-                        e.stopPropagation(); // Zabrániť prepínaniu sekcie
-                        onAddMember(team); // Zavolať funkciu na pridanie člena pre konkrétny tím
+                        e.stopPropagation();
+                        onAddMember(team);
                     }
                 }, '+')
             )
@@ -4926,7 +4915,8 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                                     openEditModal: openEditModal,
                                                     db: db,
                                                     setUserNotificationMessage: setUserNotificationMessage,
-                                                    onAddMember: handleOpenAddMemberTypeModal
+                                                    onAddMember: handleOpenAddMemberTypeModal,
+                                                    allTeamsData: allTeamsFlattened
                                                 })
                                             )
                                         )
@@ -5082,7 +5072,8 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                                         openEditModal: openEditModal,
                                                         db: db,
                                                         setUserNotificationMessage: setUserNotificationMessage,
-                                                        onAddMember: handleOpenAddMemberTypeModal
+                                                        onAddMember: handleOpenAddMemberTypeModal,
+                                                        allTeamsData: allTeamsFlattened
                                                     })
                                                 })
                                             )
