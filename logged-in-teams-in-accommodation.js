@@ -133,16 +133,24 @@ const calculatePeopleWithAccommodation = (team) => {
     const teamData = team.fullTeamData;
     let totalWithAccommodation = 0;
     
+    // Kontrola, či má tím vôbec nastavené ubytovanie
+    const teamHasAccommodation = teamData.accommodation?.type && 
+                                 teamData.accommodation.type !== 'bez ubytovania';
+    
     // Funkcia na kontrolu, či má člen ubytovanie
     const hasAccommodation = (member) => {
-        if (member.accommodation?.type && member.accommodation.type !== 'bez ubytovania') {
+        // 1. Najprv skontrolujeme individuálne nastavenie člena
+        if (member.accommodation?.type) {
+            // Ak má nastavené 'bez ubytovania', tak NEMÁ ubytovanie
+            if (member.accommodation.type === 'bez ubytovania') {
+                return false;
+            }
+            // Ak má akýkoľvek iný typ ubytovania, tak MÁ ubytovanie
             return true;
         }
-        // Ak člen nemá vlastné ubytovanie, zdedí ubytovanie z tímu
-        if (teamData.accommodation?.type && teamData.accommodation.type !== 'bez ubytovania') {
-            return true;
-        }
-        return false;
+        
+        // 2. Ak člen nemá individuálne nastavenie, zdedí ubytovanie z tímu
+        return teamHasAccommodation;
     };
     
     // Počítanie hráčov s ubytovaním
