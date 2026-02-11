@@ -1028,11 +1028,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatDateToDMMYYYY(member.dateOfBirth)),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.jerseyNumber || '-'),
                         React.createElement('td', { className: regNumberCellClass }, 
-                            member.registrationNumber || '-',
-                            isRegNumberDuplicate && React.createElement('span', {
-                                className: 'ml-1 text-xs text-red-500',
-                                title: `Duplicitné registračné číslo`
-                            }, '⚠️')
+                            member.registrationNumber || '-'
                         ),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatAddress(member)),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' },
