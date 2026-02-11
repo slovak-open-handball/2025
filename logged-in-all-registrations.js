@@ -579,9 +579,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         refreshment: 'Občerstvenie'
     };
 
-    // Pridaná premenná pre ubytovanie
-    const accommodationLabel = 'Ubytovanie';
-
 
     const formatAddress = (member) => { // Zmenený názov z 'address' na 'member' pre väčšiu prehľadnosť
         if (!member) return '-';
@@ -606,99 +603,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         ].filter(p => p !== ''); // Odstrániť prázdne časti
 
         return parts.join(', ');
-    };
-
-    // Nová funkcia na spracovanie zmeny ubytovania
-    const handleAccommodationChange = async (member, date, isChecked) => {
-        if (!db || !team._userId) {
-            setUserNotificationMessage("Chyba: Databáza nie je pripojená alebo chýba ID používateľa tímu.", 'error');
-            return;
-        }
-
-        window.showGlobalLoader();
-
-        try {
-            const userDocRef = doc(db, 'users', team._userId);
-            const docSnapshot = await getDoc(userDocRef);
-
-            if (!docSnapshot.exists()) {
-                throw new Error("Používateľský dokument sa nenašiel.");
-            }
-
-            const userData = docSnapshot.data();
-            const teamsData = { ...userData.teams };
-
-            const teamCategory = team._category;
-            const teamIndex = team._teamIndex;
-            const memberArrayType = member.originalArray;
-            const memberIndex = member.originalIndex;
-
-            const updatedCategoryTeams = JSON.parse(JSON.stringify(teamsData[teamCategory] || []));
-            const teamToUpdate = updatedCategoryTeams[teamIndex];
-
-            if (!teamToUpdate) {
-                throw new Error("Tím sa nenašiel pre aktualizáciu ubytovania.");
-            }
-
-            const memberArrayToUpdate = teamToUpdate[memberArrayType];
-
-            if (!memberArrayToUpdate || memberArrayToUpdate[memberIndex] === undefined) {
-                throw new Error("Člen tímu sa nenašiel pre aktualizáciu ubytovania.");
-            }
-
-            const memberToUpdate = memberArrayToUpdate[memberIndex];
-
-            // Notification Logic
-            const userEmail = window.auth.currentUser?.email;
-            const changes = [];
-            
-            // Získať pôvodnú hodnotu ubytovania
-            const originalAccommodationValue = memberToUpdate.accommodation?.[date]?.hasAccommodation;
-            const originalValueText = originalAccommodationValue === 1 ? 'Áno' : 
-                                    (originalAccommodationValue === 0 ? 'Nie' : 
-                                    (team.accommodation?.type && team.accommodation.type !== 'bez ubytovania' ? 'Áno (predvolené)' : 'Nie'));
-            
-            const newValueText = isChecked ? 'Áno' : 'Nie';
-
-            if (originalValueText !== newValueText) {
-                const memberName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Bez mena';
-                const teamName = team.teamName || 'Bez názvu';
-                changes.push(`Zmena ubytovania pre ${memberName} (Tím: ${teamName}, ${teamCategory})`);
-                changes.push(`  • ${formatDateToDMMYYYY(date)}, Ubytovanie: z '${originalValueText}' na '${newValueText}'`);
-            }
-
-            // Ensure accommodation object exists
-            if (!memberToUpdate.accommodation) memberToUpdate.accommodation = {};
-            if (!memberToUpdate.accommodation[date]) memberToUpdate.accommodation[date] = {};
-
-            // Update the accommodation for the specific date
-            memberToUpdate.accommodation[date].hasAccommodation = isChecked ? 1 : 0;
-
-            // Reconstruct the full path
-            const updatePayload = {
-                [`teams.${teamCategory}`]: updatedCategoryTeams
-            };
-
-            await updateDoc(userDocRef, updatePayload);
-            setUserNotificationMessage(`Ubytovanie pre ${member.firstName} ${member.lastName} bolo aktualizované.`, 'success');
-
-            // Save Notification to Firestore
-            if (changes.length > 0 && userEmail) {
-                const notificationsCollectionRef = collection(db, 'notifications');
-                await addDoc(notificationsCollectionRef, {
-                    userEmail,
-                    changes,
-                    timestamp: serverTimestamp()
-                });
-                console.log("Notifikácia o zmene ubytovania uložená do Firestore.");
-            }
-
-        } catch (error) {
-            console.error("Chyba pri aktualizácii ubytovania v Firestore:", error);
-            setUserNotificationMessage(`Chyba pri aktualizácii ubytovania: ${error.message}`, 'error');
-        } finally {
-            window.hideGlobalLoader();
-        }
     };
                 
     const handleMealChange = async (member, date, mealType, isChecked) => {
@@ -793,22 +697,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         }
     };
 
-    // Pomocná funkcia na získanie stavu ubytovania pre člena
-    const getMemberAccommodationStatus = (member, date, team) => {
-        // Ak tím nemá ubytovanie, vrátiť false
-        if (!team.accommodation?.type || team.accommodation.type === 'bez ubytovania' || team.accommodation.type === '') {
-            return false;
-        }
-        
-        // Ak člen má individuálne nastavenie, vrátiť to
-        if (member.accommodation?.[date]?.hasAccommodation !== undefined) {
-            return member.accommodation[date].hasAccommodation === 1;
-        }
-        
-        // Inak vrátiť true (predvolené, ak tím má ubytovanie)
-        return true;
-    };
-
     const teamDetailsTable = React.createElement(
         'div',
         { className: 'overflow-x-hidden' },
@@ -828,48 +716,15 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Číslo dresu'),
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Reg. číslo'),
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Adresa'),
-                    // Hlavičky stĺpcov pre ubytovanie a jedlo sa generujú len pre platné dátumy
+                    // Hlavičky stĺpcov pre jedlo sa generujú len pre platné dátumy
                     mealDates.map(date =>
-                        React.createElement(React.Fragment, { key: date },
-                            // Stĺpec pre ubytovanie
-                            React.createElement('th', { 
-                                className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 whitespace-nowrap min-w-max', 
-                                rowSpan: 2 
-                            },
-                                React.createElement('div', { className: 'font-bold mb-1 whitespace-nowrap' }, formatDateToDMMYYYY(date)),
-                                React.createElement('div', { className: 'text-[10px] font-normal' }, accommodationLabel)
-                            ),
-                            // Stĺpce pre jedlá
-                            React.createElement('th', { 
-                                colSpan: 4, 
-                                className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 whitespace-nowrap min-w-max' 
-                            },
-                                React.createElement(
-                                    'div',
-                                    { className: 'flex justify-around text-[10px] font-normal' },
-                                    mealTypes.map(type =>
-                                        React.createElement('span', { key: `${date}-${type}-sub`, className: 'w-1/4' }, mealTypeLabels[type])
-                                    )
-                                )
-                            )
-                        )
-                    )
-                ),
-                // Druhý riadok hlavičky pre názvy jedál
-                React.createElement(
-                    'tr',
-                    null,
-                    React.createElement('th', { colSpan: 7 }), // Prázdne bunky pre prvých 7 stĺpcov
-                    mealDates.map(date =>
-                        React.createElement(React.Fragment, { key: date },
-                            React.createElement('th', { className: 'hidden' }), // Prázdny pre ubytovanie (už má rowSpan: 2)
-                            React.createElement('th', { colSpan: 4, className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 whitespace-nowrap min-w-max' },
-                                React.createElement(
-                                    'div',
-                                    { className: 'flex justify-around text-[10px] font-normal' },
-                                    mealTypes.map(type =>
-                                        React.createElement('span', { key: `${date}-${type}-label`, className: 'w-1/4' }, type.charAt(0).toUpperCase())
-                                    )
+                        React.createElement('th', { key: date, colSpan: 4, className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 whitespace-nowrap min-w-max' },
+                            React.createElement('div', { className: 'font-bold mb-1 whitespace-nowrap' }, formatDateToDMMYYYY(date)),
+                            React.createElement(
+                                'div',
+                                { className: 'flex justify-around text-[10px] font-normal' },
+                                mealTypes.map(type =>
+                                    React.createElement('span', { key: `${date}-${type}-sub`, className: 'w-1/4' }, mealTypeLabels[type])
                                 )
                             )
                         )
@@ -918,59 +773,37 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.jerseyNumber || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.registrationNumber || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatAddress(member)),
-                        // Bunky s ubytovaním a jedlom pre každý dátum
-                        mealDates.map(date => {
-                            // Zistiť, či tím má ubytovanie iné ako "bez ubytovania"
-                            const hasTeamAccommodation = team.accommodation?.type && 
-                                team.accommodation.type !== 'bez ubytovania' && 
-                                team.accommodation.type !== '';
-                            
-                            // Získať stav ubytovania pre člena (ak existuje individuálne nastavenie)
-                            const memberAccommodationSetting = member.accommodation?.[date]?.hasAccommodation;
-                            
-                            // Predvolený stav: ak tím má ubytovanie, tak zaškrtnuté, inak nie
-                            let isAccommodationChecked = hasTeamAccommodation;
-                            
-                            // Ak existuje individuálne nastavenie člena, použiť to
-                            if (memberAccommodationSetting !== undefined) {
-                                isAccommodationChecked = memberAccommodationSetting === 1;
-                            }
-                            
-                            return React.createElement(React.Fragment, { key: date },
-                                // Bunka pre ubytovanie
-                                React.createElement('td', { className: 'px-4 py-2 text-center border-l border-gray-200 whitespace-nowrap min-w-max' },
-                                    React.createElement('input', {
-                                        type: 'checkbox',
-                                        checked: isAccommodationChecked,
-                                        onChange: (e) => handleAccommodationChange(member, date, e.target.checked),
-                                        className: 'form-checkbox h-4 w-4 text-blue-600',
-                                        disabled: !hasTeamAccommodation // Disable ak tím nemá ubytovanie
-                                    })
-                                ),
-                                // Bunky s jedlom
-                                React.createElement('td', { colSpan: 4, className: 'px-4 py-2 text-center border-l border-gray-200 whitespace-nowrap min-w-max' },
-                                    React.createElement(
-                                        'div',
-                                        { className: 'flex justify-around' },
-                                        mealTypes.map(type => {
-                                            const memberMealSetting = member.packageDetails?.meals?.[date]?.[type];
-                                            const teamPackageMealSetting = team.packageDetails?.meals?.[date]?.[type];
-                                            const isChecked = (memberMealSetting !== undefined)
-                                                ? (memberMealSetting === 1)
-                                                : (teamPackageMealSetting === 1);
+                        // Bunky s jedlom sa generujú len pre platné dátumy
+                        mealDates.map(date =>
+                            React.createElement('td', { key: `${member.uniqueId}-${date}-meals`, colSpan: 4, className: 'px-4 py-2 text-center border-l border-gray-200 whitespace-nowrap min-w-max' },
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex justify-around' },
+                                    mealTypes.map(type => {
+                                        // Získať stav z individuálneho nastavenia člena (ak existuje)
+                                        const memberMealSetting = member.packageDetails?.meals?.[date]?.[type];
+                                        // Získať stav z balíka tímu (ak existuje)
+                                        const teamPackageMealSetting = team.packageDetails?.meals?.[date]?.[type];
 
-                                            return React.createElement('input', {
-                                                key: `${member.uniqueId}-${date}-${type}-checkbox`,
-                                                type: 'checkbox',
-                                                checked: isChecked,
-                                                onChange: (e) => handleMealChange(member, date, type, e.target.checked),
-                                                className: 'form-checkbox h-4 w-4 text-blue-600'
-                                            });
-                                        })
-                                    )
+                                        // Predvolený stav:
+                                        // 1. Ak existuje individuálne nastavenie člena (nie je undefined), použiť to.
+                                        // 2. Inak, ak existuje nastavenie z balíka, použiť to.
+                                        // 3. Inak, predvolene false (0).
+                                        const isChecked = (memberMealSetting !== undefined)
+                                            ? (memberMealSetting === 1)
+                                            : (teamPackageMealSetting === 1);
+
+                                        return React.createElement('input', {
+                                                            key: `${member.uniqueId}-${date}-${type}-checkbox`,
+                                                            type: 'checkbox',
+                                                            checked: isChecked,
+                                                            onChange: (e) => handleMealChange(member, date, type, e.target.checked),
+                                                            className: 'form-checkbox h-4 w-4 text-blue-600'
+                                        });
+                                    })
                                 )
-                            );
-                        })
+                            )
+                        )
                     )
                 )
             )
@@ -4422,7 +4255,7 @@ const handleDeleteMember = React.useCallback(async (targetDocRef, originalDataPa
         const targetDocRefForNewTeam = doc(db, 'users', userIdForNewTeam || user.uid);
 
         openEditModal(newTeamData, 'Pridať nový tím', targetDocRefForNewTeam, newTeamPath, true); // Nastaviť isNewEntry na true
-    });
+    };
 
 
   if (!isAuthReady || user === undefined || !userProfileData) {
