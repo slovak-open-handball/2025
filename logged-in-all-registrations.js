@@ -1036,23 +1036,29 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.registrationNumber || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatAddress(member)),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' },
-                        canHaveAccommodation ? (
-                                // CHECKBOX pre ubytovanie, ak tím má ubytovanie
-                                React.createElement('input', {
-                                    type: 'checkbox',
-                                    checked: hasAccommodation,
-                                    onChange: (e) => handleAccommodationToggle(member, e.target.checked),
-                                    className: 'form-checkbox h-4 w-4 text-blue-600',
-                                    title: hasAccommodation 
-                                        ? `Odstrániť ubytovanie (aktuálne: ${accommodationStatus})`
-                                        : `Priradiť tímové ubytovanie (${team.accommodation.type})`
-                                })
-                            ) : (
-                                // Textové zobrazenie, ak tím nemá ubytovanie
-                                React.createElement('span', { 
-                                    className: accommodationStatus === 'bez ubytovania' ? 'text-gray-400' : 'text-gray-800'
-                                }, accommodationStatus)
-                            )
+                            (() => {
+                                const hasAccommodation = getAccommodationStatus(member) !== 'bez ubytovania' && getAccommodationStatus(member) !== '-';
+                                const accommodationStatus = getAccommodationStatus(member);
+                                const canHaveAccommodation = team.accommodation?.type && team.accommodation.type !== 'bez ubytovania';
+                                
+                                return canHaveAccommodation ? (
+                                    // CHECKBOX pre ubytovanie, ak tím má ubytovanie
+                                    React.createElement('input', {
+                                        type: 'checkbox',
+                                        checked: hasAccommodation,
+                                        onChange: (e) => handleAccommodationToggle(member, e.target.checked),
+                                        className: 'form-checkbox h-4 w-4 text-blue-600',
+                                        title: hasAccommodation 
+                                            ? `Odstrániť ubytovanie (aktuálne: ${accommodationStatus})`
+                                            : `Priradiť tímové ubytovanie (${team.accommodation.type})`
+                                    })
+                                ) : (
+                                    // Textové zobrazenie, ak tím nemá ubytovanie
+                                    React.createElement('span', { 
+                                        className: accommodationStatus === 'bez ubytovania' ? 'text-gray-400' : 'text-gray-800'
+                                    }, accommodationStatus)
+                                );
+                            })()
                         ),
                         // Bunky s jedlom sa generujú len pre platné dátumy
                         mealDates.map(date =>
