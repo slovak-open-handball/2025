@@ -605,6 +605,143 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         return parts.join(', ');
     };
 
+    const handleAccommodationToggle = async (member, isChecked) => {
+        if (!db || !team._userId) {
+            setUserNotificationMessage("Chyba: Databáza nie je pripojená alebo chýba ID používateľa tímu.", 'error');
+            return;
+        }
+
+        window.showGlobalLoader();
+
+        try {
+            const userDocRef = doc(db, 'users', team._userId);
+            const docSnapshot = await getDoc(userDocRef);
+
+            if (!docSnapshot.exists()) {
+                throw new Error("Používateľský dokument sa nenašiel.");
+            }
+
+            const userData = docSnapshot.data();
+            const teamsData = { ...userData.teams };
+
+            const teamCategory = team._category;
+            const teamIndex = team._teamIndex;
+            const memberArrayType = member.originalArray;
+            const memberIndex = member.originalIndex;
+
+            console.log("DEBUG: Zmena ubytovania - Parametre:", {
+                teamCategory,
+                teamIndex,
+                memberArrayType,
+                memberIndex,
+                memberName: `${member.firstName} ${member.lastName}`,
+                isChecked
+            });
+
+            // Deep clone relevant parts
+            const updatedCategoryTeams = JSON.parse(JSON.stringify(teamsData[teamCategory] || []));
+            const teamToUpdate = updatedCategoryTeams[teamIndex];
+
+            if (!teamToUpdate) {
+                throw new Error("Tím sa nenašiel pre úpravu ubytovania.");
+            }
+
+            const memberArrayToUpdate = teamToUpdate[memberArrayType];
+
+            if (!memberArrayToUpdate || memberArrayToUpdate[memberIndex] === undefined) {
+                throw new Error("Člen tímu sa nenašiel pre úpravu ubytovania.");
+            }
+
+            const memberToUpdate = memberArrayToUpdate[memberIndex];
+
+            // --- Notification Logic ---
+            const userEmail = window.auth.currentUser?.email;
+            const changes = [];
+            
+            const currentMemberAccommodation = memberToUpdate.accommodation?.type || teamToUpdate.accommodation?.type;
+            const memberName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Bez mena';
+            const teamName = team.teamName || 'Bez názvu';
+
+            if (isChecked) {
+                // Priradenie ubytovania z tímu
+                if (teamToUpdate.accommodation?.type && teamToUpdate.accommodation.type !== 'bez ubytovania') {
+                    changes.push(`Priradenie ubytovania pre ${memberName} (Tím: ${teamName}, ${teamCategory})`);
+                    changes.push(`  • Typ ubytovania nastavený na '${teamToUpdate.accommodation.type}'`);
+                } else {
+                    setUserNotificationMessage("Tím nemá nastavené ubytovanie na priradenie.", 'info');
+                    window.hideGlobalLoader();
+                    return;
+                }
+            } else {
+                // Odstránenie ubytovania
+                if (currentMemberAccommodation && currentMemberAccommodation !== 'bez ubytovania') {
+                    changes.push(`Odstránenie ubytovania pre ${memberName} (Tím: ${teamName}, ${teamCategory})`);
+                    changes.push(`  • Typ ubytovania zmenený z '${currentMemberAccommodation}' na 'bez ubytovania'`);
+                } else {
+                    setUserNotificationMessage("Tento člen už nemá ubytovanie alebo má nastavené 'bez ubytovania'.", 'info');
+                    window.hideGlobalLoader();
+                    return;
+                }
+            }
+            // --- End Notification Logic ---
+
+            // Nastaviť/odstrániť ubytovanie člena
+            if (!memberToUpdate.accommodation) {
+                memberToUpdate.accommodation = {};
+            }
+
+            if (isChecked) {
+                // Priradiť ubytovanie z tímu
+                memberToUpdate.accommodation.type = teamToUpdate.accommodation.type;
+                if (teamToUpdate.accommodation.name) {
+                    memberToUpdate.accommodation.name = teamToUpdate.accommodation.name;
+                }
+            } else {
+                // Odstrániť ubytovanie
+                memberToUpdate.accommodation.type = 'bez ubytovania';
+                delete memberToUpdate.accommodation.name;
+            }
+
+            console.log("DEBUG: Člen po úprave:", {
+                accommodation: memberToUpdate.accommodation,
+                memberData: memberToUpdate
+            });
+
+            // Aktualizovať celé pole pre danú kategóriu
+            const updatePayload = {
+                [`teams.${teamCategory}`]: updatedCategoryTeams
+            };
+
+            console.log("DEBUG: Update payload pre Firestore:", updatePayload);
+
+            await updateDoc(userDocRef, updatePayload);
+            setUserNotificationMessage(
+                isChecked 
+                    ? `Ubytovanie pre ${member.firstName} ${member.lastName} bolo priradené.`
+                    : `Ubytovanie pre ${member.firstName} ${member.lastName} bolo odstránené.`,
+                'success'
+            );
+
+            // --- Save Notification to Firestore ---
+            if (changes.length > 0 && userEmail) {
+                const notificationsCollectionRef = collection(db, 'notifications');
+                await addDoc(notificationsCollectionRef, {
+                    userEmail,
+                    changes,
+                    timestamp: serverTimestamp()
+                });
+                console.log("Notifikácia o zmene ubytovania uložená do Firestore.");
+            }
+            // --- End Save Notification ---
+
+        } catch (error) {
+            console.error("Chyba pri zmene ubytovania v Firestore:", error);
+            setUserNotificationMessage(`Chyba pri zmene ubytovania: ${error.message}`, 'error');
+        } finally {
+            window.hideGlobalLoader();
+        }
+    };
+
     const handleAccommodationRemoval = async (member) => {
         if (!db || !team._userId) {
             setUserNotificationMessage("Chyba: Databáza nie je pripojená alebo chýba ID používateľa tímu.", 'error');
@@ -728,6 +865,8 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         }
         return team.accommodation?.type || '-';
     };
+
+    const hasTeamAccommodation = team.accommodation?.type && team.accommodation.type !== 'bez ubytovania';
                 
     const handleMealChange = async (member, date, mealType, isChecked) => {
         if (!db || !team._userId) {
@@ -888,25 +1027,6 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                                 },
                                 className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-2'
                             }, '⚙️'),
-                            // Pridáme tlačidlo na odstránenie ubytovania, ak člen má ubytovanie odlišné od "bez ubytovania"
-                            (team.accommodation?.type && team.accommodation.type !== 'bez ubytovania') && (
-                                React.createElement('button', {
-                                    onClick: (e) => {
-                                        e.stopPropagation();
-                                        // Overíme, či člen už nemá nastavené "bez ubytovania"
-                                        const memberAccommodation = member.accommodation?.type || team.accommodation?.type;
-                                        if (memberAccommodation && memberAccommodation !== 'bez ubytovania') {
-                                            if (confirm(`Naozaj chcete odstrániť ubytovanie pre ${member.firstName || ''} ${member.lastName || ''}?`)) {
-                                                handleAccommodationRemoval(member);
-                                            }
-                                        } else {
-                                            setUserNotificationMessage("Tento člen už nemá ubytovanie.", 'info');
-                                        }
-                                    },
-                                    className: 'text-gray-500 hover:text-red-600 p-1 rounded-full hover:bg-gray-200 focus:outline-none ml-1',
-                                    title: 'Odstrániť ubytovanie pre tohto člena'
-                                }, '🏨')
-                            ),
                             member.type || '-'
                         ),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.firstName || '-'),
@@ -916,22 +1036,22 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.registrationNumber || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatAddress(member)),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' },
-                            // Zobrazenie stavu ubytovania
-                            React.createElement('span', { 
-                                className: getAccommodationStatus(member) === 'bez ubytovania' ? 'text-gray-400' : 'text-gray-800'
-                            }, getAccommodationStatus(member)),
-                            // Tlačidlo na odstránenie ubytovania (iba ak má nejaké ubytovanie)
-                            (getAccommodationStatus(member) !== '-' && getAccommodationStatus(member) !== 'bez ubytovania') && (
-                                React.createElement('button', {
-                                    onClick: (e) => {
-                                        e.stopPropagation();
-                                        if (confirm(`Naozaj chcete odstrániť ubytovanie pre ${member.firstName || ''} ${member.lastName || ''}?`)) {
-                                            handleAccommodationRemoval(member);
-                                        }
-                                    },
-                                    className: 'text-gray-400 hover:text-red-600 ml-2 text-xs',
-                                    title: 'Odstrániť ubytovanie'
-                                }, '×')
+                        canHaveAccommodation ? (
+                                // CHECKBOX pre ubytovanie, ak tím má ubytovanie
+                                React.createElement('input', {
+                                    type: 'checkbox',
+                                    checked: hasAccommodation,
+                                    onChange: (e) => handleAccommodationToggle(member, e.target.checked),
+                                    className: 'form-checkbox h-4 w-4 text-blue-600',
+                                    title: hasAccommodation 
+                                        ? `Odstrániť ubytovanie (aktuálne: ${accommodationStatus})`
+                                        : `Priradiť tímové ubytovanie (${team.accommodation.type})`
+                                })
+                            ) : (
+                                // Textové zobrazenie, ak tím nemá ubytovanie
+                                React.createElement('span', { 
+                                    className: accommodationStatus === 'bez ubytovania' ? 'text-gray-400' : 'text-gray-800'
+                                }, accommodationStatus)
                             )
                         ),
                         // Bunky s jedlom sa generujú len pre platné dátumy
