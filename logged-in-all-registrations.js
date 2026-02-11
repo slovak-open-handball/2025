@@ -666,7 +666,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                 // Priradenie ubytovania z tímu
                 if (teamToUpdate.accommodation?.type && teamToUpdate.accommodation.type !== 'bez ubytovania') {
                     changes.push(`Priradenie ubytovania pre ${memberName} (Tím: ${teamName}, ${teamCategory})`);
-                    changes.push(`Typ ubytovania nastavený na '${teamToUpdate.accommodation.type}'`);
+                    changes.push(`Typ ubytovania nastavený na '''${teamToUpdate.accommodation.type}'`);
                 } else {
                     setUserNotificationMessage("Tím nemá nastavené ubytovanie na priradenie.", 'info');
                     window.hideGlobalLoader();
