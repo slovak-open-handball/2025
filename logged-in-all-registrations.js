@@ -604,6 +604,130 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
 
         return parts.join(', ');
     };
+
+    const handleAccommodationRemoval = async (member) => {
+        if (!db || !team._userId) {
+            setUserNotificationMessage("Chyba: Databáza nie je pripojená alebo chýba ID používateľa tímu.", 'error');
+            return;
+        }
+    
+        window.showGlobalLoader();
+    
+        try {
+            const userDocRef = doc(db, 'users', team._userId);
+            const docSnapshot = await getDoc(userDocRef);
+    
+            if (!docSnapshot.exists()) {
+                throw new Error("Používateľský dokument sa nenašiel.");
+            }
+    
+            const userData = docSnapshot.data();
+            const teamsData = { ...userData.teams };
+    
+            const teamCategory = team._category;
+            const teamIndex = team._teamIndex;
+            const memberArrayType = member.originalArray;
+            const memberIndex = member.originalIndex;
+    
+            console.log("DEBUG: Odstránenie ubytovania - Parametre:", {
+                teamCategory,
+                teamIndex,
+                memberArrayType,
+                memberIndex,
+                memberName: `${member.firstName} ${member.lastName}`
+            });
+    
+            // Deep clone relevant parts
+            const updatedCategoryTeams = JSON.parse(JSON.stringify(teamsData[teamCategory] || []));
+            const teamToUpdate = updatedCategoryTeams[teamIndex];
+    
+            if (!teamToUpdate) {
+                throw new Error("Tím sa nenašiel pre odstránenie ubytovania.");
+            }
+    
+            const memberArrayToUpdate = teamToUpdate[memberArrayType];
+    
+            if (!memberArrayToUpdate || memberArrayToUpdate[memberIndex] === undefined) {
+                throw new Error("Člen tímu sa nenašiel pre odstránenie ubytovania.");
+            }
+    
+            const memberToUpdate = memberArrayToUpdate[memberIndex];
+    
+            // Kontrola aktuálneho stavu ubytovania
+            const teamAccommodation = team.accommodation?.type;
+            const currentMemberAccommodation = memberToUpdate.accommodation?.type || teamAccommodation;
+            
+            console.log("DEBUG: Aktuálne ubytovanie:", {
+                teamAccommodation,
+                currentMemberAccommodation,
+                memberAccommodationObj: memberToUpdate.accommodation
+            });
+    
+            // --- Notification Logic ---
+            const userEmail = window.auth.currentUser?.email;
+            const changes = [];
+            
+            if (currentMemberAccommodation && currentMemberAccommodation !== 'bez ubytovania') {
+                const memberName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Bez mena';
+                const teamName = team.teamName || 'Bez názvu';
+                changes.push(`Odstránenie ubytovania pre ${memberName} (Tím: ${teamName}, ${teamCategory})`);
+                changes.push(`  • Typ ubytovania zmenený z '${currentMemberAccommodation}' na 'bez ubytovania'`);
+            } else {
+                setUserNotificationMessage("Tento člen už nemá ubytovanie alebo má nastavené 'bez ubytovania'.", 'info');
+                window.hideGlobalLoader();
+                return;
+            }
+            // --- End Notification Logic ---
+    
+            // Nastaviť ubytovanie člena na 'bez ubytovania'
+            if (!memberToUpdate.accommodation) {
+                memberToUpdate.accommodation = {};
+            }
+            memberToUpdate.accommodation.type = 'bez ubytovania';
+            // Vymazať názov ubytovne, ak existuje
+            delete memberToUpdate.accommodation.name;
+    
+            console.log("DEBUG: Člen po úprave:", {
+                accommodation: memberToUpdate.accommodation,
+                memberData: memberToUpdate
+            });
+    
+            // Aktualizovať celé pole pre danú kategóriu
+            const updatePayload = {
+                [`teams.${teamCategory}`]: updatedCategoryTeams
+            };
+    
+            console.log("DEBUG: Update payload pre Firestore:", updatePayload);
+    
+            await updateDoc(userDocRef, updatePayload);
+            setUserNotificationMessage(`Ubytovanie pre ${member.firstName} ${member.lastName} bolo odstránené.`, 'success');
+    
+            // --- Save Notification to Firestore ---
+            if (changes.length > 0 && userEmail) {
+                const notificationsCollectionRef = collection(db, 'notifications');
+                await addDoc(notificationsCollectionRef, {
+                    userEmail,
+                    changes,
+                    timestamp: serverTimestamp()
+                });
+                console.log("Notifikácia o odstránení ubytovania uložená do Firestore.");
+            }
+            // --- End Save Notification ---
+    
+        } catch (error) {
+            console.error("Chyba pri odstraňovaní ubytovania v Firestore:", error);
+            setUserNotificationMessage(`Chyba pri odstraňovaní ubytovania: ${error.message}`, 'error');
+        } finally {
+            window.hideGlobalLoader();
+        }
+    };
+
+    const getAccommodationStatus = (member) => {
+        if (member.accommodation?.type) {
+            return member.accommodation.type;
+        }
+        return team.accommodation?.type || '-';
+    };
                 
     const handleMealChange = async (member, date, mealType, isChecked) => {
         if (!db || !team._userId) {
@@ -716,6 +840,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Číslo dresu'),
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Reg. číslo'),
                     React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Adresa'),
+                    React.createElement('th', { className: 'px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap min-w-max' }, 'Ubytovanie'),
                     // Hlavičky stĺpcov pre jedlo sa generujú len pre platné dátumy
                     mealDates.map(date =>
                         React.createElement('th', { key: date, colSpan: 4, className: 'px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 whitespace-nowrap min-w-max' },
@@ -748,10 +873,8 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                                     const targetDocRefForMember = doc(db, 'users', team._userId);
                                     let memberPathForSaving = '';
                                     if (member.originalArray && member.originalIndex !== undefined && member.originalIndex !== -1) {
-                                        // Ak je to pole, pridáme aj index
                                         memberPathForSaving = `teams.${team._category}[${team._teamIndex}].${member.originalArray}[${member.originalIndex}]`;
                                     } else if (member.originalArray) {
-                                        // Ak je to objekt a nie pole (čo by nemalo nastať pri šoféroch, ale pre istotu)
                                         memberPathForSaving = `teams.${team._category}[${team._teamIndex}].${member.originalArray}`;
                                     }
                                     const resolvedTitle = `Upraviť ${member.type}: ${member.firstName || ''} ${member.lastName || ''}`;
@@ -765,6 +888,25 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                                 },
                                 className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-2'
                             }, '⚙️'),
+                            // Pridáme tlačidlo na odstránenie ubytovania, ak člen má ubytovanie odlišné od "bez ubytovania"
+                            (team.accommodation?.type && team.accommodation.type !== 'bez ubytovania') && (
+                                React.createElement('button', {
+                                    onClick: (e) => {
+                                        e.stopPropagation();
+                                        // Overíme, či člen už nemá nastavené "bez ubytovania"
+                                        const memberAccommodation = member.accommodation?.type || team.accommodation?.type;
+                                        if (memberAccommodation && memberAccommodation !== 'bez ubytovania') {
+                                            if (confirm(`Naozaj chcete odstrániť ubytovanie pre ${member.firstName || ''} ${member.lastName || ''}?`)) {
+                                                handleAccommodationRemoval(member);
+                                            }
+                                        } else {
+                                            setUserNotificationMessage("Tento člen už nemá ubytovanie.", 'info');
+                                        }
+                                    },
+                                    className: 'text-gray-500 hover:text-red-600 p-1 rounded-full hover:bg-gray-200 focus:outline-none ml-1',
+                                    title: 'Odstrániť ubytovanie pre tohto člena'
+                                }, '🏨')
+                            ),
                             member.type || '-'
                         ),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.firstName || '-'),
@@ -773,6 +915,25 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.jerseyNumber || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.registrationNumber || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatAddress(member)),
+                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' },
+                            // Zobrazenie stavu ubytovania
+                            React.createElement('span', { 
+                                className: getAccommodationStatus(member) === 'bez ubytovania' ? 'text-gray-400' : 'text-gray-800'
+                            }, getAccommodationStatus(member)),
+                            // Tlačidlo na odstránenie ubytovania (iba ak má nejaké ubytovanie)
+                            (getAccommodationStatus(member) !== '-' && getAccommodationStatus(member) !== 'bez ubytovania') && (
+                                React.createElement('button', {
+                                    onClick: (e) => {
+                                        e.stopPropagation();
+                                        if (confirm(`Naozaj chcete odstrániť ubytovanie pre ${member.firstName || ''} ${member.lastName || ''}?`)) {
+                                            handleAccommodationRemoval(member);
+                                        }
+                                    },
+                                    className: 'text-gray-400 hover:text-red-600 ml-2 text-xs',
+                                    title: 'Odstrániť ubytovanie'
+                                }, '×')
+                            )
+                        ),
                         // Bunky s jedlom sa generujú len pre platné dátumy
                         mealDates.map(date =>
                             React.createElement('td', { key: `${member.uniqueId}-${date}-meals`, colSpan: 4, className: 'px-4 py-2 text-center border-l border-gray-200 whitespace-nowrap min-w-max' },
