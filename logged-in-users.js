@@ -14,7 +14,6 @@ import {
   getDoc,
   increment,
   setDoc,
-  addDoc,
   serverTimestamp,
   deleteField
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -83,8 +82,45 @@ window.showGlobalNotification = (message, type = 'success') => {
 
 const { useState, useEffect, useRef } = React;
 
+// Funkcia na kopírovanie textu do schránky
+const copyToClipboard = (text) => {
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        console.log('E-mail bol skopírovaný do schránky:', text);
+      })
+      .catch(err => {
+        console.error('Chyba pri kopírovaní do schránky:', err);
+        fallbackCopyTextToClipboard(text);
+      });
+  } else {
+    fallbackCopyTextToClipboard(text);
+  }
+};
+
+// Fallback metóda pre staršie prehliadače
+const fallbackCopyTextToClipboard = (text) => {
+  const textArea = document.createElement('textarea');
+  textArea.value = text;
+  textArea.style.position = 'fixed';
+  textArea.style.left = '-999999px';
+  textArea.style.top = '-999999px';
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  
+  try {
+    document.execCommand('copy');
+    console.log('E-mail bol skopírovaný do schránky (fallback):', text);
+  } catch (err) {
+    console.error('Chyba pri kopírovaní do schránky (fallback):', err);
+  }
+  
+  document.body.removeChild(textArea);
+};
+
 // Komponent pre potvrdzovacie modálne okno
-function ConfirmationModal({ message, onConfirm, onCancel }) {
+function ConfirmationModal({ message, onConfirm, onCancel, userEmail }) {
   return React.createElement(
     'div',
     { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50' },
@@ -92,7 +128,13 @@ function ConfirmationModal({ message, onConfirm, onCancel }) {
       'div',
       { className: 'bg-white p-8 rounded-lg shadow-xl w-96' },
       React.createElement('h2', { className: 'text-xl font-bold mb-4' }, 'Potvrdenie'),
-      React.createElement('p', { className: 'mb-6' }, message),
+      React.createElement('p', { className: 'mb-4' }, message),
+      userEmail && React.createElement(
+        'div',
+        { className: 'mb-4 p-3 bg-blue-50 rounded border border-blue-200' },
+        React.createElement('p', { className: 'text-sm text-blue-800 font-semibold' }, 'E-mail bude skopírovaný:'),
+        React.createElement('p', { className: 'text-sm text-blue-600 break-all' }, userEmail)
+      ),
       React.createElement('div', { className: 'flex justify-end' },
         React.createElement(
           'button',
@@ -638,6 +680,13 @@ function UsersManagementApp() {
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
 
+    // Skopírujeme e-mail používateľa do schránky
+    if (userToDelete.email) {
+      copyToClipboard(userToDelete.email);
+      // Voliteľne: Zobrazenie oznámenia
+      window.showGlobalNotification(`E-mail ${userToDelete.email} bol skopírovaný do schránky`, 'info');
+    }
+
     try {
       const userDocRef = doc(db, `users`, userToDelete.id);
       
@@ -668,10 +717,10 @@ function UsersManagementApp() {
         console.error("Firebase projectId nie je k dispozícii. Uistite sa, že 'firebaseConfig' je globálne definovaný.");
       }
 
-      setNotification({ message: `Používateľ ${userToDelete.firstName} bol odstránený.`, type: 'success' });
+      setNotification({ message: `Používateľ ${userToDelete.firstName} bol odstránený. E-mail bol skopírovaný do schránky.`, type: 'success' });
 
       // Log changes
-      await logChanges([`Odstránenie používateľa: ${userToDelete.firstName} ${userToDelete.lastName}.`]);
+      await logChanges([`Odstránenie používateľa: ${userToDelete.firstName} ${userToDelete.lastName}. E-mail: ${userToDelete.email}`]);
     } catch (error) {
       console.error("Chyba pri odstraňovaní používateľa:", error);
       setNotification({ message: 'Nepodarilo sa odstrániť používateľa.', type: 'error' });
@@ -1015,7 +1064,8 @@ function UsersManagementApp() {
     userToDelete && React.createElement(ConfirmationModal, {
       message: `Naozaj chcete odstrániť používateľa ${userToDelete.firstName} ${userToDelete.lastName}? Táto akcia je nezvratná.`,
       onConfirm: handleDeleteUser,
-      onCancel: () => setUserToDelete(null)
+      onCancel: () => setUserToDelete(null),
+      userEmail: userToDelete.email
     }),
     showFilterModal && React.createElement(FilterRolesModal, {
         onClose: () => setShowFilterModal(false),
