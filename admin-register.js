@@ -406,9 +406,11 @@ function App() {
             // ZMENA: Ukladanie do kolekcie /notifications/ s náhodným ID
             const notificationsCollectionRef = collection(db, 'notifications');
             await addDoc(notificationsCollectionRef, {
+                userEmail: email,
                 message: notificationMessage,
                 timestamp: serverTimestamp(), // Corrected: Use serverTimestamp() from modular import
                 recipientId: notificationRecipientId,
+                performedBy: currentUserEmail || null,
                 read: false
             });
             console.log("Oznámenie o novej registrácii administrátora bolo úspešne uložené do Firestore do kolekcie /notifications/.");
