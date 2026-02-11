@@ -666,7 +666,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                 // Priradenie ubytovania z tímu
                 if (teamToUpdate.accommodation?.type && teamToUpdate.accommodation.type !== 'bez ubytovania') {
                     changes.push(`Priradenie ubytovania pre ${memberName} (Tím: ${teamName}, ${teamCategory})`);
-                    changes.push(`  • Typ ubytovania nastavený na '${teamToUpdate.accommodation.type}'`);
+                    changes.push(`Typ ubytovania nastavený na '${teamToUpdate.accommodation.type}'`);
                 } else {
                     setUserNotificationMessage("Tím nemá nastavené ubytovanie na priradenie.", 'info');
                     window.hideGlobalLoader();
@@ -676,7 +676,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                 // Odstránenie ubytovania
                 if (currentMemberAccommodation && currentMemberAccommodation !== 'bez ubytovania') {
                     changes.push(`Odstránenie ubytovania pre ${memberName} (Tím: ${teamName}, ${teamCategory})`);
-                    changes.push(`  • Typ ubytovania zmenený z '${currentMemberAccommodation}' na 'bez ubytovania'`);
+                    changes.push(`Typ ubytovania zmenený z '${currentMemberAccommodation}' na 'bez ubytovania'`);
                 } else {
                     setUserNotificationMessage("Tento člen už nemá ubytovanie alebo má nastavené 'bez ubytovania'.", 'info');
                     window.hideGlobalLoader();
@@ -808,7 +808,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                 const memberName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Bez mena';
                 const teamName = team.teamName || 'Bez názvu';
                 changes.push(`Odstránenie ubytovania pre ${memberName} (Tím: ${teamName}, ${teamCategory})`);
-                changes.push(`  • Typ ubytovania zmenený z '${currentMemberAccommodation}' na 'bez ubytovania'`);
+                changes.push(`Typ ubytovania zmenený z '${currentMemberAccommodation}' na 'bez ubytovania'`);
             } else {
                 setUserNotificationMessage("Tento člen už nemá ubytovanie alebo má nastavené 'bez ubytovania'.", 'info');
                 window.hideGlobalLoader();
@@ -918,7 +918,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                 const memberName = `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Bez mena';
                 const teamName = team.teamName || 'Bez názvu';
                 changes.push(`Zmena stravovania pre ${memberName} (Tím: ${teamName}, ${teamCategory})`);
-                changes.push(`  • ${formatDateToDMMYYYY(date)}, ${mealTypeLabels[mealType]}: z '${originalMealValue}' na '${newMealValue}'`);
+                changes.push(`${formatDateToDMMYYYY(date)}, ${mealTypeLabels[mealType]}: z '${originalMealValue}' na '${newMealValue}'`);
             }
             // --- End Notification Logic ---
 
