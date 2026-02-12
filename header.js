@@ -224,18 +224,13 @@ const setupUserSettingsListener = (userId) => {
         if (docSnap.exists()) {
             const userData = docSnap.data();
             
-            // IBA AK HODNOTA EXISTUJE A JE INÁ, TAK JU AKTUALIZUJEME
+            // VŽDY aktualizujeme hodnotu, neporovnávame
             if (userData.hasOwnProperty('displayNotifications')) {
-                if (currentDisplayNotifications !== userData.displayNotifications) {
-                    currentDisplayNotifications = userData.displayNotifications;
-                    console.log("header.js: displayNotifications zmenené na:", currentDisplayNotifications);
-                }
+                currentDisplayNotifications = userData.displayNotifications;
+                console.log("header.js: displayNotifications aktualizované na:", currentDisplayNotifications, "(z databázy)");
             } else {
-                // Ak pole neexistuje, default je false - ale nastavíme len ak je to zmena
-                if (currentDisplayNotifications !== false) {
-                    currentDisplayNotifications = false;
-                    console.log("header.js: displayNotifications nastavené na false (predvolené)");
-                }
+                currentDisplayNotifications = false;
+                console.log("header.js: displayNotifications nastavené na false (predvolené)");
             }
             
             // Aktualizácia window.globalUserProfileData ak existuje
@@ -248,7 +243,7 @@ const setupUserSettingsListener = (userId) => {
     });
 };
 
-// Načítanie počiatočného stavu displayNotifications PRED nastavením listenera notifikácií
+// Načítanie počiatočného stavu displayNotifications
 const loadInitialDisplayNotifications = async (userId) => {
     if (!window.db || !userId) return false;
     
@@ -299,27 +294,27 @@ const updateHeaderLinks = (userProfileData) => {
             logoutButton.classList.remove('hidden');
             headerElement.style.backgroundColor = getHeaderColorByRole(userProfileData.role);
 
-            // NASTAVENIE LISTENERA PRE ADMINA - s počiatočným načítaním nastavení
+            // VŽDY nastavíme listener pre zmeny nastavení používateľa
+            if (userProfileData.uid) {
+                // Odhlásime predchádzajúci listener ak existuje
+                if (unsubscribeFromUserSettings) {
+                    unsubscribeFromUserSettings();
+                    unsubscribeFromUserSettings = null;
+                }
+                // Nastavíme nový listener
+                unsubscribeFromUserSettings = setupUserSettingsListener(userProfileData.uid);
+                currentUserId = userProfileData.uid;
+            }
+
+            // NASTAVENIE LISTENERA PRE ADMINA
             if (userProfileData.role === 'admin') {
                 if (!unsubscribeFromNotifications) {
                     // Najprv načítame počiatočnú hodnotu displayNotifications
-                    loadInitialDisplayNotifications(userProfileData.uid).then((initialValue) => {
-                        // Potom nastavíme listener pre zmeny nastavení
-                        if (userProfileData.uid) {
-                            // Odhlásime predchádzajúci listener ak existuje
-                            if (unsubscribeFromUserSettings) {
-                                unsubscribeFromUserSettings();
-                                unsubscribeFromUserSettings = null;
-                            }
-                            // Nastavíme nový listener
-                            unsubscribeFromUserSettings = setupUserSettingsListener(userProfileData.uid);
-                            currentUserId = userProfileData.uid;
-                        }
-                        
+                    loadInitialDisplayNotifications(userProfileData.uid).then(() => {
                         // Vyčistenie Setu pri prihlásení nového používateľa
                         shownNotificationIds.clear();
                         
-                        // Nakoniec nastavíme listener notifikácií
+                        // Nastavíme listener notifikácií
                         setupNotificationListenerForAdmin(userProfileData);
                     });
                 }
@@ -328,11 +323,6 @@ const updateHeaderLinks = (userProfileData) => {
                     unsubscribeFromNotifications();
                     unsubscribeFromNotifications = null;
                     console.log("header.js: Listener notifikácií zrušený, pretože používateľ nie je admin.");
-                }
-                // Nastavíme listener pre zmeny nastavení aj pre ne-adminov
-                if (userProfileData.uid && !unsubscribeFromUserSettings) {
-                    unsubscribeFromUserSettings = setupUserSettingsListener(userProfileData.uid);
-                    currentUserId = userProfileData.uid;
                 }
             }
         } else {
@@ -408,7 +398,7 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
     
     const notificationsCollectionRef = collection(window.db, "notifications");
     
-    unsubscribeFromNotifications = onSnapshot(notificationsCollectionRef, (snapshot) => {
+    unsubscribeFromNotifications = onSnapshot(notificationsCollectionRef, async (snapshot) => {
         const auth = getAuth();
         const userId = auth.currentUser ? auth.currentUser.uid : null;
 
@@ -430,7 +420,6 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
         if (window.globalUserProfileData) {
             window.globalUserProfileData.unreadNotificationCount = unreadCount;
             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
-            console.log("header.js: GlobalUserProfileData aktualizované s počtom neprečítaných notifikácií:", unreadCount);
         }
 
         // DEBUG: Vypíšeme aktuálny stav
