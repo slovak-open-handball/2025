@@ -191,7 +191,7 @@ const calculatePeopleWithAccommodation = (team) => {
     return totalWithAccommodation;
 };
 
-const AddGroupsApp = ({ userProfileData }) => {
+const TeamsAccommApp = ({ userProfileData }) => {
     const [accommodations, setAccommodations] = useState([]);
     const [allTeams, setAllTeams] = useState([]);
     const [selectedPlaceForEdit, setSelectedPlaceForEdit] = useState(null);
@@ -2144,8 +2144,8 @@ const handleDataUpdateAndRender = (event) => {
 
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
-            root.render(React.createElement(AddGroupsApp, { userProfileData }));
-            console.log("Aplikácia vykreslená (AddGroupsApp)");
+            root.render(React.createElement(TeamsAccommApp, { userProfileData }));
+            console.log("Aplikácia vykreslená (TeamsAccommApp)");
         }
     } else {
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
