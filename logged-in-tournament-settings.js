@@ -171,6 +171,55 @@ const sendAdminNotification = async (db, auth, notificationData) => {
     }
 };
 
+// Komponent pre vlastné modálne okno
+const UnsavedChangesModal = ({ isOpen, onConfirm, onCancel, message }) => {
+    if (!isOpen) return null;
+    
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100000]',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) onCancel();
+            }
+        },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-lg shadow-xl max-w-md w-full mx-4 overflow-hidden' },
+            React.createElement(
+                'div',
+                { className: 'p-6' },
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-900 mb-4' },
+                    'Neuložené zmeny'
+                ),
+                React.createElement('p', { className: 'text-gray-600 mb-6' },
+                    message || 'Máte neuložené zmeny. Naozaj chcete opustiť túto stránku?'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-3' },
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: onCancel,
+                            className: 'px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: onConfirm,
+                            className: 'px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors'
+                        },
+                        'Opustiť'
+                    )
+                )
+            )
+        )
+    );
+};
+
 // Import komponentov nastavení
 import { GeneralRegistrationSettings } from './logged-in-tournament-settings-general-registration-settings.js';
 import { TShirtSizeSettings } from './logged-in-tournament-settings-t-shirt-size-settings.js';
@@ -191,6 +240,16 @@ function TournamentSettingsApp() {
   const [tournamentEndDate, setTournamentEndDate] = React.useState('');
   const [activeSetting, setActiveSetting] = React.useState(null);
   const [activeCategoryId, setActiveCategoryId] = React.useState(null);
+  
+  // Stav pre modálne okno
+  const [modalState, setModalState] = React.useState({
+      isOpen: false,
+      pendingAction: null,
+      message: ''
+  });
+  
+  // Stav pre neuložené zmeny v CategorySettings
+  const [categorySettingsHasChanges, setCategorySettingsHasChanges] = React.useState(false);
 
   const settingComponents = [
     { id: 'general', title: 'Všeobecné nastavenia registrácie', component: GeneralRegistrationSettings },
@@ -244,17 +303,37 @@ function TournamentSettingsApp() {
     updateUrlHash(settingId);
   };
 
-  // Handler pre návrat na hlavnú stránku
+  // Handler pre návrat na hlavnú stránku - S MODÁLNYM OKNOM
   const handleBackToMain = () => {
-    setActiveSetting(null);
-    setActiveCategoryId(null);
-    updateUrlHash(null);
+    // Kontrola, či má CategorySettings neuložené zmeny
+    if (activeSetting === 'categories' && categorySettingsHasChanges) {
+      setModalState({
+        isOpen: true,
+        pendingAction: () => {
+          setActiveSetting(null);
+          setActiveCategoryId(null);
+          updateUrlHash(null);
+          setCategorySettingsHasChanges(false);
+          setModalState({ isOpen: false, pendingAction: null, message: '' });
+        },
+        message: 'Máte neuložené zmeny v nastaveniach kategórií. Naozaj chcete opustiť túto sekciu?'
+      });
+    } else {
+      setActiveSetting(null);
+      setActiveCategoryId(null);
+      updateUrlHash(null);
+    }
   };
 
   // Handler pre výber kategórie (bude volaný z CategorySettings)
-  const handleSelectCategory = (categoryId) => {
-    setActiveCategoryId(categoryId);
-    updateUrlHash('categories', categoryId);
+  const handleSelectCategory = (categorySlug, categoryId) => {
+    setActiveCategoryId(categorySlug);
+    updateUrlHash('categories', categorySlug);
+  };
+
+  // Handler pre zmeny v CategorySettings
+  const handleCategorySettingsHasChanges = (hasChanges) => {
+    setCategorySettingsHasChanges(hasChanges);
   };
 
   // Načítanie nastavenia z URL pri inicializácii
@@ -272,25 +351,52 @@ function TournamentSettingsApp() {
     }
   }, [isAuthReady, userProfileData]);
 
-  // Reakcia na zmenu URL hashu
+  // Reakcia na zmenu URL hashu - S MODÁLNYM OKNOM
   React.useEffect(() => {
     const handleHashChange = () => {
       if (isAuthReady && userProfileData?.role === 'admin') {
         const settingFromHash = getSettingFromHash();
         const categoryFromHash = getCategoryIdFromHash();
         
-        setActiveSetting(settingFromHash);
-        if (settingFromHash === 'categories' && categoryFromHash) {
-          setActiveCategoryId(categoryFromHash);
+        // Kontrola, či opúšťame CategorySettings s neuloženými zmenami
+        if (activeSetting === 'categories' && 
+            settingFromHash !== 'categories' && 
+            categorySettingsHasChanges) {
+          
+          setModalState({
+            isOpen: true,
+            pendingAction: () => {
+              setActiveSetting(settingFromHash);
+              if (settingFromHash === 'categories' && categoryFromHash) {
+                setActiveCategoryId(categoryFromHash);
+              } else {
+                setActiveCategoryId(null);
+              }
+              setCategorySettingsHasChanges(false);
+              setModalState({ isOpen: false, pendingAction: null, message: '' });
+            },
+            message: 'Máte neuložené zmeny v nastaveniach kategórií. Naozaj chcete opustiť túto sekciu?'
+          });
+          
+          // Vrátime URL späť
+          setTimeout(() => {
+            window.location.hash = 'categories' + (activeCategoryId ? `/category-${activeCategoryId}` : '');
+          }, 0);
+          
         } else {
-          setActiveCategoryId(null);
+          setActiveSetting(settingFromHash);
+          if (settingFromHash === 'categories' && categoryFromHash) {
+            setActiveCategoryId(categoryFromHash);
+          } else {
+            setActiveCategoryId(null);
+          }
         }
       }
     };
 
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [isAuthReady, userProfileData]);
+  }, [isAuthReady, userProfileData, activeSetting, activeCategoryId, categorySettingsHasChanges]);
 
   React.useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
@@ -398,70 +504,94 @@ function TournamentSettingsApp() {
     };
   }, [db, userProfileData]);
 
+  // Potvrdenie odchodu z modálneho okna
+  const handleConfirmLeave = () => {
+    if (modalState.pendingAction) {
+      modalState.pendingAction();
+    }
+  };
+
+  // Zrušenie odchodu z modálneho okna
+  const handleCancelLeave = () => {
+    setModalState({ isOpen: false, pendingAction: null, message: '' });
+  };
+
   if (!userProfileData || userProfileData.role !== 'admin') {
     return null; 
   }
 
   return React.createElement(
-    'div',
-    { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl mx-auto space-y-8' }, 
-    React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
-      'Nastavenia turnaja'
-    ),
-    
-    activeSetting ? (
-      React.createElement(
-        React.Fragment,
-        null,
+    React.Fragment,
+    null,
+    // Vlastné modálne okno
+    React.createElement(UnsavedChangesModal, {
+        isOpen: modalState.isOpen,
+        onConfirm: handleConfirmLeave,
+        onCancel: handleCancelLeave,
+        message: modalState.message
+    }),
+    React.createElement(
+      'div',
+      { className: 'bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl mx-auto space-y-8' }, 
+      React.createElement('h1', { className: 'text-3xl font-bold text-center text-gray-800 mb-6' },
+        'Nastavenia turnaja'
+      ),
+      
+      activeSetting ? (
+        React.createElement(
+          React.Fragment,
+          null,
+          React.createElement(
+            'div',
+            { className: 'flex items-center mb-4' },
+            React.createElement(
+              'button',
+              {
+                type: 'button',
+                onClick: handleBackToMain,
+                className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200 flex items-center'
+              },
+              React.createElement('svg', { className: 'h-4 w-4 mr-2', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
+                React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M10 19l-7-7m0 0l7-7m-7 7h18' })
+              ),
+              'Späť'
+            )
+          ),
+          React.createElement(
+            settingComponents.find(s => s.id === activeSetting).component,
+            {
+              db: db,
+              userProfileData: userProfileData,
+              tournamentStartDate: tournamentStartDate,
+              setTournamentStartDate: setTournamentStartDate,
+              tournamentEndDate: tournamentEndDate,
+              setTournamentEndDate: setTournamentEndDate,
+              showNotification: showNotification,
+              sendAdminNotification: (notificationData) => sendAdminNotification(db, auth, notificationData),
+              formatDateForDisplay: formatDateForDisplay,
+              formatToDatetimeLocal: formatToDatetimeLocal,
+              initialCategoryId: activeSetting === 'categories' ? activeCategoryId : null,
+              onSelectCategory: handleSelectCategory,
+              onHasChangesChange: handleCategorySettingsHasChanges
+            }
+          )
+        )
+      ) : (
         React.createElement(
           'div',
-          { className: 'flex items-center mb-4' },
-          React.createElement(
-            'button',
-            {
-              type: 'button',
-              onClick: handleBackToMain,
-              className: 'bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200 flex items-center'
-            },
-            React.createElement('svg', { className: 'h-4 w-4 mr-2', fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor' },
-              React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M10 19l-7-7m0 0l7-7m-7 7h18' })
-            ),
-            'Späť'
-          )
-        ),
-        React.createElement(
-          settingComponents.find(s => s.id === activeSetting).component,
-          {
-            db: db,
-            userProfileData: userProfileData,
-            tournamentStartDate: tournamentStartDate,
-            setTournamentStartDate: setTournamentStartDate,
-            tournamentEndDate: tournamentEndDate,
-            setTournamentEndDate: setTournamentEndDate,
-            showNotification: showNotification,
-            sendAdminNotification: (notificationData) => sendAdminNotification(db, auth, notificationData),
-            formatDateForDisplay: formatDateForDisplay,
-            formatToDatetimeLocal: formatToDatetimeLocal,
-            initialCategoryId: activeSetting === 'categories' ? activeCategoryId : null,
-            onSelectCategory: handleSelectCategory,
-          }
+          { className: 'space-y-4' },
+          settingComponents.map(setting => (
+            React.createElement(
+              'button',
+              {
+                key: setting.id,
+                onClick: () => handleSetActiveSetting(setting.id),
+                className: 'w-full text-left bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg shadow-md transition-colors duration-200 text-xl'
+              },
+              setting.title
+            )
+          ))
         )
-      )
-    ) : (
-      React.createElement(
-        'div',
-        { className: 'space-y-4' },
-        settingComponents.map(setting => (
-          React.createElement(
-            'button',
-            {
-              key: setting.id,
-              onClick: () => handleSetActiveSetting(setting.id),
-              className: 'w-full text-left bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg shadow-md transition-colors duration-200 text-xl'
-            },
-            setting.title
-          )
-        ))
       )
     )
   );
