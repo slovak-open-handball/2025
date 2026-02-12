@@ -226,7 +226,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
         };
     };
 
-    // Kontrola zmien
+    // Kontrola zmien - sledujeme všetky kategórie, nie len aktuálne vybranú
     const hasChanges = React.useMemo(() => {
         return categories.some(cat => 
             editedMaxTeams[cat.id] !== cat.maxTeams ||
@@ -237,6 +237,20 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
             editedDrawColor[cat.id] !== cat.drawColor ||
             editedTransportColor[cat.id] !== cat.transportColor
         );
+    }, [categories, editedMaxTeams, editedPeriods, editedPeriodDuration, 
+        editedBreakDuration, editedMatchBreak, editedDrawColor, editedTransportColor]);
+
+    // Zobrazenie počtu kategórií so zmenami
+    const categoriesWithChangesCount = React.useMemo(() => {
+        return categories.filter(cat => 
+            editedMaxTeams[cat.id] !== cat.maxTeams ||
+            editedPeriods[cat.id] !== cat.periods ||
+            editedPeriodDuration[cat.id] !== cat.periodDuration ||
+            editedBreakDuration[cat.id] !== cat.breakDuration ||
+            editedMatchBreak[cat.id] !== cat.matchBreak ||
+            editedDrawColor[cat.id] !== cat.drawColor ||
+            editedTransportColor[cat.id] !== cat.transportColor
+        ).length;
     }, [categories, editedMaxTeams, editedPeriods, editedPeriodDuration, 
         editedBreakDuration, editedMatchBreak, editedDrawColor, editedTransportColor]);
 
@@ -477,33 +491,50 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                 React.createElement(
                     React.Fragment,
                     null,
-                    // Tlačidlá pre kategórie
+                    // Tlačidlá pre kategórie s indikátorom zmien
                     React.createElement(
                         'div',
                         { className: 'mb-8' },
                         React.createElement(
                             'div',
                             { className: 'flex flex-wrap gap-3' },
-                            categories.map(cat => 
-                                React.createElement(
+                            categories.map(cat => {
+                                const hasCategoryChanges = 
+                                    editedMaxTeams[cat.id] !== cat.maxTeams ||
+                                    editedPeriods[cat.id] !== cat.periods ||
+                                    editedPeriodDuration[cat.id] !== cat.periodDuration ||
+                                    editedBreakDuration[cat.id] !== cat.breakDuration ||
+                                    editedMatchBreak[cat.id] !== cat.matchBreak ||
+                                    editedDrawColor[cat.id] !== cat.drawColor ||
+                                    editedTransportColor[cat.id] !== cat.transportColor;
+                                
+                                return React.createElement(
                                     'button',
                                     {
                                         key: cat.id,
                                         onClick: () => handleSelectCategory(cat.id),
-                                        className: `px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 ${
+                                        className: `relative px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 ${
                                             selectedCategoryId === cat.id
                                                 ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-300 ring-offset-2'
-                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow'
+                                                : hasCategoryChanges
+                                                    ? 'bg-yellow-100 text-gray-700 hover:bg-yellow-200 hover:shadow border-2 border-yellow-500'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow'
                                         }`
                                     },
-                                    cat.name
-                                )
-                            )
+                                    cat.name,
+                                    hasCategoryChanges && !saving && React.createElement(
+                                        'span',
+                                        { className: 'absolute -top-2 -right-2 w-4 h-4 bg-yellow-500 rounded-full animate-pulse' }
+                                    )
+                                );
+                            })
                         ),
                         React.createElement(
                             'p',
                             { className: 'text-xs text-gray-500 mt-3' },
-                            'Vyberte kategóriu pre úpravu jej nastavení'
+                            categoriesWithChangesCount > 0 
+                                ? `Máte neuložené zmeny v ${categoriesWithChangesCount} kategóriách. Zmeny sa ukladajú hromadne.`
+                                : 'Vyberte kategóriu pre úpravu jej nastavení'
                         )
                     ),
 
@@ -715,7 +746,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                     // Tlačidlo na uloženie všetkých zmien
                     React.createElement(
                         'div',
-                        { className: 'mt-8 flex justify-center' },
+                        { className: 'mt-8 flex flex-col items-center gap-2' },
                         React.createElement(
                             'button',
                             {
@@ -728,6 +759,11 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                                 }`
                             },
                             saving ? 'Ukladám...' : 'Uložiť všetky zmeny'
+                        ),
+                        hasChanges && !saving && React.createElement(
+                            'span',
+                            { className: 'text-sm text-yellow-600 font-medium' },
+                            `Máte neuložené zmeny v ${categoriesWithChangesCount} kategórii.`
                         )
                     )
                 )
