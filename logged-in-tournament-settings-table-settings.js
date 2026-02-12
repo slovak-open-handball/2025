@@ -253,7 +253,7 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
       React.createElement(
         'div',
         { className: 'text-sm text-gray-500 italic mt-2' },
-        'Nie sú nastavené žiadne vlastné podmienky poradia. Účastníci budú zoradení podľa dátumu registrácie (od najnovších).'
+        'Nie sú nastavené žiadne vlastné podmienky poradia. Tímy budú zoradené iba podľa počtu bodov.'
       ),
       
       // Informačný panel
