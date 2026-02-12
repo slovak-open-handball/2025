@@ -1,4 +1,6 @@
 var CLEAR_CONSOLE = 0;
+// 0 - vypisovanie
+// 1 - mazanie
 
 (function() {
     if (CLEAR_CONSOLE === 1) {
