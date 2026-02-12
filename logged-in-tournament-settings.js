@@ -311,6 +311,7 @@ function TournamentSettingsApp() {
 
   // Handler pre resetovanie zmien v CategorySettings
   const handleSetResetFunction = (resetFn) => {
+    console.log("handleSetResetFunction - registrujem reset funkciu");
     resetCategorySettingsRef.current = resetFn;
   };
 
@@ -321,6 +322,7 @@ function TournamentSettingsApp() {
       setModalState({
         isOpen: true,
         pendingAction: () => {
+          console.log("pendingAction - spúšťam reset a návrat");
           // ZAHODÍME ZMENY - zavoláme reset funkciu z CategorySettings
           if (resetCategorySettingsRef.current) {
             resetCategorySettingsRef.current();
@@ -399,6 +401,7 @@ function TournamentSettingsApp() {
             setModalState({
               isOpen: true,
               pendingAction: () => {
+                console.log("pendingAction - spúšťam reset a návrat");
                 // ZAHODÍME ZMENY - zavoláme reset funkciu z CategorySettings
                 if (resetCategorySettingsRef.current) {
                   resetCategorySettingsRef.current();
@@ -583,21 +586,24 @@ function TournamentSettingsApp() {
   const handleConfirmLeave = () => {
     console.log("handleConfirmLeave - pendingAction:", modalState.pendingAction);
     console.log("handleConfirmLeave - pendingHash:", modalState.pendingHash);
+    
     if (modalState.pendingAction) {
-      modalState.pendingAction(); 
+        modalState.pendingAction(); 
     } else if (modalState.pendingHash) {
-      window.location.hash = modalState.pendingHash;
-      setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
+        window.location.hash = modalState.pendingHash;
+        setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
     } else {
-      if (activeSetting === 'categories' && categorySettingsHasChanges) {
-        if (resetCategorySettingsRef.current) {
-          resetCategorySettingsRef.current();
+        // Ak nie je pendingAction, urobíme reset a návrat manuálne
+        if (activeSetting === 'categories' && categorySettingsHasChanges) {
+            console.log("handleConfirmLeave - manuálny reset a návrat");
+            if (resetCategorySettingsRef.current) {
+                resetCategorySettingsRef.current();
+            }
+            setActiveSetting(null);
+            setActiveCategoryId(null);
+            updateUrlHash(null);
         }
-        setActiveSetting(null);
-        setActiveCategoryId(null);
-        updateUrlHash(null);
-      }
-      setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
+        setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
     }
   };
 
