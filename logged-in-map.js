@@ -2296,20 +2296,19 @@ const AddGroupsApp = ({ userProfileData }) => {
                         className: 'w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition'
                       }, 'Upraviť polohu'),
                   React.createElement('button', {
-                    onClick: isPlaceAssigned ? null : handleDeletePlace, // Blokované ak je priradené
+                    onClick: isPlaceAssigned ? null : handleDeletePlace,
                     disabled: isPlaceAssigned,
                     className: `w-full py-3 font-medium rounded-lg transition flex items-center justify-center gap-2
                       ${isPlaceAssigned 
-                        ? 'bg-white text-red-600 border-2 border-red-600 cursor-not-allowed opacity-100' 
+                        ? 'bg-white text-red-600 border-2 border-red-600 opacity-100 hover:cursor-not-allowed' 
                         : 'bg-red-600 hover:bg-red-700 text-white'
                       }`,
-                    title: isPlaceAssigned ? 'Miesto je priradené k tímu a nie je možné ho odstrániť' : 'Odstrániť miesto',
-                    style: isPlaceAssigned ? { cursor: 'not-allowed', pointerEvents: 'none' } : {}
+                    title: isPlaceAssigned ? 'Miesto je priradené k tímu a nie je možné ho odstrániť' : 'Odstrániť miesto'
                   }, 
                     isPlaceAssigned 
                       ? React.createElement(React.Fragment, null,
                           React.createElement('i', { className: 'fa-solid fa-ban mr-2' }),
-                          'Miesto je priradené (nemožno odstrániť)'
+                          'Miesto je priradené'
                         )
                       : React.createElement(React.Fragment, null,
                           React.createElement('i', { className: 'fa-solid fa-trash-alt mr-2' }),
