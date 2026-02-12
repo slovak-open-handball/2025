@@ -254,6 +254,12 @@ const setupUserSettingsListener = (userId) => {
 };
 
 const loadInitialDisplayNotifications = async (userId) => {
+    // Ak už máme aktuálnu hodnotu pre tohto používateľa, nevoláme databázu
+    if (currentUserId === userId && currentDisplayNotifications !== false) {
+        console.log("%c📋 HEADER.JS: Používam existujúcu hodnotu displayNotifications", "background: #845ef7; color: white;");
+        return currentDisplayNotifications;
+    }
+    
     console.log("%c📋 HEADER.JS: loadInitialDisplayNotifications volaná pre userId:", "background: #845ef7; color: white;", userId);
     
     if (!window.db || !userId) {
@@ -332,42 +338,46 @@ const updateHeaderLinks = (userProfileData) => {
             logoutButton.classList.remove('hidden');
             headerElement.style.backgroundColor = getHeaderColorByRole(userProfileData.role);
 
-            if (userProfileData.id) {
-                console.log("   Spúšťam loadInitialDisplayNotifications...");
+            // IBA AK SA ZMENIL POUŽÍVATEĽ - nastavíme listenery
+            if (userProfileData.id && currentUserId !== userProfileData.id) {
+                console.log("%c🔄 POUŽÍVATEĽ ZMENENÝ - nastavujem listenery", "background: #ff9800; color: black;");
                 
+                currentUserId = userProfileData.id;
+                
+                // Načítame počiatočné nastavenia
                 loadInitialDisplayNotifications(userProfileData.id).then((initialValue) => {
-                    console.log("%c📋 HEADER.JS: loadInitialDisplayNotifications dokončené, initialValue =", "background: #845ef7; color: white;", initialValue);
-                    console.log("   currentDisplayNotifications po načítaní:", currentDisplayNotifications);
+                    console.log("%c📋 HEADER.JS: loadInitialDisplayNotifications dokončené", "background: #845ef7; color: white;", initialValue);
                     
+                    // Zrušíme starý listener nastavení
                     if (unsubscribeFromUserSettings) {
-                        console.log("   Odhlasujem predchádzajúci listener nastavení");
                         unsubscribeFromUserSettings();
                         unsubscribeFromUserSettings = null;
                     }
                     
-                    console.log("   Nastavujem nový listener nastavení...");
+                    // Nastavíme nový listener nastavení
                     unsubscribeFromUserSettings = setupUserSettingsListener(userProfileData.id);
-                    currentUserId = userProfileData.id;
                     
+                    // Zrušíme starý listener notifikácií
+                    if (unsubscribeFromNotifications) {
+                        unsubscribeFromNotifications();
+                        unsubscribeFromNotifications = null;
+                    }
+                    
+                    // Vyčistíme Set zobrazených notifikácií
+                    shownNotificationIds.clear();
+                    
+                    // Nastavíme listener notifikácií IBA pre adminov
                     if (userProfileData.role === 'admin') {
                         console.log("   Používateľ je admin, nastavujem listener notifikácií...");
-                        shownNotificationIds.clear();
                         setupNotificationListenerForAdmin(userProfileData);
-                    } else {
-                        console.log("   Používateľ nie je admin, preskakujem listener notifikácií");
                     }
                 }).catch(error => {
                     console.error("   CHYBA pri loadInitialDisplayNotifications:", error);
                 });
+            } else {
+                console.log("   Používateľ sa nezmenil, preskakujem reinicializáciu listenerov");
             }
 
-            if (userProfileData.role !== 'admin') {
-                if (unsubscribeFromNotifications) {
-                    unsubscribeFromNotifications();
-                    unsubscribeFromNotifications = null;
-                    console.log("header.js: Listener notifikácií zrušený, pretože používateľ nie je admin.");
-                }
-            }
         } else {
             console.log("   userProfileData je null, odhlasujem používateľa");
             
@@ -376,26 +386,23 @@ const updateHeaderLinks = (userProfileData) => {
             logoutButton.classList.add('hidden');
             headerElement.style.backgroundColor = getHeaderColorByRole(null);
             
+            // Vyčistenie všetkých listenerov
             if (unsubscribeFromNotifications) {
                 unsubscribeFromNotifications();
                 unsubscribeFromNotifications = null;
-                console.log("header.js: Listener notifikácií zrušený pri odhlásení.");
             }
             
             if (unsubscribeFromUserSettings) {
                 unsubscribeFromUserSettings();
                 unsubscribeFromUserSettings = null;
-                console.log("header.js: Listener nastavení používateľa zrušený pri odhlásení.");
             }
             
             shownNotificationIds.clear();
-            
             currentUserId = null;
             currentDisplayNotifications = false;
         }
 
         updateRegistrationLinkVisibility(userProfileData);
-
         headerElement.classList.remove('invisible');
     } else {
         console.log("   Podmienky NIE SÚ splnené, čakám...");
@@ -430,6 +437,12 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
 };
 
 const setupNotificationListenerForAdmin = (userProfileData) => {
+    // Kontrola, či už listener nie je nastavený
+    if (unsubscribeFromNotifications) {
+        console.log("   Listener notifikácií už je nastavený, preskakujem...");
+        return;
+    }
+    
     notificationListenerSetupCount++;
     console.log(`%c📋 HEADER.JS: ========== SPÚŠŤAM LISTENER NOTIFIKÁCIÍ ==========`, "background: #47b3ff; color: white; font-size: 14px;");
     console.log(`   Volanie #${notificationListenerSetupCount}`);
@@ -439,12 +452,6 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
     if (!window.db) {
         console.warn("header.js: Firestore databáza nie je inicializovaná pre notifikácie.");
         return;
-    }
-
-    if (unsubscribeFromNotifications) {
-        console.log("   Odhlasujem predchádzajúci listener notifikácií");
-        unsubscribeFromNotifications();
-        unsubscribeFromNotifications = null;
     }
     
     const notificationsCollectionRef = collection(window.db, "notifications");
