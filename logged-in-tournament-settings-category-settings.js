@@ -42,6 +42,14 @@ export function CategorySettings({
     const [editedMatchBreak, setEditedMatchBreak] = React.useState({});
     const [editedDrawColor, setEditedDrawColor] = React.useState({});
     const [editedTransportColor, setEditedTransportColor] = React.useState({});
+    
+    // NOVÉ: State pre timeout
+    const [editedTimeoutCount, setEditedTimeoutCount] = React.useState({});
+    const [editedTimeoutDuration, setEditedTimeoutDuration] = React.useState({});
+    
+    // NOVÉ: State pre vylúčenie
+    const [editedExclusionTime, setEditedExclusionTime] = React.useState({});
+    
     const [saving, setSaving] = React.useState(false);
     const [previousValues, setPreviousValues] = React.useState({});
     const [isInitialLoad, setIsInitialLoad] = React.useState(true);
@@ -99,7 +107,12 @@ export function CategorySettings({
                     breakDuration: obj.breakDuration ?? 2,
                     matchBreak: obj.matchBreak ?? 5,
                     drawColor: obj.drawColor ?? '#3B82F6',
-                    transportColor: obj.transportColor ?? '#10B981'
+                    transportColor: obj.transportColor ?? '#10B981',
+                    // NOVÉ: Načítanie hodnôt timeout
+                    timeoutCount: obj.timeoutCount ?? 2,
+                    timeoutDuration: obj.timeoutDuration ?? 1,
+                    // NOVÉ: Načítanie času pre vylúčenie
+                    exclusionTime: obj.exclusionTime ?? 2
                 })).sort((a, b) => a.name.localeCompare(b.name));
 
                 setCategories(list);
@@ -114,7 +127,10 @@ export function CategorySettings({
                         breakDuration: cat.breakDuration,
                         matchBreak: cat.matchBreak,
                         drawColor: cat.drawColor,
-                        transportColor: cat.transportColor
+                        transportColor: cat.transportColor,
+                        timeoutCount: cat.timeoutCount,
+                        timeoutDuration: cat.timeoutDuration,
+                        exclusionTime: cat.exclusionTime
                     };
                 });
                 originalCategoriesRef.current = originalValues;
@@ -127,6 +143,9 @@ export function CategorySettings({
                 const initialMatchBreak = {};
                 const initialDrawColor = {};
                 const initialTransportColor = {};
+                const initialTimeoutCount = {};
+                const initialTimeoutDuration = {};
+                const initialExclusionTime = {};
                 const initialPreviousValues = {};
                 
                 list.forEach(cat => {
@@ -137,6 +156,9 @@ export function CategorySettings({
                     initialMatchBreak[cat.id] = cat.matchBreak;
                     initialDrawColor[cat.id] = cat.drawColor;
                     initialTransportColor[cat.id] = cat.transportColor;
+                    initialTimeoutCount[cat.id] = cat.timeoutCount;
+                    initialTimeoutDuration[cat.id] = cat.timeoutDuration;
+                    initialExclusionTime[cat.id] = cat.exclusionTime;
                     initialPreviousValues[cat.id] = { ...cat };
                 });
                 
@@ -209,6 +231,38 @@ export function CategorySettings({
                     });
                     return newState;
                 });
+
+                // NOVÉ: Inicializácia timeout state
+                setEditedTimeoutCount(prev => {
+                    const newState = { ...initialTimeoutCount };
+                    Object.keys(prev).forEach(key => {
+                        if (prev[key] !== initialTimeoutCount[key]) {
+                            newState[key] = prev[key];
+                        }
+                    });
+                    return newState;
+                });
+
+                setEditedTimeoutDuration(prev => {
+                    const newState = { ...initialTimeoutDuration };
+                    Object.keys(prev).forEach(key => {
+                        if (prev[key] !== initialTimeoutDuration[key]) {
+                            newState[key] = prev[key];
+                        }
+                    });
+                    return newState;
+                });
+
+                // NOVÉ: Inicializácia exclusion state
+                setEditedExclusionTime(prev => {
+                    const newState = { ...initialExclusionTime };
+                    Object.keys(prev).forEach(key => {
+                        if (prev[key] !== initialExclusionTime[key]) {
+                            newState[key] = prev[key];
+                        }
+                    });
+                    return newState;
+                });
                 
                 setPreviousValues(initialPreviousValues);
                 
@@ -236,6 +290,9 @@ export function CategorySettings({
                 setEditedMatchBreak({});
                 setEditedDrawColor({});
                 setEditedTransportColor({});
+                setEditedTimeoutCount({});
+                setEditedTimeoutDuration({});
+                setEditedExclusionTime({});
                 setPreviousValues({});
                 setSelectedCategoryId(null);
                 setIsInitialLoad(false);
@@ -288,6 +345,29 @@ export function CategorySettings({
         setEditedTransportColor(prev => ({ ...prev, [catId]: value }));
     };
 
+    // NOVÝ: Handler pre počet timeoutov
+    const handleTimeoutCountChange = (catId, value) => {
+        const numValue = value === '' ? '' : Math.max(0, parseInt(value) || 0);
+        setEditedTimeoutCount(prev => ({ ...prev, [catId]: numValue }));
+        
+        // Ak je počet timeoutov 0, automaticky vynulujeme aj čas timeoutu
+        if (numValue === 0 || numValue === '0' || numValue === 0) {
+            setEditedTimeoutDuration(prev => ({ ...prev, [catId]: 0 }));
+        }
+    };
+
+    // NOVÝ: Handler pre čas timeoutu
+    const handleTimeoutDurationChange = (catId, value) => {
+        const numValue = value === '' ? '' : Math.max(0, parseInt(value) || 0);
+        setEditedTimeoutDuration(prev => ({ ...prev, [catId]: numValue }));
+    };
+
+    // NOVÝ: Handler pre čas vylúčenia
+    const handleExclusionTimeChange = (catId, value) => {
+        const numValue = value === '' ? '' : Math.max(0, parseInt(value) || 0);
+        setEditedExclusionTime(prev => ({ ...prev, [catId]: numValue }));
+    };
+
     // Výpočet celkového času zápasu
     const calculateTotalMatchTime = (catId) => {
         const periods = editedPeriods[catId] ?? categories.find(c => c.id === catId)?.periods ?? 2;
@@ -315,10 +395,15 @@ export function CategorySettings({
             editedBreakDuration[cat.id] !== cat.breakDuration ||
             editedMatchBreak[cat.id] !== cat.matchBreak ||
             editedDrawColor[cat.id] !== cat.drawColor ||
-            editedTransportColor[cat.id] !== cat.transportColor
+            editedTransportColor[cat.id] !== cat.transportColor ||
+            // NOVÉ: Kontrola timeout a exclusion zmien
+            editedTimeoutCount[cat.id] !== cat.timeoutCount ||
+            editedTimeoutDuration[cat.id] !== cat.timeoutDuration ||
+            editedExclusionTime[cat.id] !== cat.exclusionTime
         );
     }, [categories, editedMaxTeams, editedPeriods, editedPeriodDuration, 
-        editedBreakDuration, editedMatchBreak, editedDrawColor, editedTransportColor]);
+        editedBreakDuration, editedMatchBreak, editedDrawColor, editedTransportColor,
+        editedTimeoutCount, editedTimeoutDuration, editedExclusionTime]);
 
     // Hlásime zmeny nadradenému komponentu
     React.useEffect(() => {
@@ -336,10 +421,14 @@ export function CategorySettings({
             editedBreakDuration[cat.id] !== cat.breakDuration ||
             editedMatchBreak[cat.id] !== cat.matchBreak ||
             editedDrawColor[cat.id] !== cat.drawColor ||
-            editedTransportColor[cat.id] !== cat.transportColor
+            editedTransportColor[cat.id] !== cat.transportColor ||
+            editedTimeoutCount[cat.id] !== cat.timeoutCount ||
+            editedTimeoutDuration[cat.id] !== cat.timeoutDuration ||
+            editedExclusionTime[cat.id] !== cat.exclusionTime
         ).length;
     }, [categories, editedMaxTeams, editedPeriods, editedPeriodDuration, 
-        editedBreakDuration, editedMatchBreak, editedDrawColor, editedTransportColor]);
+        editedBreakDuration, editedMatchBreak, editedDrawColor, editedTransportColor,
+        editedTimeoutCount, editedTimeoutDuration, editedExclusionTime]);
 
     // RESET VŠETKÝCH NEULOŽENÝCH ZMIEN
     const resetAllChanges = React.useCallback(() => {
@@ -353,6 +442,9 @@ export function CategorySettings({
         const initialMatchBreak = {};
         const initialDrawColor = {};
         const initialTransportColor = {};
+        const initialTimeoutCount = {};
+        const initialTimeoutDuration = {};
+        const initialExclusionTime = {};
         
         // Prejdeme všetky ID v originalCategoriesRef
         Object.keys(originalCategoriesRef.current).forEach(catId => {
@@ -364,6 +456,9 @@ export function CategorySettings({
             initialMatchBreak[catId] = original.matchBreak;
             initialDrawColor[catId] = original.drawColor;
             initialTransportColor[catId] = original.transportColor;
+            initialTimeoutCount[catId] = original.timeoutCount ?? 2;
+            initialTimeoutDuration[catId] = original.timeoutDuration ?? 1;
+            initialExclusionTime[catId] = original.exclusionTime ?? 2;
         });
         
         setEditedMaxTeams(initialMaxTeams);
@@ -373,6 +468,9 @@ export function CategorySettings({
         setEditedMatchBreak(initialMatchBreak);
         setEditedDrawColor(initialDrawColor);
         setEditedTransportColor(initialTransportColor);
+        setEditedTimeoutCount(initialTimeoutCount);
+        setEditedTimeoutDuration(initialTimeoutDuration);
+        setEditedExclusionTime(initialExclusionTime);
         
         console.log("resetAllChanges - reset dokončený");
     }, []);
@@ -429,6 +527,17 @@ export function CategorySettings({
         if (newValues.transportColor !== oldValues.transportColor) {
             changes.push(`Farba pre dopravu z '${oldValues.transportColor}' na '${newValues.transportColor}'`);
         }
+        // NOVÉ: Zmeny pre timeout
+        if (newValues.timeoutCount !== oldValues.timeoutCount) {
+            changes.push(`Počet timeoutov z '${oldValues.timeoutCount}' na '${newValues.timeoutCount}'`);
+        }
+        if (newValues.timeoutDuration !== oldValues.timeoutDuration) {
+            changes.push(`Trvanie timeoutu z '${oldValues.timeoutDuration} min' na '${newValues.timeoutDuration} min'`);
+        }
+        // NOVÉ: Zmeny pre vylúčenie
+        if (newValues.exclusionTime !== oldValues.exclusionTime) {
+            changes.push(`Čas vylúčenia z '${oldValues.exclusionTime} min' na '${newValues.exclusionTime} min'`);
+        }
         
         return changes;
     };
@@ -480,6 +589,20 @@ export function CategorySettings({
                     updatedData.transportColor = editedTransportColor[cat.id];
                     hasUpdates = true;
                 }
+                // NOVÉ: Ukladanie timeout nastavení
+                if (editedTimeoutCount[cat.id] !== cat.timeoutCount && editedTimeoutCount[cat.id] >= 0) {
+                    updatedData.timeoutCount = Number(editedTimeoutCount[cat.id]);
+                    hasUpdates = true;
+                }
+                if (editedTimeoutDuration[cat.id] !== cat.timeoutDuration && editedTimeoutDuration[cat.id] >= 0) {
+                    updatedData.timeoutDuration = Number(editedTimeoutDuration[cat.id]);
+                    hasUpdates = true;
+                }
+                // NOVÉ: Ukladanie exclusion nastavení
+                if (editedExclusionTime[cat.id] !== cat.exclusionTime && editedExclusionTime[cat.id] >= 0) {
+                    updatedData.exclusionTime = Number(editedExclusionTime[cat.id]);
+                    hasUpdates = true;
+                }
 
                 if (hasUpdates) {
                     updates[cat.id] = {
@@ -495,7 +618,10 @@ export function CategorySettings({
                         breakDuration: editedBreakDuration[cat.id] ?? cat.breakDuration,
                         matchBreak: editedMatchBreak[cat.id] ?? cat.matchBreak,
                         drawColor: editedDrawColor[cat.id] ?? cat.drawColor,
-                        transportColor: editedTransportColor[cat.id] ?? cat.transportColor
+                        transportColor: editedTransportColor[cat.id] ?? cat.transportColor,
+                        timeoutCount: editedTimeoutCount[cat.id] ?? cat.timeoutCount,
+                        timeoutDuration: editedTimeoutDuration[cat.id] ?? cat.timeoutDuration,
+                        exclusionTime: editedExclusionTime[cat.id] ?? cat.exclusionTime
                     };
                     
                     categoriesWithChanges.push({
@@ -569,7 +695,10 @@ export function CategorySettings({
                             breakDuration: editedBreakDuration[cat.id] ?? cat.breakDuration,
                             matchBreak: editedMatchBreak[cat.id] ?? cat.matchBreak,
                             drawColor: editedDrawColor[cat.id] ?? cat.drawColor,
-                            transportColor: editedTransportColor[cat.id] ?? cat.transportColor
+                            transportColor: editedTransportColor[cat.id] ?? cat.transportColor,
+                            timeoutCount: editedTimeoutCount[cat.id] ?? cat.timeoutCount,
+                            timeoutDuration: editedTimeoutDuration[cat.id] ?? cat.timeoutDuration,
+                            exclusionTime: editedExclusionTime[cat.id] ?? cat.exclusionTime
                         };
                     });
                     originalCategoriesRef.current = updatedOriginalValues;
@@ -584,7 +713,10 @@ export function CategorySettings({
                         breakDuration: editedBreakDuration[cat.id] ?? cat.breakDuration,
                         matchBreak: editedMatchBreak[cat.id] ?? cat.matchBreak,
                         drawColor: editedDrawColor[cat.id] ?? cat.drawColor,
-                        transportColor: editedTransportColor[cat.id] ?? cat.transportColor
+                        transportColor: editedTransportColor[cat.id] ?? cat.transportColor,
+                        timeoutCount: editedTimeoutCount[cat.id] ?? cat.timeoutCount,
+                        timeoutDuration: editedTimeoutDuration[cat.id] ?? cat.timeoutDuration,
+                        exclusionTime: editedExclusionTime[cat.id] ?? cat.exclusionTime
                     };
                 });
                 setPreviousValues(updatedPreviousValues);
@@ -598,7 +730,10 @@ export function CategorySettings({
                 breakDuration: editedBreakDuration[cat.id] ?? cat.breakDuration,
                 matchBreak: editedMatchBreak[cat.id] ?? cat.matchBreak,
                 drawColor: editedDrawColor[cat.id] ?? cat.drawColor,
-                transportColor: editedTransportColor[cat.id] ?? cat.transportColor
+                transportColor: editedTransportColor[cat.id] ?? cat.transportColor,
+                timeoutCount: editedTimeoutCount[cat.id] ?? cat.timeoutCount,
+                timeoutDuration: editedTimeoutDuration[cat.id] ?? cat.timeoutDuration,
+                exclusionTime: editedExclusionTime[cat.id] ?? cat.exclusionTime
             })));
         } catch (err) {
             showNotification(`Chyba pri ukladaní zmien: ${err.message}`, 'error');
@@ -618,6 +753,9 @@ export function CategorySettings({
             setEditedMatchBreak(prev => ({ ...prev, [catId]: category.matchBreak }));
             setEditedDrawColor(prev => ({ ...prev, [catId]: category.drawColor }));
             setEditedTransportColor(prev => ({ ...prev, [catId]: category.transportColor }));
+            setEditedTimeoutCount(prev => ({ ...prev, [catId]: category.timeoutCount }));
+            setEditedTimeoutDuration(prev => ({ ...prev, [catId]: category.timeoutDuration }));
+            setEditedExclusionTime(prev => ({ ...prev, [catId]: category.exclusionTime }));
         }
     };
 
@@ -668,7 +806,10 @@ export function CategorySettings({
                                     editedBreakDuration[cat.id] !== cat.breakDuration ||
                                     editedMatchBreak[cat.id] !== cat.matchBreak ||
                                     editedDrawColor[cat.id] !== cat.drawColor ||
-                                    editedTransportColor[cat.id] !== cat.transportColor;
+                                    editedTransportColor[cat.id] !== cat.transportColor ||
+                                    editedTimeoutCount[cat.id] !== cat.timeoutCount ||
+                                    editedTimeoutDuration[cat.id] !== cat.timeoutDuration ||
+                                    editedExclusionTime[cat.id] !== cat.exclusionTime;
                                 
                                 return React.createElement(
                                     'button',
@@ -808,6 +949,54 @@ export function CategorySettings({
                                         min: 0,
                                         value: editedMatchBreak[selectedCategory.id] ?? selectedCategory.matchBreak,
                                         onChange: e => handleMatchBreakChange(selectedCategory.id, e.target.value),
+                                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                                    })
+                                ),
+
+                                // NOVÉ: Nastavenia pre timeout
+                                React.createElement(
+                                    'div',
+                                    { className: 'space-y-1' },
+                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                        'Počet timeoutov na zápas:'
+                                    ),
+                                    React.createElement('input', {
+                                        type: 'number',
+                                        min: 0,
+                                        value: editedTimeoutCount[selectedCategory.id] ?? selectedCategory.timeoutCount ?? 2,
+                                        onChange: e => handleTimeoutCountChange(selectedCategory.id, e.target.value),
+                                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                                    })
+                                ),
+
+                                // NOVÉ: PODMIENENÉ ZOBRAZENIE - Trvanie timeoutu - zobrazí sa len ak je počet timeoutov > 0
+                                (editedTimeoutCount[selectedCategory.id] ?? selectedCategory.timeoutCount) > 0 && React.createElement(
+                                    'div',
+                                    { className: 'space-y-1' },
+                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                        'Trvanie timeoutu (min):'
+                                    ),
+                                    React.createElement('input', {
+                                        type: 'number',
+                                        min: 0,
+                                        value: editedTimeoutDuration[selectedCategory.id] ?? selectedCategory.timeoutDuration ?? 1,
+                                        onChange: e => handleTimeoutDurationChange(selectedCategory.id, e.target.value),
+                                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                                    })
+                                ),
+
+                                // NOVÉ: Čas vylúčenia
+                                React.createElement(
+                                    'div',
+                                    { className: 'space-y-1' },
+                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                        'Čas vylúčenia (min):'
+                                    ),
+                                    React.createElement('input', {
+                                        type: 'number',
+                                        min: 0,
+                                        value: editedExclusionTime[selectedCategory.id] ?? selectedCategory.exclusionTime ?? 2,
+                                        onChange: e => handleExclusionTimeChange(selectedCategory.id, e.target.value),
                                         className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
                                     })
                                 ),
