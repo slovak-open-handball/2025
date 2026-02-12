@@ -1,5 +1,3 @@
-// logged-in-tournament-settings-category-settings.js
-
 import { doc, onSnapshot, setDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Funkcia na vytvorenie notifikácie o zmene nastavení kategórie
@@ -30,10 +28,10 @@ export function CategorySettings({
     db, 
     userProfileData, 
     showNotification,
-    initialCategoryId, // URL názov (slug)
+    initialCategoryId,
     onSelectCategory,
     onHasChangesChange,
-    onResetChanges // Nový prop pre registráciu reset funkcie
+    onResetChanges
 }) {
     const [categories, setCategories] = React.useState([]);
     const [selectedCategoryId, setSelectedCategoryId] = React.useState(null);
@@ -47,6 +45,9 @@ export function CategorySettings({
     const [saving, setSaving] = React.useState(false);
     const [previousValues, setPreviousValues] = React.useState({});
     const [isInitialLoad, setIsInitialLoad] = React.useState(true);
+
+    // REF pre uloženie pôvodných hodnôt kategórií
+    const originalCategoriesRef = React.useRef({});
 
     // Pomocná funkcia na prevod názvu na URL-friendly formát
     const slugify = (text) => {
@@ -102,6 +103,21 @@ export function CategorySettings({
                 })).sort((a, b) => a.name.localeCompare(b.name));
 
                 setCategories(list);
+                
+                // Uložíme pôvodné hodnoty do ref
+                const originalValues = {};
+                list.forEach(cat => {
+                    originalValues[cat.id] = {
+                        maxTeams: cat.maxTeams,
+                        periods: cat.periods,
+                        periodDuration: cat.periodDuration,
+                        breakDuration: cat.breakDuration,
+                        matchBreak: cat.matchBreak,
+                        drawColor: cat.drawColor,
+                        transportColor: cat.transportColor
+                    };
+                });
+                originalCategoriesRef.current = originalValues;
                 
                 // Inicializácia editovaných hodnôt
                 const initialMaxTeams = {};
@@ -328,7 +344,8 @@ export function CategorySettings({
     // RESET VŠETKÝCH NEULOŽENÝCH ZMIEN
     const resetAllChanges = React.useCallback(() => {
         console.log("resetAllChanges - spúšťam reset kategórií");
-        // Nastavíme všetky edited hodnoty na pôvodné hodnoty z databázy
+        
+        // Použijeme originalCategoriesRef pre reset
         const initialMaxTeams = {};
         const initialPeriods = {};
         const initialPeriodDuration = {};
@@ -338,13 +355,14 @@ export function CategorySettings({
         const initialTransportColor = {};
         
         categories.forEach(cat => {
-            initialMaxTeams[cat.id] = cat.maxTeams;
-            initialPeriods[cat.id] = cat.periods;
-            initialPeriodDuration[cat.id] = cat.periodDuration;
-            initialBreakDuration[cat.id] = cat.breakDuration;
-            initialMatchBreak[cat.id] = cat.matchBreak;
-            initialDrawColor[cat.id] = cat.drawColor;
-            initialTransportColor[cat.id] = cat.transportColor;
+            const original = originalCategoriesRef.current[cat.id] || cat;
+            initialMaxTeams[cat.id] = original.maxTeams;
+            initialPeriods[cat.id] = original.periods;
+            initialPeriodDuration[cat.id] = original.periodDuration;
+            initialBreakDuration[cat.id] = original.breakDuration;
+            initialMatchBreak[cat.id] = original.matchBreak;
+            initialDrawColor[cat.id] = original.drawColor;
+            initialTransportColor[cat.id] = original.transportColor;
         });
         
         setEditedMaxTeams(initialMaxTeams);
@@ -355,16 +373,23 @@ export function CategorySettings({
         setEditedDrawColor(initialDrawColor);
         setEditedTransportColor(initialTransportColor);
         
-        // hasChanges sa automaticky prepne na false
+        console.log("resetAllChanges - reset dokončený");
     }, [categories]);
 
-    // Registrujeme reset funkciu u nadradeného komponentu
+    // Registrujeme reset funkciu u nadradeného komponentu - IBA RAZ
     React.useEffect(() => {
         console.log("Registrujem reset funkciu, onResetChanges existuje:", !!onResetChanges);
         if (onResetChanges) {
             onResetChanges(resetAllChanges);
         }
-    }, [resetAllChanges, onResetChanges]);
+        
+        // Cleanup - odregistrujeme reset funkciu pri odmontovaní
+        return () => {
+            if (onResetChanges) {
+                onResetChanges(null);
+            }
+        };
+    }, []); // PRÁZDNE POLE - spustí sa iba raz
 
     // Samostatný useEffect na spracovanie zmeny URL v RÁMCI CategorySettings
     React.useEffect(() => {
@@ -532,6 +557,21 @@ export function CategorySettings({
                         }
                     }
                 }
+                
+                // Aktualizujeme originalCategoriesRef s novými hodnotami
+                const updatedOriginalValues = { ...originalCategoriesRef.current };
+                categories.forEach(cat => {
+                    updatedOriginalValues[cat.id] = {
+                        maxTeams: editedMaxTeams[cat.id] ?? cat.maxTeams,
+                        periods: editedPeriods[cat.id] ?? cat.periods,
+                        periodDuration: editedPeriodDuration[cat.id] ?? cat.periodDuration,
+                        breakDuration: editedBreakDuration[cat.id] ?? cat.breakDuration,
+                        matchBreak: editedMatchBreak[cat.id] ?? cat.matchBreak,
+                        drawColor: editedDrawColor[cat.id] ?? cat.drawColor,
+                        transportColor: editedTransportColor[cat.id] ?? cat.transportColor
+                    };
+                });
+                originalCategoriesRef.current = updatedOriginalValues;
                 
                 const updatedPreviousValues = {};
                 categories.forEach(cat => {
