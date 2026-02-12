@@ -1,4 +1,4 @@
-var CLEAR_CONSOLE = 0;
+var CLEAR_CONSOLE = 1;
 
 (function() {
     if (CLEAR_CONSOLE === 1) {
