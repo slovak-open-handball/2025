@@ -242,6 +242,45 @@ const AddGroupsApp = ({ userProfileData }) => {
         window.history.replaceState({}, '', newUrl);
     };
 
+    // Inicializácia stavov z URL pri prvom renderi
+    useEffect(() => {
+        const params = getUrlParams();
+        setViewMode(params.viewMode);
+        setSelectedCategory(params.category);
+        setSelectedAccommodationFilter(params.accommodation);
+        setSelectedTeamNameFilter(params.teamName);
+    }, []);
+
+    // Sledovanie zmien viewMode a aktualizácia URL
+    useEffect(() => {
+        updateUrlParams({ viewMode });
+    }, [viewMode]);
+
+    // Sledovanie zmien filtrov a aktualizácia URL
+    useEffect(() => {
+        updateUrlParams({
+            category: selectedCategory,
+            accommodation: selectedAccommodationFilter,
+            teamName: selectedTeamNameFilter
+        });
+    }, [selectedCategory, selectedAccommodationFilter, selectedTeamNameFilter]);
+
+    // Reakcia na zmenu URL (tlačidlo späť/vpred)
+    useEffect(() => {
+        const handlePopState = () => {
+            const params = getUrlParams();
+            setViewMode(params.viewMode);
+            setSelectedCategory(params.category);
+            setSelectedAccommodationFilter(params.accommodation);
+            setSelectedTeamNameFilter(params.teamName);
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => {
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, []);
+
     useEffect(() => {
         if (!window.db) return;
         const unsubscribe = onSnapshot(
