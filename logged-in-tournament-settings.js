@@ -228,6 +228,7 @@ import { TShirtSizeSettings } from './logged-in-tournament-settings-t-shirt-size
 import { AccommodationSettings } from './logged-in-tournament-settings-accommodation-settings.js';
 import { PackageSettings } from './logged-in-tournament-settings-package-settings.js';
 import { CategorySettings } from './logged-in-tournament-settings-category-settings.js';
+import { TableSettings } from './logged-in-tournament-settings-table-settings.js'; // NOVÝ IMPORT
 
 function TournamentSettingsApp() {
   const app = initializeApp(window.firebaseConfig);
@@ -263,6 +264,7 @@ function TournamentSettingsApp() {
     { id: 'accommodation', title: 'Nastavenia ubytovania', component: AccommodationSettings },
     { id: 'package', title: 'Nastavenia balíčkov', component: PackageSettings },
     { id: 'categories', title: 'Nastavenia kategórií', component: CategorySettings },
+    { id: 'table', title: 'Nastavenia tabuľky', component: TableSettings }, // NOVÝ ZÁZNAM
   ];
 
   // Funkcia na aktualizáciu URL hashu - HIERARCHICKÝ FORMÁT
@@ -691,7 +693,7 @@ function TournamentSettingsApp() {
               initialCategoryId: activeSetting === 'categories' ? activeCategoryId : null,
               onSelectCategory: handleSelectCategory,
               onHasChangesChange: handleCategorySettingsHasChanges,
-              onResetChanges: handleSetResetFunction // NOVÝ PROP
+              onResetChanges: handleSetResetFunction
             }
           )
         )
