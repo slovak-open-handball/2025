@@ -1,5 +1,3 @@
-// logged-in-tournament-settings-category-settings.js
-
 import { doc, onSnapshot, setDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Funkcia na vytvorenie notifikácie o zmene nastavení kategórie
@@ -26,7 +24,13 @@ const createCategorySettingsChangeNotification = async (actionType, changesArray
     }
 };
 
-export function CategorySettings({ db, userProfileData, showNotification }) {
+export function CategorySettings({ 
+    db, 
+    userProfileData, 
+    showNotification,
+    initialCategoryId,
+    onSelectCategory 
+}) {
     const [categories, setCategories] = React.useState([]);
     const [selectedCategoryId, setSelectedCategoryId] = React.useState(null);
     const [editedMaxTeams, setEditedMaxTeams] = React.useState({});
@@ -40,28 +44,12 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
     const [previousValues, setPreviousValues] = React.useState({});
     const [isInitialLoad, setIsInitialLoad] = React.useState(true);
 
-    // Funkcia na aktualizáciu URL hashu
-    const updateUrlHash = (categoryId) => {
-        if (categoryId) {
-            window.location.hash = `category-${categoryId}`;
-        } else {
-            window.location.hash = '';
-        }
-    };
-
-    // Funkcia na získanie ID kategórie z URL hashu
-    const getCategoryIdFromHash = () => {
-        const hash = window.location.hash.slice(1); // Odstránime #
-        if (hash && hash.startsWith('category-')) {
-            return hash.replace('category-', '');
-        }
-        return null;
-    };
-
-    // Handler pre výber kategórie
+    // Handler pre výber kategórie - používa callback z hlavného súboru
     const handleSelectCategory = (catId) => {
         setSelectedCategoryId(catId);
-        updateUrlHash(catId);
+        if (onSelectCategory) {
+            onSelectCategory(catId);
+        }
     };
 
     // Načítavanie kategórií
@@ -117,16 +105,16 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                 setEditedTransportColor(initialTransportColor);
                 setPreviousValues(initialPreviousValues);
                 
-                // Nastav kategóriu z URL alebo prvú kategóriu
+                // Nastav kategóriu z props (z URL) alebo prvú kategóriu
                 if (list.length > 0) {
-                    const categoryFromHash = getCategoryIdFromHash();
-                    const isValidCategory = categoryFromHash && list.some(cat => cat.id === categoryFromHash);
-                    
-                    if (isValidCategory) {
-                        setSelectedCategoryId(categoryFromHash);
+                    if (initialCategoryId && list.some(cat => cat.id === initialCategoryId)) {
+                        setSelectedCategoryId(initialCategoryId);
                     } else if (!selectedCategoryId) {
                         setSelectedCategoryId(list[0].id);
-                        updateUrlHash(list[0].id);
+                        // Ak nie je v URL, nastavíme prvú kategóriu a aktualizujeme URL
+                        if (onSelectCategory) {
+                            onSelectCategory(list[0].id);
+                        }
                     }
                 }
                 
@@ -142,7 +130,6 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                 setEditedTransportColor({});
                 setPreviousValues({});
                 setSelectedCategoryId(null);
-                updateUrlHash(null);
                 setIsInitialLoad(false);
             }
         }, err => {
@@ -151,28 +138,17 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
         });
 
         return () => unsubscribe();
-    }, [db, userProfileData, showNotification]);
+    }, [db, userProfileData, showNotification, initialCategoryId, onSelectCategory]);
 
-    // Reakcia na zmenu URL hashu (napr. pri použití tlačidla späť/vpred v prehliadači)
+    // Reakcia na zmenu initialCategoryId (keď používateľ použije tlačidlo späť/vpred)
     React.useEffect(() => {
-        const handleHashChange = () => {
-            if (categories.length > 0) {
-                const categoryFromHash = getCategoryIdFromHash();
-                const isValidCategory = categoryFromHash && categories.some(cat => cat.id === categoryFromHash);
-                
-                if (isValidCategory) {
-                    setSelectedCategoryId(categoryFromHash);
-                } else if (!categoryFromHash && categories.length > 0) {
-                    // Ak je hash prázdny, nastav prvú kategóriu
-                    setSelectedCategoryId(categories[0].id);
-                    updateUrlHash(categories[0].id);
-                }
+        if (initialCategoryId && categories.length > 0) {
+            const isValidCategory = categories.some(cat => cat.id === initialCategoryId);
+            if (isValidCategory && initialCategoryId !== selectedCategoryId) {
+                setSelectedCategoryId(initialCategoryId);
             }
-        };
-
-        window.addEventListener('hashchange', handleHashChange);
-        return () => window.removeEventListener('hashchange', handleHashChange);
-    }, [categories]);
+        }
+    }, [initialCategoryId, categories, selectedCategoryId]);
 
     // Handlery pre jednotlivé inputy
     const handleMaxTeamsChange = (catId, value) => {
@@ -226,7 +202,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
         };
     };
 
-    // Kontrola zmien - sledujeme všetky kategórie, nie len aktuálne vybranú
+    // Kontrola zmien - sledujeme všetky kategórie
     const hasChanges = React.useMemo(() => {
         return categories.some(cat => 
             editedMaxTeams[cat.id] !== cat.maxTeams ||
@@ -337,7 +313,6 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                         ...updatedData
                     };
                     
-                    // Uložíme informácie o zmenách pre notifikáciu
                     const oldValues = previousValues[cat.id] || cat;
                     const newValues = {
                         maxTeams: editedMaxTeams[cat.id] ?? cat.maxTeams,
@@ -363,10 +338,8 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                 await setDoc(catRef, updates, { merge: true });
                 showNotification("Všetky zmeny boli uložené.", 'success');
                 
-                // Vytvoríme notifikácie pre každú kategóriu so zmenami
                 for (const catChange of categoriesWithChanges) {
                     if (catChange.changes.length > 0) {
-                        // Hlavná notifikácia o úprave nastavení kategórie
                         const mainChanges = [
                             `Úprava nastavení kategórie: '${catChange.categoryName}'`,
                             ...catChange.changes
@@ -382,7 +355,6 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                             }
                         );
                         
-                        // Ak sa zmenila farba pre rozlosovanie, vytvoríme samostatnú notifikáciu
                         if (catChange.oldValues.drawColor !== catChange.newValues.drawColor) {
                             await createCategorySettingsChangeNotification(
                                 'category_draw_color_updated',
@@ -397,7 +369,6 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                             );
                         }
                         
-                        // Ak sa zmenila farba pre dopravu, vytvoríme samostatnú notifikáciu
                         if (catChange.oldValues.transportColor !== catChange.newValues.transportColor) {
                             await createCategorySettingsChangeNotification(
                                 'category_transport_color_updated',
@@ -414,7 +385,6 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                     }
                 }
                 
-                // Aktualizácia pôvodných hodnôt po uložení
                 const updatedPreviousValues = {};
                 categories.forEach(cat => {
                     updatedPreviousValues[cat.id] = {
@@ -431,7 +401,6 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                 setPreviousValues(updatedPreviousValues);
             }
 
-            // Aktualizácia kategórií po uložení
             setCategories(prev => prev.map(cat => ({
                 ...cat,
                 maxTeams: editedMaxTeams[cat.id] ?? cat.maxTeams,
@@ -538,7 +507,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                         )
                     ),
 
-                    // Karta vybranej kategórie - zobrazuje sa len jedna
+                    // Karta vybranej kategórie
                     selectedCategory && React.createElement(
                         'div',
                         {
@@ -548,7 +517,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                         React.createElement(
                             'div',
                             { className: 'p-6' },
-                            // Hlavička kategórie s názvom a reset tlačidlom
+                            // Hlavička kategórie
                             React.createElement(
                                 'div',
                                 { className: 'flex justify-between items-center mb-6' },
@@ -565,7 +534,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                                 )
                             ),
 
-                            // VŠETKY POLIA POD SEBOU - každé s popisom nad inputom
+                            // Všetky polia
                             React.createElement(
                                 'div',
                                 { className: 'space-y-4' },
@@ -739,7 +708,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                                         )
                                     )
                                 )
-                            ),
+                            )
                         )
                     ),
 
