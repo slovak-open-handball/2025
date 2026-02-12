@@ -51,7 +51,7 @@ window.showGlobalNotification = (message, type = 'success') => {
     setTimeout(() => el.className = `${base} ${cls} opacity-100 scale-100`, 10);
     setTimeout(() => el.className = `${base} ${cls} opacity-0 scale-95`, 5000);
 };
-const AddGroupsApp = ({ userProfileData }) => {
+const MapApp = ({ userProfileData }) => {
     const mapRef = useRef(null);
     const leafletMap = useRef(null);
     const placesLayerRef = useRef(null);
@@ -2961,7 +2961,7 @@ const handleDataUpdateAndRender = (event) => {
             });
             isEmailSyncListenerSetup = true;
         }
-        ReactDOM.createRoot(root).render(React.createElement(AddGroupsApp, { userProfileData }));
+        ReactDOM.createRoot(root).render(React.createElement(MapApp, { userProfileData }));
     } else {
         ReactDOM.createRoot(root).render(
             React.createElement('div', { className: 'flex justify-center items-center h-full pt-16' },
