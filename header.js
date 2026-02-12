@@ -84,30 +84,80 @@ const formatPhoneNumber = (phoneNumber) => {
 };
 
 const formatNotificationMessage = (text) => {
-    const firstApostrophe = text.indexOf("'");
-    const secondApostrophe = text.indexOf("'", firstApostrophe + 1);
-    const thirdApostrophe = text.indexOf("'", secondApostrophe + 1);
-    const fourthApostrophe = text.indexOf("'", thirdApostrophe + 1);
+    // Rozdelenie textu na časti podľa apostrofov
+    const parts = text.split("'");
+    
+    // Ak nemáme dostatok častí, vrátime pôvodný text
+    if (parts.length < 5) {
+        return text;
+    }
 
-    if (firstApostrophe !== -1 && secondApostrophe !== -1 && thirdApostrophe !== -1 && fourthApostrophe !== -1) {
-        let oldText = text.substring(firstApostrophe + 1, secondApostrophe);
-        let newText = text.substring(thirdApostrophe + 1, fourthApostrophe);
-
-        if (oldText.startsWith('+') && newText.startsWith('+')) {
-            oldText = formatPhoneNumber(oldText);
-            newText = formatPhoneNumber(newText);
-        }
-
-        let formattedText = text.substring(0, firstApostrophe);
-        formattedText += `<em>${oldText}</em>`;
-        formattedText += text.substring(secondApostrophe + 1, thirdApostrophe);
-        formattedText += `<strong>${newText}</strong>`;
-        formattedText += text.substring(fourthApostrophe + 1);
+    // Prvá časť (pred prvým apostrofom)
+    let formattedText = parts[0];
+    
+    // Prejdeme všetky páry apostrofov
+    for (let i = 1; i < parts.length - 1; i += 2) {
+        const value = parts[i];
+        const nextPart = parts[i + 1];
         
-        return formattedText;
+        // Formátujeme podľa poradia
+        if (i === 1) {
+            // Prvý pár - šikmo
+            formattedText += `<em>${value}</em>`;
+        } else if (i === 3) {
+            // Druhý pár - bold
+            formattedText += `<strong>${value}</strong>`;
+        } else {
+            // Ostatné páry - normálne
+            formattedText += value;
+        }
+        
+        // Pridáme text za apostrofom
+        formattedText += nextPart;
     }
     
-    return text;
+    // Ak máme nejaké polia navyše, pridáme ich ako nový riadok
+    if (parts.length > 5) {
+        // Zistíme, či ide o hromadnú notifikáciu s viacerými zmenami
+        const changes = [];
+        
+        // Prejdeme všetky zvyšné časti
+        for (let i = 5; i < parts.length - 1; i += 2) {
+            if (i + 1 < parts.length) {
+                const fieldName = parts[i - 1]?.trim() || '';
+                const oldValue = parts[i];
+                const newValue = parts[i + 2];
+                
+                if (oldValue && newValue) {
+                    changes.push(`${fieldName}: <em>${oldValue}</em> → <strong>${newValue}</strong>`);
+                }
+                i += 2;
+            }
+        }
+        
+        if (changes.length > 0) {
+            formattedText += '<br>' + changes.join('<br>');
+        }
+    }
+    
+    // Formátovanie telefónnych čísel
+    formattedText = formattedText.replace(/(<em>|\+?[0-9\s]+<\/em>)/g, (match) => {
+        if (match.includes('+')) {
+            const number = match.replace(/<\/?em>/g, '');
+            return `<em>${formatPhoneNumber(number)}</em>`;
+        }
+        return match;
+    });
+    
+    formattedText = formattedText.replace(/(<strong>|\+?[0-9\s]+<\/strong>)/g, (match) => {
+        if (match.includes('+')) {
+            const number = match.replace(/<\/?strong>/g, '');
+            return `<strong>${formatPhoneNumber(number)}</strong>`;
+        }
+        return match;
+    });
+    
+    return formattedText;
 };
 
 const showDatabaseNotification = (message, type = 'info') => {
@@ -129,17 +179,40 @@ const showDatabaseNotification = (message, type = 'info') => {
     notificationElement.className = `
         bg-gray-800 text-white p-4 pr-10 rounded-lg shadow-lg
         transform translate-x-full transition-all duration-500 ease-out
-        flex items-center space-x-2
+        flex flex-col items-start space-y-1
     `;
 
     const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔';
     
-    const formattedMessage = message.replace(/\n/g, '<br>');
+    // Spracovanie správy - rozdelenie podľa e-mailu a jednotlivých zmien
+    let formattedMessage = message;
+    
+    // Ak správa začína "Používateľ ...:", extrahujeme e-mail a zvyšok
+    const userMatch = message.match(/^(Používateľ [^:]+:)(.*)$/s);
+    
+    if (userMatch) {
+        const userInfo = userMatch[1].trim();
+        const restOfMessage = userMatch[2].trim();
+        
+        // Formátujeme hlavnú časť správy
+        const formattedRest = formatNotificationMessage(restOfMessage);
+        
+        // Zobrazenie: e-mail na prvom riadku, zmeny pod ním
+        formattedMessage = `
+            <div class="font-semibold text-blue-300">${userInfo}</div>
+            <div class="mt-1">${formattedRest}</div>
+        `;
+    } else {
+        // Ak nejde o používateľskú notifikáciu, normálne naformátujeme
+        formattedMessage = formatNotificationMessage(message);
+    }
 
     notificationElement.innerHTML = `
-        <span>${icon}</span>
-        <span>${formattedMessage}</span>
-        <button onclick="document.getElementById('${notificationId}').remove()" class="absolute top-1 right-1 text-gray-400 hover:text-white">&times;</button>
+        <div class="flex items-start space-x-2 w-full">
+            <span>${icon}</span>
+            <div class="flex-1">${formattedMessage}</div>
+            <button onclick="document.getElementById('${notificationId}').remove()" class="absolute top-1 right-1 text-gray-400 hover:text-white">&times;</button>
+        </div>
     `;
 
     notificationContainer.appendChild(notificationElement);
