@@ -28,6 +28,7 @@ const createCategorySettingsChangeNotification = async (actionType, changesArray
 
 export function CategorySettings({ db, userProfileData, showNotification }) {
     const [categories, setCategories] = React.useState([]);
+    const [selectedCategoryId, setSelectedCategoryId] = React.useState(null);
     const [editedMaxTeams, setEditedMaxTeams] = React.useState({});
     const [editedPeriods, setEditedPeriods] = React.useState({});
     const [editedPeriodDuration, setEditedPeriodDuration] = React.useState({});
@@ -90,6 +91,11 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                 setEditedDrawColor(initialDrawColor);
                 setEditedTransportColor(initialTransportColor);
                 setPreviousValues(initialPreviousValues);
+                
+                // Nastav prvú kategóriu ako vybranú, ak ešte žiadna nie je vybraná
+                if (list.length > 0 && !selectedCategoryId) {
+                    setSelectedCategoryId(list[0].id);
+                }
             } else {
                 setCategories([]);
                 setEditedMaxTeams({});
@@ -100,13 +106,14 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                 setEditedDrawColor({});
                 setEditedTransportColor({});
                 setPreviousValues({});
+                setSelectedCategoryId(null);
             }
         }, err => {
             showNotification(`Chyba pri načítaní kategórií: ${err.message}`, 'error');
         });
 
         return () => unsubscribe();
-    }, [db, userProfileData, showNotification]);
+    }, [db, userProfileData, showNotification, selectedCategoryId]);
 
     // Handlery pre jednotlivé inputy
     const handleMaxTeamsChange = (catId, value) => {
@@ -306,7 +313,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                         if (catChange.oldValues.drawColor !== catChange.newValues.drawColor) {
                             await createCategorySettingsChangeNotification(
                                 'category_draw_color_updated',
-                                [`Zmena farby pre rozlosovanie v kategórii z '${catChange.categoryName}: ${catChange.oldValues.drawColor}' na '${catChange.newValues.drawColor}'`],
+                                [`Zmena farby pre rozlosovanie v kategórii '${catChange.categoryName}': ${catChange.oldValues.drawColor} → ${catChange.newValues.drawColor}`],
                                 {
                                     categoryId: catChange.categoryId,
                                     categoryName: catChange.categoryName,
@@ -321,7 +328,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                         if (catChange.oldValues.transportColor !== catChange.newValues.transportColor) {
                             await createCategorySettingsChangeNotification(
                                 'category_transport_color_updated',
-                                [`Zmena farby pre dopravu v kategórii z '${catChange.categoryName}: ${catChange.oldValues.transportColor}' na '${catChange.newValues.transportColor}'`],
+                                [`Zmena farby pre dopravu v kategórii '${catChange.categoryName}': ${catChange.oldValues.transportColor} → ${catChange.newValues.transportColor}`],
                                 {
                                     categoryId: catChange.categoryId,
                                     categoryName: catChange.categoryName,
@@ -383,6 +390,14 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
         }
     };
 
+    // Handler pre výber kategórie
+    const handleSelectCategory = (catId) => {
+        setSelectedCategoryId(catId);
+    };
+
+    // Získanie vybranej kategórie
+    const selectedCategory = categories.find(cat => cat.id === selectedCategoryId);
+
     return React.createElement(
         React.Fragment,
         null,
@@ -400,229 +415,239 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                 React.createElement(
                     React.Fragment,
                     null,
+                    // Tlačidlá pre kategórie
                     React.createElement(
                         'div',
-                        { className: 'space-y-6' },
-                        categories.map(cat => {
-                            const totalTime = calculateTotalMatchTime(cat.id);
-                            
-                            return React.createElement(
+                        { className: 'mb-8' },
+                        React.createElement(
+                            'div',
+                            { className: 'flex flex-wrap gap-3' },
+                            categories.map(cat => 
+                                React.createElement(
+                                    'button',
+                                    {
+                                        key: cat.id,
+                                        onClick: () => handleSelectCategory(cat.id),
+                                        className: `px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 ${
+                                            selectedCategoryId === cat.id
+                                                ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-300 ring-offset-2'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow'
+                                        }`
+                                    },
+                                    cat.name
+                                )
+                            )
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-xs text-gray-500 mt-3' },
+                            'Vyberte kategóriu pre úpravu jej nastavení'
+                        )
+                    ),
+
+                    // Karta vybranej kategórie - zobrazuje sa len jedna
+                    selectedCategory && React.createElement(
+                        'div',
+                        {
+                            key: selectedCategory.id,
+                            className: 'bg-white border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden'
+                        },
+                        React.createElement(
+                            'div',
+                            { className: 'p-6' },
+                            // Hlavička kategórie s názvom a reset tlačidlom
+                            React.createElement(
                                 'div',
-                                {
-                                    key: cat.id,
-                                    className: 'bg-white border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden'
-                                },
+                                { className: 'flex justify-between items-center mb-6' },
+                                React.createElement('h3', {
+                                    className: 'text-xl font-semibold text-gray-800'
+                                }, selectedCategory.name),
+                                React.createElement(
+                                    'button',
+                                    {
+                                        onClick: () => handleResetCategory(selectedCategory.id),
+                                        className: 'px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors'
+                                    },
+                                    'Reset'
+                                )
+                            ),
+
+                            // VŠETKY POLIA POD SEBOU - každé s popisom nad inputom
+                            React.createElement(
+                                'div',
+                                { className: 'space-y-4' },
+                                
+                                // Maximálny počet tímov
                                 React.createElement(
                                     'div',
-                                    { className: 'p-6' },
-                                    // Hlavička kategórie s názvom a reset tlačidlom
+                                    { className: 'space-y-1' },
+                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                        'Maximálny počet tímov:'
+                                    ),
+                                    React.createElement('input', {
+                                        type: 'number',
+                                        min: 1,
+                                        value: editedMaxTeams[selectedCategory.id] ?? selectedCategory.maxTeams,
+                                        onChange: e => handleMaxTeamsChange(selectedCategory.id, e.target.value),
+                                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                                    })
+                                ),
+
+                                // Počet periód
+                                React.createElement(
+                                    'div',
+                                    { className: 'space-y-1' },
+                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                        'Počet periód:'
+                                    ),
+                                    React.createElement('input', {
+                                        type: 'number',
+                                        min: 1,
+                                        value: editedPeriods[selectedCategory.id] ?? selectedCategory.periods,
+                                        onChange: e => handlePeriodsChange(selectedCategory.id, e.target.value),
+                                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                                    })
+                                ),
+
+                                // Trvanie periódy
+                                React.createElement(
+                                    'div',
+                                    { className: 'space-y-1' },
+                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                        'Trvanie periódy (min):'
+                                    ),
+                                    React.createElement('input', {
+                                        type: 'number',
+                                        min: 1,
+                                        value: editedPeriodDuration[selectedCategory.id] ?? selectedCategory.periodDuration,
+                                        onChange: e => handlePeriodDurationChange(selectedCategory.id, e.target.value),
+                                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                                    })
+                                ),
+
+                                // Prestávka medzi periódami
+                                React.createElement(
+                                    'div',
+                                    { className: 'space-y-1' },
+                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                        'Prestávka medzi periódami (min):'
+                                    ),
+                                    React.createElement('input', {
+                                        type: 'number',
+                                        min: 0,
+                                        value: editedBreakDuration[selectedCategory.id] ?? selectedCategory.breakDuration,
+                                        onChange: e => handleBreakDurationChange(selectedCategory.id, e.target.value),
+                                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                                    })
+                                ),
+
+                                // Prestávka medzi zápasmi
+                                React.createElement(
+                                    'div',
+                                    { className: 'space-y-1' },
+                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                        'Prestávka medzi zápasmi (min):'
+                                    ),
+                                    React.createElement('input', {
+                                        type: 'number',
+                                        min: 0,
+                                        value: editedMatchBreak[selectedCategory.id] ?? selectedCategory.matchBreak,
+                                        onChange: e => handleMatchBreakChange(selectedCategory.id, e.target.value),
+                                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                                    })
+                                ),
+
+                                // Farba pre rozlosovanie
+                                React.createElement(
+                                    'div',
+                                    { className: 'space-y-1' },
+                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                        'Farba pre rozlosovanie:'
+                                    ),
                                     React.createElement(
                                         'div',
-                                        { className: 'flex justify-between items-center mb-6' },
-                                        React.createElement('h3', {
-                                            className: 'text-xl font-semibold text-gray-800'
-                                        }, cat.name),
-                                        React.createElement(
-                                            'button',
-                                            {
-                                                onClick: () => handleResetCategory(cat.id),
-                                                className: 'px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors'
-                                            },
-                                            'Reset'
+                                        { className: 'flex gap-2' },
+                                        React.createElement('input', {
+                                            type: 'color',
+                                            value: editedDrawColor[selectedCategory.id] ?? selectedCategory.drawColor,
+                                            onChange: e => handleDrawColorChange(selectedCategory.id, e.target.value),
+                                            className: 'w-12 h-10 border border-gray-300 rounded-lg cursor-pointer'
+                                        }),
+                                        React.createElement('input', {
+                                            type: 'text',
+                                            value: editedDrawColor[selectedCategory.id] ?? selectedCategory.drawColor,
+                                            onChange: e => handleDrawColorChange(selectedCategory.id, e.target.value),
+                                            className: 'flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black font-mono'
+                                        })
+                                    )
+                                ),
+
+                                // Farba pre dopravu
+                                React.createElement(
+                                    'div',
+                                    { className: 'space-y-1' },
+                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                        'Farba pre dopravu:'
+                                    ),
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex gap-2' },
+                                        React.createElement('input', {
+                                            type: 'color',
+                                            value: editedTransportColor[selectedCategory.id] ?? selectedCategory.transportColor,
+                                            onChange: e => handleTransportColorChange(selectedCategory.id, e.target.value),
+                                            className: 'w-12 h-10 border border-gray-300 rounded-lg cursor-pointer'
+                                        }),
+                                        React.createElement('input', {
+                                            type: 'text',
+                                            value: editedTransportColor[selectedCategory.id] ?? selectedCategory.transportColor,
+                                            onChange: e => handleTransportColorChange(selectedCategory.id, e.target.value),
+                                            className: 'flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black font-mono'
+                                        })
+                                    )
+                                )
+                            ),
+
+                            // Výpočet celkového času zápasu
+                            React.createElement(
+                                'div',
+                                { className: 'mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200' },
+                                React.createElement('h4', { className: 'font-semibold text-gray-700 mb-2' },
+                                    'Celkový čas zápasu:'
+                                ),
+                                React.createElement(
+                                    'div',
+                                    { className: 'grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm' },
+                                    React.createElement('div', { className: 'text-gray-600' },
+                                        'Čistý hrací čas: ',
+                                        React.createElement('span', { className: 'font-bold text-gray-900' },
+                                            `${(() => {
+                                                const time = calculateTotalMatchTime(selectedCategory.id);
+                                                return time.playingTime;
+                                            })()} min`
                                         )
                                     ),
-
-                                    // VŠETKY POLIA POD SEBOU - každé s popisom nad inputom
-                                    React.createElement(
-                                        'div',
-                                        { className: 'space-y-4' },
-                                        
-                                        // Maximálny počet tímov
-                                        React.createElement(
-                                            'div',
-                                            { className: 'space-y-1' },
-                                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
-                                                'Maximálny počet tímov:'
-                                            ),
-                                            React.createElement('input', {
-                                                type: 'number',
-                                                min: 1,
-                                                value: editedMaxTeams[cat.id] ?? cat.maxTeams,
-                                                onChange: e => handleMaxTeamsChange(cat.id, e.target.value),
-                                                className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                                            })
-                                        ),
-
-                                        // Počet periód
-                                        React.createElement(
-                                            'div',
-                                            { className: 'space-y-1' },
-                                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
-                                                'Počet periód:'
-                                            ),
-                                            React.createElement('input', {
-                                                type: 'number',
-                                                min: 1,
-                                                value: editedPeriods[cat.id] ?? cat.periods,
-                                                onChange: e => handlePeriodsChange(cat.id, e.target.value),
-                                                className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                                            })
-                                        ),
-
-                                        // Trvanie periódy
-                                        React.createElement(
-                                            'div',
-                                            { className: 'space-y-1' },
-                                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
-                                                'Trvanie periódy (min):'
-                                            ),
-                                            React.createElement('input', {
-                                                type: 'number',
-                                                min: 1,
-                                                value: editedPeriodDuration[cat.id] ?? cat.periodDuration,
-                                                onChange: e => handlePeriodDurationChange(cat.id, e.target.value),
-                                                className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                                            })
-                                        ),
-
-                                        // Prestávka medzi periódami
-                                        React.createElement(
-                                            'div',
-                                            { className: 'space-y-1' },
-                                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
-                                                'Prestávka medzi periódami (min):'
-                                            ),
-                                            React.createElement('input', {
-                                                type: 'number',
-                                                min: 0,
-                                                value: editedBreakDuration[cat.id] ?? cat.breakDuration,
-                                                onChange: e => handleBreakDurationChange(cat.id, e.target.value),
-                                                className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                                            })
-                                        ),
-
-                                        // Prestávka medzi zápasmi
-                                        React.createElement(
-                                            'div',
-                                            { className: 'space-y-1' },
-                                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
-                                                'Prestávka medzi zápasmi (min):'
-                                            ),
-                                            React.createElement('input', {
-                                                type: 'number',
-                                                min: 0,
-                                                value: editedMatchBreak[cat.id] ?? cat.matchBreak,
-                                                onChange: e => handleMatchBreakChange(cat.id, e.target.value),
-                                                className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                                            })
-                                        ),
-
-                                        // Farba pre rozlosovanie
-                                        React.createElement(
-                                            'div',
-                                            { className: 'space-y-1' },
-                                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
-                                                'Farba pre rozlosovanie:'
-                                            ),
-                                            React.createElement(
-                                                'div',
-                                                { className: 'flex gap-2' },
-                                                React.createElement('input', {
-                                                    type: 'color',
-                                                    value: editedDrawColor[cat.id] ?? cat.drawColor,
-                                                    onChange: e => handleDrawColorChange(cat.id, e.target.value),
-                                                    className: 'w-12 h-10 border border-gray-300 rounded-lg cursor-pointer'
-                                                }),
-                                                React.createElement('input', {
-                                                    type: 'text',
-                                                    value: editedDrawColor[cat.id] ?? cat.drawColor,
-                                                    onChange: e => handleDrawColorChange(cat.id, e.target.value),
-                                                    className: 'flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black font-mono'
-                                                })
-                                            )
-                                        ),
-
-                                        // Farba pre dopravu
-                                        React.createElement(
-                                            'div',
-                                            { className: 'space-y-1' },
-                                            React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
-                                                'Farba pre dopravu:'
-                                            ),
-                                            React.createElement(
-                                                'div',
-                                                { className: 'flex gap-2' },
-                                                React.createElement('input', {
-                                                    type: 'color',
-                                                    value: editedTransportColor[cat.id] ?? cat.transportColor,
-                                                    onChange: e => handleTransportColorChange(cat.id, e.target.value),
-                                                    className: 'w-12 h-10 border border-gray-300 rounded-lg cursor-pointer'
-                                                }),
-                                                React.createElement('input', {
-                                                    type: 'text',
-                                                    value: editedTransportColor[cat.id] ?? cat.transportColor,
-                                                    onChange: e => handleTransportColorChange(cat.id, e.target.value),
-                                                    className: 'flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black font-mono'
-                                                })
-                                            )
+                                    React.createElement('div', { className: 'text-gray-600' },
+                                        'Prestávky v zápase: ',
+                                        React.createElement('span', { className: 'font-bold text-gray-900' },
+                                            `${(() => {
+                                                const time = calculateTotalMatchTime(selectedCategory.id);
+                                                return time.breaksBetweenPeriods;
+                                            })()} min`
                                         )
                                     ),
-
-                                    // Výpočet celkového času zápasu
-                                    React.createElement(
-                                        'div',
-                                        { className: 'mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200' },
-                                        React.createElement('h4', { className: 'font-semibold text-gray-700 mb-2' },
-                                            'Celkový čas zápasu:'
-                                        ),
-                                        React.createElement(
-                                            'div',
-                                            { className: 'grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm' },
-                                            React.createElement('div', { className: 'text-gray-600' },
-                                                'Čistý hrací čas: ',
-                                                React.createElement('span', { className: 'font-bold text-gray-900' },
-                                                    `${totalTime.playingTime} min`
-                                                )
-                                            ),
-                                            React.createElement('div', { className: 'text-gray-600' },
-                                                'Prestávky v zápase: ',
-                                                React.createElement('span', { className: 'font-bold text-gray-900' },
-                                                    `${totalTime.breaksBetweenPeriods} min`
-                                                )
-                                            ),
-                                            React.createElement('div', { className: 'text-gray-600' },
-                                                'Celkový čas s prestávkou: ',
-                                                React.createElement('span', { className: 'font-bold text-blue-600' },
-                                                    `${totalTime.totalTimeWithMatchBreak} min`
-                                                )
-                                            )
-                                        )
-                                    ),
-
-                                    // Ukážka farieb
-                                    React.createElement(
-                                        'div',
-                                        { className: 'mt-4 flex gap-4 items-center' },
-                                        React.createElement(
-                                            'div',
-                                            { 
-                                                className: 'px-4 py-2 rounded-lg text-white text-sm font-medium',
-                                                style: { backgroundColor: editedDrawColor[cat.id] ?? cat.drawColor }
-                                            },
-                                            'Rozlosovanie'
-                                        ),
-                                        React.createElement(
-                                            'div',
-                                            { 
-                                                className: 'px-4 py-2 rounded-lg text-white text-sm font-medium',
-                                                style: { backgroundColor: editedTransportColor[cat.id] ?? cat.transportColor }
-                                            },
-                                            'Doprava'
+                                    React.createElement('div', { className: 'text-gray-600' },
+                                        'Celkový čas s prestávkou: ',
+                                        React.createElement('span', { className: 'font-bold text-blue-600' },
+                                            `${(() => {
+                                                const time = calculateTotalMatchTime(selectedCategory.id);
+                                                return time.totalTimeWithMatchBreak;
+                                            })()} min`
                                         )
                                     )
                                 )
-                            );
-                        })
+                            ),
+                        )
                     ),
 
                     // Tlačidlo na uloženie všetkých zmien
