@@ -224,19 +224,23 @@ const setupUserSettingsListener = (userId) => {
         if (docSnap.exists()) {
             const userData = docSnap.data();
             
-            // Načítanie počiatočnej hodnoty displayNotifications z databázy
+            // IBA AK HODNOTA EXISTUJE A JE INÁ, TAK JU AKTUALIZUJEME
             if (userData.hasOwnProperty('displayNotifications')) {
-                currentDisplayNotifications = userData.displayNotifications;
-                console.log("header.js: displayNotifications aktualizované na:", currentDisplayNotifications);
+                if (currentDisplayNotifications !== userData.displayNotifications) {
+                    currentDisplayNotifications = userData.displayNotifications;
+                    console.log("header.js: displayNotifications zmenené na:", currentDisplayNotifications);
+                }
             } else {
-                // Ak pole neexistuje, default je false
-                currentDisplayNotifications = false;
+                // Ak pole neexistuje, default je false - ale nastavíme len ak je to zmena
+                if (currentDisplayNotifications !== false) {
+                    currentDisplayNotifications = false;
+                    console.log("header.js: displayNotifications nastavené na false (predvolené)");
+                }
             }
             
             // Aktualizácia window.globalUserProfileData ak existuje
             if (window.globalUserProfileData) {
                 window.globalUserProfileData.displayNotifications = currentDisplayNotifications;
-                // Neodosielame globalDataUpdated, aby sme zbytočne nevyvolávali re-rendery
             }
         }
     }, (error) => {
@@ -244,7 +248,7 @@ const setupUserSettingsListener = (userId) => {
     });
 };
 
-// NOVÁ FUNKCIA: Načítanie počiatočného stavu displayNotifications PRED nastavením listenera notifikácií
+// Načítanie počiatočného stavu displayNotifications PRED nastavením listenera notifikácií
 const loadInitialDisplayNotifications = async (userId) => {
     if (!window.db || !userId) return false;
     
@@ -301,7 +305,13 @@ const updateHeaderLinks = (userProfileData) => {
                     // Najprv načítame počiatočnú hodnotu displayNotifications
                     loadInitialDisplayNotifications(userProfileData.uid).then((initialValue) => {
                         // Potom nastavíme listener pre zmeny nastavení
-                        if (userProfileData.uid && !unsubscribeFromUserSettings) {
+                        if (userProfileData.uid) {
+                            // Odhlásime predchádzajúci listener ak existuje
+                            if (unsubscribeFromUserSettings) {
+                                unsubscribeFromUserSettings();
+                                unsubscribeFromUserSettings = null;
+                            }
+                            // Nastavíme nový listener
                             unsubscribeFromUserSettings = setupUserSettingsListener(userProfileData.uid);
                             currentUserId = userProfileData.uid;
                         }
@@ -381,23 +391,6 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
     }
 };
 
-// Pomocná funkcia pre kontrolu aktuálneho stavu displayNotifications priamo z Firestore
-const checkCurrentDisplayNotificationsStatus = async (userId) => {
-    if (!window.db || !userId) return false;
-    
-    try {
-        const userDocRef = doc(window.db, 'users', userId);
-        const userSnap = await getDoc(userDocRef);
-        if (userSnap.exists()) {
-            const userData = userSnap.data();
-            return userData.displayNotifications || false;
-        }
-    } catch (e) {
-        console.error("header.js: Chyba pri kontrole displayNotifications:", e);
-    }
-    return false;
-};
-
 const setupNotificationListenerForAdmin = (userProfileData) => {
     notificationListenerSetupCount++;
     console.log(`header.js: setupNotificationListenerForAdmin volané ${notificationListenerSetupCount}. krát`);
@@ -440,7 +433,10 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
             console.log("header.js: GlobalUserProfileData aktualizované s počtom neprečítaných notifikácií:", unreadCount);
         }
 
-        // AK MAJÚ VYPNUTÉ NOTIFIKÁCIE, UKONČIŤ - ale stále počítame unreadCount
+        // DEBUG: Vypíšeme aktuálny stav
+        console.log("header.js: Kontrola displayNotifications pred zobrazením:", currentDisplayNotifications);
+        
+        // AK MAJÚ VYPNUTÉ NOTIFIKÁCIE, UKONČIŤ
         if (!currentDisplayNotifications) {
             console.log("header.js: Notifikácie sú vypnuté (aktuálny stav), nezobrazujem nové upozornenia.");
             return;
@@ -455,7 +451,6 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                 message = `Máte ${unreadCount} nové neprečítané upozornenia.`;
             }
             showDatabaseNotification(message, 'info');
-            // Pokračujeme ďalej, aby sa zobrazili aj jednotlivé notifikácie
         }
 
         // SPRACOVANIE JEDNOTLIVÝCH NOVÝCH NOTIFIKÁCIÍ
