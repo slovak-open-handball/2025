@@ -22,7 +22,6 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const matchesLink = document.getElementById('matches-link');
     
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
-        console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo menu spacer po vložení HTML.");
         return;
     }
 
@@ -305,16 +304,13 @@ const setupMenuListeners = (userProfileData, db, userId) => {
 
     const saveMenuState = async () => {
         if (!userId) {
-            console.error("left-menu.js: Upozornenie: Chýba ID používateľa. Stav menu nebude uložený.");
             return;
         }
 
         const userDocRef = doc(db, 'users', userId);
         try {
             await setDoc(userDocRef, { isMenuToggled }, { merge: true });
-            console.log("left-menu.js: Stav menu bol úspešne uložený do databázy.");
         } catch (error) {
-            console.error("left-menu.js: Chyba pri ukladaní/vytváraní stavu menu:", error);
             if (window.showGlobalNotification) {
                 window.showGlobalNotification('Nepodarilo sa uložiť nastavenia menu. Skontrolujte oprávnenia.', 'error');
             }
@@ -359,7 +355,6 @@ const loadLeftMenu = async (userProfileData) => {
     if (userProfileData && userProfileData.id) {
         const menuPlaceholder = document.getElementById('menu-placeholder');
         if (!menuPlaceholder) {
-            console.error("left-menu.js: Nebol nájdený žiadny element s ID 'menu-placeholder'.");
             return;
         }
 
@@ -370,7 +365,6 @@ const loadLeftMenu = async (userProfileData) => {
             }
             const menuHtml = await response.text();
             menuPlaceholder.innerHTML = menuHtml;
-            console.log("logged-in-left-menu-js: Obsah menu bol úspešne vložený do placeholderu.");
 
             const db = window.db;
             const userId = userProfileData.id;
@@ -438,14 +432,12 @@ const loadLeftMenu = async (userProfileData) => {
             });
 
         } catch (error) {
-            console.error("left-menu.js: Chyba pri inicializácii ľavého menu:", error);
         }
     } else {
         const leftMenuElement = document.getElementById('left-menu');
         if (leftMenuElement) {
             leftMenuElement.classList.add('hidden');
         }
-        console.log("left-menu.js: Globálne dáta používateľa nie sú dostupné. Menu sa skryje.");
     }
 };
 
@@ -523,11 +515,9 @@ const addCustomStyles = () => {
 addCustomStyles();
 
 window.addEventListener('globalDataUpdated', (event) => {
-    console.log('left-menu.js: Prijatá udalosť "globalDataUpdated". Kontrolujem dáta...');
     loadLeftMenu(event.detail);
 });
 
 if (window.globalUserProfileData) {
-    console.log('left-menu.js: Globálne dáta už existujú. Vykresľujem menu okamžite.');
     loadLeftMenu(window.globalUserProfileData);
 }
