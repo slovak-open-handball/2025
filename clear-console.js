@@ -7,53 +7,54 @@ var CLEAR_CONSOLE = 1;
             console.clear();
         }
         
-        // Zachytenie a vyčistenie všetkých console.log výpisov
+        // Zachytenie a úplné potlačenie všetkých console výpisov
         if (typeof console !== 'undefined') {
-            // Uložíme pôvodné metódy
+            // Uložíme pôvodné metódy (pre prípad, že by sme ich chceli neskôr obnoviť)
             var originalLog = console.log;
             var originalInfo = console.info;
             var originalWarn = console.warn;
             var originalError = console.error;
             var originalDebug = console.debug;
             
-            // Prepíšeme console.log
+            // Prepíšeme console.log - žiadny výpis
             console.log = function() {
+                // Vyčistíme a NEVYPÍŠEME nič
                 if (CLEAR_CONSOLE === 1) {
                     console.clear();
                 }
-                return originalLog.apply(console, arguments);
+                // return originalLog.apply(console, arguments); // TOTO SME ODSTRÁNILI
             };
             
-            // Prepíšeme console.info
+            // Prepíšeme console.info - žiadny výpis
             console.info = function() {
                 if (CLEAR_CONSOLE === 1) {
                     console.clear();
                 }
-                return originalInfo.apply(console, arguments);
+                // ŽIADNY VÝPIS
             };
             
-            // Prepíšeme console.warn
+            // Prepíšeme console.warn - žiadny výpis
             console.warn = function() {
                 if (CLEAR_CONSOLE === 1) {
                     console.clear();
                 }
-                return originalWarn.apply(console, arguments);
+                // ŽIADNY VÝPIS
             };
             
-            // Prepíšeme console.error
+            // Prepíšeme console.error - žiadny výpis
             console.error = function() {
                 if (CLEAR_CONSOLE === 1) {
                     console.clear();
                 }
-                return originalError.apply(console, arguments);
+                // ŽIADNY VÝPIS
             };
             
-            // Prepíšeme console.debug
+            // Prepíšeme console.debug - žiadny výpis
             console.debug = function() {
                 if (CLEAR_CONSOLE === 1) {
                     console.clear();
                 }
-                return originalDebug.apply(console, arguments);
+                // ŽIADNY VÝPIS
             };
         }
     }
