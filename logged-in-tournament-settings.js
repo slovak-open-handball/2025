@@ -317,39 +317,37 @@ function TournamentSettingsApp() {
 
   // Handler pre návrat na hlavnú stránku - S MODÁLNYM OKNOM
   const handleBackToMain = () => {
-    console.log("handleBackToMain - setting modalState with pendingAction");
-    if (activeSetting === 'categories' && categorySettingsHasChanges) {
-      setModalState({
-        isOpen: true,
-        pendingAction: () => {
-            console.log("pendingAction - spúšťam reset a návrat");
-    
-            // Najprv resetujeme zmeny
-            if (resetCategorySettingsRef.current) {
-                resetCategorySettingsRef.current();
-            }
-
-            // Potom opustíme sekciu - POUŽIJEME setTimeout pre istotu
-            setTimeout(() => {
-                setActiveSetting(null);
-                setActiveCategoryId(null);
-                updateUrlHash(null);
-            }, 0);
-            
-            // A NAKONIEC zatvoríme modálne okno
-            setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
-        },
-        pendingHash: null,
-        message: 'Máte neuložené zmeny v nastaveniach kategórií. Naozaj chcete opustiť túto sekciu? Všetky neuložené zmeny budú zahodené.'
-      });
-      
-      // TOTO JE DÔLEŽITÉ: handleConfirmLeave sa zavolá až po kliknutí na "Opustiť"
-      // Takže pendingAction sa spustí až v handleConfirmLeave
-    } else {
-      setActiveSetting(null);
-      setActiveCategoryId(null);
-      updateUrlHash(null);
-    }
+      console.log("handleBackToMain - setting modalState with pendingAction");
+      if (activeSetting === 'categories' && categorySettingsHasChanges) {
+          setModalState({
+              isOpen: true,
+              pendingAction: () => {
+                  console.log("pendingAction - spúšťam reset a návrat");
+                  
+                // Najprv resetujeme zmeny - TOTO JE SYNCHRÓNNE
+                  if (resetCategorySettingsRef.current) {
+                      resetCategorySettingsRef.current();
+                  }
+                  
+                  // Počkáme na ďalší cyklus, aby sa hasChanges stihlo prepnúť na false
+                  setTimeout(() => {
+                      // Teraz už categorySettingsHasChanges je false
+                      setActiveSetting(null);
+                      setActiveCategoryId(null);
+                      updateUrlHash(null);
+                      
+                      // A NAKONIEC zatvoríme modálne okno
+                      setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
+                  }, 50); // Krátke oneskorenie pre istotu
+              },
+              pendingHash: null,
+              message: 'Máte neuložené zmeny v nastaveniach kategórií. Naozaj chcete opustiť túto sekciu? Všetky neuložené zmeny budú zahodené.'
+          });
+      } else {
+          setActiveSetting(null);
+          setActiveCategoryId(null);
+          updateUrlHash(null);
+      }
   };
 
   // Handler pre výber kategórie (bude volaný z CategorySettings)
@@ -414,16 +412,19 @@ function TournamentSettingsApp() {
                       resetCategorySettingsRef.current();
                   }
                   
-                  // Potom prepneme na novú sekciu
-                  setActiveSetting(settingFromHash);
-                  if (settingFromHash === 'categories' && categoryFromHash) {
-                      setActiveCategoryId(categoryFromHash);
-                  } else {
-                      setActiveCategoryId(null);
-                  }
-                  
-                  // A NAKONIEC zatvoríme modálne okno
-                  setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
+                  // Počkáme na ďalší cyklus
+                  setTimeout(() => {
+                      // Potom prepneme na novú sekciu
+                      setActiveSetting(settingFromHash);
+                      if (settingFromHash === 'categories' && categoryFromHash) {
+                          setActiveCategoryId(categoryFromHash);
+                      } else {
+                          setActiveCategoryId(null);
+                      }
+                      
+                      // A NAKONIEC zatvoríme modálne okno
+                      setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
+                  }, 50);
               },
               pendingHash: newHash,
               message: 'Máte neuložené zmeny v nastaveniach kategórií. Naozaj chcete opustiť túto sekciu? Všetky neuložené zmeny budú zahodené.'
@@ -594,35 +595,38 @@ function TournamentSettingsApp() {
 
   // Potvrdenie odchodu z modálneho okna
   const handleConfirmLeave = () => {
-    console.log("handleConfirmLeave - pendingAction:", modalState.pendingAction);
-    console.log("handleConfirmLeave - pendingHash:", modalState.pendingHash);
+      console.log("handleConfirmLeave - pendingAction:", modalState.pendingAction);
+      console.log("handleConfirmLeave - pendingHash:", modalState.pendingHash);
     
-    if (modalState.pendingAction) {
-        modalState.pendingAction(); 
-    } else if (modalState.pendingHash) {
-        window.location.hash = modalState.pendingHash;
-        setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
-    } else {
-        // Ak nie je pendingAction, urobíme reset a návrat manuálne
-        if (activeSetting === 'categories' && categorySettingsHasChanges) {
-            console.log("handleConfirmLeave - manuálny reset a návrat");
-    
-            // Najprv resetujeme zmeny
-            if (resetCategorySettingsRef.current) {
-                resetCategorySettingsRef.current();
-            }
-            
-            // Potom opustíme sekciu
-            setActiveSetting(null);
-            setActiveCategoryId(null);
-            updateUrlHash(null);
-            
-            // A NAKONIEC zatvoríme modálne okno
-            setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
-        } else {
-            setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
-        }
-    }
+      if (modalState.pendingAction) {
+          modalState.pendingAction(); 
+      } else if (modalState.pendingHash) {
+          window.location.hash = modalState.pendingHash;
+          setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
+      } else {
+          // Ak nie je pendingAction, urobíme reset a návrat manuálne
+          if (activeSetting === 'categories' && categorySettingsHasChanges) {
+              console.log("handleConfirmLeave - manuálny reset a návrat");
+              
+              // Najprv resetujeme zmeny
+              if (resetCategorySettingsRef.current) {
+                  resetCategorySettingsRef.current();
+              }
+              
+              // Počkáme na ďalší cyklus
+              setTimeout(() => {
+                  // Potom opustíme sekciu
+                  setActiveSetting(null);
+                  setActiveCategoryId(null);
+                  updateUrlHash(null);
+                  
+                  // A NAKONIEC zatvoríme modálne okno
+                  setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
+              }, 50);
+          } else {
+              setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
+          }
+      }
   };
 
   // Zrušenie odchodu z modálneho okna
