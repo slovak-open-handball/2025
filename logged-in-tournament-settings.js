@@ -1,3 +1,4 @@
+// logged-in-tournament-settings.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, onSnapshot, setDoc, Timestamp, updateDoc, arrayUnion, arrayRemove, getDoc, collection, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -337,6 +338,19 @@ function TournamentSettingsApp() {
   const handleCategorySettingsHasChanges = (hasChanges) => {
     setCategorySettingsHasChanges(hasChanges);
   };
+
+  React.useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (categorySettingsHasChanges) {
+        e.preventDefault();
+        e.returnValue = 'Máte neuložené zmeny v nastaveniach kategórií. Naozaj chcete opustiť stránku?';
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [categorySettingsHasChanges]);
 
   // Načítanie nastavenia z URL pri inicializácii
   React.useEffect(() => {
