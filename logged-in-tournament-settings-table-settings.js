@@ -140,15 +140,15 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
       // Zistíme, čo sa zmenilo pre notifikáciu
       const changes = [];
       
-      // Zmeny v podmienkach poradia - KAŽDÁ PODMIENKA NA SAMOSTATNÝ RIADOK
+      // Zmeny v podmienkach poradia - KAŽDÁ PODMIENKA NA SAMOSTATNÝ PRVOK V POLI
       if (JSON.stringify(validConditions) !== JSON.stringify(originalSortingConditions)) {
         if (validConditions.length === 0) {
           changes.push('Poradie bolo nastavené na predvolené (podľa bodov)');
         } else {
-          // Úvodný text na samostatný riadok
+          // Úvodný text ako samostatný prvok poľa
           changes.push('Zmena nastavení poradia:');
           
-          // Každú podmienku pridáme ako samostatný riadok
+          // Každú podmienku pridáme ako samostatný prvok poľa
           validConditions.forEach((cond, index) => {
             const param = availableParameters.find(p => p.value === cond.parameter)?.label || cond.parameter;
             
@@ -172,15 +172,12 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
       
       showNotification('Nastavenia poradia boli úspešne uložené.', 'success');
       
-      // Notifikácia pre adminov - KAŽDÁ PODMIENKA NA SAMOSTATNÝ RIADOK
+      // Notifikácia pre adminov - POSIELAME CELE POLE changes
       if (changes.length > 0) {
-        // Spojíme riadky s oddeľovačom \n pre pekný formát v databáze
-        const changesText = changes.join('\n');
-        
         await sendAdminNotification({
           type: 'updateSettings',
           data: {
-            changesMade: changesText
+            changesMade: changes  // Posielame celé pole, nie spojený text
           }
         });
       }
