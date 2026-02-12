@@ -432,15 +432,15 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                                         )
                                     ),
 
-                                    // Grid pre nastavenia
+                                    // VŠETKY POLIA POD SEBOU - každé s popisom nad inputom
                                     React.createElement(
                                         'div',
-                                        { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' },
+                                        { className: 'space-y-4' },
                                         
                                         // Maximálny počet tímov
                                         React.createElement(
                                             'div',
-                                            { className: 'space-y-2' },
+                                            { className: 'space-y-1' },
                                             React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
                                                 'Maximálny počet tímov:'
                                             ),
@@ -456,7 +456,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                                         // Počet periód
                                         React.createElement(
                                             'div',
-                                            { className: 'space-y-2' },
+                                            { className: 'space-y-1' },
                                             React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
                                                 'Počet periód:'
                                             ),
@@ -472,7 +472,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                                         // Trvanie periódy
                                         React.createElement(
                                             'div',
-                                            { className: 'space-y-2' },
+                                            { className: 'space-y-1' },
                                             React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
                                                 'Trvanie periódy (min):'
                                             ),
@@ -488,7 +488,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                                         // Prestávka medzi periódami
                                         React.createElement(
                                             'div',
-                                            { className: 'space-y-2' },
+                                            { className: 'space-y-1' },
                                             React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
                                                 'Prestávka medzi periódami (min):'
                                             ),
@@ -504,7 +504,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                                         // Prestávka medzi zápasmi
                                         React.createElement(
                                             'div',
-                                            { className: 'space-y-2' },
+                                            { className: 'space-y-1' },
                                             React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
                                                 'Prestávka medzi zápasmi (min):'
                                             ),
@@ -520,7 +520,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                                         // Farba pre rozlosovanie
                                         React.createElement(
                                             'div',
-                                            { className: 'space-y-2' },
+                                            { className: 'space-y-1' },
                                             React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
                                                 'Farba pre rozlosovanie:'
                                             ),
@@ -545,7 +545,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                                         // Farba pre dopravu
                                         React.createElement(
                                             'div',
-                                            { className: 'space-y-2' },
+                                            { className: 'space-y-1' },
                                             React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
                                                 'Farba pre dopravu:'
                                             ),
