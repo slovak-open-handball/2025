@@ -721,10 +721,10 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                             {
                                 onClick: handleSaveAll,
                                 disabled: !hasChanges || saving,
-                                className: `px-10 py-4 rounded-lg font-bold text-lg transition-colors min-w-[280px] ${
+                                className: `px-10 py-4 rounded-lg font-bold text-lg transition-colors min-w-[280px] border ${
                                     hasChanges && !saving
-                                        ? 'bg-green-600 hover:bg-green-700 text-white'
-                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        ? 'bg-green-600 hover:bg-green-700 text-white border-transparent'
+                                        : 'bg-white text-green-600 border-2 border-green-600 cursor-not-allowed opacity-75'
                                 }`
                             },
                             saving ? 'Ukladám...' : 'Uložiť všetky zmeny'
