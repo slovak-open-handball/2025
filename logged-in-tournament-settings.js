@@ -581,6 +581,16 @@ function TournamentSettingsApp() {
     } else if (modalState.pendingHash) {
       window.location.hash = modalState.pendingHash;
       setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
+    } else {
+      if (activeSetting === 'categories' && categorySettingsHasChanges) {
+        if (resetCategorySettingsRef.current) {
+          resetCategorySettingsRef.current();
+        }
+        setActiveSetting(null);
+        setActiveCategoryId(null);
+        updateUrlHash(null);
+      }
+      setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
     }
   };
 
