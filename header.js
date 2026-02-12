@@ -224,12 +224,12 @@ const setupUserSettingsListener = (userId) => {
         if (docSnap.exists()) {
             const userData = docSnap.data();
             
-            // VŽDY aktualizujeme hodnotu, neporovnávame
+            // VŽDY aktualizujeme hodnotu
             if (userData.hasOwnProperty('displayNotifications')) {
                 const oldValue = currentDisplayNotifications;
                 currentDisplayNotifications = userData.displayNotifications;
                 
-                // ŠPECIÁLNY LOG PRE ZMENY DISPLAY NOTIFICATIONS - ĽAHKO NÁJDEŤ V KONZOLE
+                // ŠPECIÁLNY LOG PRE ZMENY DISPLAY NOTIFICATIONS
                 console.log("%c🔔 DISPLAY NOTIFICATIONS ZMENENÉ 🔔", "background: #47b3ff; color: white; font-size: 14px; font-weight: bold; padding: 4px; border-radius: 4px;");
                 console.log("%c   Stará hodnota:", "color: #ff6b6b; font-weight: bold;", oldValue);
                 console.log("%c   Nová hodnota: ", "color: #51cf66; font-weight: bold;", currentDisplayNotifications);
@@ -248,7 +248,7 @@ const setupUserSettingsListener = (userId) => {
                 console.log("--------------------------------------------------");
             }
             
-            // Aktualizácia window.globalUserProfileData ak existuje
+            // Aktualizácia window.globalUserProfileData
             if (window.globalUserProfileData) {
                 window.globalUserProfileData.displayNotifications = currentDisplayNotifications;
             }
@@ -258,7 +258,7 @@ const setupUserSettingsListener = (userId) => {
     });
 };
 
-// Načítanie počiatočného stavu displayNotifications
+// Načítanie počiatočného stavu displayNotifications - TOTO JE TERAZ HLAVNÝ ZDROJ PRAVDY
 const loadInitialDisplayNotifications = async (userId) => {
     if (!window.db || !userId) return false;
     
@@ -268,16 +268,20 @@ const loadInitialDisplayNotifications = async (userId) => {
         if (userSnap.exists()) {
             const userData = userSnap.data();
             const initialValue = userData.displayNotifications || false;
+            
+            // TOTO JE KRITICKÉ - NASTAVÍME HODNOTU OKAMŽITE
             currentDisplayNotifications = initialValue;
             
-            // ŠPECIÁLNY LOG PRE POČIATOČNÉ NAČÍTANIE
             console.log("%c🔔 DISPLAY NOTIFICATIONS - POČIATOČNÉ NAČÍTANIE 🔔", "background: #845ef7; color: white; font-size: 14px; font-weight: bold; padding: 4px; border-radius: 4px;");
-            console.log("%c   Počiatočná hodnota:", "color: #51cf66; font-weight: bold;", currentDisplayNotifications);
-            console.log("%c   Zdroj:           getDoc (priame načítanie)", "color: #845ef7;");
-            console.log("%c   Čas:            ", "color: #888;", new Date().toLocaleTimeString());
+            console.log("%c   ✅ ÚSPEŠNE NAČÍTANÉ Z DATABÁZY", "color: #51cf66; font-weight: bold;");
+            console.log("%c   Hodnota:       ", "color: #51cf66; font-weight: bold;", currentDisplayNotifications);
+            console.log("%c   ID používateľa:", "color: #888;", userId);
+            console.log("%c   Čas:          ", "color: #888;", new Date().toLocaleTimeString());
             console.log("--------------------------------------------------");
             
             return initialValue;
+        } else {
+            console.warn("header.js: Dokument používateľa neexistuje!");
         }
     } catch (e) {
         console.error("header.js: Chyba pri načítaní počiatočnej hodnoty displayNotifications:", e);
@@ -316,32 +320,31 @@ const updateHeaderLinks = (userProfileData) => {
             logoutButton.classList.remove('hidden');
             headerElement.style.backgroundColor = getHeaderColorByRole(userProfileData.role);
 
-            // KRITICKÁ ZMENA: NAJPRV NASTAVÍME LISTENER PRE ZMENY NASTAVENÍ
-            // AŽ POTOM NAČÍTAME POČIATOČNÚ HODNOTU A NASTAVÍME LISTENER NOTIFIKÁCIÍ
+            // KRITICKÁ ZMENA: NAJPRV NAČÍTAME POČIATOČNÚ HODNOTU SYNCHRÓNNE
+            // AŽ POTOM NASTAVÍME LISTENER
             if (userProfileData.uid) {
-                // Odhlásime predchádzajúci listener ak existuje
-                if (unsubscribeFromUserSettings) {
-                    unsubscribeFromUserSettings();
-                    unsubscribeFromUserSettings = null;
-                }
-                // Nastavíme nový listener - TOTO BUDE OKAMŽITE BEŽAŤ A AKTUALIZOVAŤ HODNOTU
-                unsubscribeFromUserSettings = setupUserSettingsListener(userProfileData.uid);
-                currentUserId = userProfileData.uid;
-            }
-
-            // NASTAVENIE LISTENERA PRE ADMINA
-            if (userProfileData.role === 'admin') {
-                // Počkáme 500ms aby sa stihol nastaviť listener a načítať hodnota z databázy
-                setTimeout(() => {
-                    if (!unsubscribeFromNotifications) {
-                        // Vyčistenie Setu pri prihlásení nového používateľa
+                // 1. NAJPRV NAČÍTAŤ HODNOTU Z DATABÁZY - TOTO JE OKAMŽITÉ
+                loadInitialDisplayNotifications(userProfileData.uid).then((initialValue) => {
+                    console.log("%c🔔 HEADER.JS: Počiatočné načítanie dokončené, hodnota =", "background: #845ef7; color: white;", initialValue);
+                    
+                    // 2. POTOM NASTAVIŤ LISTENER PRE BUDÚCE ZMENY
+                    if (unsubscribeFromUserSettings) {
+                        unsubscribeFromUserSettings();
+                        unsubscribeFromUserSettings = null;
+                    }
+                    unsubscribeFromUserSettings = setupUserSettingsListener(userProfileData.uid);
+                    currentUserId = userProfileData.uid;
+                    
+                    // 3. TERAZ UŽ MÁME SPRÁVNU HODNOTU, MÔŽEME NASTAVIŤ LISTENER NOTIFIKÁCIÍ
+                    if (userProfileData.role === 'admin') {
                         shownNotificationIds.clear();
-                        
-                        // Nastavíme listener notifikácií
                         setupNotificationListenerForAdmin(userProfileData);
                     }
-                }, 500);
-            } else {
+                });
+            }
+
+            // Pre ne-adminov
+            if (userProfileData.role !== 'admin') {
                 if (unsubscribeFromNotifications) {
                     unsubscribeFromNotifications();
                     unsubscribeFromNotifications = null;
@@ -406,9 +409,10 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
 
 const setupNotificationListenerForAdmin = (userProfileData) => {
     notificationListenerSetupCount++;
+    console.log(`header.js: ========== SPÚŠŤAM LISTENER NOTIFIKÁCIÍ ==========`);
     console.log(`header.js: setupNotificationListenerForAdmin volané ${notificationListenerSetupCount}. krát`);
-    console.log("header.js: setupNotificationListenerForAdmin volané s userProfileData:", userProfileData);
-    console.log("header.js: Aktuálny stav displayNotifications pri štarte listenera:", currentDisplayNotifications);
+    console.log(`header.js: Aktuálny stav displayNotifications: ${currentDisplayNotifications ? '✅ ZAPNUTÉ' : '❌ VYPNUTÉ'}`);
+    console.log(`========================================`);
     
     if (!window.db) {
         console.warn("header.js: Firestore databáza nie je inicializovaná pre notifikácie.");
@@ -429,7 +433,7 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
             return;
         }
 
-        // VYPOČÍTAŤ UNREAD COUNT - vždy sa kontroluje bez ohľadu na displayNotifications
+        // VYPOČÍTAŤ UNREAD COUNT
         let unreadCount = 0;
         const allNotifications = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
 
@@ -447,7 +451,7 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
 
         // ŠPECIÁLNY LOG PRE KONTROLU DISPLAY NOTIFICATIONS
         console.log("%c🔍 KONTROLA DISPLAY NOTIFICATIONS", "background: #47b3ff; color: white; font-size: 13px; font-weight: bold; padding: 3px; border-radius: 3px;");
-        console.log(`%c   Hodnota: ${currentDisplayNotifications}`, currentDisplayNotifications ? "color: #51cf66; font-weight: bold;" : "color: #ff6b6b; font-weight: bold;");
+        console.log(`%c   Hodnota z databázy: ${currentDisplayNotifications}`, currentDisplayNotifications ? "color: #51cf66; font-weight: bold;" : "color: #ff6b6b; font-weight: bold;");
         console.log(`%c   Výsledok: ${currentDisplayNotifications ? '✅ Zobrazujem notifikácie' : '❌ Notifikácie sú vypnuté'}`, currentDisplayNotifications ? "color: #51cf66;" : "color: #ff6b6b;");
         console.log("--------------------------------------------------");
         
@@ -480,19 +484,13 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                 
                 const seenBy = newNotification.seenBy || [];
                 
-                // Komplexná kontrola - notifikácia sa zobrazí IBA AK:
-                // 1. Používateľ ju ešte nevidel (nie je v seenBy)
-                // 2. Ešte nebola zobrazená v tejto relácii (nie je v shownNotificationIds)
                 if (!seenBy.includes(userId) && !shownNotificationIds.has(notificationId)) {
-                    console.log("header.js: Nová notifikácia prijatá, ešte nebola videná ani zobrazená:", notificationId);
+                    console.log("header.js: Nová notifikácia prijatá, ešte nebola videná:", notificationId);
                     
-                    // PRIDAŤ DO SETU ZOBRAZENÝCH NOTIFIKÁCIÍ
                     shownNotificationIds.add(notificationId);
                     
-                    // Formátovanie správy pre zobrazenie
                     let changesMessage = '';
                     
-                    // Spracovanie rôznych formátov notifikácií
                     if (newNotification.changes) {
                         if (Array.isArray(newNotification.changes) && newNotification.changes.length > 0) {
                             changesMessage = newNotification.changes[0];
@@ -507,22 +505,18 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                         changesMessage = 'Nová notifikácia';
                     }
                     
-                    // Pridanie informácie o používateľovi
                     if (newNotification.userEmail) {
                         changesMessage = `Používateľ ${newNotification.userEmail}: ${changesMessage}`;
                     }
                     
-                    // ZOBRAZIŤ JEDNOTLIVÚ NOTIFIKÁCIU
                     console.log("header.js: Zobrazujem notifikáciu:", changesMessage);
                     showDatabaseNotification(changesMessage, newNotification.type || 'info');
                     
-                    // OZNAČIŤ AKO SEEN - až po zobrazení
                     const notificationDocRef = doc(window.db, "notifications", notificationId);
                     try {
                         await updateDoc(notificationDocRef, {
                             seenBy: arrayUnion(userId)
                         });
-                        console.log("header.js: Notifikácia označená ako 'seen' pre používateľa:", userId);
                     } catch (e) {
                         console.error("header.js: Chyba pri aktualizácii notifikácie 'seenBy':", e);
                     }
