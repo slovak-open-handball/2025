@@ -71,12 +71,44 @@ export function CategorySettings({
     const handleSelectCategory = (catId) => {
         const category = categories.find(c => c.id === catId);
         if (category && onSelectCategory) {
-            // Pred prepnutím kategórie sa automaticky uložia zmeny v aktuálnej kategórii
-            // do state, takže o ne neprídeme
             onSelectCategory(slugify(category.name), catId);
         }
         setSelectedCategoryId(catId);
     };
+
+    // OCHRANA PRED STRATOU DÁT - beforeunload a hashchange
+    React.useEffect(() => {
+        const hasUnsavedChanges = hasChanges && !saving;
+        
+        const handleBeforeUnload = (e) => {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = 'Máte neuložené zmeny. Naozaj chcete opustiť stránku?';
+                return e.returnValue;
+            }
+        };
+
+        const handleHashChange = (e) => {
+            if (hasUnsavedChanges) {
+                const confirmLeave = window.confirm('Máte neuložené zmeny. Naozaj chcete opustiť túto sekciu?');
+                if (!confirmLeave) {
+                    // Zrušíme zmenu URL - vrátime sa na pôvodný hash
+                    const currentHash = window.location.hash;
+                    setTimeout(() => {
+                        window.location.hash = currentHash;
+                    }, 0);
+                }
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        window.addEventListener('hashchange', handleHashChange);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            window.removeEventListener('hashchange', handleHashChange);
+        };
+    }, [hasChanges, saving]);
 
     // Načítavanie kategórií
     React.useEffect(() => {
@@ -101,7 +133,7 @@ export function CategorySettings({
 
                 setCategories(list);
                 
-                // Inicializácia editovaných hodnôt - TOTO SA SPUSTÍ IBA RAZ PRI NAČÍTANÍ
+                // Inicializácia editovaných hodnôt
                 const initialMaxTeams = {};
                 const initialPeriods = {};
                 const initialPeriodDuration = {};
@@ -122,11 +154,8 @@ export function CategorySettings({
                     initialPreviousValues[cat.id] = { ...cat };
                 });
                 
-                // DÔLEŽITÉ: Toto nastavíme len ak ešte nemáme žiadne hodnoty
-                // Zabráni to prepísaniu existujúcich neuložených zmien
                 setEditedMaxTeams(prev => {
                     const newState = { ...initialMaxTeams };
-                    // Zachováme existujúce hodnoty, ktoré sa líšia od pôvodných
                     Object.keys(prev).forEach(key => {
                         if (prev[key] !== initialMaxTeams[key]) {
                             newState[key] = prev[key];
@@ -238,10 +267,24 @@ export function CategorySettings({
         if (!isInitialLoad && categories.length > 0 && initialCategoryId) {
             const categoryIdFromUrl = getCategoryIdFromUrlName(initialCategoryId, categories);
             if (categoryIdFromUrl && categoryIdFromUrl !== selectedCategoryId) {
-                setSelectedCategoryId(categoryIdFromUrl);
+                // Pri zmene URL cez tlačidlo späť/vpred kontrolujeme neuložené zmeny
+                if (hasChanges && !saving) {
+                    const confirmChange = window.confirm('Máte neuložené zmeny. Naozaj chcete prepnúť na inú kategóriu?');
+                    if (confirmChange) {
+                        setSelectedCategoryId(categoryIdFromUrl);
+                    } else {
+                        // Vrátime URL späť na pôvodnú kategóriu
+                        const currentCategory = categories.find(c => c.id === selectedCategoryId);
+                        if (currentCategory && onSelectCategory) {
+                            onSelectCategory(slugify(currentCategory.name), currentCategory.id);
+                        }
+                    }
+                } else {
+                    setSelectedCategoryId(categoryIdFromUrl);
+                }
             }
         }
-    }, [initialCategoryId, categories, selectedCategoryId, isInitialLoad]);
+    }, [initialCategoryId, categories, selectedCategoryId, isInitialLoad, hasChanges, saving, onSelectCategory]);
 
     // Handlery pre jednotlivé inputy
     const handleMaxTeamsChange = (catId, value) => {
