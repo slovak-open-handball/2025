@@ -27,23 +27,16 @@ var CLEAR_CONSOLE = 1;
         if (console.trace) console.trace = function() {};
         if (console.assert) console.assert = function() {};
         
-        // ŠPECIÁLNE PRE TAILWIND UPOZORNENIE - oneskorené čistenie
-        setTimeout(function() {
+        // IHNEDŤ A OPAKOVANE - čistenie každých 10ms
+        var clearIntervalId = setInterval(function() {
             if (typeof console !== 'undefined' && typeof console.clear === 'function') {
                 console.clear();
             }
-        }, 100);
+        }, 10);
         
+        // Voliteľné: zastavenie po 3 sekundách
         setTimeout(function() {
-            if (typeof console !== 'undefined' && typeof console.clear === 'function') {
-                console.clear();
-            }
-        }, 500);
-        
-        setTimeout(function() {
-            if (typeof console !== 'undefined' && typeof console.clear === 'function') {
-                console.clear();
-            }
-        }, 1000);
+            clearInterval(clearIntervalId);
+        }, 3000);
     }
 })();
