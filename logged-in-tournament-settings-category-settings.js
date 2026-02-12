@@ -24,6 +24,56 @@ const createCategorySettingsChangeNotification = async (actionType, changesArray
     }
 };
 
+// Komponent pre vlastné modálne okno
+const UnsavedChangesModal = ({ isOpen, onConfirm, onCancel, message }) => {
+    if (!isOpen) return null;
+    
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100000]',
+            onClick: (e) => {
+                // Zatvorí sa len ak klikne na pozadie
+                if (e.target === e.currentTarget) onCancel();
+            }
+        },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-lg shadow-xl max-w-md w-full mx-4 overflow-hidden' },
+            React.createElement(
+                'div',
+                { className: 'p-6' },
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-900 mb-4' },
+                    'Neuložené zmeny'
+                ),
+                React.createElement('p', { className: 'text-gray-600 mb-6' },
+                    message || 'Máte neuložené zmeny. Naozaj chcete opustiť túto stránku?'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-3' },
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: onCancel,
+                            className: 'px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: onConfirm,
+                            className: 'px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors'
+                        },
+                        'Opustiť'
+                    )
+                )
+            )
+        )
+    );
+};
+
 export function CategorySettings({ 
     db, 
     userProfileData, 
@@ -43,9 +93,13 @@ export function CategorySettings({
     const [saving, setSaving] = React.useState(false);
     const [previousValues, setPreviousValues] = React.useState({});
     const [isInitialLoad, setIsInitialLoad] = React.useState(true);
-
-    // REFERENCIA pre sledovanie, či ide o prepínanie v rámci CategorySettings
-    const isWithinCategorySettings = React.useRef(true);
+    
+    // Stav pre modálne okno
+    const [modalState, setModalState] = React.useState({
+        isOpen: false,
+        pendingAction: null,
+        message: ''
+    });
 
     // Pomocná funkcia na prevod názvu na URL-friendly formát
     const slugify = (text) => {
@@ -317,12 +371,11 @@ export function CategorySettings({
     }, [categories, editedMaxTeams, editedPeriods, editedPeriodDuration, 
         editedBreakDuration, editedMatchBreak, editedDrawColor, editedTransportColor]);
 
-    // OCHRANA PRED STRATOU DÁT - beforeunload a hashchange
+    // OCHRANA PRED STRATOU DÁT - beforeunload a hashchange s vlastným modálnym oknom
     React.useEffect(() => {
-        const hasUnsavedChanges = hasChanges && !saving;
-        
         const handleBeforeUnload = (e) => {
-            if (hasUnsavedChanges) {
+            if (hasChanges && !saving) {
+                // Pre beforeunload musíme stále použiť štandardný dialóg
                 e.preventDefault();
                 e.returnValue = 'Máte neuložené zmeny. Naozaj chcete opustiť stránku?';
                 return e.returnValue;
@@ -330,20 +383,31 @@ export function CategorySettings({
         };
 
         const handleHashChange = (e) => {
-            // ZISTÍME, ČI IDE O PREPINANIE V RÁMCI CATEGORY SETTINGS
             const newHash = window.location.hash.slice(1);
             const isStillCategorySection = newHash.startsWith('categories');
             
-            // ZOBRAZÍME UPOZORNENIE LEN AK OPÚŠŤAME CATEGORY SETTINGS SEKCIU
-            if (hasUnsavedChanges && !isStillCategorySection) {
-                const confirmLeave = window.confirm('Máte neuložené zmeny. Naozaj chcete opustiť túto sekciu?');
-                if (!confirmLeave) {
-                    // Zrušíme zmenu URL - vrátime sa na pôvodný hash
-                    const currentHash = window.location.hash;
-                    setTimeout(() => {
-                        window.location.hash = currentHash;
-                    }, 0);
-                }
+            if (hasChanges && !saving && !isStillCategorySection) {
+                e.preventDefault();
+                
+                // Uložíme aktuálny hash pre prípad zrušenia
+                const currentHash = window.location.hash;
+                
+                // Otvoríme modálne okno
+                setModalState({
+                    isOpen: true,
+                    pendingAction: () => {
+                        // Používateľ potvrdil - necháme zmenu prejsť
+                        setModalState({ isOpen: false, pendingAction: null, message: '' });
+                    },
+                    cancelAction: () => {
+                        // Používateľ zrušil - vrátime sa na pôvodný hash
+                        setTimeout(() => {
+                            window.location.hash = currentHash;
+                        }, 0);
+                        setModalState({ isOpen: false, pendingAction: null, message: '' });
+                    },
+                    message: 'Máte neuložené zmeny. Naozaj chcete opustiť túto sekciu?'
+                });
             }
         };
 
@@ -575,15 +639,31 @@ export function CategorySettings({
 
     if (isInitialLoad) {
         return React.createElement(
-            'div',
-            { className: 'space-y-6 p-6 border border-gray-200 rounded-lg shadow-sm mt-8 bg-white text-center' },
-            React.createElement('p', { className: 'text-gray-500' }, 'Načítavam kategórie...')
+            React.Fragment,
+            null,
+            React.createElement(
+                'div',
+                { className: 'space-y-6 p-6 border border-gray-200 rounded-lg shadow-sm mt-8 bg-white text-center' },
+                React.createElement('p', { className: 'text-gray-500' }, 'Načítavam kategórie...')
+            )
         );
     }
 
     return React.createElement(
         React.Fragment,
         null,
+        // Vlastné modálne okno
+        React.createElement(UnsavedChangesModal, {
+            isOpen: modalState.isOpen,
+            onConfirm: () => {
+                if (modalState.pendingAction) modalState.pendingAction();
+            },
+            onCancel: () => {
+                if (modalState.cancelAction) modalState.cancelAction();
+                else setModalState({ isOpen: false, pendingAction: null, cancelAction: null, message: '' });
+            },
+            message: modalState.message
+        }),
         React.createElement(
             'div',
             { className: 'space-y-6 p-6 border border-gray-200 rounded-lg shadow-sm mt-8 bg-white' },
@@ -640,7 +720,7 @@ export function CategorySettings({
                             'p',
                             { className: 'text-xs text-gray-500 mt-3' },
                             categoriesWithChangesCount > 0 
-                                ? `Máte neuložené zmeny v ${categoriesWithChangesCount} kategóriách. Zmeny sa ukladajú hromadne.`
+                                ? `Máte neuložené zmeny v ${categoriesWithChangesCount} ${categoriesWithChangesCount === 1 ? 'kategórii' : 'kategóriách'}. Zmeny sa ukladajú hromadne.`
                                 : 'Vyberte kategóriu pre úpravu jej nastavení'
                         )
                     ),
