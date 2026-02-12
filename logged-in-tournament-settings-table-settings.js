@@ -85,7 +85,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
     const generateDetailedChanges = (oldConditions, newConditions) => {
         const changes = [];
         changes.push('Zmena nastavení poradia:');
-        changes.push('');
         
         // Nájdeme maximálny počet podmienok z oboch polí
         const maxLength = Math.max(oldConditions.length, newConditions.length);
