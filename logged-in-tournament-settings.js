@@ -1,3 +1,5 @@
+// logged-in-tournament-settings.js
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, onSnapshot, setDoc, Timestamp, updateDoc, arrayUnion, arrayRemove, getDoc, collection, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -332,6 +334,9 @@ function TournamentSettingsApp() {
         pendingHash: null,
         message: 'Máte neuložené zmeny v nastaveniach kategórií. Naozaj chcete opustiť túto sekciu? Všetky neuložené zmeny budú zahodené.'
       });
+      
+      // TOTO JE DÔLEŽITÉ: handleConfirmLeave sa zavolá až po kliknutí na "Opustiť"
+      // Takže pendingAction sa spustí až v handleConfirmLeave
     } else {
       setActiveSetting(null);
       setActiveCategoryId(null);
@@ -577,6 +582,7 @@ function TournamentSettingsApp() {
   // Potvrdenie odchodu z modálneho okna
   const handleConfirmLeave = () => {
     if (modalState.pendingAction) {
+      // Spustíme pendingAction - toto je teraz nastavené v handleBackToMain
       modalState.pendingAction(); 
     } else if (modalState.pendingHash) {
       window.location.hash = modalState.pendingHash;
