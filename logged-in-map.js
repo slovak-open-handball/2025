@@ -2255,8 +2255,10 @@ const AddGroupsApp = ({ userProfileData }) => {
                     className: 'w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition'
                   },
                     (selectedPlace?.type === 'ubytovanie' || selectedPlace?.type === 'stravovanie')
-                      ? 'Upraviť názov/typ/kapacitu/cenu/poznámku'
-                      : 'Upraviť názov/typ/poznámku'
+                        ? isPlaceAssigned 
+                            ? 'Upraviť názov/kapacitu/cenu/poznámku'
+                            : 'Upraviť názov/typ/kapacitu/cenu/poznámku'
+                        : 'Upraviť názov/typ/poznámku'
                   ),
                   isEditingLocation
                     ? React.createElement('div', { className: 'flex gap-2' },
