@@ -368,101 +368,90 @@ function TournamentSettingsApp() {
 
     // VLASTNÉ RIEŠENIE PRE ZMENY URL - namiesto hashchange listenera
     React.useEffect(() => {
-      const checkAndHandleHashChange = (newHash) => {
-        if (!isAuthReady || userProfileData?.role !== 'admin') return;
-        
-        const settingFromHash = getSettingFromHash();
-        const categoryFromHash = getCategoryIdFromHash();
-        
-        // Kontrola, či opúšťame CategorySettings s neuloženými zmenami
-        if (activeSetting === 'categories' && 
-            settingFromHash !== 'categories' && 
-            categorySettingsHasChanges) {
+        const checkAndHandleHashChange = (newHash) => {
+          if (!isAuthReady || userProfileData?.role !== 'admin') return;
+      
+          const settingFromHash = getSettingFromHash();
+          const categoryFromHash = getCategoryIdFromHash();
           
-          setModalState({
-            isOpen: true,
-            pendingAction: () => {
-              // LEN PREPNEME NA NOVÚ SEKCIU - NEVYMAZÁVAME ŽIADNE DÁTA!
-              setActiveSetting(settingFromHash);
-              if (settingFromHash === 'categories' && categoryFromHash) {
-                setActiveCategoryId(categoryFromHash);
-              } else {
-                setActiveCategoryId(null);
-              }
-              // NERESETUJEME categorySettingsHasChanges
-              setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
-            },
-            pendingHash: newHash,
-            message: 'Máte neuložené zmeny v nastaveniach kategórií. Naozaj chcete opustiť túto sekciu?'
-          });
+          // Kontrola, či opúšťame CategorySettings s neuloženými zmenami
+          if (activeSetting === 'categories' && 
+              settingFromHash !== 'categories' && 
+              categorySettingsHasChanges) {
+        
+            setModalState({
+              isOpen: true,
+              pendingAction: () => {
+                // LEN PREPNEME NA NOVÚ SEKCIU - NEVYMAZÁVAME ŽIADNE DÁTA!
+                setActiveSetting(settingFromHash);
+                if (settingFromHash === 'categories' && categoryFromHash) {
+                  setActiveCategoryId(categoryFromHash);
+                } else {
+                  setActiveCategoryId(null);
+                }
+                // NERESETUJEME categorySettingsHasChanges
+                setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
+              },
+              pendingHash: newHash,
+              message: 'Máte neuložené zmeny v nastaveniach kategórií. Naozaj chcete opustiť túto sekciu?'
+            });
+            
+            // Vrátime URL späť na pôvodnú
+            const currentHash = 'categories' + (activeCategoryId ? `/category-${activeCategoryId}` : '');
+            setTimeout(() => {
+              window.location.hash = currentHash;
+            }, 0);
+            
+            return true;
+          }
           
-          // Vrátime URL späť na pôvodnú
-          const currentHash = 'categories' + (activeCategoryId ? `/category-${activeCategoryId}` : '');
+          // Normálne spracovanie zmeny
+          setActiveSetting(settingFromHash);
+          if (settingFromHash === 'categories' && categoryFromHash) {
+            setActiveCategoryId(categoryFromHash);
+          } else {
+            setActiveCategoryId(null);
+          }
+      
+          return false;
+        };
+  
+        // Sledovanie zmien URL cez popstate
+        const handlePopState = () => {
+          const hash = window.location.hash.slice(1);
+          checkAndHandleHashChange(hash);
+        };
+
+        // Prepísanie history.pushState a history.replaceState
+        const originalPushState = history.pushState;
+        const originalReplaceState = history.replaceState;
+    
+        history.pushState = function(...args) {
+          const result = originalPushState.apply(this, args);
           setTimeout(() => {
-            window.location.hash = currentHash;
+            const hash = window.location.hash.slice(1);
+            checkAndHandleHashChange(hash);
           }, 0);
-          
-          return true;
-        }
-        
-        // Normálne spracovanie zmeny
-        setActiveSetting(settingFromHash);
-        if (settingFromHash === 'categories' && categoryFromHash) {
-          setActiveCategoryId(categoryFromHash);
-        } else {
-          setActiveCategoryId(null);
-        }
-        
-        return false;
-      };
-      
-      // Normálne spracovanie zmeny
-      setActiveSetting(settingFromHash);
-      if (settingFromHash === 'categories' && categoryFromHash) {
-        setActiveCategoryId(categoryFromHash);
-      } else {
-        setActiveCategoryId(null);
-      }
-      
-      return false; // Zmena prebehla normálne
-    };
+          return result;
+        };
 
-    // Sledovanie zmien URL cez popstate
-    const handlePopState = () => {
-      const hash = window.location.hash.slice(1);
-      checkAndHandleHashChange(hash);
-    };
+        history.replaceState = function(...args) {
+          const result = originalReplaceState.apply(this, args);
+          setTimeout(() => {
+            const hash = window.location.hash.slice(1);
+            checkAndHandleHashChange(hash);
+          }, 0);
+          return result;
+        };
 
-    // Prepísanie history.pushState a history.replaceState
-    const originalPushState = history.pushState;
-    const originalReplaceState = history.replaceState;
+        window.addEventListener('popstate', handlePopState);
 
-    history.pushState = function(...args) {
-      const result = originalPushState.apply(this, args);
-      setTimeout(() => {
-        const hash = window.location.hash.slice(1);
-        checkAndHandleHashChange(hash);
-      }, 0);
-      return result;
-    };
-
-    history.replaceState = function(...args) {
-      const result = originalReplaceState.apply(this, args);
-      setTimeout(() => {
-        const hash = window.location.hash.slice(1);
-        checkAndHandleHashChange(hash);
-      }, 0);
-      return result;
-    };
-
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-      history.pushState = originalPushState;
-      history.replaceState = originalReplaceState;
-    };
-  }, [isAuthReady, userProfileData, activeSetting, activeCategoryId, categorySettingsHasChanges]);
+        return () => {
+          window.removeEventListener('popstate', handlePopState);
+          history.pushState = originalPushState;
+          history.replaceState = originalReplaceState;
+        };
+      }, [isAuthReady, userProfileData, activeSetting, activeCategoryId, categorySettingsHasChanges]);
 
   React.useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
