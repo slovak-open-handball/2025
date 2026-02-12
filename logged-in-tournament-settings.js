@@ -245,6 +245,7 @@ function TournamentSettingsApp() {
   const [modalState, setModalState] = React.useState({
       isOpen: false,
       pendingAction: null,
+      pendingHash: null,
       message: ''
   });
   
@@ -314,8 +315,9 @@ function TournamentSettingsApp() {
           setActiveCategoryId(null);
           updateUrlHash(null);
           setCategorySettingsHasChanges(false);
-          setModalState({ isOpen: false, pendingAction: null, message: '' });
+          setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
         },
+        pendingHash: null,
         message: 'Máte neuložené zmeny v nastaveniach kategórií. Naozaj chcete opustiť túto sekciu?'
       });
     } else {
@@ -351,51 +353,91 @@ function TournamentSettingsApp() {
     }
   }, [isAuthReady, userProfileData]);
 
-  // Reakcia na zmenu URL hashu - S MODÁLNYM OKNOM
+  // VLASTNÉ RIEŠENIE PRE ZMENY URL - namiesto hashchange listenera
   React.useEffect(() => {
-    const handleHashChange = () => {
-      if (isAuthReady && userProfileData?.role === 'admin') {
-        const settingFromHash = getSettingFromHash();
-        const categoryFromHash = getCategoryIdFromHash();
+    const checkAndHandleHashChange = (newHash) => {
+      if (!isAuthReady || userProfileData?.role !== 'admin') return;
+      
+      const settingFromHash = getSettingFromHash();
+      const categoryFromHash = getCategoryIdFromHash();
+      
+      // Kontrola, či opúšťame CategorySettings s neuloženými zmenami
+      if (activeSetting === 'categories' && 
+          settingFromHash !== 'categories' && 
+          categorySettingsHasChanges) {
         
-        // Kontrola, či opúšťame CategorySettings s neuloženými zmenami
-        if (activeSetting === 'categories' && 
-            settingFromHash !== 'categories' && 
-            categorySettingsHasChanges) {
-          
-          setModalState({
-            isOpen: true,
-            pendingAction: () => {
-              setActiveSetting(settingFromHash);
-              if (settingFromHash === 'categories' && categoryFromHash) {
-                setActiveCategoryId(categoryFromHash);
-              } else {
-                setActiveCategoryId(null);
-              }
-              setCategorySettingsHasChanges(false);
-              setModalState({ isOpen: false, pendingAction: null, message: '' });
-            },
-            message: 'Máte neuložené zmeny v nastaveniach kategórií. Naozaj chcete opustiť túto sekciu?'
-          });
-          
-          // Vrátime URL späť
-          setTimeout(() => {
-            window.location.hash = 'categories' + (activeCategoryId ? `/category-${activeCategoryId}` : '');
-          }, 0);
-          
-        } else {
-          setActiveSetting(settingFromHash);
-          if (settingFromHash === 'categories' && categoryFromHash) {
-            setActiveCategoryId(categoryFromHash);
-          } else {
-            setActiveCategoryId(null);
-          }
-        }
+        // Zabrániť predvolenému správaniu
+        setModalState({
+          isOpen: true,
+          pendingAction: () => {
+            setActiveSetting(settingFromHash);
+            if (settingFromHash === 'categories' && categoryFromHash) {
+              setActiveCategoryId(categoryFromHash);
+            } else {
+              setActiveCategoryId(null);
+            }
+            setCategorySettingsHasChanges(false);
+            setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
+          },
+          pendingHash: newHash,
+          message: 'Máte neuložené zmeny v nastaveniach kategórií. Naozaj chcete opustiť túto sekciu?'
+        });
+        
+        // Vrátime URL späť na pôvodnú
+        const currentHash = 'categories' + (activeCategoryId ? `/category-${activeCategoryId}` : '');
+        setTimeout(() => {
+          window.location.hash = currentHash;
+        }, 0);
+        
+        return true; // Zmena bola zablokovaná
       }
+      
+      // Normálne spracovanie zmeny
+      setActiveSetting(settingFromHash);
+      if (settingFromHash === 'categories' && categoryFromHash) {
+        setActiveCategoryId(categoryFromHash);
+      } else {
+        setActiveCategoryId(null);
+      }
+      
+      return false; // Zmena prebehla normálne
     };
 
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    // Sledovanie zmien URL cez popstate
+    const handlePopState = () => {
+      const hash = window.location.hash.slice(1);
+      checkAndHandleHashChange(hash);
+    };
+
+    // Prepísanie history.pushState a history.replaceState
+    const originalPushState = history.pushState;
+    const originalReplaceState = history.replaceState;
+
+    history.pushState = function(...args) {
+      const result = originalPushState.apply(this, args);
+      setTimeout(() => {
+        const hash = window.location.hash.slice(1);
+        checkAndHandleHashChange(hash);
+      }, 0);
+      return result;
+    };
+
+    history.replaceState = function(...args) {
+      const result = originalReplaceState.apply(this, args);
+      setTimeout(() => {
+        const hash = window.location.hash.slice(1);
+        checkAndHandleHashChange(hash);
+      }, 0);
+      return result;
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      history.pushState = originalPushState;
+      history.replaceState = originalReplaceState;
+    };
   }, [isAuthReady, userProfileData, activeSetting, activeCategoryId, categorySettingsHasChanges]);
 
   React.useEffect(() => {
@@ -508,12 +550,15 @@ function TournamentSettingsApp() {
   const handleConfirmLeave = () => {
     if (modalState.pendingAction) {
       modalState.pendingAction();
+    } else if (modalState.pendingHash) {
+      window.location.hash = modalState.pendingHash;
+      setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
     }
   };
 
   // Zrušenie odchodu z modálneho okna
   const handleCancelLeave = () => {
-    setModalState({ isOpen: false, pendingAction: null, message: '' });
+    setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
   };
 
   if (!userProfileData || userProfileData.role !== 'admin') {
