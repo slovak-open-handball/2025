@@ -190,7 +190,7 @@ export const ChangeBillingModal = ({ show, onClose, userProfileData, roleColor }
             }
             
             await updateDoc(doc(db, "users", user.uid), updatedData);
-            window.showGlobalNotification('Fakturačné údaje boli úspešne aktualizované!', 'success');
+            window.showGlobalNotification('Fakturačné údaje boli aktualizované!', 'success');
             onClose();
 
         } catch (e) {
