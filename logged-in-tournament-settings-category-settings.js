@@ -231,7 +231,7 @@ export function CategorySettings({
         });
 
         return () => unsubscribe();
-    }, [db, userProfileData, showNotification]); // ODSTRÁNENÉ initialCategoryId a onSelectCategory z dependencies!
+    }, [db, userProfileData, showNotification]);
 
     // Samostatný useEffect na spracovanie zmeny URL
     React.useEffect(() => {
@@ -680,8 +680,8 @@ export function CategorySettings({
                                     })
                                 ),
 
-                                // Prestávka medzi periódami
-                                React.createElement(
+                                // PODMIENENÉ ZOBRAZENIE: Prestávka medzi periódami - zobrazí sa len ak je počet periód > 1
+                                (editedPeriods[selectedCategory.id] ?? selectedCategory.periods) > 1 && React.createElement(
                                     'div',
                                     { className: 'space-y-1' },
                                     React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
