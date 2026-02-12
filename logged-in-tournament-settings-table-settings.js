@@ -3,30 +3,12 @@
 import { doc, updateDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export function TableSettings({ db, userProfileData, showNotification, sendAdminNotification }) {
-  // Stav pre nastavenia stĺpcov tabuľky
-  const [tableSettings, setTableSettings] = React.useState({
-    showLevel: true,
-    showCategory: true,
-    showGender: true,
-    showYearOfBirth: true,
-    showClub: true,
-    showCity: true,
-    showAccommodation: true,
-    showTShirt: true,
-    showPackages: true,
-    showNote: true,
-    showRegisteredAt: false,
-    showPaymentStatus: true,
-    showPaymentMethod: true
-  });
-  
   // Stav pre podmienky poradia
   const [sortingConditions, setSortingConditions] = React.useState([]);
   
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSaving, setIsSaving] = React.useState(false);
   const [hasChanges, setHasChanges] = React.useState(false);
-  const [originalSettings, setOriginalSettings] = React.useState(null);
   const [originalSortingConditions, setOriginalSortingConditions] = React.useState([]);
 
   // Dostupné parametre pre selectbox
@@ -40,7 +22,7 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
     { value: 'losses', label: 'Počet prehier' }
   ];
 
-  // Načítanie nastavení tabuľky a poradia z Firestore
+  // Načítanie nastavení poradia z Firestore
   React.useEffect(() => {
     const loadTableSettings = async () => {
       if (!db) return;
@@ -52,31 +34,15 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
         
         if (settingsDoc.exists()) {
           const data = settingsDoc.data();
-          setTableSettings(data);
           setSortingConditions(data.sortingConditions || []);
-          setOriginalSettings(data);
           setOriginalSortingConditions(data.sortingConditions || []);
         } else {
           // Vytvoríme predvolené nastavenia, ak neexistujú
           const defaultSettings = {
-            showLevel: true,
-            showCategory: true,
-            showGender: true,
-            showYearOfBirth: true,
-            showClub: true,
-            showCity: true,
-            showAccommodation: true,
-            showTShirt: true,
-            showPackages: true,
-            showNote: true,
-            showRegisteredAt: false,
-            showPaymentStatus: true,
-            showPaymentMethod: true,
             sortingConditions: []
           };
-          setTableSettings(defaultSettings);
+          await setDoc(settingsDocRef, defaultSettings);
           setSortingConditions([]);
-          setOriginalSettings(defaultSettings);
           setOriginalSortingConditions([]);
         }
       } catch (error) {
@@ -88,16 +54,6 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
 
     loadTableSettings();
   }, [db, showNotification]);
-
-  // Handler pre zmenu checkboxu
-  const handleCheckboxChange = (field) => (e) => {
-    const newValue = e.target.checked;
-    setTableSettings(prev => ({
-      ...prev,
-      [field]: newValue
-    }));
-    setHasChanges(true);
-  };
 
   // Handler pre zmenu podmienky poradia
   const handleSortingConditionChange = (index, field, value) => {
@@ -137,22 +93,12 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
       
       // Pripravíme dáta na uloženie
       const dataToSave = {
-        ...tableSettings,
         sortingConditions: sortingConditions
       };
 
       // Zistíme, čo sa zmenilo pre notifikáciu
       const changes = [];
       
-      // Zmeny v stĺpcoch
-      Object.keys(tableSettings).forEach(key => {
-        if (key !== 'sortingConditions' && originalSettings && tableSettings[key] !== originalSettings[key]) {
-          const fieldName = getFieldLabel(key);
-          const newState = tableSettings[key] ? 'zobrazený' : 'skrytý';
-          changes.push(`Stĺpec "${fieldName}" bude ${newState}`);
-        }
-      });
-
       // Zmeny v podmienkach poradia
       if (JSON.stringify(sortingConditions) !== JSON.stringify(originalSortingConditions)) {
         if (sortingConditions.length === 0) {
@@ -170,23 +116,22 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
       await setDoc(settingsDocRef, dataToSave, { merge: true });
       
       // Aktualizujeme pôvodné nastavenia
-      setOriginalSettings(dataToSave);
       setOriginalSortingConditions(sortingConditions);
       setHasChanges(false);
       
-      showNotification('Nastavenia tabuľky boli úspešne uložené.', 'success');
+      showNotification('Nastavenia poradia boli úspešne uložené.', 'success');
       
       // Notifikácia pre adminov
       if (changes.length > 0) {
         await sendAdminNotification({
           type: 'updateSettings',
           data: {
-            changesMade: `Zmena nastavení tabuľky: ${changes.join('; ')}`
+            changesMade: `Zmena nastavení poradia: ${changes.join('; ')}`
           }
         });
       }
     } catch (error) {
-      showNotification(`Chyba pri ukladaní nastavení tabuľky: ${error.message}`, 'error');
+      showNotification(`Chyba pri ukladaní nastavení poradia: ${error.message}`, 'error');
     } finally {
       setIsSaving(false);
     }
@@ -194,45 +139,8 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
 
   // Handler pre reset nastavení na predvolené
   const handleResetToDefault = () => {
-    const defaultSettings = {
-      showLevel: true,
-      showCategory: true,
-      showGender: true,
-      showYearOfBirth: true,
-      showClub: true,
-      showCity: true,
-      showAccommodation: true,
-      showTShirt: true,
-      showPackages: true,
-      showNote: true,
-      showRegisteredAt: false,
-      showPaymentStatus: true,
-      showPaymentMethod: true
-    };
-    
-    setTableSettings(defaultSettings);
     setSortingConditions([]);
     setHasChanges(true);
-  };
-
-  // Pomocná funkcia pre získanie popisku poľa
-  const getFieldLabel = (field) => {
-    const labels = {
-      showLevel: 'Výkonnostná úroveň',
-      showCategory: 'Kategória',
-      showGender: 'Pohlavie',
-      showYearOfBirth: 'Rok narodenia',
-      showClub: 'Klub',
-      showCity: 'Mesto',
-      showAccommodation: 'Ubytovanie',
-      showTShirt: 'Veľkosť trička',
-      showPackages: 'Zvolené balíčky',
-      showNote: 'Poznámka',
-      showRegisteredAt: 'Dátum registrácie',
-      showPaymentStatus: 'Stav platby',
-      showPaymentMethod: 'Spôsob platby'
-    };
-    return labels[field] || field;
   };
 
   // Získanie dostupných parametrov pre selectbox (odstránime už vybraté)
@@ -248,7 +156,7 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
     return React.createElement(
       'div',
       { className: 'text-center py-8' },
-      React.createElement('p', { className: 'text-gray-600' }, 'Načítavam nastavenia tabuľky...')
+      React.createElement('p', { className: 'text-gray-600' }, 'Načítavam nastavenia poradia...')
     );
   }
 
@@ -261,23 +169,17 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
       'div',
       { className: 'border-b border-gray-200 pb-4' },
       React.createElement('h2', { className: 'text-2xl font-semibold text-gray-800' },
-        'Nastavenia tabuľky účastníkov'
+        'Nastavenie poradia účastníkov'
       ),
       React.createElement('p', { className: 'text-gray-600 mt-1 text-sm' },
-        'Vyberte, ktoré stĺpce sa majú zobrazovať v tabuľke účastníkov turnaja a nastavte poradie.'
+        'Nastavte kritériá pre určenie poradia účastníkov v tabuľke. Poradie kritérií určuje prioritu.'
       )
     ),
     
     // Sekcia pre nastavenie poradia
     React.createElement(
       'div',
-      { className: 'bg-white border border-gray-200 rounded-lg p-6 mb-6' },
-      React.createElement('h3', { className: 'text-lg font-medium text-gray-800 mb-4' },
-        'Nastavenie poradia účastníkov'
-      ),
-      React.createElement('p', { className: 'text-sm text-gray-600 mb-4' },
-        'Nastavte kritériá pre určenie poradia účastníkov v tabuľke. Poradie kritérií určuje prioritu.'
-      ),
+      { className: 'bg-white border border-gray-200 rounded-lg p-6' },
       
       // Dynamické riadky podmienok
       React.createElement(
@@ -352,236 +254,22 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
         'div',
         { className: 'text-sm text-gray-500 italic mt-2' },
         'Nie sú nastavené žiadne vlastné podmienky poradia. Účastníci budú zoradení podľa dátumu registrácie (od najnovších).'
-      )
-    ),
-    
-    // Grid s checkboxmi (pôvodné nastavenia stĺpcov)
-    React.createElement(
-      'div',
-      { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' },
-      
-      // Základné údaje
-      React.createElement(
-        'div',
-        { className: 'space-y-2' },
-        React.createElement('h3', { className: 'font-medium text-gray-700 mb-2' },
-          'Základné údaje'
-        ),
-        React.createElement(
-          'div',
-          { className: 'space-y-2' },
-          // Výkonnostná úroveň
-          React.createElement(
-            'label',
-            { className: 'flex items-center space-x-3' },
-            React.createElement('input', {
-              type: 'checkbox',
-              checked: tableSettings.showLevel,
-              onChange: handleCheckboxChange('showLevel'),
-              className: 'h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500'
-            }),
-            React.createElement('span', { className: 'text-gray-700' }, 'Výkonnostná úroveň')
-          ),
-          // Kategória
-          React.createElement(
-            'label',
-            { className: 'flex items-center space-x-3' },
-            React.createElement('input', {
-              type: 'checkbox',
-              checked: tableSettings.showCategory,
-              onChange: handleCheckboxChange('showCategory'),
-              className: 'h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500'
-            }),
-            React.createElement('span', { className: 'text-gray-700' }, 'Kategória')
-          ),
-          // Pohlavie
-          React.createElement(
-            'label',
-            { className: 'flex items-center space-x-3' },
-            React.createElement('input', {
-              type: 'checkbox',
-              checked: tableSettings.showGender,
-              onChange: handleCheckboxChange('showGender'),
-              className: 'h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500'
-            }),
-            React.createElement('span', { className: 'text-gray-700' }, 'Pohlavie')
-          ),
-          // Rok narodenia
-          React.createElement(
-            'label',
-            { className: 'flex items-center space-x-3' },
-            React.createElement('input', {
-              type: 'checkbox',
-              checked: tableSettings.showYearOfBirth,
-              onChange: handleCheckboxChange('showYearOfBirth'),
-              className: 'h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500'
-            }),
-            React.createElement('span', { className: 'text-gray-700' }, 'Rok narodenia')
-          )
-        )
       ),
       
-      // Kontaktné údaje a klub
+      // Informačný panel
       React.createElement(
         'div',
-        { className: 'space-y-2' },
-        React.createElement('h3', { className: 'font-medium text-gray-700 mb-2' },
-          'Klub a lokalita'
-        ),
-        React.createElement(
-          'div',
-          { className: 'space-y-2' },
-          // Klub
-          React.createElement(
-            'label',
-            { className: 'flex items-center space-x-3' },
-            React.createElement('input', {
-              type: 'checkbox',
-              checked: tableSettings.showClub,
-              onChange: handleCheckboxChange('showClub'),
-              className: 'h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500'
-            }),
-            React.createElement('span', { className: 'text-gray-700' }, 'Klub')
+        { className: 'bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6' },
+        React.createElement('div', { className: 'flex' },
+          React.createElement('div', { className: 'flex-shrink-0' },
+            React.createElement('svg', { className: 'h-5 w-5 text-blue-400', viewBox: '0 0 20 20', fill: 'currentColor' },
+              React.createElement('path', { fillRule: 'evenodd', d: 'M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z', clipRule: 'evenodd' })
+            )
           ),
-          // Mesto
-          React.createElement(
-            'label',
-            { className: 'flex items-center space-x-3' },
-            React.createElement('input', {
-              type: 'checkbox',
-              checked: tableSettings.showCity,
-              onChange: handleCheckboxChange('showCity'),
-              className: 'h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500'
-            }),
-            React.createElement('span', { className: 'text-gray-700' }, 'Mesto')
-          )
-        )
-      ),
-      
-      // Špecifické nastavenia turnaja
-      React.createElement(
-        'div',
-        { className: 'space-y-2' },
-        React.createElement('h3', { className: 'font-medium text-gray-700 mb-2' },
-          'Turnajové nastavenia'
-        ),
-        React.createElement(
-          'div',
-          { className: 'space-y-2' },
-          // Ubytovanie
-          React.createElement(
-            'label',
-            { className: 'flex items-center space-x-3' },
-            React.createElement('input', {
-              type: 'checkbox',
-              checked: tableSettings.showAccommodation,
-              onChange: handleCheckboxChange('showAccommodation'),
-              className: 'h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500'
-            }),
-            React.createElement('span', { className: 'text-gray-700' }, 'Ubytovanie')
-          ),
-          // Veľkosť trička
-          React.createElement(
-            'label',
-            { className: 'flex items-center space-x-3' },
-            React.createElement('input', {
-              type: 'checkbox',
-              checked: tableSettings.showTShirt,
-              onChange: handleCheckboxChange('showTShirt'),
-              className: 'h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500'
-            }),
-            React.createElement('span', { className: 'text-gray-700' }, 'Veľkosť trička')
-          ),
-          // Zvolené balíčky
-          React.createElement(
-            'label',
-            { className: 'flex items-center space-x-3' },
-            React.createElement('input', {
-              type: 'checkbox',
-              checked: tableSettings.showPackages,
-              onChange: handleCheckboxChange('showPackages'),
-              className: 'h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500'
-            }),
-            React.createElement('span', { className: 'text-gray-700' }, 'Zvolené balíčky')
-          ),
-          // Poznámka
-          React.createElement(
-            'label',
-            { className: 'flex items-center space-x-3' },
-            React.createElement('input', {
-              type: 'checkbox',
-              checked: tableSettings.showNote,
-              onChange: handleCheckboxChange('showNote'),
-              className: 'h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500'
-            }),
-            React.createElement('span', { className: 'text-gray-700' }, 'Poznámka')
-          )
-        )
-      ),
-      
-      // Registrácia a platby
-      React.createElement(
-        'div',
-        { className: 'space-y-2' },
-        React.createElement('h3', { className: 'font-medium text-gray-700 mb-2' },
-          'Registrácia a platby'
-        ),
-        React.createElement(
-          'div',
-          { className: 'space-y-2' },
-          // Dátum registrácie
-          React.createElement(
-            'label',
-            { className: 'flex items-center space-x-3' },
-            React.createElement('input', {
-              type: 'checkbox',
-              checked: tableSettings.showRegisteredAt,
-              onChange: handleCheckboxChange('showRegisteredAt'),
-              className: 'h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500'
-            }),
-            React.createElement('span', { className: 'text-gray-700' }, 'Dátum registrácie')
-          ),
-          // Stav platby
-          React.createElement(
-            'label',
-            { className: 'flex items-center space-x-3' },
-            React.createElement('input', {
-              type: 'checkbox',
-              checked: tableSettings.showPaymentStatus,
-              onChange: handleCheckboxChange('showPaymentStatus'),
-              className: 'h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500'
-            }),
-            React.createElement('span', { className: 'text-gray-700' }, 'Stav platby')
-          ),
-          // Spôsob platby
-          React.createElement(
-            'label',
-            { className: 'flex items-center space-x-3' },
-            React.createElement('input', {
-              type: 'checkbox',
-              checked: tableSettings.showPaymentMethod,
-              onChange: handleCheckboxChange('showPaymentMethod'),
-              className: 'h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500'
-            }),
-            React.createElement('span', { className: 'text-gray-700' }, 'Spôsob platby')
-          )
-        )
-      )
-    ),
-    
-    // Informačný panel
-    React.createElement(
-      'div',
-      { className: 'bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4' },
-      React.createElement('div', { className: 'flex' },
-        React.createElement('div', { className: 'flex-shrink-0' },
-          React.createElement('svg', { className: 'h-5 w-5 text-blue-400', viewBox: '0 0 20 20', fill: 'currentColor' },
-            React.createElement('path', { fillRule: 'evenodd', d: 'M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z', clipRule: 'evenodd' })
-          )
-        ),
-        React.createElement('div', { className: 'ml-3 flex-1' },
-          React.createElement('p', { className: 'text-sm text-blue-700' },
-            'Tieto nastavenia ovplyvňujú zobrazenie tabuľky účastníkov v administračnom rozhraní. Stĺpce, ktoré nie sú zaškrtnuté, budú skryté. Poradie účastníkov sa riadi nastavenými kritériami.'
+          React.createElement('div', { className: 'ml-3 flex-1' },
+            React.createElement('p', { className: 'text-sm text-blue-700' },
+              'Poradie účastníkov sa riadi nastavenými kritériami. Prvé kritérium má najvyššiu prioritu.'
+            )
           )
         )
       )
