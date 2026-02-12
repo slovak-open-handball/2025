@@ -9,7 +9,7 @@ var CLEAR_CONSOLE = 1;
         var originalError = console.error;
         var originalDebug = console.debug;
         
-        // ÚPLNE POTLAČÍME VŠETKY VÝPISY – BEZ console.clear()
+        // ÚPLNE POTLAČÍME VŠETKY VÝPISY
         console.log = function() {};
         console.info = function() {};
         console.warn = function() {};
@@ -26,5 +26,24 @@ var CLEAR_CONSOLE = 1;
         if (console.timeEnd) console.timeEnd = function() {};
         if (console.trace) console.trace = function() {};
         if (console.assert) console.assert = function() {};
+        
+        // ŠPECIÁLNE PRE TAILWIND UPOZORNENIE - oneskorené čistenie
+        setTimeout(function() {
+            if (typeof console !== 'undefined' && typeof console.clear === 'function') {
+                console.clear();
+            }
+        }, 100);
+        
+        setTimeout(function() {
+            if (typeof console !== 'undefined' && typeof console.clear === 'function') {
+                console.clear();
+            }
+        }, 500);
+        
+        setTimeout(function() {
+            if (typeof console !== 'undefined' && typeof console.clear === 'function') {
+                console.clear();
+            }
+        }, 1000);
     }
 })();
