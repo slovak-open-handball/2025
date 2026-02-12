@@ -46,22 +46,21 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
-const AddGroupsApp = ({ userProfileData }) => {
+const AddMatchesApp = ({ userProfileData }) => {
     return React.createElement(
         'div',
-        { className: 'flex-grow flex justify-center items-center' },
+        { className: 'flex-grow flex justify-center items-start w-full' },
         React.createElement(
             'div',
-            { className: `w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]` },
+            { className: 'w-full bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mx-4' },
             React.createElement(
                 'div',
-                { className: `flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl` },
-                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Zápasy')
+                { className: 'flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl bg-gradient-to-r from-blue-500 to-indigo-600' },
+                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center text-white' }, 'Zápasy')
             )
         )
     );
 };
-
 
 // Premenná na sledovanie, či bol poslucháč už nastavený
 let isEmailSyncListenerSetup = false;
@@ -121,7 +120,7 @@ const handleDataUpdateAndRender = (event) => {
 
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
-            root.render(React.createElement(AddGroupsApp, { userProfileData }));
+            root.render(React.createElement(AddMatchesApp, { userProfileData }));
             console.log("logged-in-matches.js: Aplikácia bola vykreslená po udalosti 'globalDataUpdated'.");
         } else {
             console.error("logged-in-matches.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
@@ -133,7 +132,7 @@ const handleDataUpdateAndRender = (event) => {
             root.render(
                 React.createElement(
                     'div',
-                    { className: 'flex justify-center items-center h-full pt-16' },
+                    { className: 'flex justify-center items-center h-full pt-16 w-full' },
                     React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
                 )
             );
@@ -160,7 +159,7 @@ if (window.globalUserProfileData) {
         root.render(
             React.createElement(
                 'div',
-                { className: 'flex justify-center items-center h-full pt-16' },
+                { className: 'flex justify-center items-center h-full pt-16 w-full' },
                 React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
             )
         );
