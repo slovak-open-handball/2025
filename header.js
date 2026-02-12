@@ -226,11 +226,26 @@ const setupUserSettingsListener = (userId) => {
             
             // VŽDY aktualizujeme hodnotu, neporovnávame
             if (userData.hasOwnProperty('displayNotifications')) {
+                const oldValue = currentDisplayNotifications;
                 currentDisplayNotifications = userData.displayNotifications;
-                console.log("header.js: displayNotifications aktualizované na:", currentDisplayNotifications, "(z databázy)");
+                
+                // ŠPECIÁLNY LOG PRE ZMENY DISPLAY NOTIFICATIONS - ĽAHKO NÁJDEŤ V KONZOLE
+                console.log("%c🔔 DISPLAY NOTIFICATIONS ZMENENÉ 🔔", "background: #47b3ff; color: white; font-size: 14px; font-weight: bold; padding: 4px; border-radius: 4px;");
+                console.log("%c   Stará hodnota:", "color: #ff6b6b; font-weight: bold;", oldValue);
+                console.log("%c   Nová hodnota: ", "color: #51cf66; font-weight: bold;", currentDisplayNotifications);
+                console.log("%c   Zdroj:        onSnapshot listener (databáza)", "color: #47b3ff;");
+                console.log("%c   Čas:         ", "color: #888;", new Date().toLocaleTimeString());
+                console.log("--------------------------------------------------");
             } else {
+                const oldValue = currentDisplayNotifications;
                 currentDisplayNotifications = false;
-                console.log("header.js: displayNotifications nastavené na false (predvolené)");
+                
+                console.log("%c🔔 DISPLAY NOTIFICATIONS - PREDVOLENÁ HODNOTA 🔔", "background: #ff6b6b; color: white; font-size: 14px; font-weight: bold; padding: 4px; border-radius: 4px;");
+                console.log("%c   Pole displayNotifications neexistuje v databáze", "color: #ff6b6b;");
+                console.log("%c   Stará hodnota:", "color: #ff6b6b; font-weight: bold;", oldValue);
+                console.log("%c   Nová hodnota: ", "color: #51cf66; font-weight: bold;", currentDisplayNotifications);
+                console.log("%c   Čas:         ", "color: #888;", new Date().toLocaleTimeString());
+                console.log("--------------------------------------------------");
             }
             
             // Aktualizácia window.globalUserProfileData ak existuje
@@ -254,7 +269,14 @@ const loadInitialDisplayNotifications = async (userId) => {
             const userData = userSnap.data();
             const initialValue = userData.displayNotifications || false;
             currentDisplayNotifications = initialValue;
-            console.log("header.js: Počiatočná hodnota displayNotifications načítaná:", currentDisplayNotifications);
+            
+            // ŠPECIÁLNY LOG PRE POČIATOČNÉ NAČÍTANIE
+            console.log("%c🔔 DISPLAY NOTIFICATIONS - POČIATOČNÉ NAČÍTANIE 🔔", "background: #845ef7; color: white; font-size: 14px; font-weight: bold; padding: 4px; border-radius: 4px;");
+            console.log("%c   Počiatočná hodnota:", "color: #51cf66; font-weight: bold;", currentDisplayNotifications);
+            console.log("%c   Zdroj:           getDoc (priame načítanie)", "color: #845ef7;");
+            console.log("%c   Čas:            ", "color: #888;", new Date().toLocaleTimeString());
+            console.log("--------------------------------------------------");
+            
             return initialValue;
         }
     } catch (e) {
@@ -422,12 +444,14 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
         }
 
-        // DEBUG: Vypíšeme aktuálny stav
-        console.log("header.js: Kontrola displayNotifications pred zobrazením:", currentDisplayNotifications);
+        // ŠPECIÁLNY LOG PRE KONTROLU DISPLAY NOTIFICATIONS
+        console.log("%c🔍 KONTROLA DISPLAY NOTIFICATIONS", "background: #47b3ff; color: white; font-size: 13px; font-weight: bold; padding: 3px; border-radius: 3px;");
+        console.log(`%c   Hodnota: ${currentDisplayNotifications}`, currentDisplayNotifications ? "color: #51cf66; font-weight: bold;" : "color: #ff6b6b; font-weight: bold;");
+        console.log(`%c   Výsledok: ${currentDisplayNotifications ? '✅ Zobrazujem notifikácie' : '❌ Notifikácie sú vypnuté'}`, currentDisplayNotifications ? "color: #51cf66;" : "color: #ff6b6b;");
+        console.log("--------------------------------------------------");
         
         // AK MAJÚ VYPNUTÉ NOTIFIKÁCIE, UKONČIŤ
         if (!currentDisplayNotifications) {
-            console.log("header.js: Notifikácie sú vypnuté (aktuálny stav), nezobrazujem nové upozornenia.");
             return;
         }
 
