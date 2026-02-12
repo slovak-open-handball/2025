@@ -11,11 +11,11 @@ let isFirestoreListenersSetup = false;
 window.areCategoriesLoaded = false;
 let notificationListenerSetupCount = 0;
 
-// NOVÉ: Globálna premenná pre aktuálny stav displayNotifications
+// Globálna premenná pre aktuálny stav displayNotifications
 let currentDisplayNotifications = false;
 let currentUserId = null;
 
-// NOVÉ: Set pre sledovanie už zobrazených notifikácií
+// Set pre sledovanie už zobrazených notifikácií
 let shownNotificationIds = new Set();
 
 window.showGlobalNotification = (message, type = 'success') => {
@@ -173,7 +173,7 @@ const handleLogout = async () => {
             console.log("header.js: Listener nastavení používateľa zrušený.");
         }
         
-        // NOVÉ: Vyčistenie Setu zobrazených notifikácií pri odhlásení
+        // Vyčistenie Setu zobrazených notifikácií pri odhlásení
         shownNotificationIds.clear();
         
         currentUserId = null;
@@ -224,7 +224,7 @@ const setupUserSettingsListener = (userId) => {
         if (docSnap.exists()) {
             const userData = docSnap.data();
             
-            // Aktualizácia globálneho stavu displayNotifications
+            // Načítanie počiatočnej hodnoty displayNotifications z databázy
             if (userData.hasOwnProperty('displayNotifications')) {
                 currentDisplayNotifications = userData.displayNotifications;
                 console.log("header.js: displayNotifications aktualizované na:", currentDisplayNotifications);
@@ -242,6 +242,26 @@ const setupUserSettingsListener = (userId) => {
     }, (error) => {
         console.error("header.js: Chyba pri počúvaní nastavení používateľa:", error);
     });
+};
+
+// NOVÁ FUNKCIA: Načítanie počiatočného stavu displayNotifications PRED nastavením listenera notifikácií
+const loadInitialDisplayNotifications = async (userId) => {
+    if (!window.db || !userId) return false;
+    
+    try {
+        const userDocRef = doc(window.db, 'users', userId);
+        const userSnap = await getDoc(userDocRef);
+        if (userSnap.exists()) {
+            const userData = userSnap.data();
+            const initialValue = userData.displayNotifications || false;
+            currentDisplayNotifications = initialValue;
+            console.log("header.js: Počiatočná hodnota displayNotifications načítaná:", currentDisplayNotifications);
+            return initialValue;
+        }
+    } catch (e) {
+        console.error("header.js: Chyba pri načítaní počiatočnej hodnoty displayNotifications:", e);
+    }
+    return false;
 };
 
 const updateHeaderLinks = (userProfileData) => {
@@ -275,24 +295,34 @@ const updateHeaderLinks = (userProfileData) => {
             logoutButton.classList.remove('hidden');
             headerElement.style.backgroundColor = getHeaderColorByRole(userProfileData.role);
 
-            // Nastavenie listenera pre zmeny nastavení používateľa
-            if (userProfileData.uid && !unsubscribeFromUserSettings) {
-                unsubscribeFromUserSettings = setupUserSettingsListener(userProfileData.uid);
-                currentUserId = userProfileData.uid;
-                
-                // NOVÉ: Vyčistenie Setu pri prihlásení nového používateľa
-                shownNotificationIds.clear();
-            }
-
+            // NASTAVENIE LISTENERA PRE ADMINA - s počiatočným načítaním nastavení
             if (userProfileData.role === 'admin') {
                 if (!unsubscribeFromNotifications) {
-                    setupNotificationListenerForAdmin(userProfileData); 
+                    // Najprv načítame počiatočnú hodnotu displayNotifications
+                    loadInitialDisplayNotifications(userProfileData.uid).then((initialValue) => {
+                        // Potom nastavíme listener pre zmeny nastavení
+                        if (userProfileData.uid && !unsubscribeFromUserSettings) {
+                            unsubscribeFromUserSettings = setupUserSettingsListener(userProfileData.uid);
+                            currentUserId = userProfileData.uid;
+                        }
+                        
+                        // Vyčistenie Setu pri prihlásení nového používateľa
+                        shownNotificationIds.clear();
+                        
+                        // Nakoniec nastavíme listener notifikácií
+                        setupNotificationListenerForAdmin(userProfileData);
+                    });
                 }
             } else {
                 if (unsubscribeFromNotifications) {
                     unsubscribeFromNotifications();
                     unsubscribeFromNotifications = null;
                     console.log("header.js: Listener notifikácií zrušený, pretože používateľ nie je admin.");
+                }
+                // Nastavíme listener pre zmeny nastavení aj pre ne-adminov
+                if (userProfileData.uid && !unsubscribeFromUserSettings) {
+                    unsubscribeFromUserSettings = setupUserSettingsListener(userProfileData.uid);
+                    currentUserId = userProfileData.uid;
                 }
             }
         } else {
@@ -314,7 +344,7 @@ const updateHeaderLinks = (userProfileData) => {
                 console.log("header.js: Listener nastavení používateľa zrušený pri odhlásení.");
             }
             
-            // NOVÉ: Vyčistenie Setu pri odhlásení
+            // Vyčistenie Setu pri odhlásení
             shownNotificationIds.clear();
             
             currentUserId = null;
@@ -372,6 +402,7 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
     notificationListenerSetupCount++;
     console.log(`header.js: setupNotificationListenerForAdmin volané ${notificationListenerSetupCount}. krát`);
     console.log("header.js: setupNotificationListenerForAdmin volané s userProfileData:", userProfileData);
+    console.log("header.js: Aktuálny stav displayNotifications pri štarte listenera:", currentDisplayNotifications);
     
     if (!window.db) {
         console.warn("header.js: Firestore databáza nie je inicializovaná pre notifikácie.");
@@ -409,10 +440,7 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
             console.log("header.js: GlobalUserProfileData aktualizované s počtom neprečítaných notifikácií:", unreadCount);
         }
 
-        // Použitie aktuálnej hodnoty displayNotifications z real-time listenera
-        console.log("header.js: Aktuálny stav displayNotifications:", currentDisplayNotifications);
-        
-        // AK MAJÚ VYPNUTÉ NOTIFIKÁCIE, UKONČIŤ
+        // AK MAJÚ VYPNUTÉ NOTIFIKÁCIE, UKONČIŤ - ale stále počítame unreadCount
         if (!currentDisplayNotifications) {
             console.log("header.js: Notifikácie sú vypnuté (aktuálny stav), nezobrazujem nové upozornenia.");
             return;
@@ -435,7 +463,6 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
             if (change.type === "added") {
                 // Kontrola aktuálneho stavu pre každú novú notifikáciu
                 if (!currentDisplayNotifications) {
-                    console.log("header.js: Notifikácie sú vypnuté, preskakujem novú notifikáciu.");
                     return;
                 }
                 
@@ -444,15 +471,14 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                 
                 const seenBy = newNotification.seenBy || [];
                 
-                // NOVÉ: Komplexná kontrola - notifikácia sa zobrazí IBA AK:
+                // Komplexná kontrola - notifikácia sa zobrazí IBA AK:
                 // 1. Používateľ ju ešte nevidel (nie je v seenBy)
                 // 2. Ešte nebola zobrazená v tejto relácii (nie je v shownNotificationIds)
                 if (!seenBy.includes(userId) && !shownNotificationIds.has(notificationId)) {
                     console.log("header.js: Nová notifikácia prijatá, ešte nebola videná ani zobrazená:", notificationId);
                     
-                    // PRIDAŤ DO SETU ZOBRAZENÝCH NOTIFIKÁCIÍ - hneď ako sa rozhodneme ju zobraziť
+                    // PRIDAŤ DO SETU ZOBRAZENÝCH NOTIFIKÁCIÍ
                     shownNotificationIds.add(notificationId);
-                    console.log("header.js: Notifikácia pridaná do shownNotificationIds. Celkový počet zobrazených:", shownNotificationIds.size);
                     
                     // Formátovanie správy pre zobrazenie
                     let changesMessage = '';
@@ -472,7 +498,7 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                         changesMessage = 'Nová notifikácia';
                     }
                     
-                    // Pridanie informácie o používateľovi ak je k dispozícii
+                    // Pridanie informácie o používateľovi
                     if (newNotification.userEmail) {
                         changesMessage = `Používateľ ${newNotification.userEmail}: ${changesMessage}`;
                     }
@@ -490,14 +516,6 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                         console.log("header.js: Notifikácia označená ako 'seen' pre používateľa:", userId);
                     } catch (e) {
                         console.error("header.js: Chyba pri aktualizácii notifikácie 'seenBy':", e);
-                    }
-                } else {
-                    // Logovanie prečo sa notifikácia nezobrazila
-                    if (seenBy.includes(userId)) {
-                        console.log("header.js: Notifikácia už bola videná používateľom, preskakujem:", notificationId);
-                    }
-                    if (shownNotificationIds.has(notificationId)) {
-                        console.log("header.js: Notifikácia už bola zobrazená v tejto relácii, preskakujem:", notificationId);
                     }
                 }
             }
