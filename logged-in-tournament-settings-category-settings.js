@@ -38,6 +38,31 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
     const [editedTransportColor, setEditedTransportColor] = React.useState({});
     const [saving, setSaving] = React.useState(false);
     const [previousValues, setPreviousValues] = React.useState({});
+    const [isInitialLoad, setIsInitialLoad] = React.useState(true);
+
+    // Funkcia na aktualizáciu URL hashu
+    const updateUrlHash = (categoryId) => {
+        if (categoryId) {
+            window.location.hash = `category-${categoryId}`;
+        } else {
+            window.location.hash = '';
+        }
+    };
+
+    // Funkcia na získanie ID kategórie z URL hashu
+    const getCategoryIdFromHash = () => {
+        const hash = window.location.hash.slice(1); // Odstránime #
+        if (hash && hash.startsWith('category-')) {
+            return hash.replace('category-', '');
+        }
+        return null;
+    };
+
+    // Handler pre výber kategórie
+    const handleSelectCategory = (catId) => {
+        setSelectedCategoryId(catId);
+        updateUrlHash(catId);
+    };
 
     // Načítavanie kategórií
     React.useEffect(() => {
@@ -92,10 +117,20 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                 setEditedTransportColor(initialTransportColor);
                 setPreviousValues(initialPreviousValues);
                 
-                // Nastav prvú kategóriu ako vybranú, ak ešte žiadna nie je vybraná
-                if (list.length > 0 && !selectedCategoryId) {
-                    setSelectedCategoryId(list[0].id);
+                // Nastav kategóriu z URL alebo prvú kategóriu
+                if (list.length > 0) {
+                    const categoryFromHash = getCategoryIdFromHash();
+                    const isValidCategory = categoryFromHash && list.some(cat => cat.id === categoryFromHash);
+                    
+                    if (isValidCategory) {
+                        setSelectedCategoryId(categoryFromHash);
+                    } else if (!selectedCategoryId) {
+                        setSelectedCategoryId(list[0].id);
+                        updateUrlHash(list[0].id);
+                    }
                 }
+                
+                setIsInitialLoad(false);
             } else {
                 setCategories([]);
                 setEditedMaxTeams({});
@@ -107,13 +142,37 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                 setEditedTransportColor({});
                 setPreviousValues({});
                 setSelectedCategoryId(null);
+                updateUrlHash(null);
+                setIsInitialLoad(false);
             }
         }, err => {
             showNotification(`Chyba pri načítaní kategórií: ${err.message}`, 'error');
+            setIsInitialLoad(false);
         });
 
         return () => unsubscribe();
-    }, [db, userProfileData, showNotification, selectedCategoryId]);
+    }, [db, userProfileData, showNotification]);
+
+    // Reakcia na zmenu URL hashu (napr. pri použití tlačidla späť/vpred v prehliadači)
+    React.useEffect(() => {
+        const handleHashChange = () => {
+            if (categories.length > 0) {
+                const categoryFromHash = getCategoryIdFromHash();
+                const isValidCategory = categoryFromHash && categories.some(cat => cat.id === categoryFromHash);
+                
+                if (isValidCategory) {
+                    setSelectedCategoryId(categoryFromHash);
+                } else if (!categoryFromHash && categories.length > 0) {
+                    // Ak je hash prázdny, nastav prvú kategóriu
+                    setSelectedCategoryId(categories[0].id);
+                    updateUrlHash(categories[0].id);
+                }
+            }
+        };
+
+        window.addEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, [categories]);
 
     // Handlery pre jednotlivé inputy
     const handleMaxTeamsChange = (catId, value) => {
@@ -390,13 +449,16 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
         }
     };
 
-    // Handler pre výber kategórie
-    const handleSelectCategory = (catId) => {
-        setSelectedCategoryId(catId);
-    };
-
     // Získanie vybranej kategórie
     const selectedCategory = categories.find(cat => cat.id === selectedCategoryId);
+
+    if (isInitialLoad) {
+        return React.createElement(
+            'div',
+            { className: 'space-y-6 p-6 border border-gray-200 rounded-lg shadow-sm mt-8 bg-white text-center' },
+            React.createElement('p', { className: 'text-gray-500' }, 'Načítavam kategórie...')
+        );
+    }
 
     return React.createElement(
         React.Fragment,
