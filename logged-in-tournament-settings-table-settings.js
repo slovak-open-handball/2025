@@ -22,6 +22,15 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
     { value: 'losses', label: 'Počet prehier' }
   ];
 
+  // Parametre, ktoré podporujú voľbu smeru (vzostupne/zostupne)
+  const parametersWithDirection = [
+    'scoreDifference',
+    'goalsScored',
+    'goalsConceded',
+    'wins',
+    'losses'
+  ];
+
   // Načítanie nastavení poradia z Firestore
   React.useEffect(() => {
     const loadTableSettings = async () => {
@@ -63,6 +72,12 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
         updated[index] = { parameter: '', direction: 'asc' };
       }
       updated[index] = { ...updated[index], [field]: value };
+      
+      // Ak parameter nepodporuje smer, nastavíme predvolenú hodnotu a zamkneme
+      if (field === 'parameter' && !parametersWithDirection.includes(value)) {
+        updated[index].direction = 'asc';
+      }
+      
       return updated;
     });
     setHasChanges(true);
@@ -108,8 +123,12 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
         } else {
           const conditionsText = validConditions.map((cond, index) => {
             const param = availableParameters.find(p => p.value === cond.parameter)?.label || cond.parameter;
-            const direction = cond.direction === 'asc' ? 'vzostupne' : 'zostupne';
-            return `${index + 1}. ${param} (${direction})`;
+            // Pridáme smer iba pre parametre, ktoré ho podporujú
+            if (parametersWithDirection.includes(cond.parameter)) {
+              const direction = cond.direction === 'asc' ? 'vzostupne' : 'zostupne';
+              return `${index + 1}. ${param} (${direction})`;
+            }
+            return `${index + 1}. ${param}`;
           }).join('; ');
           changes.push(`Poradie účastníkov: ${conditionsText}`);
         }
@@ -165,6 +184,11 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
     return sortingConditions.every(cond => cond.parameter && cond.parameter.trim() !== '');
   };
 
+  // Zistenie, či parameter podporuje smer
+  const supportsDirection = (parameter) => {
+    return parametersWithDirection.includes(parameter);
+  };
+
   if (isLoading) {
     return React.createElement(
       'div',
@@ -203,8 +227,10 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
         React.createElement(
           'div',
           { className: 'space-y-3 mb-4' },
-          sortingConditions.map((condition, index) => 
-            React.createElement(
+          sortingConditions.map((condition, index) => {
+            const hasDirectionSupport = condition.parameter && supportsDirection(condition.parameter);
+            
+            return React.createElement(
               'div',
               { 
                 key: index,
@@ -215,6 +241,7 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
                 { className: 'text-gray-500 font-medium w-8' },
                 `${index + 1}.`
               ),
+              // Select pre výber parametra
               React.createElement(
                 'select',
                 {
@@ -223,7 +250,6 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
                   className: `flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900`
                 },
                 getAvailableParameters(index).map(param => {
-                  // Špeciálne triedy pre placeholder možnosť
                   if (param.isPlaceholder) {
                     return React.createElement(
                       'option', 
@@ -236,7 +262,6 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
                       param.label
                     );
                   }
-                  // Normálne možnosti - štandardná farba a kurzor
                   return React.createElement(
                     'option', 
                     { 
@@ -248,19 +273,20 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
                   );
                 })
               ),
-              React.createElement(
-                'select',
-                {
-                  value: condition.direction || 'asc',
-                  onChange: (e) => handleSortingConditionChange(index, 'direction', e.target.value),
-                  disabled: !condition.parameter,
-                  className: `px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 w-32 text-gray-900 ${
-                    !condition.parameter ? 'bg-gray-100 cursor-not-allowed' : 'cursor-pointer'
-                  }`
-                },
-                React.createElement('option', { value: 'asc', className: 'text-gray-900' }, 'Vzostupne'),
-                React.createElement('option', { value: 'desc', className: 'text-gray-900' }, 'Zostupne')
-              ),
+              // Select pre smer - zobrazí sa len pre podporované parametre
+              hasDirectionSupport 
+                ? React.createElement(
+                    'select',
+                    {
+                      value: condition.direction || 'asc',
+                      onChange: (e) => handleSortingConditionChange(index, 'direction', e.target.value),
+                      className: 'px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 w-32 text-gray-900 cursor-pointer'
+                    },
+                    React.createElement('option', { value: 'asc', className: 'text-gray-900' }, 'Vzostupne'),
+                    React.createElement('option', { value: 'desc', className: 'text-gray-900' }, 'Zostupne')
+                  )
+                : React.createElement('div', { className: 'w-32' }), // Prázdny div pre zachovanie medzery
+              // Tlačidlo pre odstránenie
               React.createElement(
                 'button',
                 {
@@ -272,8 +298,8 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
                   React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
                 )
               )
-            )
-          )
+            );
+          })
         ),
         
         // Tlačidlo pre pridanie novej podmienky
