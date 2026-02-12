@@ -4,7 +4,7 @@ import { countryDialCodes } from "./countryDialCodes.js";
 
 let registrationCheckIntervalId = null;
 let unsubscribeFromNotifications = null;
-let unsubscribeFromUserSettings = null; // NOVÉ: pre odhlásenie listenera nastavení
+let unsubscribeFromUserSettings = null;
 window.isRegistrationDataLoaded = false;
 window.isCategoriesDataLoaded = false;
 let isFirestoreListenersSetup = false; 
@@ -14,6 +14,9 @@ let notificationListenerSetupCount = 0;
 // NOVÉ: Globálna premenná pre aktuálny stav displayNotifications
 let currentDisplayNotifications = false;
 let currentUserId = null;
+
+// NOVÉ: Set pre sledovanie už zobrazených notifikácií
+let shownNotificationIds = new Set();
 
 window.showGlobalNotification = (message, type = 'success') => {
   let notificationElement = document.getElementById('global-notification');
@@ -164,12 +167,14 @@ const handleLogout = async () => {
             console.log("header.js: Listener notifikácií zrušený.");
         }
         
-        // NOVÉ: Vyčistenie listenera nastavení používateľa
         if (unsubscribeFromUserSettings) {
             unsubscribeFromUserSettings();
             unsubscribeFromUserSettings = null;
             console.log("header.js: Listener nastavení používateľa zrušený.");
         }
+        
+        // NOVÉ: Vyčistenie Setu zobrazených notifikácií pri odhlásení
+        shownNotificationIds.clear();
         
         currentUserId = null;
         currentDisplayNotifications = false;
@@ -198,7 +203,7 @@ const getHeaderColorByRole = (role) => {
     }
 }
 
-// NOVÉ: Funkcia pre sledovanie zmien v nastaveniach používateľa
+// Funkcia pre sledovanie zmien v nastaveniach používateľa
 const setupUserSettingsListener = (userId) => {
     if (!window.db || !userId) {
         console.warn("header.js: Chýba db alebo userId pre nastavenie listenera používateľa.");
@@ -219,7 +224,7 @@ const setupUserSettingsListener = (userId) => {
         if (docSnap.exists()) {
             const userData = docSnap.data();
             
-            // NOVÉ: Aktualizácia globálneho stavu displayNotifications
+            // Aktualizácia globálneho stavu displayNotifications
             if (userData.hasOwnProperty('displayNotifications')) {
                 currentDisplayNotifications = userData.displayNotifications;
                 console.log("header.js: displayNotifications aktualizované na:", currentDisplayNotifications);
@@ -270,10 +275,13 @@ const updateHeaderLinks = (userProfileData) => {
             logoutButton.classList.remove('hidden');
             headerElement.style.backgroundColor = getHeaderColorByRole(userProfileData.role);
 
-            // NOVÉ: Nastavenie listenera pre zmeny nastavení používateľa
+            // Nastavenie listenera pre zmeny nastavení používateľa
             if (userProfileData.uid && !unsubscribeFromUserSettings) {
                 unsubscribeFromUserSettings = setupUserSettingsListener(userProfileData.uid);
                 currentUserId = userProfileData.uid;
+                
+                // NOVÉ: Vyčistenie Setu pri prihlásení nového používateľa
+                shownNotificationIds.clear();
             }
 
             if (userProfileData.role === 'admin') {
@@ -300,12 +308,14 @@ const updateHeaderLinks = (userProfileData) => {
                 console.log("header.js: Listener notifikácií zrušený pri odhlásení.");
             }
             
-            // NOVÉ: Vyčistenie listenera nastavení
             if (unsubscribeFromUserSettings) {
                 unsubscribeFromUserSettings();
                 unsubscribeFromUserSettings = null;
                 console.log("header.js: Listener nastavení používateľa zrušený pri odhlásení.");
             }
+            
+            // NOVÉ: Vyčistenie Setu pri odhlásení
+            shownNotificationIds.clear();
             
             currentUserId = null;
             currentDisplayNotifications = false;
@@ -341,7 +351,7 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
     }
 };
 
-// NOVÉ: Pomocná funkcia pre kontrolu aktuálneho stavu displayNotifications priamo z Firestore
+// Pomocná funkcia pre kontrolu aktuálneho stavu displayNotifications priamo z Firestore
 const checkCurrentDisplayNotificationsStatus = async (userId) => {
     if (!window.db || !userId) return false;
     
@@ -399,7 +409,7 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
             console.log("header.js: GlobalUserProfileData aktualizované s počtom neprečítaných notifikácií:", unreadCount);
         }
 
-        // NOVÉ: Použitie aktuálnej hodnoty displayNotifications z real-time listenera
+        // Použitie aktuálnej hodnoty displayNotifications z real-time listenera
         console.log("header.js: Aktuálny stav displayNotifications:", currentDisplayNotifications);
         
         // AK MAJÚ VYPNUTÉ NOTIFIKÁCIE, UKONČIŤ
@@ -434,9 +444,15 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                 
                 const seenBy = newNotification.seenBy || [];
                 
-                // Skontrolovať, či používateľ ešte nevidí túto notifikáciu
-                if (!seenBy.includes(userId)) {
-                    console.log("header.js: Nová notifikácia prijatá a nebola videná používateľom:", newNotification);
+                // NOVÉ: Komplexná kontrola - notifikácia sa zobrazí IBA AK:
+                // 1. Používateľ ju ešte nevidel (nie je v seenBy)
+                // 2. Ešte nebola zobrazená v tejto relácii (nie je v shownNotificationIds)
+                if (!seenBy.includes(userId) && !shownNotificationIds.has(notificationId)) {
+                    console.log("header.js: Nová notifikácia prijatá, ešte nebola videná ani zobrazená:", notificationId);
+                    
+                    // PRIDAŤ DO SETU ZOBRAZENÝCH NOTIFIKÁCIÍ - hneď ako sa rozhodneme ju zobraziť
+                    shownNotificationIds.add(notificationId);
+                    console.log("header.js: Notifikácia pridaná do shownNotificationIds. Celkový počet zobrazených:", shownNotificationIds.size);
                     
                     // Formátovanie správy pre zobrazenie
                     let changesMessage = '';
@@ -465,7 +481,7 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                     console.log("header.js: Zobrazujem notifikáciu:", changesMessage);
                     showDatabaseNotification(changesMessage, newNotification.type || 'info');
                     
-                    // OZNAČIŤ AKO SEEN
+                    // OZNAČIŤ AKO SEEN - až po zobrazení
                     const notificationDocRef = doc(window.db, "notifications", notificationId);
                     try {
                         await updateDoc(notificationDocRef, {
@@ -474,6 +490,14 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                         console.log("header.js: Notifikácia označená ako 'seen' pre používateľa:", userId);
                     } catch (e) {
                         console.error("header.js: Chyba pri aktualizácii notifikácie 'seenBy':", e);
+                    }
+                } else {
+                    // Logovanie prečo sa notifikácia nezobrazila
+                    if (seenBy.includes(userId)) {
+                        console.log("header.js: Notifikácia už bola videná používateľom, preskakujem:", notificationId);
+                    }
+                    if (shownNotificationIds.has(notificationId)) {
+                        console.log("header.js: Notifikácia už bola zobrazená v tejto relácii, preskakujem:", notificationId);
                     }
                 }
             }
@@ -484,7 +508,6 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
 
     console.log("header.js: Listener pre notifikácie admina nastavený.");
 };
-
 
 const setupFirestoreListeners = () => {
     if (!window.db) {
@@ -555,7 +578,6 @@ const setupFirestoreListeners = () => {
                 console.log("header.js: Časovač pre kontrolu registrácie zrušený.");
             }
             
-            // NOVÉ: Vyčistenie listenerov pri zatváraní stránky
             if (unsubscribeFromNotifications) {
                 unsubscribeFromNotifications();
             }
