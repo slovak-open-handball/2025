@@ -313,7 +313,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                         if (catChange.oldValues.drawColor !== catChange.newValues.drawColor) {
                             await createCategorySettingsChangeNotification(
                                 'category_draw_color_updated',
-                                [`Zmena farby pre rozlosovanie v kategórii z '${catChange.categoryName}' : ÷${catChange.oldValues.drawColor}' na '${catChange.newValues.drawColor}'`],
+                                [`Zmena farby pre rozlosovanie v kategórii ${catChange.categoryName}: z '${catChange.oldValues.drawColor}' na '${catChange.newValues.drawColor}'`],
                                 {
                                     categoryId: catChange.categoryId,
                                     categoryName: catChange.categoryName,
@@ -328,7 +328,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                         if (catChange.oldValues.transportColor !== catChange.newValues.transportColor) {
                             await createCategorySettingsChangeNotification(
                                 'category_transport_color_updated',
-                                [`Zmena farby pre dopravu v kategórii z '${catChange.categoryName}' : '${catChange.oldValues.transportColor}' na '${catChange.newValues.transportColor}'`],
+                                [`Zmena farby pre dopravu v kategórii ${catChange.categoryName}: z '${catChange.oldValues.transportColor}' na '${catChange.newValues.transportColor}'`],
                                 {
                                     categoryId: catChange.categoryId,
                                     categoryName: catChange.categoryName,
