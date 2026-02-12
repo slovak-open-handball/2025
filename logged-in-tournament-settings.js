@@ -1,5 +1,6 @@
-import { getFirestore, doc, onSnapshot, setDoc, Timestamp, updateDoc, arrayUnion, arrayRemove, getDoc, collection, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, onSnapshot, setDoc, Timestamp, updateDoc, arrayUnion, arrayRemove, getDoc, collection, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Všetky pomocné funkcie sú teraz priamo v tomto súbore
 const formatToDatetimeLocal = (date) => {
@@ -37,7 +38,7 @@ const formatDateForDisplay = (dateOrTimestamp) => {
   return `${day}. ${month}. ${year} ${hours}:${minutes} hod.`;
 };
 
-const showNotification = (message, type = 'success', duration = 5000) => { // Pridaný parameter duration
+const showNotification = (message, type = 'success', duration = 5000) => {
     let notificationElement = document.getElementById('global-notification'); 
     
     if (!notificationElement) {
@@ -66,7 +67,7 @@ const showNotification = (message, type = 'success', duration = 5000) => { // Pr
 
     setTimeout(() => {
         notificationElement.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
-    }, duration); // Použitie dynamického duration
+    }, duration);
 };
 
 const sendAdminNotification = async (db, auth, notificationData) => {
@@ -76,7 +77,7 @@ const sendAdminNotification = async (db, auth, notificationData) => {
     }
     try {
       const notificationsCollectionRef = collection(db, 'notifications');
-      let changesContent; // Zmenené z changesMessage na changesContent, aby to mohlo byť pole
+      let changesContent;
       const userEmail = auth.currentUser.email;
 
       if (notificationData.type === 'createSize') {
@@ -86,7 +87,6 @@ const sendAdminNotification = async (db, auth, notificationData) => {
       } else if (notificationData.type === 'deleteSize') {
         changesContent = `Zmazanie veľkosti trička: '''${notificationData.data.deletedSize}'`;
       } else if (notificationData.type === 'updateSettings') {
-        // Tu je zmena: Rozdelenie reťazca na pole
         changesContent = notificationData.data.changesMade.split(';').map(change => change.trim()).filter(change => change !== ''); 
       } else if (notificationData.type === 'createAccommodation') { 
         changesContent = `Vytvorenie typu ubytovania: '''${notificationData.data.type} s kapacitou ${notificationData.data.capacity}'`;
@@ -103,7 +103,7 @@ const sendAdminNotification = async (db, auth, notificationData) => {
 
         if (!originalPackage || !newPackage) {
             console.error("sendAdminNotification: Chýbajú pôvodné alebo nové dáta balíčka pre notifikáciu 'editPackage'.");
-            changesContent = [`Úprava balíčka '${notificationData.data.originalName || 'Neznámy názov'}'. Podrobnosti o zmene nie sú k dispozícii.`]; // Pole pre konzistentnosť
+            changesContent = [`Úprava balíčka '${notificationData.data.originalName || 'Neznámy názov'}'. Podrobnosti o zmene nie sú k dispozícii.`];
             await addDoc(notificationsCollectionRef, {
                 userEmail: userEmail,
                 changes: changesContent,
@@ -122,7 +122,6 @@ const sendAdminNotification = async (db, auth, notificationData) => {
 
         const mealTypes = ['breakfast', 'lunch', 'dinner', 'refreshment'];
         
-        // Získame všetky kľúče z meals objektov, ktoré sú platnými dátumami
         const originalMealDates = Object.keys(originalPackage.meals || {}).filter(key => !isNaN(new Date(key)));
         const newMealDates = Object.keys(newPackage.meals || {}).filter(key => !isNaN(new Date(key)));
         const allDates = new Set([...originalMealDates, ...newMealDates]);
@@ -133,8 +132,7 @@ const sendAdminNotification = async (db, auth, notificationData) => {
                 const oldStatus = (originalPackage.meals && originalPackage.meals[date] && originalPackage.meals[date][mealType] === 1);
                 const newStatus = (newPackage.meals && newPackage.meals[date] && newPackage.meals[date][mealType] === 1);
                 const displayDate = new Date(date).toLocaleDateString('sk-SK');
-                const mealName = mealType === 'breakfast' ? 'Raňajky' : mealType === 'lunch' ? 'Obed' ? mealType === 'dinner' ? 'Večera' : 'Občerstvenie' : 'Obed' : 'Večera';
-
+                const mealName = mealType === 'breakfast' ? 'Raňajky' : mealType === 'lunch' ? 'Obed' : mealType === 'dinner' ? 'Večera' : 'Občerstvenie';
 
                 if (oldStatus !== newStatus) {
                     if (newStatus) {
@@ -157,14 +155,14 @@ const sendAdminNotification = async (db, auth, notificationData) => {
             }
         }
         
-        changesContent = changes; // Už je to pole
+        changesContent = changes;
       } else if (notificationData.type === 'deletePackage') {
         changesContent = `Zmazanie balíčka: '''${notificationData.data.deletedName} (cena: ${notificationData.data.deletedPrice}€)'`;
       }
 
       await addDoc(notificationsCollectionRef, {
         userEmail: userEmail,
-        changes: changesContent, // Tu sa teraz ukladá buď reťazec alebo pole reťazcov
+        changes: changesContent,
         timestamp: Timestamp.fromDate(new Date()),
         recipientId: 'all_admins'
       });
@@ -173,14 +171,12 @@ const sendAdminNotification = async (db, auth, notificationData) => {
     }
 };
 
-
 // Import komponentov nastavení
 import { GeneralRegistrationSettings } from './logged-in-tournament-settings-general-registration-settings.js';
 import { TShirtSizeSettings } from './logged-in-tournament-settings-t-shirt-size-settings.js';
 import { AccommodationSettings } from './logged-in-tournament-settings-accommodation-settings.js';
 import { PackageSettings } from './logged-in-tournament-settings-package-settings.js';
 import { CategorySettings } from './logged-in-tournament-settings-category-settings.js';
-
 
 function TournamentSettingsApp() {
   const app = initializeApp(window.firebaseConfig);
@@ -194,7 +190,7 @@ function TournamentSettingsApp() {
   const [tournamentStartDate, setTournamentStartDate] = React.useState('');
   const [tournamentEndDate, setTournamentEndDate] = React.useState('');
   const [activeSetting, setActiveSetting] = React.useState(null);
-  const [activeCategoryId, setActiveCategoryId] = React.useState(null); // Nový stav pre kategóriu
+  const [activeCategoryId, setActiveCategoryId] = React.useState(null);
 
   const settingComponents = [
     { id: 'general', title: 'Všeobecné nastavenia registrácie', component: GeneralRegistrationSettings },
@@ -217,10 +213,9 @@ function TournamentSettingsApp() {
 
   // Funkcia na získanie nastavenia z URL hashu
   const getSettingFromHash = () => {
-    const hash = window.location.hash.slice(1); // Odstránime #
+    const hash = window.location.hash.slice(1);
     if (!hash) return null;
     
-    // Rozparsujeme hash na časti
     const parts = hash.split('/');
     const settingId = parts[0];
     
@@ -297,7 +292,115 @@ function TournamentSettingsApp() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, [isAuthReady, userProfileData]);
 
-  // ... (zvyšok kódu zostáva rovnaký) ...
+  React.useEffect(() => {
+    const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
+      setUser(currentUser);
+      setIsAuthReady(true); 
+      if (!currentUser) {
+        window.location.href = 'login.html';
+      }
+    });
+
+    const handleGlobalDataUpdated = (event) => {
+      setUserProfileData(event.detail);
+    };
+    window.addEventListener('globalDataUpdated', handleGlobalDataUpdated);
+
+    if (window.isGlobalAuthReady) {
+        setIsAuthReady(true);
+        setUser(auth.currentUser);
+        if (window.globalUserProfileData) {
+            setUserProfileData(window.globalUserProfileData);
+        }
+    }
+
+    return () => {
+      unsubscribeAuth();
+      window.removeEventListener('globalDataUpdated', handleGlobalDataUpdated);
+    };
+  }, [auth]); 
+
+  React.useEffect(() => {
+    let unsubscribeUserDoc;
+
+    if (user && db && isAuthReady) {
+
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        unsubscribeUserDoc = onSnapshot(userDocRef, docSnapshot => {
+          if (docSnapshot.exists()) {
+            const userData = docSnapshot.data();
+
+            if (userData.role !== 'admin') {
+                window.location.href = 'logged-in-my-data.html';
+                return; 
+            }
+
+            setUserProfileData(userData); 
+          } else {
+            showNotification("Chyba: Používateľský profil sa nenašiel. Skúste sa prosím znova prihlásiť.", 'error'); 
+            auth.signOut(); 
+            setUser(null);
+            setUserProfileData(null);
+          }
+        }, error => {
+          showNotification(`Chyba pri načítaní používateľských dát: ${error.message}`, 'error'); 
+          auth.signOut();
+          setUser(null);
+          setUserProfileData(null);
+        });
+      } catch (e) {
+        showNotification(`Chyba pri nastavovaní poslucháča pre používateľské dáta: ${e.message}`, 'error'); 
+        auth.signOut();
+        setUser(null);
+        setUserProfileData(null);
+      }
+    } 
+
+    return () => {
+      if (unsubscribeUserDoc) {
+        unsubscribeUserDoc();
+      }
+    };
+  }, [user, db, isAuthReady, auth]);
+
+  React.useEffect(() => {
+    let unsubscribeSettings;
+    const fetchTournamentDates = () => {
+      if (!db || !userProfileData || userProfileData.role !== 'admin') {
+        return;
+      }
+      try {
+        const settingsDocRef = doc(db, 'settings', 'registration');
+        unsubscribeSettings = onSnapshot(settingsDocRef, docSnapshot => {
+          if (docSnapshot.exists()) {
+            const data = docSnapshot.data();
+            setTournamentStartDate(data.tournamentStart ? formatToDatetimeLocal(data.tournamentStart.toDate()) : '');
+            setTournamentEndDate(data.tournamentEnd ? formatToDatetimeLocal(data.tournamentEnd.toDate()) : '');
+          } else {
+            setTournamentStartDate('');
+            setTournamentEndDate('');
+          }
+        }, error => {
+          showNotification(`Chyba pri načítaní dátumov turnaja: ${error.message}`, 'error');
+        });
+      } catch (e) {
+        showNotification(`Chyba pri nastavovaní poslucháča pre dátumy turnaja: ${e.message}`, 'error');
+      }
+    };
+
+    fetchTournamentDates();
+
+    return () => {
+      if (unsubscribeSettings) {
+        unsubscribeSettings();
+      }
+    };
+  }, [db, userProfileData]);
+
+  if (!userProfileData || userProfileData.role !== 'admin') {
+    return null; 
+  }
 
   return React.createElement(
     'div',
@@ -339,7 +442,6 @@ function TournamentSettingsApp() {
             sendAdminNotification: (notificationData) => sendAdminNotification(db, auth, notificationData),
             formatDateForDisplay: formatDateForDisplay,
             formatToDatetimeLocal: formatToDatetimeLocal,
-            // Nové props pre CategorySettings
             initialCategoryId: activeSetting === 'categories' ? activeCategoryId : null,
             onSelectCategory: handleSelectCategory,
           }
