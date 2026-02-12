@@ -322,20 +322,6 @@ export function CategorySettings({
     }, [categories, editedMaxTeams, editedPeriods, editedPeriodDuration, 
         editedBreakDuration, editedMatchBreak, editedDrawColor, editedTransportColor]);
 
-    // OCHRANA PRED STRATOU DÁT - beforeunload
-    React.useEffect(() => {
-        const handleBeforeUnload = (e) => {
-            if (hasChanges && !saving) {
-                e.preventDefault();
-                e.returnValue = 'Máte neuložené zmeny. Naozaj chcete opustiť stránku?';
-                return e.returnValue;
-            }
-        };
-
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [hasChanges, saving]);
-
     // Samostatný useEffect na spracovanie zmeny URL v RÁMCI CategorySettings
     React.useEffect(() => {
         if (!isInitialLoad && categories.length > 0 && initialCategoryId) {
