@@ -1,4 +1,3 @@
-// logged-in-tournament-settings.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, onSnapshot, setDoc, Timestamp, updateDoc, arrayUnion, arrayRemove, getDoc, collection, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -252,6 +251,9 @@ function TournamentSettingsApp() {
   
   // Stav pre neuložené zmeny v CategorySettings
   const [categorySettingsHasChanges, setCategorySettingsHasChanges] = React.useState(false);
+  
+  // REFERENCIA na reset funkciu z CategorySettings
+  const resetCategorySettingsRef = React.useRef(null);
 
   const settingComponents = [
     { id: 'general', title: 'Všeobecné nastavenia registrácie', component: GeneralRegistrationSettings },
@@ -305,6 +307,11 @@ function TournamentSettingsApp() {
     updateUrlHash(settingId);
   };
 
+  // Handler pre resetovanie zmien v CategorySettings
+  const handleSetResetFunction = (resetFn) => {
+    resetCategorySettingsRef.current = resetFn;
+  };
+
   // Handler pre návrat na hlavnú stránku - S MODÁLNYM OKNOM
   const handleBackToMain = () => {
     // Kontrola, či má CategorySettings neuložené zmeny
@@ -312,15 +319,18 @@ function TournamentSettingsApp() {
       setModalState({
         isOpen: true,
         pendingAction: () => {
-          // TOTO JE TERAZ ROVNAKÁ LOGIKA AKO V PRÍPADE BEZ ZMIEN!
+          // ZAHODÍME ZMENY - zavoláme reset funkciu z CategorySettings
+          if (resetCategorySettingsRef.current) {
+            resetCategorySettingsRef.current();
+          }
+          // Potom normálne opustíme sekciu
           setActiveSetting(null);
           setActiveCategoryId(null);
           updateUrlHash(null);
-          // NERESETUJEME categorySettingsHasChanges - to si má na starosti CategorySettings sám!
           setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
         },
         pendingHash: null,
-        message: 'Máte neuložené zmeny v nastaveniach kategórií. Naozaj chcete opustiť túto sekciu?'
+        message: 'Máte neuložené zmeny v nastaveniach kategórií. Naozaj chcete opustiť túto sekciu? Všetky neuložené zmeny budú zahodené.'
       });
     } else {
       setActiveSetting(null);
@@ -384,18 +394,21 @@ function TournamentSettingsApp() {
             setModalState({
               isOpen: true,
               pendingAction: () => {
-                // LEN PREPNEME NA NOVÚ SEKCIU - NEVYMAZÁVAME ŽIADNE DÁTA!
+                // ZAHODÍME ZMENY - zavoláme reset funkciu z CategorySettings
+                if (resetCategorySettingsRef.current) {
+                  resetCategorySettingsRef.current();
+                }
+                // LEN PREPNEME NA NOVÚ SEKCIU
                 setActiveSetting(settingFromHash);
                 if (settingFromHash === 'categories' && categoryFromHash) {
                   setActiveCategoryId(categoryFromHash);
                 } else {
                   setActiveCategoryId(null);
                 }
-                // NERESETUJEME categorySettingsHasChanges
                 setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
               },
               pendingHash: newHash,
-              message: 'Máte neuložené zmeny v nastaveniach kategórií. Naozaj chcete opustiť túto sekciu?'
+              message: 'Máte neuložené zmeny v nastaveniach kategórií. Naozaj chcete opustiť túto sekciu? Všetky neuložené zmeny budú zahodené.'
             });
             
             // Vrátime URL späť na pôvodnú
@@ -632,7 +645,8 @@ function TournamentSettingsApp() {
               formatToDatetimeLocal: formatToDatetimeLocal,
               initialCategoryId: activeSetting === 'categories' ? activeCategoryId : null,
               onSelectCategory: handleSelectCategory,
-              onHasChangesChange: handleCategorySettingsHasChanges
+              onHasChangesChange: handleCategorySettingsHasChanges,
+              onResetChanges: handleSetResetFunction // NOVÝ PROP
             }
           )
         )
