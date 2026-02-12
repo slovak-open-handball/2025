@@ -33,7 +33,6 @@ const UnsavedChangesModal = ({ isOpen, onConfirm, onCancel, message }) => {
         {
             className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100000]',
             onClick: (e) => {
-                // Zatvorí sa len ak klikne na pozadie
                 if (e.target === e.currentTarget) onCancel();
             }
         },
@@ -97,7 +96,7 @@ export function CategorySettings({
     // Stav pre modálne okno
     const [modalState, setModalState] = React.useState({
         isOpen: false,
-        pendingAction: null,
+        pendingHash: null,
         message: ''
     });
 
@@ -124,7 +123,7 @@ export function CategorySettings({
         return foundCategory ? foundCategory.id : null;
     };
 
-    // Handler pre výber kategórie - do URL ukladá názov, nie ID
+    // Handler pre výber kategórie - priamo volá onSelectCategory bez čakania na hashchange
     const handleSelectCategory = (catId) => {
         const category = categories.find(c => c.id === catId);
         if (category && onSelectCategory) {
@@ -295,7 +294,6 @@ export function CategorySettings({
         const numValue = value === '' ? '' : Math.max(1, parseInt(value) || 1);
         setEditedPeriods(prev => ({ ...prev, [catId]: numValue }));
         
-        // AUTOMATICKÉ VYNULOVANIE: Ak je počet periód 1, vynulujeme prestávku medzi periódami
         const periodsValue = value === '' ? 1 : Math.max(1, parseInt(value) || 1);
         if (periodsValue === 1) {
             setEditedBreakDuration(prev => ({ ...prev, [catId]: 0 }));
@@ -371,62 +369,87 @@ export function CategorySettings({
     }, [categories, editedMaxTeams, editedPeriods, editedPeriodDuration, 
         editedBreakDuration, editedMatchBreak, editedDrawColor, editedTransportColor]);
 
-    // OCHRANA PRED STRATOU DÁT - beforeunload a hashchange s vlastným modálnym oknom
+    // OCHRANA PRED STRATOU DÁT - beforeunload
     React.useEffect(() => {
         const handleBeforeUnload = (e) => {
             if (hasChanges && !saving) {
-                // Pre beforeunload musíme stále použiť štandardný dialóg
                 e.preventDefault();
                 e.returnValue = 'Máte neuložené zmeny. Naozaj chcete opustiť stránku?';
                 return e.returnValue;
             }
         };
 
-        const handleHashChange = (e) => {
-            const newHash = window.location.hash.slice(1);
-            const isStillCategorySection = newHash.startsWith('categories');
-            
-            if (hasChanges && !saving && !isStillCategorySection) {
-                e.preventDefault();
-                
-                // Uložíme aktuálny hash pre prípad zrušenia
-                const currentHash = window.location.hash;
-                
-                // Otvoríme modálne okno
-                setModalState({
-                    isOpen: true,
-                    pendingAction: () => {
-                        // Používateľ potvrdil - necháme zmenu prejsť
-                        setModalState({ isOpen: false, pendingAction: null, message: '' });
-                    },
-                    cancelAction: () => {
-                        // Používateľ zrušil - vrátime sa na pôvodný hash
-                        setTimeout(() => {
-                            window.location.hash = currentHash;
-                        }, 0);
-                        setModalState({ isOpen: false, pendingAction: null, message: '' });
-                    },
-                    message: 'Máte neuložené zmeny. Naozaj chcete opustiť túto sekciu?'
-                });
-            }
-        };
-
         window.addEventListener('beforeunload', handleBeforeUnload);
-        window.addEventListener('hashchange', handleHashChange);
-
-        return () => {
-            window.removeEventListener('beforeunload', handleBeforeUnload);
-            window.removeEventListener('hashchange', handleHashChange);
-        };
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, [hasChanges, saving]);
 
-    // Samostatný useEffect na spracovanie zmeny URL v RÁMCI CategorySettings
+    // VLASTNÉ RIEŠENIE PRE HASHCHANGE - namiesto event listenera
+    const handleHashChange = (newHash) => {
+        if (!hasChanges || saving) {
+            // Ak nie sú zmeny, normálne spracujeme URL
+            if (categories.length > 0) {
+                const categoryIdFromUrl = getCategoryIdFromUrlName(newHash, categories);
+                if (categoryIdFromUrl) {
+                    setSelectedCategoryId(categoryIdFromUrl);
+                }
+            }
+            return;
+        }
+
+        const isStillCategorySection = newHash.startsWith('categories');
+        
+        if (!isStillCategorySection) {
+            // Opúšťame CategorySettings sekciu - zobrazíme modálne okno
+            setModalState({
+                isOpen: true,
+                pendingHash: newHash,
+                message: 'Máte neuložené zmeny. Naozaj chcete opustiť túto sekciu?'
+            });
+        } else {
+            // Prepínanie v rámci CategorySettings - normálne spracujeme
+            const categoryIdFromUrl = getCategoryIdFromUrlName(newHash, categories);
+            if (categoryIdFromUrl) {
+                setSelectedCategoryId(categoryIdFromUrl);
+            }
+        }
+    };
+
+    // Sledovanie zmien URL cez popstate a vlastný handler
+    React.useEffect(() => {
+        const checkHashChange = () => {
+            const hash = window.location.hash.slice(1);
+            handleHashChange(hash);
+        };
+
+        // Počiatočné načítanie už máme cez props
+        window.addEventListener('popstate', checkHashChange);
+        
+        // Vytvoríme vlastný observer pre zmeny hashu
+        const originalPushState = history.pushState;
+        const originalReplaceState = history.replaceState;
+
+        history.pushState = function() {
+            originalPushState.apply(this, arguments);
+            setTimeout(() => checkHashChange(), 0);
+        };
+
+        history.replaceState = function() {
+            originalReplaceState.apply(this, arguments);
+            setTimeout(() => checkHashChange(), 0);
+        };
+
+        return () => {
+            window.removeEventListener('popstate', checkHashChange);
+            history.pushState = originalPushState;
+            history.replaceState = originalReplaceState;
+        };
+    }, [categories, hasChanges, saving]);
+
+    // Samostatný useEffect na spracovanie zmeny URL z props (z hlavného komponentu)
     React.useEffect(() => {
         if (!isInitialLoad && categories.length > 0 && initialCategoryId) {
             const categoryIdFromUrl = getCategoryIdFromUrlName(initialCategoryId, categories);
             if (categoryIdFromUrl && categoryIdFromUrl !== selectedCategoryId) {
-                // Pri zmene URL v RÁMCI CategorySettings (prepínanie kategórií)
-                // NIKDY NEZOBRAZUJEME UPOZORNENIE
                 setSelectedCategoryId(categoryIdFromUrl);
             }
         }
@@ -634,6 +657,19 @@ export function CategorySettings({
         }
     };
 
+    // Potvrdenie odchodu z modálneho okna
+    const handleConfirmLeave = () => {
+        if (modalState.pendingHash) {
+            window.location.hash = modalState.pendingHash;
+        }
+        setModalState({ isOpen: false, pendingHash: null, message: '' });
+    };
+
+    // Zrušenie odchodu z modálneho okna
+    const handleCancelLeave = () => {
+        setModalState({ isOpen: false, pendingHash: null, message: '' });
+    };
+
     // Získanie vybranej kategórie
     const selectedCategory = categories.find(cat => cat.id === selectedCategoryId);
 
@@ -655,13 +691,8 @@ export function CategorySettings({
         // Vlastné modálne okno
         React.createElement(UnsavedChangesModal, {
             isOpen: modalState.isOpen,
-            onConfirm: () => {
-                if (modalState.pendingAction) modalState.pendingAction();
-            },
-            onCancel: () => {
-                if (modalState.cancelAction) modalState.cancelAction();
-                else setModalState({ isOpen: false, pendingAction: null, cancelAction: null, message: '' });
-            },
+            onConfirm: handleConfirmLeave,
+            onCancel: handleCancelLeave,
             message: modalState.message
         }),
         React.createElement(
