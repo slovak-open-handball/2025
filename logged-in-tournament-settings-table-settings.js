@@ -172,7 +172,7 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
         'Nastavenia tabuľky'
       ),
       React.createElement('p', { className: 'text-gray-600 mt-1 text-sm' },
-        'Nastavte kritériá pre určenie poradia účastníkov v tabuľke. Poradie kritérií určuje prioritu.'
+        'Nastavte kritériá pre určenie poradia tímov v tabuľke. Poradie kritérií určuje prioritu.'
       )
     ),
     
