@@ -2315,6 +2315,7 @@ const AddGroupsApp = ({ userProfileData }) => {
                           React.createElement('i', { className: 'fa-solid fa-trash-alt mr-2' }),
                           'Odstrániť miesto'
                         )
+                    ),
                 )
               ),
             ),
