@@ -1,3 +1,5 @@
+// logged-in-tournament-settings-category-settings.js
+
 import { doc, onSnapshot, setDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Funkcia na vytvorenie notifikácie o zmene nastavení kategórie
@@ -325,6 +327,7 @@ export function CategorySettings({
 
     // RESET VŠETKÝCH NEULOŽENÝCH ZMIEN
     const resetAllChanges = React.useCallback(() => {
+        console.log("resetAllChanges - spúšťam reset kategórií");
         // Nastavíme všetky edited hodnoty na pôvodné hodnoty z databázy
         const initialMaxTeams = {};
         const initialPeriods = {};
@@ -357,6 +360,7 @@ export function CategorySettings({
 
     // Registrujeme reset funkciu u nadradeného komponentu
     React.useEffect(() => {
+        console.log("Registrujem reset funkciu, onResetChanges existuje:", !!onResetChanges);
         if (onResetChanges) {
             onResetChanges(resetAllChanges);
         }
