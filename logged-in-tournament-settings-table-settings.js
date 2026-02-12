@@ -53,6 +53,37 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         'losses'
     ];
 
+    // Pomocná funkcia na formátovanie jednej podmienky
+    const formatCondition = (cond, index) => {
+        if (!cond || !cond.parameter) return null;
+        
+        const param = availableParameters.find(p => p.value === cond.parameter)?.label || cond.parameter;
+        
+        if (parametersWithDirection.includes(cond.parameter)) {
+            const direction = cond.direction === 'asc' ? 'vzostupne' : 'zostupne';
+            return `${index + 1}. ${param} (${direction})`;
+        } else {
+            return `${index + 1}. ${param}`;
+        }
+    };
+
+    // Pomocná funkcia na generovanie zoznamu podmienok pre notifikáciu
+    const generateConditionsList = (conditions, title) => {
+        const list = [];
+        if (title) list.push(title);
+        
+        if (!conditions || conditions.length === 0) {
+            list.push('Žiadne vlastné podmienky (zoradenie iba podľa bodov)');
+        } else {
+            conditions.forEach((cond, index) => {
+                const formatted = formatCondition(cond, index);
+                if (formatted) list.push(formatted);
+            });
+        }
+        
+        return list;
+    };
+
     // Načítanie nastavení poradia z Firestore
     React.useEffect(() => {
         const loadTableSettings = async () => {
@@ -159,38 +190,28 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                 sortingConditions: validConditions
             };
 
-            // Zistíme, čo sa zmenilo pre notifikáciu
-            const changes = [];
+            // Zistíme, či došlo k zmene
+            const isChanged = JSON.stringify(validConditions) !== JSON.stringify(originalSortingConditions);
             
-            // Zmeny v podmienkach poradia
-            if (JSON.stringify(validConditions) !== JSON.stringify(originalSortingConditions)) {
-                if (validConditions.length === 0) {
-                    changes.push('Poradie bolo nastavené na predvolené (podľa bodov)');
-                } else {
-                    // Úvodný text ako samostatný prvok poľa
-                    changes.push('Zmena nastavení poradia:');
-                    
-                    // Každú podmienku pridáme ako samostatný prvok poľa
-                    validConditions.forEach((cond, index) => {
-                        const param = availableParameters.find(p => p.value === cond.parameter)?.label || cond.parameter;
-                        
-                        // Pridáme smer iba pre parametre, ktoré ho podporujú
-                        if (parametersWithDirection.includes(cond.parameter)) {
-                            const direction = cond.direction === 'asc' ? 'vzostupne' : 'zostupne';
-                            changes.push(`${index + 1}. ${param} (${direction})`);
-                        } else {
-                            changes.push(`${index + 1}. ${param}`);
-                        }
-                    });
-                }
-            }
-
-            await setDoc(settingsDocRef, dataToSave, { merge: true });
-            
-            // Uložíme notifikáciu do Firestore
-            if (changes.length > 0) {
+            // Ak došlo k zmene, vytvoríme detailnú notifikáciu s pôvodným a novým poradím
+            if (isChanged) {
+                const changes = [];
+                changes.push('Zmena nastavení poradia:');
+                changes.push('');
+                
+                // Pôvodné poradie
+                const originalList = generateConditionsList(originalSortingConditions, 'Pôvodné poradie:');
+                changes.push(...originalList);
+                changes.push('');
+                
+                // Nové poradie
+                const newList = generateConditionsList(validConditions, 'Nové poradie:');
+                changes.push(...newList);
+                
                 await createTableSettingsChangeNotification('table_settings_updated', changes);
             }
+            
+            await setDoc(settingsDocRef, dataToSave, { merge: true });
             
             // Aktualizujeme pôvodné nastavenia
             setOriginalSortingConditions(validConditions);
