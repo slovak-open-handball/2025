@@ -52,11 +52,11 @@ const AddMatchesApp = ({ userProfileData }) => {
         { className: 'flex-grow flex justify-center items-start w-full' },
         React.createElement(
             'div',
-            { className: 'w-full bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01] mx-4' },
+            { className: 'w-full bg-white rounded-xl shadow-xl p-8 mx-4' },
             React.createElement(
                 'div',
-                { className: 'flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl bg-gradient-to-r from-blue-500 to-indigo-600' },
-                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center text-white' }, 'Zápasy')
+                { className: 'flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl' },
+                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center text-gray-800' }, 'Zápasy')
             )
         )
     );
