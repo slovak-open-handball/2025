@@ -53,7 +53,7 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         'losses'
     ];
 
-    // Pomocná funkcia na formátovanie jednej podmienky
+    // Pomocná funkcia na formátovanie jednej podmienky pre zobrazenie
     const formatCondition = (cond, index) => {
         if (!cond || !cond.parameter) return null;
         
@@ -67,21 +67,39 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         }
     };
 
-    // Pomocná funkcia na generovanie zoznamu podmienok pre notifikáciu
-    const generateConditionsList = (conditions, title) => {
-        const list = [];
-        if (title) list.push(title);
+    // Pomocná funkcia na formátovanie hodnoty pre porovnanie zmien
+    const formatConditionValue = (cond) => {
+        if (!cond || !cond.parameter) return 'Žiadne';
         
-        if (!conditions || conditions.length === 0) {
-            list.push('Žiadne vlastné podmienky (zoradenie iba podľa bodov)');
+        const param = availableParameters.find(p => p.value === cond.parameter)?.label || cond.parameter;
+        
+        if (parametersWithDirection.includes(cond.parameter)) {
+            const direction = cond.direction === 'asc' ? 'vzostupne' : 'zostupne';
+            return `${param} (${direction})`;
         } else {
-            conditions.forEach((cond, index) => {
-                const formatted = formatCondition(cond, index);
-                if (formatted) list.push(formatted);
-            });
+            return param;
+        }
+    };
+
+    // Funkcia na generovanie detailných zmien pre každú pozíciu
+    const generateDetailedChanges = (oldConditions, newConditions) => {
+        const changes = [];
+        changes.push('Zmena nastavení poradia:');
+        changes.push('');
+        
+        // Nájdeme maximálny počet podmienok z oboch polí
+        const maxLength = Math.max(oldConditions.length, newConditions.length);
+        
+        for (let i = 0; i < maxLength; i++) {
+            const oldValue = i < oldConditions.length ? formatConditionValue(oldConditions[i]) : 'Žiadne';
+            const newValue = i < newConditions.length ? formatConditionValue(newConditions[i]) : 'Žiadne';
+            
+            if (oldValue !== newValue) {
+                changes.push(`${i + 1}. kritérium: Zmena z '${oldValue}' na '${newValue}'`);
+            }
         }
         
-        return list;
+        return changes;
     };
 
     // Načítanie nastavení poradia z Firestore
@@ -193,21 +211,9 @@ export function TableSettings({ db, userProfileData, showNotification }) {
             // Zistíme, či došlo k zmene
             const isChanged = JSON.stringify(validConditions) !== JSON.stringify(originalSortingConditions);
             
-            // Ak došlo k zmene, vytvoríme detailnú notifikáciu s pôvodným a novým poradím
+            // Ak došlo k zmene, vytvoríme detailnú notifikáciu s jednotlivými zmenami na pozíciách
             if (isChanged) {
-                const changes = [];
-                changes.push('Zmena nastavení poradia:');
-                changes.push('');
-                
-                // Pôvodné poradie
-                const originalList = generateConditionsList(originalSortingConditions, 'Pôvodné poradie:');
-                changes.push(...originalList);
-                changes.push('');
-                
-                // Nové poradie
-                const newList = generateConditionsList(validConditions, 'Nové poradie:');
-                changes.push(...newList);
-                
+                const changes = generateDetailedChanges(originalSortingConditions, validConditions);
                 await createTableSettingsChangeNotification('table_settings_updated', changes);
             }
             
