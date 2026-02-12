@@ -1,3 +1,4 @@
+// logged-in-tournament-settings-category-settings.js
 import { doc, onSnapshot, setDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Funkcia na vytvorenie notifikácie o zmene nastavení kategórie
