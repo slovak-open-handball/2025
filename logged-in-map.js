@@ -2307,13 +2307,19 @@ const AddGroupsApp = ({ userProfileData }) => {
                   }, 
                     isPlaceAssigned 
                       ? React.createElement(React.Fragment, null,
+                          React.createElement('i', { 
+                            className: 'fa-solid fa-trash-alt mr-2',
+                            style: { color: 'inherit' }
+                          }),
                           'Odstrániť miesto'
                         )
                       : React.createElement(React.Fragment, null,
-                          React.createElement('i', { className: 'fa-solid fa-trash-alt mr-2' }),
+                          React.createElement('i', { 
+                            className: 'fa-solid fa-trash-alt mr-2' 
+                          }),
                           'Odstrániť miesto'
                         )
-                    ),
+                  ),
                 )
               ),
             ),
