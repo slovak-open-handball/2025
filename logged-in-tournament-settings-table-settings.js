@@ -3,6 +3,7 @@
 import { doc, updateDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export function TableSettings({ db, userProfileData, showNotification, sendAdminNotification }) {
+  // Stav pre nastavenia stĺpcov tabuľky
   const [tableSettings, setTableSettings] = React.useState({
     showLevel: true,
     showCategory: true,
@@ -19,12 +20,27 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
     showPaymentMethod: true
   });
   
+  // Stav pre podmienky poradia
+  const [sortingConditions, setSortingConditions] = React.useState([]);
+  
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSaving, setIsSaving] = React.useState(false);
   const [hasChanges, setHasChanges] = React.useState(false);
   const [originalSettings, setOriginalSettings] = React.useState(null);
+  const [originalSortingConditions, setOriginalSortingConditions] = React.useState([]);
 
-  // Načítanie nastavení tabuľky z Firestore
+  // Dostupné parametre pre selectbox
+  const availableParameters = [
+    { value: 'headToHead', label: 'Vzájomný zápas' },
+    { value: 'scoreDifference', label: '+/-' },
+    { value: 'goalsScored', label: 'Počet strelených gólov' },
+    { value: 'goalsConceded', label: 'Počet inkasovaných gólov' },
+    { value: 'draw', label: 'Losovanie' },
+    { value: 'wins', label: 'Počet výhier' },
+    { value: 'losses', label: 'Počet prehier' }
+  ];
+
+  // Načítanie nastavení tabuľky a poradia z Firestore
   React.useEffect(() => {
     const loadTableSettings = async () => {
       if (!db) return;
@@ -37,7 +53,9 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
         if (settingsDoc.exists()) {
           const data = settingsDoc.data();
           setTableSettings(data);
+          setSortingConditions(data.sortingConditions || []);
           setOriginalSettings(data);
+          setOriginalSortingConditions(data.sortingConditions || []);
         } else {
           // Vytvoríme predvolené nastavenia, ak neexistujú
           const defaultSettings = {
@@ -53,10 +71,13 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
             showNote: true,
             showRegisteredAt: false,
             showPaymentStatus: true,
-            showPaymentMethod: true
+            showPaymentMethod: true,
+            sortingConditions: []
           };
           setTableSettings(defaultSettings);
+          setSortingConditions([]);
           setOriginalSettings(defaultSettings);
+          setOriginalSortingConditions([]);
         }
       } catch (error) {
         showNotification(`Chyba pri načítaní nastavení tabuľky: ${error.message}`, 'error');
@@ -78,6 +99,34 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
     setHasChanges(true);
   };
 
+  // Handler pre zmenu podmienky poradia
+  const handleSortingConditionChange = (index, field, value) => {
+    setSortingConditions(prev => {
+      const updated = [...prev];
+      if (!updated[index]) {
+        updated[index] = { parameter: 'headToHead', direction: 'asc' };
+      }
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+    setHasChanges(true);
+  };
+
+  // Handler pre pridanie novej podmienky
+  const handleAddCondition = () => {
+    setSortingConditions(prev => [
+      ...prev,
+      { parameter: 'headToHead', direction: 'asc' }
+    ]);
+    setHasChanges(true);
+  };
+
+  // Handler pre odstránenie podmienky
+  const handleRemoveCondition = (index) => {
+    setSortingConditions(prev => prev.filter((_, i) => i !== index));
+    setHasChanges(true);
+  };
+
   // Handler pre uloženie nastavení
   const handleSave = async () => {
     if (!db) return;
@@ -86,20 +135,43 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
       setIsSaving(true);
       const settingsDocRef = doc(db, 'settings', 'table');
       
+      // Pripravíme dáta na uloženie
+      const dataToSave = {
+        ...tableSettings,
+        sortingConditions: sortingConditions
+      };
+
       // Zistíme, čo sa zmenilo pre notifikáciu
       const changes = [];
+      
+      // Zmeny v stĺpcoch
       Object.keys(tableSettings).forEach(key => {
-        if (originalSettings && tableSettings[key] !== originalSettings[key]) {
+        if (key !== 'sortingConditions' && originalSettings && tableSettings[key] !== originalSettings[key]) {
           const fieldName = getFieldLabel(key);
           const newState = tableSettings[key] ? 'zobrazený' : 'skrytý';
           changes.push(`Stĺpec "${fieldName}" bude ${newState}`);
         }
       });
 
-      await setDoc(settingsDocRef, tableSettings, { merge: true });
+      // Zmeny v podmienkach poradia
+      if (JSON.stringify(sortingConditions) !== JSON.stringify(originalSortingConditions)) {
+        if (sortingConditions.length === 0) {
+          changes.push('Poradie bolo nastavené na predvolené (podľa dátumu registrácie)');
+        } else {
+          const conditionsText = sortingConditions.map((cond, index) => {
+            const param = availableParameters.find(p => p.value === cond.parameter)?.label || cond.parameter;
+            const direction = cond.direction === 'asc' ? 'vzostupne' : 'zostupne';
+            return `${index + 1}. ${param} (${direction})`;
+          }).join('; ');
+          changes.push(`Poradie účastníkov: ${conditionsText}`);
+        }
+      }
+
+      await setDoc(settingsDocRef, dataToSave, { merge: true });
       
       // Aktualizujeme pôvodné nastavenia
-      setOriginalSettings(tableSettings);
+      setOriginalSettings(dataToSave);
+      setOriginalSortingConditions(sortingConditions);
       setHasChanges(false);
       
       showNotification('Nastavenia tabuľky boli úspešne uložené.', 'success');
@@ -139,6 +211,7 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
     };
     
     setTableSettings(defaultSettings);
+    setSortingConditions([]);
     setHasChanges(true);
   };
 
@@ -162,6 +235,15 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
     return labels[field] || field;
   };
 
+  // Získanie dostupných parametrov pre selectbox (odstránime už vybraté)
+  const getAvailableParameters = (currentIndex) => {
+    const selectedValues = sortingConditions
+      .filter((_, index) => index !== currentIndex)
+      .map(cond => cond.parameter);
+    
+    return availableParameters.filter(param => !selectedValues.includes(param.value));
+  };
+
   if (isLoading) {
     return React.createElement(
       'div',
@@ -182,11 +264,98 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
         'Nastavenia tabuľky účastníkov'
       ),
       React.createElement('p', { className: 'text-gray-600 mt-1 text-sm' },
-        'Vyberte, ktoré stĺpce sa majú zobrazovať v tabuľke účastníkov turnaja.'
+        'Vyberte, ktoré stĺpce sa majú zobrazovať v tabuľke účastníkov turnaja a nastavte poradie.'
       )
     ),
     
-    // Grid s checkboxmi
+    // Sekcia pre nastavenie poradia
+    React.createElement(
+      'div',
+      { className: 'bg-white border border-gray-200 rounded-lg p-6 mb-6' },
+      React.createElement('h3', { className: 'text-lg font-medium text-gray-800 mb-4' },
+        'Nastavenie poradia účastníkov'
+      ),
+      React.createElement('p', { className: 'text-sm text-gray-600 mb-4' },
+        'Nastavte kritériá pre určenie poradia účastníkov v tabuľke. Poradie kritérií určuje prioritu.'
+      ),
+      
+      // Dynamické riadky podmienok
+      React.createElement(
+        'div',
+        { className: 'space-y-3 mb-4' },
+        sortingConditions.map((condition, index) => 
+          React.createElement(
+            'div',
+            { 
+              key: index,
+              className: 'flex items-center space-x-4 bg-gray-50 p-3 rounded-lg'
+            },
+            React.createElement(
+              'span',
+              { className: 'text-gray-500 font-medium w-8' },
+              `${index + 1}.`
+            ),
+            React.createElement(
+              'select',
+              {
+                value: condition.parameter || 'headToHead',
+                onChange: (e) => handleSortingConditionChange(index, 'parameter', e.target.value),
+                className: 'flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'
+              },
+              getAvailableParameters(index).map(param => 
+                React.createElement('option', { key: param.value, value: param.value }, param.label)
+              )
+            ),
+            React.createElement(
+              'select',
+              {
+                value: condition.direction || 'asc',
+                onChange: (e) => handleSortingConditionChange(index, 'direction', e.target.value),
+                className: 'px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 w-32'
+              },
+              React.createElement('option', { value: 'asc' }, 'Vzostupne'),
+              React.createElement('option', { value: 'desc' }, 'Zostupne')
+            ),
+            React.createElement(
+              'button',
+              {
+                type: 'button',
+                onClick: () => handleRemoveCondition(index),
+                className: 'p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors duration-200'
+              },
+              React.createElement('svg', { className: 'h-5 w-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
+              )
+            )
+          )
+        )
+      ),
+      
+      // Tlačidlo pre pridanie novej podmienky
+      sortingConditions.length < availableParameters.length &&
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          onClick: handleAddCondition,
+          className: 'inline-flex items-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500'
+        },
+        React.createElement('svg', { className: 'h-5 w-5 mr-2', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+          React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M12 4v16m8-8H4' })
+        ),
+        'Pridať podmienku'
+      ),
+      
+      // Informácia o predvolenom poradí
+      sortingConditions.length === 0 &&
+      React.createElement(
+        'div',
+        { className: 'text-sm text-gray-500 italic mt-2' },
+        'Nie sú nastavené žiadne vlastné podmienky poradia. Účastníci budú zoradení podľa dátumu registrácie (od najnovších).'
+      )
+    ),
+    
+    // Grid s checkboxmi (pôvodné nastavenia stĺpcov)
     React.createElement(
       'div',
       { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' },
@@ -412,7 +581,7 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
         ),
         React.createElement('div', { className: 'ml-3 flex-1' },
           React.createElement('p', { className: 'text-sm text-blue-700' },
-            'Tieto nastavenia ovplyvňujú zobrazenie tabuľky účastníkov v administračnom rozhraní. Stĺpce, ktoré nie sú zaškrtnuté, budú skryté.'
+            'Tieto nastavenia ovplyvňujú zobrazenie tabuľky účastníkov v administračnom rozhraní. Stĺpce, ktoré nie sú zaškrtnuté, budú skryté. Poradie účastníkov sa riadi nastavenými kritériami.'
           )
         )
       )
