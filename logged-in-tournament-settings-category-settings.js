@@ -344,8 +344,8 @@ export function CategorySettings({
     // RESET VŠETKÝCH NEULOŽENÝCH ZMIEN
     const resetAllChanges = React.useCallback(() => {
         console.log("resetAllChanges - spúšťam reset kategórií");
-        
-        // Použijeme originalCategoriesRef pre reset
+    
+        // Použijeme ORIGINAL VALUES z ref, NIE aktuálne categories
         const initialMaxTeams = {};
         const initialPeriods = {};
         const initialPeriodDuration = {};
@@ -354,15 +354,16 @@ export function CategorySettings({
         const initialDrawColor = {};
         const initialTransportColor = {};
         
-        categories.forEach(cat => {
-            const original = originalCategoriesRef.current[cat.id] || cat;
-            initialMaxTeams[cat.id] = original.maxTeams;
-            initialPeriods[cat.id] = original.periods;
-            initialPeriodDuration[cat.id] = original.periodDuration;
-            initialBreakDuration[cat.id] = original.breakDuration;
-            initialMatchBreak[cat.id] = original.matchBreak;
-            initialDrawColor[cat.id] = original.drawColor;
-            initialTransportColor[cat.id] = original.transportColor;
+        // Prejdeme všetky ID v originalCategoriesRef
+        Object.keys(originalCategoriesRef.current).forEach(catId => {
+            const original = originalCategoriesRef.current[catId];
+            initialMaxTeams[catId] = original.maxTeams;
+            initialPeriods[catId] = original.periods;
+            initialPeriodDuration[catId] = original.periodDuration;
+            initialBreakDuration[catId] = original.breakDuration;
+            initialMatchBreak[catId] = original.matchBreak;
+            initialDrawColor[catId] = original.drawColor;
+            initialTransportColor[catId] = original.transportColor;
         });
         
         setEditedMaxTeams(initialMaxTeams);
@@ -374,7 +375,7 @@ export function CategorySettings({
         setEditedTransportColor(initialTransportColor);
         
         console.log("resetAllChanges - reset dokončený");
-    }, [categories]);
+    }, []);
 
     // Registrujeme reset funkciu u nadradeného komponentu - IBA RAZ
     React.useEffect(() => {
@@ -560,18 +561,18 @@ export function CategorySettings({
                 
                 // Aktualizujeme originalCategoriesRef s novými hodnotami
                 const updatedOriginalValues = { ...originalCategoriesRef.current };
-                categories.forEach(cat => {
-                    updatedOriginalValues[cat.id] = {
-                        maxTeams: editedMaxTeams[cat.id] ?? cat.maxTeams,
-                        periods: editedPeriods[cat.id] ?? cat.periods,
-                        periodDuration: editedPeriodDuration[cat.id] ?? cat.periodDuration,
-                        breakDuration: editedBreakDuration[cat.id] ?? cat.breakDuration,
-                        matchBreak: editedMatchBreak[cat.id] ?? cat.matchBreak,
-                        drawColor: editedDrawColor[cat.id] ?? cat.drawColor,
-                        transportColor: editedTransportColor[cat.id] ?? cat.transportColor
-                    };
-                });
-                originalCategoriesRef.current = updatedOriginalValues;
+                    categories.forEach(cat => {
+                        updatedOriginalValues[cat.id] = {
+                            maxTeams: editedMaxTeams[cat.id] ?? cat.maxTeams,
+                            periods: editedPeriods[cat.id] ?? cat.periods,
+                            periodDuration: editedPeriodDuration[cat.id] ?? cat.periodDuration,
+                            breakDuration: editedBreakDuration[cat.id] ?? cat.breakDuration,
+                            matchBreak: editedMatchBreak[cat.id] ?? cat.matchBreak,
+                            drawColor: editedDrawColor[cat.id] ?? cat.drawColor,
+                            transportColor: editedTransportColor[cat.id] ?? cat.transportColor
+                        };
+                    });
+                    originalCategoriesRef.current = updatedOriginalValues;
                 
                 const updatedPreviousValues = {};
                 categories.forEach(cat => {
