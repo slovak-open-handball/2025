@@ -1,6 +1,30 @@
 // logged-in-tournament-settings-category-settings.js
 
-import { doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, onSnapshot, setDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// Funkcia na vytvorenie notifikácie o zmene nastavení kategórie
+const createCategorySettingsChangeNotification = async (actionType, changesArray, categoryData) => {
+    if (!window.db || !changesArray?.length) return;
+    
+    try {
+        const currentUserEmail = window.globalUserProfileData?.email || null;
+        
+        await addDoc(collection(window.db, 'notifications'), {
+            userEmail: currentUserEmail || "",
+            performedBy: currentUserEmail || null,
+            changes: changesArray,
+            timestamp: Timestamp.now(),
+            actionType: actionType,
+            relatedCategoryId: categoryData.categoryId || null,
+            relatedCategoryName: categoryData.categoryName || null,
+            settingsType: 'category_settings'
+        });
+        
+        console.log("[NOTIFIKÁCIA – zmena nastavení kategórie]", changesArray);
+    } catch (err) {
+        console.error("[CHYBA pri ukladaní notifikácie nastavení kategórie]", err);
+    }
+};
 
 export function CategorySettings({ db, userProfileData, showNotification }) {
     const [categories, setCategories] = React.useState([]);
@@ -12,6 +36,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
     const [editedDrawColor, setEditedDrawColor] = React.useState({});
     const [editedTransportColor, setEditedTransportColor] = React.useState({});
     const [saving, setSaving] = React.useState(false);
+    const [previousValues, setPreviousValues] = React.useState({});
 
     // Načítavanie kategórií
     React.useEffect(() => {
@@ -44,6 +69,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                 const initialMatchBreak = {};
                 const initialDrawColor = {};
                 const initialTransportColor = {};
+                const initialPreviousValues = {};
                 
                 list.forEach(cat => {
                     initialMaxTeams[cat.id] = cat.maxTeams;
@@ -53,6 +79,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                     initialMatchBreak[cat.id] = cat.matchBreak;
                     initialDrawColor[cat.id] = cat.drawColor;
                     initialTransportColor[cat.id] = cat.transportColor;
+                    initialPreviousValues[cat.id] = { ...cat };
                 });
                 
                 setEditedMaxTeams(initialMaxTeams);
@@ -62,6 +89,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                 setEditedMatchBreak(initialMatchBreak);
                 setEditedDrawColor(initialDrawColor);
                 setEditedTransportColor(initialTransportColor);
+                setPreviousValues(initialPreviousValues);
             } else {
                 setCategories([]);
                 setEditedMaxTeams({});
@@ -71,6 +99,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                 setEditedMatchBreak({});
                 setEditedDrawColor({});
                 setEditedTransportColor({});
+                setPreviousValues({});
             }
         }, err => {
             showNotification(`Chyba pri načítaní kategórií: ${err.message}`, 'error');
@@ -145,6 +174,35 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
     }, [categories, editedMaxTeams, editedPeriods, editedPeriodDuration, 
         editedBreakDuration, editedMatchBreak, editedDrawColor, editedTransportColor]);
 
+    // Funkcia na generovanie zoznamu zmien pre notifikáciu
+    const generateChangesList = (category, oldValues, newValues) => {
+        const changes = [];
+        
+        if (newValues.maxTeams !== oldValues.maxTeams) {
+            changes.push(`Max. počet tímov: ${oldValues.maxTeams} → ${newValues.maxTeams}`);
+        }
+        if (newValues.periods !== oldValues.periods) {
+            changes.push(`Počet periód: ${oldValues.periods} → ${newValues.periods}`);
+        }
+        if (newValues.periodDuration !== oldValues.periodDuration) {
+            changes.push(`Trvanie periódy: ${oldValues.periodDuration} min → ${newValues.periodDuration} min`);
+        }
+        if (newValues.breakDuration !== oldValues.breakDuration) {
+            changes.push(`Prestávka medzi periódami: ${oldValues.breakDuration} min → ${newValues.breakDuration} min`);
+        }
+        if (newValues.matchBreak !== oldValues.matchBreak) {
+            changes.push(`Prestávka medzi zápasmi: ${oldValues.matchBreak} min → ${newValues.matchBreak} min`);
+        }
+        if (newValues.drawColor !== oldValues.drawColor) {
+            changes.push(`Farba pre rozlosovanie: ${oldValues.drawColor} → ${newValues.drawColor}`);
+        }
+        if (newValues.transportColor !== oldValues.transportColor) {
+            changes.push(`Farba pre dopravu: ${oldValues.transportColor} → ${newValues.transportColor}`);
+        }
+        
+        return changes;
+    };
+
     const handleSaveAll = async () => {
         if (!hasChanges || saving) return;
 
@@ -158,6 +216,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
         try {
             const catRef = doc(db, 'settings', 'categories');
             const updates = {};
+            const categoriesWithChanges = [];
 
             categories.forEach(cat => {
                 const updatedData = {};
@@ -197,15 +256,102 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                         name: cat.name,
                         ...updatedData
                     };
+                    
+                    // Uložíme informácie o zmenách pre notifikáciu
+                    const oldValues = previousValues[cat.id] || cat;
+                    const newValues = {
+                        maxTeams: editedMaxTeams[cat.id] ?? cat.maxTeams,
+                        periods: editedPeriods[cat.id] ?? cat.periods,
+                        periodDuration: editedPeriodDuration[cat.id] ?? cat.periodDuration,
+                        breakDuration: editedBreakDuration[cat.id] ?? cat.breakDuration,
+                        matchBreak: editedMatchBreak[cat.id] ?? cat.matchBreak,
+                        drawColor: editedDrawColor[cat.id] ?? cat.drawColor,
+                        transportColor: editedTransportColor[cat.id] ?? cat.transportColor
+                    };
+                    
+                    categoriesWithChanges.push({
+                        categoryId: cat.id,
+                        categoryName: cat.name,
+                        oldValues,
+                        newValues,
+                        changes: generateChangesList(cat, oldValues, newValues)
+                    });
                 }
             });
 
             if (Object.keys(updates).length > 0) {
                 await setDoc(catRef, updates, { merge: true });
                 showNotification("Všetky zmeny boli uložené.", 'success');
+                
+                // Vytvoríme notifikácie pre každú kategóriu so zmenami
+                for (const catChange of categoriesWithChanges) {
+                    if (catChange.changes.length > 0) {
+                        // Hlavná notifikácia o úprave nastavení kategórie
+                        const mainChanges = [
+                            `Úprava nastavení kategórie: '${catChange.categoryName}'`,
+                            ...catChange.changes
+                        ];
+                        
+                        await createCategorySettingsChangeNotification(
+                            'category_settings_updated',
+                            mainChanges,
+                            {
+                                categoryId: catChange.categoryId,
+                                categoryName: catChange.categoryName,
+                                settings: catChange.newValues
+                            }
+                        );
+                        
+                        // Ak sa zmenila farba pre rozlosovanie, vytvoríme samostatnú notifikáciu
+                        if (catChange.oldValues.drawColor !== catChange.newValues.drawColor) {
+                            await createCategorySettingsChangeNotification(
+                                'category_draw_color_updated',
+                                [`Zmena farby pre rozlosovanie v kategórii '${catChange.categoryName}': ${catChange.oldValues.drawColor} → ${catChange.newValues.drawColor}`],
+                                {
+                                    categoryId: catChange.categoryId,
+                                    categoryName: catChange.categoryName,
+                                    oldColor: catChange.oldValues.drawColor,
+                                    newColor: catChange.newValues.drawColor,
+                                    colorType: 'draw'
+                                }
+                            );
+                        }
+                        
+                        // Ak sa zmenila farba pre dopravu, vytvoríme samostatnú notifikáciu
+                        if (catChange.oldValues.transportColor !== catChange.newValues.transportColor) {
+                            await createCategorySettingsChangeNotification(
+                                'category_transport_color_updated',
+                                [`Zmena farby pre dopravu v kategórii '${catChange.categoryName}': ${catChange.oldValues.transportColor} → ${catChange.newValues.transportColor}`],
+                                {
+                                    categoryId: catChange.categoryId,
+                                    categoryName: catChange.categoryName,
+                                    oldColor: catChange.oldValues.transportColor,
+                                    newColor: catChange.newValues.transportColor,
+                                    colorType: 'transport'
+                                }
+                            );
+                        }
+                    }
+                }
+                
+                // Aktualizácia pôvodných hodnôt po uložení
+                const updatedPreviousValues = {};
+                categories.forEach(cat => {
+                    updatedPreviousValues[cat.id] = {
+                        ...cat,
+                        maxTeams: editedMaxTeams[cat.id] ?? cat.maxTeams,
+                        periods: editedPeriods[cat.id] ?? cat.periods,
+                        periodDuration: editedPeriodDuration[cat.id] ?? cat.periodDuration,
+                        breakDuration: editedBreakDuration[cat.id] ?? cat.breakDuration,
+                        matchBreak: editedMatchBreak[cat.id] ?? cat.matchBreak,
+                        drawColor: editedDrawColor[cat.id] ?? cat.drawColor,
+                        transportColor: editedTransportColor[cat.id] ?? cat.transportColor
+                    };
+                });
+                setPreviousValues(updatedPreviousValues);
             }
 
-            // Aktualizácia pôvodných hodnôt po uložení
+            // Aktualizácia kategórií po uložení
             setCategories(prev => prev.map(cat => ({
                 ...cat,
                 maxTeams: editedMaxTeams[cat.id] ?? cat.maxTeams,
