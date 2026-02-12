@@ -44,6 +44,9 @@ export function CategorySettings({
     const [previousValues, setPreviousValues] = React.useState({});
     const [isInitialLoad, setIsInitialLoad] = React.useState(true);
 
+    // REFERENCIA pre sledovanie, či ide o prepínanie v rámci CategorySettings
+    const isWithinCategorySettings = React.useRef(true);
+
     // Pomocná funkcia na prevod názvu na URL-friendly formát
     const slugify = (text) => {
         if (!text) return '';
@@ -314,7 +317,7 @@ export function CategorySettings({
     }, [categories, editedMaxTeams, editedPeriods, editedPeriodDuration, 
         editedBreakDuration, editedMatchBreak, editedDrawColor, editedTransportColor]);
 
-    // OCHRANA PRED STRATOU DÁT - beforeunload a hashchange (PRESUNUTÉ POD hasChanges)
+    // OCHRANA PRED STRATOU DÁT - beforeunload a hashchange
     React.useEffect(() => {
         const hasUnsavedChanges = hasChanges && !saving;
         
@@ -327,7 +330,12 @@ export function CategorySettings({
         };
 
         const handleHashChange = (e) => {
-            if (hasUnsavedChanges) {
+            // ZISTÍME, ČI IDE O PREPINANIE V RÁMCI CATEGORY SETTINGS
+            const newHash = window.location.hash.slice(1);
+            const isStillCategorySection = newHash.startsWith('categories');
+            
+            // ZOBRAZÍME UPOZORNENIE LEN AK OPÚŠŤAME CATEGORY SETTINGS SEKCIU
+            if (hasUnsavedChanges && !isStillCategorySection) {
                 const confirmLeave = window.confirm('Máte neuložené zmeny. Naozaj chcete opustiť túto sekciu?');
                 if (!confirmLeave) {
                     // Zrušíme zmenu URL - vrátime sa na pôvodný hash
@@ -348,29 +356,17 @@ export function CategorySettings({
         };
     }, [hasChanges, saving]);
 
-    // Samostatný useEffect na spracovanie zmeny URL (PRESUNUTÉ POD hasChanges)
+    // Samostatný useEffect na spracovanie zmeny URL v RÁMCI CategorySettings
     React.useEffect(() => {
         if (!isInitialLoad && categories.length > 0 && initialCategoryId) {
             const categoryIdFromUrl = getCategoryIdFromUrlName(initialCategoryId, categories);
             if (categoryIdFromUrl && categoryIdFromUrl !== selectedCategoryId) {
-                // Pri zmene URL cez tlačidlo späť/vpred kontrolujeme neuložené zmeny
-                if (hasChanges && !saving) {
-                    const confirmChange = window.confirm('Máte neuložené zmeny. Naozaj chcete prepnúť na inú kategóriu?');
-                    if (confirmChange) {
-                        setSelectedCategoryId(categoryIdFromUrl);
-                    } else {
-                        // Vrátime URL späť na pôvodnú kategóriu
-                        const currentCategory = categories.find(c => c.id === selectedCategoryId);
-                        if (currentCategory && onSelectCategory) {
-                            onSelectCategory(slugify(currentCategory.name), currentCategory.id);
-                        }
-                    }
-                } else {
-                    setSelectedCategoryId(categoryIdFromUrl);
-                }
+                // Pri zmene URL v RÁMCI CategorySettings (prepínanie kategórií)
+                // NIKDY NEZOBRAZUJEME UPOZORNENIE
+                setSelectedCategoryId(categoryIdFromUrl);
             }
         }
-    }, [initialCategoryId, categories, selectedCategoryId, isInitialLoad, hasChanges, saving, onSelectCategory]);
+    }, [initialCategoryId, categories, selectedCategoryId, isInitialLoad]);
 
     // Funkcia na generovanie zoznamu zmien pre notifikáciu
     const generateChangesList = (category, oldValues, newValues) => {
