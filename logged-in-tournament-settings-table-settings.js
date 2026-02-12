@@ -138,28 +138,31 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
       };
 
       // Zistíme, čo sa zmenilo pre notifikáciu
-      const changes = [];
+      let changesText = '';
       
-      // Zmeny v podmienkach poradia - KAŽDÁ PODMIENKA NA SAMOSTATNÝ PRVOK V POLI
+      // Zmeny v podmienkach poradia - VŠETKO SPOJENÉ DO JEDNÉHO TEXTU
       if (JSON.stringify(validConditions) !== JSON.stringify(originalSortingConditions)) {
         if (validConditions.length === 0) {
-          changes.push('Poradie bolo nastavené na predvolené (podľa bodov)');
+          changesText = 'Poradie bolo nastavené na predvolené (podľa bodov)';
         } else {
-          // Úvodný text ako samostatný prvok poľa
-          changes.push('Zmena nastavení poradia:');
+          // Začneme úvodným textom
+          changesText = 'Zmena nastavení poradia:\n';
           
-          // Každú podmienku pridáme ako samostatný prvok poľa
+          // Každú podmienku pridáme ako nový riadok
           validConditions.forEach((cond, index) => {
             const param = availableParameters.find(p => p.value === cond.parameter)?.label || cond.parameter;
             
             // Pridáme smer iba pre parametre, ktoré ho podporujú
             if (parametersWithDirection.includes(cond.parameter)) {
               const direction = cond.direction === 'asc' ? 'vzostupne' : 'zostupne';
-              changes.push(`${index + 1}. ${param} (${direction})`);
+              changesText += `${index + 1}. ${param} (${direction})\n`;
             } else {
-              changes.push(`${index + 1}. ${param}`);
+              changesText += `${index + 1}. ${param}\n`;
             }
           });
+          
+          // Odstránime posledný newline
+          changesText = changesText.trimEnd();
         }
       }
 
@@ -172,12 +175,12 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
       
       showNotification('Nastavenia poradia boli úspešne uložené.', 'success');
       
-      // Notifikácia pre adminov - POSIELAME CELE POLE changes
-      if (changes.length > 0) {
+      // Notifikácia pre adminov - POSIELAME TEXT, NIE POLE
+      if (changesText) {
         await sendAdminNotification({
           type: 'updateSettings',
           data: {
-            changesMade: changes  // Posielame celé pole, nie spojený text
+            changesMade: changesText  // Posielame text, nie pole
           }
         });
       }
