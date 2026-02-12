@@ -46,7 +46,7 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
-const AddGroupsApp = ({ userProfileData }) => {
+const TemplateApp = ({ userProfileData }) => {
     return React.createElement(
         'div',
         { className: 'flex-grow flex justify-center items-center' },
@@ -121,7 +121,7 @@ const handleDataUpdateAndRender = (event) => {
 
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
-            root.render(React.createElement(AddGroupsApp, { userProfileData }));
+            root.render(React.createElement(TemplateApp, { userProfileData }));
             console.log("logged-in-template.js: Aplikácia bola vykreslená po udalosti 'globalDataUpdated'.");
         } else {
             console.error("logged-in-template.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
