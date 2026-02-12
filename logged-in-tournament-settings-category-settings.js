@@ -515,7 +515,7 @@ export function CategorySettings({
                 for (const catChange of categoriesWithChanges) {
                     if (catChange.changes.length > 0) {
                         const mainChanges = [
-                            `Úprava nastavení kategórie: '${catChange.categoryName}'`,
+                            `Úprava nastavení kategórie: '''${catChange.categoryName}'`,
                             ...catChange.changes
                         ];
                         
