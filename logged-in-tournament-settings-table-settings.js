@@ -459,7 +459,11 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                         type: 'button',
                         onClick: handleSave,
                         disabled: !hasChanges || isSaving || !areConditionsValid(),
-                        className: `px-6 py-2 bg-blue-600 text-white rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${hasChanges && !isSaving && areConditionsValid() ? 'hover:bg-blue-700 cursor-pointer' : ''}`
+                        className: `px-6 py-2 rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                            !hasChanges || isSaving || !areConditionsValid()
+                                ? 'bg-white text-blue-600 border-2 border-blue-600 opacity-50 cursor-not-allowed'
+                                : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                        }`
                     },
                     isSaving ? 'Ukladám...' : 'Uložiť nastavenia'
                 )
