@@ -164,140 +164,146 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
     'div',
     { className: 'space-y-6' },
     
-    // Hlavička
+    // Hlavný kontajner s orámovaním
     React.createElement(
       'div',
-      { className: 'border-b border-gray-200 pb-4' },
-      React.createElement('h2', { className: 'text-2xl font-semibold text-gray-800' },
-        'Nastavenia tabuľky'
-      ),
-      React.createElement('p', { className: 'text-gray-600 mt-1 text-sm' },
-        'Nastavte kritériá pre určenie poradia tímov v tabuľke. Poradie kritérií určuje prioritu.'
-      )
-    ),
-    
-    // Sekcia pre nastavenie poradia
-    React.createElement(
-      'div',
-      { className: 'bg-white border border-gray-200 rounded-lg p-6' },
+      { className: 'border border-gray-200 rounded-lg p-6' },
       
-      // Dynamické riadky podmienok
+      // Hlavička
       React.createElement(
         'div',
-        { className: 'space-y-3 mb-4' },
-        sortingConditions.map((condition, index) => 
-          React.createElement(
-            'div',
-            { 
-              key: index,
-              className: 'flex items-center space-x-4 bg-gray-50 p-3 rounded-lg'
-            },
-            React.createElement(
-              'span',
-              { className: 'text-gray-500 font-medium w-8' },
-              `${index + 1}.`
-            ),
-            React.createElement(
-              'select',
-              {
-                value: condition.parameter || 'headToHead',
-                onChange: (e) => handleSortingConditionChange(index, 'parameter', e.target.value),
-                className: 'flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'
-              },
-              getAvailableParameters(index).map(param => 
-                React.createElement('option', { key: param.value, value: param.value }, param.label)
-              )
-            ),
-            React.createElement(
-              'select',
-              {
-                value: condition.direction || 'asc',
-                onChange: (e) => handleSortingConditionChange(index, 'direction', e.target.value),
-                className: 'px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 w-32'
-              },
-              React.createElement('option', { value: 'asc' }, 'Vzostupne'),
-              React.createElement('option', { value: 'desc' }, 'Zostupne')
-            ),
-            React.createElement(
-              'button',
-              {
-                type: 'button',
-                onClick: () => handleRemoveCondition(index),
-                className: 'p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors duration-200'
-              },
-              React.createElement('svg', { className: 'h-5 w-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-                React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
-              )
-            )
-          )
-        )
-      ),
-      
-      // Tlačidlo pre pridanie novej podmienky
-      sortingConditions.length < availableParameters.length &&
-      React.createElement(
-        'button',
-        {
-          type: 'button',
-          onClick: handleAddCondition,
-          className: 'inline-flex items-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500'
-        },
-        React.createElement('svg', { className: 'h-5 w-5 mr-2', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-          React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M12 4v16m8-8H4' })
+        { className: 'mb-6' },
+        React.createElement('h2', { className: 'text-2xl font-semibold text-gray-800' },
+          'Nastavenia tabuľky'
         ),
-        'Pridať podmienku'
+        React.createElement('p', { className: 'text-gray-600 mt-1 text-sm' },
+          'Nastavte kritériá pre určenie poradia tímov v tabuľke. Poradie kritérií určuje prioritu.'
+        )
       ),
       
-      // Informácia o predvolenom poradí
-      sortingConditions.length === 0 &&
+      // Sekcia pre nastavenie poradia
       React.createElement(
         'div',
-        { className: 'text-sm text-gray-500 italic mt-2' },
-        'Nie sú nastavené žiadne vlastné podmienky poradia. Tímy budú zoradené iba podľa počtu bodov.'
-      ),
-      
-      // Informačný panel
-      React.createElement(
-        'div',
-        { className: 'bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6' },
-        React.createElement('div', { className: 'flex' },
-          React.createElement('div', { className: 'flex-shrink-0' },
-            React.createElement('svg', { className: 'h-5 w-5 text-blue-400', viewBox: '0 0 20 20', fill: 'currentColor' },
-              React.createElement('path', { fillRule: 'evenodd', d: 'M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z', clipRule: 'evenodd' })
+        { className: 'bg-white rounded-lg' },
+        
+        // Dynamické riadky podmienok
+        React.createElement(
+          'div',
+          { className: 'space-y-3 mb-4' },
+          sortingConditions.map((condition, index) => 
+            React.createElement(
+              'div',
+              { 
+                key: index,
+                className: 'flex items-center space-x-4 bg-gray-50 p-3 rounded-lg'
+              },
+              React.createElement(
+                'span',
+                { className: 'text-gray-500 font-medium w-8' },
+                `${index + 1}.`
+              ),
+              React.createElement(
+                'select',
+                {
+                  value: condition.parameter || 'headToHead',
+                  onChange: (e) => handleSortingConditionChange(index, 'parameter', e.target.value),
+                  className: 'flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'
+                },
+                getAvailableParameters(index).map(param => 
+                  React.createElement('option', { key: param.value, value: param.value }, param.label)
+                )
+              ),
+              React.createElement(
+                'select',
+                {
+                  value: condition.direction || 'asc',
+                  onChange: (e) => handleSortingConditionChange(index, 'direction', e.target.value),
+                  className: 'px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 w-32'
+                },
+                React.createElement('option', { value: 'asc' }, 'Vzostupne'),
+                React.createElement('option', { value: 'desc' }, 'Zostupne')
+              ),
+              React.createElement(
+                'button',
+                {
+                  type: 'button',
+                  onClick: () => handleRemoveCondition(index),
+                  className: 'p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors duration-200'
+                },
+                React.createElement('svg', { className: 'h-5 w-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                  React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
+                )
+              )
             )
+          )
+        ),
+        
+        // Tlačidlo pre pridanie novej podmienky
+        sortingConditions.length < availableParameters.length &&
+        React.createElement(
+          'button',
+          {
+            type: 'button',
+            onClick: handleAddCondition,
+            className: 'inline-flex items-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 mb-4'
+          },
+          React.createElement('svg', { className: 'h-5 w-5 mr-2', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+            React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M12 4v16m8-8H4' })
           ),
-          React.createElement('div', { className: 'ml-3 flex-1' },
-            React.createElement('p', { className: 'text-sm text-blue-700' },
-              'Poradie účastníkov sa riadi nastavenými kritériami. Prvé kritérium má najvyššiu prioritu.'
+          'Pridať podmienku'
+        ),
+        
+        // Informácia o predvolenom poradí
+        sortingConditions.length === 0 &&
+        React.createElement(
+          'div',
+          { className: 'text-sm text-gray-500 italic mb-4' },
+          'Nie sú nastavené žiadne vlastné podmienky poradia. Tímy budú zoradené iba podľa počtu bodov.'
+        ),
+        
+        // Informačný panel
+        React.createElement(
+          'div',
+          { className: 'bg-blue-50 border border-blue-200 rounded-lg p-4' },
+          React.createElement('div', { className: 'flex' },
+            React.createElement('div', { className: 'flex-shrink-0' },
+              React.createElement('svg', { className: 'h-5 w-5 text-blue-400', viewBox: '0 0 20 20', fill: 'currentColor' },
+                React.createElement('path', { fillRule: 'evenodd', d: 'M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z', clipRule: 'evenodd' })
+              )
+            ),
+            React.createElement('div', { className: 'ml-3 flex-1' },
+              React.createElement('p', { className: 'text-sm text-blue-700' },
+                'Poradie účastníkov sa riadi nastavenými kritériami. Prvé kritérium má najvyššiu prioritu.'
+              )
             )
           )
         )
-      )
-    ),
-    
-    // Akčné tlačidlá
-    React.createElement(
-      'div',
-      { className: 'flex justify-end space-x-4 pt-4 border-t border-gray-200' },
-      React.createElement(
-        'button',
-        {
-          type: 'button',
-          onClick: handleResetToDefault,
-          disabled: isSaving,
-          className: 'px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
-        },
-        'Obnoviť predvolené'
       ),
+      
+      // Akčné tlačidlá
       React.createElement(
-        'button',
-        {
-          type: 'button',
-          onClick: handleSave,
-          disabled: !hasChanges || isSaving,
-          className: `px-6 py-2 bg-blue-600 text-white rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${hasChanges && !isSaving ? 'hover:bg-blue-700' : ''}`
-        },
-        isSaving ? 'Ukladám...' : 'Uložiť nastavenia'
+        'div',
+        { className: 'flex justify-end space-x-4 mt-6' },
+        React.createElement(
+          'button',
+          {
+            type: 'button',
+            onClick: handleResetToDefault,
+            disabled: isSaving,
+            className: 'px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
+          },
+          'Obnoviť predvolené'
+        ),
+        React.createElement(
+          'button',
+          {
+            type: 'button',
+            onClick: handleSave,
+            disabled: !hasChanges || isSaving,
+            className: `px-6 py-2 bg-blue-600 text-white rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${hasChanges && !isSaving ? 'hover:bg-blue-700' : ''}`
+          },
+          isSaving ? 'Ukladám...' : 'Uložiť nastavenia'
+        )
       )
     )
   );
