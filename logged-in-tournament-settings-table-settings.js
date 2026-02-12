@@ -138,31 +138,28 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
       };
 
       // Zistíme, čo sa zmenilo pre notifikáciu
-      let changesText = '';
+      const changes = []; // TOTO JE POLE PRE DATABÁZU
       
-      // Zmeny v podmienkach poradia - VŠETKO SPOJENÉ DO JEDNÉHO TEXTU
+      // Zmeny v podmienkach poradia - KAŽDÁ PODMIENKA NA SAMOSTATNÝ PRVOK V POLI
       if (JSON.stringify(validConditions) !== JSON.stringify(originalSortingConditions)) {
         if (validConditions.length === 0) {
-          changesText = 'Poradie bolo nastavené na predvolené (podľa bodov)';
+          changes.push('Poradie bolo nastavené na predvolené (podľa bodov)');
         } else {
-          // Začneme úvodným textom
-          changesText = 'Zmena nastavení poradia:\n';
+          // Úvodný text ako samostatný prvok poľa
+          changes.push('Zmena nastavení poradia:');
           
-          // Každú podmienku pridáme ako nový riadok
+          // Každú podmienku pridáme ako samostatný prvok poľa
           validConditions.forEach((cond, index) => {
             const param = availableParameters.find(p => p.value === cond.parameter)?.label || cond.parameter;
             
             // Pridáme smer iba pre parametre, ktoré ho podporujú
             if (parametersWithDirection.includes(cond.parameter)) {
               const direction = cond.direction === 'asc' ? 'vzostupne' : 'zostupne';
-              changesText += `${index + 1}. ${param} (${direction})\n`;
+              changes.push(`${index + 1}. ${param} (${direction})`);
             } else {
-              changesText += `${index + 1}. ${param}\n`;
+              changes.push(`${index + 1}. ${param}`);
             }
           });
-          
-          // Odstránime posledný newline
-          changesText = changesText.trimEnd();
         }
       }
 
@@ -175,12 +172,16 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
       
       showNotification('Nastavenia poradia boli úspešne uložené.', 'success');
       
-      // Notifikácia pre adminov - POSIELAME TEXT, NIE POLE
-      if (changesText) {
+      // Notifikácia pre adminov - PREVEDIEME POLE NA TEXT KVÔLI sendAdminNotification
+      if (changes.length > 0) {
+        // Prevedieme pole na text s oddeľovačom newline
+        const changesText = changes.join('\n');
+        
         await sendAdminNotification({
           type: 'updateSettings',
           data: {
-            changesMade: changesText  // Posielame text, nie pole
+            changesMade: changesText,  // Posielame TEXT pre sendAdminNotification
+            changesArray: changes      // Voliteľne: posielame aj pole pre prípadné iné použitie
           }
         });
       }
