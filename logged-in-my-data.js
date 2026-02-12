@@ -1,20 +1,9 @@
-// Importy pre Firebase funkcie (Tieto sa nebudú používať na inicializáciu, ale na typy a funkcie)
 import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-
-
-// Import zoznamu predvolieb
 import { countryDialCodes } from "./countryDialCodes.js";
-
-// Import komponentu pre modálne okno, ktorý je teraz v samostatnom súbore
 import { ChangeProfileModal } from "./logged-in-my-data-change-profile-modal.js";
 import { ChangeBillingModal } from "./logged-in-my-data-change-billing-modal.js";
-
 const { useState, useEffect, useRef, useSyncExternalStore } = React;
-
-/**
- * Globálna funkcia pre zobrazenie notifikácií
- */
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
     if (!notificationElement) {
@@ -23,7 +12,6 @@ window.showGlobalNotification = (message, type = 'success') => {
         notificationElement.className = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] opacity-0 transition-opacity duration-300';
         document.body.appendChild(notificationElement);
     }
-
     const baseClasses = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-all duration-500 ease-in-out transform';
     let typeClasses = '';
     switch (type) {
@@ -39,38 +27,21 @@ window.showGlobalNotification = (message, type = 'success') => {
         default:
             typeClasses = 'bg-gray-700 text-white';
     }
-
     notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     notificationElement.textContent = message;
-
-    // Zobrazenie notifikácie
     setTimeout(() => {
         notificationElement.className = `${baseClasses} ${typeClasses} opacity-100 scale-100`;
     }, 10);
-
-    // Skrytie notifikácie po 5 sekundách
     setTimeout(() => {
         notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     }, 5000);
 };
-
-/**
- * Funkcia na formátovanie telefónneho čísla
- * Nájdeme predvoľbu a zvyšné číslo rozdelíme na trojčíselné skupiny
- */
 const formatPhoneNumber = (phoneNumber) => {
     if (!phoneNumber) return '-';
-
-    // Odstránime všetky medzery
     const cleanNumber = phoneNumber.replace(/\s/g, '');
-
-    // Zoznam predvolieb je zoradený zostupne podľa dĺžky, aby sa najprv našli dlhšie zhody (napr. +1234 pred +1)
     const sortedDialCodes = [...countryDialCodes].sort((a, b) => b.dialCode.length - a.dialCode.length);
-
     let dialCode = '';
     let restOfNumber = '';
-
-    // Nájdeme zodpovedajúcu predvoľbu
     for (const country of sortedDialCodes) {
         if (cleanNumber.startsWith(country.dialCode)) {
             dialCode = country.dialCode;
@@ -78,26 +49,19 @@ const formatPhoneNumber = (phoneNumber) => {
             break;
         }
     }
-
-    // Ak sa predvoľba nenašla, vrátime pôvodné číslo bez formátovania (ale s odstránenými medzerami)
     if (!dialCode) {
         return cleanNumber;
     }
-
-    // Rozdelíme zvyšok čísla na trojčíselné skupiny
     const parts = [];
     for (let i = 0; i < restOfNumber.length; i += 3) {
         parts.push(restOfNumber.substring(i, i + 3));
     }
-
-    // Skontrolujeme, či máme nejaké časti na zobrazenie
     if (parts.length > 0) {
         return `${dialCode} ${parts.join(' ')}`;
     } else {
         return dialCode;
     }
 };
-
 const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModal, canEdit, isPasswordChangeOnlyMode }) => {
     const getRoleColor = (role) => {
         switch (role) {
@@ -116,7 +80,6 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
         }
     };
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
-
     const getFullRoleName = (role) => {
         switch (role) {
             case 'admin':
@@ -135,24 +98,12 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                 return 'Používateľ';
         }
     };
-
-    // Dynamicky nastavíme názov karty podľa roly
     const profileCardTitle = userProfileData?.role === 'club' ? 'Kontaktná osoba' : 'Moje údaje';
-
-    // Dynamicky nastavíme popisky polí
     const nameLabel = userProfileData?.role === 'club' ? 'Meno a priezvisko kontaktnej osoby' : 'Meno a priezvisko';
     const emailLabel = userProfileData?.role === 'club' ? 'E-mailová adresa kontaktnej osoby' : 'E-mailová adresa';
     const phoneLabel = userProfileData?.role === 'club' ? 'Telefónne číslo kontaktnej osoby' : 'Telefónne číslo';
-
-    // Logika pre zobrazenie tlačidla Upraviť pre profil
-    // Tlačidlo je viditeľné, ak je canEdit true (všetky úpravy sú povolené)
-    // ALEBO ak je canEdit false, ale používateľ je typu 'club' a je povolený len režim zmeny hesla.
-    const showProfilePencil = canEdit || (userProfileData.role === 'club' && isPasswordChangeOnlyMode);
-    
-    // Tlačidlo pre fakturačné údaje je viditeľné len ak je canEdit true.
+    const showProfilePencil = canEdit || (userProfileData.role === 'club' && isPasswordChangeOnlyMode);    
     const showBillingPencil = canEdit;
-
-
     const profileContent = React.createElement(
         'div',
         { className: `w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]` },
@@ -160,7 +111,6 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             'div',
             { className: `flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-white`, style: { backgroundColor: roleColor } },
             React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, profileCardTitle),
-            // Ceruzka sa zobrazí len ak je showProfilePencil true
             showProfilePencil && React.createElement(
                 'button',
                 {
@@ -177,7 +127,6 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                 React.createElement('span', { className: 'font-medium' }, 'Upraviť')
             )
         ),
-        // Zmena rozloženia údajov
         React.createElement(
             'div',
             { className: 'space-y-6 text-lg' },
@@ -189,7 +138,6 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                 React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, emailLabel),
                 React.createElement('div', { className: 'font-normal' }, userProfileData.email)
             ),
-            // Podmienka pre zobrazenie telefónneho čísla
             userProfileData.role !== 'admin' && userProfileData.role !== 'hall' && 
             React.createElement('div', null,
                 React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, phoneLabel),
@@ -202,16 +150,13 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             )
         )
     );
-
     const billingContent = (userProfileData.role === 'admin' || userProfileData.role === 'hall' || userProfileData.role === 'referee' || userProfileData.role === 'volunteer') ? null : React.createElement(
         'div',
         { className: 'w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]`' },
         React.createElement(
             'div',
-            // OPRAVA: Zmenený backtick na jednoduchú úvodzovku pre správnu syntax
             { className: 'flex items-center justify-between mb-6 p-4 -mx-8 -mt-8 rounded-t-xl text-white', style: { backgroundColor: roleColor } },
             React.createElement('h2', { className: 'text-3xl font-bold tracking-tight' }, 'Fakturačné údaje'),
-            // Ceruzka sa zobrazí len ak je canEdit true
             showBillingPencil && React.createElement(
                 'button',
                 {
@@ -228,7 +173,6 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                 React.createElement('span', { className: 'font-medium' }, 'Upraviť')
             )
         ),
-        // Zmena rozloženia údajov
         React.createElement(
             'div',
             { className: 'space-y-6 text-gray-700 text-lg' },
@@ -236,7 +180,6 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
                 React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Oficiálny názov klubu'),
                 React.createElement('div', { className: 'font-normal' }, userProfileData.billing?.clubName || '-')
             ),
-            // Zlúčená adresa do jedného riadku
             React.createElement('div', null,
                 React.createElement('div', { className: 'font-bold text-gray-700 text-sm' }, 'Adresa'),
                 React.createElement('div', { className: 'font-normal' },
@@ -257,7 +200,6 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
             )
         )
     );
-
     return React.createElement(
         'div',
         { className: 'flex flex-col items-center gap-8' },
@@ -265,57 +207,33 @@ const ProfileSection = ({ userProfileData, onOpenProfileModal, onOpenBillingModa
         billingContent
     );
 };
-
-
-// Definícia externého store pre globálne window premenné
 const globalDataStore = (() => {
-    let internalSnapshot = {}; // Stores the last *raw* snapshot of global window variables
-    let listeners = new Set(); // Stores callback functions registered by React components
-
-    // Function to get the current state of global variables from window object
+    let internalSnapshot = {};
+    let listeners = new Set();
     const getGlobalState = () => {
         return {
             isGlobalAuthReady: window.isGlobalAuthReady || false,
             isRegistrationDataLoaded: window.isRegistrationDataLoaded || false,
             isCategoriesDataLoaded: window.isCategoriesDataLoaded || false,
-            // registrationDates už nebude v globalDataStore, bude spravované lokálne v MyDataApp
         };
     };
-
-    // Function to notify all subscribed components about a change
     const emitChange = () => {
         const newGlobalState = getGlobalState();
         let changed = false;
-
-        // Simplified comparison: just compare the JSON string representation
         if (JSON.stringify(newGlobalState) !== JSON.stringify(internalSnapshot)) {
             changed = true;
-        }
-        
+        }        
         if (changed) {
-            internalSnapshot = newGlobalState; // Update the stable internal snapshot
-            listeners.forEach(listener => listener()); // Notify React to re-render
+            internalSnapshot = newGlobalState;
+            listeners.forEach(listener => listener());
         }
     };
-
-    // Initial setup of the internal snapshot
     internalSnapshot = getGlobalState();
-
-    // The 'getSnapshot' function for useSyncExternalStore.
-    // It should return a stable reference to the latest data.
     const getSnapshotForReact = () => internalSnapshot;
-
-    // The 'subscribe' function for useSyncExternalStore.
-    // It registers callbacks that should be called when the external store changes.
     const subscribeForReact = (callback) => {
         listeners.add(callback);
-
-        // Add event listeners to global window events that might trigger changes
         window.addEventListener('globalDataUpdated', emitChange);
         window.addEventListener('categoriesLoaded', emitChange);
-        // Odstránený listener pre 'registrationDatesUpdated', keďže sa budú spravovať lokálne
-        
-        // Return a cleanup function
         return () => {
             listeners.delete(callback);
             window.removeEventListener('globalDataUpdated', emitChange);
@@ -323,153 +241,96 @@ const globalDataStore = (() => {
         };
     };
 
-    return { getSnapshot: getSnapshotForReact, subscribe: subscribeForReact }; // Opravené na getSnapshotForReact
+    return { getSnapshot: getSnapshotForReact, subscribe: subscribeForReact };
 })();
-// --- END globalDataStore implementation ---
-
-
 const MyDataApp = ({ userProfileData }) => {
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [showBillingModal, setShowBillingModal] = useState(false);
     const [canEdit, setCanEdit] = useState(false);
-    // NOVINKA: Lokálny stav pre registrationDates (z /settings/registration)
     const [settingsRegistrationDates, setSettingsRegistrationDates] = useState(null);
-    // NOVINKA: Stav pre indikáciu režimu zmeny hesla (true, ak je po deadline a používateľ je 'club')
     const [isPasswordChangeOnlyMode, setIsPasswordChangeOnlyMode] = useState(false);
-
-
-    // Use useSyncExternalStore to synchronize with global data.
     const { 
         isGlobalAuthReady, 
         isRegistrationDataLoaded, 
         isCategoriesDataLoaded, 
     } = useSyncExternalStore(globalDataStore.subscribe, globalDataStore.getSnapshot);
-
-    // Effect na načítanie registrationDates z Firestore priamo v MyDataApp
     useEffect(() => {
         if (!window.db) {
-            console.warn("MyDataApp: Firestore databáza nie je inicializovaná pre načítanie registrationDates.");
             return;
         }
-
         const registrationDocRef = doc(window.db, "settings", "registration");
         const unsubscribe = onSnapshot(registrationDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 setSettingsRegistrationDates(data);
-                console.log("MyDataApp: Lokálne settingsRegistrationDates aktualizované (onSnapshot).", data);
             } else {
                 setSettingsRegistrationDates(null);
-                console.warn("MyDataApp: Dokument 'settings/registration' nebol nájdený!");
             }
         }, (error) => {
-            console.error("MyDataApp: Chyba pri počúvaní dát o registrácii:", error);
             setSettingsRegistrationDates(null);
         });
-
-        // Cleanup function pre odhlásenie z listenera
         return () => unsubscribe();
-    }, [window.db]); // Závisí od inštancie Firebase db
-
-    // If user data changes, close modals
+    }, [window.db]); 
     useEffect(() => {
         if (userProfileData) {
             setShowProfileModal(false);
             setShowBillingModal(false);
         }
     }, [userProfileData]);
-
-    // Calculate deadlineMillis
-    // Priorita: userProfileData.dataEditDeadline > settingsRegistrationDates.dataEditDeadline
-    const effectiveDataEditDeadline = userProfileData?.dataEditDeadline || settingsRegistrationDates?.dataEditDeadline;
-    
+    const effectiveDataEditDeadline = userProfileData?.dataEditDeadline || settingsRegistrationDates?.dataEditDeadline;    
     const deadlineMillis = (effectiveDataEditDeadline instanceof Timestamp) ? 
                             effectiveDataEditDeadline.toDate().getTime() : 
                             (effectiveDataEditDeadline instanceof Date) ?
                             effectiveDataEditDeadline.getTime() :
                             null;
-
-
-    // Timer and logic to determine if data can be edited
     useEffect(() => {
-        let timer; 
-        
+        let timer;         
         const updateCanEditStatus = () => {
-            // Predvolené nastavenia
             setCanEdit(false); 
-            setIsPasswordChangeOnlyMode(false); // Reset režimu zmeny hesla
-
-            // Zabezpečenie, že dáta používateľa a globálne dáta sú pripravené
+            setIsPasswordChangeOnlyMode(false);
             if (!userProfileData || !isGlobalAuthReady || !isRegistrationDataLoaded || !isCategoriesDataLoaded || !settingsRegistrationDates) {
-                console.log("logged-in-my-data.js: Chýbajú dáta používateľa alebo globálne dáta hlavičky/lokálne dáta registrácie nie sú pripravené. Úpravy nie sú povolené.");
                 return;
             }
-
             const isAdmin = userProfileData.role === 'admin';
             if (isAdmin) {
                 setCanEdit(true);
-                console.log("logged-in-my-data.js: Admin môže vždy upravovať. canEdit nastavené na TRUE.");
                 return; 
             }
-
-            // Pre ne-admin používateľov skontroluj termín
             if (deadlineMillis !== null) { 
                 const nowMillis = Date.now();
-                
-                console.log(`logged-in-my-data.js: dataEditDeadline (millis): ${deadlineMillis}`);
-                console.log(`logged-in-my-data.js: Aktuálny čas (millis): ${nowMillis}`);
-                console.log(`logged-in-my-data.js: Rozdiel (millis): ${deadlineMillis - nowMillis}`);
-
                 if (nowMillis <= deadlineMillis || userProfileData.role === 'referee' || userProfileData.role === 'volunteer') { 
                     setCanEdit(true); 
-                    console.log("logged-in-my-data.js: Tlačidlo ZOBRAZENÉ pre NE-ADMIN (všetky roly okrem admina) - pred deadline.");
-
-                    // Zrušíme predošlý časovač, ak existuje, aby sme predišli duplikátom alebo nesprávnym oneskoreniam
                     if (timer) clearTimeout(timer);
-                    // Nastavíme nový časovač len ak je deadline v budúcnosti
                     if (deadlineMillis - nowMillis > 0) {
                         timer = setTimeout(() => {
                             setCanEdit(false);
-                            // NOVINKA: Ak uplynie termín, ale používateľ je typu 'club', prepni na režim zmeny hesla
                             if (userProfileData.role === 'club') {
                                 setIsPasswordChangeOnlyMode(true);
-                                console.log("logged-in-my-data.js: Termín úprav uplynul pre používateľa typu 'club', prepínam na režim zmeny hesla.");
                             } else {
-                                setIsPasswordChangeOnlyMode(false); // Pre ostatné roly vypni všetko
+                                setIsPasswordChangeOnlyMode(false);
                             }
-                            console.log("logged-in-my-data.js: Termín úprav uplynul pre ne-admin rolu, zakazujem úpravy (okrem zmeny hesla pre 'club').");
-                        }, deadlineMillis - nowMillis + 100); // Pridáme malé oneskorenie pre istotu
+                        }, deadlineMillis - nowMillis + 100); 
                     }
                 } else {
                     setCanEdit(false);
-                    // NOVINKA: Ak je už po termíne, ale používateľ je typu 'club', povoľ režim zmeny hesla
                     if (userProfileData.role === 'club') {
                         setIsPasswordChangeOnlyMode(true);
-                        console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ pre NE-ADMIN (všetky roly okrem admina) - po deadline, ALE povolená zmena hesla pre 'club'.");
                     } else {
-                        setIsPasswordChangeOnlyMode(false); // Pre ostatné roly vypni všetko
-                        console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ pre NE-ADMIN (všetky roly okrem admina) - po deadline.");
+                        setIsPasswordChangeOnlyMode(false);
                     }
                 }
             } else {
                 setCanEdit(false);
                 setIsPasswordChangeOnlyMode(false);
-                console.log("logged-in-my-data.js: Tlačidlo SKRYTÉ (ne-admin) - registračné dáta nie sú načítané/dostupné/platné (deadlineMillis je null).");
             }
         };
-
-        // Zavolaj funkciu hneď pri prvom renderovaní a pri každej zmene závislostí
         updateCanEditStatus();
-
-        // Čistiacia funkcia pre useEffect
         return () => {
             if (timer) {
                 clearTimeout(timer);
             }
         };
     }, [userProfileData, isGlobalAuthReady, isRegistrationDataLoaded, isCategoriesDataLoaded, settingsRegistrationDates, deadlineMillis]); 
-    // Dependencies now include settingsRegistrationDates, a isPasswordChangeOnlyMode je tiež ovplyvňované
-
     const getRoleColor = (role) => {
         switch (role) {
             case 'admin':
@@ -487,7 +348,6 @@ const MyDataApp = ({ userProfileData }) => {
         }
     };
     const roleColor = getRoleColor(userProfileData?.role) || '#1D4ED8';
-
     return React.createElement(
         'div',
         { className: 'flex-grow' },
@@ -497,8 +357,8 @@ const MyDataApp = ({ userProfileData }) => {
                 userProfileData: userProfileData,
                 onOpenProfileModal: () => setShowProfileModal(true),
                 onOpenBillingModal: () => setShowBillingModal(true),
-                canEdit: canEdit, // Pass general edit permission
-                isPasswordChangeOnlyMode: isPasswordChangeOnlyMode // Pass mode for profile modal
+                canEdit: canEdit,
+                isPasswordChangeOnlyMode: isPasswordChangeOnlyMode
             }
         ),
         React.createElement(
@@ -508,7 +368,7 @@ const MyDataApp = ({ userProfileData }) => {
                 onClose: () => setShowProfileModal(false),
                 userProfileData: userProfileData,
                 roleColor: roleColor,
-                onlyAllowPasswordChange: isPasswordChangeOnlyMode // Pass mode to modal
+                onlyAllowPasswordChange: isPasswordChangeOnlyMode
             }
         ),
         React.createElement(
@@ -522,24 +382,12 @@ const MyDataApp = ({ userProfileData }) => {
         )
     );
 };
-
-// Premenná na sledovanie, či bol poslucháč už nastavený
 let isEmailSyncListenerSetup = false;
-
-/**
- * Táto funkcia je poslucháčom udalosti 'globalDataUpdated'.
- * Akonáhle sa dáta používateľa načítajú, vykreslí aplikáciu MyDataApp.
- */
 const handleDataUpdateAndRender = (event) => {
     const userProfileData = event.detail;
     const rootElement = document.getElementById('root');
-
     if (userProfileData) {
-        // Ak sa dáta načítali, nastavíme poslucháča na synchronizáciu e-mailu, ak ešte nebol nastavený
-        // Používame window.auth a window.db, ktoré by mali byť nastavené pri načítaní aplikácie.
-        if (window.auth && window.db && !isEmailSyncListenerSetup) {
-            console.log("logged-in-my-data.js: Nastavujem poslucháča na synchronizáciu e-mailu.");
-            
+        if (window.auth && window.db && !isEmailSyncListenerSetup) {            
             onAuthStateChanged(window.auth, async (user) => {
                 if (user) {
                     try {
@@ -548,46 +396,31 @@ const handleDataUpdateAndRender = (event) => {
             
                         if (docSnap.exists()) {
                             const firestoreEmail = docSnap.data().email;
-                            if (user.email !== firestoreEmail) {
-                                console.log(`logged-in-my-data.js: E-mail v autentifikácii (${user.email}) sa líši od e-mailu vo Firestore (${firestoreEmail}). Aktualizujem...`);
-                                
+                            if (user.email !== firestoreEmail) {                                
                                 await updateDoc(userProfileRef, {
                                     email: user.email
-                                });
-            
-                                // Vytvorenie notifikácie v databáze s novou štruktúrou
+                                });            
                                 const notificationsCollectionRef = collection(window.db, 'notifications');
                                 await addDoc(notificationsCollectionRef, {
-                                    userEmail: user.email, // Používame userEmail namiesto userId a userName
+                                    userEmail: user.email,
                                     changes: `Zmena e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
-                                    timestamp: new Date(), // Používame timestamp namiesto createdAt
-                                });
-                                
-                                window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');
-                                console.log("logged-in-my-data.js: E-mail vo Firestore bol aktualizovaný a notifikácia vytvorená.");
-            
-                            } else {
-                                console.log("logged-in-my-data.js: E-maily sú synchronizované, nie je potrebné nič aktualizovať.");
+                                    timestamp: new Date(),
+                                });                                
+                                window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');            
                             }
                         }
                     } catch (error) {
-                        console.error("logged-in-my-data.js: Chyba pri porovnávaní a aktualizácii e-mailu:", error);
                         window.showGlobalNotification('Nastala chyba pri synchronizácii e-mailovej adresy.', 'error');
                     }
                 }
             });
-            isEmailSyncListenerSetup = true; // Označíme, že poslucháč je nastavený
+            isEmailSyncListenerSetup = true; 
         }
-
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(MyDataApp, { userProfileData }));
-            console.log("logged-in-my-data.js: Aplikácia bola vykreslená po udalosti 'globalDataUpdated'.");
-        } else {
-            console.error("logged-in-my-data.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
         }
     } else {
-        // Ak dáta nie sú dostupné, zobrazíme loader
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(
@@ -598,22 +431,12 @@ const handleDataUpdateAndRender = (event) => {
                 )
             );
         }
-        console.error("logged-in-my-data.js: Dáta používateľa nie sú dostupné v udalosti 'globalDataUpdated'. Zobrazujem loader.");
     }
 };
-
-// Zaregistrujeme poslucháča udalosti 'globalDataUpdated'.
-console.log("logged-in-my-data.js: Registrujem poslucháča pre 'globalDataUpdated'.");
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
-
-// Aby sme predišli premeškaniu udalosti, ak sa načíta skôr, ako sa tento poslucháč zaregistruje,
-// skontrolujeme, či sú dáta už dostupné.
-console.log("logged-in-my-data.js: Kontrolujem, či existujú globálne dáta.");
 if (window.globalUserProfileData) {
-    console.log("logged-in-my-data.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 } else {
-    // Ak dáta nie sú dostupné, čakáme na event listener, zatiaľ zobrazíme loader
     const rootElement = document.getElementById('root');
     if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
         const root = ReactDOM.createRoot(rootElement);
