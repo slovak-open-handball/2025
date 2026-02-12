@@ -83,6 +83,30 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
     setHasChanges(true);
   };
 
+  // Handler pre posunutie podmienky nahor
+  const handleMoveUp = (index) => {
+    if (index === 0) return; // Už je na začiatku
+    
+    setSortingConditions(prev => {
+      const updated = [...prev];
+      [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
+      return updated;
+    });
+    setHasChanges(true);
+  };
+
+  // Handler pre posunutie podmienky nadol
+  const handleMoveDown = (index) => {
+    if (index === sortingConditions.length - 1) return; // Už je na konci
+    
+    setSortingConditions(prev => {
+      const updated = [...prev];
+      [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
+      return updated;
+    });
+    setHasChanges(true);
+  };
+
   // Handler pre pridanie novej podmienky
   const handleAddCondition = () => {
     setSortingConditions(prev => [
@@ -229,6 +253,8 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
           { className: 'space-y-3 mb-4' },
           sortingConditions.map((condition, index) => {
             const hasDirectionSupport = condition.parameter && supportsDirection(condition.parameter);
+            const canMoveUp = index > 0;
+            const canMoveDown = index < sortingConditions.length - 1;
             
             return React.createElement(
               'div',
@@ -236,10 +262,53 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
                 key: index,
                 className: 'flex items-center space-x-4 bg-gray-50 p-3 rounded-lg'
               },
+              // Číslo a šípky
               React.createElement(
-                'span',
-                { className: 'text-gray-500 font-medium w-8' },
-                `${index + 1}.`
+                'div',
+                { className: 'flex items-center space-x-1 w-16' },
+                React.createElement(
+                  'span',
+                  { className: 'text-gray-500 font-medium w-6 text-center' },
+                  `${index + 1}.`
+                ),
+                React.createElement(
+                  'div',
+                  { className: 'flex flex-col space-y-1' },
+                  // Šípka nahor
+                  React.createElement(
+                    'button',
+                    {
+                      type: 'button',
+                      onClick: () => handleMoveUp(index),
+                      disabled: !canMoveUp,
+                      className: `p-1 rounded transition-colors duration-200 ${
+                        canMoveUp 
+                          ? 'text-gray-600 hover:text-blue-600 hover:bg-blue-50 cursor-pointer' 
+                          : 'text-gray-300 cursor-not-allowed'
+                      }`
+                    },
+                    React.createElement('svg', { className: 'h-4 w-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                      React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M5 15l7-7 7 7' })
+                    )
+                  ),
+                  // Šípka nadol
+                  React.createElement(
+                    'button',
+                    {
+                      type: 'button',
+                      onClick: () => handleMoveDown(index),
+                      disabled: !canMoveDown,
+                      className: `p-1 rounded transition-colors duration-200 ${
+                        canMoveDown 
+                          ? 'text-gray-600 hover:text-blue-600 hover:bg-blue-50 cursor-pointer' 
+                          : 'text-gray-300 cursor-not-allowed'
+                      }`
+                    },
+                    React.createElement('svg', { className: 'h-4 w-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                      React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 9l-7 7-7-7' })
+                    )
+                  )
+                )
               ),
               // Select pre výber parametra
               React.createElement(
