@@ -295,6 +295,12 @@ export function CategorySettings({
     const handlePeriodsChange = (catId, value) => {
         const numValue = value === '' ? '' : Math.max(1, parseInt(value) || 1);
         setEditedPeriods(prev => ({ ...prev, [catId]: numValue }));
+        
+        // AUTOMATICKÉ VYNULOVANIE: Ak je počet periód 1, vynulujeme prestávku medzi periódami
+        const periodsValue = value === '' ? 1 : Math.max(1, parseInt(value) || 1);
+        if (periodsValue === 1) {
+            setEditedBreakDuration(prev => ({ ...prev, [catId]: 0 }));
+        }
     };
 
     const handlePeriodDurationChange = (catId, value) => {
