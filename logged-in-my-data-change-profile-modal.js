@@ -475,7 +475,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
             const credential = EmailAuthProvider.credential(user.email, currentPassword);
             await reauthenticateWithCredential(user, credential);
             await updatePassword(user, newPassword);
-            window.showGlobalNotification('Heslo bolo úspešne zmenené.', 'success');
+            window.showGlobalNotification('Heslo bolo zmenené.', 'success');
             return true;
         } catch (error) {
             console.error("Chyba pri zmene hesla:", error);
@@ -588,7 +588,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
                     });
                 }
 
-                window.showGlobalNotification('Profilové údaje boli úspešne aktualizované.', 'success');
+                window.showGlobalNotification('Profilové údaje boli aktualizované.', 'success');
             } catch (error) {
                 console.error("Chyba pri aktualizácii profilu:", error);
                 window.showGlobalNotification('Chyba pri aktualizácii profilových údajov.', 'error');
