@@ -1,9 +1,6 @@
-// Importy pre Firebase funkcie
 import { doc, getDoc, getDocs, onSnapshot, updateDoc, addDoc, collection, Timestamp, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-
 const { useState, useEffect } = React;
-
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
     if (!notificationElement) {
@@ -25,9 +22,7 @@ window.showGlobalNotification = (message, type = 'success') => {
     setTimeout(() => { notificationElement.className = `${baseClasses} ${typeClasses} opacity-100 scale-100`; }, 10);
     setTimeout(() => { notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`; }, 5000);
 };
-
 let isEmailSyncListenerSetup = false;
-
 const listeners = new Set();
 const notify = (message, type = 'info') => {
     const id = Date.now() + Math.random();
@@ -37,33 +32,27 @@ const subscribe = (cb) => {
     listeners.add(cb);
     return () => listeners.delete(cb);
 };
-
 const NotificationPortal = () => {
-    const [notification, setNotification] = React.useState(null);
-    
+    const [notification, setNotification] = React.useState(null);    
     useEffect(() => {
         let timer;
         const unsubscribe = subscribe((notif) => {
             setNotification(notif);
             clearTimeout(timer);
             timer = setTimeout(() => setNotification(null), 5000);
-        });
-        
+        });        
         return () => {
             unsubscribe();
             clearTimeout(timer);
         };
-    }, []);
-    
-    if (!notification) return null;
-    
+    }, []);    
+    if (!notification) return null;    
     const typeClasses = {
         success: 'bg-green-600',
         error: 'bg-red-600',
         info: 'bg-blue-600',
         default: 'bg-gray-700'
-    }[notification.type || 'default'];
-    
+    }[notification.type || 'default'];    
     return ReactDOM.createPortal(
         React.createElement(
             'div',
@@ -76,15 +65,11 @@ const NotificationPortal = () => {
         document.body
     );
 };
-
 const createAccommodationNotification = async (action, data) => {
-    if (!window.db) return;
-    
-    const currentUserEmail = window.globalUserProfileData?.email || null;
-    
+    if (!window.db) return;    
+    const currentUserEmail = window.globalUserProfileData?.email || null;    
     let message = '';
-    const { teamName, accommodationName, category, teamId, userId, totalPeople, oldAccommodation, newAccommodation } = data;
-    
+    const { teamName, accommodationName, category, teamId, userId, totalPeople, oldAccommodation, newAccommodation } = data;    
     switch (action) {
         case 'assign_accommodation':
             message = `Tím ${teamName} (${category}) bol priradený do ubytovne '''${accommodationName}'`;
@@ -100,8 +85,7 @@ const createAccommodationNotification = async (action, data) => {
             break;
         default:
             message = `Zmena v ubytovaní: ${action}`;
-    }
-    
+    }    
     try {
         const notificationsRef = collection(window.db, 'notifications');
         await addDoc(notificationsRef, {
@@ -120,101 +104,69 @@ const createAccommodationNotification = async (action, data) => {
             oldAccommodation: oldAccommodation || null,
             newAccommodation: newAccommodation || null
         });
-        console.log("[NOTIFIKÁCIA UBYTOVANIE] Uložená:", message);
     } catch (err) {
-        console.error("[NOTIFIKÁCIA UBYTOVANIE] Chyba pri ukladaní:", err);
     }
 };
-
-// Funkcia na výpočet skutočného počtu osôb s ubytovaním v tíme
 const calculatePeopleWithAccommodation = (team) => {
-    if (!team || !team.fullTeamData) return 0;
-    
+    if (!team || !team.fullTeamData) return 0;    
     const teamData = team.fullTeamData;
     let totalWithAccommodation = 0;
-    
-    // Kontrola, či má tím vôbec nastavené ubytovanie
     const teamHasAccommodation = teamData.accommodation?.type && 
-                                 teamData.accommodation.type !== 'bez ubytovania';
-    
-    // Funkcia na kontrolu, či má člen ubytovanie
+                                 teamData.accommodation.type !== 'bez ubytovania';    
     const hasAccommodation = (member) => {
-        // 1. Najprv skontrolujeme individuálne nastavenie člena
         if (member.accommodation?.type) {
-            // Ak má nastavené 'bez ubytovania', tak NEMÁ ubytovanie
             if (member.accommodation.type === 'bez ubytovania') {
                 return false;
             }
-            // Ak má akýkoľvek iný typ ubytovania, tak MÁ ubytovanie
             return true;
-        }
-        
-        // 2. Ak člen nemá individuálne nastavenie, zdedí ubytovanie z tímu
+        }        
         return teamHasAccommodation;
-    };
-    
-    // Počítanie hráčov s ubytovaním
+    };    
     if (Array.isArray(teamData.playerDetails)) {
         teamData.playerDetails.forEach(player => {
             if (hasAccommodation(player)) totalWithAccommodation++;
         });
-    }
-    
-    // Počítanie členov realizačného tímu (ženy) s ubytovaním
+    }    
     if (Array.isArray(teamData.womenTeamMemberDetails)) {
         teamData.womenTeamMemberDetails.forEach(member => {
             if (hasAccommodation(member)) totalWithAccommodation++;
         });
-    }
-    
-    // Počítanie členov realizačného tímu (muži) s ubytovaním
+    }    
     if (Array.isArray(teamData.menTeamMemberDetails)) {
         teamData.menTeamMemberDetails.forEach(member => {
             if (hasAccommodation(member)) totalWithAccommodation++;
         });
-    }
-    
-    // Počítanie šoférov (ženy) s ubytovaním
+    }    
     if (Array.isArray(teamData.driverDetailsFemale)) {
         teamData.driverDetailsFemale.forEach(driver => {
             if (hasAccommodation(driver)) totalWithAccommodation++;
         });
-    }
-    
-    // Počítanie šoférov (muži) s ubytovaním
+    }    
     if (Array.isArray(teamData.driverDetailsMale)) {
         teamData.driverDetailsMale.forEach(driver => {
             if (hasAccommodation(driver)) totalWithAccommodation++;
         });
-    }
-    
+    }    
     return totalWithAccommodation;
 };
-
 const TeamsAccommApp = ({ userProfileData }) => {
     const [accommodations, setAccommodations] = useState([]);
     const [allTeams, setAllTeams] = useState([]);
     const [selectedPlaceForEdit, setSelectedPlaceForEdit] = useState(null);
     const [isColorModalOpen, setIsColorModalOpen] = useState(false);
     const [newHeaderColor, setNewHeaderColor] = useState('#1e40af');
-    const [newHeaderTextColor, setNewHeaderTextColor] = useState('#000000');
-    
+    const [newHeaderTextColor, setNewHeaderTextColor] = useState('#000000');    
     const [selectedTeam, setSelectedTeam] = useState(null);
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [availableAccommodations, setAvailableAccommodations] = useState([]);
     const [selectedAccommodationId, setSelectedAccommodationId] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedAccommodationFilter, setSelectedAccommodationFilter] = useState('');
     const [selectedTeamNameFilter, setSelectedTeamNameFilter] = useState('');
-
     const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
     const [teamToRemove, setTeamToRemove] = useState(null);
-
-    // Nový stav pre prepínač režimov
-    const [viewMode, setViewMode] = useState('accommodation'); // 'accommodation' alebo 'category'
-
+    const [viewMode, setViewMode] = useState('accommodation');
     const getUrlParams = () => {
         const params = new URLSearchParams(window.location.search);
         return {
@@ -223,26 +175,19 @@ const TeamsAccommApp = ({ userProfileData }) => {
             accommodation: params.get('accommodation') || '',
             teamName: params.get('team') || ''
         };
-    };
-    
+    };    
     const updateUrlParams = (params) => {
-        const urlParams = new URLSearchParams(window.location.search);
-        
+        const urlParams = new URLSearchParams(window.location.search);        
         if (params.viewMode) urlParams.set('view', params.viewMode);
         if (params.category) urlParams.set('category', params.category);
-        else if (params.category === '') urlParams.delete('category');
-        
+        else if (params.category === '') urlParams.delete('category');        
         if (params.accommodation) urlParams.set('accommodation', params.accommodation);
-        else if (params.accommodation === '') urlParams.delete('accommodation');
-        
+        else if (params.accommodation === '') urlParams.delete('accommodation');        
         if (params.teamName) urlParams.set('team', params.teamName);
-        else if (params.teamName === '') urlParams.delete('team');
-        
+        else if (params.teamName === '') urlParams.delete('team');        
         const newUrl = `${window.location.pathname}${urlParams.toString() ? '?' + urlParams.toString() : ''}${window.location.hash}`;
         window.history.replaceState({}, '', newUrl);
     };
-
-    // Inicializácia stavov z URL pri prvom renderi
     useEffect(() => {
         const params = getUrlParams();
         setViewMode(params.viewMode);
@@ -250,13 +195,9 @@ const TeamsAccommApp = ({ userProfileData }) => {
         setSelectedAccommodationFilter(params.accommodation);
         setSelectedTeamNameFilter(params.teamName);
     }, []);
-
-    // Sledovanie zmien viewMode a aktualizácia URL
     useEffect(() => {
         updateUrlParams({ viewMode });
     }, [viewMode]);
-
-    // Sledovanie zmien filtrov a aktualizácia URL
     useEffect(() => {
         updateUrlParams({
             category: selectedCategory,
@@ -264,8 +205,6 @@ const TeamsAccommApp = ({ userProfileData }) => {
             teamName: selectedTeamNameFilter
         });
     }, [selectedCategory, selectedAccommodationFilter, selectedTeamNameFilter]);
-
-    // Reakcia na zmenu URL (tlačidlo späť/vpred)
     useEffect(() => {
         const handlePopState = () => {
             const params = getUrlParams();
@@ -280,7 +219,6 @@ const TeamsAccommApp = ({ userProfileData }) => {
             window.removeEventListener('popstate', handlePopState);
         };
     }, []);
-
     useEffect(() => {
         if (!window.db) return;
         const unsubscribe = onSnapshot(
@@ -300,18 +238,12 @@ const TeamsAccommApp = ({ userProfileData }) => {
                         assignedTeams: []
                     });
                 });
-
-                console.log("═══════════════════════════════════════════════════");
-                console.log(`NAČÍTANÉ UBYTOVANIE — ${new Date().toLocaleTimeString('sk-SK')}`);
-                console.log(`Celkový počet: ${places.length}`);
-                console.log("═══════════════════════════════════════════════════");
                 setAccommodations(places);
             },
             (err) => console.error("[PLACES]", err)
         );
         return () => unsubscribe();
     }, []);
-
     useEffect(() => {
         if (!window.db) return;
         const unsubscribe = onSnapshot(
@@ -328,15 +260,12 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                 const accomType = team.accommodation?.type?.trim?.() || '';
                                 const hasAccommodation = accomType !== '' && accomType.toLowerCase() !== 'bez ubytovania';
                                 if (!hasAccommodation) return;
-
                                 const playerCount = Array.isArray(team.playerDetails) ? team.playerDetails.length : 0;
                                 const womenRTCount = Array.isArray(team.womenTeamMemberDetails) ? team.womenTeamMemberDetails.length : 0;
                                 const menRTCount = Array.isArray(team.menTeamMemberDetails) ? team.menTeamMemberDetails.length : 0;
                                 const femaleDrivers = Array.isArray(team.driverDetailsFemale) ? team.driverDetailsFemale.length : 0;
                                 const maleDrivers = Array.isArray(team.driverDetailsMale) ? team.driverDetailsMale.length : 0;
-                                const totalPeople = playerCount + womenRTCount + menRTCount + femaleDrivers + maleDrivers;
-                                
-                                // Výpočet počtu osôb s ubytovaním
+                                const totalPeople = playerCount + womenRTCount + menRTCount + femaleDrivers + maleDrivers;                                
                                 const peopleWithAccommodation = calculatePeopleWithAccommodation({
                                     category,
                                     teamName: team.teamName.trim(),
@@ -345,13 +274,12 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                     teamId: team.teamId || team.teamName.toLowerCase().replace(/\s+/g, '-'),
                                     assignedPlace: team.accommodation?.name || null
                                 });
-
                                 teams.push({
                                     category,
                                     teamName: team.teamName.trim(),
                                     accommodation: accomType,
                                     totalPeople,
-                                    peopleWithAccommodation, // Nové pole: počet ľudí s ubytovaním
+                                    peopleWithAccommodation,
                                     fullTeamData: team,
                                     userId: doc.id,
                                     teamId: team.teamId || team.teamName.toLowerCase().replace(/\s+/g, '-'),
@@ -366,71 +294,43 @@ const TeamsAccommApp = ({ userProfileData }) => {
                         });
                     }
                 });
-
-                console.log("═══════════════════════════════════════════════════════════════════════════════════════");
-                console.log(`VŠETKY TÍMY S UBYTOVANÍM — ${new Date().toLocaleTimeString('sk-SK')}`);
-                console.log(`Celkom tímov: ${teams.length}`);
-                console.log("═══════════════════════════════════════════════════════════════════════════════════════");
                 setAllTeams(teams);
             },
             (err) => console.error("[USERS]", err)
         );
         return () => unsubscribe();
     }, []);
-
-    // Funkcia na odstránenie veľkého písmenka na konci názvu tímu (A, B, C)
     const normalizeTeamName = (teamName) => {
-        if (!teamName) return teamName;
-        
-        // Odstránenie veľkého písmenka na konci s medzerou pred ním
-        // Napríklad: "Názov tímu A" -> "Názov tímu"
-        const trimmed = teamName.trim();
-        
-        // Kontrola, či končí na veľké písmeno (A-Z)
+        if (!teamName) return teamName;        
+        const trimmed = teamName.trim();        
         const lastChar = trimmed.slice(-1);
-        const secondLastChar = trimmed.slice(-2, -1);
-        
-        // Ak je posledný znak veľké písmeno a predchádza mu medzera
+        const secondLastChar = trimmed.slice(-2, -1);        
         if (/^[A-Z]$/.test(lastChar) && secondLastChar === ' ') {
-            return trimmed.slice(0, -2).trim(); // Odstráni medzeru a písmeno
-        }
-        
-        // Ak je posledný znak veľké písmeno bez medzery pred ním
+            return trimmed.slice(0, -2).trim();
+        }        
         if (/^[A-Z]$/.test(lastChar)) {
-            return trimmed.slice(0, -1).trim(); // Odstráni iba písmeno
-        }
-        
+            return trimmed.slice(0, -1).trim(); 
+        }        
         return trimmed;
     };
-
-    // Generovanie jedinečných názvov tímov pre select box (bez písmenka na konci)
     const uniqueTeamNames = [...new Set(allTeams.map(team => {
         const normalized = normalizeTeamName(team.teamName);
         return normalized || team.teamName;
     }))].sort((a, b) => 
         a.localeCompare(b, 'sk', { sensitivity: 'base' })
-    ).filter(name => name !== ''); // Filtrovanie prázdnych názvov
-
-    // Funkcia na kontrolu, či tím zodpovedá vybranému filtru (vrátane variant s písmenkom)
+    ).filter(name => name !== '');
     const teamMatchesFilter = (team, filter) => {
-        if (!filter) return true;
-        
+        if (!filter) return true;        
         const normalizedTeamName = normalizeTeamName(team.teamName);
-        const normalizedFilter = normalizeTeamName(filter);
-        
-        // Kontrola či sa normalizované názvy rovnajú
+        const normalizedFilter = normalizeTeamName(filter);        
         if (normalizedTeamName === normalizedFilter) {
             return true;
-        }
-        
-        // Kontrola či je názov tímu úplne rovnaký ako filter
+        }        
         if (team.teamName === filter) {
             return true;
-        }
-        
+        }        
         return false;
     };
-
     const sortTeams = (teams) => {
         return [...teams].sort((a, b) => {
             const categoryCompare = a.category.localeCompare(b.category, 'sk', { sensitivity: 'base' });
@@ -438,18 +338,14 @@ const TeamsAccommApp = ({ userProfileData }) => {
             return a.teamName.localeCompare(b.teamName, 'sk', { sensitivity: 'base' });
         });
     };
-
     const unassignedTeams = sortTeams(allTeams.filter(team => !team.assignedPlace));
     const assignedTeams = sortTeams(allTeams.filter(team => team.assignedPlace));
-
     const categories = [...new Set(allTeams.map(team => team.category))].sort();
-
     const filteredUnassignedTeams = unassignedTeams.filter(team => {
         if (selectedCategory && team.category !== selectedCategory) return false;
         if (selectedTeamNameFilter && !teamMatchesFilter(team, selectedTeamNameFilter)) return false;
         return true;
     });
-
     const filteredAssignedTeams = assignedTeams.filter(team => {
         if (selectedCategory && team.category !== selectedCategory) return false;
         if (selectedTeamNameFilter && !teamMatchesFilter(team, selectedTeamNameFilter)) return false;
@@ -460,29 +356,23 @@ const TeamsAccommApp = ({ userProfileData }) => {
         }
         return true;
     });
-
     const getActualCapacity = (placeId) => {
         const place = accommodations.find(p => p.id === placeId);
-        if (!place) return { used: 0, remaining: null };
-        
+        if (!place) return { used: 0, remaining: null };        
         const allTeamsInPlace = assignedTeams.filter(team => team.assignedPlace === place.name);
         const usedCapacity = allTeamsInPlace.reduce((sum, team) => sum + team.peopleWithAccommodation, 0);
-        const remainingCapacity = place.capacity !== null ? place.capacity - usedCapacity : null;
-        
+        const remainingCapacity = place.capacity !== null ? place.capacity - usedCapacity : null;        
         return {
             used: usedCapacity,
             remaining: remainingCapacity
         };
     };
-
     const getFilteredTeamsPeopleCount = (teamsArray) => {
         return teamsArray.reduce((sum, team) => sum + (team.totalPeople || 0), 0);
-    };
-    
+    };    
     const getFilteredTeamsPeopleWithAccommodationCount = (teamsArray) => {
         return teamsArray.reduce((sum, team) => sum + (team.peopleWithAccommodation || 0), 0);
     };
-
     const accommodationsWithTeams = accommodations
         .filter(place => {
             if (selectedAccommodationFilter) {
@@ -493,8 +383,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
         .map(place => {
             const allTeamsInPlace = sortTeams(
                 assignedTeams.filter(team => team.assignedPlace === place.name)
-            );
-            
+            );            
             const filteredTeamsInPlace = sortTeams(
                 assignedTeams.filter(team => {
                     if (team.assignedPlace !== place.name) return false;
@@ -502,10 +391,8 @@ const TeamsAccommApp = ({ userProfileData }) => {
                     if (selectedTeamNameFilter && !teamMatchesFilter(team, selectedTeamNameFilter)) return false;
                     return true;
                 })
-            );
-            
-            const actualCapacity = getActualCapacity(place.id);
-            
+            );            
+            const actualCapacity = getActualCapacity(place.id);            
             return {
                 ...place,
                 allAssignedTeams: allTeamsInPlace,
@@ -520,38 +407,26 @@ const TeamsAccommApp = ({ userProfileData }) => {
             }
             return true;
         });
-
-    // Pridané: Funkcia na získanie farby ubytovne pre tím
     const getTeamAccommodationColor = (team) => {
-        if (!team.assignedPlace) return null;
-        
+        if (!team.assignedPlace) return null;        
         const accommodation = accommodations.find(place => place.name === team.assignedPlace);
-        if (!accommodation) return null;
-        
+        if (!accommodation) return null;        
         return accommodation.headerColor || '#1e40af';
     };
-
     const getTeamAccommodationTextColor = (team) => {
-        if (!team.assignedPlace) return null;
-    
+        if (!team.assignedPlace) return null;    
         const accommodation = accommodations.find(place => place.name === team.assignedPlace);
-        if (!accommodation) return null;
-        
+        if (!accommodation) return null;        
         return accommodation.headerTextColor || '#ffffff';
     };
-
-    // Pridané: Logika pre režim kategórií
     const categoriesData = categories.map(category => {
         const teamsInCategory = allTeams.filter(team => team.category === category);
         const assignedTeamsInCategory = teamsInCategory.filter(team => team.assignedPlace);
-        const unassignedTeamsInCategory = teamsInCategory.filter(team => !team.assignedPlace);
-        
-        // Spočítať osoby
+        const unassignedTeamsInCategory = teamsInCategory.filter(team => !team.assignedPlace);        
         const totalPeople = teamsInCategory.reduce((sum, team) => sum + (team.totalPeople || 0), 0);
         const peopleWithAccommodation = teamsInCategory.reduce((sum, team) => sum + (team.peopleWithAccommodation || 0), 0);
         const assignedPeople = assignedTeamsInCategory.reduce((sum, team) => sum + (team.peopleWithAccommodation || 0), 0);
-        const unassignedPeople = unassignedTeamsInCategory.reduce((sum, team) => sum + (team.peopleWithAccommodation || 0), 0);
-        
+        const unassignedPeople = unassignedTeamsInCategory.reduce((sum, team) => sum + (team.peopleWithAccommodation || 0), 0);        
         return {
             name: category,
             teams: teamsInCategory,
@@ -566,8 +441,6 @@ const TeamsAccommApp = ({ userProfileData }) => {
             unassignedTeamsCount: unassignedTeamsInCategory.length
         };
     });
-
-    // Pridané: Filtrovanie kategórií podľa vybraných filtrov
     const filteredCategoriesData = categoriesData.filter(categoryData => {
         if (selectedCategory && categoryData.name !== selectedCategory) return false;
         if (selectedTeamNameFilter) {
@@ -586,24 +459,20 @@ const TeamsAccommApp = ({ userProfileData }) => {
         }
         return true;
     });
-
     const openEditModal = (place) => {
         setSelectedPlaceForEdit(place);
         setNewHeaderColor(place.headerColor || '#1e40af');
         setNewHeaderTextColor(place.headerTextColor || '#000000');
         setIsColorModalOpen(true);
     };
-
     const saveHeaderColor = async () => {
         if (!selectedPlaceForEdit || !window.db) return;
-
         try {
             const placeRef = doc(window.db, 'places', selectedPlaceForEdit.id);
             await updateDoc(placeRef, { 
                 headerColor: newHeaderColor,
                 headerTextColor: newHeaderTextColor 
             });
-
             setAccommodations(prev =>
                 prev.map(p =>
                     p.id === selectedPlaceForEdit.id 
@@ -611,37 +480,29 @@ const TeamsAccommApp = ({ userProfileData }) => {
                         : p
                 )
             );
-
             await createAccommodationNotification('update_accommodation_color', {
                 accommodationName: selectedPlaceForEdit.name,
                 newHeaderColor: newHeaderColor,
                 newHeaderTextColor: newHeaderTextColor
             });
-
             window.showGlobalNotification('Farba hlavičky bola aktualizovaná', 'success');
             notify('Farba ubytovne bola aktualizovaná', 'success');
         } catch (err) {
-            console.error("Chyba pri ukladaní farby:", err);
             window.showGlobalNotification('Nepodarilo sa uložiť farbu', 'error');
             notify('Nepodarilo sa uložiť farbu ubytovne', 'error');
         }
-
         setIsColorModalOpen(false);
         setSelectedPlaceForEdit(null);
     };
-
     const openAssignModal = async (team) => {
         setSelectedTeam(team);
-        setIsLoading(true);
-        
+        setIsLoading(true);        
         const filteredAccommodations = accommodations.filter(place => 
             place.accommodationType && 
             team.accommodation && 
             place.accommodationType.toLowerCase().includes(team.accommodation.toLowerCase())
-        );
-        
-        setAvailableAccommodations(filteredAccommodations);
-        
+        );        
+        setAvailableAccommodations(filteredAccommodations);        
         if (team.assignedPlace) {
             const assignedPlace = filteredAccommodations.find(p => p.name === team.assignedPlace);
             if (assignedPlace) {
@@ -649,34 +510,25 @@ const TeamsAccommApp = ({ userProfileData }) => {
             }
         } else {
             setSelectedAccommodationId('');
-        }
-        
+        }        
         setIsLoading(false);
         setIsAssignModalOpen(true);
     };
-
     const saveAccommodationAssignment = async () => {
         if (!selectedTeam || !selectedAccommodationId || !window.db) return;
-
         const selectedPlace = availableAccommodations.find(p => p.id === selectedAccommodationId);
         if (!selectedPlace) return;
-
         setIsLoading(true);
-
         try {
             const userRef = doc(window.db, 'users', selectedTeam.userId);
-            const userDoc = await getDoc(userRef);
-            
+            const userDoc = await getDoc(userRef);            
             if (!userDoc.exists()) {
                 throw new Error('Používateľský dokument neexistuje');
             }
-
             const userData = userDoc.data();
             const teams = userData.teams || {};
             const teamArray = teams[selectedTeam.category] || [];
-
             const oldAccommodation = selectedTeam.assignedPlace;
-
             const updatedTeamArray = teamArray.map(teamItem => {
                 if (teamItem.teamName === selectedTeam.teamName) {
                     return {
@@ -689,11 +541,9 @@ const TeamsAccommApp = ({ userProfileData }) => {
                 }
                 return teamItem;
             });
-
             await updateDoc(userRef, {
                 [`teams.${selectedTeam.category}`]: updatedTeamArray
             });
-
             if (oldAccommodation) {
                 await createAccommodationNotification('change_accommodation', {
                     teamName: selectedTeam.teamName,
@@ -716,47 +566,36 @@ const TeamsAccommApp = ({ userProfileData }) => {
                 });
                 notify(`Tím ${selectedTeam.teamName} bol priradený do ${selectedPlace.name}`, 'success');
             }
-
             window.showGlobalNotification(
                 `Tím "${selectedTeam.teamName}" bol priradený do "${selectedPlace.name}"`,
                 'success'
             );
-
             setIsAssignModalOpen(false);
             setSelectedTeam(null);
             setSelectedAccommodationId('');
-
         } catch (err) {
-            console.error("Chyba pri ukladaní priradenia:", err);
             window.showGlobalNotification('Nepodarilo sa priradiť ubytovňu', 'error');
             notify('Nepodarilo sa priradiť ubytovňu', 'error');
         } finally {
             setIsLoading(false);
         }
     };
-
     const openRemoveConfirmation = (team) => {
         setTeamToRemove(team);
         setIsRemoveModalOpen(true);
     };
-
     const removeTeamAssignment = async () => {
         if (!teamToRemove || !window.db) return;
-
         setIsLoading(true);
-
         try {
             const userRef = doc(window.db, 'users', teamToRemove.userId);
-            const userDoc = await getDoc(userRef);
-            
+            const userDoc = await getDoc(userRef);            
             if (!userDoc.exists()) {
                 throw new Error('Používateľský dokument neexistuje');
             }
-
             const userData = userDoc.data();
             const teams = userData.teams || {};
             const teamArray = teams[teamToRemove.category] || [];
-
             const updatedTeamArray = teamArray.map(teamItem => {
                 if (teamItem.teamName === teamToRemove.teamName) {
                     return {
@@ -769,11 +608,9 @@ const TeamsAccommApp = ({ userProfileData }) => {
                 }
                 return teamItem;
             });
-
             await updateDoc(userRef, {
                 [`teams.${teamToRemove.category}`]: updatedTeamArray
             });
-
             await createAccommodationNotification('remove_accommodation', {
                 teamName: teamToRemove.teamName,
                 category: teamToRemove.category,
@@ -782,31 +619,25 @@ const TeamsAccommApp = ({ userProfileData }) => {
                 totalPeople: teamToRemove.peopleWithAccommodation,
                 oldAccommodation: teamToRemove.assignedPlace
             });
-
             window.showGlobalNotification(
                 `Priradenie tímu "${teamToRemove.teamName}" bolo odstránené`,
                 'success'
             );
             notify(`Tím ${teamToRemove.teamName} bol odstránený z ubytovne ${teamToRemove.assignedPlace}`, 'success');
-
             setIsRemoveModalOpen(false);
             setTeamToRemove(null);
-
         } catch (err) {
-            console.error("Chyba pri odstraňovaní priradenia:", err);
             window.showGlobalNotification('Nepodarilo sa odstrániť priradenie', 'error');
             notify('Nepodarilo sa odstrániť priradenie tímu', 'error');
         } finally {
             setIsLoading(false);
         }
     };
-
     const resetFilters = () => {
         setSelectedCategory('');
         setSelectedAccommodationFilter('');
         setSelectedTeamNameFilter('');
     };
-
     const getFilterDescription = () => {
         const filters = [];
         if (selectedCategory) {
@@ -821,23 +652,19 @@ const TeamsAccommApp = ({ userProfileData }) => {
         }
         return filters.join(' + ');
     };
-
     const hexToRgb = (hex) => {
         const r = parseInt(hex.slice(1,3), 16);
         const g = parseInt(hex.slice(3,5), 16);
         const b = parseInt(hex.slice(5,7), 16);
         return `rgb(${r}, ${g}, ${b})`;
-    };
-    
+    };    
     const hexToHsl = (hex) => {
         let r = parseInt(hex.slice(1,3), 16) / 255;
         let g = parseInt(hex.slice(3,5), 16) / 255;
-        let b = parseInt(hex.slice(5,7), 16) / 255;
-    
+        let b = parseInt(hex.slice(5,7), 16) / 255;    
         const max = Math.max(r, g, b);
         const min = Math.min(r, g, b);
-        let h, s, l = (max + min) / 2;
-    
+        let h, s, l = (max + min) / 2;    
         if (max === min) {
             h = s = 0;
         } else {
@@ -849,14 +676,12 @@ const TeamsAccommApp = ({ userProfileData }) => {
                 case b: h = (r - g) / d + 4; break;
             }
             h /= 6;
-        }
-    
+        }    
         h = Math.round(h * 360);
         s = Math.round(s * 100);
         l = Math.round(l * 100);
         return `hsl(${h}, ${s}%, ${l}%)`;
     };
-
     const [uiNotification, setUiNotification] = useState(null);
     useEffect(() => {
         let timer;
@@ -872,13 +697,11 @@ const TeamsAccommApp = ({ userProfileData }) => {
             clearTimeout(timer);
         };
     }, []);
-
     const uiNotificationClasses = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-2xl text-white text-center z-[9999] transition-all duration-400 ease-in-out ${
         uiNotification
             ? 'opacity-100 scale-100 translate-y-0'
             : 'opacity-0 scale-95 -translate-y-4 pointer-events-none'
-    }`;
-    
+    }`;    
     let typeClasses = '';
     if (uiNotification) {
         switch (uiNotification.type) {
@@ -888,24 +711,18 @@ const TeamsAccommApp = ({ userProfileData }) => {
             default: typeClasses = 'bg-gray-700';
         }
     }
-
     return React.createElement(
         'div',
-        { className: 'min-h-screen bg-gray-50 py-8 px-4 relative' },
-        
+        { className: 'min-h-screen bg-gray-50 py-8 px-4 relative' },        
         uiNotification && React.createElement(
             'div',
             { className: `${uiNotificationClasses} ${typeClasses}` },
             uiNotification.message
-        ),
-        
-        React.createElement(NotificationPortal, null),
-        
+        ),        
+        React.createElement(NotificationPortal, null),        
         React.createElement(
             'div',
             { className: 'max-w-7xl mx-auto h-full' },
-
-            // Pridané: Prepínač režimov
             React.createElement(
                 'div',
                 { className: 'mb-6 bg-white rounded-xl shadow-lg p-4' },
@@ -1028,7 +845,6 @@ const TeamsAccommApp = ({ userProfileData }) => {
                             )
                         )
                     ),
-
                     React.createElement(
                         'div',
                         { className: 'flex-1' },
@@ -1053,8 +869,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                 React.createElement('option', { key: teamName, value: teamName }, teamName)
                             )
                         )
-                    ),
-    
+                    ),    
                     React.createElement(
                         'div',
                         { className: 'md:flex items-end' },
@@ -1067,8 +882,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                             'Zrušiť filtre'
                         )
                     )
-                ),
-    
+                ),    
                 (selectedCategory || selectedAccommodationFilter || selectedTeamNameFilter) && React.createElement(
                     'div',
                     { className: 'mt-6 pt-6 border-t border-gray-200' },
@@ -1125,19 +939,16 @@ const TeamsAccommApp = ({ userProfileData }) => {
                         )
                     )
                 )
-            ),
-    
-            // Hlavný obsah - podmienené vykreslenie podľa režimu
+            ),    
             viewMode === 'accommodation' 
-                ? // Pôvodné zobrazenie podľa ubytovní
+                ?
                 React.createElement(
                     'div',
                     { 
                         className: filteredUnassignedTeams.length > 0 
                             ? 'flex flex-col lg:flex-row gap-8 lg:gap-10 h-full' 
                             : 'grid grid-cols-1 h-full'
-                    },
-    
+                    },    
                     filteredUnassignedTeams.length > 0 && React.createElement(
                         'div',
                         { className: 'lg:w-[48%] xl:w-[46%] h-full flex flex-col' },
@@ -1211,8 +1022,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                 )
                             )
                         )
-                    ),
-    
+                    ),    
                     React.createElement(
                         'div',
                         { 
@@ -1444,7 +1254,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                         )
                     )
                 )
-                : // Nové zobrazenie podľa kategórií
+                :
                 React.createElement(
                     'div',
                     { className: 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6' },
@@ -1465,7 +1275,6 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                     key: category.name, 
                                     className: 'bg-white rounded-xl shadow-lg overflow-hidden flex flex-col min-w-0'
                                 },
-                                // Hlavička kategórie
                                 React.createElement(
                                     'div',
                                     {
@@ -1491,15 +1300,12 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                         { className: 'flex-shrink-0 ml-2 text-xs font-medium bg-white text-blue-600 px-2 py-1 rounded-full whitespace-nowrap' },
                                         `${category.totalTeams} tímov`
                                     )
-                                ),
-                                
-                                // Telo karty s tímami
+                                ),                                
                                 React.createElement(
                                     'div',
                                     { 
                                         className: 'p-4 flex-grow overflow-visible flex flex-col min-w-0'
                                     },
-                                    // Nepriradené tímy
                                     category.unassignedTeams.length > 0 && 
                                     (selectedTeamNameFilter ? 
                                         category.unassignedTeams.filter(team => 
@@ -1559,9 +1365,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                                     )
                                                 )
                                         )
-                                    ),
-                                    
-                                    // Priradené tímy (bez nadpisov ubytovní)
+                                    ),                                    
                                     category.assignedTeams.length > 0 && 
                                     (selectedAccommodationFilter || selectedTeamNameFilter ? 
                                         category.assignedTeams.filter(team => {
@@ -1604,15 +1408,13 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                                     return true;
                                                 })
                                                 .sort((a, b) => {
-                                                    // Najprv zoradiť podľa ubytovne, potom podľa názvu tímu
                                                     if (a.assignedPlace !== b.assignedPlace) {
                                                         return a.assignedPlace.localeCompare(b.assignedPlace, 'sk', { sensitivity: 'base' });
                                                     }
                                                     return a.teamName.localeCompare(b.teamName, 'sk', { sensitivity: 'base' });
                                                 })
                                                 .map((team, index) => {
-                                                    const teamColor = getTeamAccommodationColor(team);
-                                                    
+                                                    const teamColor = getTeamAccommodationColor(team);                                                    
                                                     return React.createElement(
                                                         'li',
                                                         {
@@ -1702,8 +1504,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                             );
                         })
                 )
-        ),
-    
+        ),    
         isColorModalOpen &&
         React.createElement(
             'div',
@@ -1728,8 +1529,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                         { className: 'text-lg font-medium text-gray-600 ml-2' },
                         '– ' + (selectedPlaceForEdit?.name || 'Ubytovacie miesto')
                     )
-                ),
-        
+                ),        
                 React.createElement('div', { className: 'mb-10' },
                     React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-3' }, 'Farba pozadia hlavičky'),
                     React.createElement(
@@ -1749,8 +1549,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                             React.createElement('div', null, `HSL: ${hexToHsl(newHeaderColor)}`)
                         )
                     )
-                ),
-        
+                ),        
                 React.createElement('div', { className: 'mb-10' },
                     React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-3' }, 'Farba textu názvu'),
                     React.createElement(
@@ -1760,13 +1559,13 @@ const TeamsAccommApp = ({ userProfileData }) => {
                             'button',
                             {
                                 type: 'button',
-                                onClick: () => setNewHeaderTextColor('#ffffff'), // Zmena na bielu
+                                onClick: () => setNewHeaderTextColor('#ffffff'),
                                 className: `flex-1 px-5 py-3 rounded-lg border text-center font-medium transition-all ${
                                     newHeaderTextColor === '#ffffff'
                                         ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
                                         : 'border-gray-300 hover:bg-gray-50'
                                 }`,
-                                style: { backgroundColor: '#ffffff', color: '#000000' } // Biele pozadie, čierny text
+                                style: { backgroundColor: '#ffffff', color: '#000000' }
                             },
                             'Biela'
                         ),
@@ -1774,19 +1573,18 @@ const TeamsAccommApp = ({ userProfileData }) => {
                             'button',
                             {
                                 type: 'button',
-                                onClick: () => setNewHeaderTextColor('#000000'), // Zmena na čiernu
+                                onClick: () => setNewHeaderTextColor('#000000'),
                                 className: `flex-1 px-5 py-3 rounded-lg border text-center font-medium transition-all ${
                                     newHeaderTextColor === '#000000'
                                         ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
                                         : 'border-gray-300 hover:bg-gray-50'
                                 }`,
-                                style: { backgroundColor: '#000000', color: '#ffffff' } // Čierne pozadie, biely text
+                                style: { backgroundColor: '#000000', color: '#ffffff' }
                             },
                             'Čierna'
                         )
                     )
-                ),
-        
+                ),        
                 React.createElement(
                     'div',
                     { className: 'flex justify-end gap-4 mt-8' },
@@ -1809,7 +1607,6 @@ const TeamsAccommApp = ({ userProfileData }) => {
                 )
             )
         ),
-
         isRemoveModalOpen &&
         React.createElement(
             'div',
@@ -1868,8 +1665,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                             )
                         )
                     )
-                ),
-    
+                ),    
                 React.createElement(
                     'div',
                     { className: 'flex justify-end gap-4 mt-8' },
@@ -1907,8 +1703,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                     )
                 )
             )
-        ),
-    
+        ),    
         isAssignModalOpen &&
         React.createElement(
             'div',
@@ -1933,8 +1728,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                         { className: 'text-lg font-medium text-gray-600 ml-2' },
                         `– ${selectedTeam?.category}: ${selectedTeam?.teamName}`
                     )
-                ),
-    
+                ),    
                 React.createElement('div', { className: 'mb-6' },
                     React.createElement('p', { className: 'text-sm text-gray-600 mb-3' },
                         `Typ ubytovania tímu: ${selectedTeam?.accommodation}`
@@ -1945,8 +1739,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                     React.createElement('p', { className: 'text-sm text-gray-600' },
                         `Počet osôb s ubytovaním: ${selectedTeam?.peopleWithAccommodation || 0}`
                     )
-                ),
-    
+                ),    
                 React.createElement('div', { className: 'mb-8' },
                     React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-3' }, 'Vyberte ubytovňu'),
                     isLoading
@@ -1969,8 +1762,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                 availableAccommodations.map(place => {
                                     const actualCapacity = getActualCapacity(place.id);
                                     const canAccommodate = place.capacity === null || 
-                                        (actualCapacity.remaining !== null && actualCapacity.remaining >= (selectedTeam?.peopleWithAccommodation || 0));
-                                    
+                                        (actualCapacity.remaining !== null && actualCapacity.remaining >= (selectedTeam?.peopleWithAccommodation || 0));                                    
                                     return React.createElement(
                                         'div',
                                         { 
@@ -2069,8 +1861,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                     );
                                 })
                             )
-                ),
-    
+                ),    
                 React.createElement(
                     'div',
                     { className: 'flex justify-end gap-4 mt-8' },
@@ -2108,13 +1899,11 @@ const TeamsAccommApp = ({ userProfileData }) => {
         )
     );
 }
-
 const handleDataUpdateAndRender = (event) => {
     const userProfileData = event.detail;
     const rootElement = document.getElementById('root');
     if (userProfileData) {
         if (window.auth && window.db && !isEmailSyncListenerSetup) {
-            console.log("logged-in-teams-in-accomodation.js: Nastavujem poslucháča na synchronizáciu e-mailu.");
             onAuthStateChanged(window.auth, async (user) => {
                 if (user) {
                     try {
@@ -2123,7 +1912,6 @@ const handleDataUpdateAndRender = (event) => {
                         if (docSnap.exists()) {
                             const firestoreEmail = docSnap.data().email;
                             if (user.email !== firestoreEmail) {
-                                console.log(`E-mail rozdiel: auth → ${user.email} vs firestore → ${firestoreEmail}`);
                                 await updateDoc(userProfileRef, { email: user.email });
                                 await addDoc(collection(window.db, 'notifications'), {
                                     userEmail: user.email,
@@ -2134,18 +1922,15 @@ const handleDataUpdateAndRender = (event) => {
                             }
                         }
                     } catch (error) {
-                        console.error("Chyba pri synchronizácii e-mailu:", error);
                         window.showGlobalNotification('Chyba pri synchronizácii e-mailu.', 'error');
                     }
                 }
             });
             isEmailSyncListenerSetup = true;
         }
-
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(TeamsAccommApp, { userProfileData }));
-            console.log("Aplikácia vykreslená (TeamsAccommApp)");
         }
     } else {
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
@@ -2160,12 +1945,8 @@ const handleDataUpdateAndRender = (event) => {
         }
     }
 };
-
-console.log("logged-in-teams-in-accomodation.js: Registrujem poslucháča pre 'globalDataUpdated'.");
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
-
 if (window.globalUserProfileData) {
-    console.log("Globálne dáta už existujú → vykresľujem okamžite");
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 } else {
     const rootElement = document.getElementById('root');
