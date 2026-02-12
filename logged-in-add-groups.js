@@ -483,7 +483,11 @@ const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingG
                     React.createElement(
                         'button',
                         {
-                            className: `flex-1 w-full px-4 py-2 text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 sm:ml-3 ${isButtonDisabled ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed hover:cursor-default' : 'bg-blue-500 hover:bg-blue-700 text-white focus:ring-blue-500'}`,
+                            className: `flex-1 w-full px-4 py-2 text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 sm:ml-3 ${
+                                isButtonDisabled 
+                                    ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' 
+                                    : 'bg-blue-500 hover:bg-blue-700 text-white focus:ring-blue-500'
+                            }`,
                             onClick: handleUpdateGroup,
                             disabled: isButtonDisabled
                         },
@@ -796,7 +800,11 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
                     React.createElement(
                         'button',
                         {
-                            className: `flex-1 w-full px-4 py-2 text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 sm:ml-3 ${isButtonDisabled ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed hover:cursor-default' : 'bg-blue-500 hover:bg-blue-700 text-white focus:ring-blue-500'}`,
+                            className: `flex-1 w-full px-4 py-2 text-base font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 sm:ml-3 ${
+                                isButtonDisabled 
+                                    ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' 
+                                    : 'bg-blue-500 hover:bg-blue-700 text-white focus:ring-blue-500'
+                            }`,
                             onClick: handleCreateGroup,
                             disabled: isButtonDisabled
                         },
