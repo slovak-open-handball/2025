@@ -325,17 +325,17 @@ const updateHeaderLinks = (userProfileData) => {
         console.log("   Podmienky splnené, pokračujem...");
         
         if (userProfileData) {
-            console.log("   userProfileData existuje, uid:", userProfileData.uid);
+            console.log("   userProfileData existuje, uid:", userProfileData.id);
             
             authLink.classList.add('hidden');
             profileLink.classList.remove('hidden');
             logoutButton.classList.remove('hidden');
             headerElement.style.backgroundColor = getHeaderColorByRole(userProfileData.role);
 
-            if (userProfileData.uid) {
+            if (userProfileData.id) {
                 console.log("   Spúšťam loadInitialDisplayNotifications...");
                 
-                loadInitialDisplayNotifications(userProfileData.uid).then((initialValue) => {
+                loadInitialDisplayNotifications(userProfileData.id).then((initialValue) => {
                     console.log("%c📋 HEADER.JS: loadInitialDisplayNotifications dokončené, initialValue =", "background: #845ef7; color: white;", initialValue);
                     console.log("   currentDisplayNotifications po načítaní:", currentDisplayNotifications);
                     
@@ -346,8 +346,8 @@ const updateHeaderLinks = (userProfileData) => {
                     }
                     
                     console.log("   Nastavujem nový listener nastavení...");
-                    unsubscribeFromUserSettings = setupUserSettingsListener(userProfileData.uid);
-                    currentUserId = userProfileData.uid;
+                    unsubscribeFromUserSettings = setupUserSettingsListener(userProfileData.id);
+                    currentUserId = userProfileData.id;
                     
                     if (userProfileData.role === 'admin') {
                         console.log("   Používateľ je admin, nastavujem listener notifikácií...");
