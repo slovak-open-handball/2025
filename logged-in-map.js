@@ -113,6 +113,8 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [showAccommodationTypesDropdown, setShowAccommodationTypesDropdown] = useState(false);
     const [selectedAccommodationTypeFilter, setSelectedAccommodationTypeFilter] = useState(null);
 
+    const [isPlaceAssigned, setIsPlaceAssigned] = useState(false);
+
     const formatPrice = (price) => {
         if (price == null) return '';
         return price.toFixed(2).replace('.', ',');
@@ -201,6 +203,44 @@ const AddGroupsApp = ({ userProfileData }) => {
             }
         }, 200);
     }, [selectedPlace]);
+
+    useEffect(() => {
+      const checkIfPlaceIsAssigned = async () => {
+        if (!selectedPlace || !window.db) return;
+        
+        try {
+          // Načítaj všetkých používateľov a skontroluj, či niektorý tím má priradené toto miesto
+          const allUsers = await getDocs(collection(window.db, 'users'));
+          let assigned = false;
+          
+          for (const userDoc of allUsers.docs) {
+            const userData = userDoc.data();
+            const teams = userData.teams || {};
+            
+            for (const category in teams) {
+              const teamArray = teams[category];
+              if (!Array.isArray(teamArray)) continue;
+              
+              for (const team of teamArray) {
+                if (team.accommodation?.name === selectedPlace.name) {
+                  assigned = true;
+                  break;
+                }
+              }
+              if (assigned) break;
+            }
+            if (assigned) break;
+          }
+          
+          setIsPlaceAssigned(assigned);
+        } catch (err) {
+          console.error("Chyba pri kontrole priradenia miesta:", err);
+          setIsPlaceAssigned(false);
+        }
+      };
+      
+      checkIfPlaceIsAssigned();
+    }, [selectedPlace, places]);
 
     // NOVÉ: Effect pre zatváranie dropdownu pri kliknutí mimo
     useEffect(() => {
@@ -2256,9 +2296,25 @@ const AddGroupsApp = ({ userProfileData }) => {
                         className: 'w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition'
                       }, 'Upraviť polohu'),
                   React.createElement('button', {
-                    onClick: handleDeletePlace,
-                    className: 'w-full py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition'
-                  }, 'Odstrániť miesto')
+                    onClick: isPlaceAssigned ? null : handleDeletePlace, // Blokované ak je priradené
+                    disabled: isPlaceAssigned,
+                    className: `w-full py-3 font-medium rounded-lg transition flex items-center justify-center gap-2
+                      ${isPlaceAssigned 
+                        ? 'bg-white text-red-600 border-2 border-red-600 cursor-not-allowed opacity-100' 
+                        : 'bg-red-600 hover:bg-red-700 text-white'
+                      }`,
+                    title: isPlaceAssigned ? 'Miesto je priradené k tímu a nie je možné ho odstrániť' : 'Odstrániť miesto',
+                    style: isPlaceAssigned ? { cursor: 'not-allowed', pointerEvents: 'none' } : {}
+                  }, 
+                    isPlaceAssigned 
+                      ? React.createElement(React.Fragment, null,
+                          React.createElement('i', { className: 'fa-solid fa-ban mr-2' }),
+                          'Miesto je priradené (nemožno odstrániť)'
+                        )
+                      : React.createElement(React.Fragment, null,
+                          React.createElement('i', { className: 'fa-solid fa-trash-alt mr-2' }),
+                          'Odstrániť miesto'
+                        )
                 )
               ),
             ),
