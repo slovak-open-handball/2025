@@ -242,45 +242,6 @@ const AddGroupsApp = ({ userProfileData }) => {
         window.history.replaceState({}, '', newUrl);
     };
 
-    // Funkcie pre správu URL hash
-    const getViewModeFromHash = () => {
-        const hash = window.location.hash.replace('#', '');
-        if (hash === 'category' || hash === 'accommodation') {
-            return hash;
-        }
-        return 'accommodation'; // predvolená hodnota
-    };
-
-    const updateHash = (mode) => {
-        window.location.hash = mode;
-    };
-
-    // Inicializácia viewMode z URL hash pri prvom renderi
-    useEffect(() => {
-        const initialMode = getViewModeFromHash();
-        setViewMode(initialMode);
-    }, []);
-
-    // Aktualizácia URL hash pri zmene viewMode
-    useEffect(() => {
-        updateHash(viewMode);
-    }, [viewMode]);
-
-    // Pridanie poslucháča na zmeny hash v URL
-    useEffect(() => {
-        const handleHashChange = () => {
-            const newMode = getViewModeFromHash();
-            if (newMode !== viewMode) {
-                setViewMode(newMode);
-            }
-        };
-
-        window.addEventListener('hashchange', handleHashChange);
-        return () => {
-            window.removeEventListener('hashchange', handleHashChange);
-        };
-    }, [viewMode]);
-
     useEffect(() => {
         if (!window.db) return;
         const unsubscribe = onSnapshot(
