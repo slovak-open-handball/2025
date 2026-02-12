@@ -179,25 +179,25 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
         const changes = [];
         
         if (newValues.maxTeams !== oldValues.maxTeams) {
-            changes.push(`Max. počet tímov: ${oldValues.maxTeams} → ${newValues.maxTeams}`);
+            changes.push(`Max. počet tímov z '${oldValues.maxTeams}' na '${newValues.maxTeams}'`);
         }
         if (newValues.periods !== oldValues.periods) {
-            changes.push(`Počet periód: ${oldValues.periods} → ${newValues.periods}`);
+            changes.push(`Počet periód z '${oldValues.periods}' na '${newValues.periods}'`);
         }
         if (newValues.periodDuration !== oldValues.periodDuration) {
-            changes.push(`Trvanie periódy: ${oldValues.periodDuration} min → ${newValues.periodDuration} min`);
+            changes.push(`Trvanie periódy z '${oldValues.periodDuration} min' na '${newValues.periodDuration} min'`);
         }
         if (newValues.breakDuration !== oldValues.breakDuration) {
-            changes.push(`Prestávka medzi periódami: ${oldValues.breakDuration} min → ${newValues.breakDuration} min`);
+            changes.push(`Prestávka medzi periódami z '${oldValues.breakDuration} min' na '${newValues.breakDuration} min'`);
         }
         if (newValues.matchBreak !== oldValues.matchBreak) {
-            changes.push(`Prestávka medzi zápasmi: ${oldValues.matchBreak} min → ${newValues.matchBreak} min`);
+            changes.push(`Prestávka medzi zápasmi z '${oldValues.matchBreak} min' na '${newValues.matchBreak} min'`);
         }
         if (newValues.drawColor !== oldValues.drawColor) {
-            changes.push(`Farba pre rozlosovanie: ${oldValues.drawColor} → ${newValues.drawColor}`);
+            changes.push(`Farba pre rozlosovanie z '${oldValues.drawColor}' na '${newValues.drawColor}'`);
         }
         if (newValues.transportColor !== oldValues.transportColor) {
-            changes.push(`Farba pre dopravu: ${oldValues.transportColor} → ${newValues.transportColor}`);
+            changes.push(`Farba pre dopravu z '${oldValues.transportColor}' na '${newValues.transportColor}'`);
         }
         
         return changes;
