@@ -2303,11 +2303,11 @@ const AddGroupsApp = ({ userProfileData }) => {
                         ? 'bg-white text-red-600 border-2 border-red-600 opacity-100 hover:cursor-not-allowed' 
                         : 'bg-red-600 hover:bg-red-700 text-white'
                       }`,
-                    title: isPlaceAssigned ? 'Miesto je priradené k tímu a nie je možné ho odstrániť' : 'Odstrániť miesto'
+                    title: isPlaceAssigned ? 'Miesto nie je možné odstrániť' : 'Odstrániť miesto'
                   }, 
                     isPlaceAssigned 
                       ? React.createElement(React.Fragment, null,
-                          'Miesto je priradené'
+                          'Odstrániť miesto'
                         )
                       : React.createElement(React.Fragment, null,
                           React.createElement('i', { className: 'fa-solid fa-trash-alt mr-2' }),
