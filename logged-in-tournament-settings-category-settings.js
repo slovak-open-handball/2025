@@ -1,4 +1,3 @@
-// logged-in-tournament-settings-category-settings.js
 import { doc, onSnapshot, setDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Funkcia na vytvorenie notifikácie o zmene nastavení kategórie
@@ -31,7 +30,8 @@ export function CategorySettings({
     showNotification,
     initialCategoryId, // URL názov (slug)
     onSelectCategory,
-    onHasChangesChange // Nový prop pre hlásenie zmien
+    onHasChangesChange,
+    onResetChanges // Nový prop pre registráciu reset funkcie
 }) {
     const [categories, setCategories] = React.useState([]);
     const [selectedCategoryId, setSelectedCategoryId] = React.useState(null);
@@ -323,6 +323,45 @@ export function CategorySettings({
     }, [categories, editedMaxTeams, editedPeriods, editedPeriodDuration, 
         editedBreakDuration, editedMatchBreak, editedDrawColor, editedTransportColor]);
 
+    // RESET VŠETKÝCH NEULOŽENÝCH ZMIEN
+    const resetAllChanges = React.useCallback(() => {
+        // Nastavíme všetky edited hodnoty na pôvodné hodnoty z databázy
+        const initialMaxTeams = {};
+        const initialPeriods = {};
+        const initialPeriodDuration = {};
+        const initialBreakDuration = {};
+        const initialMatchBreak = {};
+        const initialDrawColor = {};
+        const initialTransportColor = {};
+        
+        categories.forEach(cat => {
+            initialMaxTeams[cat.id] = cat.maxTeams;
+            initialPeriods[cat.id] = cat.periods;
+            initialPeriodDuration[cat.id] = cat.periodDuration;
+            initialBreakDuration[cat.id] = cat.breakDuration;
+            initialMatchBreak[cat.id] = cat.matchBreak;
+            initialDrawColor[cat.id] = cat.drawColor;
+            initialTransportColor[cat.id] = cat.transportColor;
+        });
+        
+        setEditedMaxTeams(initialMaxTeams);
+        setEditedPeriods(initialPeriods);
+        setEditedPeriodDuration(initialPeriodDuration);
+        setEditedBreakDuration(initialBreakDuration);
+        setEditedMatchBreak(initialMatchBreak);
+        setEditedDrawColor(initialDrawColor);
+        setEditedTransportColor(initialTransportColor);
+        
+        // hasChanges sa automaticky prepne na false
+    }, [categories]);
+
+    // Registrujeme reset funkciu u nadradeného komponentu
+    React.useEffect(() => {
+        if (onResetChanges) {
+            onResetChanges(resetAllChanges);
+        }
+    }, [resetAllChanges, onResetChanges]);
+
     // Samostatný useEffect na spracovanie zmeny URL v RÁMCI CategorySettings
     React.useEffect(() => {
         if (!isInitialLoad && categories.length > 0 && initialCategoryId) {
@@ -446,7 +485,7 @@ export function CategorySettings({
                 for (const catChange of categoriesWithChanges) {
                     if (catChange.changes.length > 0) {
                         const mainChanges = [
-                            `Úprava nastavení kategórie: '''${catChange.categoryName}'`,
+                            `Úprava nastavení kategórie: '${catChange.categoryName}'`,
                             ...catChange.changes
                         ];
                         
