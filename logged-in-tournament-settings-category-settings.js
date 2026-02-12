@@ -825,7 +825,7 @@ export function CategorySettings({
                         hasChanges && !saving && React.createElement(
                             'span',
                             { className: 'text-sm text-yellow-600 font-medium' },
-                            `Máte neuložené zmeny v ${categoriesWithChangesCount} kategórii.`
+                            `Máte neuložené zmeny v ${categoriesWithChangesCount} ${categoriesWithChangesCount === 1 ? 'kategórii' : 'kategóriách'}.`
                         )
                     )
                 )
