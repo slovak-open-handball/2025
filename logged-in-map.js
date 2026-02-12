@@ -2307,7 +2307,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                   }, 
                     isPlaceAssigned 
                       ? React.createElement(React.Fragment, null,
-                          React.createElement('i', { className: 'fa-solid fa-ban mr-2' }),
                           'Miesto je priradené'
                         )
                       : React.createElement(React.Fragment, null,
