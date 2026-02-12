@@ -402,13 +402,13 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
         // NOVÉ: Použitie aktuálnej hodnoty displayNotifications z real-time listenera
         console.log("header.js: Aktuálny stav displayNotifications:", currentDisplayNotifications);
         
-        // AK MAJÚ VYPNUTÉ NOTIFIKÁCIE, UKONČIŤ - NIE označiť ako seen!
+        // AK MAJÚ VYPNUTÉ NOTIFIKÁCIE, UKONČIŤ
         if (!currentDisplayNotifications) {
             console.log("header.js: Notifikácie sú vypnuté (aktuálny stav), nezobrazujem nové upozornenia.");
             return;
         }
 
-        // POKRAČOVAŤ LEN AK MAJÚ ZAPNUTÉ NOTIFIKÁCIE
+        // ZOBRAZENIE HROMADNEJ NOTIFIKÁCIE PRE 3+ NEPREČÍTANÝCH
         if (unreadCount >= 3) {
             let message = '';
             if (unreadCount >= 5) {
@@ -417,12 +417,13 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                 message = `Máte ${unreadCount} nové neprečítané upozornenia.`;
             }
             showDatabaseNotification(message, 'info');
-            return; 
+            // Pokračujeme ďalej, aby sa zobrazili aj jednotlivé notifikácie
         }
 
+        // SPRACOVANIE JEDNOTLIVÝCH NOVÝCH NOTIFIKÁCIÍ
         snapshot.docChanges().forEach(async (change) => {
             if (change.type === "added") {
-                // NOVÉ: Dodatočná kontrola aktuálneho stavu pre každú novú notifikáciu
+                // Kontrola aktuálneho stavu pre každú novú notifikáciu
                 if (!currentDisplayNotifications) {
                     console.log("header.js: Notifikácie sú vypnuté, preskakujem novú notifikáciu.");
                     return;
@@ -432,12 +433,15 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                 const notificationId = change.doc.id;
                 
                 const seenBy = newNotification.seenBy || [];
+                
                 // Skontrolovať, či používateľ ešte nevidí túto notifikáciu
                 if (!seenBy.includes(userId)) {
                     console.log("header.js: Nová notifikácia prijatá a nebola videná používateľom:", newNotification);
                     
                     // Formátovanie správy pre zobrazenie
                     let changesMessage = '';
+                    
+                    // Spracovanie rôznych formátov notifikácií
                     if (newNotification.changes) {
                         if (Array.isArray(newNotification.changes) && newNotification.changes.length > 0) {
                             changesMessage = newNotification.changes[0];
@@ -452,10 +456,16 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                         changesMessage = 'Nová notifikácia';
                     }
                     
-                    // ZOBRAZIŤ NOTIFIKÁCIU
+                    // Pridanie informácie o používateľovi ak je k dispozícii
+                    if (newNotification.userEmail) {
+                        changesMessage = `Používateľ ${newNotification.userEmail}: ${changesMessage}`;
+                    }
+                    
+                    // ZOBRAZIŤ JEDNOTLIVÚ NOTIFIKÁCIU
+                    console.log("header.js: Zobrazujem notifikáciu:", changesMessage);
                     showDatabaseNotification(changesMessage, newNotification.type || 'info');
                     
-                    // TERAZ až po zobrazení notifikácie pridať userId do seenBy
+                    // OZNAČIŤ AKO SEEN
                     const notificationDocRef = doc(window.db, "notifications", notificationId);
                     try {
                         await updateDoc(notificationDocRef, {
