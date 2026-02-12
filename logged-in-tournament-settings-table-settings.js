@@ -155,7 +155,7 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
     
     // Pridáme možnosť "Vyberte" ako prvú a potom dostupné parametre
     return [
-      { value: '', label: '-- Vyberte parameter --', disabled: true },
+      { value: '', label: '-- Vyberte parameter --', disabled: true, isPlaceholder: true },
       ...availableParameters.filter(param => !selectedValues.includes(param.value))
     ];
   };
@@ -220,22 +220,33 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
                 {
                   value: condition.parameter || '',
                   onChange: (e) => handleSortingConditionChange(index, 'parameter', e.target.value),
-                  className: `flex-1 px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${
-                    !condition.parameter ? 'text-gray-400' : 'text-gray-900'
-                  }`
+                  className: `flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900`
                 },
-                getAvailableParameters(index).map(param => 
-                  React.createElement(
+                getAvailableParameters(index).map(param => {
+                  // Špeciálne triedy pre placeholder možnosť
+                  if (param.isPlaceholder) {
+                    return React.createElement(
+                      'option', 
+                      { 
+                        key: param.value, 
+                        value: param.value,
+                        disabled: true,
+                        className: 'text-gray-400 cursor-not-allowed hover:cursor-not-allowed'
+                      }, 
+                      param.label
+                    );
+                  }
+                  // Normálne možnosti - štandardná farba a kurzor
+                  return React.createElement(
                     'option', 
                     { 
                       key: param.value, 
                       value: param.value,
-                      disabled: param.disabled || false,
-                      className: param.disabled ? 'text-gray-400' : ''
+                      className: 'text-gray-900 cursor-pointer hover:cursor-pointer'
                     }, 
                     param.label
-                  )
-                )
+                  );
+                })
               ),
               React.createElement(
                 'select',
@@ -243,19 +254,19 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
                   value: condition.direction || 'asc',
                   onChange: (e) => handleSortingConditionChange(index, 'direction', e.target.value),
                   disabled: !condition.parameter,
-                  className: `px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 w-32 ${
-                    !condition.parameter ? 'bg-gray-100 cursor-not-allowed' : ''
+                  className: `px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 w-32 text-gray-900 ${
+                    !condition.parameter ? 'bg-gray-100 cursor-not-allowed' : 'cursor-pointer'
                   }`
                 },
-                React.createElement('option', { value: 'asc' }, 'Vzostupne'),
-                React.createElement('option', { value: 'desc' }, 'Zostupne')
+                React.createElement('option', { value: 'asc', className: 'text-gray-900' }, 'Vzostupne'),
+                React.createElement('option', { value: 'desc', className: 'text-gray-900' }, 'Zostupne')
               ),
               React.createElement(
                 'button',
                 {
                   type: 'button',
                   onClick: () => handleRemoveCondition(index),
-                  className: 'p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors duration-200'
+                  className: 'p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors duration-200 cursor-pointer'
                 },
                 React.createElement('svg', { className: 'h-5 w-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
                   React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
@@ -272,7 +283,7 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
           {
             type: 'button',
             onClick: handleAddCondition,
-            className: 'inline-flex items-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 mb-4'
+            className: 'inline-flex items-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 mb-4 cursor-pointer'
           },
           React.createElement('svg', { className: 'h-5 w-5 mr-2', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
             React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M12 4v16m8-8H4' })
@@ -299,7 +310,7 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
             type: 'button',
             onClick: handleResetToDefault,
             disabled: isSaving,
-            className: 'px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
+            className: 'px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer'
           },
           'Obnoviť predvolené'
         ),
@@ -309,7 +320,7 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
             type: 'button',
             onClick: handleSave,
             disabled: !hasChanges || isSaving || !areConditionsValid(),
-            className: `px-6 py-2 bg-blue-600 text-white rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${hasChanges && !isSaving && areConditionsValid() ? 'hover:bg-blue-700' : ''}`
+            className: `px-6 py-2 bg-blue-600 text-white rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${hasChanges && !isSaving && areConditionsValid() ? 'hover:bg-blue-700 cursor-pointer' : ''}`
           },
           isSaving ? 'Ukladám...' : 'Uložiť nastavenia'
         )
