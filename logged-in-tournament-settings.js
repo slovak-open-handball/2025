@@ -310,10 +310,10 @@ function TournamentSettingsApp() {
   };
 
   // Handler pre resetovanie zmien v CategorySettings
-  const handleSetResetFunction = (resetFn) => {
+  const handleSetResetFunction = React.useCallback((resetFn) => {
     console.log("handleSetResetFunction - registrujem reset funkciu");
     resetCategorySettingsRef.current = resetFn;
-  };
+}, []);
 
   // Handler pre návrat na hlavnú stránku - S MODÁLNYM OKNOM
   const handleBackToMain = () => {
@@ -328,11 +328,13 @@ function TournamentSettingsApp() {
             if (resetCategorySettingsRef.current) {
                 resetCategorySettingsRef.current();
             }
-    
-            // Potom opustíme sekciu
-            setActiveSetting(null);
-            setActiveCategoryId(null);
-            updateUrlHash(null);
+
+            // Potom opustíme sekciu - POUŽIJEME setTimeout pre istotu
+            setTimeout(() => {
+                setActiveSetting(null);
+                setActiveCategoryId(null);
+                updateUrlHash(null);
+            }, 0);
             
             // A NAKONIEC zatvoríme modálne okno
             setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
