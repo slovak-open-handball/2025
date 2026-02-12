@@ -28,7 +28,7 @@ export function CategorySettings({
     db, 
     userProfileData, 
     showNotification,
-    initialCategoryId,
+    initialCategoryId, // Stále používame ID pre internú logiku
     onSelectCategory 
 }) {
     const [categories, setCategories] = React.useState([]);
@@ -44,12 +44,38 @@ export function CategorySettings({
     const [previousValues, setPreviousValues] = React.useState({});
     const [isInitialLoad, setIsInitialLoad] = React.useState(true);
 
-    // Handler pre výber kategórie - používa callback z hlavného súboru
+    // Pomocná funkcia na prevod názvu na URL-friendly formát
+    const slugify = (text) => {
+        if (!text) return '';
+        return text
+            .toString()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '') // odstráni diakritiku
+            .replace(/[^a-z0-9]+/g, '-')     // nahradí nealfanumerické znaky pomlčkou
+            .replace(/^-+|-+$/g, '');        // odstráni pomlčky na začiatku a konci
+    };
+
+    // Funkcia na získanie ID kategórie podľa názvu z URL
+    const getCategoryIdFromUrlName = (urlName, categoriesList) => {
+        if (!urlName || !categoriesList.length) return null;
+        
+        // Nájdeme kategóriu, ktorej slugified názov sa zhoduje s URL názvom
+        const foundCategory = categoriesList.find(cat => 
+            slugify(cat.name) === urlName
+        );
+        
+        return foundCategory ? foundCategory.id : null;
+    };
+
+    // Handler pre výber kategórie - do URL ukladá názov, nie ID
     const handleSelectCategory = (catId) => {
-        setSelectedCategoryId(catId);
-        if (onSelectCategory) {
-            onSelectCategory(catId);
+        const category = categories.find(c => c.id === catId);
+        if (category && onSelectCategory) {
+            // Pošleme do hlavného komponentu názov kategórie (pre URL)
+            onSelectCategory(slugify(category.name), catId);
         }
+        setSelectedCategoryId(catId);
     };
 
     // Načítavanie kategórií
@@ -107,13 +133,16 @@ export function CategorySettings({
                 
                 // Nastav kategóriu z props (z URL) alebo prvú kategóriu
                 if (list.length > 0) {
-                    if (initialCategoryId && list.some(cat => cat.id === initialCategoryId)) {
-                        setSelectedCategoryId(initialCategoryId);
+                    // initialCategoryId je teraz URL názov (slug), nie ID
+                    const categoryIdFromUrl = getCategoryIdFromUrlName(initialCategoryId, list);
+                    
+                    if (categoryIdFromUrl) {
+                        setSelectedCategoryId(categoryIdFromUrl);
                     } else if (!selectedCategoryId) {
                         setSelectedCategoryId(list[0].id);
                         // Ak nie je v URL, nastavíme prvú kategóriu a aktualizujeme URL
                         if (onSelectCategory) {
-                            onSelectCategory(list[0].id);
+                            onSelectCategory(slugify(list[0].name), list[0].id);
                         }
                     }
                 }
@@ -143,9 +172,9 @@ export function CategorySettings({
     // Reakcia na zmenu initialCategoryId (keď používateľ použije tlačidlo späť/vpred)
     React.useEffect(() => {
         if (initialCategoryId && categories.length > 0) {
-            const isValidCategory = categories.some(cat => cat.id === initialCategoryId);
-            if (isValidCategory && initialCategoryId !== selectedCategoryId) {
-                setSelectedCategoryId(initialCategoryId);
+            const categoryIdFromUrl = getCategoryIdFromUrlName(initialCategoryId, categories);
+            if (categoryIdFromUrl && categoryIdFromUrl !== selectedCategoryId) {
+                setSelectedCategoryId(categoryIdFromUrl);
             }
         }
     }, [initialCategoryId, categories, selectedCategoryId]);
