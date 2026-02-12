@@ -2459,7 +2459,7 @@ const AddGroupsApp = ({ userProfileData }) => {
               React.createElement('select', {
                 value: editType,
                 onChange: e => setEditType(e.target.value),
-                isabled: isPlaceAssigned, 
+                disabled: isPlaceAssigned, 
                 className: `w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition bg-white ${
                     isPlaceAssigned ? 'cursor-not-allowed bg-gray-100 opacity-70' : ''
                 }`
