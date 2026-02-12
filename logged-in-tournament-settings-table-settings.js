@@ -60,7 +60,7 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
     setSortingConditions(prev => {
       const updated = [...prev];
       if (!updated[index]) {
-        updated[index] = { parameter: 'headToHead', direction: 'asc' };
+        updated[index] = { parameter: '', direction: 'asc' };
       }
       updated[index] = { ...updated[index], [field]: value };
       return updated;
@@ -72,7 +72,7 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
   const handleAddCondition = () => {
     setSortingConditions(prev => [
       ...prev,
-      { parameter: 'headToHead', direction: 'asc' }
+      { parameter: '', direction: 'asc' }
     ]);
     setHasChanges(true);
   };
@@ -91,20 +91,22 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
       setIsSaving(true);
       const settingsDocRef = doc(db, 'settings', 'table');
       
-      // Pripravíme dáta na uloženie
+      // Pripravíme dáta na uloženie - odstránime prázdne podmienky
+      const validConditions = sortingConditions.filter(cond => cond.parameter && cond.parameter.trim() !== '');
+      
       const dataToSave = {
-        sortingConditions: sortingConditions
+        sortingConditions: validConditions
       };
 
       // Zistíme, čo sa zmenilo pre notifikáciu
       const changes = [];
       
       // Zmeny v podmienkach poradia
-      if (JSON.stringify(sortingConditions) !== JSON.stringify(originalSortingConditions)) {
-        if (sortingConditions.length === 0) {
-          changes.push('Poradie bolo nastavené na predvolené (podľa dátumu registrácie)');
+      if (JSON.stringify(validConditions) !== JSON.stringify(originalSortingConditions)) {
+        if (validConditions.length === 0) {
+          changes.push('Poradie bolo nastavené na predvolené (podľa bodov)');
         } else {
-          const conditionsText = sortingConditions.map((cond, index) => {
+          const conditionsText = validConditions.map((cond, index) => {
             const param = availableParameters.find(p => p.value === cond.parameter)?.label || cond.parameter;
             const direction = cond.direction === 'asc' ? 'vzostupne' : 'zostupne';
             return `${index + 1}. ${param} (${direction})`;
@@ -116,7 +118,8 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
       await setDoc(settingsDocRef, dataToSave, { merge: true });
       
       // Aktualizujeme pôvodné nastavenia
-      setOriginalSortingConditions(sortingConditions);
+      setOriginalSortingConditions(validConditions);
+      setSortingConditions(validConditions); // Aktualizujeme stav aby neobsahoval prázdne podmienky
       setHasChanges(false);
       
       showNotification('Nastavenia poradia boli úspešne uložené.', 'success');
@@ -143,13 +146,23 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
     setHasChanges(true);
   };
 
-  // Získanie dostupných parametrov pre selectbox (odstránime už vybraté)
+  // Získanie dostupných parametrov pre selectbox
   const getAvailableParameters = (currentIndex) => {
     const selectedValues = sortingConditions
       .filter((_, index) => index !== currentIndex)
-      .map(cond => cond.parameter);
+      .map(cond => cond.parameter)
+      .filter(param => param && param.trim() !== ''); // Iba neprázdne hodnoty
     
-    return availableParameters.filter(param => !selectedValues.includes(param.value));
+    // Pridáme možnosť "Vyberte" ako prvú a potom dostupné parametre
+    return [
+      { value: '', label: '-- Vyberte parameter --', disabled: true },
+      ...availableParameters.filter(param => !selectedValues.includes(param.value))
+    ];
+  };
+
+  // Kontrola, či sú všetky podmienky validné
+  const areConditionsValid = () => {
+    return sortingConditions.every(cond => cond.parameter && cond.parameter.trim() !== '');
   };
 
   if (isLoading) {
@@ -205,12 +218,23 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
               React.createElement(
                 'select',
                 {
-                  value: condition.parameter || 'headToHead',
+                  value: condition.parameter || '',
                   onChange: (e) => handleSortingConditionChange(index, 'parameter', e.target.value),
-                  className: 'flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'
+                  className: `flex-1 px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${
+                    !condition.parameter ? 'text-gray-400' : 'text-gray-900'
+                  }`
                 },
                 getAvailableParameters(index).map(param => 
-                  React.createElement('option', { key: param.value, value: param.value }, param.label)
+                  React.createElement(
+                    'option', 
+                    { 
+                      key: param.value, 
+                      value: param.value,
+                      disabled: param.disabled || false,
+                      className: param.disabled ? 'text-gray-400' : ''
+                    }, 
+                    param.label
+                  )
                 )
               ),
               React.createElement(
@@ -218,7 +242,10 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
                 {
                   value: condition.direction || 'asc',
                   onChange: (e) => handleSortingConditionChange(index, 'direction', e.target.value),
-                  className: 'px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 w-32'
+                  disabled: !condition.parameter,
+                  className: `px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 w-32 ${
+                    !condition.parameter ? 'bg-gray-100 cursor-not-allowed' : ''
+                  }`
                 },
                 React.createElement('option', { value: 'asc' }, 'Vzostupne'),
                 React.createElement('option', { value: 'desc' }, 'Zostupne')
@@ -281,8 +308,8 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
           {
             type: 'button',
             onClick: handleSave,
-            disabled: !hasChanges || isSaving,
-            className: `px-6 py-2 bg-blue-600 text-white rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${hasChanges && !isSaving ? 'hover:bg-blue-700' : ''}`
+            disabled: !hasChanges || isSaving || !areConditionsValid(),
+            className: `px-6 py-2 bg-blue-600 text-white rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${hasChanges && !isSaving && areConditionsValid() ? 'hover:bg-blue-700' : ''}`
           },
           isSaving ? 'Ukladám...' : 'Uložiť nastavenia'
         )
