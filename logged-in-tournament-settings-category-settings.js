@@ -617,7 +617,7 @@ export function CategorySettings({ db, userProfileData, showNotification }) {
                                 ),
                                 React.createElement(
                                     'div',
-                                    { className: 'grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm' },
+                                    { className: 'grid grid-cols-1 gap-4 text-sm' },
                                     React.createElement('div', { className: 'text-gray-600' },
                                         'Čistý hrací čas: ',
                                         React.createElement('span', { className: 'font-bold text-gray-900' },
