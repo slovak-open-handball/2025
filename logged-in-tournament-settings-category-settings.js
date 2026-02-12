@@ -28,7 +28,7 @@ export function CategorySettings({
     db, 
     userProfileData, 
     showNotification,
-    initialCategoryId, // Stále používame ID pre internú logiku
+    initialCategoryId, // URL názov (slug)
     onSelectCategory 
 }) {
     const [categories, setCategories] = React.useState([]);
@@ -51,16 +51,15 @@ export function CategorySettings({
             .toString()
             .toLowerCase()
             .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '') // odstráni diakritiku
-            .replace(/[^a-z0-9]+/g, '-')     // nahradí nealfanumerické znaky pomlčkou
-            .replace(/^-+|-+$/g, '');        // odstráni pomlčky na začiatku a konci
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
     };
 
     // Funkcia na získanie ID kategórie podľa názvu z URL
     const getCategoryIdFromUrlName = (urlName, categoriesList) => {
         if (!urlName || !categoriesList.length) return null;
         
-        // Nájdeme kategóriu, ktorej slugified názov sa zhoduje s URL názvom
         const foundCategory = categoriesList.find(cat => 
             slugify(cat.name) === urlName
         );
@@ -72,7 +71,8 @@ export function CategorySettings({
     const handleSelectCategory = (catId) => {
         const category = categories.find(c => c.id === catId);
         if (category && onSelectCategory) {
-            // Pošleme do hlavného komponentu názov kategórie (pre URL)
+            // Pred prepnutím kategórie sa automaticky uložia zmeny v aktuálnej kategórii
+            // do state, takže o ne neprídeme
             onSelectCategory(slugify(category.name), catId);
         }
         setSelectedCategoryId(catId);
@@ -101,7 +101,7 @@ export function CategorySettings({
 
                 setCategories(list);
                 
-                // Inicializácia editovaných hodnôt
+                // Inicializácia editovaných hodnôt - TOTO SA SPUSTÍ IBA RAZ PRI NAČÍTANÍ
                 const initialMaxTeams = {};
                 const initialPeriods = {};
                 const initialPeriodDuration = {};
@@ -122,25 +122,89 @@ export function CategorySettings({
                     initialPreviousValues[cat.id] = { ...cat };
                 });
                 
-                setEditedMaxTeams(initialMaxTeams);
-                setEditedPeriods(initialPeriods);
-                setEditedPeriodDuration(initialPeriodDuration);
-                setEditedBreakDuration(initialBreakDuration);
-                setEditedMatchBreak(initialMatchBreak);
-                setEditedDrawColor(initialDrawColor);
-                setEditedTransportColor(initialTransportColor);
+                // DÔLEŽITÉ: Toto nastavíme len ak ešte nemáme žiadne hodnoty
+                // Zabráni to prepísaniu existujúcich neuložených zmien
+                setEditedMaxTeams(prev => {
+                    const newState = { ...initialMaxTeams };
+                    // Zachováme existujúce hodnoty, ktoré sa líšia od pôvodných
+                    Object.keys(prev).forEach(key => {
+                        if (prev[key] !== initialMaxTeams[key]) {
+                            newState[key] = prev[key];
+                        }
+                    });
+                    return newState;
+                });
+                
+                setEditedPeriods(prev => {
+                    const newState = { ...initialPeriods };
+                    Object.keys(prev).forEach(key => {
+                        if (prev[key] !== initialPeriods[key]) {
+                            newState[key] = prev[key];
+                        }
+                    });
+                    return newState;
+                });
+                
+                setEditedPeriodDuration(prev => {
+                    const newState = { ...initialPeriodDuration };
+                    Object.keys(prev).forEach(key => {
+                        if (prev[key] !== initialPeriodDuration[key]) {
+                            newState[key] = prev[key];
+                        }
+                    });
+                    return newState;
+                });
+                
+                setEditedBreakDuration(prev => {
+                    const newState = { ...initialBreakDuration };
+                    Object.keys(prev).forEach(key => {
+                        if (prev[key] !== initialBreakDuration[key]) {
+                            newState[key] = prev[key];
+                        }
+                    });
+                    return newState;
+                });
+                
+                setEditedMatchBreak(prev => {
+                    const newState = { ...initialMatchBreak };
+                    Object.keys(prev).forEach(key => {
+                        if (prev[key] !== initialMatchBreak[key]) {
+                            newState[key] = prev[key];
+                        }
+                    });
+                    return newState;
+                });
+                
+                setEditedDrawColor(prev => {
+                    const newState = { ...initialDrawColor };
+                    Object.keys(prev).forEach(key => {
+                        if (prev[key] !== initialDrawColor[key]) {
+                            newState[key] = prev[key];
+                        }
+                    });
+                    return newState;
+                });
+                
+                setEditedTransportColor(prev => {
+                    const newState = { ...initialTransportColor };
+                    Object.keys(prev).forEach(key => {
+                        if (prev[key] !== initialTransportColor[key]) {
+                            newState[key] = prev[key];
+                        }
+                    });
+                    return newState;
+                });
+                
                 setPreviousValues(initialPreviousValues);
                 
                 // Nastav kategóriu z props (z URL) alebo prvú kategóriu
                 if (list.length > 0) {
-                    // initialCategoryId je teraz URL názov (slug), nie ID
                     const categoryIdFromUrl = getCategoryIdFromUrlName(initialCategoryId, list);
                     
                     if (categoryIdFromUrl) {
                         setSelectedCategoryId(categoryIdFromUrl);
                     } else if (!selectedCategoryId) {
                         setSelectedCategoryId(list[0].id);
-                        // Ak nie je v URL, nastavíme prvú kategóriu a aktualizujeme URL
                         if (onSelectCategory) {
                             onSelectCategory(slugify(list[0].name), list[0].id);
                         }
@@ -167,17 +231,17 @@ export function CategorySettings({
         });
 
         return () => unsubscribe();
-    }, [db, userProfileData, showNotification, initialCategoryId, onSelectCategory]);
+    }, [db, userProfileData, showNotification]); // ODSTRÁNENÉ initialCategoryId a onSelectCategory z dependencies!
 
-    // Reakcia na zmenu initialCategoryId (keď používateľ použije tlačidlo späť/vpred)
+    // Samostatný useEffect na spracovanie zmeny URL
     React.useEffect(() => {
-        if (initialCategoryId && categories.length > 0) {
+        if (!isInitialLoad && categories.length > 0 && initialCategoryId) {
             const categoryIdFromUrl = getCategoryIdFromUrlName(initialCategoryId, categories);
             if (categoryIdFromUrl && categoryIdFromUrl !== selectedCategoryId) {
                 setSelectedCategoryId(categoryIdFromUrl);
             }
         }
-    }, [initialCategoryId, categories, selectedCategoryId]);
+    }, [initialCategoryId, categories, selectedCategoryId, isInitialLoad]);
 
     // Handlery pre jednotlivé inputy
     const handleMaxTeamsChange = (catId, value) => {
