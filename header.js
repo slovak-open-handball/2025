@@ -129,7 +129,7 @@ const formatNotificationMessage = (text) => {
                 const newValue = parts[i + 2];
                 
                 if (oldValue && newValue) {
-                    changes.push(`${fieldName}: <em>${oldValue}</em> → <strong>${newValue}</strong>`);
+                    changes.push(`${fieldName} z <em>${oldValue}</em> na <strong>${newValue}</strong>`);
                 }
                 i += 2;
             }
