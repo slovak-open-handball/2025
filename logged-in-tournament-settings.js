@@ -316,7 +316,7 @@ function TournamentSettingsApp() {
 
   // Handler pre návrat na hlavnú stránku - S MODÁLNYM OKNOM
   const handleBackToMain = () => {
-    // Kontrola, či má CategorySettings neuložené zmeny
+    console.log("handleBackToMain - setting modalState with pendingAction");
     if (activeSetting === 'categories' && categorySettingsHasChanges) {
       setModalState({
         isOpen: true,
@@ -581,8 +581,9 @@ function TournamentSettingsApp() {
 
   // Potvrdenie odchodu z modálneho okna
   const handleConfirmLeave = () => {
+    console.log("handleConfirmLeave - pendingAction:", modalState.pendingAction);
+    console.log("handleConfirmLeave - pendingHash:", modalState.pendingHash);
     if (modalState.pendingAction) {
-      // Spustíme pendingAction - toto je teraz nastavené v handleBackToMain
       modalState.pendingAction(); 
     } else if (modalState.pendingHash) {
       window.location.hash = modalState.pendingHash;
