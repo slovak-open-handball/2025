@@ -24,61 +24,13 @@ const createCategorySettingsChangeNotification = async (actionType, changesArray
     }
 };
 
-// Komponent pre vlastné modálne okno
-const UnsavedChangesModal = ({ isOpen, onConfirm, onCancel, message }) => {
-    if (!isOpen) return null;
-    
-    return React.createElement(
-        'div',
-        {
-            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100000]',
-            onClick: (e) => {
-                if (e.target === e.currentTarget) onCancel();
-            }
-        },
-        React.createElement(
-            'div',
-            { className: 'bg-white rounded-lg shadow-xl max-w-md w-full mx-4 overflow-hidden' },
-            React.createElement(
-                'div',
-                { className: 'p-6' },
-                React.createElement('h3', { className: 'text-xl font-bold text-gray-900 mb-4' },
-                    'Neuložené zmeny'
-                ),
-                React.createElement('p', { className: 'text-gray-600 mb-6' },
-                    message || 'Máte neuložené zmeny. Naozaj chcete opustiť túto stránku?'
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'flex justify-end gap-3' },
-                    React.createElement(
-                        'button',
-                        {
-                            onClick: onCancel,
-                            className: 'px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors'
-                        },
-                        'Zrušiť'
-                    ),
-                    React.createElement(
-                        'button',
-                        {
-                            onClick: onConfirm,
-                            className: 'px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors'
-                        },
-                        'Opustiť'
-                    )
-                )
-            )
-        )
-    );
-};
-
 export function CategorySettings({ 
     db, 
     userProfileData, 
     showNotification,
     initialCategoryId, // URL názov (slug)
-    onSelectCategory 
+    onSelectCategory,
+    onHasChangesChange // Nový prop pre hlásenie zmien
 }) {
     const [categories, setCategories] = React.useState([]);
     const [selectedCategoryId, setSelectedCategoryId] = React.useState(null);
@@ -92,13 +44,6 @@ export function CategorySettings({
     const [saving, setSaving] = React.useState(false);
     const [previousValues, setPreviousValues] = React.useState({});
     const [isInitialLoad, setIsInitialLoad] = React.useState(true);
-    
-    // Stav pre modálne okno
-    const [modalState, setModalState] = React.useState({
-        isOpen: false,
-        pendingHash: null,
-        message: ''
-    });
 
     // Pomocná funkcia na prevod názvu na URL-friendly formát
     const slugify = (text) => {
@@ -123,7 +68,7 @@ export function CategorySettings({
         return foundCategory ? foundCategory.id : null;
     };
 
-    // Handler pre výber kategórie - priamo volá onSelectCategory bez čakania na hashchange
+    // Handler pre výber kategórie - do URL ukladá názov, nie ID
     const handleSelectCategory = (catId) => {
         const category = categories.find(c => c.id === catId);
         if (category && onSelectCategory) {
@@ -294,6 +239,7 @@ export function CategorySettings({
         const numValue = value === '' ? '' : Math.max(1, parseInt(value) || 1);
         setEditedPeriods(prev => ({ ...prev, [catId]: numValue }));
         
+        // AUTOMATICKÉ VYNULOVANIE: Ak je počet periód 1, vynulujeme prestávku medzi periódami
         const periodsValue = value === '' ? 1 : Math.max(1, parseInt(value) || 1);
         if (periodsValue === 1) {
             setEditedBreakDuration(prev => ({ ...prev, [catId]: 0 }));
@@ -355,6 +301,13 @@ export function CategorySettings({
     }, [categories, editedMaxTeams, editedPeriods, editedPeriodDuration, 
         editedBreakDuration, editedMatchBreak, editedDrawColor, editedTransportColor]);
 
+    // Hlásime zmeny nadradenému komponentu
+    React.useEffect(() => {
+        if (onHasChangesChange) {
+            onHasChangesChange(hasChanges && !saving);
+        }
+    }, [hasChanges, saving, onHasChangesChange]);
+
     // Zobrazenie počtu kategórií so zmenami
     const categoriesWithChangesCount = React.useMemo(() => {
         return categories.filter(cat => 
@@ -383,73 +336,13 @@ export function CategorySettings({
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, [hasChanges, saving]);
 
-    // VLASTNÉ RIEŠENIE PRE HASHCHANGE - namiesto event listenera
-    const handleHashChange = (newHash) => {
-        if (!hasChanges || saving) {
-            // Ak nie sú zmeny, normálne spracujeme URL
-            if (categories.length > 0) {
-                const categoryIdFromUrl = getCategoryIdFromUrlName(newHash, categories);
-                if (categoryIdFromUrl) {
-                    setSelectedCategoryId(categoryIdFromUrl);
-                }
-            }
-            return;
-        }
-
-        const isStillCategorySection = newHash.startsWith('categories');
-        
-        if (!isStillCategorySection) {
-            // Opúšťame CategorySettings sekciu - zobrazíme modálne okno
-            setModalState({
-                isOpen: true,
-                pendingHash: newHash,
-                message: 'Máte neuložené zmeny. Naozaj chcete opustiť túto sekciu?'
-            });
-        } else {
-            // Prepínanie v rámci CategorySettings - normálne spracujeme
-            const categoryIdFromUrl = getCategoryIdFromUrlName(newHash, categories);
-            if (categoryIdFromUrl) {
-                setSelectedCategoryId(categoryIdFromUrl);
-            }
-        }
-    };
-
-    // Sledovanie zmien URL cez popstate a vlastný handler
-    React.useEffect(() => {
-        const checkHashChange = () => {
-            const hash = window.location.hash.slice(1);
-            handleHashChange(hash);
-        };
-
-        // Počiatočné načítanie už máme cez props
-        window.addEventListener('popstate', checkHashChange);
-        
-        // Vytvoríme vlastný observer pre zmeny hashu
-        const originalPushState = history.pushState;
-        const originalReplaceState = history.replaceState;
-
-        history.pushState = function() {
-            originalPushState.apply(this, arguments);
-            setTimeout(() => checkHashChange(), 0);
-        };
-
-        history.replaceState = function() {
-            originalReplaceState.apply(this, arguments);
-            setTimeout(() => checkHashChange(), 0);
-        };
-
-        return () => {
-            window.removeEventListener('popstate', checkHashChange);
-            history.pushState = originalPushState;
-            history.replaceState = originalReplaceState;
-        };
-    }, [categories, hasChanges, saving]);
-
-    // Samostatný useEffect na spracovanie zmeny URL z props (z hlavného komponentu)
+    // Samostatný useEffect na spracovanie zmeny URL v RÁMCI CategorySettings
     React.useEffect(() => {
         if (!isInitialLoad && categories.length > 0 && initialCategoryId) {
             const categoryIdFromUrl = getCategoryIdFromUrlName(initialCategoryId, categories);
             if (categoryIdFromUrl && categoryIdFromUrl !== selectedCategoryId) {
+                // Pri zmene URL v RÁMCI CategorySettings (prepínanie kategórií)
+                // NIKDY NEZOBRAZUJEME UPOZORNENIE
                 setSelectedCategoryId(categoryIdFromUrl);
             }
         }
@@ -657,19 +550,6 @@ export function CategorySettings({
         }
     };
 
-    // Potvrdenie odchodu z modálneho okna
-    const handleConfirmLeave = () => {
-        if (modalState.pendingHash) {
-            window.location.hash = modalState.pendingHash;
-        }
-        setModalState({ isOpen: false, pendingHash: null, message: '' });
-    };
-
-    // Zrušenie odchodu z modálneho okna
-    const handleCancelLeave = () => {
-        setModalState({ isOpen: false, pendingHash: null, message: '' });
-    };
-
     // Získanie vybranej kategórie
     const selectedCategory = categories.find(cat => cat.id === selectedCategoryId);
 
@@ -688,13 +568,6 @@ export function CategorySettings({
     return React.createElement(
         React.Fragment,
         null,
-        // Vlastné modálne okno
-        React.createElement(UnsavedChangesModal, {
-            isOpen: modalState.isOpen,
-            onConfirm: handleConfirmLeave,
-            onCancel: handleCancelLeave,
-            message: modalState.message
-        }),
         React.createElement(
             'div',
             { className: 'space-y-6 p-6 border border-gray-200 rounded-lg shadow-sm mt-8 bg-white' },
