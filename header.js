@@ -316,30 +316,31 @@ const updateHeaderLinks = (userProfileData) => {
             logoutButton.classList.remove('hidden');
             headerElement.style.backgroundColor = getHeaderColorByRole(userProfileData.role);
 
-            // VŽDY nastavíme listener pre zmeny nastavení používateľa
+            // KRITICKÁ ZMENA: NAJPRV NASTAVÍME LISTENER PRE ZMENY NASTAVENÍ
+            // AŽ POTOM NAČÍTAME POČIATOČNÚ HODNOTU A NASTAVÍME LISTENER NOTIFIKÁCIÍ
             if (userProfileData.uid) {
                 // Odhlásime predchádzajúci listener ak existuje
                 if (unsubscribeFromUserSettings) {
                     unsubscribeFromUserSettings();
                     unsubscribeFromUserSettings = null;
                 }
-                // Nastavíme nový listener
+                // Nastavíme nový listener - TOTO BUDE OKAMŽITE BEŽAŤ A AKTUALIZOVAŤ HODNOTU
                 unsubscribeFromUserSettings = setupUserSettingsListener(userProfileData.uid);
                 currentUserId = userProfileData.uid;
             }
 
             // NASTAVENIE LISTENERA PRE ADMINA
             if (userProfileData.role === 'admin') {
-                if (!unsubscribeFromNotifications) {
-                    // Najprv načítame počiatočnú hodnotu displayNotifications
-                    loadInitialDisplayNotifications(userProfileData.uid).then(() => {
+                // Počkáme 500ms aby sa stihol nastaviť listener a načítať hodnota z databázy
+                setTimeout(() => {
+                    if (!unsubscribeFromNotifications) {
                         // Vyčistenie Setu pri prihlásení nového používateľa
                         shownNotificationIds.clear();
                         
                         // Nastavíme listener notifikácií
                         setupNotificationListenerForAdmin(userProfileData);
-                    });
-                }
+                    }
+                }, 500);
             } else {
                 if (unsubscribeFromNotifications) {
                     unsubscribeFromNotifications();
