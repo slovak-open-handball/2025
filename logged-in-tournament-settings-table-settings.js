@@ -140,21 +140,26 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
       // Zistíme, čo sa zmenilo pre notifikáciu
       const changes = [];
       
-      // Zmeny v podmienkach poradia
+      // Zmeny v podmienkach poradia - KAŽDÁ PODMIENKA NA SAMOSTATNÝ RIADOK
       if (JSON.stringify(validConditions) !== JSON.stringify(originalSortingConditions)) {
         if (validConditions.length === 0) {
           changes.push('Poradie bolo nastavené na predvolené (podľa bodov)');
         } else {
-          const conditionsText = validConditions.map((cond, index) => {
+          // Úvodný text na samostatný riadok
+          changes.push('Zmena nastavení poradia:');
+          
+          // Každú podmienku pridáme ako samostatný riadok
+          validConditions.forEach((cond, index) => {
             const param = availableParameters.find(p => p.value === cond.parameter)?.label || cond.parameter;
+            
             // Pridáme smer iba pre parametre, ktoré ho podporujú
             if (parametersWithDirection.includes(cond.parameter)) {
               const direction = cond.direction === 'asc' ? 'vzostupne' : 'zostupne';
-              return `${index + 1}. ${param} (${direction})`;
+              changes.push(`${index + 1}. ${param} (${direction})`);
+            } else {
+              changes.push(`${index + 1}. ${param}`);
             }
-            return `${index + 1}. ${param}`;
-          }).join('; ');
-          changes.push(`Poradie účastníkov: ${conditionsText}`);
+          });
         }
       }
 
@@ -167,12 +172,15 @@ export function TableSettings({ db, userProfileData, showNotification, sendAdmin
       
       showNotification('Nastavenia poradia boli úspešne uložené.', 'success');
       
-      // Notifikácia pre adminov
+      // Notifikácia pre adminov - KAŽDÁ PODMIENKA NA SAMOSTATNÝ RIADOK
       if (changes.length > 0) {
+        // Spojíme riadky s oddeľovačom \n pre pekný formát v databáze
+        const changesText = changes.join('\n');
+        
         await sendAdminNotification({
           type: 'updateSettings',
           data: {
-            changesMade: `Zmena nastavení poradia: ${changes.join('; ')}`
+            changesMade: changesText
           }
         });
       }
