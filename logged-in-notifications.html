@@ -12,16 +12,15 @@
         body {
             font-family: 'Inter', sans-serif;
             margin: 0;
-            padding-top: 64px; /* Odsadenie pre pevnú hlavičku */
-            box-sizing: border-box; /* Zabezpečí, že padding nebude pridávať k celkovej šírke/výške */
-            display: flex; /* Použitie flexboxu pre celé body */
-            flex-direction: column; /* Usporiadanie obsahu vo stĺpci */
-            min-height: 100vh; /* Minimálna výška stránky */
+            padding-top: 64px;
+            box-sizing: border-box; 
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
     </style>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-
     <script src="clear-console.js"></script>
     <script type="module" src="authentication.js"></script>
     <script type="module" src="logged-in-left-menu.js"></script>
@@ -29,10 +28,8 @@
 </head>
 <body class="bg-gray-100">
     <div id="header-placeholder"></div>
-
     <div class="flex flex-grow">
         <div id="menu-placeholder"></div>
-
         <main id="main-content-area" class="flex-grow flex">
             <div class="flex-shrink-0 w-16 transition-all duration-300"></div>
             <div id="root" class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -42,14 +39,10 @@
             </div>
         </main>
     </div>
-
     <script type="module">
-        // Spustíme načítanie hlavičky a menu po načítaní DOM
         window.addEventListener('DOMContentLoaded', async () => {
             const headerPlaceholder = document.getElementById('header-placeholder');
             const menuPlaceholder = document.getElementById('menu-placeholder');
-            
-            // Načítanie hlavičky
             try {
                 const headerResponse = await fetch('header.html');
                 if (!headerResponse.ok) throw new Error('Network response for header was not ok.');
@@ -58,10 +51,7 @@
                     headerPlaceholder.innerHTML = headerHtml;
                 }
             } catch (error) {
-                console.error("Chyba pri načítaní hlavičky:", error);
             }
-
-            // Načítanie ľavého menu
             try {
                 const menuResponse = await fetch('logged-in-left-menu.html');
                 if (!menuResponse.ok) throw new Error('Network response for menu was not ok.');
@@ -70,50 +60,33 @@
                     menuPlaceholder.innerHTML = menuHtml;
                 }
             } catch (error) {
-                console.error("Chyba pri načítaní ľavého menu:", error);
             }
-
             const renderApp = () => {
                 if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
-                    console.error("Chyba: React alebo ReactDOM nie sú načítané. Skontrolujte poradie skriptov.");
                     document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní aplikácie. Skúste to prosím neskôr.</div>';
                     return;
                 }
                 if (typeof NotificationsApp === 'undefined') {
-                    console.error("Chyba: Komponent NotificationsApp nie je definovaný. Skontrolujte logged-in-notifications.js.");
                     document.getElementById('root').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">Chyba pri načítaní komponentu aplikácie.</div>';
                     return;
                 }
                 const root = ReactDOM.createRoot(document.getElementById('root'));
                 root.render(React.createElement(NotificationsApp, null));
-                console.log("logged-in-notifications.html: React App vykreslená.");
-            };
-    
-            // Počkáme na globalDataUpdated
+            };    
             window.addEventListener('globalDataUpdated', (event) => {
-                console.log("logged-in-notifications.html: Prijatá udalosť 'globalDataUpdated'. Pripravujem vykreslenie React aplikácie.");
                 if (event.detail) {
                     renderApp();
-                } else {
-                    console.log("logged-in-notifications.html: GlobalUserProfileData je null, používateľ nie je prihlásený. Presmerovanie už mala spracovať authentication.js.");
                 }
             });
-
-            // Ak už sú globálne dáta k dispozícii, vykreslíme aplikáciu ihneď.
             if (window.isGlobalAuthReady && window.globalUserProfileData) {
-                console.log("logged-in-notifications.html: GlobalData už pripravená pri DOMContentLoaded. Vykresľujem React aplikáciu.");
                 renderApp();
             } else if (window.isGlobalAuthReady && !window.globalUserProfileData) {
-                console.log("logged-in-notifications.html: Auth ready, but no user data. Redirecting to login.");
                 window.location.href = 'login.html';
             }
-
-            // Až po načítaní všetkého spustiť header.js
             const headerScript = document.createElement('script');
             headerScript.type = 'module';
             headerScript.src = 'header.js';
             document.body.appendChild(headerScript);
-            console.log("logged-in-notifications.html: Dynamicky načítavam header.js.");
         });
     </script>
 </body>
