@@ -19,6 +19,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const teamsInGroupsLink = document.getElementById('teams-in-groups-link');
     const mapLink = document.getElementById('map-link'); 
     const teamsAccommodationLink = document.getElementById('teams-accommodation-link');
+    const matchesLink = document.getElementById('matches-link');
     
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
         console.error("left-menu.js: Nepodarilo sa nájsť #left-menu, #menu-toggle-button, textové elementy alebo menu spacer po vložení HTML.");
@@ -241,6 +242,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             teamsInGroupsLink.classList.remove('hidden');
             mapLink?.classList.remove('hidden');
             teamsAccommodationLink?.classList.remove('hidden');
+            matchesLink.classList.remove('hidden');
     
             const unreadCount = userProfileData.unreadNotificationCount || 0;
             if (notificationsTextWithCount) {
@@ -271,6 +273,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             teamsInGroupsLink.classList.add('hidden'); 
             mapLink?.classList.add('hidden');
             teamsAccommodationLink?.classList.add('hidden');
+            matchesLink.classList.add('hidden');
             
             if (notificationsTextWithCount) {
                 notificationsTextWithCount.textContent = 'Upozornenia';
@@ -289,6 +292,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             teamsInGroupsLink.classList.add('hidden');
             mapLink?.classList.add('hidden');
             teamsAccommodationLink?.classList.add('hidden');
+            matchesLink.classList.add('hidden');
             
             if (notificationsTextWithCount) {
                 notificationsTextWithCount.textContent = 'Upozornenia';
