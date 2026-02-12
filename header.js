@@ -231,18 +231,15 @@ const handleLogout = async () => {
     try {
         const auth = getAuth();
         await signOut(auth);
-        console.log("header.js: Používateľ bol úspešne odhlásený.");
         
         if (unsubscribeFromNotifications) {
             unsubscribeFromNotifications();
             unsubscribeFromNotifications = null;
-            console.log("header.js: Listener notifikácií zrušený.");
         }
         
         if (unsubscribeFromUserSettings) {
             unsubscribeFromUserSettings();
             unsubscribeFromUserSettings = null;
-            console.log("header.js: Listener nastavení používateľa zrušený.");
         }
         
         shownNotificationIds.clear();
@@ -284,35 +281,19 @@ const setupUserSettingsListener = (userId) => {
         unsubscribeFromUserSettings();
         unsubscribeFromUserSettings = null;
     }
-    
-    console.log("%c📋 HEADER.JS: Nastavujem listener pre zmeny nastavení používateľa:", "background: #ffa500; color: black;", userId);
-    
+        
     const userDocRef = doc(window.db, 'users', userId);
     
     return onSnapshot(userDocRef, (docSnap) => {
-        console.log("%c📋 HEADER.JS: Listener nastavení - dostal som update z databázy!", "background: #ffa500; color: black;");
         if (docSnap.exists()) {
             const userData = docSnap.data();
-            console.log("   Data z databázy:", userData);
             
             if (userData.hasOwnProperty('displayNotifications')) {
                 const oldValue = currentDisplayNotifications;
-                currentDisplayNotifications = userData.displayNotifications;
-                
-                console.log("%c🔔 DISPLAY NOTIFICATIONS ZMENENÉ 🔔", "background: #47b3ff; color: white; font-size: 14px; font-weight: bold; padding: 4px; border-radius: 4px;");
-                console.log("%c   Stará hodnota:", "color: #ff6b6b; font-weight: bold;", oldValue);
-                console.log("%c   Nová hodnota: ", "color: #51cf66; font-weight: bold;", currentDisplayNotifications);
-                console.log("%c   Zdroj:        onSnapshot listener (databáza)", "color: #47b3ff;");
-                console.log("--------------------------------------------------");
+                currentDisplayNotifications = userData.displayNotifications;                
             } else {
                 const oldValue = currentDisplayNotifications;
-                currentDisplayNotifications = false;
-                
-                console.log("%c🔔 DISPLAY NOTIFICATIONS - PREDVOLENÁ HODNOTA 🔔", "background: #ff6b6b; color: white; font-size: 14px; font-weight: bold; padding: 4px; border-radius: 4px;");
-                console.log("%c   Pole displayNotifications neexistuje v databáze", "color: #ff6b6b;");
-                console.log("%c   Stará hodnota:", "color: #ff6b6b; font-weight: bold;", oldValue);
-                console.log("%c   Nová hodnota: ", "color: #51cf66; font-weight: bold;", currentDisplayNotifications);
-                console.log("--------------------------------------------------");
+                currentDisplayNotifications = false;                
             }
             
             if (window.globalUserProfileData) {
@@ -327,42 +308,21 @@ const setupUserSettingsListener = (userId) => {
 };
 
 const loadInitialDisplayNotifications = async (userId) => {
-    // Ak už máme aktuálnu hodnotu pre tohto používateľa, nevoláme databázu
     if (currentUserId === userId && currentDisplayNotifications !== false) {
-        console.log("%c📋 HEADER.JS: Používam existujúcu hodnotu displayNotifications", "background: #845ef7; color: white;");
         return currentDisplayNotifications;
-    }
-    
-    console.log("%c📋 HEADER.JS: loadInitialDisplayNotifications volaná pre userId:", "background: #845ef7; color: white;", userId);
-    
+    }    
     if (!window.db || !userId) {
         console.warn("header.js: Chýba db alebo userId pre načítanie nastavení.");
         return false;
     }
     
     try {
-        const userDocRef = doc(window.db, 'users', userId);
-        console.log("   Volám getDoc pre:", userDocRef.path);
-        
-        const userSnap = await getDoc(userDocRef);
-        console.log("   getDoc dokončený, exists:", userSnap.exists());
-        
+        const userDocRef = doc(window.db, 'users', userId);        
+        const userSnap = await getDoc(userDocRef);        
         if (userSnap.exists()) {
-            const userData = userSnap.data();
-            console.log("   Dáta z getDoc:", userData);
-            
-            const initialValue = userData.displayNotifications || false;
-            console.log("   displayNotifications hodnota z databázy:", userData.displayNotifications);
-            console.log("   initialValue (po || false):", initialValue);
-            
-            currentDisplayNotifications = initialValue;
-            
-            console.log("%c🔔 DISPLAY NOTIFICATIONS - POČIATOČNÉ NAČÍTANIE 🔔", "background: #845ef7; color: white; font-size: 14px; font-weight: bold; padding: 4px; border-radius: 4px;");
-            console.log("%c   ✅ ÚSPEŠNE NAČÍTANÉ Z DATABÁZY", "color: #51cf66; font-weight: bold;");
-            console.log("%c   Hodnota:       ", "color: #51cf66; font-weight: bold;", currentDisplayNotifications);
-            console.log("%c   ID používateľa:", "color: #888;", userId);
-            console.log("--------------------------------------------------");
-            
+            const userData = userSnap.data();            
+            const initialValue = userData.displayNotifications || false;            
+            currentDisplayNotifications = initialValue;            
             return initialValue;
         } else {
             console.warn("header.js: Dokument používateľa neexistuje!");
@@ -373,10 +333,7 @@ const loadInitialDisplayNotifications = async (userId) => {
     return false;
 };
 
-const updateHeaderLinks = (userProfileData) => {
-    console.log("%c📋 HEADER.JS: updateHeaderLinks volaná", "background: #1D4ED8; color: white;");
-    console.log("   userProfileData:", userProfileData);
-    
+const updateHeaderLinks = (userProfileData) => {    
     const authLink = document.getElementById('auth-link');
     const profileLink = document.getElementById('profile-link');
     const logoutButton = document.getElementById('logout-button');
@@ -400,28 +357,15 @@ const updateHeaderLinks = (userProfileData) => {
         return;
     }
 
-    if (window.isGlobalAuthReady && window.isRegistrationDataLoaded && window.isCategoriesDataLoaded) {
-        console.log("   Podmienky splnené, pokračujem...");
-        
-        if (userProfileData) {
-            console.log("   userProfileData existuje, uid:", userProfileData.id);
-            
+    if (window.isGlobalAuthReady && window.isRegistrationDataLoaded && window.isCategoriesDataLoaded) {        
+        if (userProfileData) {            
             authLink.classList.add('hidden');
             profileLink.classList.remove('hidden');
             logoutButton.classList.remove('hidden');
             headerElement.style.backgroundColor = getHeaderColorByRole(userProfileData.role);
-
-            // IBA AK SA ZMENIL POUŽÍVATEĽ - nastavíme listenery
-            if (userProfileData.id && currentUserId !== userProfileData.id) {
-                console.log("%c🔄 POUŽÍVATEĽ ZMENENÝ - nastavujem listenery", "background: #ff9800; color: black;");
-                
-                currentUserId = userProfileData.id;
-                
-                // Načítame počiatočné nastavenia
-                loadInitialDisplayNotifications(userProfileData.id).then((initialValue) => {
-                    console.log("%c📋 HEADER.JS: loadInitialDisplayNotifications dokončené", "background: #845ef7; color: white;", initialValue);
-                    
-                    // Zrušíme starý listener nastavení
+            if (userProfileData.id && currentUserId !== userProfileData.id) {                
+                currentUserId = userProfileData.id;                
+                loadInitialDisplayNotifications(userProfileData.id).then((initialValue) => {                    
                     if (unsubscribeFromUserSettings) {
                         unsubscribeFromUserSettings();
                         unsubscribeFromUserSettings = null;
@@ -441,19 +385,13 @@ const updateHeaderLinks = (userProfileData) => {
                     
                     // Nastavíme listener notifikácií IBA pre adminov
                     if (userProfileData.role === 'admin') {
-                        console.log("   Používateľ je admin, nastavujem listener notifikácií...");
                         setupNotificationListenerForAdmin(userProfileData);
                     }
                 }).catch(error => {
                     console.error("   CHYBA pri loadInitialDisplayNotifications:", error);
                 });
-            } else {
-                console.log("   Používateľ sa nezmenil, preskakujem reinicializáciu listenerov");
-            }
-
-        } else {
-            console.log("   userProfileData je null, odhlasujem používateľa");
-            
+            } 
+        } else {            
             authLink.classList.remove('hidden');
             profileLink.classList.add('hidden');
             logoutButton.classList.add('hidden');
@@ -477,11 +415,6 @@ const updateHeaderLinks = (userProfileData) => {
 
         updateRegistrationLinkVisibility(userProfileData);
         headerElement.classList.remove('invisible');
-    } else {
-        console.log("   Podmienky NIE SÚ splnené, čakám...");
-        console.log("   window.isGlobalAuthReady:", window.isGlobalAuthReady);
-        console.log("   window.isRegistrationDataLoaded:", window.isRegistrationDataLoaded);
-        console.log("   window.isCategoriesDataLoaded:", window.isCategoriesDataLoaded);
     }
 };
 
@@ -510,62 +443,36 @@ const updateRegistrationLinkVisibility = (userProfileData) => {
 };
 
 const setupNotificationListenerForAdmin = (userProfileData) => {
-    // Kontrola, či už listener nie je nastavený
     if (unsubscribeFromNotifications) {
-        console.log("   Listener notifikácií už je nastavený, preskakujem...");
         return;
-    }
-    
-    notificationListenerSetupCount++;
-    console.log(`%c📋 HEADER.JS: ========== SPÚŠŤAM LISTENER NOTIFIKÁCIÍ ==========`, "background: #47b3ff; color: white; font-size: 14px;");
-    console.log(`   Volanie #${notificationListenerSetupCount}`);
-    console.log(`   Aktuálny stav displayNotifications: ${currentDisplayNotifications ? '✅ ZAPNUTÉ' : '❌ VYPNUTÉ'}`);
-    console.log(`========================================`);
-    
+    }    
+    notificationListenerSetupCount++;    
     if (!window.db) {
         console.warn("header.js: Firestore databáza nie je inicializovaná pre notifikácie.");
         return;
-    }
-    
-    const notificationsCollectionRef = collection(window.db, "notifications");
-    console.log("   Nastavujem onSnapshot pre collection:", notificationsCollectionRef.path);
-    
-    unsubscribeFromNotifications = onSnapshot(notificationsCollectionRef, async (snapshot) => {
-        console.log("%c📋 HEADER.JS: Listener notifikácií - dostal som update!", "background: #47b3ff; color: white;");
-        
+    }    
+    const notificationsCollectionRef = collection(window.db, "notifications");    
+    unsubscribeFromNotifications = onSnapshot(notificationsCollectionRef, async (snapshot) => {        
         const auth = getAuth();
         const userId = auth.currentUser ? auth.currentUser.uid : null;
-
         if (!userId) {
-            console.log("   Žiadny prihlásený používateľ, preskakujem");
             return;
         }
-
         let unreadCount = 0;
         const allNotifications = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
-
         allNotifications.forEach(notification => {
             const seenBy = notification.data.seenBy || [];
             if (!seenBy.includes(userId)) {
                 unreadCount++;
             }
         });
-
         if (window.globalUserProfileData) {
             window.globalUserProfileData.unreadNotificationCount = unreadCount;
             window.dispatchEvent(new CustomEvent('globalDataUpdated', { detail: window.globalUserProfileData }));
-        }
-
-        console.log("%c🔍 KONTROLA DISPLAY NOTIFICATIONS", "background: #47b3ff; color: white; font-size: 13px; font-weight: bold; padding: 3px; border-radius: 3px;");
-        console.log(`%c   Hodnota z databázy: ${currentDisplayNotifications}`, currentDisplayNotifications ? "color: #51cf66; font-weight: bold;" : "color: #ff6b6b; font-weight: bold;");
-        console.log(`%c   Výsledok: ${currentDisplayNotifications ? '✅ Zobrazujem notifikácie' : '❌ Notifikácie sú vypnuté'}`, currentDisplayNotifications ? "color: #51cf66;" : "color: #ff6b6b;");
-        console.log("--------------------------------------------------");
-        
+        }        
         if (!currentDisplayNotifications) {
-            console.log("   Notifikácie sú vypnuté, končím spracovanie");
             return;
         }
-
         if (unreadCount >= 3) {
             let message = '';
             if (unreadCount >= 5) {
@@ -573,28 +480,19 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
             } else { 
                 message = `Máte ${unreadCount} nové neprečítané upozornenia.`;
             }
-            console.log("   Zobrazujem hromadnú notifikáciu:", message);
             showDatabaseNotification(message, 'info');
         }
-
         snapshot.docChanges().forEach(async (change) => {
             if (change.type === "added") {
                 if (!currentDisplayNotifications) {
                     return;
-                }
-                
+                }                
                 const newNotification = change.doc.data();
-                const notificationId = change.doc.id;
-                
-                const seenBy = newNotification.seenBy || [];
-                
-                if (!seenBy.includes(userId) && !shownNotificationIds.has(notificationId)) {
-                    console.log("header.js: Nová notifikácia prijatá, ešte nebola videná:", notificationId);
-                    
-                    shownNotificationIds.add(notificationId);
-                    
-                    let changesMessage = '';
-                    
+                const notificationId = change.doc.id;                
+                const seenBy = newNotification.seenBy || [];                
+                if (!seenBy.includes(userId) && !shownNotificationIds.has(notificationId)) {                    
+                    shownNotificationIds.add(notificationId);                    
+                    let changesMessage = '';                    
                     if (newNotification.changes) {
                         if (Array.isArray(newNotification.changes) && newNotification.changes.length > 0) {
                             changesMessage = newNotification.changes[0];
@@ -607,15 +505,11 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                         changesMessage = newNotification.content;
                     } else {
                         changesMessage = 'Nová notifikácia';
-                    }
-                    
+                    }                    
                     if (newNotification.userEmail) {
                         changesMessage = `Používateľ ${newNotification.userEmail}: ${changesMessage}`;
-                    }
-                    
-                    console.log("header.js: Zobrazujem notifikáciu:", changesMessage);
-                    showDatabaseNotification(changesMessage, newNotification.type || 'info');
-                    
+                    }                    
+                    showDatabaseNotification(changesMessage, newNotification.type || 'info');                    
                     const notificationDocRef = doc(window.db, "notifications", notificationId);
                     try {
                         await updateDoc(notificationDocRef, {
@@ -628,33 +522,24 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
             }
         });
     }, (error) => {
-            console.error("header.js: Chyba pri počúvaní notifikácií:", error);
+            console.error("", error);
     });
-
-    console.log("header.js: Listener pre notifikácie admina nastavený.");
 };
 
-const setupFirestoreListeners = () => {
-    console.log("%c📋 HEADER.JS: setupFirestoreListeners volaná", "background: #1D4ED8; color: white;");
-    
+const setupFirestoreListeners = () => {    
     if (!window.db) {
         console.warn("header.js: Firestore databáza nie je inicializovaná. Odkladám nastavenie listenerov.");
         return; 
     }
-
     if (isFirestoreListenersSetup) {
-        console.log("header.js: Listenery Firestore sú už nastavené.");
         return;
     }
 
     try {
-        console.log("   Nastavujem listener pre settings/registration");
         const registrationDocRef = doc(window.db, "settings", "registration");
         onSnapshot(registrationDocRef, (docSnap) => {
-            console.log("   Listener registration - dostal som update");
             if (docSnap.exists()) {
                 window.registrationDates = docSnap.data();
-                console.log("header.js: Dáta o registrácii aktualizované (onSnapshot).", window.registrationDates);
             } else {
                 window.registrationDates = null;
                 console.warn("header.js: Dokument 'settings/registration' nebol nájdený!");
@@ -666,15 +551,11 @@ const setupFirestoreListeners = () => {
             window.isRegistrationDataLoaded = true;
             updateHeaderLinks(window.globalUserProfileData);
         });
-
-        console.log("   Nastavujem listener pre settings/categories");
         const categoriesDocRef = doc(window.db, "settings", "categories");
         onSnapshot(categoriesDocRef, (docSnap) => {
-            console.log("   Listener categories - dostal som update");
             if (docSnap.exists()) {
                 const categories = docSnap.data();
                 window.hasCategories = Object.keys(categories).length > 0;
-                console.log(`header.js: Dáta kategórií aktualizované (onSnapshot). Počet kategórií: ${Object.keys(categories).length}`);
             } else {
                 window.hasCategories = false;
                 console.warn("header.js: Dokument 'settings/categories' nebol nájdený!");
@@ -682,14 +563,12 @@ const setupFirestoreListeners = () => {
             window.isCategoriesDataLoaded = true;
             window.areCategoriesLoaded = true;
             window.dispatchEvent(new CustomEvent('categoriesLoaded'));
-            console.log("header.js: Odoslaná udalosť 'categoriesLoaded'.");
             updateHeaderLinks(window.globalUserProfileData);
         }, (error) => {
             console.error("header.js: Chyba pri počúvaní dát o kategóriách:", error);
             window.isCategoriesDataLoaded = true;
             window.areCategoriesLoaded = true;
             window.dispatchEvent(new CustomEvent('categoriesLoaded'));
-            console.log("header.js: Odoslaná udalosť 'categoriesLoaded' (s chybou).");
             updateHeaderLinks(window.globalUserProfileData);
         });
 
@@ -701,12 +580,10 @@ const setupFirestoreListeners = () => {
                 updateRegistrationLinkVisibility(window.globalUserProfileData);
             }
         }, 1000); 
-        console.log("header.js: Časovač pre kontrolu registrácie spustený.");
         
         window.addEventListener('beforeunload', () => {
             if (registrationCheckIntervalId) {
                 clearInterval(registrationCheckIntervalId);
-                console.log("header.js: Časovač pre kontrolu registrácie zrušený.");
             }
             
             if (unsubscribeFromNotifications) {
@@ -718,7 +595,6 @@ const setupFirestoreListeners = () => {
         });
 
         isFirestoreListenersSetup = true;
-        console.log("header.js: Firestore listenery boli úspešne nastavené.");
 
     } catch (error) {
         console.error("header.js: Chyba pri inicializácii listenerov Firestore:", error);
@@ -726,58 +602,41 @@ const setupFirestoreListeners = () => {
 };
 
 window.loadHeaderAndScripts = async () => {
-    console.log("%c📋 HEADER.JS: loadHeaderAndScripts spustená", "background: #1D4ED8; color: white; font-size: 16px;");
     
     try {
         const headerPlaceholder = document.getElementById('header-placeholder');
-        console.log("   headerPlaceholder nájdený:", headerPlaceholder ? "áno" : "nie");
         
         const response = await fetch('header.html');
-        console.log("   fetch header.html response status:", response.status);
         
         if (!response.ok) throw new Error('Chyba pri načítaní header.html');
         const headerHtml = await response.text();
-        console.log("   header.html načítaný, dĺžka:", headerHtml.length);
         
         if (headerPlaceholder) {
             headerPlaceholder.innerHTML = headerHtml;
-            console.log("   header.html vložený do placeholderu");
         }
 
         const logoutButton = document.getElementById('logout-button');
         if (logoutButton) {
             logoutButton.addEventListener('click', handleLogout);
-            console.log("header.js: Listener pre tlačidlo odhlásenia bol pridaný.");
         } else {
             console.warn("header.js: Tlačidlo logout-button nebolo nájdené!");
         }
-
         window.addEventListener('globalDataUpdated', (event) => {
-            console.log('%c📋 HEADER.JS: Prijatá udalosť "globalDataUpdated"', "background: #1D4ED8; color: white;");
-            console.log("   event.detail:", event.detail);
             window.isGlobalAuthReady = true; 
             setupFirestoreListeners();
             updateHeaderLinks(event.detail);
         });
-
         if (window.isGlobalAuthReady) {
-             console.log('header.js: Autentifikačné dáta sú už načítané, spúšťam listenery Firestore.');
-             console.log("   window.globalUserProfileData:", window.globalUserProfileData);
              setupFirestoreListeners();
              updateHeaderLinks(window.globalUserProfileData);
-        } else {
-            console.log("header.js: Čakám na globalDataUpdated event...");
         }
-
     } catch (error) {
         console.error("header.js: Chyba pri inicializácii hlavičky:", error);
     }
 };
 
 if (document.readyState === 'loading') {
-    console.log("header.js: Dokument sa načítava, pridávam event listener pre DOMContentLoaded");
     window.addEventListener('DOMContentLoaded', window.loadHeaderAndScripts);
 } else {
-    console.log("header.js: Dokument už je načítaný, spúšťam loadHeaderAndScripts okamžite");
     window.loadHeaderAndScripts();
 }
