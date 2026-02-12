@@ -215,6 +215,33 @@ const AddGroupsApp = ({ userProfileData }) => {
     // Nový stav pre prepínač režimov
     const [viewMode, setViewMode] = useState('accommodation'); // 'accommodation' alebo 'category'
 
+    const getUrlParams = () => {
+        const params = new URLSearchParams(window.location.search);
+        return {
+            viewMode: params.get('view') || 'accommodation',
+            category: params.get('category') || '',
+            accommodation: params.get('accommodation') || '',
+            teamName: params.get('team') || ''
+        };
+    };
+    
+    const updateUrlParams = (params) => {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        if (params.viewMode) urlParams.set('view', params.viewMode);
+        if (params.category) urlParams.set('category', params.category);
+        else if (params.category === '') urlParams.delete('category');
+        
+        if (params.accommodation) urlParams.set('accommodation', params.accommodation);
+        else if (params.accommodation === '') urlParams.delete('accommodation');
+        
+        if (params.teamName) urlParams.set('team', params.teamName);
+        else if (params.teamName === '') urlParams.delete('team');
+        
+        const newUrl = `${window.location.pathname}${urlParams.toString() ? '?' + urlParams.toString() : ''}${window.location.hash}`;
+        window.history.replaceState({}, '', newUrl);
+    };
+
     // Funkcie pre správu URL hash
     const getViewModeFromHash = () => {
         const hash = window.location.hash.replace('#', '');
