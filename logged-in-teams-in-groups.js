@@ -166,7 +166,7 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, team, isConfirming }) 
     )
   );
 };
-const AddGroupsApp = (props) => {
+const AddTeamsGroupApp = (props) => {
     const teamsWithoutGroupRef = React.useRef(null);
     const [allTeams, setAllTeams] = useState([]);
     const [userTeamsData, setUserTeamsData] = useState([]);
@@ -2709,7 +2709,7 @@ const renderSingleCategoryView = () => {
         };
     }, []);
   
-    // Pôvodný kód pred return v komponente AddGroupsApp:
+    // Pôvodný kód pred return v komponente AddTeamsGroupApp:
 return React.createElement(
     'div',
     { className: 'flex flex-col w-full relative text-[87.5%]' },
@@ -2835,7 +2835,7 @@ const handleDataUpdateAndRender = (event) => {
     if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
         const root = ReactDOM.createRoot(rootElement);
         if (userProfileData) {
-            root.render(React.createElement(AddGroupsApp, { userProfileData }));
+            root.render(React.createElement(AddTeamsGroupApp, { userProfileData }));
             if (window.auth && window.db && !isEmailSyncListenerSetup) {
                 onAuthStateChanged(window.auth, async (user) => {
                     if (user) {
