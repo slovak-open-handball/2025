@@ -324,20 +324,18 @@ function TournamentSettingsApp() {
         pendingAction: () => {
             console.log("pendingAction - spúšťam reset a návrat");
     
-            // Najprv zatvoríme modálne okno
-            setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
-    
-            // Potom resetujeme zmeny
+            // Najprv resetujeme zmeny
             if (resetCategorySettingsRef.current) {
                 resetCategorySettingsRef.current();
             }
     
-            // A NAKONIEC opustíme sekciu - použijeme setTimeout
-            setTimeout(() => {
-                setActiveSetting(null);
-                setActiveCategoryId(null);
-                updateUrlHash(null);
-            }, 0);
+            // Potom opustíme sekciu
+            setActiveSetting(null);
+            setActiveCategoryId(null);
+            updateUrlHash(null);
+            
+            // A NAKONIEC zatvoríme modálne okno
+            setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
         },
         pendingHash: null,
         message: 'Máte neuložené zmeny v nastaveniach kategórií. Naozaj chcete opustiť túto sekciu? Všetky neuložené zmeny budú zahodené.'
@@ -407,22 +405,23 @@ function TournamentSettingsApp() {
             setModalState({
               isOpen: true,
               pendingAction: () => {
-                  console.log("pendingAction - spúšťam reset a návrat");
+                  console.log("pendingAction - spúšťam reset a prepnutie sekcie");
     
-                  // Najprv zatvoríme modálne okno
-                  setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
-                  
-                  // Potom resetujeme zmeny
+                  // Najprv resetujeme zmeny
                   if (resetCategorySettingsRef.current) {
                       resetCategorySettingsRef.current();
                   }
                   
-                  // A NAKONIEC opustíme sekciu - použijeme setTimeout
-                  setTimeout(() => {
-                      setActiveSetting(null);
+                  // Potom prepneme na novú sekciu
+                  setActiveSetting(settingFromHash);
+                  if (settingFromHash === 'categories' && categoryFromHash) {
+                      setActiveCategoryId(categoryFromHash);
+                  } else {
                       setActiveCategoryId(null);
-                      updateUrlHash(null);
-                  }, 0);
+                  }
+                  
+                  // A NAKONIEC zatvoríme modálne okno
+                  setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
               },
               pendingHash: newHash,
               message: 'Máte neuložené zmeny v nastaveniach kategórií. Naozaj chcete opustiť túto sekciu? Všetky neuložené zmeny budú zahodené.'
@@ -605,22 +604,19 @@ function TournamentSettingsApp() {
         // Ak nie je pendingAction, urobíme reset a návrat manuálne
         if (activeSetting === 'categories' && categorySettingsHasChanges) {
             console.log("handleConfirmLeave - manuálny reset a návrat");
-            
-            // Najprv zatvoríme modálne okno
-            setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
-            
-            // Potom resetujeme zmeny
+    
+            // Najprv resetujeme zmeny
             if (resetCategorySettingsRef.current) {
                 resetCategorySettingsRef.current();
             }
             
-            // A NAKONIEC opustíme sekciu - toto sa stane až po resetovaní zmien
-            // Použijeme setTimeout, aby sa reset stihol spracovať
-            setTimeout(() => {
-                setActiveSetting(null);
-                setActiveCategoryId(null);
-                updateUrlHash(null);
-            }, 0);
+            // Potom opustíme sekciu
+            setActiveSetting(null);
+            setActiveCategoryId(null);
+            updateUrlHash(null);
+            
+            // A NAKONIEC zatvoríme modálne okno
+            setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
         } else {
             setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
         }
