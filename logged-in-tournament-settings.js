@@ -312,9 +312,11 @@ function TournamentSettingsApp() {
       setModalState({
         isOpen: true,
         pendingAction: () => {
+          // TOTO JE TERAZ ROVNAKÁ LOGIKA AKO V PRÍPADE BEZ ZMIEN!
           setActiveSetting(null);
           setActiveCategoryId(null);
           updateUrlHash(null);
+          // NERESETUJEME categorySettingsHasChanges - to si má na starosti CategorySettings sám!
           setModalState({ isOpen: false, pendingAction: null, pendingHash: null, message: '' });
         },
         pendingHash: null,
