@@ -1,14 +1,10 @@
-// Importy pre Firebase funkcie (Tieto sa nebudú používať na inicializáciu, ale na typy a funkcie)
 import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, getDocs, setDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef, useSyncExternalStore, useCallback } = React;
-
 const createGroupChangeNotification = async (actionType, changesArray, groupData) => {
-    if (!window.db || !changesArray?.length) return;
-    
+    if (!window.db || !changesArray?.length) return;    
     try {
-        const currentUserEmail = window.globalUserProfileData?.email || null;
-        
+        const currentUserEmail = window.globalUserProfileData?.email || null;        
         await addDoc(collection(window.db, 'notifications'), {
             userEmail: currentUserEmail || "",
             performedBy: currentUserEmail || null,
@@ -20,13 +16,9 @@ const createGroupChangeNotification = async (actionType, changesArray, groupData
             relatedGroupName: groupData.groupName || null,
             relatedGroupType: groupData.groupType || null,
         });
-        
-        console.log("[NOTIFIKÁCIA – zmena skupiny]", changesArray);
     } catch (err) {
-        console.error("[CHYBA pri ukladaní notifikácie skupiny]", err);
     }
 };
-
 const loadAndLogAllUsersData = async () => {
     try {      
         const usersCollectionRef = collection(window.db, 'users');
@@ -65,12 +57,10 @@ const loadAndLogAllUsersData = async () => {
         });        
         return { querySnapshot, allTeams, teamsByCategory };
     } catch (error) {
-        console.error("Chyba pri načítavaní údajov z databázy:", error);
         window.showGlobalNotification('Nastala chyba pri načítavaní údajov z databázy.', 'error');
         throw error;
     }
 };
-
 const loadAndLogSuperstructureTeams = async () => {
     try {
         const superstructureDocRef = doc(window.db, 'settings', 'superstructureGroups');
@@ -85,28 +75,20 @@ const loadAndLogSuperstructureTeams = async () => {
         }        
         return processSuperstructureData(docSnap.data());        
     } catch (error) {
-        console.error("Chyba pri načítavaní superštruktúrových tímov:", error);
-        console.error("Detail chyby:", error.message);
         window.showGlobalNotification('Nastala chyba pri načítavaní superštruktúrových tímov.', 'error');
         return [];
     }
 };
-
-const processSuperstructureData = (superstructureData) => {
-    
-    let allSuperstructureTeams = [];
-    
+const processSuperstructureData = (superstructureData) => {    
+    let allSuperstructureTeams = [];    
     Object.keys(superstructureData).forEach(categoryId => {
-        const categoryData = superstructureData[categoryId];
-        
-        if (Array.isArray(categoryData)) {
-            
+        const categoryData = superstructureData[categoryId];        
+        if (Array.isArray(categoryData)) {            
             categoryData.forEach((teamItem, index) => {
                 if (typeof teamItem === 'object' && teamItem !== null) {
                     const teamName = teamItem.teamName || teamItem.name || `Tím ${index + 1}`;
                     const groupName = teamItem.groupName || teamItem.group || "Skupina neznáma";
-                    const order = teamItem.order || teamItem.position || index + 1;
-                                        
+                    const order = teamItem.order || teamItem.position || index + 1;                                        
                     allSuperstructureTeams.push({
                         category: categoryId,
                         teamName: teamName,
@@ -116,16 +98,13 @@ const processSuperstructureData = (superstructureData) => {
                     });
                 }
             });
-        } else if (typeof categoryData === 'object' && categoryData !== null) {
-            
+        } else if (typeof categoryData === 'object' && categoryData !== null) {            
             Object.keys(categoryData).forEach(key => {
-                const item = categoryData[key];
-                
+                const item = categoryData[key];                
                 if (typeof item === 'object' && item !== null) {
                     const teamName = item.teamName || item.name || key;
                     const groupName = item.groupName || item.group || "Skupina neznáma";
-                    const order = item.order || item.position || 0;
-                                        
+                    const order = item.order || item.position || 0;                                        
                     allSuperstructureTeams.push({
                         category: categoryId,
                         subCategory: key,
@@ -137,8 +116,7 @@ const processSuperstructureData = (superstructureData) => {
                 }
             });
         }
-    });
-    
+    });    
     allSuperstructureTeams.sort((a, b) => {
         if (a.category !== b.category) {
             return a.category.localeCompare(b.category);
@@ -150,52 +128,38 @@ const processSuperstructureData = (superstructureData) => {
             return a.order - b.order;
         }
         return a.teamName.localeCompare(b.teamName);
-    });
-    
+    });    
     if (allSuperstructureTeams.length === 0) {
-//        console.log("❌ V dokumente neboli nájdené žiadne tímy.");
     } else {
         allSuperstructureTeams.forEach(team => {
             const teamName = team.teamName || "Názov tímu neznámy";
             const groupName = team.groupName || "Skupina neznáma";
-        });
-        
+        });        
         const teamsByCategory = {};
         allSuperstructureTeams.forEach(team => {
             if (!teamsByCategory[team.category]) {
                 teamsByCategory[team.category] = [];
             }
             teamsByCategory[team.category].push(team);
-        });
-        
+        });        
         Object.keys(teamsByCategory).sort().forEach(category => {
         });
-    }
-        
+    }        
     return allSuperstructureTeams;
 };
-
-
 const setupRealTimeUsersListener = () => {
-    try {
-        
-        const usersCollectionRef = collection(window.db, 'users');
-        
-        const unsubscribe = onSnapshot(usersCollectionRef, (snapshot) => {
-            
-            let newTeams = [];
-            
+    try {        
+        const usersCollectionRef = collection(window.db, 'users');        
+        const unsubscribe = onSnapshot(usersCollectionRef, (snapshot) => {            
+            let newTeams = [];            
             snapshot.forEach((docSnap) => {
                 const userData = docSnap.data();
-                const teams = userData.teams || {};
-                
+                const teams = userData.teams || {};                
                 Object.keys(teams).forEach(categoryId => {
-                    const teamsInCategory = teams[categoryId] || [];
-                    
+                    const teamsInCategory = teams[categoryId] || [];                    
                     teamsInCategory.forEach((team) => {
                         const teamName = team.teamName || "Názov tímu neznámy";
-                        const groupName = team.groupName || "Skupina neznáma";
-                        
+                        const groupName = team.groupName || "Skupina neznáma";                        
                         newTeams.push({
                             category: categoryId,
                             teamName: teamName,
@@ -204,34 +168,24 @@ const setupRealTimeUsersListener = () => {
                         });
                     });
                 });
-            });
-            
+            });            
             newTeams.sort((a, b) => {
                 if (a.category !== b.category) {
                     return a.category.localeCompare(b.category);
                 }
                 return a.teamName.localeCompare(b.teamName);
-            });
-                        
+            });                        
             snapshot.docChanges().forEach((change) => {
                 const userData = change.doc.data();
                 const userEmail = userData.email || "N/A";
                 const userName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || "N/A";
             });
         }, (error) => {
-            console.error("Chyba pri sledovaní zmien v reálnom čase:", error);
         });
-        
-        // Vrátime unsubscribe funkciu pre možnosť zastaviť sledovanie
         return unsubscribe;
     } catch (error) {
-        console.error("Chyba pri nastavovaní sledovania v reálnom čase:", error);
     }
 };
-
-/**
- * Globálna funkcia pre zobrazenie notifikácií
- */
 window.showGlobalNotification = (message, type = 'success') => {
     let notificationElement = document.getElementById('global-notification');
     if (!notificationElement) {
@@ -240,7 +194,6 @@ window.showGlobalNotification = (message, type = 'success') => {
         notificationElement.className = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] opacity-0 transition-opacity duration-300';
         document.body.appendChild(notificationElement);
     }
-
     const baseClasses = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] transition-all duration-500 ease-in-out transform';
     let typeClasses = '';
     switch (type) {
@@ -256,71 +209,54 @@ window.showGlobalNotification = (message, type = 'success') => {
         default:
             typeClasses = 'bg-gray-700 text-white';
     }
-
     notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     notificationElement.textContent = message;
-
-    // Zobrazenie notifikácie
     setTimeout(() => {
         notificationElement.className = `${baseClasses} ${typeClasses} opacity-100 scale-100`;
     }, 10);
-
-    // Skrytie notifikácie po 5 sekundách
     setTimeout(() => {
         notificationElement.className = `${baseClasses} ${typeClasses} opacity-0 scale-95`;
     }, 5000);
 };
-
-// Modal pre úpravu skupiny
 const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingGroups, onUpdate, categories }) => {
-    const [groupName, setGroupName] = useState(groupToEdit?.name || '');
-    const [groupType, setGroupType] = useState(groupToEdit?.type || 'základná skupina');
+    const [groupName, setGroupName] = useState('');
+    const [groupType, setGroupType] = useState('základná skupina');
     const [nameError, setNameError] = useState('');
     const [allFieldsFilled, setAllFieldsFilled] = useState(false);
-
-    // Funkcia na formátovanie názvu skupiny pri úprave
-    const formatGroupName = (input) => {
-        // Odstránime predošlý text "skupina " ak existuje
-        const cleanInput = input.replace(/^skupina\s+/i, '');
-        
-        if (!cleanInput.trim()) return '';
-        
-        const firstChar = cleanInput.charAt(0);
-        const upperChar = firstChar.toUpperCase();
-        
-        return `skupina ${upperChar}`;
+    const handleGroupNameChange = (e) => {
+        const input = e.target.value;        
+        if (input === '') {
+            setGroupName('');
+            return;
+        }        
+        const lastChar = input.charAt(input.length - 1);        
+        if (/^[A-Za-z]$/.test(lastChar)) {
+            const upperChar = lastChar.toUpperCase();
+            setGroupName(`skupina ${upperChar}`);
+        }
     };
-
     useEffect(() => {
         const fieldsFilled = groupName.trim() !== '' && groupType !== '';
         setAllFieldsFilled(fieldsFilled);
     }, [groupName, groupType]);
-
     useEffect(() => {
         if (groupToEdit) {
-            // Pri načítaní skupiny na úpravu zobrazíme existujúci názov
             setGroupName(groupToEdit.name);
             setGroupType(groupToEdit.type);
             setNameError('');
         }
     }, [groupToEdit]);
-
     const isButtonDisabled = !allFieldsFilled || !!nameError;
-
-    // Funkcia na kontrolu duplicity názvu skupiny
     const checkGroupNameDuplicate = () => {
-        if (!categoryId || !groupName.trim()) {
+        if (!categoryId || !groupName) {
             setNameError('');
             return false;
         }
-
-        const formattedGroupName = formatGroupName(groupName);
         const groupsInCategory = existingGroups[categoryId] || [];
         const isDuplicate = groupsInCategory.some(group => 
-            group.name.toLowerCase() === formattedGroupName.toLowerCase() && 
+            group.name.toLowerCase() === groupName.toLowerCase() && 
             group.name.toLowerCase() !== groupToEdit.name.toLowerCase()
         );
-
         if (isDuplicate) {
             setNameError('Názov skupiny už v tejto kategórii existuje.');
             return true;
@@ -329,98 +265,66 @@ const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingG
             return false;
         }
     };
-
-    // Pridané: Kontrola duplicity pri zmene názvu skupiny
     useEffect(() => {
-        if (groupName.trim() && categoryId && groupToEdit) {
+        if (groupName && categoryId && groupToEdit) {
             checkGroupNameDuplicate();
         } else {
             setNameError('');
         }
-    }, [groupName, categoryId]);
-
+    }, [groupName, categoryId, groupToEdit]);
     if (!isVisible || !groupToEdit) return null;
-
     const handleUpdateGroup = async () => {
         if (!groupName || !groupType) {
             window.showGlobalNotification('Prosím, vyplňte všetky polia.', 'error');
             return;
-        }
-    
-        const formattedGroupName = formatGroupName(groupName);
-        
-        // Kontrola duplicity pred odoslaním
+        }    
         const isDuplicate = checkGroupNameDuplicate();
         if (isDuplicate) {
             return;
-        }
-    
+        }    
         try {
             const groupsDocRef = doc(window.db, 'settings', 'groups');
             const newGroup = {
-                name: formattedGroupName,
+                name: groupName, 
                 type: groupType,
-            };
-    
+            };    
             const categoryName = categories && categories.find ? categories.find(c => c.id === categoryId)?.name || categoryId : categoryId;
             const oldGroupName = groupToEdit.name;
-            const oldGroupType = groupToEdit.type;
-            
+            const oldGroupType = groupToEdit.type;            
             await updateDoc(groupsDocRef, {
                 [categoryId]: arrayRemove(groupToEdit)
             });
             await updateDoc(groupsDocRef, {
                 [categoryId]: arrayUnion(newGroup)
-            });
-    
-            // VŽDY generujeme notifikáciu o zmene skupiny
-            const changesList = [];
-            
-            // Vždy uvádzame kategóriu, starý a nový názov, starý a nový typ
+            });    
+            const changesList = [];            
             changesList.push(`Úprava skupiny v kategórii '''${categoryName}'`);
-            changesList.push(`Názov: z '${oldGroupName}' na '${formattedGroupName}'`);
+            changesList.push(`Názov: z '${oldGroupName}' na '${groupName}'`);
             changesList.push(`Typ: z '${oldGroupType}' na '${groupType}'`);
-    
-            // Ak sa nič nezmenilo, upravíme notifikáciu
-            if (oldGroupName === formattedGroupName && oldGroupType === groupType) {
-                changesList.length = 0; // Vymažeme predchádzajúce správy
+            if (oldGroupName === groupName && oldGroupType === groupType) {
+                changesList.length = 0; 
                 changesList.push(`Skupina v kategórii '''${categoryName}' bola upravená`);
-                changesList.push(`Názov skupiny '''${formattedGroupName}'`);
+                changesList.push(`Názov skupiny '''${groupName}'`);
                 changesList.push(`Typ skupiny '''${groupType}'`);
-            }
-    
+            }    
             await createGroupChangeNotification('group_updated', 
                 changesList,
                 {
                     categoryId: categoryId,
                     categoryName: categoryName,
-                    groupName: formattedGroupName,
+                    groupName: groupName,
                     oldGroupName: oldGroupName,
                     groupType: groupType,
                     oldGroupType: oldGroupType
                 }
-            );
-    
+            );    
             window.showGlobalNotification('Skupina bola aktualizovaná.', 'success');
             onClose();
             onUpdate();
         } catch (e) {
-            console.error("Chyba pri aktualizácii skupiny: ", e);
             window.showGlobalNotification('Nastala chyba pri aktualizácii skupiny.', 'error');
         }
     };
-
-    // Funkcia na spracovanie zmeny v inpute
-    const handleGroupNameChange = (e) => {
-        const input = e.target.value;
-        if (input.length > 0) {
-            const formattedName = formatGroupName(input);
-            setGroupName(formattedName);
-        } else {
-            setGroupName('');
-        }
-    };
-
     return React.createElement(
         'div',
         { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50' },
@@ -445,15 +349,13 @@ const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingG
                                 className: `mt-1 block w-full pl-3 pr-3 py-2 border ${nameError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'} rounded-md shadow-sm focus:outline-none sm:text-sm`,
                                 value: groupName,
                                 onChange: handleGroupNameChange,
-                                placeholder: 'Zadajte písmeno (napr. A, B, C...)'
+                                placeholder: 'Zadajte písmeno (A, B, C...)'
                             }
                         ),
                         React.createElement(
                             'p',
                             { className: 'mt-1 text-sm text-gray-500 text-left' },
-                            groupName.trim() ? 
-                                `Názov skupiny bude ${formatGroupName(groupName)}` : 
-                                'Názov skupiny bude skupina X'
+                            groupName ? groupName : 'Názov skupiny bude skupina X'
                         ),
                         nameError && React.createElement(
                             'p',
@@ -506,11 +408,8 @@ const EditGroupModal = ({ isVisible, onClose, groupToEdit, categoryId, existingG
         )
     );
 };
-
-// Modal pre potvrdenie zmazania
 const DeleteConfirmationModal = ({ isVisible, onClose, onConfirm, groupName }) => {
     if (!isVisible) return null;
-
     return React.createElement(
         'div',
         { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50' },
@@ -550,48 +449,33 @@ const DeleteConfirmationModal = ({ isVisible, onClose, onConfirm, groupName }) =
         )
     );
 };
-
-
-// Modal pre vytvorenie skupiny
 const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) => {
     const [selectedCategoryId, setSelectedCategoryId] = useState('');
     const [groupName, setGroupName] = useState('');
     const [groupType, setGroupType] = useState('základná skupina');
-    // Pridaný stav pre sledovanie chybového hlásenia
     const [nameError, setNameError] = useState('');
     const [allFieldsFilled, setAllFieldsFilled] = useState(false);
-
-    // Funkcia na automatické formátovanie názvu skupiny
-    const formatGroupName = (input) => {
-        // Odstránime predošlý text "skupina " ak existuje
-        const cleanInput = input.replace(/^skupina\s+/i, '');
-        
-        // Ak je vstup prázdny, vrátime prázdny reťazec
-        if (!cleanInput.trim()) return '';
-        
-        // Získame iba prvé písmeno
-        const firstChar = cleanInput.charAt(0);
-        
-        // Premeníme písmeno na veľké
-        const upperChar = firstChar.toUpperCase();
-        
-        // Vrátime formátovaný reťazec
-        return `skupina ${upperChar}`;
+    const handleGroupNameChange = (e) => {
+        const input = e.target.value;        
+        if (input === '') {
+            setGroupName('');
+            return;
+        }        
+        const lastChar = input.charAt(input.length - 1);        
+        if (/^[A-Za-z]$/.test(lastChar)) {
+            const upperChar = lastChar.toUpperCase();
+            setGroupName(`skupina ${upperChar}`);
+        }
     };
-
-    // Funkcia na kontrolu duplicity názvu skupiny
     const checkGroupNameDuplicate = useCallback(() => {
-        if (!selectedCategoryId || !groupName.trim()) {
+        if (!selectedCategoryId || !groupName) {
             setNameError('');
             return false;
         }
-
-        const formattedGroupName = formatGroupName(groupName);
         const groupsInCategory = existingGroups[selectedCategoryId] || [];
         const isDuplicate = groupsInCategory.some(group => 
-            group.name.toLowerCase() === formattedGroupName.toLowerCase()
+            group.name.toLowerCase() === groupName.toLowerCase()
         );
-
         if (isDuplicate) {
             setNameError('Názov skupiny už v tejto kategórii existuje.');
             return true;
@@ -600,33 +484,18 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
             return false;
         }
     }, [selectedCategoryId, groupName, existingGroups]);
-
     const isButtonDisabled = !allFieldsFilled || !!nameError;
-
     useEffect(() => {
-        const fieldsFilled = selectedCategoryId !== '' && groupName.trim() !== '' && groupType !== '';
+        const fieldsFilled = selectedCategoryId !== '' && groupName !== '' && groupType !== '';
         setAllFieldsFilled(fieldsFilled);
     }, [selectedCategoryId, groupName, groupType]);
-
-    // Pridané: Kontrola duplicity pri zmene názvu skupiny
     useEffect(() => {
-        if (groupName.trim() && selectedCategoryId) {
+        if (groupName && selectedCategoryId) {
             checkGroupNameDuplicate();
         } else {
             setNameError('');
         }
     }, [groupName, selectedCategoryId, checkGroupNameDuplicate]);
-
-    // Pridané: Kontrola duplicity pri zmene kategórie
-    useEffect(() => {
-        if (selectedCategoryId && groupName.trim()) {
-            checkGroupNameDuplicate();
-        } else {
-            setNameError('');
-        }
-    }, [selectedCategoryId, groupName.trim(), checkGroupNameDuplicate]);
-
-    // Reset formulára pri otvorení/zatvorení modálu
     useEffect(() => {
         if (!isVisible) {
             setSelectedCategoryId('');
@@ -635,91 +504,64 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
             setNameError('');
         }
     }, [isVisible]);
-
     if (!isVisible) return null;
-
     const handleCreateGroup = async () => {
         if (!selectedCategoryId || !groupName || !groupType) {
             window.showGlobalNotification('Prosím, vyplňte všetky polia.', 'error');
             return;
-        }
-        
-        const formattedGroupName = formatGroupName(groupName);
-        
-        // Kontrola duplicity pred odoslaním
+        }        
         const isDuplicate = checkGroupNameDuplicate();
         if (isDuplicate) {
             return;
-        }
-    
+        }    
         try {
             const groupsDocRef = doc(window.db, 'settings', 'groups');
             const newGroup = {
-                name: formattedGroupName,
+                name: groupName,
                 type: groupType,
-            };
-    
+            };    
             await updateDoc(groupsDocRef, {
                 [selectedCategoryId]: arrayUnion(newGroup)
-            });
-    
-            // PRIDANÉ: Vytvorenie notifikácie o vytvorení skupiny
+            });    
             const categoryName = categories.find(c => c.id === selectedCategoryId)?.name || selectedCategoryId;
             await createGroupChangeNotification('group_created', 
-                [`Vytvorená nová skupina: '${formattedGroupName} (${groupType})' v kategórii '${categoryName}'`],
+                [`Vytvorená nová skupina: '${groupName} (${groupType})' v kategórii '${categoryName}'`],
                 {
                     categoryId: selectedCategoryId,
                     categoryName: categoryName,
-                    groupName: formattedGroupName,
+                    groupName: groupName,
                     groupType: groupType
                 }
-            );
-    
+            );    
             window.showGlobalNotification('Skupina bola vytvorená.', 'success');
             onClose();
         } catch (e) {
             if (e.code === 'not-found') {
                 const groupsDocRef = doc(window.db, 'settings', 'groups');
                 const newGroup = {
-                    name: formattedGroupName,
+                    name: groupName,
                     type: groupType,
                 };
                 await setDoc(groupsDocRef, {
                     [selectedCategoryId]: [newGroup]
-                });
-                
+                });                
                 const categoryName = categories.find(c => c.id === selectedCategoryId)?.name || selectedCategoryId;
                 await createGroupChangeNotification('group_created', 
-                    [`Vytvorená nová skupina: '${formattedGroupName} (${groupType})' v kategórii '${categoryName}'`],
+                    [`Vytvorená nová skupina: '${groupName} (${groupType})' v kategórii '${categoryName}'`],
                     {
                         categoryId: selectedCategoryId,
                         categoryName: categoryName,
-                        groupName: formattedGroupName,
+                        groupName: groupName,
                         groupType: groupType
                     }
-                );
-                
+                );                
                 window.showGlobalNotification('Skupina bola vytvorená.', 'success');
                 onClose();
             } else {
-                console.error("Chyba pri pridávaní skupiny: ", e);
                 window.showGlobalNotification('Nastala chyba pri vytváraní skupiny.', 'error');
             }
         }
     };
-
-    // Funkcia na spracovanie zmeny v inpute
-    const handleGroupNameChange = (e) => {
-        const input = e.target.value;
-        // Ak používateľ zadá viac ako jedno písmeno, vezmeme iba prvé
-        if (input.length > 0) {
-            const formattedName = formatGroupName(input);
-            setGroupName(formattedName);
-        } else {
-            setGroupName('');
-        }
-    };
-
     return React.createElement(
         'div',
         { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50' },
@@ -761,16 +603,13 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
                                 className: `mt-1 block w-full pl-3 pr-3 py-2 border ${nameError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'} rounded-md shadow-sm focus:outline-none sm:text-sm`,
                                 value: groupName,
                                 onChange: handleGroupNameChange,
-                                placeholder: 'Zadajte písmeno (napr. A, B, C...)'
+                                placeholder: 'Zadajte písmeno (A, B, C...)'
                             }
                         ),
-                        // Pridané: Zobrazenie pomôcky a chybového hlásenia
                         React.createElement(
                             'p',
                             { className: 'mt-1 text-sm text-gray-500 text-left' },
-                            groupName.trim() ? 
-                                `Názov skupiny bude ${formatGroupName(groupName)}` : 
-                                'Názov skupiny bude skupina X'
+                            groupName ? groupName : 'Názov skupiny bude skupina X'
                         ),
                         nameError && React.createElement(
                             'p',
@@ -829,7 +668,6 @@ const CreateGroupModal = ({ isVisible, onClose, categories, existingGroups }) =>
         )
     );
 };
-
 const AddGroupsApp = ({ userProfileData }) => {
     const [categories, setCategories] = useState([]);
     const [groups, setGroups] = useState({});
@@ -840,43 +678,27 @@ const AddGroupsApp = ({ userProfileData }) => {
     const [categoryOfGroupToEdit, setCategoryOfGroupToEdit] = useState('');
     const [groupToDelete, setGroupToDelete] = useState(null);
     const [categoryOfGroupToDelete, setCategoryOfGroupToDelete] = useState('');
-    
-    // Pridané: stav pre sledovanie, či sa majú načítať údaje
     const [usersDataLoaded, setUsersDataLoaded] = useState(false);
-    const [realTimeListener, setRealTimeListener] = useState(null);
-    
-    // PRIDANÉ: stav pre ukladanie tímov z databázy
+    const [realTimeListener, setRealTimeListener] = useState(null);    
     const [databaseTeams, setDatabaseTeams] = useState([]);
-    // PRIDANÉ: stav pre ukladanie superštruktúrových tímov
     const [superstructureTeams, setSuperstructureTeams] = useState([]);
-
     useEffect(() => {
-        // Načítanie kategórií v reálnom čase
         const unsubscribeCategories = onSnapshot(doc(window.db, 'settings', 'categories'), (docSnap) => {
                 if (docSnap.exists()) {
-                    const categoriesData = docSnap.data();
-//                    console.log("DEBUG: Všetky kategórie z databázy:", categoriesData);
-                    
+                    const categoriesData = docSnap.data();                    
                     const loadedCategories = Object.keys(categoriesData).map(id => ({
                         id: id,
                         name: categoriesData[id].name
                     }));
                     loadedCategories.sort((a, b) => a.name.localeCompare(b.name));
-                    setCategories(loadedCategories);
-            
-                    // Debug: Vypíšeme ID a názvy
+                    setCategories(loadedCategories);            
                     loadedCategories.forEach(cat => {
-//                        console.log(`DEBUG Kategória: id="${cat.id}", name="${cat.name}"`);
                     });
                 } else {
                     setCategories([]);
-//                    console.log("Dokument 'categories' nebol nájdený v 'settings'.");
                 }
             }, (error) => {
-                console.error("Chyba pri načítavaní kategórií v reálnom čase:", error);
             });
-
-        // Načítanie skupín v reálnom čase
         const unsubscribeGroups = onSnapshot(doc(window.db, 'settings', 'groups'), (docSnap) => {
             if (docSnap.exists()) {
                 setGroups(docSnap.data());
@@ -884,156 +706,90 @@ const AddGroupsApp = ({ userProfileData }) => {
                 setGroups({});
             }
         }, (error) => {
-            console.error("Chyba pri načítavaní skupín v reálnom čase:", error);
-        });
-        
-        // PRIDANÉ: Automaticky načítame údaje o používateľoch pri načítaní komponentu
+        });        
         const loadUsersData = async () => {
             try {
                 const { allTeams } = await loadAndLogAllUsersData();
-                // Uložíme tímy z databázy do stavu
                 setDatabaseTeams(allTeams);
-                setUsersDataLoaded(true);
-                
-                // Nastavíme sledovanie v reálnom čase
+                setUsersDataLoaded(true);                
                 const unsubscribe = setupRealTimeUsersListener();
                 setRealTimeListener(() => unsubscribe);
             } catch (error) {
-                console.error("Chyba pri automatickom načítavaní údajov používateľov:", error);
             }
-        };
-        
-        // PRIDANÉ: Načítame superštruktúrové tímy
+        };        
         const loadSuperstructureTeams = async () => {
             try {
                 const teams = await loadAndLogSuperstructureTeams();
                 setSuperstructureTeams(teams);
             } catch (error) {
-                console.error("Chyba pri načítavaní superštruktúrových tímov:", error);
             }
-        };
-        
+        };        
         loadUsersData();
         loadSuperstructureTeams();
-
         return () => {
             unsubscribeCategories();
-            unsubscribeGroups();
-            
-            // PRIDANÉ: Zastavíme sledovanie v reálnom čase pri odstránení komponentu
+            unsubscribeGroups();            
             if (realTimeListener) {
                 realTimeListener();
             }
         };
     }, []);
-
     const getCategoryNameById = (categoryId) => {
         const category = categories.find(cat => cat.id === categoryId);
         return category ? category.name : categoryId;
     };
-
-    // PRIDANÉ: Funkcia na získanie ID kategórie z názvu
     const getCategoryIdByName = (categoryName) => {
         const category = categories.find(cat => cat.name === categoryName);
         return category ? category.id : categoryName;
     };
-
-    // PRIDANÉ: Funkcia na kontrolu, či skupina má tímy v databáze
     const isGroupUsedInDatabase = (categoryId, groupName) => {
         if (!databaseTeams || databaseTeams.length === 0) {
             return false;
-        }
-        
-        // Získame názov kategórie z ID
-        const categoryName = getCategoryNameById(categoryId);
-//        console.log(`DEBUG isGroupUsedInDatabase: Hľadám ${categoryName} ("${groupName}")`);
-        
-        // Skontrolujeme, či existuje aspoň jeden tím v tejto kategórii s danou skupinou
+        }        
+        const categoryName = getCategoryNameById(categoryId);        
         const found = databaseTeams.some(team => {
             const teamCategory = team.category;
             const teamGroup = team.groupName;
-            
-            // Porovnávame názvy kategórií, nie ID!
             return teamCategory === categoryName && teamGroup === groupName;
-        });
-        
-        // DEBUG log
-//        if (found) {
-//            console.log(`DEBUG: Nájdený tím v databáze: ${categoryName} - "${groupName}"`);
-//        }
-        
+        });        
         return found;
-    };
-    
-    // PRIDANÉ: Funkcia na kontrolu, či skupina je v superštruktúre
+    };    
     const isGroupInSuperstructure = (categoryId, groupName) => {
         if (!superstructureTeams || superstructureTeams.length === 0) {
             return false;
-        }
-        
-        // Získame názov kategórie z ID
-        const categoryName = getCategoryNameById(categoryId);
-//        console.log(`DEBUG isGroupInSuperstructure: Hľadám ${categoryName} ("${groupName}")`);
-        
-        // Skontrolujeme, či existuje aspoň jeden superštruktúrový tím v tejto kategórii s danou skupinou
+        }        
+        const categoryName = getCategoryNameById(categoryId);        
         const found = superstructureTeams.some(team => {
             const teamCategory = team.category;
-            const teamGroup = team.groupName;
-            
-            // Porovnávame názvy kategórií, nie ID!
+            const teamGroup = team.groupName;            
             return teamCategory === categoryName && teamGroup === groupName;
-        });
-        
-        // DEBUG log
-//        if (found) {
-//            console.log(`DEBUG: Nájdený superštruktúrový tím: ${categoryName} - "${groupName}"`);
-//        }
-        
+        });                
         return found;
-    };
-    
-    // PRIDANÉ: Kombinovaná funkcia na kontrolu, či skupina je používaná
+    };    
     const isGroupUsed = (categoryId, groupName) => {
-        const categoryName = getCategoryNameById(categoryId);
-//        console.log(`DEBUG isGroupUsed: Kontrolujem ${categoryName} (ID: ${categoryId}) - "${groupName}"`);
-//        console.log(`DEBUG: databaseTeams dĺžka: ${databaseTeams ? databaseTeams.length : 'null'}`);
-//        console.log(`DEBUG: superstructureTeams dĺžka: ${superstructureTeams ? superstructureTeams.length : 'null'}`);
-        
+        const categoryName = getCategoryNameById(categoryId);        
         const usedInDatabase = isGroupUsedInDatabase(categoryId, groupName);
         const usedInSuperstructure = isGroupInSuperstructure(categoryId, groupName);
-        const isUsed = usedInDatabase || usedInSuperstructure;
-        
-        // Log pre debug
-//        console.log(`DEBUG isGroupUsed výsledok pre ${categoryName} - "${groupName}": ${isUsed} (DB: ${usedInDatabase}, Super: ${usedInSuperstructure})`);
-        
+        const isUsed = usedInDatabase || usedInSuperstructure;    
         return isUsed;
     };
-
     const handleEditClick = (group, categoryId) => {
         setGroupToEdit(group);
         setCategoryOfGroupToEdit(categoryId);
         setEditModalVisible(true);
     };
-
     const handleDeleteClick = (group, categoryId) => {
-        // Kontrola, či je skupina používaná v databáze alebo superštruktúre
-        const isUsed = isGroupUsed(categoryId, group.name);
-        
+        const isUsed = isGroupUsed(categoryId, group.name);        
         if (isUsed) {
             window.showGlobalNotification('Túto skupinu nie je možné zmazať, pretože je priradená k existujúcim tímom.', 'error');
-            return; // Ukončíme funkciu, neukážeme dialógové okno
-        }
-        
-        // Ak skupina nie je používaná, zobrazíme dialógové okno na potvrdenie
+            return; 
+        }        
         setGroupToDelete(group);
         setCategoryOfGroupToDelete(categoryId);
         setDeleteModalVisible(true);
     };
-
     const handleConfirmDelete = async () => {
-        if (!groupToDelete || !categoryOfGroupToDelete) return;
-    
-        // Dvojitá kontrola
+        if (!groupToDelete || !categoryOfGroupToDelete) return;    
         const isUsed = isGroupUsed(categoryOfGroupToDelete, groupToDelete.name);
         if (isUsed) {
             window.showGlobalNotification('Túto skupinu nie je možné zmazať, pretože obsahuje aspoň jeden tím.', 'error');
@@ -1041,17 +797,13 @@ const AddGroupsApp = ({ userProfileData }) => {
             setGroupToDelete(null);
             setCategoryOfGroupToDelete('');
             return;
-        }
-    
+        }    
         try {
-            const groupsDocRef = doc(window.db, 'settings', 'groups');
-            
-            const categoryName = categories.find(c => c.id === categoryOfGroupToDelete)?.name || categoryOfGroupToDelete;
-            
+            const groupsDocRef = doc(window.db, 'settings', 'groups');            
+            const categoryName = categories.find(c => c.id === categoryOfGroupToDelete)?.name || categoryOfGroupToDelete;            
             await updateDoc(groupsDocRef, {
                 [categoryOfGroupToDelete]: arrayRemove(groupToDelete)
-            });
-    
+            });    
             await createGroupChangeNotification('group_deleted', 
                 [`Odstránená skupina: '${groupToDelete.name} (${groupToDelete.type})' z kategórie '${categoryName}'`],
                 {
@@ -1060,25 +812,20 @@ const AddGroupsApp = ({ userProfileData }) => {
                     groupName: groupToDelete.name,
                     groupType: groupToDelete.type
                 }
-            );
-    
+            );    
             window.showGlobalNotification('Skupina bola odstránená.', 'success');
         } catch (e) {
-            console.error("Chyba pri mazaní skupiny: ", e);
             window.showGlobalNotification('Nastala chyba pri mazaní skupiny.', 'error');
         } finally {
             setDeleteModalVisible(false);
             setGroupToDelete(null);
             setCategoryOfGroupToDelete('');
         }
-    };
-    
-    // Vytvorenie mapy pre rýchle vyhľadávanie názvov kategórií
+    };    
     const categoryNamesMap = categories.reduce((map, category) => {
         map[category.id] = category.name;
         return map;
     }, {});
-
     return React.createElement(
         'div',
         { className: 'flex-grow flex justify-center items-center' },
@@ -1094,21 +841,17 @@ const AddGroupsApp = ({ userProfileData }) => {
                 'div',
                 { className: 'flex flex-wrap justify-center gap-4' },
                 categories.map(category => {
-                    // Zoradenie skupín v rámci kategórie
                     const categoryGroups = groups[category.id] || [];
                     const zakladneSkupiny = categoryGroups.filter(g => g.type === 'základná skupina').sort((a, b) => a.name.localeCompare(b.name));
                     const nadstavboveSkupiny = categoryGroups.filter(g => g.type === 'nadstavbová skupina').sort((a, b) => a.name.localeCompare(b.name));
-                    const sortedGroups = [...zakladneSkupiny, ...nadstavboveSkupiny];
-                    
+                    const sortedGroups = [...zakladneSkupiny, ...nadstavboveSkupiny];                    
                     return React.createElement(
                         'div',
                         { key: category.id, className: 'w-1/5 bg-white rounded-lg shadow-md p-4 flex flex-col items-center text-center' },
                         React.createElement('h3', { className: 'text-lg font-semibold mb-2' }, category.name),
                         React.createElement('ul', { className: 'w-full' },
                             sortedGroups.map((group, groupIndex) => {
-                                // PRIDANÉ: Kontrola, či sa skupina používa
-                                const isUsed = isGroupUsed(category.id, group.name);
-                                
+                                const isUsed = isGroupUsed(category.id, group.name);                                
                                 return React.createElement('li', {
                                     key: groupIndex,
                                     className: `
@@ -1119,12 +862,6 @@ const AddGroupsApp = ({ userProfileData }) => {
                                     React.createElement('div', { className: 'flex-1 text-left' },
                                         React.createElement('div', { className: 'font-semibold' }, group.name),
                                         React.createElement('div', { className: 'text-gray-500 text-xs' }, group.type),
-                                        // PRIDANÉ: Zobrazenie indikátora, ak je skupina používaná
-//                                        isUsed && React.createElement(
-//                                            'div',
-//                                            { className: 'text-xs text-red-500 mt-1' },
-//                                            'Obsahuje tímy v databáze'
-//                                        )
                                     ),
                                     React.createElement('div', { className: 'flex gap-2' },
                                         React.createElement(
@@ -1226,7 +963,6 @@ const AddGroupsApp = ({ userProfileData }) => {
             existingGroups: groups,
             categories: categories,
             onUpdate: () => {
-                // Toto sa volá po aktualizácii, aby sa zabezpečilo, že stav je čistý
                 setGroupToEdit(null);
                 setCategoryOfGroupToEdit('');
             }
@@ -1239,73 +975,44 @@ const AddGroupsApp = ({ userProfileData }) => {
         })
     );
 };
-
-
-// Premenná na sledovanie, či bol poslucháč už nastavený
 let isEmailSyncListenerSetup = false;
-
-/**
- * Táto funkcia je poslucháčom udalosti 'globalDataUpdated'.
- * Akonáhle sa dáta používateľa načítajú, vykreslí aplikáciu MyDataApp.
- */
 const handleDataUpdateAndRender = (event) => {
     const userProfileData = event.detail;
     const rootElement = document.getElementById('root');
-
     if (userProfileData) {
-        // Ak sa dáta načítali, nastavíme poslucháča na synchronizáciu e-mailu, ak ešte nebol nastavený
-        // Používame window.auth a window.db, ktoré by mali byť nastavené pri načítaní aplikácie.
-        if (window.auth && window.db && !isEmailSyncListenerSetup) {
-//            console.log("logged-in-add-groups.js: Nastavujem poslucháča na synchronizáciu e-mailu.");
-            
+        if (window.auth && window.db && !isEmailSyncListenerSetup) {            
             onAuthStateChanged(window.auth, async (user) => {
                 if (user) {
                     try {
                         const userProfileRef = doc(window.db, 'users', user.uid);
-                        const docSnap = await getDoc(userProfileRef);
-            
+                        const docSnap = await getDoc(userProfileRef);            
                         if (docSnap.exists()) {
                             const firestoreEmail = docSnap.data().email;
-                            if (user.email !== firestoreEmail) {
-//                                console.log(`logged-in-add-groups.js: E-mail v autentifikácii (${user.email}) sa líši od e-mailu vo Firestore (${firestoreEmail}). Aktualizujem...`);
-                                
+                            if (user.email !== firestoreEmail) {                                
                                 await updateDoc(userProfileRef, {
                                     email: user.email
-                                });
-            
-                                // Vytvorenie notifikácie v databáze s novou štruktúrou
+                                });            
                                 const notificationsCollectionRef = collection(window.db, 'notifications');
                                 await addDoc(notificationsCollectionRef, {
-                                    userEmail: user.email, // Používame userEmail namiesto userId a userName
+                                    userEmail: user.email,
                                     changes: `Zmena e-mailovej adresy z '${firestoreEmail}' na '${user.email}'.`,
-                                    timestamp: new Date(), // Používame timestamp namiesto createdAt
-                                });
-                                
-                                window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');
-//                                console.log("logged-in-add-groups.js: E-mail vo Firestore bol aktualizovaný a notifikácia vytvorená.");
-            
-                            } else {
-                                console.log("logged-in-add-groups.js: E-maily sú synchronizované, nie je potrebné nič aktualizovať.");
+                                    timestamp: new Date(),
+                                });                                
+                                window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');            
                             }
                         }
                     } catch (error) {
-                        console.error("logged-in-add-groups.js: Chyba pri porovnávaní a aktualizácii e-mailu:", error);
                         window.showGlobalNotification('Nastala chyba pri synchronizácii e-mailovej adresy.', 'error');
                     }
                 }
             });
-            isEmailSyncListenerSetup = true; // Označíme, že poslucháč je nastavený
+            isEmailSyncListenerSetup = true;
         }
-
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(AddGroupsApp, { userProfileData }));
-//            console.log("logged-in-add-groups.js: Aplikácia bola vykreslená po udalosti 'globalDataUpdated'.");
-        } else {
-            console.error("logged-in-add-groups.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
         }
     } else {
-        // Ak dáta nie sú dostupné, zobrazíme loader
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(
@@ -1315,23 +1022,13 @@ const handleDataUpdateAndRender = (event) => {
                 React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' })
             )
         );
-    }
-    console.error("logged-in-add-groups.js: Dáta používateľa nie sú dostupné v udalosti 'globalDataUpdated'. Zobrazujem loader.");
-    }
+     }
+   }
 };
-
-// Zaregistrujeme poslucháča udalosti 'globalDataUpdated'.
-//console.log("logged-in-add-groups.js: Registrujem poslucháča pre 'globalDataUpdated'.");
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
-
-// Aby sme predišli premeškaniu udalosti, ak sa načíta skôr, ako sa tento poslucháč zaregistruje,
-// skontrolujeme, či sú dáta už dostupné.
-//console.log("logged-in-add-groups.js: Kontrolujem, či existujú globálne dáta.");
 if (window.globalUserProfileData) {
-//    console.log("logged-in-add-groups.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 } else {
-    // Ak dáta nie sú dostupné, čakáme na event listener, zatiaľ zobrazíme loader
     const rootElement = document.getElementById('root');
     if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
         const root = ReactDOM.createRoot(rootElement);
