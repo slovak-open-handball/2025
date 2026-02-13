@@ -396,10 +396,10 @@
         try {
             const initialData = await loadAllTeamsOnce(getDoc, getDocs, collection, doc);
 //            console.log("[TeamManager] Počiatočné načítanie dokončené:", {
-                totalTeams: initialData.allTeams.length,
-                userTeams: initialData.userTeams.length,
-                superstructureTeams: initialData.superstructureTeams.length
-            });
+//                totalTeams: initialData.allTeams.length,
+//                userTeams: initialData.userTeams.length,
+//                superstructureTeams: initialData.superstructureTeams.length
+//            });
             
             notifyListeners({
                 type: 'initialLoad',
