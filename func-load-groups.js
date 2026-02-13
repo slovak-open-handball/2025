@@ -604,6 +604,32 @@
         return cleanGroupName(groupName);
     }
 
+    /**
+     * Získa názov tímu podľa jeho ID
+     * @param {string} teamId - ID tímu (napr. "U12 CH A1")
+     * @returns {Promise<string|null>} - Názov tímu alebo null, ak sa nenašiel
+     */
+    async function getTeamNameById(teamId) {
+        if (!teamId) return null;
+        
+        const allTeams = await getAllTeams();
+        const team = allTeams.find(t => t.id === teamId);
+        
+        return team ? team.teamName : null;
+    }
+
+    /**
+     * Získa názov tímu podľa jeho ID (synchronna verzia z cache)
+     * @param {string} teamId - ID tímu (napr. "U12 CH A1")
+     * @returns {string|null} - Názov tímu alebo null, ak sa nenašiel
+     */
+    function getTeamNameByIdSync(teamId) {
+        if (!teamId || !window.__teamManagerData?.allTeams) return null;
+        
+        const team = window.__teamManagerData.allTeams.find(t => t.id === teamId);
+        return team ? team.teamName : null;
+    }
+
     // ============================================================
     // Vytvorenie globálneho objektu
     // ============================================================
@@ -615,7 +641,9 @@
         getTeamsByGroup,
         getCategoryMap,
         getGroupsByCategory,
-        cleanGroupName: getCleanGroupName  // Pridaná pomocná funkcia
+        cleanGroupName: getCleanGroupName,
+        getTeamNameById,        // Nová async funkcia
+        getTeamNameByIdSync     // Nová sync funkcia (rýchlejšia, len z cache)
     };
 
     // ============================================================
