@@ -456,6 +456,10 @@ const AddMatchesApp = ({ userProfileData }) => {
             throw new Error('Databáza nie je inicializovaná');
         }
 
+        if (userProfileData?.role !== 'admin') {
+            throw new Error('Na ukladanie zápasov potrebujete administrátorské práva');
+        }
+
         const matchesRef = collection(window.db, 'matches');
         const savedMatches = [];
 
@@ -496,6 +500,8 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     // Funkcia na generovanie zápasov
     const generateMatches = async ({ categoryId, groupName, withRepetitions }) => {
+        console.log('Používateľská rola:', userProfileData?.role);
+        console.log('Je admin?', userProfileData?.role === 'admin');        
         try {
             console.log('Generujem zápasy:', { categoryId, groupName, withRepetitions });
             
