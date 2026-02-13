@@ -1123,7 +1123,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'span',
                                                 { 
-                                                    className: `font-semibold ${showTeamId ? 'font-mono text-xs' : ''} text-gray-800`,
+                                                    className: `font-semibold ${showTeamId ? 'font-mono' : ''} text-gray-800`,
                                                     title: showTeamId ? match.homeTeamId : homeTeamDisplay
                                                 },
                                                 homeTeamDisplay
@@ -1132,7 +1132,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'span',
                                                 { 
-                                                    className: `font-semibold ${showTeamId ? 'font-mono text-xs' : ''} text-gray-800`,
+                                                    className: `font-semibold ${showTeamId ? 'font-mono' : ''} text-gray-800`,
                                                     title: showTeamId ? match.awayTeamId : awayTeamDisplay
                                                 },
                                                 awayTeamDisplay
