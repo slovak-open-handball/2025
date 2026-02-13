@@ -406,9 +406,37 @@ const AddMatchesApp = ({ userProfileData }) => {
     // Funkcia na získanie zobrazovaného textu pre tím
     const getTeamDisplayText = (teamId) => {
         if (showTeamId) {
-            // Zobraziť ID (alebo skrátenú verziu pre lepšiu čitateľnosť)
+            // Zobraziť ID v požadovanom formáte: '{názov kategorie}' '{názov skupiny}' 'poradove číslo'
             if (!teamId) return '---';
-            // Ak je ID príliš dlhé, zobrazíme prvých a posledných pár znakov
+            
+            // Skúsime nájsť tím podľa ID
+            if (teamData.allTeams && teamData.allTeams.length > 0) {
+                const team = teamData.allTeams.find(t => t.id === teamId);
+                if (team) {
+                    // Získame názov kategórie a skupiny
+                    const category = categories.find(c => c.name === team.category);
+                    const categoryName = category?.name || team.category || 'Neznáma kategória';
+                    const groupName = team.groupName || 'Neznáma skupina';
+                    
+                    // Nájdeme poradové číslo tímu v jeho skupine
+                    const teamsInSameGroup = teamData.allTeams.filter(t => 
+                        t.category === team.category && t.groupName === team.groupName
+                    );
+                    
+                    // Zoradíme tímy podľa názvu pre konzistentné poradové číslo
+                    const sortedTeams = [...teamsInSameGroup].sort((a, b) => 
+                        (a.teamName || a.name || '').localeCompare(b.teamName || b.name || '')
+                    );
+                    
+                    const teamIndex = sortedTeams.findIndex(t => t.id === teamId);
+                    const teamNumber = teamIndex !== -1 ? teamIndex + 1 : '?';
+                    
+                    // Formát: '{názov kategorie}' '{názov skupiny}' 'poradove číslo'
+                    return `${categoryName} ${groupName} ${teamNumber}`;
+                }
+            }
+            
+            // Ak tím nenajdeme, vrátime pôvodné ID ako fallback
             if (typeof teamId === 'string' && teamId.length > 20) {
                 return `${teamId.substring(0, 8)}...${teamId.substring(teamId.length - 4)}`;
             }
