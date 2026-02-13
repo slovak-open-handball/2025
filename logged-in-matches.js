@@ -522,7 +522,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     const generateMatches = async ({ categoryId, groupName, withRepetitions }) => {
         try {
             console.log('Generujem zápasy:', { categoryId, groupName, withRepetitions });
-        
+    
             // DEBUG: Skontrolujeme admin práva
             console.log('Kontrola admin práv v generateMatches:');
             console.log('userProfileData:', userProfileData);
@@ -532,8 +532,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                 window.showGlobalNotification('Na generovanie zápasov potrebujete administrátorské práva', 'error');
                 return;
             }       
-        try {
-            console.log('Generujem zápasy:', { categoryId, groupName, withRepetitions });
             
             // Získanie kategórie
             const category = categories.find(c => c.id === categoryId);
@@ -541,15 +539,15 @@ const AddMatchesApp = ({ userProfileData }) => {
                 window.showGlobalNotification('Kategória nebola nájdená', 'error');
                 return;
             }
-
+    
             // Skontrolujeme, či máme teamManager dáta
             if (!window.teamManager) {
                 window.showGlobalNotification('TeamManager nie je inicializovaný', 'error');
                 return;
             }
-
+    
             let allGeneratedMatches = [];
-
+    
             if (groupName) {
                 // Konkrétna skupina
                 const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, groupName);
@@ -565,7 +563,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     window.showGlobalNotification(`V skupine ${groupName} sú menej ako 2 tímy`, 'error');
                     return;
                 }
-
+    
                 // Generovanie zápasov pre túto skupinu
                 const groupMatches = generateMatchesForGroup(teamsInGroup, withRepetitions);
                 
@@ -582,7 +580,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     groupName: groupName,
                     status: 'pending'
                 }));
-
+    
                 allGeneratedMatches = [...allGeneratedMatches, ...matchesWithInfo];
                 
             } else {
@@ -593,10 +591,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                     window.showGlobalNotification('V tejto kategórii nie sú žiadne skupiny s aspoň 2 tímami', 'error');
                     return;
                 }
-
+    
                 console.log(`Našiel som ${groups.length} skupín v kategórii ${category.name}:`, 
                     groups.map(g => g.name));
-
+    
                 // Pre každú skupinu vygenerujeme zápasy (skupiny sú už zoradené z getAllGroupsInCategory)
                 for (const group of groups) {
                     const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, group.name);
@@ -618,12 +616,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                             groupName: group.name,
                             status: 'pending'
                         }));
-
+    
                         allGeneratedMatches = [...allGeneratedMatches, ...matchesWithInfo];
                     }
                 }
             }
-
+    
             // Uloženie zápasov do Firebase
             if (allGeneratedMatches.length > 0) {
                 console.log('Ukladám zápasy do Firebase...');
@@ -642,7 +640,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     'success'
                 );
             }
-
+    
         } catch (error) {
             console.error('Chyba pri generovaní zápasov:', error);
             window.showGlobalNotification('Chyba pri generovaní zápasov: ' + error.message, 'error');
