@@ -59,37 +59,52 @@
     }
 
     /**
+     * Vypíše tímy v požadovanom formáte: kategória skupina poradie názov
+     */
+    function printTeamsInFormat(teams) {
+        console.log('=== TÍMY PODĽA KATEGÓRIÍ A SKUPÍN ===');
+        
+        // Zoradenie podľa kategórie, skupiny a poradia
+        const sortedTeams = [...teams].sort((a, b) => {
+            if (a.category !== b.category) return a.category.localeCompare(b.category);
+            if ((a.groupName || '') !== (b.groupName || '')) return (a.groupName || '').localeCompare(b.groupName || '');
+            return (a.order || 999) - (b.order || 999);
+        });
+        
+        // Výpis v požadovanom formáte
+        sortedTeams.forEach(team => {
+            const kategoria = team.category || 'bez kategórie';
+            const skupina = team.groupName || 'bez skupiny';
+            const poradie = team.order !== null && team.order !== undefined ? team.order : '-';
+            const nazov = team.teamName || 'neznámy názov';
+            
+            console.log(`${kategoria} ${skupina} ${poradie} ${nazov}`);
+        });
+        
+        console.log(`Celkový počet tímov: ${teams.length}`);
+        console.log('=======================================');
+    }
+
+    /**
      * Interná funkcia na odoslanie dát všetkým prihláseným odberateľom
      */
     function notifyListeners(data) {
         // Uložíme dáta pre prípad, že by sa niekto prihlásil neskôr
         window.__teamManagerData = data;
         
-        // Vypíšeme všetky dáta do konzoly
+        // Vypíšeme základné informácie
         console.log('=== TÍMOVÝ MANAŽÉR - AKTUALIZÁCIA DÁT ===');
         console.log('Čas:', new Date().toLocaleTimeString());
         console.log('Typ udalosti:', data.type);
         
         if (data.type === 'update' || data.type === 'initialLoad') {
-            console.log('Všetky tímy:', data.allTeams);
             console.log('Počet všetkých tímov:', data.allTeams.length);
-            
-            console.log('Používateľské tímy:', data.userTeams);
             console.log('Počet používateľských tímov:', data.userTeams.length);
-            
-            console.log('Nadstavbové tímy:', data.superstructureTeams);
             console.log('Počet nadstavbových tímov:', 
                 Object.values(data.superstructureTeams).reduce((sum, arr) => sum + arr.length, 0));
             
-            // Vypíšeme prehľadnú tabuľku
-            console.table(data.allTeams.map(t => ({
-                Názov: t.teamName,
-                Kategória: t.category,
-                Skupina: t.groupName || 'bez skupiny',
-                Poradie: t.order,
-                Typ: t.isSuperstructureTeam ? 'Nadstavbový' : 'Používateľský',
-                Zdroj: t.source
-            })));
+            // Výpis v požadovanom formáte
+            printTeamsInFormat(data.allTeams);
         }
         
         if (data.type === 'categoriesUpdate' || data.type === 'initialLoad') {
@@ -103,8 +118,6 @@
                 .reduce((sum, arr) => sum + arr.length, 0);
             console.log('Počet skupín:', totalGroups);
         }
-        
-        console.log('==========================================');
         
         // Notifikujeme všetkých listenerov
         teamManagerListeners.forEach(callback => {
