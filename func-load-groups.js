@@ -59,6 +59,16 @@
     }
 
     /**
+     * Odstráni text "skupina " z názvu skupiny (ak existuje)
+     */
+    function cleanGroupName(groupName) {
+        if (!groupName) return 'bez skupiny';
+        
+        // Odstráni "skupina " z názvu (case insensitive)
+        return groupName.replace(/^skupina\s+/i, '');
+    }
+
+    /**
      * Vypíše tímy v požadovanom formáte: kategória skupina poradie názov
      */
     function printTeamsInFormat(teams) {
@@ -67,14 +77,18 @@
         // Zoradenie podľa kategórie, skupiny a poradia
         const sortedTeams = [...teams].sort((a, b) => {
             if (a.category !== b.category) return a.category.localeCompare(b.category);
-            if ((a.groupName || '') !== (b.groupName || '')) return (a.groupName || '').localeCompare(b.groupName || '');
+            
+            const groupA = a.groupName ? cleanGroupName(a.groupName) : '';
+            const groupB = b.groupName ? cleanGroupName(b.groupName) : '';
+            if (groupA !== groupB) return groupA.localeCompare(groupB);
+            
             return (a.order || 999) - (b.order || 999);
         });
         
         // Výpis v požadovanom formáte
         sortedTeams.forEach(team => {
             const kategoria = team.category || 'bez kategórie';
-            const skupina = team.groupName || 'bez skupiny';
+            const skupina = team.groupName ? cleanGroupName(team.groupName) : 'bez skupiny';
             const poradie = team.order !== null && team.order !== undefined ? team.order : '-';
             const nazov = team.teamName || 'neznámy názov';
             
@@ -113,7 +127,16 @@
         }
         
         if (data.type === 'groupsUpdate' || data.type === 'initialLoad') {
-            console.log('Skupiny podľa kategórií:', data.groupsByCategoryId);
+            // Vyčistené názvy skupín pre výpis
+            const cleanedGroups = {};
+            Object.entries(data.groupsByCategoryId || {}).forEach(([catId, groups]) => {
+                cleanedGroups[catId] = groups.map(g => ({
+                    ...g,
+                    cleanName: cleanGroupName(g.name)
+                }));
+            });
+            console.log('Skupiny podľa kategórií (s vyčistenými názvami):', cleanedGroups);
+            
             const totalGroups = Object.values(data.groupsByCategoryId || {})
                 .reduce((sum, arr) => sum + arr.length, 0);
             console.log('Počet skupín:', totalGroups);
@@ -574,6 +597,13 @@
         return [];
     }
 
+    /**
+     * Získa vyčistený názov skupiny (bez "skupina ")
+     */
+    function getCleanGroupName(groupName) {
+        return cleanGroupName(groupName);
+    }
+
     // ============================================================
     // Vytvorenie globálneho objektu
     // ============================================================
@@ -584,7 +614,8 @@
         getTeamsByCategory,
         getTeamsByGroup,
         getCategoryMap,
-        getGroupsByCategory
+        getGroupsByCategory,
+        cleanGroupName: getCleanGroupName  // Pridaná pomocná funkcia
     };
 
     // ============================================================
