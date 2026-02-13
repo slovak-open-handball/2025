@@ -1,5 +1,5 @@
 // Importy pre Firebase funkcie
-import { doc, getDoc, getDocs, onSnapshot, updateDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, getDocs, onSnapshot, updateDoc, addDoc, deleteDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const { useState, useEffect } = React;
@@ -358,6 +358,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         if (!team) return null;
         return team.id || null;
     };
+
     // Funkcia na získanie názvu tímu podľa ID (pre existujúce zápasy)
     const getTeamNameById = (teamId) => {
         if (!teamId) {
@@ -540,7 +541,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 
                 return extractedName;
             }
-        
+            
             // Ak je ID príliš dlhé, skrátime ho
             if (typeof teamId === 'string' && teamId.length > 20) {
                 return `${teamId.substring(0, 8)}...${teamId.substring(teamId.length - 4)}`;
@@ -558,6 +559,41 @@ const AddMatchesApp = ({ userProfileData }) => {
             match.categoryId === categoryId && 
             (groupName ? match.groupName === groupName : true)
         );
+    };
+
+    // Funkcia na zmazanie zápasu
+    const deleteMatch = async (matchId) => {
+        if (!window.db) {
+            window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
+            return;
+        }
+
+        // Skontrolujeme, či je používateľ admin
+        if (userProfileData?.role !== 'admin') {
+            window.showGlobalNotification('Na mazanie zápasov potrebujete administrátorské práva', 'error');
+            return;
+        }
+
+        if (!userProfileData?.approved) {
+            window.showGlobalNotification('Váš účet ešte nebol schválený administrátorom.', 'error');
+            return;
+        }
+
+        // Potvrdenie od používateľa
+        if (!confirm('Naozaj chcete zmazať tento zápas?')) {
+            return;
+        }
+
+        try {
+            const matchRef = doc(window.db, 'matches', matchId);
+            await deleteDoc(matchRef);
+            
+            console.log(`Zápas s ID ${matchId} bol úspešne zmazaný`);
+            window.showGlobalNotification('Zápas bol úspešne zmazaný', 'success');
+        } catch (error) {
+            console.error('Chyba pri mazaní zápasu:', error);
+            window.showGlobalNotification('Chyba pri mazaní zápasu: ' + error.message, 'error');
+        }
     };
 
     // Funkcia na výpis používateľov pre každý tím
@@ -704,8 +740,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                         console.log(`    ${index + 1}. ${match.homeTeamId} vs ${match.awayTeamId} (${match.categoryName || 'Neznáma kategória'}) - ${match.time}`);
                     });
                     console.log('---');
-                    
-                    users.push(user);
                 }
             });
             
@@ -1250,7 +1284,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 'div',
                 { className: 'w-full bg-white rounded-xl shadow-xl p-8 mx-4' },
                 
-                // Hlavička s prepínačom a tlačidlom pre výpis vlastníkov
+                // Hlavička s prepínačom
                 React.createElement(
                     'div',
                     { className: 'flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl' },
@@ -1330,8 +1364,18 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         'div',
                                         { 
                                             key: match.id,
-                                            className: 'bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow cursor-pointer'
+                                            className: 'bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow relative group'
                                         },
+                                        // Tlačidlo pre zmazanie (zobrazí sa pri hoveri)
+                                        userProfileData?.role === 'admin' && React.createElement(
+                                            'button',
+                                            {
+                                                onClick: () => deleteMatch(match.id),
+                                                className: 'absolute top-2 right-2 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md',
+                                                title: 'Zmazať zápas'
+                                            },
+                                            React.createElement('i', { className: 'fa-solid fa-trash-can text-sm' })
+                                        ),
                                         React.createElement(
                                             'div',
                                             { className: 'flex justify-between items-start mb-2' },
