@@ -471,6 +471,113 @@ const AddMatchesApp = ({ userProfileData }) => {
         );
     };
 
+    // Funkcia na výpis používateľov pre každý tím
+    const logTeamOwners = async () => {
+        if (!window.db || !teamData.allTeams) return;
+        
+        console.log('=== VLASTNÍCI TÍMOV ===');
+        console.log('Celkový počet tímov:', teamData.allTeams.length);
+        
+        // Pre každý tím v teamData
+        for (const team of teamData.allTeams) {
+            try {
+                console.log(`\nSpracovávam tím: ${team.teamName || team.name || 'Neznámy názov'}`);
+                console.log('  - Celý objekt tímu:', team);
+                
+                // Ak tím má ID používateľa
+                if (team.userId) {
+                    console.log('  - Hľadám podľa userId:', team.userId);
+                    
+                    // Načítame dokument používateľa podľa ID
+                    const userRef = doc(window.db, 'users', team.userId);
+                    const userSnap = await getDoc(userRef);
+                    
+                    if (userSnap.exists()) {
+                        const userData = userSnap.data();
+                        console.log(`  ✓ Nájdený používateľ pre tím: ${team.teamName || team.name} (Kategória: ${team.category})`);
+                        console.log('    - ID tímu:', team.id);
+                        console.log('    - ID používateľa:', team.userId);
+                        console.log('    - Dokument používateľa:', {
+                            id: userSnap.id,
+                            ...userData
+                        });
+                    } else {
+                        console.log(`  ✗ Používateľ s ID ${team.userId} pre tím ${team.teamName || team.name} neexistuje`);
+                    }
+                } 
+                // Ak tím má email používateľa
+                else if (team.userEmail) {
+                    console.log('  - Hľadám podľa userEmail:', team.userEmail);
+                    
+                    // Načítame všetkých používateľov a hľadáme podľa emailu
+                    const usersRef = collection(window.db, 'users');
+                    const usersSnapshot = await getDocs(usersRef);
+                    
+                    let foundUser = null;
+                    usersSnapshot.forEach((doc) => {
+                        const userData = doc.data();
+                        if (userData.email === team.userEmail) {
+                            foundUser = {
+                                id: doc.id,
+                                ...userData
+                            };
+                        }
+                    });
+                    
+                    if (foundUser) {
+                        console.log(`  ✓ Nájdený používateľ pre tím: ${team.teamName || team.name} (Kategória: ${team.category})`);
+                        console.log('    - ID tímu:', team.id);
+                        console.log('    - Email používateľa:', team.userEmail);
+                        console.log('    - Dokument používateľa:', foundUser);
+                    } else {
+                        console.log(`  ✗ Používateľ s emailom ${team.userEmail} pre tím ${team.teamName || team.name} neexistuje`);
+                    }
+                }
+                // Ak tím má createdBy (meno používateľa)
+                else if (team.createdBy) {
+                    console.log('  - Hľadám podľa createdBy:', team.createdBy);
+                    
+                    // Načítame všetkých používateľov a hľadáme podľa mena alebo emailu
+                    const usersRef = collection(window.db, 'users');
+                    const usersSnapshot = await getDocs(usersRef);
+                    
+                    let foundUser = null;
+                    usersSnapshot.forEach((doc) => {
+                        const userData = doc.data();
+                        if (userData.displayName === team.createdBy || userData.email === team.createdBy) {
+                            foundUser = {
+                                id: doc.id,
+                                ...userData
+                            };
+                        }
+                    });
+                    
+                    if (foundUser) {
+                        console.log(`  ✓ Nájdený používateľ pre tím: ${team.teamName || team.name} (Kategória: ${team.category})`);
+                        console.log('    - ID tímu:', team.id);
+                        console.log('    - createdBy:', team.createdBy);
+                        console.log('    - Dokument používateľa:', foundUser);
+                    } else {
+                        console.log(`  ✗ Používateľ s menom/emailom ${team.createdBy} pre tím ${team.teamName || team.name} neexistuje`);
+                    }
+                }
+                // Ak tím nemá priradeného používateľa
+                else {
+                    console.log(`  ⚠ Tím: ${team.teamName || team.name} (Kategória: ${team.category}) - Nemá priradeného používateľa`);
+                    console.log('    - ID tímu:', team.id);
+                    console.log('    - Dostupné polia:', Object.keys(team));
+                }
+                
+                console.log('---');
+            } catch (error) {
+                console.error(`Chyba pri načítaní používateľa pre tím ${team.teamName || team.name}:`, error);
+            }
+        }
+        
+        console.log('=== KONIEC VLASTNÍKOV TÍMOV ===');
+        console.log('Celkový počet spracovaných tímov:', teamData.allTeams.length);
+    };
+
     // Funkcia na načítanie používateľov, ktorí vytvorili zápasy
     const loadUsersWithMatches = async () => {
         if (!window.db) return;
@@ -560,11 +667,21 @@ const AddMatchesApp = ({ userProfileData }) => {
             if (window.__teamManagerData) {
                 console.log('Našiel som existujúce teamManager data, počet tímov:', window.__teamManagerData.allTeams?.length);
                 setTeamData(window.__teamManagerData);
+                
+                // Vypíšeme vlastníkov tímov po krátkom oneskorení (aby sa stihli načítať všetky dáta)
+                setTimeout(() => {
+                    logTeamOwners();
+                }, 1000);
             }
             
             const unsubscribe = window.teamManager.subscribe((data) => {
                 console.log('TeamManager data aktualizované, počet tímov:', data.allTeams?.length);
                 setTeamData(data);
+                
+                // Vypíšeme vlastníkov tímov po aktualizácii
+                setTimeout(() => {
+                    logTeamOwners();
+                }, 1000);
             });
             
             return () => {
@@ -573,6 +690,16 @@ const AddMatchesApp = ({ userProfileData }) => {
             };
         } else {
             console.log('teamManager nie je k dispozícii');
+            
+            // Skúsime načítať dáta priamo z window.__teamManagerData
+            if (window.__teamManagerData) {
+                console.log('Našiel som window.__teamManagerData, počet tímov:', window.__teamManagerData.allTeams?.length);
+                setTeamData(window.__teamManagerData);
+                
+                setTimeout(() => {
+                    logTeamOwners();
+                }, 1000);
+            }
         }
     }, []);
 
@@ -1006,7 +1133,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         };
     }, []);
 
-    // ZJEDNODUŠENÝ RENDER - dva stĺpce (ľavý - zápasy, pravý - haly)
+    // ZJEDNODUŠENÝ RENDER - dva stĺpce (ľavý - zápasy, pravý - haly) s pridaným tlačidlom pre výpis vlastníkov
     return React.createElement(
         React.Fragment,
         null,
@@ -1034,39 +1161,55 @@ const AddMatchesApp = ({ userProfileData }) => {
                 'div',
                 { className: 'w-full bg-white rounded-xl shadow-xl p-8 mx-4' },
                 
-                // Hlavička s prepínačom
+                // Hlavička s prepínačom a tlačidlom pre výpis vlastníkov
                 React.createElement(
                     'div',
                     { className: 'flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl' },
                     React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center text-gray-800 mb-4' }, 'Zápasy'),
                     
-                    // NOVÝ PREPÍNAČ
+                    // Ovládacie prvky
                     React.createElement(
                         'div',
-                        { className: 'flex items-center gap-3 bg-gray-100 p-2 rounded-lg' },
+                        { className: 'flex items-center gap-3 flex-wrap justify-center' },
+                        // Prepínač pre zobrazenie ID tímov
                         React.createElement(
-                            'span',
-                            { 
-                                className: `px-3 py-1 rounded-md text-sm font-medium cursor-pointer transition-colors ${
-                                    !showTeamId 
-                                        ? 'bg-blue-600 text-white shadow-sm' 
-                                        : 'text-gray-600 hover:bg-gray-200'
-                                }`,
-                                onClick: () => setShowTeamId(false)
-                            },
-                            'Názvy tímov'
+                            'div',
+                            { className: 'flex items-center gap-3 bg-gray-100 p-2 rounded-lg' },
+                            React.createElement(
+                                'span',
+                                { 
+                                    className: `px-3 py-1 rounded-md text-sm font-medium cursor-pointer transition-colors ${
+                                        !showTeamId 
+                                            ? 'bg-blue-600 text-white shadow-sm' 
+                                            : 'text-gray-600 hover:bg-gray-200'
+                                    }`,
+                                    onClick: () => setShowTeamId(false)
+                                },
+                                'Názvy tímov'
+                            ),
+                            React.createElement(
+                                'span',
+                                { 
+                                    className: `px-3 py-1 rounded-md text-sm font-medium cursor-pointer transition-colors ${
+                                        showTeamId 
+                                            ? 'bg-blue-600 text-white shadow-sm' 
+                                            : 'text-gray-600 hover:bg-gray-200'
+                                    }`,
+                                    onClick: () => setShowTeamId(true)
+                                },
+                                'ID tímov'
+                            )
                         ),
+                        
+                        // Tlačidlo pre výpis vlastníkov tímov
                         React.createElement(
-                            'span',
-                            { 
-                                className: `px-3 py-1 rounded-md text-sm font-medium cursor-pointer transition-colors ${
-                                    showTeamId 
-                                        ? 'bg-blue-600 text-white shadow-sm' 
-                                        : 'text-gray-600 hover:bg-gray-200'
-                                }`,
-                                onClick: () => setShowTeamId(true)
+                            'button',
+                            {
+                                onClick: logTeamOwners,
+                                className: 'px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2'
                             },
-                            'ID tímov'
+                            React.createElement('i', { className: 'fa-solid fa-users' }),
+                            'Vypísať vlastníkov tímov'
                         )
                     )
                 ),
