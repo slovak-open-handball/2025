@@ -7,17 +7,11 @@ const { useState, useEffect } = React;
 // Definície typov pre športové haly
 const typeLabels = {
     sportova_hala: "Športová hala",
-    ubytovanie: "Ubytovanie",
-    stravovanie: "Stravovanie",
-    zastavka: "Zastávka",
 };
 
 // Ikony pre typy miest
 const typeIcons = {
     sportova_hala: { icon: 'fa-futbol', color: '#dc2626' },
-    stravovanie: { icon: 'fa-utensils', color: '#16a34a' },
-    ubytovanie: { icon: 'fa-bed', color: '#6b7280' },
-    zastavka: { icon: 'fa-bus', color: '#2563eb' }
 };
 
 /**
@@ -88,8 +82,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                         type: data.type,
                         lat: loc?.latitude ?? data.lat,
                         lng: loc?.longitude ?? data.lng,
-                        capacity: data.capacity || null,
-                        note: data.note || null,
                     });
                 });
                 
@@ -166,12 +158,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                             'div',
                             { 
                                 key: hall.id,
-                                // ODSTRÁNENÝ onClick - karta nie je klikateľná
                                 className: `p-5 bg-white rounded-xl border-2 border-gray-200 shadow-sm`
                             },
                             React.createElement(
                                 'div',
-                                { className: 'flex items-center mb-3' },
+                                { className: 'flex items-center' },
                                 React.createElement(
                                     'div',
                                     { 
@@ -198,25 +189,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         }
                                     }, 'Športová hala')
                                 )
-                            ),
-                            
-                            // Kapacita (ak existuje)
-                            hall.capacity && React.createElement(
-                                'div',
-                                { className: 'mt-3 pt-3 border-t border-gray-200 text-sm text-gray-600 flex items-center' },
-                                React.createElement('i', { className: 'fa-solid fa-users mr-2 text-gray-400' }),
-                                React.createElement('span', null, 
-                                    React.createElement('strong', null, 'Kapacita: '),
-                                    `${hall.capacity} miest`
-                                )
-                            ),
-                            
-                            // Poznámka (ak existuje)
-                            hall.note && React.createElement(
-                                'div',
-                                { className: 'mt-2 text-sm text-gray-500 italic' },
-                                React.createElement('i', { className: 'fa-solid fa-note-sticky mr-2' }),
-                                React.createElement('span', null, hall.note)
                             )
                         );
                     })
