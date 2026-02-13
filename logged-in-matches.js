@@ -62,6 +62,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [sportHalls, setSportHalls] = useState([]);
     const [loading, setLoading] = useState(true);
     const [categories, setCategories] = useState([]);
+    const [matches, setMatches] = useState([]); // State pre zápasy
 
     // Funkcia na výpočet celkového času zápasu pre kategóriu
     const calculateTotalMatchTime = (category) => {
@@ -187,7 +188,20 @@ const AddMatchesApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    // ZJEDNODUŠENÝ RENDER - iba zoznam hál, žiadna interaktivita
+    // Simulované zápasy pre ukážku (neskôr sa budú generovať)
+    useEffect(() => {
+        // Toto je dočasné, kým sa implementuje generovanie zápasov
+        const demoMatches = [
+            { id: 1, homeTeam: "Tím A", awayTeam: "Tím B", time: "10:00", hall: "Hala 1", category: "Muži" },
+            { id: 2, homeTeam: "Tím C", awayTeam: "Tím D", time: "11:30", hall: "Hala 1", category: "Muži" },
+            { id: 3, homeTeam: "Tím E", awayTeam: "Tím F", time: "13:00", hall: "Hala 2", category: "Ženy" },
+            { id: 4, homeTeam: "Tím G", awayTeam: "Tím H", time: "14:30", hall: "Hala 2", category: "Ženy" },
+            { id: 5, homeTeam: "Tím I", awayTeam: "Tím J", time: "16:00", hall: "Hala 3", category: "Juniori" },
+        ];
+        setMatches(demoMatches);
+    }, []);
+
+    // ZJEDNODUŠENÝ RENDER - dva stĺpce (ľavý - zápasy, pravý - haly)
     return React.createElement(
         'div',
         { className: 'flex-grow flex justify-center items-start w-full' },
@@ -202,81 +216,170 @@ const AddMatchesApp = ({ userProfileData }) => {
                 React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center text-gray-800' }, 'Zápasy')
             ),
             
-            // Zobrazenie športových hál
+            // Dva stĺpce - ľavý pre zápasy, pravý pre haly
             React.createElement(
                 'div',
-                { className: 'mt-4' },
+                { className: 'flex flex-col lg:flex-row gap-6 mt-4' },
+                
+                // ĽAVÝ STĹPEC - Zoznam zápasov
                 React.createElement(
-                    'h3',
-                    { className: 'text-xl font-semibold mb-4 text-gray-700 border-b pb-2' },
-                    React.createElement('i', { className: 'fa-solid fa-futbol mr-2 text-red-500' }),
-                    'Športové haly',
-                    React.createElement('span', { className: 'ml-2 text-sm font-normal text-gray-500' },
-                        `(${sportHalls.length} ${sportHalls.length === 1 ? 'hala' : sportHalls.length < 5 ? 'haly' : 'hál'})`
-                    )
-                ),
-                
-                // Indikátor načítavania
-                loading && React.createElement(
                     'div',
-                    { className: 'flex justify-center items-center py-12' },
-                    React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500' })
-                ),
-                
-                // Žiadne haly
-                !loading && sportHalls.length === 0 && React.createElement(
-                    'div',
-                    { className: 'text-center py-12 text-gray-500 bg-gray-50 rounded-lg' },
-                    React.createElement('i', { className: 'fa-solid fa-map-pin text-5xl mb-4 opacity-30' }),
-                    React.createElement('p', { className: 'text-lg' }, 'Žiadne športové haly nie sú k dispozícii'),
-                    React.createElement('p', { className: 'text-sm mt-2' }, 'Pridajte prvú športovú halu v mape.')
-                ),
-                
-                // Grid zoznam športových hál - IBA PRE ZOBRAZENIE, ŽIADNE KLIKANIE
-                !loading && sportHalls.length > 0 && React.createElement(
-                    'div',
-                    { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' },
-                    sportHalls.map((hall) => {
-                        const typeConfig = typeIcons[hall.type] || { icon: 'fa-futbol', color: '#dc2626' };
-                        
-                        return React.createElement(
+                    { className: 'lg:w-1/3 bg-gray-50 rounded-xl p-4 border border-gray-200' },
+                    React.createElement(
+                        'h3',
+                        { className: 'text-xl font-semibold mb-4 text-gray-700 border-b pb-2 flex items-center' },
+                        React.createElement('i', { className: 'fa-solid fa-trophy mr-2 text-yellow-500' }),
+                        'Zoznam zápasov',
+                        React.createElement('span', { className: 'ml-2 text-sm font-normal text-gray-500' },
+                            `(${matches.length})`
+                        )
+                    ),
+                    
+                    // Zoznam zápasov
+                    matches.length === 0 ? 
+                        React.createElement(
                             'div',
-                            { 
-                                key: hall.id,
-                                className: `p-5 bg-white rounded-xl border-2 border-gray-200 shadow-sm`
-                            },
-                            React.createElement(
-                                'div',
-                                { className: 'flex items-center' },
+                            { className: 'text-center py-8 text-gray-500' },
+                            React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-4xl mb-3 opacity-30' }),
+                            React.createElement('p', { className: 'text-sm' }, 'Žiadne zápasy')
+                        ) :
+                        React.createElement(
+                            'div',
+                            { className: 'space-y-3 max-h-[600px] overflow-y-auto pr-2' },
+                            matches.map(match => (
                                 React.createElement(
                                     'div',
                                     { 
-                                        className: 'w-14 h-14 rounded-full flex items-center justify-center mr-4',
-                                        style: { 
-                                            backgroundColor: typeConfig.color + '20',
-                                            border: `3px solid ${typeConfig.color}`
-                                        }
+                                        key: match.id,
+                                        className: 'bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow cursor-pointer'
                                     },
-                                    React.createElement('i', { 
-                                        className: `fa-solid ${typeConfig.icon} text-2xl`,
-                                        style: { color: typeConfig.color }
-                                    })
-                                ),
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex justify-between items-start mb-2' },
+                                        React.createElement(
+                                            'span',
+                                            { className: 'text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 rounded-full' },
+                                            match.time
+                                        ),
+                                        React.createElement(
+                                            'span',
+                                            { className: 'text-xs text-gray-500' },
+                                            match.category
+                                        )
+                                    ),
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex items-center justify-between' },
+                                        React.createElement(
+                                            'span',
+                                            { className: 'font-semibold text-gray-800' },
+                                            match.homeTeam
+                                        ),
+                                        React.createElement('i', { className: 'fa-solid fa-vs text-xs text-gray-400 mx-2' }),
+                                        React.createElement(
+                                            'span',
+                                            { className: 'font-semibold text-gray-800' },
+                                            match.awayTeam
+                                        )
+                                    ),
+                                    React.createElement(
+                                        'div',
+                                        { className: 'mt-2 text-xs text-gray-500 flex items-center' },
+                                        React.createElement('i', { className: 'fa-solid fa-location-dot mr-1 text-gray-400' }),
+                                        match.hall
+                                    )
+                                )
+                            ))
+                        ),
+                    
+                    // Tlačidlo pre generovanie zápasov (zatiaľ neaktívne)
+                    React.createElement(
+                        'button',
+                        { 
+                            className: 'mt-4 w-full py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2',
+                            onClick: () => console.log('Generovanie zápasov - bude implementované')
+                        },
+                        React.createElement('i', { className: 'fa-solid fa-plus-circle' }),
+                        'Generovať zápasy'
+                    )
+                ),
+                
+                // PRAVÝ STĹPEC - Športové haly
+                React.createElement(
+                    'div',
+                    { className: 'lg:w-2/3' },
+                    React.createElement(
+                        'h3',
+                        { className: 'text-xl font-semibold mb-4 text-gray-700 border-b pb-2' },
+                        React.createElement('i', { className: 'fa-solid fa-futbol mr-2 text-red-500' }),
+                        'Športové haly',
+                        React.createElement('span', { className: 'ml-2 text-sm font-normal text-gray-500' },
+                            `(${sportHalls.length} ${sportHalls.length === 1 ? 'hala' : sportHalls.length < 5 ? 'haly' : 'hál'})`
+                        )
+                    ),
+                    
+                    // Indikátor načítavania
+                    loading && React.createElement(
+                        'div',
+                        { className: 'flex justify-center items-center py-12' },
+                        React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500' })
+                    ),
+                    
+                    // Žiadne haly
+                    !loading && sportHalls.length === 0 && React.createElement(
+                        'div',
+                        { className: 'text-center py-12 text-gray-500 bg-gray-50 rounded-lg' },
+                        React.createElement('i', { className: 'fa-solid fa-map-pin text-5xl mb-4 opacity-30' }),
+                        React.createElement('p', { className: 'text-lg' }, 'Žiadne športové haly nie sú k dispozícii'),
+                        React.createElement('p', { className: 'text-sm mt-2' }, 'Pridajte prvú športovú halu v mape.')
+                    ),
+                    
+                    // Grid zoznam športových hál
+                    !loading && sportHalls.length > 0 && React.createElement(
+                        'div',
+                        { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
+                        sportHalls.map((hall) => {
+                            const typeConfig = typeIcons[hall.type] || { icon: 'fa-futbol', color: '#dc2626' };
+                            
+                            return React.createElement(
+                                'div',
+                                { 
+                                    key: hall.id,
+                                    className: `p-5 bg-white rounded-xl border-2 border-gray-200 shadow-sm hover:shadow-md transition-shadow`
+                                },
                                 React.createElement(
                                     'div',
-                                    { className: 'flex-1' },
-                                    React.createElement('h4', { className: 'font-bold text-xl text-gray-800' }, hall.name),
-                                    React.createElement('span', { 
-                                        className: 'inline-block px-3 py-1 text-xs font-medium rounded-full mt-1',
-                                        style: { 
-                                            backgroundColor: typeConfig.color + '20',
-                                            color: typeConfig.color
-                                        }
-                                    }, 'Športová hala')
+                                    { className: 'flex items-center' },
+                                    React.createElement(
+                                        'div',
+                                        { 
+                                            className: 'w-14 h-14 rounded-full flex items-center justify-center mr-4',
+                                            style: { 
+                                                backgroundColor: typeConfig.color + '20',
+                                                border: `3px solid ${typeConfig.color}`
+                                            }
+                                        },
+                                        React.createElement('i', { 
+                                            className: `fa-solid ${typeConfig.icon} text-2xl`,
+                                            style: { color: typeConfig.color }
+                                        })
+                                    ),
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex-1' },
+                                        React.createElement('h4', { className: 'font-bold text-xl text-gray-800' }, hall.name),
+                                        React.createElement('span', { 
+                                            className: 'inline-block px-3 py-1 text-xs font-medium rounded-full mt-1',
+                                            style: { 
+                                                backgroundColor: typeConfig.color + '20',
+                                                color: typeConfig.color
+                                            }
+                                        }, 'Športová hala')
+                                    )
                                 )
-                            )
-                        );
-                    })
+                            );
+                        })
+                    )
                 )
             )
         )
