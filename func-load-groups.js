@@ -25,7 +25,7 @@
                 getDoc: module.getDoc
             };
         } catch (error) {
-//            console.error("[TeamManager] Chyba pri načítaní Firebase modulov:", error);
+            console.error("[TeamManager] Chyba pri načítaní Firebase modulov:", error);
             return null;
         }
     }
@@ -54,7 +54,7 @@
                 try {
                     callback(window.__teamManagerData);
                 } catch (error) {
-//                    console.error("[TeamManager] Chyba pri volaní listenera:", error);
+                    console.error("[TeamManager] Chyba pri volaní listenera:", error);
                 }
             }, 0);
         }
@@ -89,7 +89,7 @@
      * Vypíše tímy v požadovanom formáte: kategória skupina poradie názov
      */
     function printTeamsInFormat(teams) {
-//        console.log('=== TÍMY PODĽA KATEGÓRIÍ A SKUPÍN ===');
+        console.log('=== TÍMY PODĽA KATEGÓRIÍ A SKUPÍN ===');
         
         // Zoradenie podľa kategórie, skupiny a poradia
         const sortedTeams = [...teams].sort((a, b) => {
@@ -107,11 +107,11 @@
             const displayId = createTeamDisplayId(team);
             const nazov = team.teamName || 'neznámy názov';
             
-//            console.log(`${displayId} ${nazov}`);
+            console.log(`${displayId} ${nazov}`);
         });
         
-//        console.log(`Celkový počet tímov: ${teams.length}`);
-//        console.log('=======================================');
+        console.log(`Celkový počet tímov: ${teams.length}`);
+        console.log('=======================================');
     }
 
     /**
@@ -122,23 +122,23 @@
         window.__teamManagerData = data;
         
         // Vypíšeme základné informácie
-//        console.log('=== TÍMOVÝ MANAŽÉR - AKTUALIZÁCIA DÁT ===');
-//        console.log('Čas:', new Date().toLocaleTimeString());
-//        console.log('Typ udalosti:', data.type);
+        console.log('=== TÍMOVÝ MANAŽÉR - AKTUALIZÁCIA DÁT ===');
+        console.log('Čas:', new Date().toLocaleTimeString());
+        console.log('Typ udalosti:', data.type);
         
         if (data.type === 'update' || data.type === 'initialLoad') {
-//            console.log('Počet všetkých tímov:', data.allTeams.length);
-//            console.log('Počet používateľských tímov:', data.userTeams.length);
-//            console.log('Počet nadstavbových tímov:', 
-//                Object.values(data.superstructureTeams).reduce((sum, arr) => sum + arr.length, 0));
+            console.log('Počet všetkých tímov:', data.allTeams.length);
+            console.log('Počet používateľských tímov:', data.userTeams.length);
+            console.log('Počet nadstavbových tímov:', 
+                Object.values(data.superstructureTeams).reduce((sum, arr) => sum + arr.length, 0));
             
             // Výpis v požadovanom formáte
             printTeamsInFormat(data.allTeams);
         }
         
         if (data.type === 'categoriesUpdate' || data.type === 'initialLoad') {
-//            console.log('Kategórie (ID -> názov):', data.categoryIdToNameMap);
-//            console.log('Počet kategórií:', Object.keys(data.categoryIdToNameMap || {}).length);
+            console.log('Kategórie (ID -> názov):', data.categoryIdToNameMap);
+            console.log('Počet kategórií:', Object.keys(data.categoryIdToNameMap || {}).length);
         }
         
         if (data.type === 'groupsUpdate' || data.type === 'initialLoad') {
@@ -150,11 +150,11 @@
                     cleanName: cleanGroupName(g.name)
                 }));
             });
-//            console.log('Skupiny podľa kategórií (s vyčistenými názvami):', cleanedGroups);
+            console.log('Skupiny podľa kategórií (s vyčistenými názvami):', cleanedGroups);
             
             const totalGroups = Object.values(data.groupsByCategoryId || {})
                 .reduce((sum, arr) => sum + arr.length, 0);
-//            console.log('Počet skupín:', totalGroups);
+            console.log('Počet skupín:', totalGroups);
         }
         
         // Notifikujeme všetkých listenerov
@@ -162,7 +162,7 @@
             try {
                 callback(data);
             } catch (error) {
-//                console.error("[TeamManager] Chyba pri volaní listenera:", error);
+                console.error("[TeamManager] Chyba pri volaní listenera:", error);
             }
         });
         
@@ -177,22 +177,22 @@
     // Hlavná funkcia - inicializácia načúvania na zmeny v databáze
     // ============================================================
     async function initializeTeamManager() {
-//        console.log("[TeamManager] Inicializácia...");
+        console.log("[TeamManager] Inicializácia...");
         
         if (!window.db) {
-//            console.error("[TeamManager] Firestore nie je inicializovaný! Čakám na window.db...");
+            console.error("[TeamManager] Firestore nie je inicializovaný! Čakám na window.db...");
             
             // Počkáme na window.db (max 5 sekúnd)
             for (let i = 0; i < 50; i++) {
                 await new Promise(resolve => setTimeout(resolve, 100));
                 if (window.db) {
-//                    console.log("[TeamManager] window.db nájdený, pokračujem...");
+                    console.log("[TeamManager] window.db nájdený, pokračujem...");
                     break;
                 }
             }
             
             if (!window.db) {
-//                console.error("[TeamManager] Firestore stále nie je inicializovaný! Končím.");
+                console.error("[TeamManager] Firestore stále nie je inicializovaný! Končím.");
                 return;
             }
         }
@@ -200,7 +200,7 @@
         // Načítanie Firebase modulov
         const firebase = await loadFirebaseModules();
         if (!firebase) {
-//            console.error("[TeamManager] Nepodarilo sa načítať Firebase moduly!");
+            console.error("[TeamManager] Nepodarilo sa načítať Firebase moduly!");
             return;
         }
         
@@ -242,7 +242,7 @@
         const unsubscribeUsers = onSnapshot(
             query(collection(window.db, 'users')),
             (querySnapshot) => {
-//                console.log("[TeamManager] Načítavam používateľské tímy...");
+                console.log("[TeamManager] Načítavam používateľské tímy...");
                 const newUserTeams = [];
 
                 querySnapshot.forEach((doc) => {
@@ -283,10 +283,10 @@
                     timestamp: new Date().toISOString()
                 });
                 
-//                console.log(`[TeamManager] Načítaných ${userTeams.length} používateľských tímov`);
+                console.log(`[TeamManager] Načítaných ${userTeams.length} používateľských tímov`);
             },
             (error) => {
-//                console.error("[TeamManager] Chyba pri načítaní používateľských tímov:", error);
+                console.error("[TeamManager] Chyba pri načítaní používateľských tímov:", error);
             }
         );
 
@@ -296,7 +296,7 @@
         const unsubscribeSuperstructure = onSnapshot(
             doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/')),
             (docSnap) => {
-//                console.log("[TeamManager] Načítavam nadstavbové tímy...");
+                console.log("[TeamManager] Načítavam nadstavbové tímy...");
                 superstructureTeams = docSnap.exists() ? docSnap.data() : {};
                 allTeams = [...userTeams, ...flattenSuperstructureTeams(superstructureTeams)];
                 
@@ -311,10 +311,10 @@
                 });
                 
                 const totalSuperTeams = flattenSuperstructureTeams(superstructureTeams).length;
-//                console.log(`[TeamManager] Načítaných ${totalSuperTeams} nadstavbových tímov`);
+                console.log(`[TeamManager] Načítaných ${totalSuperTeams} nadstavbových tímov`);
             },
             (error) => {
-//                console.error("[TeamManager] Chyba pri načítaní nadstavbových tímov:", error);
+                console.error("[TeamManager] Chyba pri načítaní nadstavbových tímov:", error);
             }
         );
 
@@ -324,7 +324,7 @@
         const unsubscribeCategories = onSnapshot(
             doc(window.db, 'settings', 'categories'),
             (docSnap) => {
-//                console.log("[TeamManager] Načítavam kategórie...");
+                console.log("[TeamManager] Načítavam kategórie...");
                 const newMap = {};
                 
                 if (docSnap.exists()) {
@@ -345,10 +345,10 @@
                     timestamp: new Date().toISOString()
                 });
                 
-//                console.log(`[TeamManager] Načítaných ${Object.keys(newMap).length} kategórií`);
+                console.log(`[TeamManager] Načítaných ${Object.keys(newMap).length} kategórií`);
             },
             (error) => {
-//                console.error("[TeamManager] Chyba pri načítaní kategórií:", error);
+                console.error("[TeamManager] Chyba pri načítaní kategórií:", error);
             }
         );
 
@@ -358,7 +358,7 @@
         const unsubscribeGroups = onSnapshot(
             doc(window.db, 'settings', 'groups'),
             (docSnap) => {
-//                console.log("[TeamManager] Načítavam skupiny...");
+                console.log("[TeamManager] Načítavam skupiny...");
                 const newGroups = {};
                 
                 if (docSnap.exists()) {
@@ -383,10 +383,10 @@
                 });
                 
                 const totalGroups = Object.values(newGroups).reduce((sum, arr) => sum + arr.length, 0);
-//                console.log(`[TeamManager] Načítaných ${totalGroups} skupín`);
+                console.log(`[TeamManager] Načítaných ${totalGroups} skupín`);
             },
             (error) => {
-//                console.error("[TeamManager] Chyba pri načítaní skupín:", error);
+                console.error("[TeamManager] Chyba pri načítaní skupín:", error);
             }
         );
 
@@ -395,11 +395,11 @@
         // ========================================================
         try {
             const initialData = await loadAllTeamsOnce(getDoc, getDocs, collection, doc);
-//            console.log("[TeamManager] Počiatočné načítanie dokončené:", {
-//                totalTeams: initialData.allTeams.length,
-//                userTeams: initialData.userTeams.length,
-//                superstructureTeams: initialData.superstructureTeams.length
-//            });
+            console.log("[TeamManager] Počiatočné načítanie dokončené:", {
+                totalTeams: initialData.allTeams.length,
+                userTeams: initialData.userTeams.length,
+                superstructureTeams: initialData.superstructureTeams.length
+            });
             
             notifyListeners({
                 type: 'initialLoad',
@@ -407,14 +407,14 @@
                 timestamp: new Date().toISOString()
             });
         } catch (error) {
-//            console.error("[TeamManager] Chyba pri počiatočnom načítaní:", error);
+            console.error("[TeamManager] Chyba pri počiatočnom načítaní:", error);
         }
 
         // ========================================================
         // Návratová funkcia na odhlásenie všetkých listenerov
         // ========================================================
         window.__teamManagerCleanup = () => {
-//            console.log("[TeamManager] Uzatváram všetky listenery...");
+            console.log("[TeamManager] Uzatváram všetky listenery...");
             unsubscribeUsers();
             unsubscribeSuperstructure();
             unsubscribeCategories();
@@ -429,7 +429,7 @@
     // Jednorazové načítanie všetkých tímov (pre počiatočné dáta)
     // ============================================================
     async function loadAllTeamsOnce(getDoc, getDocs, collection, doc) {
-//        console.log("[TeamManager] Jednorazové načítanie všetkých tímov...");
+        console.log("[TeamManager] Jednorazové načítanie všetkých tímov...");
         
         if (!window.db) {
             throw new Error("[TeamManager] Firestore nie je inicializovaný!");
@@ -497,7 +497,7 @@
 
         const allTeams = [...userTeams, ...superstructureTeams];
 
-//        console.log(`[TeamManager] Jednorazové načítanie dokončené: ${allTeams.length} tímov`);
+        console.log(`[TeamManager] Jednorazové načítanie dokončené: ${allTeams.length} tímov`);
 
         return {
             allTeams,
@@ -739,13 +739,13 @@
     // ============================================================
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
-//            console.log("[TeamManager] DOM pripravený, spúšťam inicializáciu...");
+            console.log("[TeamManager] DOM pripravený, spúšťam inicializáciu...");
             initializeTeamManager();
         });
     } else {
-//        console.log("[TeamManager] DOM už je pripravený, spúšťam inicializáciu...");
+        console.log("[TeamManager] DOM už je pripravený, spúšťam inicializáciu...");
         setTimeout(() => initializeTeamManager(), 100);
     }
 
-//    console.log("[TeamManager] Skript načítaný, window.teamManager je k dispozícii");
+    console.log("[TeamManager] Skript načítaný, window.teamManager je k dispozícii");
 })();
