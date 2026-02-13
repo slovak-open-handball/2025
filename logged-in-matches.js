@@ -309,6 +309,30 @@ const AddMatchesApp = ({ userProfileData }) => {
         return 'Neznámy tím';
     };
 
+    // Funkcia na načítanie zápasov z Firebase
+    const loadMatches = () => {
+        if (!window.db) return;
+
+        const matchesRef = collection(window.db, 'matches');
+        
+        const unsubscribe = onSnapshot(matchesRef, (snapshot) => {
+            const loadedMatches = [];
+            snapshot.forEach((doc) => {
+                loadedMatches.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+            // Zoradenie podľa času vytvorenia (najnovšie prvé)
+            loadedMatches.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+            setMatches(loadedMatches);
+        }, (error) => {
+            console.error('Chyba pri načítaní zápasov:', error);
+        });
+
+        return unsubscribe;
+    };
+
     // Prihlásenie na odber zmien v teamManager
     useEffect(() => {
         if (window.teamManager) {
@@ -426,6 +450,50 @@ const AddMatchesApp = ({ userProfileData }) => {
         return groups;
     };
 
+    // Funkcia na uloženie zápasov do Firebase
+    const saveMatchesToFirebase = async (matchesToSave) => {
+        if (!window.db) {
+            throw new Error('Databáza nie je inicializovaná');
+        }
+
+        const matchesRef = collection(window.db, 'matches');
+        const savedMatches = [];
+
+        for (const match of matchesToSave) {
+            try {
+                // Pripravíme dáta pre uloženie
+                const matchData = {
+                    homeTeamId: match.homeTeamId,
+                    awayTeamId: match.awayTeamId,
+                    homeTeamName: match.homeTeamName,
+                    awayTeamName: match.awayTeamName,
+                    time: match.time,
+                    hallId: match.hallId,
+                    categoryId: match.categoryId,
+                    categoryName: match.categoryName,
+                    groupName: match.groupName,
+                    status: match.status,
+                    createdAt: Timestamp.now(),
+                    createdBy: userProfileData?.email || 'unknown'
+                };
+
+                // Uložíme do Firebase a získame ID
+                const docRef = await addDoc(matchesRef, matchData);
+                savedMatches.push({
+                    id: docRef.id,
+                    ...matchData
+                });
+                
+                console.log(`Zápas uložený s ID: ${docRef.id}`);
+            } catch (error) {
+                console.error('Chyba pri ukladaní zápasu:', error);
+                throw error;
+            }
+        }
+
+        return savedMatches;
+    };
+
     // Funkcia na generovanie zápasov
     const generateMatches = async ({ categoryId, groupName, withRepetitions }) => {
         try {
@@ -467,7 +535,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                 
                 // Pridanie informácií o skupine ku každému zápasu
                 const matchesWithInfo = groupMatches.map((match, index) => ({
-                    id: Date.now() + index + Math.random(),
                     homeTeamId: match.homeTeamId,
                     awayTeamId: match.awayTeamId,
                     homeTeamName: match.homeTeamName,
@@ -482,11 +549,6 @@ const AddMatchesApp = ({ userProfileData }) => {
 
                 allGeneratedMatches = [...allGeneratedMatches, ...matchesWithInfo];
                 
-                window.showGlobalNotification(
-                    `Vygenerovaných ${matchesWithInfo.length} zápasov pre ${category.name} - ${groupName}`,
-                    'success'
-                );
-
             } else {
                 // Všetky skupiny v kategórii
                 const groups = getAllGroupsInCategory(category.name);
@@ -509,7 +571,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                         const groupMatches = generateMatchesForGroup(teamsInGroup, withRepetitions);
                         
                         const matchesWithInfo = groupMatches.map((match, index) => ({
-                            id: Date.now() + index + Math.random() + group.name,
                             homeTeamId: match.homeTeamId,
                             awayTeamId: match.awayTeamId,
                             homeTeamName: match.homeTeamName,
@@ -525,17 +586,25 @@ const AddMatchesApp = ({ userProfileData }) => {
                         allGeneratedMatches = [...allGeneratedMatches, ...matchesWithInfo];
                     }
                 }
-
-                window.showGlobalNotification(
-                    `Vygenerovaných ${allGeneratedMatches.length} zápasov pre všetky skupiny v ${category.name}`,
-                    'success'
-                );
             }
 
-            // Pridanie všetkých vygenerovaných zápasov do stavu
+            // Uloženie zápasov do Firebase
             if (allGeneratedMatches.length > 0) {
-                console.log('Pridávam zápasy do stavu:', allGeneratedMatches);
-                setMatches(prev => [...prev, ...allGeneratedMatches]);
+                console.log('Ukladám zápasy do Firebase...');
+                
+                // Zobrazíme loading notifikáciu
+                window.showGlobalNotification(`Ukladám ${allGeneratedMatches.length} zápasov...`, 'info');
+                
+                // Uložíme do Firebase
+                const savedMatches = await saveMatchesToFirebase(allGeneratedMatches);
+                
+                console.log(`Úspešne uložených ${savedMatches.length} zápasov`);
+                
+                // Pridáme do lokálneho stavu (matches sa aktualizujú cez onSnapshot)
+                window.showGlobalNotification(
+                    `Vygenerovaných a uložených ${savedMatches.length} zápasov pre ${category.name}${groupName ? ' - ' + groupName : ''}`,
+                    'success'
+                );
             }
 
         } catch (error) {
@@ -553,6 +622,9 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
 
         console.log("AddMatchesApp: Načítavam športové haly a kategórie z databázy...");
+        
+        // Načítame zápasy
+        const unsubscribeMatches = loadMatches();
         
         // Načítame nastavenia kategórií
         const loadCategorySettings = async () => {
@@ -630,7 +702,7 @@ const AddMatchesApp = ({ userProfileData }) => {
 
         loadGroups();
         
-        const unsubscribe = onSnapshot(
+        const unsubscribePlaces = onSnapshot(
             collection(window.db, 'places'),
             (snapshot) => {
                 const loadedPlaces = [];
@@ -661,7 +733,10 @@ const AddMatchesApp = ({ userProfileData }) => {
             }
         );
 
-        return () => unsubscribe();
+        return () => {
+            if (unsubscribeMatches) unsubscribeMatches();
+            unsubscribePlaces();
+        };
     }, []);
 
     // ZJEDNODUŠENÝ RENDER - dva stĺpce (ľavý - zápasy, pravý - haly)
