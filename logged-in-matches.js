@@ -455,14 +455,14 @@ const AddMatchesApp = ({ userProfileData }) => {
         if (!window.db) {
             throw new Error('Databáza nie je inicializovaná');
         }
-
+    
         // DEBUG: Vypíšeme informácie o používateľovi
         console.log('Kontrola admin práv pre ukladanie:');
         console.log('userProfileData:', userProfileData);
         console.log('role:', userProfileData?.role);
         console.log('approved:', userProfileData?.approved);
         console.log('email:', userProfileData?.email);
-
+    
         // Skontrolujeme, či je používateľ admin
         if (userProfileData?.role !== 'admin') {
             console.error('Používateľ nie je admin. Role:', userProfileData?.role);
@@ -477,7 +477,9 @@ const AddMatchesApp = ({ userProfileData }) => {
         const matchesRef = collection(window.db, 'matches');
         const savedMatches = [];
     
-        for (const match of matchesToSave) {
+        // Pridáme index do cyklu
+        for (let i = 0; i < matchesToSave.length; i++) {
+            const match = matchesToSave[i];
             try {
                 // Pripravíme dáta pre uloženie
                 const matchData = {
@@ -495,7 +497,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     createdBy: userProfileData?.email || 'unknown',
                     createdByUid: userProfileData?.uid || null
                 };
-
+    
                 // Uložíme do Firebase a získame ID
                 const docRef = await addDoc(matchesRef, matchData);
                 savedMatches.push({
@@ -503,7 +505,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     ...matchData
                 });
                 
-                console.log(`Zápas ${index + 1}/${matchesToSave.length} uložený s ID: ${docRef.id}`);
+                console.log(`Zápas ${i + 1}/${matchesToSave.length} uložený s ID: ${docRef.id}`);
             } catch (error) {
                 console.error('Chyba pri ukladaní zápasu:', error);
                 
