@@ -344,12 +344,12 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [pendingGeneration, setPendingGeneration] = useState(null);
     const [groupsByCategory, setGroupsByCategory] = useState({});
     const [teamData, setTeamData] = useState({ allTeams: [] });
-    const [showTeamId, setShowTeamId] = useState(false); // NOVÝ STATE PRE PREPÍNAČ
+    const [showTeamId, setShowTeamId] = useState(false);
 
     // Funkcia na získanie názvu tímu podľa ID alebo priamo z objektu
     const getTeamName = (team) => {
         if (!team) return 'Neznámy tím';
-        return team.teamName || team.name || 'Neznámy tím';
+        return team.teamName || 'Neznámy tím';
     };
 
     // Funkcia na získanie ID tímu (ak existuje)
@@ -378,7 +378,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         if (teamData.allTeams && teamData.allTeams.length > 0) {
             const team = teamData.allTeams.find(t => 
                 t.category === categoryName && 
-                (t.teamName === teamId || t.name === teamId)
+                t.teamName === teamId
             );
             
             if (team) {
@@ -390,7 +390,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         if (window.__teamManagerData?.allTeams) {
             const team = window.__teamManagerData.allTeams.find(t => 
                 t.category === categoryName && 
-                (t.teamName === teamId || t.name === teamId)
+                t.teamName === teamId
             );
             
             if (team) {
@@ -398,7 +398,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 return getTeamName(team);
             }
         }
-    
+
         // Ak ide o priamy názov tímu (fallback), vrátime ho
         if (typeof teamId === 'string' && teamId.length > 0) {
             return teamId;
@@ -414,7 +414,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             if (!teamId) return '---';
             
             // ZISTÍME KATEGÓRIU Z AKTUÁLNEHO ZÁPASU
-            // Nájdeme zápas, v ktorom sa tento tím vyskytuje
             const currentMatch = matches.find(m => m.homeTeamId === teamId || m.awayTeamId === teamId);
             
             if (!currentMatch || !currentMatch.categoryName) {
@@ -428,10 +427,9 @@ const AddMatchesApp = ({ userProfileData }) => {
             
             // VYHĽADÁME TÍM PODĽA KATEGÓRIE A NÁZVU
             if (teamData.allTeams && teamData.allTeams.length > 0) {
-                // Hľadáme tím v danej kategórii podľa názvu
                 const team = teamData.allTeams.find(t => 
                     t.category === categoryName && 
-                    (t.teamName === teamId || t.name === teamId)
+                    t.teamName === teamId
                 );
                 
                 if (team) {
@@ -441,11 +439,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                     );
                     
                     const sortedTeams = [...teamsInSameGroup].sort((a, b) => 
-                        (a.teamName || a.name || '').localeCompare(b.teamName || b.name || '')
+                        (a.teamName || '').localeCompare(b.teamName || '')
                     );
                     
                     const teamIndex = sortedTeams.findIndex(t => 
-                        t.id === team.id || t.teamName === teamId || t.name === teamId
+                        t.id === team.id || t.teamName === teamId
                     );
                     const teamNumber = teamIndex !== -1 ? teamIndex + 1 : '?';
                     
