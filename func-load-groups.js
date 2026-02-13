@@ -18,6 +18,7 @@
     }
     const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
     const teamManagerListeners = new Set();
+    
     function subscribeToTeams(callback) {
         teamManagerListeners.add(callback);        
         if (window.__teamManagerData) {
@@ -31,16 +32,19 @@
         
         return () => teamManagerListeners.delete(callback);
     }
+    
     function cleanGroupName(groupName) {
         if (!groupName) return 'bez skupiny';        
         return groupName.replace(/^skupina\s+/i, '');
     }
+    
     function createTeamDisplayId(team) {
         const kategoria = team.category || '';
         const skupina = team.groupName ? cleanGroupName(team.groupName) : '';
         const poradie = team.order !== null && team.order !== undefined ? team.order : '';        
         return `${kategoria} ${skupina}${poradie}`.trim();
     }
+    
     function printTeamsInFormat(teams) {        
         const sortedTeams = [...teams].sort((a, b) => {
             if (a.category !== b.category) return a.category.localeCompare(b.category);            
@@ -54,6 +58,123 @@
             const nazov = team.teamName || 'neznámy názov';            
         });        
     }
+    
+    // NOVÁ FUNKCIA: Výpis všetkých tímov v kategórii
+    function printTeamsInCategory(categoryName) {
+        if (!window.__teamManagerData?.allTeams) {
+            console.log('TeamManager dáta ešte nie sú načítané');
+            return;
+        }
+        
+        const teamsInCategory = window.__teamManagerData.allTeams.filter(team => 
+            team.category === categoryName
+        );
+        
+        if (teamsInCategory.length === 0) {
+            console.log(`V kategórii "${categoryName}" sa nenašli žiadne tímy`);
+            return;
+        }
+        
+        console.log(`\n=== TÍMY V KATEGÓRII: ${categoryName} ===`);
+        console.log(`Celkový počet tímov: ${teamsInCategory.length}`);
+        
+        // Zoradenie tímov podľa skupiny a poradia
+        const sortedTeams = [...teamsInCategory].sort((a, b) => {
+            // Podľa skupiny
+            if (a.groupName !== b.groupName) {
+                return (a.groupName || '').localeCompare(b.groupName || '');
+            }
+            // Potom podľa poradia
+            return (a.order || 999) - (b.order || 999);
+        });
+        
+        sortedTeams.forEach((team, index) => {
+            const displayId = createTeamDisplayId(team);
+            console.log(`${index + 1}. ${displayId} - "${team.teamName}" (ID: ${team.id})${team.groupName ? ` [Skupina: ${team.groupName}]` : ''}`);
+        });
+        console.log('========================\n');
+    }
+    
+    // NOVÁ FUNKCIA: Výpis všetkých tímov v skupine
+    function printTeamsInGroup(categoryName, groupName) {
+        if (!window.__teamManagerData?.allTeams) {
+            console.log('TeamManager dáta ešte nie sú načítané');
+            return;
+        }
+        
+        const cleanGroup = cleanGroupName(groupName);
+        
+        const teamsInGroup = window.__teamManagerData.allTeams.filter(team => 
+            team.category === categoryName && 
+            team.groupName && 
+            cleanGroupName(team.groupName) === cleanGroup
+        );
+        
+        if (teamsInGroup.length === 0) {
+            console.log(`V skupine "${groupName}" v kategórii "${categoryName}" sa nenašli žiadne tímy`);
+            return;
+        }
+        
+        console.log(`\n=== TÍMY V SKUPINE: ${categoryName} - ${groupName} ===`);
+        console.log(`Počet tímov v skupine: ${teamsInGroup.length}`);
+        
+        // Zoradenie tímov podľa poradia
+        const sortedTeams = [...teamsInGroup].sort((a, b) => 
+            (a.order || 999) - (b.order || 999)
+        );
+        
+        sortedTeams.forEach((team, index) => {
+            const displayId = createTeamDisplayId(team);
+            console.log(`${index + 1}. ${displayId} - "${team.teamName}" (ID: ${team.id}, poradie: ${team.order || '?'})`);
+        });
+        console.log('========================\n');
+    }
+    
+    // NOVÁ FUNKCIA: Výpis všetkých kategórií a ich tímov
+    function printAllCategories() {
+        if (!window.__teamManagerData?.allTeams) {
+            console.log('TeamManager dáta ešte nie sú načítané');
+            return;
+        }
+        
+        // Získame všetky unikátne kategórie
+        const categories = [...new Set(window.__teamManagerData.allTeams.map(t => t.category))].sort();
+        
+        console.log('\n=== PREHĽAD VŠETKÝCH KATEGÓRIÍ ===');
+        
+        categories.forEach(category => {
+            const teamsInCategory = window.__teamManagerData.allTeams.filter(t => t.category === category);
+            console.log(`\n📁 ${category} (${teamsInCategory.length} tímov)`);
+            
+            // Získame skupiny v tejto kategórii
+            const groups = [...new Set(teamsInCategory.map(t => t.groupName).filter(g => g))].sort();
+            
+            if (groups.length > 0) {
+                groups.forEach(group => {
+                    const teamsInGroup = teamsInCategory.filter(t => t.groupName === group);
+                    console.log(`   📂 ${group} (${teamsInGroup.length} tímov):`);
+                    teamsInGroup.sort((a, b) => (a.order || 999) - (b.order || 999))
+                        .forEach(team => {
+                            const displayId = createTeamDisplayId(team);
+                            console.log(`      • ${displayId} - "${team.teamName}"`);
+                        });
+                });
+            } else {
+                // Tímy bez skupiny
+                const teamsWithoutGroup = teamsInCategory.filter(t => !t.groupName);
+                if (teamsWithoutGroup.length > 0) {
+                    console.log(`   📂 Bez skupiny (${teamsWithoutGroup.length} tímov):`);
+                    teamsWithoutGroup.sort((a, b) => (a.order || 999) - (b.order || 999))
+                        .forEach(team => {
+                            const displayId = createTeamDisplayId(team);
+                            console.log(`      • ${displayId} - "${team.teamName}"`);
+                        });
+                }
+            }
+        });
+        console.log('\n========================\n');
+    }
+    
     function notifyListeners(data) {
         window.__teamManagerData = data; 
         if (data.type === 'update' || data.type === 'initialLoad') {            
@@ -81,6 +202,7 @@
         });
         window.dispatchEvent(event);
     }
+    
     async function initializeTeamManager() {        
         if (!window.db) {            
             for (let i = 0; i < 50; i++) {
@@ -103,6 +225,7 @@
         let superstructureTeams = {};
         let categoryIdToNameMap = {};
         let groupsByCategoryId = {};
+        
         const flattenSuperstructureTeams = (superstructureData) => {
             const result = [];            
             Object.entries(superstructureData || {}).forEach(([categoryName, teamArray]) => {
@@ -121,6 +244,7 @@
             });            
             return result;
         };
+        
         const unsubscribeUsers = onSnapshot(
             query(collection(window.db, 'users')),
             (querySnapshot) => {
@@ -163,6 +287,7 @@
             (error) => {
             }
         );
+        
         const unsubscribeSuperstructure = onSnapshot(
             doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/')),
             (docSnap) => {
@@ -182,6 +307,7 @@
             (error) => {
             }
         );
+        
         const unsubscribeCategories = onSnapshot(
             doc(window.db, 'settings', 'categories'),
             (docSnap) => {
@@ -205,6 +331,7 @@
             (error) => {
             }
         );
+        
         const unsubscribeGroups = onSnapshot(
             doc(window.db, 'settings', 'groups'),
             (docSnap) => {
@@ -232,6 +359,7 @@
             (error) => {
             }
         );
+        
         try {
             const initialData = await loadAllTeamsOnce(getDoc, getDocs, collection, doc);            
             notifyListeners({
@@ -241,6 +369,7 @@
             });
         } catch (error) {
         }
+        
         window.__teamManagerCleanup = () => {
             unsubscribeUsers();
             unsubscribeSuperstructure();
@@ -250,6 +379,7 @@
         };        
         return window.__teamManagerCleanup;
     }
+    
     async function loadAllTeamsOnce(getDoc, getDocs, collection, doc) {        
         if (!window.db) {
             throw new Error("[TeamManager] Firestore nie je inicializovaný!");
@@ -314,6 +444,7 @@
             groupsByCategoryId
         };
     }
+    
     function flattenSuperstructureTeamsGlobal(superstructureData) {
         const result = [];        
         Object.entries(superstructureData || {}).forEach(([categoryName, teamArray]) => {
@@ -332,6 +463,7 @@
         });        
         return result;
     }
+    
     async function getAllTeams() {
         const firebase = await loadFirebaseModules();
         if (!firebase) return [];
@@ -340,16 +472,19 @@
         const data = await loadAllTeamsOnce(getDoc, getDocs, collection, doc);
         return data.allTeams;
     }
+    
     async function getTeamsByCategory(categoryName) {
         const allTeams = await getAllTeams();
         return allTeams.filter(team => team.category === categoryName);
     }
+    
     async function getTeamsByGroup(categoryName, groupName) {
         const allTeams = await getAllTeams();
         return allTeams.filter(team => 
             team.category === categoryName && team.groupName === groupName
         );
     }
+    
     async function getCategoryMap() {
         const firebase = await loadFirebaseModules();
         if (!firebase) return {};        
@@ -366,6 +501,7 @@
         }        
         return categoryIdToName;
     }
+    
     async function getGroupsByCategory(categoryId) {
         const firebase = await loadFirebaseModules();
         if (!firebase) return [];        
@@ -382,21 +518,25 @@
         }        
         return [];
     }
+    
     function getCleanGroupName(groupName) {
         return cleanGroupName(groupName);
     }
+    
     async function getTeamNameById(teamId) {
         if (!teamId) return null;        
         const allTeams = await getAllTeams();
         const team = allTeams.find(t => t.id === teamId);        
         return team ? team.teamName : null;
     }
+    
     function getTeamNameByIdSync(teamId) {
         if (!teamId || !window.__teamManagerData?.allTeams) return null;
         
         const team = window.__teamManagerData.allTeams.find(t => t.id === teamId);
         return team ? team.teamName : null;
     }
+    
     async function getTeamNameByDisplayId(displayId) {
         if (!displayId) return null;        
         const allTeams = await getAllTeams();        
@@ -406,6 +546,7 @@
         });        
         return team ? team.teamName : null;
     }
+    
     function getTeamNameByDisplayIdSync(displayId) {
         if (!displayId || !window.__teamManagerData?.allTeams) return null;        
         const team = window.__teamManagerData.allTeams.find(team => {
@@ -414,6 +555,7 @@
         });        
         return team ? team.teamName : null;
     }
+    
     async function getTeamByDisplayId(displayId) {
         if (!displayId) return null;        
         const allTeams = await getAllTeams();        
@@ -423,6 +565,7 @@
         });        
         return team || null;
     }
+    
     function getTeamByDisplayIdSync(displayId) {
         if (!displayId || !window.__teamManagerData?.allTeams) return null;        
         const team = window.__teamManagerData.allTeams.find(team => {
@@ -431,6 +574,7 @@
         });        
         return team || null;
     }
+    
     window.teamManager = {
         initialize: initializeTeamManager,
         subscribe: subscribeToTeams,
@@ -445,8 +589,13 @@
         getTeamNameByDisplayId,
         getTeamNameByDisplayIdSync,
         getTeamByDisplayId,
-        getTeamByDisplayIdSync 
+        getTeamByDisplayIdSync,
+        // NOVÉ PRIDANÉ FUNKCIE
+        printTeamsInCategory,
+        printTeamsInGroup,
+        printAllCategories
     };
+    
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
             initializeTeamManager();
