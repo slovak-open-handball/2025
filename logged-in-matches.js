@@ -836,8 +836,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 { className: 'space-y-3 max-h-[600px] overflow-y-auto pr-2' },
                                 matches.map(match => {
                                     // Ak máme uložené mená tímov priamo v zápase, použijeme ich
-                                    const homeTeamName = match.homeTeamName || getTeamNameById(match.homeTeamId);
-                                    const awayTeamName = match.awayTeamName || getTeamNameById(match.awayTeamId);
+                                    const homeTeamName = getTeamNameById(match.homeTeamId);
+                                    const awayTeamName = getTeamNameById(match.awayTeamId);
                                     
                                     return React.createElement(
                                         'div',
