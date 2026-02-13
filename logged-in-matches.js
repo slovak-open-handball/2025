@@ -374,6 +374,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                 return team.teamName || 'Neznámy tím';
             }
             
+            // Ak nenašlo podľa ID, skúsime nájsť tím podľa teamName (pre tímy bez ID)
+            const teamByName = teamData.allTeams.find(t => t.teamName === teamId);
+            
+            if (teamByName) {
+                return teamByName.teamName;
+            }
+            
             // Ak nenašlo podľa ID, skúsime extrahovať názov z teamId
             // Formát: uid-teamName
             const parts = teamId.split('-');
@@ -384,13 +391,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                 // Skúsime nájsť tím podľa extrahovaného názvu a kategórie
                 const match = matches.find(m => m.homeTeamId === teamId || m.awayTeamId === teamId);
                 if (match && match.categoryName) {
-                    const teamByName = teamData.allTeams.find(t => 
+                    const teamByExtractedName = teamData.allTeams.find(t => 
                         t.category === match.categoryName && 
                         t.teamName === extractedName
                     );
                     
-                    if (teamByName) {
-                        return teamByName.teamName;
+                    if (teamByExtractedName) {
+                        return teamByExtractedName.teamName;
                     }
                 }
                 
@@ -400,10 +407,18 @@ const AddMatchesApp = ({ userProfileData }) => {
         
         // Ak nie je v teamData, skúsime priamo z window.__teamManagerData
         if (window.__teamManagerData?.allTeams) {
+            // Hľadáme podľa ID
             const team = window.__teamManagerData.allTeams.find(t => t.id === teamId);
             if (team) {
                 setTeamData(window.__teamManagerData);
                 return team.teamName || 'Neznámy tím';
+            }
+            
+            // Hľadáme podľa teamName
+            const teamByName = window.__teamManagerData.allTeams.find(t => t.teamName === teamId);
+            if (teamByName) {
+                setTeamData(window.__teamManagerData);
+                return teamByName.teamName;
             }
         }
     
@@ -421,11 +436,23 @@ const AddMatchesApp = ({ userProfileData }) => {
             let team = null;
             
             if (teamData.allTeams && teamData.allTeams.length > 0) {
+                // Hľadáme podľa ID
                 team = teamData.allTeams.find(t => t.id === teamId);
+                
+                // Ak nenašlo podľa ID, skúsime podľa teamName
+                if (!team) {
+                    team = teamData.allTeams.find(t => t.teamName === teamId);
+                }
             }
             
             if (!team && window.__teamManagerData?.allTeams) {
+                // Hľadáme podľa ID
                 team = window.__teamManagerData.allTeams.find(t => t.id === teamId);
+                
+                // Ak nenašlo podľa ID, skúsime podľa teamName
+                if (!team) {
+                    team = window.__teamManagerData.allTeams.find(t => t.teamName === teamId);
+                }
             }
             
             if (team) {
