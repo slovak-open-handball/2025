@@ -432,7 +432,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     const teamNumber = teamIndex !== -1 ? teamIndex + 1 : '?';
                     
                     // Formát: '{názov kategorie}' '{názov skupiny}' 'poradove číslo'
-                    return `${categoryName} ${groupName} ${teamNumber}`;
+                    return `${categoryName} ${groupName}${teamNumber}`;
                 }
             }
             
