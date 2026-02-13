@@ -107,7 +107,7 @@
             const displayId = createTeamDisplayId(team);
             const nazov = team.teamName || 'neznámy názov';
             
-            console.log(`${displayId} ${nazov}`);
+//            console.log(`${displayId} ${nazov}`);
         });
         
 //        console.log(`Celkový počet tímov: ${teams.length}`);
