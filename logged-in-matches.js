@@ -283,26 +283,39 @@ const AddMatchesApp = ({ userProfileData }) => {
             return 'Neznámy tím';
         }
         
-        // Skúsime nájsť v teamData (z React state)
+    // Skúsime nájsť v teamData (z React state)
         if (teamData.allTeams && teamData.allTeams.length > 0) {
-            const team = teamData.allTeams.find(t => t.id === teamId || t.teamName === teamId);
+            const team = teamData.allTeams.find(t => t.id === teamId);
             if (team) {
                 return getTeamName(team);
+            }
+            
+            // Ak nenašiel podľa ID, skúsime podľa názvu (pre fallback prípady)
+            const teamByName = teamData.allTeams.find(t => t.teamName === teamId || t.name === teamId);
+            if (teamByName) {
+                return getTeamName(teamByName);
             }
         }
         
         // Ak nie je v teamData, skúsime priamo z window.__teamManagerData
         if (window.__teamManagerData?.allTeams) {
-            const team = window.__teamManagerData.allTeams.find(t => t.id === teamId || t.teamName === teamId);
+            const team = window.__teamManagerData.allTeams.find(t => t.id === teamId);
             if (team) {
                 // Aktualizujeme teamData pre budúce použitie
                 setTeamData(window.__teamManagerData);
                 return getTeamName(team);
             }
+            
+            // Skúsime podľa názvu
+            const teamByName = window.__teamManagerData.allTeams.find(t => t.teamName === teamId || t.name === teamId);
+            if (teamByName) {
+                setTeamData(window.__teamManagerData);
+                return getTeamName(teamByName);
+            }
         }
-        
-        // Ak ide o priamy názov tímu (nie ID), vrátime ho
-        if (typeof teamId === 'string' && teamId.length > 0 && !teamId.includes('-')) {
+    
+        // Ak ide o priamy názov tímu (fallback), vrátime ho
+        if (typeof teamId === 'string' && teamId.length > 0) {
             return teamId;
         }
         
@@ -398,8 +411,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                         matches.push({
                             homeTeamId: teamIdentifiers[i].id || teamIdentifiers[i].name,
                             awayTeamId: teamIdentifiers[j].id || teamIdentifiers[j].name,
-                            homeTeamName: teamIdentifiers[i].name,
-                            awayTeamName: teamIdentifiers[j].name
                         });
                     }
                 }
@@ -411,8 +422,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                     matches.push({
                         homeTeamId: teamIdentifiers[i].id || teamIdentifiers[i].name,
                         awayTeamId: teamIdentifiers[j].id || teamIdentifiers[j].name,
-                        homeTeamName: teamIdentifiers[i].name,
-                        awayTeamName: teamIdentifiers[j].name
                     });
                 }
             }
@@ -485,8 +494,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                 const matchData = {
                     homeTeamId: match.homeTeamId,
                     awayTeamId: match.awayTeamId,
-                    homeTeamName: match.homeTeamName,
-                    awayTeamName: match.awayTeamName,
                     time: match.time,
                     hallId: match.hallId,
                     categoryId: match.categoryId,
