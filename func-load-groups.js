@@ -1,3 +1,7 @@
+// volanie názvu tímu v konzole podla ID
+// teamManager.getTeamNameByDisplayIdSync("U10 D 1A")
+
+
 // ============================================================
 // func-load-groups.js - Tímový manažér (globálna verzia)
 // ============================================================
