@@ -544,7 +544,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                         React.createElement(
                             'h3',
                             { className: 'text-xl font-semibold mb-4 text-gray-700 border-b pb-2 flex items-center' },
-                            React.createElement('i', { className: 'fa-solid fa-trophy mr-2 text-yellow-500' }),
                             'Zoznam zápasov',
                             React.createElement('span', { className: 'ml-2 text-sm font-normal text-gray-500' },
                                 `(${matches.length})`
