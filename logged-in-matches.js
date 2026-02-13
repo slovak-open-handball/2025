@@ -664,12 +664,18 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     // Funkcia na spracovanie ďalšieho existujúceho zápasu
     const processNextExistingMatch = () => {
+        console.log('processNextExistingMatch:', {
+            currentMatchIndex,
+            totalExisting: existingMatchesToProcess.length,
+            currentMatch: existingMatchesToProcess[currentMatchIndex]
+        });
+    
         if (currentMatchIndex < existingMatchesToProcess.length) {
             const match = existingMatchesToProcess[currentMatchIndex];
             setCurrentExistingMatch(match);
             setIsExistingMatchModalOpen(true);
         } else {
-            // Všetky existujúce zápasy boli spracované, uložíme výsledok
+            console.log('Všetky existujúce zápasy spracované, ukončujem generovanie');
             finishGeneration();
         }
     };
@@ -1223,6 +1229,12 @@ const AddMatchesApp = ({ userProfileData }) => {
 
             // Skontrolujeme existujúce zápasy
             const { existingMatches, newMatches: newOnes } = checkExistingMatchesDuringGeneration(allGeneratedMatches);
+
+            console.log('Rozdelenie zápasov:', {
+                celkovyPocet: allGeneratedMatches.length,
+                existujuce: existingMatches.length,
+                nove: newOnes.length
+            });
             
             if (existingMatches.length > 0) {
                 // Uložíme informácie o generovaní
