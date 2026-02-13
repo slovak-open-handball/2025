@@ -580,8 +580,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                 const matchesWithInfo = groupMatches.map((match, index) => ({
                     homeTeamId: match.homeTeamId,
                     awayTeamId: match.awayTeamId,
-                    homeTeamName: match.homeTeamName,
-                    awayTeamName: match.awayTeamName,
                     time: '--:--',
                     hallId: null,
                     categoryId: category.id,
