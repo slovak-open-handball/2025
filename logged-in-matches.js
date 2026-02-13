@@ -303,7 +303,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         const teamIds = teams.map(t => t.id);
         
         if (withRepetitions) {
-            // Každý s každým doma/vonku
+            // Každý s každým doma/vonku v rámci skupiny
             for (let i = 0; i < teamIds.length; i++) {
                 for (let j = 0; j < teamIds.length; j++) {
                     if (i !== j) {
@@ -315,7 +315,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 }
             }
         } else {
-            // Jedinečné dvojice (každý s každým raz)
+            // Jedinečné dvojice (každý s každým raz) v rámci skupiny
             for (let i = 0; i < teamIds.length; i++) {
                 for (let j = i + 1; j < teamIds.length; j++) {
                     matches.push({
@@ -327,6 +327,29 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
         
         return matches;
+    };
+
+    // Funkcia na získanie všetkých skupín v kategórii
+    const getAllGroupsInCategory = (categoryName) => {
+        const groups = [];
+        
+        // Prejdeme všetky tímy a extrahujeme unikátne skupiny
+        if (teamData.allTeams) {
+            const teamsInCategory = teamData.allTeams.filter(t => t.category === categoryName);
+            const groupNames = [...new Set(teamsInCategory.map(t => t.groupName).filter(g => g))];
+            
+            groupNames.forEach(groupName => {
+                const teamsInGroup = teamsInCategory.filter(t => t.groupName === groupName);
+                if (teamsInGroup.length >= 2) {
+                    groups.push({
+                        name: groupName,
+                        teams: teamsInGroup
+                    });
+                }
+            });
+        }
+        
+        return groups;
     };
 
     // Funkcia na generovanie zápasov
@@ -341,45 +364,82 @@ const AddMatchesApp = ({ userProfileData }) => {
                 return;
             }
 
-            // Získanie tímov pre danú kategóriu a skupinu
-            let teamsToUse = [];
-            
+            let allGeneratedMatches = [];
+
             if (groupName) {
                 // Konkrétna skupina
-                teamsToUse = await window.teamManager.getTeamsByGroup(category.name, groupName);
+                const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, groupName);
+                
+                if (teamsInGroup.length < 2) {
+                    window.showGlobalNotification(`V skupine ${groupName} sú menej ako 2 tímy`, 'error');
+                    return;
+                }
+
+                // Generovanie zápasov pre túto skupinu
+                const groupMatches = generateMatchesForGroup(teamsInGroup, withRepetitions);
+                
+                // Pridanie informácií o skupine ku každému zápasu
+                const matchesWithInfo = groupMatches.map((match, index) => ({
+                    id: Date.now() + index + Math.random(),
+                    homeTeamId: match.homeTeamId,
+                    awayTeamId: match.awayTeamId,
+                    time: '--:--',
+                    hallId: null,
+                    categoryId: category.id,
+                    categoryName: category.name,
+                    groupName: groupName,
+                    status: 'pending'
+                }));
+
+                allGeneratedMatches = [...allGeneratedMatches, ...matchesWithInfo];
+                
+                window.showGlobalNotification(
+                    `Vygenerovaných ${matchesWithInfo.length} zápasov pre ${category.name} - ${groupName}`,
+                    'success'
+                );
+
             } else {
-                // Všetky tímy v kategórii
-                teamsToUse = await window.teamManager.getTeamsByCategory(category.name);
+                // Všetky skupiny v kategórii
+                const groups = getAllGroupsInCategory(category.name);
+                
+                if (groups.length === 0) {
+                    window.showGlobalNotification('V tejto kategórii nie sú žiadne skupiny s aspoň 2 tímami', 'error');
+                    return;
+                }
+
+                // Pre každú skupinu vygenerujeme zápasy
+                for (const group of groups) {
+                    const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, group.name);
+                    
+                    if (teamsInGroup.length >= 2) {
+                        const groupMatches = generateMatchesForGroup(teamsInGroup, withRepetitions);
+                        
+                        const matchesWithInfo = groupMatches.map((match, index) => ({
+                            id: Date.now() + index + Math.random() + group.name,
+                            homeTeamId: match.homeTeamId,
+                            awayTeamId: match.awayTeamId,
+                            time: '--:--',
+                            hallId: null,
+                            categoryId: category.id,
+                            categoryName: category.name,
+                            groupName: group.name,
+                            status: 'pending'
+                        }));
+
+                        allGeneratedMatches = [...allGeneratedMatches, ...matchesWithInfo];
+                    }
+                }
+
+                window.showGlobalNotification(
+                    `Vygenerovaných ${allGeneratedMatches.length} zápasov pre všetky skupiny v ${category.name}`,
+                    'success'
+                );
             }
 
-            if (teamsToUse.length < 2) {
-                window.showGlobalNotification('Pre generovanie zápasov sú potrebné aspoň 2 tímy', 'error');
-                return;
+            // Pridanie všetkých vygenerovaných zápasov do stavu
+            if (allGeneratedMatches.length > 0) {
+                setMatches(prev => [...prev, ...allGeneratedMatches]);
             }
-
-            // Generovanie zápasov
-            const generatedMatches = generateMatchesForGroup(teamsToUse, withRepetitions);
-            
-            // Vytvorenie finálnych zápasov s dodatočnými informáciami
-            const newMatches = generatedMatches.map((match, index) => ({
-                id: Date.now() + index + Math.random(),
-                homeTeamId: match.homeTeamId,
-                awayTeamId: match.awayTeamId,
-                time: '--:--', // Zatiaľ prázdne, neskôr sa priradí
-                hallId: null, // Zatiaľ prázdne, neskôr sa priradí
-                categoryId: category.id,
-                categoryName: category.name,
-                groupName: groupName || 'Všetky skupiny',
-                status: 'pending'
-            }));
-
-            // Pridanie do existujúcich zápasov
-            setMatches(prev => [...prev, ...newMatches]);
-            
-            window.showGlobalNotification(
-                `Vygenerovaných ${newMatches.length} zápasov pre ${category.name}${groupName ? ' - ' + groupName : ''}`,
-                'success'
-            );
 
         } catch (error) {
             console.error('Chyba pri generovaní zápasov:', error);
