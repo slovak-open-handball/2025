@@ -268,32 +268,33 @@ const AddMatchesApp = ({ userProfileData }) => {
     // Funkcia na získanie názvu tímu podľa ID
     const getTeamNameById = (teamId) => {
         if (!teamId) {
-            console.log(`Chýba ID tímu`);
+            console.log(`Chýba ID tímu:`, teamId);
             return 'Neznámy tím';
         }
         
-        if (!teamData.allTeams || teamData.allTeams.length === 0) {
-            console.log(`TeamData ešte nie je načítané`);
-            return 'Neznámy tím';
+        // Skúsime nájsť v teamData (z React state)
+        if (teamData.allTeams && teamData.allTeams.length > 0) {
+            const team = teamData.allTeams.find(t => t.id === teamId);
+            if (team) {
+                return team.teamName;
+            }
         }
         
-        // Skúsime nájsť tím podľa ID
-        const team = teamData.allTeams.find(t => t.id === teamId);
-        
-        if (team) {
-            return team.teamName;
+        // Ak nie je v teamData, skúsime priamo z window.__teamManagerData
+        if (window.__teamManagerData?.allTeams) {
+            console.log('Hľadám v window.__teamManagerData pre ID:', teamId);
+            const team = window.__teamManagerData.allTeams.find(t => t.id === teamId);
+            if (team) {
+                // Aktualizujeme teamData pre budúce použitie
+                setTeamData(window.__teamManagerData);
+                return team.teamName;
+            }
         }
         
-        // Debug: Vypíšeme hľadané ID a dostupné ID
+        // Debug výpis
         console.log(`Nenašiel sa tím s ID: "${teamId}"`);
-        console.log(`Dostupné ID:`, teamData.allTeams.map(t => t.id).slice(0, 5)); // Prvých 5 ID pre kontrolu
-        
-        // Skúsime hľadať bez ohľadu na typ (string vs number)
-        const teamAsString = teamData.allTeams.find(t => String(t.id) === String(teamId));
-        if (teamAsString) {
-            console.log(`Našiel sa tím po konverzii na string:`, teamAsString);
-            return teamAsString.teamName;
-        }
+        console.log('Dostupné ID v teamData:', teamData.allTeams?.map(t => t.id).slice(0, 5));
+        console.log('Dostupné ID v window.__teamManagerData:', window.__teamManagerData?.allTeams?.map(t => t.id).slice(0, 5));
         
         return 'Neznámy tím';
     };
@@ -301,14 +302,25 @@ const AddMatchesApp = ({ userProfileData }) => {
     // Prihlásenie na odber zmien v teamManager
     useEffect(() => {
         if (window.teamManager) {
+            console.log('Prihlasujem sa na odber teamManager');
+            
+            // Okamžite skúsime načítať existujúce dáta
+            if (window.__teamManagerData) {
+                console.log('Našiel som existujúce teamManager data, počet tímov:', window.__teamManagerData.allTeams?.length);
+                setTeamData(window.__teamManagerData);
+            }
+            
             const unsubscribe = window.teamManager.subscribe((data) => {
+                console.log('TeamManager data aktualizované, počet tímov:', data.allTeams?.length);
                 setTeamData(data);
-                console.log('TeamManager data aktualizované:', data);
             });
             
             return () => {
+                console.log('Odhlasujem sa z odberu teamManager');
                 if (unsubscribe) unsubscribe();
             };
+        } else {
+            console.log('teamManager nie je k dispozícii');
         }
     }, []);
 
@@ -337,11 +349,19 @@ const AddMatchesApp = ({ userProfileData }) => {
         const matches = [];
         const teamIds = teams.map(t => t.id);
         
+        // Kontrola, či všetky tímy majú ID
+        const invalidTeams = teams.filter(t => !t.id);
+        if (invalidTeams.length > 0) {
+            console.warn('Niektoré tímy nemajú ID:', invalidTeams);
+        }
+        
+        console.log('Generujem zápasy pre tímy s ID:', teamIds);
+        
         if (withRepetitions) {
             // Každý s každým doma/vonku v rámci skupiny
             for (let i = 0; i < teamIds.length; i++) {
                 for (let j = 0; j < teamIds.length; j++) {
-                    if (i !== j) {
+                    if (i !== j && teamIds[i] && teamIds[j]) {
                         matches.push({
                             homeTeamId: teamIds[i],
                             awayTeamId: teamIds[j]
@@ -353,14 +373,17 @@ const AddMatchesApp = ({ userProfileData }) => {
             // Jedinečné dvojice (každý s každým raz) v rámci skupiny
             for (let i = 0; i < teamIds.length; i++) {
                 for (let j = i + 1; j < teamIds.length; j++) {
-                    matches.push({
-                        homeTeamId: teamIds[i],
-                        awayTeamId: teamIds[j]
-                    });
+                    if (teamIds[i] && teamIds[j]) {
+                        matches.push({
+                            homeTeamId: teamIds[i],
+                            awayTeamId: teamIds[j]
+                        });
+                    }
                 }
             }
         }
         
+        console.log(`Vygenerovaných ${matches.length} zápasov`);
         return matches;
     };
 
@@ -369,8 +392,10 @@ const AddMatchesApp = ({ userProfileData }) => {
         const groups = [];
         
         // Prejdeme všetky tímy a extrahujeme unikátne skupiny
-        if (teamData.allTeams) {
-            const teamsInCategory = teamData.allTeams.filter(t => t.category === categoryName);
+        const teamsToUse = teamData.allTeams || window.__teamManagerData?.allTeams || [];
+        
+        if (teamsToUse.length > 0) {
+            const teamsInCategory = teamsToUse.filter(t => t.category === categoryName);
             const groupNames = [...new Set(teamsInCategory.map(t => t.groupName).filter(g => g))];
             
             // Zoradenie názvov skupín podľa abecedy
@@ -402,11 +427,20 @@ const AddMatchesApp = ({ userProfileData }) => {
                 return;
             }
 
+            // Skontrolujeme, či máme teamManager dáta
+            if (!window.teamManager) {
+                window.showGlobalNotification('TeamManager nie je inicializovaný', 'error');
+                return;
+            }
+
             let allGeneratedMatches = [];
 
             if (groupName) {
                 // Konkrétna skupina
                 const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, groupName);
+                
+                console.log(`Našiel som ${teamsInGroup.length} tímov v skupine ${groupName}:`, 
+                    teamsInGroup.map(t => ({ id: t.id, name: t.teamName })));
                 
                 if (teamsInGroup.length < 2) {
                     window.showGlobalNotification(`V skupine ${groupName} sú menej ako 2 tímy`, 'error');
@@ -445,11 +479,16 @@ const AddMatchesApp = ({ userProfileData }) => {
                     return;
                 }
 
+                console.log(`Našiel som ${groups.length} skupín v kategórii ${category.name}:`, 
+                    groups.map(g => g.name));
+
                 // Pre každú skupinu vygenerujeme zápasy (skupiny sú už zoradené z getAllGroupsInCategory)
                 for (const group of groups) {
                     const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, group.name);
                     
                     if (teamsInGroup.length >= 2) {
+                        console.log(`Generujem zápasy pre skupinu ${group.name} s ${teamsInGroup.length} tímami`);
+                        
                         const groupMatches = generateMatchesForGroup(teamsInGroup, withRepetitions);
                         
                         const matchesWithInfo = groupMatches.map((match, index) => ({
@@ -476,12 +515,13 @@ const AddMatchesApp = ({ userProfileData }) => {
 
             // Pridanie všetkých vygenerovaných zápasov do stavu
             if (allGeneratedMatches.length > 0) {
+                console.log('Pridávam zápasy do stavu:', allGeneratedMatches);
                 setMatches(prev => [...prev, ...allGeneratedMatches]);
             }
 
         } catch (error) {
             console.error('Chyba pri generovaní zápasov:', error);
-            window.showGlobalNotification('Chyba pri generovaní zápasov', 'error');
+            window.showGlobalNotification('Chyba pri generovaní zápasov: ' + error.message, 'error');
         }
     };
 
@@ -659,8 +699,18 @@ const AddMatchesApp = ({ userProfileData }) => {
                             React.createElement(
                                 'div',
                                 { className: 'space-y-3 max-h-[600px] overflow-y-auto pr-2' },
-                                matches.map(match => (
-                                    React.createElement(
+                                matches.map(match => {
+                                    // Debug pre prvých pár zápasov
+                                    if (matches.indexOf(match) < 3) {
+                                        console.log(`Zápas ${match.id}:`, {
+                                            homeTeamId: match.homeTeamId,
+                                            homeTeamName: getTeamNameById(match.homeTeamId),
+                                            awayTeamId: match.awayTeamId,
+                                            awayTeamName: getTeamNameById(match.awayTeamId)
+                                        });
+                                    }
+                                    
+                                    return React.createElement(
                                         'div',
                                         { 
                                             key: match.id,
@@ -706,8 +756,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 match.groupName
                                             )
                                         )
-                                    )
-                                ))
+                                    );
+                                })
                             ),
                         
                         // Tlačidlo pre generovanie zápasov
