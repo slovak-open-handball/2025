@@ -267,9 +267,35 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     // Funkcia na získanie názvu tímu podľa ID
     const getTeamNameById = (teamId) => {
-        if (!teamId || !teamData.allTeams) return 'Neznámy tím';
+        if (!teamId) {
+            console.log(`Chýba ID tímu`);
+            return 'Neznámy tím';
+        }
+        
+        if (!teamData.allTeams || teamData.allTeams.length === 0) {
+            console.log(`TeamData ešte nie je načítané`);
+            return 'Neznámy tím';
+        }
+        
+        // Skúsime nájsť tím podľa ID
         const team = teamData.allTeams.find(t => t.id === teamId);
-        return team ? team.teamName : 'Neznámy tím';
+        
+        if (team) {
+            return team.teamName;
+        }
+        
+        // Debug: Vypíšeme hľadané ID a dostupné ID
+        console.log(`Nenašiel sa tím s ID: "${teamId}"`);
+        console.log(`Dostupné ID:`, teamData.allTeams.map(t => t.id).slice(0, 5)); // Prvých 5 ID pre kontrolu
+        
+        // Skúsime hľadať bez ohľadu na typ (string vs number)
+        const teamAsString = teamData.allTeams.find(t => String(t.id) === String(teamId));
+        if (teamAsString) {
+            console.log(`Našiel sa tím po konverzii na string:`, teamAsString);
+            return teamAsString.teamName;
+        }
+        
+        return 'Neznámy tím';
     };
 
     // Prihlásenie na odber zmien v teamManager
