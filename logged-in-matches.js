@@ -61,6 +61,27 @@ window.showGlobalNotification = (message, type = 'success') => {
 const AddMatchesApp = ({ userProfileData }) => {
     const [sportHalls, setSportHalls] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [categorySettings, setCategorySettings] = useState({});
+
+    // Funkcia na výpočet celkového času zápasu pre kategóriu
+    const calculateTotalMatchTime = (category) => {
+        if (!category) return { playingTime: 0, breaksBetweenPeriods: 0, totalTimeWithMatchBreak: 0 };
+        
+        const periods = category.periods ?? 2;
+        const periodDuration = category.periodDuration ?? 20;
+        const breakDuration = category.breakDuration ?? 2;
+        const matchBreak = category.matchBreak ?? 5;
+        
+        const playingTime = periods * periodDuration;
+        const breaksBetweenPeriods = (periods - 1) * breakDuration;
+        const totalTimeWithMatchBreak = playingTime + breaksBetweenPeriods + matchBreak;
+        
+        return {
+            playingTime,
+            breaksBetweenPeriods,
+            totalTimeWithMatchBreak
+        };
+    };
 
     // Načítanie športových hál z Firebase
     useEffect(() => {
@@ -71,6 +92,42 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
 
         console.log("AddMatchesApp: Načítavam športové haly z databázy...");
+        
+        // Najprv načítame nastavenia kategórií
+        const loadCategorySettings = async () => {
+            try {
+                const catRef = doc(window.db, 'settings', 'categories');
+                const catSnap = await getDoc(catRef);
+                
+                if (catSnap.exists()) {
+                    const data = catSnap.data() || {};
+                    const settings = {};
+                    
+                    Object.entries(data).forEach(([id, obj]) => {
+                        settings[id] = {
+                            name: obj.name || `Kategória ${id}`,
+                            maxTeams: obj.maxTeams ?? 12,
+                            periods: obj.periods ?? 2,
+                            periodDuration: obj.periodDuration ?? 20,
+                            breakDuration: obj.breakDuration ?? 2,
+                            matchBreak: obj.matchBreak ?? 5,
+                            drawColor: obj.drawColor ?? '#3B82F6',
+                            transportColor: obj.transportColor ?? '#10B981',
+                            timeoutCount: obj.timeoutCount ?? 2,
+                            timeoutDuration: obj.timeoutDuration ?? 1,
+                            exclusionTime: obj.exclusionTime ?? 2
+                        };
+                    });
+                    
+                    setCategorySettings(settings);
+                    console.log("AddMatchesApp: Načítané nastavenia kategórií:", settings);
+                }
+            } catch (error) {
+                console.error("AddMatchesApp: Chyba pri načítaní nastavení kategórií:", error);
+            }
+        };
+        
+        loadCategorySettings();
         
         const unsubscribe = onSnapshot(
             collection(window.db, 'places'),
@@ -158,6 +215,18 @@ const AddMatchesApp = ({ userProfileData }) => {
                     sportHalls.map((hall) => {
                         const typeConfig = typeIcons[hall.type] || { icon: 'fa-futbol', color: '#dc2626' };
                         
+                        // Pre každú halu použijeme prvú dostupnú kategóriu pre výpočet času a farby
+                        // V reálnej aplikácii by ste tu mali mapovanie hala -> kategória
+                        const firstCategory = Object.values(categorySettings)[0];
+                        const matchTime = calculateTotalMatchTime(firstCategory);
+                        const drawColor = firstCategory?.drawColor ?? '#3B82F6';
+                        
+                        // Výpis do konzoly pre každú halu
+                        console.log(`Hala: ${hall.name}`);
+                        console.log(`  - Farba pre rozlosovanie: ${drawColor}`);
+                        console.log(`  - Celkový čas zápasu: ${matchTime.totalTimeWithMatchBreak} min`);
+                        console.log(`    (Čistý hrací čas: ${matchTime.playingTime} min, Prestávky: ${matchTime.breaksBetweenPeriods} min)`);
+                        
                         return React.createElement(
                             'div',
                             { 
@@ -192,6 +261,46 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             color: typeConfig.color
                                         }
                                     }, 'Športová hala')
+                                )
+                            ),
+                            
+                            // Zobrazenie informácií o zápase
+                            React.createElement(
+                                'div',
+                                { className: 'mt-4 pt-4 border-t border-gray-100' },
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex items-center justify-between text-sm' },
+                                    React.createElement(
+                                        'span',
+                                        { className: 'text-gray-600' },
+                                        React.createElement('i', { className: 'fa-regular fa-clock mr-1' }),
+                                        'Čas zápasu:'
+                                    ),
+                                    React.createElement(
+                                        'span',
+                                        { className: 'font-bold text-blue-600' },
+                                        `${matchTime.totalTimeWithMatchBreak} min`
+                                    )
+                                ),
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex items-center justify-between text-sm mt-1' },
+                                    React.createElement(
+                                        'span',
+                                        { className: 'text-gray-600' },
+                                        React.createElement('i', { className: 'fa-solid fa-palette mr-1' }),
+                                        'Farba:'
+                                    ),
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex items-center gap-1' },
+                                        React.createElement('div', {
+                                            className: 'w-4 h-4 rounded-full',
+                                            style: { backgroundColor: drawColor }
+                                        }),
+                                        React.createElement('span', { className: 'font-mono text-xs' }, drawColor)
+                                    )
                                 )
                             )
                         );
