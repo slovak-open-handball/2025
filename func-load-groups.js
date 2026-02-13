@@ -1,5 +1,6 @@
 // volanie názvu tímu v konzole podla ID
 // teamManager.getTeamNameByDisplayIdSync("U10 CH A1")
+// teamManager.printAllCategories();
 (function() {
     async function loadFirebaseModules() {
         try {
