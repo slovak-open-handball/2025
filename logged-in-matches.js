@@ -664,14 +664,18 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     // Funkcia na spracovanie ďalšieho existujúceho zápasu
     const processNextExistingMatch = () => {
-        console.log('processNextExistingMatch:', {
+        console.log('processNextExistingMatch - aktuálny stav:', {
             currentMatchIndex,
             totalExisting: existingMatchesToProcess.length,
-            currentMatch: existingMatchesToProcess[currentMatchIndex]
+            existingMatchesToProcess: existingMatchesToProcess.map(m => ({ 
+                home: m.homeTeamId, 
+                away: m.awayTeamId 
+            }))
         });
     
         if (currentMatchIndex < existingMatchesToProcess.length) {
             const match = existingMatchesToProcess[currentMatchIndex];
+            console.log('Zobrazujem modálne okno pre zápas č.', currentMatchIndex + 1, 'z', existingMatchesToProcess.length, ':', match);
             setCurrentExistingMatch(match);
             setIsExistingMatchModalOpen(true);
         } else {
@@ -1128,7 +1132,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     const generateMatches = async ({ categoryId, groupName, withRepetitions }) => {
         try {
             console.log('Generujem zápasy:', { categoryId, groupName, withRepetitions });
-
+    
             // DEBUG: Skontrolujeme admin práva
             console.log('Kontrola admin práv v generateMatches:');
             console.log('userProfileData:', userProfileData);
@@ -1145,16 +1149,16 @@ const AddMatchesApp = ({ userProfileData }) => {
                 window.showGlobalNotification('Kategória nebola nájdená', 'error');
                 return;
             }
-
+    
             // Skontrolujeme, či máme teamManager dáta
             if (!window.teamManager) {
                 window.showGlobalNotification('TeamManager nie je inicializovaný', 'error');
                 return;
             }
-
+    
             setGenerationInProgress(true);
             let allGeneratedMatches = [];
-
+    
             if (groupName) {
                 // Konkrétna skupina
                 const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, groupName);
@@ -1171,7 +1175,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     setGenerationInProgress(false);
                     return;
                 }
-
+    
                 // Generovanie zápasov pre túto skupinu
                 const groupMatches = generateMatchesForGroup(teamsInGroup, withRepetitions);
                 
@@ -1186,7 +1190,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     groupName: groupName,
                     status: 'pending'
                 }));
-
+    
                 allGeneratedMatches = [...allGeneratedMatches, ...matchesWithInfo];
                 
             } else {
@@ -1198,10 +1202,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                     setGenerationInProgress(false);
                     return;
                 }
-
+    
                 console.log(`Našiel som ${groups.length} skupín v kategórii ${category.name}:`, 
                     groups.map(g => g.name));
-
+    
                 // Pre každú skupinu vygenerujeme zápasy (skupiny sú už zoradené z getAllGroupsInCategory)
                 for (const group of groups) {
                     const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, group.name);
@@ -1221,15 +1225,15 @@ const AddMatchesApp = ({ userProfileData }) => {
                             groupName: group.name,
                             status: 'pending'
                         }));
-
+    
                         allGeneratedMatches = [...allGeneratedMatches, ...matchesWithInfo];
                     }
                 }
             }
-
+    
             // Skontrolujeme existujúce zápasy
             const { existingMatches, newMatches: newOnes } = checkExistingMatchesDuringGeneration(allGeneratedMatches);
-
+    
             console.log('Rozdelenie zápasov:', {
                 celkovyPocet: allGeneratedMatches.length,
                 existujuce: existingMatches.length,
@@ -1243,15 +1247,21 @@ const AddMatchesApp = ({ userProfileData }) => {
                     groupName: groupName
                 });
                 
+                // NASTAVÍME STAVY - dôležité: najprv nastavíme newMatches a existingMatchesToProcess
                 setNewMatches(newOnes);
                 setExistingMatchesToProcess(existingMatches);
                 setCurrentMatchIndex(0);
                 setPendingMatches([]);
                 
-                // Začneme spracovávať prvý existujúci zápas
+                // Vypíšeme pre kontrolu
+                console.log('Nastavujem existingMatchesToProcess:', existingMatches);
+                console.log('Nastavujem newMatches:', newOnes);
+                
+                // Začneme spracovávať prvý existujúci zápas - použijeme useEffect alebo setTimeout
                 setTimeout(() => {
+                    console.log('Spúšťam processNextExistingMatch s indexom 0');
                     processNextExistingMatch();
-                }, 100);
+                }, 200); // Zvýšime oneskorenie pre istotu
                 
             } else {
                 // Žiadne existujúce zápasy, rovno uložíme všetky
@@ -1273,7 +1283,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 }
                 setGenerationInProgress(false);
             }
-
+    
         } catch (error) {
             console.error('Chyba pri generovaní zápasov:', error);
             window.showGlobalNotification('Chyba pri generovaní zápasov: ' + error.message, 'error');
