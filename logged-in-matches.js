@@ -66,10 +66,19 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
     const [availableGroups, setAvailableGroups] = useState([]);
     const [selectedGroupType, setSelectedGroupType] = useState('');
 
+    // Zoradenie kategórií podľa abecedy
+    const sortedCategories = React.useMemo(() => {
+        return [...categories].sort((a, b) => a.name.localeCompare(b.name));
+    }, [categories]);
+
     // Aktualizácia dostupných skupín pri zmene kategórie
     useEffect(() => {
         if (selectedCategory && groupsByCategory[selectedCategory]) {
-            setAvailableGroups(groupsByCategory[selectedCategory]);
+            // Zoradenie skupín podľa abecedy
+            const sortedGroups = [...groupsByCategory[selectedCategory]].sort((a, b) => 
+                a.name.localeCompare(b.name)
+            );
+            setAvailableGroups(sortedGroups);
             setSelectedGroup('');
             setSelectedGroupType('');
         } else {
@@ -122,7 +131,7 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                 )
             ),
 
-            // Výber kategórie
+            // Výber kategórie - zoradené podľa abecedy
             React.createElement(
                 'div',
                 { className: 'mb-4' },
@@ -137,13 +146,13 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                         className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
                     },
                     React.createElement('option', { value: '' }, '-- Vyberte kategóriu --'),
-                    categories.map(cat => 
+                    sortedCategories.map(cat => 
                         React.createElement('option', { key: cat.id, value: cat.id }, cat.name)
                     )
                 )
             ),
 
-            // Výber skupiny (ak je kategória vybraná)
+            // Výber skupiny (ak je kategória vybraná) - skupiny sú už zoradené v availableGroups
             selectedCategory && React.createElement(
                 'div',
                 { className: 'mb-4' },
@@ -338,7 +347,10 @@ const AddMatchesApp = ({ userProfileData }) => {
             const teamsInCategory = teamData.allTeams.filter(t => t.category === categoryName);
             const groupNames = [...new Set(teamsInCategory.map(t => t.groupName).filter(g => g))];
             
-            groupNames.forEach(groupName => {
+            // Zoradenie názvov skupín podľa abecedy
+            const sortedGroupNames = groupNames.sort((a, b) => a.localeCompare(b));
+            
+            sortedGroupNames.forEach(groupName => {
                 const teamsInGroup = teamsInCategory.filter(t => t.groupName === groupName);
                 if (teamsInGroup.length >= 2) {
                     groups.push({
@@ -407,7 +419,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     return;
                 }
 
-                // Pre každú skupinu vygenerujeme zápasy
+                // Pre každú skupinu vygenerujeme zápasy (skupiny sú už zoradené z getAllGroupsInCategory)
                 for (const group of groups) {
                     const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, group.name);
                     
