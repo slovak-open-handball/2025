@@ -344,6 +344,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [pendingGeneration, setPendingGeneration] = useState(null);
     const [groupsByCategory, setGroupsByCategory] = useState({});
     const [teamData, setTeamData] = useState({ allTeams: [] });
+    const [showTeamId, setShowTeamId] = useState(false); // NOVÝ STATE PRE PREPÍNAČ
 
     // Funkcia na získanie názvu tímu podľa ID alebo priamo z objektu
     const getTeamName = (team) => {
@@ -400,6 +401,22 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
         
         return 'Neznámy tím';
+    };
+
+    // Funkcia na získanie zobrazovaného textu pre tím
+    const getTeamDisplayText = (teamId) => {
+        if (showTeamId) {
+            // Zobraziť ID (alebo skrátenú verziu pre lepšiu čitateľnosť)
+            if (!teamId) return '---';
+            // Ak je ID príliš dlhé, zobrazíme prvých a posledných pár znakov
+            if (typeof teamId === 'string' && teamId.length > 20) {
+                return `${teamId.substring(0, 8)}...${teamId.substring(teamId.length - 4)}`;
+            }
+            return teamId;
+        } else {
+            // Zobraziť názov tímu
+            return getTeamNameById(teamId);
+        }
     };
 
     // Funkcia na kontrolu, či už boli zápasy pre danú kategóriu/skupinu vygenerované
@@ -917,11 +934,41 @@ const AddMatchesApp = ({ userProfileData }) => {
                 'div',
                 { className: 'w-full bg-white rounded-xl shadow-xl p-8 mx-4' },
                 
-                // Hlavička
+                // Hlavička s prepínačom
                 React.createElement(
                     'div',
                     { className: 'flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl' },
-                    React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center text-gray-800' }, 'Zápasy')
+                    React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center text-gray-800 mb-4' }, 'Zápasy'),
+                    
+                    // NOVÝ PREPÍNAČ
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-3 bg-gray-100 p-2 rounded-lg' },
+                        React.createElement(
+                            'span',
+                            { 
+                                className: `px-3 py-1 rounded-md text-sm font-medium cursor-pointer transition-colors ${
+                                    !showTeamId 
+                                        ? 'bg-blue-600 text-white shadow-sm' 
+                                        : 'text-gray-600 hover:bg-gray-200'
+                                }`,
+                                onClick: () => setShowTeamId(false)
+                            },
+                            'Názvy tímov'
+                        ),
+                        React.createElement(
+                            'span',
+                            { 
+                                className: `px-3 py-1 rounded-md text-sm font-medium cursor-pointer transition-colors ${
+                                    showTeamId 
+                                        ? 'bg-blue-600 text-white shadow-sm' 
+                                        : 'text-gray-600 hover:bg-gray-200'
+                                }`,
+                                onClick: () => setShowTeamId(true)
+                            },
+                            'ID tímov'
+                        )
+                    )
                 ),
                 
                 // Dva stĺpce - ľavý pre zápasy, pravý pre haly
@@ -954,9 +1001,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 'div',
                                 { className: 'space-y-3 max-h-[600px] overflow-y-auto pr-2' },
                                 matches.map(match => {
-                                    // Ak máme uložené mená tímov priamo v zápase, použijeme ich
-                                    const homeTeamName = getTeamNameById(match.homeTeamId);
-                                    const awayTeamName = getTeamNameById(match.awayTeamId);
+                                    // Použijeme prepínač pre zobrazenie
+                                    const homeTeamDisplay = getTeamDisplayText(match.homeTeamId);
+                                    const awayTeamDisplay = getTeamDisplayText(match.awayTeamId);
                                     
                                     return React.createElement(
                                         'div',
@@ -983,14 +1030,20 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             { className: 'flex items-center justify-between' },
                                             React.createElement(
                                                 'span',
-                                                { className: 'font-semibold text-gray-800' },
-                                                homeTeamName
+                                                { 
+                                                    className: `font-semibold ${showTeamId ? 'font-mono text-xs' : ''} text-gray-800`,
+                                                    title: showTeamId ? match.homeTeamId : homeTeamDisplay
+                                                },
+                                                homeTeamDisplay
                                             ),
                                             React.createElement('i', { className: 'fa-solid fa-vs text-xs text-gray-400 mx-2' }),
                                             React.createElement(
                                                 'span',
-                                                { className: 'font-semibold text-gray-800' },
-                                                awayTeamName
+                                                { 
+                                                    className: `font-semibold ${showTeamId ? 'font-mono text-xs' : ''} text-gray-800`,
+                                                    title: showTeamId ? match.awayTeamId : awayTeamDisplay
+                                                },
+                                                awayTeamDisplay
                                             )
                                         ),
                                         React.createElement(
