@@ -456,13 +456,27 @@ const AddMatchesApp = ({ userProfileData }) => {
             throw new Error('Databáza nie je inicializovaná');
         }
 
-        if (userProfileData?.role !== 'admin') {
-            throw new Error('Na ukladanie zápasov potrebujete administrátorské práva');
-        }
+        // DEBUG: Vypíšeme informácie o používateľovi
+        console.log('Kontrola admin práv pre ukladanie:');
+        console.log('userProfileData:', userProfileData);
+        console.log('role:', userProfileData?.role);
+        console.log('approved:', userProfileData?.approved);
+        console.log('email:', userProfileData?.email);
 
+        // Skontrolujeme, či je používateľ admin
+        if (userProfileData?.role !== 'admin') {
+            console.error('Používateľ nie je admin. Role:', userProfileData?.role);
+            throw new Error('Na ukladanie zápasov potrebujete administrátorské práva. Vaša rola: ' + (userProfileData?.role || 'žiadna'));
+        }
+    
+        if (!userProfileData?.approved) {
+            console.error('Používateľ nie je schválený. Approved:', userProfileData?.approved);
+            throw new Error('Váš účet ešte nebol schválený administrátorom.');
+        }
+    
         const matchesRef = collection(window.db, 'matches');
         const savedMatches = [];
-
+    
         for (const match of matchesToSave) {
             try {
                 // Pripravíme dáta pre uloženie
@@ -478,7 +492,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                     groupName: match.groupName,
                     status: match.status,
                     createdAt: Timestamp.now(),
-                    createdBy: userProfileData?.email || 'unknown'
+                    createdBy: userProfileData?.email || 'unknown',
+                    createdByUid: userProfileData?.uid || null
                 };
 
                 // Uložíme do Firebase a získame ID
@@ -488,20 +503,35 @@ const AddMatchesApp = ({ userProfileData }) => {
                     ...matchData
                 });
                 
-                console.log(`Zápas uložený s ID: ${docRef.id}`);
+                console.log(`Zápas ${index + 1}/${matchesToSave.length} uložený s ID: ${docRef.id}`);
             } catch (error) {
                 console.error('Chyba pri ukladaní zápasu:', error);
+                
+                if (error.code === 'permission-denied') {
+                    throw new Error('Nemáte oprávnenie na ukladanie zápasov. Ste prihlásený ako admin? (kód: permission-denied)');
+                }
+                
                 throw error;
             }
         }
-
+    
         return savedMatches;
     };
 
     // Funkcia na generovanie zápasov
     const generateMatches = async ({ categoryId, groupName, withRepetitions }) => {
-        console.log('Používateľská rola:', userProfileData?.role);
-        console.log('Je admin?', userProfileData?.role === 'admin');        
+        try {
+            console.log('Generujem zápasy:', { categoryId, groupName, withRepetitions });
+        
+            // DEBUG: Skontrolujeme admin práva
+            console.log('Kontrola admin práv v generateMatches:');
+            console.log('userProfileData:', userProfileData);
+            console.log('Je admin?', userProfileData?.role === 'admin');
+            
+            if (userProfileData?.role !== 'admin') {
+                window.showGlobalNotification('Na generovanie zápasov potrebujete administrátorské práva', 'error');
+                return;
+            }       
         try {
             console.log('Generujem zápasy:', { categoryId, groupName, withRepetitions });
             
