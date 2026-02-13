@@ -429,7 +429,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     // Funkcia na získanie zobrazovaného textu pre tím
     const getTeamDisplayText = (teamId) => {
         if (showTeamId) {
-            // Zobraziť ID v požadovanom formáte: 'kategória skupina číslo'
+            // Zobraziť ID v požadovanom formáte: 'kategória skupina číslo' (bez medzier medzi skupinou a číslom)
             if (!teamId) return '---';
             
             // Nájdeme tím podľa ID
@@ -456,12 +456,19 @@ const AddMatchesApp = ({ userProfileData }) => {
             }
             
             if (team) {
-                // Máme tím, zobrazíme kategória skupina číslo
+                // Máme tím, zobrazíme kategória skupina číslo (bez medzery medzi skupinou a číslom)
                 const category = team.category || 'Neznáma kategória';
-                const groupName = team.groupName || 'Neznáma skupina';
+                
+                // Odstránime text "skupina " z názvu skupiny, ak existuje
+                let groupName = team.groupName || 'Neznáma skupina';
+                if (groupName.startsWith('skupina ')) {
+                    groupName = groupName.substring(8); // Odstráni prvých 8 znakov ("skupina ")
+                }
+                
                 const order = team.order || '?';
                 
-                return `${category} ${groupName} ${order}`;
+                // Spojíme bez medzery medzi groupName a order
+                return `${category} ${groupName}${order}`;
             }
             
             // Ak sa nám nepodarilo nájsť tím podľa ID, skúsime extrahovať názov z ID
@@ -473,7 +480,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                 // Skúsime nájsť podľa extrahovaného názvu
                 const match = matches.find(m => m.homeTeamId === teamId || m.awayTeamId === teamId);
                 if (match && match.categoryName && match.groupName) {
-                    return `${match.categoryName} ${match.groupName} ?`;
+                    // Odstránime text "skupina " z názvu skupiny, ak existuje
+                    let groupName = match.groupName;
+                    if (groupName.startsWith('skupina ')) {
+                        groupName = groupName.substring(8);
+                    }
+                    // Spojíme bez medzery medzi groupName a ?
+                    return `${match.categoryName} ${groupName}?`;
                 }
                 
                 return extractedName;
