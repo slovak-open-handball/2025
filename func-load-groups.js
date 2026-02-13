@@ -130,7 +130,7 @@
 //            console.log('Počet všetkých tímov:', data.allTeams.length);
 //            console.log('Počet používateľských tímov:', data.userTeams.length);
 //            console.log('Počet nadstavbových tímov:', 
-                Object.values(data.superstructureTeams).reduce((sum, arr) => sum + arr.length, 0));
+//                Object.values(data.superstructureTeams).reduce((sum, arr) => sum + arr.length, 0));
             
             // Výpis v požadovanom formáte
             printTeamsInFormat(data.allTeams);
