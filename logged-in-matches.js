@@ -62,20 +62,36 @@ window.showGlobalNotification = (message, type = 'success') => {
 const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCategory }) => {
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('');
-    const [groupType, setGroupType] = useState('basic'); // 'basic' alebo 'advanced'
     const [withRepetitions, setWithRepetitions] = useState(false);
     const [availableGroups, setAvailableGroups] = useState([]);
+    const [selectedGroupType, setSelectedGroupType] = useState('');
 
     // Aktualizácia dostupných skupín pri zmene kategórie
     useEffect(() => {
         if (selectedCategory && groupsByCategory[selectedCategory]) {
             setAvailableGroups(groupsByCategory[selectedCategory]);
             setSelectedGroup('');
+            setSelectedGroupType('');
         } else {
             setAvailableGroups([]);
             setSelectedGroup('');
+            setSelectedGroupType('');
         }
     }, [selectedCategory, groupsByCategory]);
+
+    // Zistenie typu vybranej skupiny
+    useEffect(() => {
+        if (selectedGroup && availableGroups.length > 0) {
+            const group = availableGroups.find(g => g.name === selectedGroup);
+            if (group) {
+                setSelectedGroupType(group.type === 'basic' ? 'Základná skupina' : 'Nadstavbová skupina');
+            } else {
+                setSelectedGroupType('');
+            }
+        } else {
+            setSelectedGroupType('');
+        }
+    }, [selectedGroup, availableGroups]);
 
     if (!isOpen) return null;
 
@@ -145,44 +161,29 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                     availableGroups.map((group, index) => 
                         React.createElement('option', { key: index, value: group.name }, group.name)
                     )
-                )
-            ),
-
-            // Výber typu skupiny
-            React.createElement(
-                'div',
-                { className: 'mb-4' },
-                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' },
-                    'Typ skupiny:'
                 ),
-                React.createElement(
+                
+                // Zobrazenie typu skupiny pod selectboxom
+                selectedGroup && selectedGroupType && React.createElement(
                     'div',
-                    { className: 'space-y-2' },
+                    { className: 'mt-2 text-sm' },
                     React.createElement(
-                        'label',
-                        { className: 'flex items-center gap-2 cursor-pointer' },
-                        React.createElement('input', {
-                            type: 'radio',
-                            name: 'groupType',
-                            value: 'basic',
-                            checked: groupType === 'basic',
-                            onChange: (e) => setGroupType(e.target.value),
-                            className: 'w-4 h-4 text-blue-600'
+                        'span',
+                        { 
+                            className: `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                selectedGroupType === 'Základná skupina' 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-purple-100 text-purple-800'
+                            }` 
+                        },
+                        React.createElement('i', { 
+                            className: `fa-solid ${
+                                selectedGroupType === 'Základná skupina' 
+                                    ? 'fa-layer-group' 
+                                    : 'fa-chart-line'
+                            } mr-1 text-xs` 
                         }),
-                        React.createElement('span', { className: 'text-gray-700' }, 'Základná skupina')
-                    ),
-                    React.createElement(
-                        'label',
-                        { className: 'flex items-center gap-2 cursor-pointer' },
-                        React.createElement('input', {
-                            type: 'radio',
-                            name: 'groupType',
-                            value: 'advanced',
-                            checked: groupType === 'advanced',
-                            onChange: (e) => setGroupType(e.target.value),
-                            className: 'w-4 h-4 text-blue-600'
-                        }),
-                        React.createElement('span', { className: 'text-gray-700' }, 'Nadstavbová skupina')
+                        selectedGroupType
                     )
                 )
             ),
@@ -228,7 +229,6 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                             onConfirm({
                                 categoryId: selectedCategory,
                                 groupName: selectedGroup || null,
-                                groupType,
                                 withRepetitions
                             });
                             onClose();
@@ -254,7 +254,28 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [matches, setMatches] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [groupsByCategory, setGroupsByCategory] = useState({});
-    const [teamsByCategory, setTeamsByCategory] = useState({});
+    const [teamData, setTeamData] = useState({ allTeams: [] });
+
+    // Funkcia na získanie názvu tímu podľa ID
+    const getTeamNameById = (teamId) => {
+        if (!teamId || !teamData.allTeams) return 'Neznámy tím';
+        const team = teamData.allTeams.find(t => t.id === teamId);
+        return team ? team.teamName : 'Neznámy tím';
+    };
+
+    // Prihlásenie na odber zmien v teamManager
+    useEffect(() => {
+        if (window.teamManager) {
+            const unsubscribe = window.teamManager.subscribe((data) => {
+                setTeamData(data);
+                console.log('TeamManager data aktualizované:', data);
+            });
+            
+            return () => {
+                if (unsubscribe) unsubscribe();
+            };
+        }
+    }, []);
 
     // Funkcia na výpočet celkového času zápasu pre kategóriu
     const calculateTotalMatchTime = (category) => {
@@ -288,9 +309,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     if (i !== j) {
                         matches.push({
                             homeTeamId: teamIds[i],
-                            awayTeamId: teamIds[j],
-                            homeTeamName: teams[i].teamName,
-                            awayTeamName: teams[j].teamName
+                            awayTeamId: teamIds[j]
                         });
                     }
                 }
@@ -301,9 +320,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 for (let j = i + 1; j < teamIds.length; j++) {
                     matches.push({
                         homeTeamId: teamIds[i],
-                        awayTeamId: teamIds[j],
-                        homeTeamName: teams[i].teamName,
-                        awayTeamName: teams[j].teamName
+                        awayTeamId: teamIds[j]
                     });
                 }
             }
@@ -313,9 +330,9 @@ const AddMatchesApp = ({ userProfileData }) => {
     };
 
     // Funkcia na generovanie zápasov
-    const generateMatches = async ({ categoryId, groupName, groupType, withRepetitions }) => {
+    const generateMatches = async ({ categoryId, groupName, withRepetitions }) => {
         try {
-            console.log('Generujem zápasy:', { categoryId, groupName, groupType, withRepetitions });
+            console.log('Generujem zápasy:', { categoryId, groupName, withRepetitions });
             
             // Získanie kategórie
             const category = categories.find(c => c.id === categoryId);
@@ -335,9 +352,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                 teamsToUse = await window.teamManager.getTeamsByCategory(category.name);
             }
 
-            // Filtrovanie podľa typu skupiny (ak je to potrebné)
-            // Poznámka: Toto závisí od toho, ako máte v dátach označené tímy pre základné/nadstavbové skupiny
-            
             if (teamsToUse.length < 2) {
                 window.showGlobalNotification('Pre generovanie zápasov sú potrebné aspoň 2 tímy', 'error');
                 return;
@@ -349,16 +363,13 @@ const AddMatchesApp = ({ userProfileData }) => {
             // Vytvorenie finálnych zápasov s dodatočnými informáciami
             const newMatches = generatedMatches.map((match, index) => ({
                 id: Date.now() + index + Math.random(),
-                homeTeam: match.homeTeamName,
-                awayTeam: match.awayTeamName,
                 homeTeamId: match.homeTeamId,
                 awayTeamId: match.awayTeamId,
                 time: '--:--', // Zatiaľ prázdne, neskôr sa priradí
-                hall: '', // Zatiaľ prázdne, neskôr sa priradí
-                category: category.name,
+                hallId: null, // Zatiaľ prázdne, neskôr sa priradí
                 categoryId: category.id,
+                categoryName: category.name,
                 groupName: groupName || 'Všetky skupiny',
-                groupType: groupType,
                 status: 'pending'
             }));
 
@@ -496,19 +507,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, []);
 
-    // Simulované zápasy pre ukážku (neskôr sa budú generovať)
-    useEffect(() => {
-        // Toto je dočasné, kým sa implementuje generovanie zápasov
-        const demoMatches = [
-            { id: 1, homeTeam: "Tím A", awayTeam: "Tím B", time: "10:00", hall: "Hala 1", category: "Muži" },
-            { id: 2, homeTeam: "Tím C", awayTeam: "Tím D", time: "11:30", hall: "Hala 1", category: "Muži" },
-            { id: 3, homeTeam: "Tím E", awayTeam: "Tím F", time: "13:00", hall: "Hala 2", category: "Ženy" },
-            { id: 4, homeTeam: "Tím G", awayTeam: "Tím H", time: "14:30", hall: "Hala 2", category: "Ženy" },
-            { id: 5, homeTeam: "Tím I", awayTeam: "Tím J", time: "16:00", hall: "Hala 3", category: "Juniori" },
-        ];
-        setMatches(demoMatches);
-    }, []);
-
     // ZJEDNODUŠENÝ RENDER - dva stĺpce (ľavý - zápasy, pravý - haly)
     return React.createElement(
         React.Fragment,
@@ -582,7 +580,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'span',
                                                 { className: 'text-xs text-gray-500' },
-                                                match.category
+                                                match.categoryName || 'Neznáma kategória'
                                             )
                                         ),
                                         React.createElement(
@@ -591,20 +589,25 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'span',
                                                 { className: 'font-semibold text-gray-800' },
-                                                match.homeTeam
+                                                getTeamNameById(match.homeTeamId)
                                             ),
                                             React.createElement('i', { className: 'fa-solid fa-vs text-xs text-gray-400 mx-2' }),
                                             React.createElement(
                                                 'span',
                                                 { className: 'font-semibold text-gray-800' },
-                                                match.awayTeam
+                                                getTeamNameById(match.awayTeamId)
                                             )
                                         ),
                                         React.createElement(
                                             'div',
                                             { className: 'mt-2 text-xs text-gray-500 flex items-center' },
                                             React.createElement('i', { className: 'fa-solid fa-location-dot mr-1 text-gray-400' }),
-                                            match.hall || 'Nepriradené'
+                                            match.hallId ? 'Hala' : 'Nepriradené',
+                                            match.groupName && React.createElement(
+                                                'span',
+                                                { className: 'ml-2 px-2 py-0.5 bg-gray-100 rounded-full' },
+                                                match.groupName
+                                            )
                                         )
                                     )
                                 ))
