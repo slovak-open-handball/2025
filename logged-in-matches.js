@@ -345,6 +345,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [groupsByCategory, setGroupsByCategory] = useState({});
     const [teamData, setTeamData] = useState({ allTeams: [] });
     const [showTeamId, setShowTeamId] = useState(false);
+    const [usersWithMatches, setUsersWithMatches] = useState([]);
 
     // Funkcia na získanie názvu tímu podľa ID alebo priamo z objektu
     const getTeamName = (team) => {
@@ -470,6 +471,58 @@ const AddMatchesApp = ({ userProfileData }) => {
         );
     };
 
+    // Funkcia na načítanie používateľov, ktorí vytvorili zápasy
+    const loadUsersWithMatches = async () => {
+        if (!window.db) return;
+        
+        try {
+            const usersRef = collection(window.db, 'users');
+            const usersSnapshot = await getDocs(usersRef);
+            
+            const users = [];
+            usersSnapshot.forEach((doc) => {
+                users.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+            
+            console.log('=== VŠETCI POUŽÍVATELIA, KTORÍ VYTVORILI ZÁPASY ===');
+            
+            // Pre každého používateľa zistíme, koľko zápasov vytvoril
+            users.forEach(user => {
+                const userMatches = matches.filter(match => 
+                    match.createdBy === user.email || match.createdByUid === user.id
+                );
+                
+                if (userMatches.length > 0) {
+                    console.log(`Používateľ: ${user.email || user.id}`);
+                    console.log(`  - ID: ${user.id}`);
+                    console.log(`  - Meno: ${user.displayName || 'Nezadané'}`);
+                    console.log(`  - Rola: ${user.role || 'Nezadaná'}`);
+                    console.log(`  - Schválený: ${user.approved ? 'Áno' : 'Nie'}`);
+                    console.log(`  - Počet vytvorených zápasov: ${userMatches.length}`);
+                    console.log(`  - Dátum registrácie: ${user.createdAt ? new Date(user.createdAt.seconds * 1000).toLocaleString('sk-SK') : 'Neznámy'}`);
+                    console.log('  - Vytvorené zápasy:');
+                    userMatches.forEach((match, index) => {
+                        console.log(`    ${index + 1}. ${match.homeTeamId} vs ${match.awayTeamId} (${match.categoryName || 'Neznáma kategória'}) - ${match.time}`);
+                    });
+                    console.log('---');
+                    
+                    users.push(user);
+                }
+            });
+            
+            console.log(`Celkový počet používateľov, ktorí vytvorili zápasy: ${users.length}`);
+            console.log('===========================================');
+            
+            setUsersWithMatches(users);
+            
+        } catch (error) {
+            console.error('Chyba pri načítaní používateľov:', error);
+        }
+    };
+
     // Funkcia na načítanie zápasov z Firebase
     const loadMatches = () => {
         if (!window.db) return;
@@ -487,6 +540,10 @@ const AddMatchesApp = ({ userProfileData }) => {
             // Zoradenie podľa času vytvorenia (najnovšie prvé)
             loadedMatches.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
             setMatches(loadedMatches);
+            
+            // Po načítaní zápasov načítame používateľov
+            loadUsersWithMatches();
+            
         }, (error) => {
             console.error('Chyba pri načítaní zápasov:', error);
         });
