@@ -92,7 +92,7 @@
             const poradie = team.order !== null && team.order !== undefined ? team.order : '-';
             const nazov = team.teamName || 'neznámy názov';
             
-            console.log(`${kategoria} ${skupina} ${poradie} ${nazov}`);
+            console.log(`${kategoria} ${skupina}${poradie} ${nazov}`);
         });
         
         console.log(`Celkový počet tímov: ${teams.length}`);
