@@ -69,6 +69,19 @@
     }
 
     /**
+     * Vytvorí zobrazené ID tímu v rovnakom formáte ako v konzole
+     * @param {Object} team - Tímový objekt
+     * @returns {string} - Zobrazené ID (napr. "U12 CH A1")
+     */
+    function createTeamDisplayId(team) {
+        const kategoria = team.category || '';
+        const skupina = team.groupName ? cleanGroupName(team.groupName) : '';
+        const poradie = team.order !== null && team.order !== undefined ? team.order : '';
+        
+        return `${kategoria} ${skupina}${poradie}`.trim();
+    }
+
+    /**
      * Vypíše tímy v požadovanom formáte: kategória skupina poradie názov
      */
     function printTeamsInFormat(teams) {
@@ -87,12 +100,10 @@
         
         // Výpis v požadovanom formáte
         sortedTeams.forEach(team => {
-            const kategoria = team.category || 'bez kategórie';
-            const skupina = team.groupName ? cleanGroupName(team.groupName) : 'bez skupiny';
-            const poradie = team.order !== null && team.order !== undefined ? team.order : '-';
+            const displayId = createTeamDisplayId(team);
             const nazov = team.teamName || 'neznámy názov';
             
-            console.log(`${kategoria} ${skupina}${poradie} ${nazov}`);
+            console.log(`${displayId} ${nazov}`);
         });
         
         console.log(`Celkový počet tímov: ${teams.length}`);
@@ -605,8 +616,8 @@
     }
 
     /**
-     * Získa názov tímu podľa jeho ID
-     * @param {string} teamId - ID tímu (napr. "U12 CH A1")
+     * Získa názov tímu podľa jeho interného ID
+     * @param {string} teamId - Interné ID tímu
      * @returns {Promise<string|null>} - Názov tímu alebo null, ak sa nenašiel
      */
     async function getTeamNameById(teamId) {
@@ -619,8 +630,8 @@
     }
 
     /**
-     * Získa názov tímu podľa jeho ID (synchronna verzia z cache)
-     * @param {string} teamId - ID tímu (napr. "U12 CH A1")
+     * Získa názov tímu podľa jeho interného ID (synchronna verzia z cache)
+     * @param {string} teamId - Interné ID tímu
      * @returns {string|null} - Názov tímu alebo null, ak sa nenašiel
      */
     function getTeamNameByIdSync(teamId) {
@@ -628,6 +639,75 @@
         
         const team = window.__teamManagerData.allTeams.find(t => t.id === teamId);
         return team ? team.teamName : null;
+    }
+
+    /**
+     * Získa názov tímu podľa zobrazeného ID (formát: "kategória skupinaporadie")
+     * @param {string} displayId - Zobrazené ID tímu (napr. "U12 CH A1")
+     * @returns {Promise<string|null>} - Názov tímu alebo null, ak sa nenašiel
+     */
+    async function getTeamNameByDisplayId(displayId) {
+        if (!displayId) return null;
+        
+        const allTeams = await getAllTeams();
+        
+        // Prejdeme všetky tímy a vytvoríme pre každý zobrazené ID v rovnakom formáte
+        const team = allTeams.find(team => {
+            const teamDisplayId = createTeamDisplayId(team);
+            return teamDisplayId === displayId;
+        });
+        
+        return team ? team.teamName : null;
+    }
+
+    /**
+     * Získa názov tímu podľa zobrazeného ID (synchrónna verzia z cache)
+     * @param {string} displayId - Zobrazené ID tímu (napr. "U12 CH A1")
+     * @returns {string|null} - Názov tímu alebo null, ak sa nenašiel
+     */
+    function getTeamNameByDisplayIdSync(displayId) {
+        if (!displayId || !window.__teamManagerData?.allTeams) return null;
+        
+        const team = window.__teamManagerData.allTeams.find(team => {
+            const teamDisplayId = createTeamDisplayId(team);
+            return teamDisplayId === displayId;
+        });
+        
+        return team ? team.teamName : null;
+    }
+
+    /**
+     * Získa celý objekt tímu podľa zobrazeného ID
+     * @param {string} displayId - Zobrazené ID tímu (napr. "U12 CH A1")
+     * @returns {Promise<Object|null>} - Tímový objekt alebo null
+     */
+    async function getTeamByDisplayId(displayId) {
+        if (!displayId) return null;
+        
+        const allTeams = await getAllTeams();
+        
+        const team = allTeams.find(team => {
+            const teamDisplayId = createTeamDisplayId(team);
+            return teamDisplayId === displayId;
+        });
+        
+        return team || null;
+    }
+
+    /**
+     * Získa celý objekt tímu podľa zobrazeného ID (synchrónna verzia)
+     * @param {string} displayId - Zobrazené ID tímu (napr. "U12 CH A1")
+     * @returns {Object|null} - Tímový objekt alebo null
+     */
+    function getTeamByDisplayIdSync(displayId) {
+        if (!displayId || !window.__teamManagerData?.allTeams) return null;
+        
+        const team = window.__teamManagerData.allTeams.find(team => {
+            const teamDisplayId = createTeamDisplayId(team);
+            return teamDisplayId === displayId;
+        });
+        
+        return team || null;
     }
 
     // ============================================================
@@ -642,8 +722,12 @@
         getCategoryMap,
         getGroupsByCategory,
         cleanGroupName: getCleanGroupName,
-        getTeamNameById,        // Nová async funkcia
-        getTeamNameByIdSync     // Nová sync funkcia (rýchlejšia, len z cache)
+        getTeamNameById,
+        getTeamNameByIdSync,
+        getTeamNameByDisplayId,        // Nová funkcia podľa zobrazeného ID
+        getTeamNameByDisplayIdSync,     // Nová funkcia podľa zobrazeného ID (sync)
+        getTeamByDisplayId,              // Získa celý objekt tímu
+        getTeamByDisplayIdSync           // Získa celý objekt tímu (sync)
     };
 
     // ============================================================
