@@ -265,36 +265,46 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [groupsByCategory, setGroupsByCategory] = useState({});
     const [teamData, setTeamData] = useState({ allTeams: [] });
 
-    // Funkcia na získanie názvu tímu podľa ID
+    // Funkcia na získanie názvu tímu podľa ID alebo priamo z objektu
+    const getTeamName = (team) => {
+        if (!team) return 'Neznámy tím';
+        return team.teamName || team.name || 'Neznámy tím';
+    };
+
+    // Funkcia na získanie ID tímu (ak existuje)
+    const getTeamId = (team) => {
+        if (!team) return null;
+        return team.id || null;
+    };
+
+    // Funkcia na získanie názvu tímu podľa ID (pre existujúce zápasy)
     const getTeamNameById = (teamId) => {
         if (!teamId) {
-            console.log(`Chýba ID tímu:`, teamId);
             return 'Neznámy tím';
         }
         
         // Skúsime nájsť v teamData (z React state)
         if (teamData.allTeams && teamData.allTeams.length > 0) {
-            const team = teamData.allTeams.find(t => t.id === teamId);
+            const team = teamData.allTeams.find(t => t.id === teamId || t.teamName === teamId);
             if (team) {
-                return team.teamName;
+                return getTeamName(team);
             }
         }
         
         // Ak nie je v teamData, skúsime priamo z window.__teamManagerData
         if (window.__teamManagerData?.allTeams) {
-            console.log('Hľadám v window.__teamManagerData pre ID:', teamId);
-            const team = window.__teamManagerData.allTeams.find(t => t.id === teamId);
+            const team = window.__teamManagerData.allTeams.find(t => t.id === teamId || t.teamName === teamId);
             if (team) {
                 // Aktualizujeme teamData pre budúce použitie
                 setTeamData(window.__teamManagerData);
-                return team.teamName;
+                return getTeamName(team);
             }
         }
         
-        // Debug výpis
-        console.log(`Nenašiel sa tím s ID: "${teamId}"`);
-        console.log('Dostupné ID v teamData:', teamData.allTeams?.map(t => t.id).slice(0, 5));
-        console.log('Dostupné ID v window.__teamManagerData:', window.__teamManagerData?.allTeams?.map(t => t.id).slice(0, 5));
+        // Ak ide o priamy názov tímu (nie ID), vrátime ho
+        if (typeof teamId === 'string' && teamId.length > 0 && !teamId.includes('-')) {
+            return teamId;
+        }
         
         return 'Neznámy tím';
     };
@@ -347,38 +357,39 @@ const AddMatchesApp = ({ userProfileData }) => {
     // Funkcia na generovanie zápasov pre skupinu
     const generateMatchesForGroup = (teams, withRepetitions) => {
         const matches = [];
-        const teamIds = teams.map(t => t.id);
         
-        // Kontrola, či všetky tímy majú ID
-        const invalidTeams = teams.filter(t => !t.id);
-        if (invalidTeams.length > 0) {
-            console.warn('Niektoré tímy nemajú ID:', invalidTeams);
-        }
+        // Pre každý tím vytvoríme identifikátor (ID alebo názov)
+        const teamIdentifiers = teams.map(t => ({
+            id: getTeamId(t),
+            name: getTeamName(t)
+        }));
         
-        console.log('Generujem zápasy pre tímy s ID:', teamIds);
+        console.log('Generujem zápasy pre tímy:', teamIdentifiers);
         
         if (withRepetitions) {
             // Každý s každým doma/vonku v rámci skupiny
-            for (let i = 0; i < teamIds.length; i++) {
-                for (let j = 0; j < teamIds.length; j++) {
-                    if (i !== j && teamIds[i] && teamIds[j]) {
+            for (let i = 0; i < teamIdentifiers.length; i++) {
+                for (let j = 0; j < teamIdentifiers.length; j++) {
+                    if (i !== j) {
                         matches.push({
-                            homeTeamId: teamIds[i],
-                            awayTeamId: teamIds[j]
+                            homeTeamId: teamIdentifiers[i].id || teamIdentifiers[i].name,
+                            awayTeamId: teamIdentifiers[j].id || teamIdentifiers[j].name,
+                            homeTeamName: teamIdentifiers[i].name,
+                            awayTeamName: teamIdentifiers[j].name
                         });
                     }
                 }
             }
         } else {
             // Jedinečné dvojice (každý s každým raz) v rámci skupiny
-            for (let i = 0; i < teamIds.length; i++) {
-                for (let j = i + 1; j < teamIds.length; j++) {
-                    if (teamIds[i] && teamIds[j]) {
-                        matches.push({
-                            homeTeamId: teamIds[i],
-                            awayTeamId: teamIds[j]
-                        });
-                    }
+            for (let i = 0; i < teamIdentifiers.length; i++) {
+                for (let j = i + 1; j < teamIdentifiers.length; j++) {
+                    matches.push({
+                        homeTeamId: teamIdentifiers[i].id || teamIdentifiers[i].name,
+                        awayTeamId: teamIdentifiers[j].id || teamIdentifiers[j].name,
+                        homeTeamName: teamIdentifiers[i].name,
+                        awayTeamName: teamIdentifiers[j].name
+                    });
                 }
             }
         }
@@ -440,7 +451,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                 const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, groupName);
                 
                 console.log(`Našiel som ${teamsInGroup.length} tímov v skupine ${groupName}:`, 
-                    teamsInGroup.map(t => ({ id: t.id, name: t.teamName })));
+                    teamsInGroup.map(t => ({ 
+                        id: t.id, 
+                        name: t.teamName || t.name,
+                        hasId: !!t.id 
+                    })));
                 
                 if (teamsInGroup.length < 2) {
                     window.showGlobalNotification(`V skupine ${groupName} sú menej ako 2 tímy`, 'error');
@@ -455,6 +470,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                     id: Date.now() + index + Math.random(),
                     homeTeamId: match.homeTeamId,
                     awayTeamId: match.awayTeamId,
+                    homeTeamName: match.homeTeamName,
+                    awayTeamName: match.awayTeamName,
                     time: '--:--',
                     hallId: null,
                     categoryId: category.id,
@@ -495,6 +512,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                             id: Date.now() + index + Math.random() + group.name,
                             homeTeamId: match.homeTeamId,
                             awayTeamId: match.awayTeamId,
+                            homeTeamName: match.homeTeamName,
+                            awayTeamName: match.awayTeamName,
                             time: '--:--',
                             hallId: null,
                             categoryId: category.id,
@@ -700,15 +719,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 'div',
                                 { className: 'space-y-3 max-h-[600px] overflow-y-auto pr-2' },
                                 matches.map(match => {
-                                    // Debug pre prvých pár zápasov
-                                    if (matches.indexOf(match) < 3) {
-                                        console.log(`Zápas ${match.id}:`, {
-                                            homeTeamId: match.homeTeamId,
-                                            homeTeamName: getTeamNameById(match.homeTeamId),
-                                            awayTeamId: match.awayTeamId,
-                                            awayTeamName: getTeamNameById(match.awayTeamId)
-                                        });
-                                    }
+                                    // Ak máme uložené mená tímov priamo v zápase, použijeme ich
+                                    const homeTeamName = match.homeTeamName || getTeamNameById(match.homeTeamId);
+                                    const awayTeamName = match.awayTeamName || getTeamNameById(match.awayTeamId);
                                     
                                     return React.createElement(
                                         'div',
@@ -736,13 +749,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'span',
                                                 { className: 'font-semibold text-gray-800' },
-                                                getTeamNameById(match.homeTeamId)
+                                                homeTeamName
                                             ),
                                             React.createElement('i', { className: 'fa-solid fa-vs text-xs text-gray-400 mx-2' }),
                                             React.createElement(
                                                 'span',
                                                 { className: 'font-semibold text-gray-800' },
-                                                getTeamNameById(match.awayTeamId)
+                                                awayTeamName
                                             )
                                         ),
                                         React.createElement(
