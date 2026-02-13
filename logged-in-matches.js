@@ -61,7 +61,7 @@ window.showGlobalNotification = (message, type = 'success') => {
 const AddMatchesApp = ({ userProfileData }) => {
     const [sportHalls, setSportHalls] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [categorySettings, setCategorySettings] = useState({});
+    const [categories, setCategories] = useState([]);
 
     // Funkcia na výpočet celkového času zápasu pre kategóriu
     const calculateTotalMatchTime = (category) => {
@@ -83,7 +83,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         };
     };
 
-    // Načítanie športových hál z Firebase
+    // Načítanie športových hál a kategórií z Firebase
     useEffect(() => {
         if (!window.db) {
             console.error("Firestore databáza nie je inicializovaná");
@@ -91,9 +91,9 @@ const AddMatchesApp = ({ userProfileData }) => {
             return;
         }
 
-        console.log("AddMatchesApp: Načítavam športové haly z databázy...");
+        console.log("AddMatchesApp: Načítavam športové haly a kategórie z databázy...");
         
-        // Najprv načítame nastavenia kategórií
+        // Načítame nastavenia kategórií
         const loadCategorySettings = async () => {
             try {
                 const catRef = doc(window.db, 'settings', 'categories');
@@ -101,10 +101,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                 
                 if (catSnap.exists()) {
                     const data = catSnap.data() || {};
-                    const settings = {};
+                    const categoriesList = [];
                     
                     Object.entries(data).forEach(([id, obj]) => {
-                        settings[id] = {
+                        const category = {
+                            id: id,
                             name: obj.name || `Kategória ${id}`,
                             maxTeams: obj.maxTeams ?? 12,
                             periods: obj.periods ?? 2,
@@ -117,10 +118,33 @@ const AddMatchesApp = ({ userProfileData }) => {
                             timeoutDuration: obj.timeoutDuration ?? 1,
                             exclusionTime: obj.exclusionTime ?? 2
                         };
+                        
+                        categoriesList.push(category);
+                        
+                        // Výpočet času pre túto kategóriu
+                        const matchTime = calculateTotalMatchTime(category);
+                        
+                        // Výpis do konzoly pre každú kategóriu
+                        console.log(`Kategória: ${category.name} (ID: ${category.id})`);
+                        console.log(`  - Farba pre rozlosovanie: ${category.drawColor}`);
+                        console.log(`  - Celkový čas zápasu: ${matchTime.totalTimeWithMatchBreak} min`);
+                        console.log(`    (Čistý hrací čas: ${matchTime.playingTime} min, Prestávky: ${matchTime.breaksBetweenPeriods} min)`);
+                        console.log(`  - Nastavenia:`);
+                        console.log(`    • Počet periód: ${category.periods}`);
+                        console.log(`    • Trvanie periódy: ${category.periodDuration} min`);
+                        console.log(`    • Prestávka medzi periódami: ${category.breakDuration} min`);
+                        console.log(`    • Prestávka medzi zápasmi: ${category.matchBreak} min`);
+                        console.log(`    • Počet timeoutov: ${category.timeoutCount}`);
+                        console.log(`    • Trvanie timeoutu: ${category.timeoutDuration} min`);
+                        console.log(`    • Čas vylúčenia: ${category.exclusionTime} min`);
+                        console.log(`    • Farba pre dopravu: ${category.transportColor}`);
+                        console.log('---');
                     });
                     
-                    setCategorySettings(settings);
-                    console.log("AddMatchesApp: Načítané nastavenia kategórií:", settings);
+                    setCategories(categoriesList);
+                    console.log(`AddMatchesApp: Načítaných ${categoriesList.length} kategórií`);
+                } else {
+                    console.log("AddMatchesApp: Žiadne kategórie neboli nájdené");
                 }
             } catch (error) {
                 console.error("AddMatchesApp: Chyba pri načítaní nastavení kategórií:", error);
@@ -215,18 +239,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                     sportHalls.map((hall) => {
                         const typeConfig = typeIcons[hall.type] || { icon: 'fa-futbol', color: '#dc2626' };
                         
-                        // Pre každú halu použijeme prvú dostupnú kategóriu pre výpočet času a farby
-                        // V reálnej aplikácii by ste tu mali mapovanie hala -> kategória
-                        const firstCategory = Object.values(categorySettings)[0];
-                        const matchTime = calculateTotalMatchTime(firstCategory);
-                        const drawColor = firstCategory?.drawColor ?? '#3B82F6';
-                        
-                        // Výpis do konzoly pre každú halu
-                        console.log(`Hala: ${hall.name}`);
-                        console.log(`  - Farba pre rozlosovanie: ${drawColor}`);
-                        console.log(`  - Celkový čas zápasu: ${matchTime.totalTimeWithMatchBreak} min`);
-                        console.log(`    (Čistý hrací čas: ${matchTime.playingTime} min, Prestávky: ${matchTime.breaksBetweenPeriods} min)`);
-                        
                         return React.createElement(
                             'div',
                             { 
@@ -261,46 +273,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             color: typeConfig.color
                                         }
                                     }, 'Športová hala')
-                                )
-                            ),
-                            
-                            // Zobrazenie informácií o zápase
-                            React.createElement(
-                                'div',
-                                { className: 'mt-4 pt-4 border-t border-gray-100' },
-                                React.createElement(
-                                    'div',
-                                    { className: 'flex items-center justify-between text-sm' },
-                                    React.createElement(
-                                        'span',
-                                        { className: 'text-gray-600' },
-                                        React.createElement('i', { className: 'fa-regular fa-clock mr-1' }),
-                                        'Čas zápasu:'
-                                    ),
-                                    React.createElement(
-                                        'span',
-                                        { className: 'font-bold text-blue-600' },
-                                        `${matchTime.totalTimeWithMatchBreak} min`
-                                    )
-                                ),
-                                React.createElement(
-                                    'div',
-                                    { className: 'flex items-center justify-between text-sm mt-1' },
-                                    React.createElement(
-                                        'span',
-                                        { className: 'text-gray-600' },
-                                        React.createElement('i', { className: 'fa-solid fa-palette mr-1' }),
-                                        'Farba:'
-                                    ),
-                                    React.createElement(
-                                        'div',
-                                        { className: 'flex items-center gap-1' },
-                                        React.createElement('div', {
-                                            className: 'w-4 h-4 rounded-full',
-                                            style: { backgroundColor: drawColor }
-                                        }),
-                                        React.createElement('span', { className: 'font-mono text-xs' }, drawColor)
-                                    )
                                 )
                             )
                         );
