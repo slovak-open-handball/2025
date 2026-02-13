@@ -4,6 +4,10 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/fi
 
 const { useState, useEffect } = React;
 
+const faCSS = document.createElement('link');
+faCSS.rel = 'stylesheet';
+faCSS.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css';document.head.appendChild(faCSS);
+
 // Definície typov pre športové haly
 const typeLabels = {
     sportova_hala: "Športová hala",
