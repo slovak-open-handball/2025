@@ -1239,17 +1239,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 },
                                 'ID tímov'
                             )
-                        ),
-                        
-                        // Tlačidlo pre výpis vlastníkov tímov
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: logTeamOwners,
-                                className: 'px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2'
-                            },
-                            React.createElement('i', { className: 'fa-solid fa-users' }),
-                            'Vypísať vlastníkov tímov'
                         )
                     )
                 ),
