@@ -345,6 +345,10 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [groupsByCategory, setGroupsByCategory] = useState({});
     const [teamData, setTeamData] = useState({ allTeams: [] });
     const [showTeamId, setShowTeamId] = useState(false);
+    
+    // NOVÉ STAVY PRE ZOZNAM POUŽÍVATEĽOV
+    const [users, setUsers] = useState([]);
+    const [loadingUsers, setLoadingUsers] = useState(true);
 
     // Funkcia na získanie názvu tímu podľa ID alebo priamo z objektu
     const getTeamName = (team) => {
@@ -492,6 +496,67 @@ const AddMatchesApp = ({ userProfileData }) => {
         });
 
         return unsubscribe;
+    };
+
+    // NOVÁ FUNKCIA: Načítanie používateľov z Firebase
+    const loadUsers = () => {
+        if (!window.db) return;
+
+        const usersRef = collection(window.db, 'users');
+        
+        const unsubscribe = onSnapshot(usersRef, (snapshot) => {
+            const loadedUsers = [];
+            snapshot.forEach((doc) => {
+                loadedUsers.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+            // Zoradenie podľa emailu
+            loadedUsers.sort((a, b) => (a.email || '').localeCompare(b.email || ''));
+            setUsers(loadedUsers);
+            setLoadingUsers(false);
+            
+            console.log(`Načítaných ${loadedUsers.length} používateľov:`);
+            loadedUsers.forEach(user => {
+                console.log(`- ${user.email} (UID: ${user.id}, Rola: ${user.role || 'bežný'}, Schválený: ${user.approved ? 'áno' : 'nie'})`);
+            });
+        }, (error) => {
+            console.error('Chyba pri načítaní používateľov:', error);
+            setLoadingUsers(false);
+        });
+
+        return unsubscribe;
+    };
+
+    // Funkcia na získanie počtu zápasov pre používateľa
+    const getUserMatchesCount = (userEmail) => {
+        if (!userEmail) return 0;
+        return matches.filter(match => match.createdBy === userEmail).length;
+    };
+
+    // Funkcia na získanie zoznamu kategórií, pre ktoré používateľ generoval zápasy
+    const getUserCategories = (userEmail) => {
+        if (!userEmail) return [];
+        const userMatches = matches.filter(match => match.createdBy === userEmail);
+        const categories = [...new Set(userMatches.map(match => match.categoryName).filter(Boolean))];
+        return categories.sort();
+    };
+
+    // Funkcia na získanie celkového počtu zápasov
+    const getTotalMatchesCount = () => {
+        return matches.length;
+    };
+
+    // Funkcia na získanie počtu zápasov podľa kategórie
+    const getMatchesCountByCategory = () => {
+        const counts = {};
+        matches.forEach(match => {
+            if (match.categoryName) {
+                counts[match.categoryName] = (counts[match.categoryName] || 0) + 1;
+            }
+        });
+        return counts;
     };
 
     // Prihlásenie na odber zmien v teamManager
@@ -823,18 +888,22 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     };
 
-    // Načítanie športových hál a kategórií z Firebase
+    // Načítanie športových hál, kategórií a používateľov z Firebase
     useEffect(() => {
         if (!window.db) {
             console.error("Firestore databáza nie je inicializovaná");
             setLoading(false);
+            setLoadingUsers(false);
             return;
         }
 
-        console.log("AddMatchesApp: Načítavam športové haly a kategórie z databázy...");
+        console.log("AddMatchesApp: Načítavam športové haly, kategórie a používateľov z databázy...");
         
         // Načítame zápasy
         const unsubscribeMatches = loadMatches();
+        
+        // Načítame používateľov
+        const unsubscribeUsers = loadUsers();
         
         // Načítame nastavenia kategórií
         const loadCategorySettings = async () => {
@@ -945,11 +1014,12 @@ const AddMatchesApp = ({ userProfileData }) => {
 
         return () => {
             if (unsubscribeMatches) unsubscribeMatches();
+            if (unsubscribeUsers) unsubscribeUsers();
             unsubscribePlaces();
         };
     }, []);
 
-    // ZJEDNODUŠENÝ RENDER - dva stĺpce (ľavý - zápasy, pravý - haly)
+    // ZJEDNODUŠENÝ RENDER - tri stĺpce (ľavý - zápasy, stredný - používatelia, pravý - haly)
     return React.createElement(
         React.Fragment,
         null,
@@ -1014,7 +1084,31 @@ const AddMatchesApp = ({ userProfileData }) => {
                     )
                 ),
                 
-                // Dva stĺpce - ľavý pre zápasy, pravý pre haly
+                // Štatistika zápasov
+                React.createElement(
+                    'div',
+                    { className: 'grid grid-cols-1 md:grid-cols-3 gap-4 mb-6' },
+                    React.createElement(
+                        'div',
+                        { className: 'bg-blue-50 p-4 rounded-lg border border-blue-200' },
+                        React.createElement('div', { className: 'text-sm text-blue-600 font-medium' }, 'Celkový počet zápasov'),
+                        React.createElement('div', { className: 'text-3xl font-bold text-blue-800' }, getTotalMatchesCount())
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'bg-green-50 p-4 rounded-lg border border-green-200' },
+                        React.createElement('div', { className: 'text-sm text-green-600 font-medium' }, 'Počet používateľov'),
+                        React.createElement('div', { className: 'text-3xl font-bold text-green-800' }, users.length)
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'bg-purple-50 p-4 rounded-lg border border-purple-200' },
+                        React.createElement('div', { className: 'text-sm text-purple-600 font-medium' }, 'Počet hál'),
+                        React.createElement('div', { className: 'text-3xl font-bold text-purple-800' }, sportHalls.length)
+                    )
+                ),
+                
+                // Tri stĺpce - ľavý pre zápasy, stredný pre používateľov, pravý pre haly
                 React.createElement(
                     'div',
                     { className: 'flex flex-col lg:flex-row gap-6 mt-4' },
@@ -1026,6 +1120,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                         React.createElement(
                             'h3',
                             { className: 'text-xl font-semibold mb-4 text-gray-700 border-b pb-2 flex items-center' },
+                            React.createElement('i', { className: 'fa-solid fa-calendar-alt mr-2 text-blue-500' }),
                             'Zoznam zápasov',
                             React.createElement('span', { className: 'ml-2 text-sm font-normal text-gray-500' },
                                 `(${matches.length})`
@@ -1092,6 +1187,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         React.createElement(
                                             'div',
                                             { className: 'mt-2 text-xs text-gray-500 flex items-center' },
+                                            React.createElement('i', { className: 'fa-solid fa-user mr-1 text-gray-400' }),
+                                            match.createdBy || 'Neznámy',
+                                            React.createElement('span', { className: 'mx-2' }, '•'),
                                             React.createElement('i', { className: 'fa-solid fa-location-dot mr-1 text-gray-400' }),
                                             match.hallId ? 'Hala' : 'Nepriradené',
                                             match.groupName && React.createElement(
@@ -1116,10 +1214,143 @@ const AddMatchesApp = ({ userProfileData }) => {
                         )
                     ),
                     
+                    // STREDNÝ STĹPEC - Zoznam používateľov
+                    React.createElement(
+                        'div',
+                        { className: 'lg:w-1/3 bg-gray-50 rounded-xl p-4 border border-gray-200' },
+                        React.createElement(
+                            'h3',
+                            { className: 'text-xl font-semibold mb-4 text-gray-700 border-b pb-2 flex items-center' },
+                            React.createElement('i', { className: 'fa-solid fa-users mr-2 text-green-500' }),
+                            'Používatelia so zápasmi',
+                            React.createElement('span', { className: 'ml-2 text-sm font-normal text-gray-500' },
+                                `(${users.length})`
+                            )
+                        ),
+                        
+                        // Indikátor načítavania
+                        loadingUsers && React.createElement(
+                            'div',
+                            { className: 'flex justify-center items-center py-8' },
+                            React.createElement('div', { className: 'animate-spin rounded-full h-8 w-8 border-b-4 border-green-500' })
+                        ),
+                        
+                        // Zoznam používateľov
+                        !loadingUsers && users.length === 0 ? 
+                            React.createElement(
+                                'div',
+                                { className: 'text-center py-8 text-gray-500' },
+                                React.createElement('i', { className: 'fa-solid fa-users-slash text-4xl mb-3 opacity-30' }),
+                                React.createElement('p', { className: 'text-sm' }, 'Žiadni používatelia')
+                            ) :
+                            !loadingUsers && React.createElement(
+                                'div',
+                                { className: 'space-y-3 max-h-[600px] overflow-y-auto pr-2' },
+                                users.map(user => {
+                                    const matchesCount = getUserMatchesCount(user.email);
+                                    const userCategories = getUserCategories(user.email);
+                                    
+                                    // Zobrazíme len používateľov, ktorí majú aspoň jeden zápas
+                                    if (matchesCount === 0) return null;
+                                    
+                                    return React.createElement(
+                                        'div',
+                                        { 
+                                            key: user.id,
+                                            className: 'bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow'
+                                        },
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex items-start justify-between mb-2' },
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex items-center gap-2' },
+                                                React.createElement(
+                                                    'div',
+                                                    { 
+                                                        className: 'w-8 h-8 rounded-full bg-green-100 flex items-center justify-center',
+                                                    },
+                                                    React.createElement('i', { className: 'fa-solid fa-user text-green-600' })
+                                                ),
+                                                React.createElement(
+                                                    'div',
+                                                    null,
+                                                    React.createElement(
+                                                        'div',
+                                                        { className: 'font-medium text-gray-800' },
+                                                        user.email || 'Bez emailu'
+                                                    ),
+                                                    React.createElement(
+                                                        'div',
+                                                        { className: 'text-xs text-gray-500' },
+                                                        `UID: ${user.id.substring(0, 8)}...`
+                                                    )
+                                                )
+                                            ),
+                                            React.createElement(
+                                                'span',
+                                                { 
+                                                    className: `px-2 py-1 text-xs font-medium rounded-full ${
+                                                        user.role === 'admin' 
+                                                            ? 'bg-purple-100 text-purple-700' 
+                                                            : 'bg-blue-100 text-blue-700'
+                                                    }` 
+                                                },
+                                                user.role === 'admin' ? 'Admin' : 'Bežný'
+                                            )
+                                        ),
+                                        React.createElement(
+                                            'div',
+                                            { className: 'mt-2 flex items-center gap-2' },
+                                            React.createElement(
+                                                'span',
+                                                { className: 'text-xs bg-gray-100 px-2 py-1 rounded-full' },
+                                                React.createElement('i', { className: 'fa-solid fa-calendar mr-1' }),
+                                                `Zápasy: ${matchesCount}`
+                                            ),
+                                            user.approved ? 
+                                                React.createElement(
+                                                    'span',
+                                                    { className: 'text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full' },
+                                                    React.createElement('i', { className: 'fa-solid fa-check-circle mr-1' }),
+                                                    'Schválený'
+                                                ) :
+                                                React.createElement(
+                                                    'span',
+                                                    { className: 'text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full' },
+                                                    React.createElement('i', { className: 'fa-solid fa-clock mr-1' }),
+                                                    'Čaká na schválenie'
+                                                )
+                                        ),
+                                        userCategories.length > 0 && React.createElement(
+                                            'div',
+                                            { className: 'mt-2' },
+                                            React.createElement(
+                                                'div',
+                                                { className: 'text-xs text-gray-500 mb-1' },
+                                                'Kategórie:'
+                                            ),
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex flex-wrap gap-1' },
+                                                userCategories.map(cat => 
+                                                    React.createElement(
+                                                        'span',
+                                                        { key: cat, className: 'text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full' },
+                                                        cat
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    );
+                                })
+                            )
+                    ),
+                    
                     // PRAVÝ STĹPEC - Športové haly
                     React.createElement(
                         'div',
-                        { className: 'lg:w-2/3' },
+                        { className: 'lg:w-1/3' },
                         React.createElement(
                             'h3',
                             { className: 'text-xl font-semibold mb-4 text-gray-700 border-b pb-2' },
@@ -1149,7 +1380,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                         // Grid zoznam športových hál
                         !loading && sportHalls.length > 0 && React.createElement(
                             'div',
-                            { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
+                            { className: 'grid grid-cols-1 gap-4' },
                             sportHalls.map((hall) => {
                                 const typeConfig = typeIcons[hall.type] || { icon: 'fa-futbol', color: '#dc2626' };
                                 
