@@ -409,7 +409,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             // Zobraziť ID v požadovanom formáte: '{názov kategorie}' '{názov skupiny}' 'poradove číslo'
             if (!teamId) return '---';
             
-            // Skúsime nájsť tím podľa ID
+            // Najprv skúsime nájsť tím podľa ID (pre nové zápasy)
             if (teamData.allTeams && teamData.allTeams.length > 0) {
                 const team = teamData.allTeams.find(t => t.id === teamId);
                 if (team) {
@@ -436,10 +436,74 @@ const AddMatchesApp = ({ userProfileData }) => {
                 }
             }
             
-            // Ak tím nenajdeme, vrátime pôvodné ID ako fallback
-            if (typeof teamId === 'string' && teamId.length > 20) {
-                return `${teamId.substring(0, 8)}...${teamId.substring(teamId.length - 4)}`;
+            // Ak sme nenašli podľa ID, skúsime nájsť tím podľa názvu (pre staršie zápasy)
+            // Predpokladáme, že teamId je v tomto prípade názov tímu
+            if (typeof teamId === 'string' && teamId.length > 0) {
+                // Prejdeme všetky kategórie a hľadáme tím s týmto názvom
+                for (const category of categories) {
+                    const teamsInCategory = teamData.allTeams.filter(t => t.category === category.name);
+                    
+                    // Hľadáme tím podľa názvu
+                    const team = teamsInCategory.find(t => 
+                        t.teamName === teamId || t.name === teamId
+                    );
+                    
+                    if (team) {
+                        // Našli sme tím, teraz zistíme jeho poradové číslo v skupine
+                        const teamsInSameGroup = teamData.allTeams.filter(t => 
+                            t.category === category.name && t.groupName === team.groupName
+                        );
+                        
+                        const sortedTeams = [...teamsInSameGroup].sort((a, b) => 
+                            (a.teamName || a.name || '').localeCompare(b.teamName || b.name || '')
+                        );
+                        
+                        const teamIndex = sortedTeams.findIndex(t => 
+                            t.id === team.id || t.teamName === teamId || t.name === teamId
+                        );
+                        const teamNumber = teamIndex !== -1 ? teamIndex + 1 : '?';
+                        
+                        return `${category.name} ${team.groupName}${teamNumber}`;
+                    }
+                }
+                
+                // Ak tím nenašiel ani podľa názvu, skúsime získať informácie z aktuálneho zápasu
+                // Toto je fallback pre prípady, keď sa zápas zobrazuje v kontexte konkrétnej kategórie
+                const currentMatch = matches.find(m => m.homeTeamId === teamId || m.awayTeamId === teamId);
+                if (currentMatch && currentMatch.categoryName) {
+                    const category = categories.find(c => c.name === currentMatch.categoryName);
+                    if (category) {
+                        const teamsInCategory = teamData.allTeams.filter(t => t.category === category.name);
+                        const team = teamsInCategory.find(t => 
+                            t.teamName === teamId || t.name === teamId
+                        );
+                        
+                        if (team && team.groupName) {
+                            const teamsInSameGroup = teamData.allTeams.filter(t => 
+                                t.category === category.name && t.groupName === team.groupName
+                            );
+                            
+                            const sortedTeams = [...teamsInSameGroup].sort((a, b) => 
+                                (a.teamName || a.name || '').localeCompare(b.teamName || b.name || '')
+                            );
+                            
+                            const teamIndex = sortedTeams.findIndex(t => 
+                                t.teamName === teamId || t.name === teamId
+                            );
+                            const teamNumber = teamIndex !== -1 ? teamIndex + 1 : '?';
+                            
+                            return `${category.name} ${team.groupName}${teamNumber}`;
+                        }
+                    }
+                }
+                
+                // Ak sa nám nepodarilo nájsť tím, vrátime pôvodný názov
+                if (teamId.length > 20) {
+                    return `${teamId.substring(0, 8)}...${teamId.substring(teamId.length - 4)}`;
+                }
+                return teamId;
             }
+            
             return teamId;
         } else {
             // Zobraziť názov tímu
