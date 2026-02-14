@@ -1215,13 +1215,31 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     React.createElement(
                         'div',
                         { className: 'flex-1' },
-                        React.createElement('p', { className: 'text-sm text-gray-600' }, match.homeTeamIdentifier)
+                        displayMode === 'both' && typeof getTeamDisplayText(match.homeTeamIdentifier) === 'object'
+                            ? React.createElement(
+                                'div',
+                                { className: 'flex flex-col items-start' },
+                                React.createElement('span', { className: 'font-semibold text-sm text-gray-800' }, getTeamDisplayText(match.homeTeamIdentifier).name),
+                                React.createElement('span', { className: 'text-xs text-gray-500' }, `(${getTeamDisplayText(match.homeTeamIdentifier).id})`)
+                            )
+                            : React.createElement('p', { className: 'text-sm text-gray-600' }, 
+                                displayMode === 'name' ? getTeamDisplayText(match.homeTeamIdentifier) : match.homeTeamIdentifier
+                            )
                     ),
                     React.createElement('i', { className: 'fa-solid fa-vs text-xs text-gray-400 mx-2' }),
                     React.createElement(
                         'div',
                         { className: 'flex-1 text-right' },
-                        React.createElement('p', { className: 'text-sm text-gray-600' }, match.awayTeamIdentifier)
+                        displayMode === 'both' && typeof getTeamDisplayText(match.awayTeamIdentifier) === 'object'
+                            ? React.createElement(
+                                'div',
+                                { className: 'flex flex-col items-end' },
+                                React.createElement('span', { className: 'font-semibold text-sm text-gray-800' }, getTeamDisplayText(match.awayTeamIdentifier).name),
+                                React.createElement('span', { className: 'text-xs text-gray-500' }, `(${getTeamDisplayText(match.awayTeamIdentifier).id})`)
+                            )
+                            : React.createElement('p', { className: 'text-sm text-gray-600' }, 
+                                displayMode === 'name' ? getTeamDisplayText(match.awayTeamIdentifier) : match.awayTeamIdentifier
+                            )
                     )
                 ),
                 React.createElement(
