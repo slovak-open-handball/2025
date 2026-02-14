@@ -3680,11 +3680,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         )
                                                     ),
                                                     
-                                                    // Zoznam zápasov pre tento deň - zoradené chronologicky podľa času
+                                                    // V časti s kartami pre dni turnaja - upravte časť so zoznamom zápasov
+                                                    // (približne riadok 3100 - zobrazenie zápasov v karte dňa)
+
+                                                    // Zoznam zápasov pre tento deň - bez scrollovania, výška sa prispôsobí obsahu
                                                     matchesCount > 0 ? 
                                                         React.createElement(
                                                             'div',
-                                                            { className: 'space-y-1 max-h-[150px] overflow-y-auto text-xs' },
+                                                            { className: 'space-y-1 text-xs' }, // Odstránené max-h a overflow-y
                                                             hallMatches
                                                                 .sort((a, b) => {
                                                                     if (!a.scheduledTime) return 1;
