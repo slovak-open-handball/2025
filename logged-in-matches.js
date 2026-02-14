@@ -3969,39 +3969,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                             { className: 'space-y-4 overflow-y-auto pr-2 flex-1' },
                             sortedFilteredSportHalls.map((hall) => {
                                 const typeConfig = typeIcons[hall.type] || { icon: 'fa-futbol', color: '#dc2626' };
-                        
-                                // Získame všetky zápasy pre túto halu
-                                const hallMatches = matches.filter(m => m.hallId === hall.id && m.scheduledTime);
-                        
-                                // Zápasy vyhovujúce filtrom kategórie a skupiny
-                                const filteredHallMatches = hallMatches.filter(match => {
-                                    // Filter podľa kategórie
-                                    if (selectedCategoryFilter && match.categoryId !== selectedCategoryFilter) {
-                                        return false;
-                                    }
-                                    // Filter podľa skupiny
-                                    if (selectedGroupFilter && match.groupName !== selectedGroupFilter) {
-                                        return false;
-                                    }
-                                    return true;
-                                });
-                        
-                                const daysWithMatches = new Set();
-                                filteredHallMatches.forEach(match => {
-                                    if (match.scheduledTime) {
-                                        try {
-                                            const matchDate = match.scheduledTime.toDate();
-                                            const dateStr = getLocalDateStr(matchDate);
-                                            daysWithMatches.add(dateStr);
-                                        } catch (e) {
-                                            console.error('Chyba pri spracovaní dátumu zápasu:', e);
-                                        }
-                                    }
-                                });
+                                
+                                // Zistíme, či je aktívny nejaký filter (kategória alebo skupina)
+                                const isFilterActive = selectedCategoryFilter || selectedGroupFilter;
                                 
                                 // Generovanie zoznamu dní medzi začiatkom a koncom turnaja
                                 const tournamentDays = [];
-                                const dayCards = []; // Sem budeme ukladať len karty dní, ktoré sa majú zobraziť
+                                const dayCards = []; // Sem budeme ukladať karty dní
                                 
                                 if (tournamentStartDate && tournamentEndDate) {
                                     const startDate = new Date(tournamentStartDate);
@@ -4020,17 +3994,29 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         const matchesDayFilter = !selectedDayFilter || selectedDayFilter === dateStr;
                                         
                                         if (matchesDayFilter) {
-                                            // Získame zápasy pre túto halu a tento deň po aplikovaní všetkých filtrov
+                                            // Získame zápasy pre túto halu a tento deň po aplikovaní filtrov
                                             const hallMatchesForDay = getMatchesForHallAndDay(hall.id, currentDate);
                                             const matchesCount = hallMatchesForDay.length;
                                             
-                                            // Pridáme kartu dňa LEN AK má aspoň 1 zápas
-                                            if (matchesCount > 0) {
+                                            if (isFilterActive) {
+                                                // Ak je filter aktívny, zobrazíme LEN dni, ktoré majú zápasy
+                                                if (matchesCount > 0) {
+                                                    dayCards.push({
+                                                        date: new Date(currentDate),
+                                                        dateStr: dateStr,
+                                                        matches: hallMatchesForDay,
+                                                        matchesCount: matchesCount,
+                                                        isEmpty: false
+                                                    });
+                                                }
+                                            } else {
+                                                // Ak nie je filter, zobrazíme VŠETKY dni (aj prázdne)
                                                 dayCards.push({
                                                     date: new Date(currentDate),
                                                     dateStr: dateStr,
                                                     matches: hallMatchesForDay,
-                                                    matchesCount: matchesCount
+                                                    matchesCount: matchesCount,
+                                                    isEmpty: matchesCount === 0
                                                 });
                                             }
                                         }
@@ -4039,8 +4025,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     }
                                 }
                                 
-                                // Ak hala nemá žiadne karty dní (žiadne zápasy po aplikovaní filtrov), nevracame nič
-                                if (dayCards.length === 0) {
+                                // Ak je filter aktívny a hala nemá žiadne karty dní (žiadne zápasy), nevracame nič
+                                if (isFilterActive && dayCards.length === 0) {
                                     return null;
                                 }
                                 
@@ -4108,6 +4094,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     const dateStr = dayCard.dateStr;
                                                     const hallMatches = dayCard.matches;
                                                     const matchesCount = dayCard.matchesCount;
+                                                    const isEmpty = dayCard.isEmpty;
                                                     
                                                     return React.createElement(
                                                         'div',
@@ -4157,24 +4144,32 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                             React.createElement(
                                                                 'div',
                                                                 { className: 'flex items-center gap-2 flex-shrink-0' },
-                                                                React.createElement(
+                                                                isEmpty ? React.createElement(
                                                                     'span',
-                                                                    { className: 'text-xs text-gray-500 whitespace-nowrap' },
-                                                                    (() => {
-                                                                        if (matchesCount === 1) return `${matchesCount} zápas`;
-                                                                        if (matchesCount >= 2 && matchesCount <= 4) return `${matchesCount} zápasy`;
-                                                                        return `${matchesCount} zápasov`;
-                                                                    })()
-                                                                ),
-                                                                React.createElement(
-                                                                    'span',
-                                                                    { className: 'w-2 h-2 bg-green-500 rounded-full flex-shrink-0' }
+                                                                    { className: 'text-xs text-gray-400 whitespace-nowrap' },
+                                                                    'Žiadne zápasy'
+                                                                ) : React.createElement(
+                                                                    React.Fragment,
+                                                                    null,
+                                                                    React.createElement(
+                                                                        'span',
+                                                                        { className: 'text-xs text-gray-500 whitespace-nowrap' },
+                                                                        (() => {
+                                                                            if (matchesCount === 1) return `${matchesCount} zápas`;
+                                                                            if (matchesCount >= 2 && matchesCount <= 4) return `${matchesCount} zápasy`;
+                                                                            return `${matchesCount} zápasov`;
+                                                                        })()
+                                                                    ),
+                                                                    React.createElement(
+                                                                        'span',
+                                                                        { className: 'w-2 h-2 bg-green-500 rounded-full flex-shrink-0' }
+                                                                    )
                                                                 )
                                                             )
                                                         ),
                                                         
-                                                        // Zoznam zápasov pre tento deň
-                                                        React.createElement(
+                                                        // Zoznam zápasov pre tento deň (alebo prázdny placeholder)
+                                                        !isEmpty ? React.createElement(
                                                             'div',
                                                             { 
                                                                 className: 'space-y-1 text-xs',
@@ -4309,6 +4304,17 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         )
                                                                     );
                                                                 })
+                                                        ) : React.createElement(
+                                                            'div',
+                                                            {
+                                                                className: 'w-full py-2 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-1 whitespace-nowrap',
+                                                                style: { 
+                                                                    minWidth: '420px',
+                                                                    width: 'fit-content'
+                                                                }
+                                                            },
+                                                            React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-xs flex-shrink-0' }),
+                                                            React.createElement('span', null, 'Žiadne zápasy')
                                                         )
                                                     );
                                                 })
