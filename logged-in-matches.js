@@ -927,16 +927,15 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             // Nájdeme detaily kategórie pre tento zápas
             const category = categories.find(c => c.name === match.categoryName);
             setCategoryDetails(category);
-            
+        
             if (category) {
-                // Výpočet času zápasu podľa vzorca: (periodDuration + breakDuration) * periods - breakDuration + matchBreak
+                // Výpočet čistého času zápasu (bez prestávky po zápase)
                 const periods = category.periods || 2;
                 const periodDuration = category.periodDuration || 20;
                 const breakDuration = category.breakDuration || 2;
-                const matchBreak = category.matchBreak || 5;
-                
-                // Výpočet podľa vzorca
-                const calculatedDuration = (periodDuration + breakDuration) * periods - breakDuration + matchBreak;
+            
+                // Čistý čas zápasu = (periodDuration + breakDuration) * periods - breakDuration
+                const calculatedDuration = (periodDuration + breakDuration) * periods - breakDuration;
                 setMatchDuration(calculatedDuration);
             }
         }
@@ -969,7 +968,8 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             const [hours, minutes] = selectedTime.split(':').map(Number);
             const startDateTime = new Date(selectedDate);
             startDateTime.setHours(hours, minutes, 0, 0);
-            
+        
+            // Koniec zápasu je start + matchDuration (čistý čas bez prestávky po zápase)
             const endDateTime = new Date(startDateTime.getTime() + matchDuration * 60000);
             
             const endHours = endDateTime.getHours().toString().padStart(2, '0');
@@ -3234,7 +3234,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 title: `Kliknite pre úpravu zápasu`
                                                                             },
                                                                             React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs' }),
-                                                                            React.createElement('span', { className: 'font-medium text-blue-700' }, matchTime),
+                                                                            React.createElement(
+                                                                                'span',
+                                                                                { className: 'font-medium text-blue-700' },
+                                                                                `${matchTime} - ${match.scheduledEndTime || '--:--'}`
+                                                                            ),
                                                                             React.createElement('span', { className: 'text-gray-400' }, '|'),
                                                                             
                                                                             // Zobrazenie tímov podľa displayMode
