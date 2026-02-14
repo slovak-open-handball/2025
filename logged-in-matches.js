@@ -1254,14 +1254,14 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     );
 };
 
-const HallDayStartTimeModal = ({ isOpen, onClose, onConfirm, hallName, date }) => {
-    const [startTime, setStartTime] = useState('08:00');
+const HallDayStartTimeModal = ({ isOpen, onClose, onConfirm, hallName, date, currentStartTime }) => {
+    const [startTime, setStartTime] = useState(currentStartTime || '08:00');
 
     useEffect(() => {
-        if (!isOpen) {
-            setStartTime('08:00');
+        if (isOpen) {
+            setStartTime(currentStartTime || '08:00');
         }
-    }, [isOpen]);
+    }, [isOpen, currentStartTime]);
 
     if (!isOpen) return null;
 
@@ -1281,7 +1281,9 @@ const HallDayStartTimeModal = ({ isOpen, onClose, onConfirm, hallName, date }) =
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mb-4' },
-                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 'Nastavenie času začiatku'),
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 
+                    currentStartTime ? 'Upraviť čas začiatku' : 'Nastavenie času začiatku'
+                ),
                 React.createElement(
                     'button',
                     {
@@ -1340,7 +1342,7 @@ const HallDayStartTimeModal = ({ isOpen, onClose, onConfirm, hallName, date }) =
                         },
                         className: 'px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors'
                     },
-                    'Uložiť'
+                    currentStartTime ? 'Upraviť' : 'Uložiť'
                 )
             )
         )
@@ -1383,6 +1385,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [selectedDateForHall, setSelectedDateForHall] = useState(null);
     const [selectedDateStrForHall, setSelectedDateStrForHall] = useState('');
     const [hallSchedules, setHallSchedules] = useState({});
+    const [selectedCurrentStartTime, setSelectedCurrentStartTime] = useState(null);
 
     const loadHallSchedules = () => {
         if (!window.db) return;
@@ -1405,9 +1408,15 @@ const AddMatchesApp = ({ userProfileData }) => {
 
 
     const handleHallDayHeaderClick = (hall, date, dateStr) => {
+        // Získame existujúci čas pre túto halu a deň
+        const scheduleId = `${hall.id}_${date.toISOString().split('T')[0]}`;
+        const existingSchedule = hallSchedules[scheduleId];
+        const currentStartTime = existingSchedule?.startTime;
+    
         setSelectedHallForDay(hall);
         setSelectedDateForHall(date);
         setSelectedDateStrForHall(dateStr);
+        setSelectedCurrentStartTime(currentStartTime); // Uložíme existujúci čas
         setIsHallDayModalOpen(true);
     };
 
@@ -1969,117 +1978,9 @@ const AddMatchesApp = ({ userProfileData }) => {
         setTimeout(() => {
             processNextExistingMatch();
         }, 100);
-    };
+    }; 
 
 /*
-    // Funkcia na výpis používateľov pre každý tím
-    const logTeamOwners = async () => {
-        if (!window.db || !teamData.allTeams) return;
-        
-        console.log('=== VLASTNÍCI TÍMOV ===');
-        console.log('Celkový počet tímov:', teamData.allTeams.length);
-        
-        // Pre každý tím v teamData
-        for (const team of teamData.allTeams) {
-            try {
-                console.log(`\nSpracovávam tím: ${team.teamName || team.name || 'Neznámy názov'}`);
-                console.log('  - Celý objekt tímu:', team);
-                
-                // Ak tím má ID používateľa
-                if (team.userId) {
-                    console.log('  - Hľadám podľa userId:', team.userId);
-                    
-                    // Načítame dokument používateľa podľa ID
-                    const userRef = doc(window.db, 'users', team.userId);
-                    const userSnap = await getDoc(userRef);
-                    
-                    if (userSnap.exists()) {
-                        const userData = userSnap.data();
-                        console.log(`  ✓ Nájdený používateľ pre tím: ${team.teamName || team.name} (Kategória: ${team.category})`);
-                        console.log('    - ID tímu:', team.id);
-                        console.log('    - ID používateľa:', team.userId);
-                        console.log('    - Dokument používateľa:', {
-                            id: userSnap.id,
-                            ...userData
-                        });
-                    } else {
-                        console.log(`  ✗ Používateľ s ID ${team.userId} pre tím ${team.teamName || team.name} neexistuje`);
-                    }
-                } 
-                // Ak tím má email používateľa
-                else if (team.userEmail) {
-                    console.log('  - Hľadám podľa userEmail:', team.userEmail);
-                    
-                    // Načítame všetkých používateľov a hľadáme podľa emailu
-                    const usersRef = collection(window.db, 'users');
-                    const usersSnapshot = await getDocs(usersRef);
-                    
-                    let foundUser = null;
-                    usersSnapshot.forEach((doc) => {
-                        const userData = doc.data();
-                        if (userData.email === team.userEmail) {
-                            foundUser = {
-                                id: doc.id,
-                                ...userData
-                            };
-                        }
-                    });
-                    
-                    if (foundUser) {
-                        console.log(`  ✓ Nájdený používateľ pre tím: ${team.teamName || team.name} (Kategória: ${team.category})`);
-                        console.log('    - ID tímu:', team.id);
-                        console.log('    - Email používateľa:', team.userEmail);
-                        console.log('    - Dokument používateľa:', foundUser);
-                    } else {
-                        console.log(`  ✗ Používateľ s emailom ${team.userEmail} pre tím ${team.teamName || team.name} neexistuje`);
-                    }
-                }
-                // Ak tím má createdBy (meno používateľa)
-                else if (team.createdBy) {
-                    console.log('  - Hľadám podľa createdBy:', team.createdBy);
-                    
-                    // Načítame všetkých používateľov a hľadáme podľa mena alebo emailu
-                    const usersRef = collection(window.db, 'users');
-                    const usersSnapshot = await getDocs(usersRef);
-                    
-                    let foundUser = null;
-                    usersSnapshot.forEach((doc) => {
-                        const userData = doc.data();
-                        if (userData.displayName === team.createdBy || userData.email === team.createdBy) {
-                            foundUser = {
-                                id: doc.id,
-                                ...userData
-                            };
-                        }
-                    });
-                    
-                    if (foundUser) {
-                        console.log(`  ✓ Nájdený používateľ pre tím: ${team.teamName || team.name} (Kategória: ${team.category})`);
-                        console.log('    - ID tímu:', team.id);
-                        console.log('    - createdBy:', team.createdBy);
-                        console.log('    - Dokument používateľa:', foundUser);
-                    } else {
-                        console.log(`  ✗ Používateľ s menom/emailom ${team.createdBy} pre tím ${team.teamName || team.name} neexistuje`);
-                    }
-                }
-                // Ak tím nemá priradeného používateľa
-                else {
-                    console.log(`  ⚠ Tím: ${team.teamName || team.name} (Kategória: ${team.category}) - Nemá priradeného používateľa`);
-                    console.log('    - ID tímu:', team.id);
-                    console.log('    - Dostupné polia:', Object.keys(team));
-                }
-                
-                console.log('---');
-            } catch (error) {
-                console.error(`Chyba pri načítaní používateľa pre tím ${team.teamName || team.name}:`, error);
-            }
-        }
-        
-        console.log('=== KONIEC VLASTNÍKOV TÍMOV ===');
-        console.log('Celkový počet spracovaných tímov:', teamData.allTeams.length);
-    };
-*/    
-
     // Funkcia na načítanie používateľov, ktorí vytvorili zápasy
     const loadUsersWithMatches = async () => {
         if (!window.db) return;
@@ -2129,6 +2030,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             console.error('Chyba pri načítaní používateľov:', error);
         }
     };
+*/    
 
     // Funkcia na načítanie zápasov z Firebase
     const loadMatches = () => {
@@ -2969,6 +2871,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 setSelectedHallForDay(null);
                 setSelectedDateForHall(null);
                 setSelectedDateStrForHall('');
+                setSelectedCurrentStartTime(null);
             },
             onConfirm: handleSaveHallStartTime,
             hallName: selectedHallForDay?.name,
