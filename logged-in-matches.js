@@ -1746,10 +1746,8 @@ const AddMatchesApp = ({ userProfileData }) => {
         });
     };
     
-    // Filtrované zápasy pre ľavý stĺpec (nepriradené)
     const filteredUnassignedMatches = getFilteredMatches(matches.filter(m => !m.hallId));
-    
-    // Filtrované zápasy pre všetky zápasy (pre počty v hlavičkách)
+    const filteredSportHalls = selectedHallFilter ? sportHalls.filter(hall => hall.id === selectedHallFilter) : sportHalls;    
     const filteredAllMatches = getFilteredMatches(matches);
 
     const loadHallSchedules = () => {
@@ -3755,7 +3753,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                             React.createElement('i', { className: 'fa-solid fa-futbol mr-2 text-red-500' }),
                             'Športové haly',
                             React.createElement('span', { className: 'ml-2 text-sm font-normal text-gray-500' },
-                                `(${sportHalls.length} ${sportHalls.length === 1 ? 'hala' : sportHalls.length < 5 ? 'haly' : 'hál'})`
+                                `(${filteredSportHalls.length} ${filteredSportHalls.length === 1 ? 'hala' : filteredSportHalls.length < 5 ? 'haly' : 'hál'})`
                             )
                         ),
                         
@@ -3783,7 +3781,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                         !loading && sportHalls.length > 0 && React.createElement(
                             'div',
                             { className: 'space-y-4 overflow-y-auto pr-2 flex-1' },
-                            sportHalls.map((hall) => {
+                            filteredSportHalls.map((hall) => {
                                 const typeConfig = typeIcons[hall.type] || { icon: 'fa-futbol', color: '#dc2626' };
                                 
                                 // Generovanie zoznamu dní medzi začiatkom a koncom turnaja
