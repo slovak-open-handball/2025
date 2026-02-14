@@ -1289,8 +1289,12 @@ const AddMatchesApp = ({ userProfileData }) => {
     const getInitialDisplayMode = () => {
         if (window.location.hash) {
             const hash = window.location.hash.substring(1); // odstránime #
-            if (hash === 'nazvy' || hash === 'id' || hash === 'oboje') {
-                return hash;
+            if (hash === 'nazvy') {
+                return 'name';
+            } else if (hash === 'id') {
+                return 'id';
+            } else if (hash === 'oboje') {
+                return 'both';
             }
         }
         return 'name'; // predvolená hodnota
@@ -1307,7 +1311,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     // Funkcia na zmenu režimu zobrazenia a aktualizáciu URL
     const handleDisplayModeChange = (mode) => {
         setDisplayMode(mode);
-        
+    
         // Aktualizujeme URL hash
         let hash = '';
         switch (mode) {
@@ -1340,7 +1344,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 }
             }
         };
-
+    
         window.addEventListener('hashchange', handleHashChange);
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, []);
