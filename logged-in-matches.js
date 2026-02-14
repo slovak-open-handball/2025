@@ -1709,7 +1709,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [availableDays, setAvailableDays] = useState([]);
 
     // Nahraďte existujúcu funkciu getFilteredMatches touto:
-    const getFilteredMatches = (matchesToFilter, ignoreHallFilter = false) => {
+    const getFilteredMatches = (matchesToFilter, ignoreHallFilter = false, ignoreDayFilter = false) => {
         return matchesToFilter.filter(match => {
             // Filter podľa kategórie
             if (selectedCategoryFilter && match.categoryId !== selectedCategoryFilter) {
@@ -1726,8 +1726,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                 return false;
             }
             
-            // Filter podľa dňa
-            if (selectedDayFilter && match.scheduledTime) {
+            // Filter podľa dňa - aplikujeme len ak nie je ignoreDayFilter = true
+            if (!ignoreDayFilter && selectedDayFilter) {
+                // Ak zápas nemá naplánovaný čas, nevyhovuje (lebo nemá dátum)
+                if (!match.scheduledTime) {
+                    return false;
+                }
+                
                 try {
                     const matchDate = match.scheduledTime.toDate();
                     const matchDateStr = matchDate.toISOString().split('T')[0];
@@ -1737,17 +1742,15 @@ const AddMatchesApp = ({ userProfileData }) => {
                 } catch (e) {
                     return false;
                 }
-            } else if (selectedDayFilter && !match.scheduledTime) {
-                return false;
             }
             
             return true;
         });
     };
     
-    const filteredUnassignedMatches = getFilteredMatches(matches.filter(m => !m.hallId), true);
+    const filteredUnassignedMatches = getFilteredMatches(matches.filter(m => !m.hallId), true, true);
     const filteredSportHalls = selectedHallFilter ? sportHalls.filter(hall => hall.id === selectedHallFilter) : sportHalls;    
-    const filteredAllMatches = getFilteredMatches(matches, false);
+    const filteredAllMatches = getFilteredMatches(matches, false, false);
 
     const loadHallSchedules = () => {
         if (!window.db) return;
