@@ -1597,7 +1597,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     const generateMatchesForGroup = (teams, withRepetitions, categoryName) => {
         const matches = [];
         
-        // Pre každý tím vytvoríme identifikátor v tvare "kategória skupina poradie"
+        // Pre každý tím vytvoríme identifikátor v tvare "kategória skupinaorder"
         const teamIdentifiers = teams.map(t => {
             // Získame názov kategórie
             const category = categoryName || t.category || 'Neznáma kategória';
@@ -1611,8 +1611,8 @@ const AddMatchesApp = ({ userProfileData }) => {
             // Pridáme order/číslo tímu
             const order = t.order || '?';
             
-            // Vytvoríme identifikátor v požadovanom formáte: "kategória skupina poradie" (napr. "U10 A 1")
-            // Medzery medzi všetkými časťami
+            // Vytvoríme identifikátor v požadovanom formáte: "kategória skupinaorder" (napr. "U10 A1")
+            // Medzera len medzi kategóriou a skupinou, žiadna medzera medzi skupinou a orderom
             const teamIdentifier = `${category} ${groupName}${order}`;
             
             return {
@@ -1657,20 +1657,37 @@ const AddMatchesApp = ({ userProfileData }) => {
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
         
-        // Parsujeme identifikátor v tvare "kategória skupina poradie" (napr. "U10 A 1")
-        // Rozdelíme podľa medzier
+        // Parsujeme identifikátor v tvare "kategória skupinaorder" (napr. "U10 A1")
+        // Rozdelíme podľa medzier - bude to mať 2 časti: [kategória, skupinaorder]
         const parts = identifier.split(' ');
         
-        if (parts.length < 3) {
+        if (parts.length < 2) {
             return identifier; // Fallback na identifikátor
         }
         
-        // Posledná časť je poradie
-        const order = parts.pop();
-        // Posledná časť po odstránení poradia je skupina
-        const groupName = parts.pop();
+        // Posledná časť je skupina + order (napr. "A1")
+        const groupAndOrder = parts.pop();
         // Zvyšok je kategória (môže byť viacslovná)
         const category = parts.join(' ');
+        
+        // Rozdelíme groupAndOrder na groupName a order
+        // Order je číselná časť na konci, groupName je zvyšok
+        let groupName = '';
+        let order = '';
+        
+        for (let i = 0; i < groupAndOrder.length; i++) {
+            const char = groupAndOrder[i];
+            if (char >= '0' && char <= '9') {
+                order = groupAndOrder.substring(i);
+                groupName = groupAndOrder.substring(0, i);
+                break;
+            }
+        }
+        
+        if (!order) {
+            order = '?';
+            groupName = groupAndOrder;
+        }
         
         // Hľadáme v teamData
         if (teamData.allTeams && teamData.allTeams.length > 0) {
