@@ -1540,6 +1540,32 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     };
 
+    // Pridajte túto funkciu do komponentu AddMatchesApp (napr. za getTeamDisplayText)
+    const getMatchesForHallAndDay = (hallId, date) => {
+        if (!matches || matches.length === 0) return [];
+    
+        // Formátujeme dátum pre porovnanie (rovnaký formát ako v selectedDate)
+        const dateStr = date.toISOString().split('T')[0];
+    
+        return matches.filter(match => {
+            // Zápas musí mať priradenú halu a naplánovaný čas
+            if (!match.hallId || !match.scheduledTime) return false;
+        
+            // Skontrolujeme, či je zápas pre túto halu
+            if (match.hallId !== hallId) return false;
+        
+            // Skonvertujeme scheduledTime na Date a porovnáme dátum
+            try {
+                const matchDate = match.scheduledTime.toDate();
+                const matchDateStr = matchDate.toISOString().split('T')[0];
+                return matchDateStr === dateStr;
+            } catch (e) {
+                console.error('Chyba pri spracovaní dátumu zápasu:', e);
+                return false;
+            }
+        });
+    };
+
     // Funkcia na kontrolu, či už boli zápasy pre danú kategóriu/skupinu vygenerované
     const hasExistingMatches = (categoryId, groupName) => {
         return matches.some(match => 
@@ -3084,34 +3110,88 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     year: 'numeric'
                                                 });
                                                 
-                                                // Počet zápasov priradených k tejto hale v tento deň (príklad - treba implementovať podľa vašej logiky)
-                                                const matchesCount = 0; // Zatiaľ 0, neskôr môžete pridať reálne počítanie
+                                                // Získame zápasy pre túto halu a tento deň
+                                                const hallMatches = getMatchesForHallAndDay(hall.id, date);
+                                                const matchesCount = hallMatches.length;
                                                 
                                                 return React.createElement(
-                                                    'button',
+                                                    'div',
                                                     {
                                                         key: index,
-                                                        className: 'flex flex-col items-center p-2 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group',
-                                                        onClick: () => {
-                                                            // Tu môžete pridať funkciu pre otvorenie modálneho okna na priradenie zápasov
-                                                            console.log(`Vybratý deň: ${dateStr} pre halu ${hall.name}`);
-                                                            window.showGlobalNotification(`Vybratý termín: ${dateStr}`, 'info');
-                                                        }
+                                                        className: 'flex flex-col p-2 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group'
                                                     },
+                                                    // Dátum
                                                     React.createElement(
-                                                        'span',
-                                                        { className: 'text-sm font-semibold text-gray-800 group-hover:text-blue-600' },
-                                                        dateStr
+                                                        'div',
+                                                        { className: 'flex items-center justify-between mb-2' },
+                                                        React.createElement(
+                                                            'span',
+                                                            { className: 'text-sm font-semibold text-gray-800' },
+                                                            dateStr
+                                                        ),
+                                                        matchesCount > 0 && React.createElement(
+                                                            'span',
+                                                            { className: 'w-2 h-2 bg-green-500 rounded-full' }
+                                                        )
                                                     ),
-                                                    React.createElement(
-                                                        'span',
-                                                        { className: 'text-xs text-gray-500 mt-1' },
-                                                        `${matchesCount} zápasov`
-                                                    ),
-                                                    matchesCount > 0 && React.createElement(
-                                                        'span',
-                                                        { className: 'w-2 h-2 bg-green-500 rounded-full mt-1' }
-                                                    )
+                                                    
+                                                    // Zoznam zápasov pre tento deň
+                                                    matchesCount > 0 ? 
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'space-y-1 max-h-[100px] overflow-y-auto text-xs' },
+                                                            hallMatches.map((match, idx) => {
+                                                                // Formátovanie času zápasu
+                                                                let matchTime = '--:--';
+                                                                if (match.scheduledTime) {
+                                                                    try {
+                                                                        const date = match.scheduledTime.toDate();
+                                                                        matchTime = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+                                                                    } catch (e) {
+                                                                        console.error('Chyba pri formátovaní času:', e);
+                                                                    }
+                                                                }
+                                                                
+                                                                return React.createElement(
+                                                                    'div',
+                                                                    {
+                                                                        key: idx,
+                                                                        className: 'p-1 bg-blue-50 rounded border border-blue-100 cursor-pointer hover:bg-blue-100 transition-colors',
+                                                                        onClick: (e) => {
+                                                                            e.stopPropagation();
+                                                                            handleMatchCardClick(match);
+                                                                        },
+                                                                        title: `Kliknite pre úpravu zápasu ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`
+                                                                    },
+                                                                    React.createElement(
+                                                                        'div',
+                                                                        { className: 'flex items-center gap-1 text-[10px]' },
+                                                                        React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-[8px]' }),
+                                                                        React.createElement('span', { className: 'font-medium text-blue-700' }, matchTime),
+                                                                        React.createElement('span', { className: 'text-gray-600' }, '·'),
+                                                                        React.createElement(
+                                                                            'span',
+                                                                            { className: 'truncate flex-1' },
+                                                                            `${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`
+                                                                        )
+                                                                    )
+                                                                );
+                                                            })
+                                                        ) :
+                                                        React.createElement(
+                                                            'button',
+                                                            {
+                                                                className: 'w-full py-1 text-xs text-gray-400 hover:text-blue-500 transition-colors flex items-center justify-center gap-1',
+                                                                onClick: (e) => {
+                                                                    e.stopPropagation();
+                                                                    // Tu môžete otvoriť modálne okno pre priradenie nového zápasu
+                                                                    console.log(`Pridať zápas pre halu ${hall.name} v deň ${dateStr}`);
+                                                                    window.showGlobalNotification(`Funkcia pre pridanie zápasu v deň ${dateStr}`, 'info');
+                                                                }
+                                                            },
+                                                            React.createElement('i', { className: 'fa-solid fa-plus text-xs' }),
+                                                            React.createElement('span', null, 'Pridať zápas')
+                                                        )
                                                 );
                                             })
                                         )
