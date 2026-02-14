@@ -2124,8 +2124,8 @@ const AddMatchesApp = ({ userProfileData }) => {
             },
             onConfirm: handleConfirmExistingMatch,
             match: currentExistingMatch,
-            homeTeamDisplay: currentExistingMatch ? getTeamDisplayText(currentExistingMatch.homeTeamId) : '',
-            awayTeamDisplay: currentExistingMatch ? getTeamDisplayText(currentExistingMatch.awayTeamId) : ''
+            homeTeamDisplay: currentExistingMatch ? getTeamDisplayText(currentExistingMatch.homeTeamIdentifier) : '',
+            awayTeamDisplay: currentExistingMatch ? getTeamDisplayText(currentExistingMatch.awayTeamIdentifier) : ''
         }),
         React.createElement(ConfirmDeleteModal, {
             isOpen: isDeleteModalOpen,
