@@ -912,6 +912,306 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayT
     );
 };
 
+// Modálne okno pre priradenie zápasu do haly
+const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAssign }) => {
+    const [selectedHallId, setSelectedHallId] = useState('');
+    const [selectedDate, setSelectedDate] = useState('');
+    const [selectedTime, setSelectedTime] = useState('');
+    const [availableDates, setAvailableDates] = useState([]);
+    const [categoryDetails, setCategoryDetails] = useState(null);
+    const [matchDuration, setMatchDuration] = useState(0);
+    const [matchEndTime, setMatchEndTime] = useState('');
+
+    useEffect(() => {
+        if (match && categories.length > 0) {
+            // Nájdeme detaily kategórie pre tento zápas
+            const category = categories.find(c => c.name === match.categoryName);
+            setCategoryDetails(category);
+            
+            if (category) {
+                // Výpočet času zápasu podľa vzorca: (periodDuration + breakDuration) * periods - breakDuration + matchBreak
+                const periods = category.periods || 2;
+                const periodDuration = category.periodDuration || 20;
+                const breakDuration = category.breakDuration || 2;
+                const matchBreak = category.matchBreak || 5;
+                
+                // Výpočet podľa vzorca
+                const calculatedDuration = (periodDuration + breakDuration) * periods - breakDuration + matchBreak;
+                setMatchDuration(calculatedDuration);
+            }
+        }
+    }, [match, categories]);
+
+    // Generovanie dostupných dátumov z tournamentStartDate a tournamentEndDate
+    useEffect(() => {
+        if (window.tournamentStartDate && window.tournamentEndDate) {
+            const dates = [];
+            const startDate = new Date(window.tournamentStartDate);
+            const endDate = new Date(window.tournamentEndDate);
+            
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(0, 0, 0, 0);
+            
+            const currentDate = new Date(startDate);
+            
+            while (currentDate <= endDate) {
+                dates.push(new Date(currentDate));
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            
+            setAvailableDates(dates);
+        }
+    }, []);
+
+    // Výpočet času ukončenia zápasu
+    useEffect(() => {
+        if (selectedDate && selectedTime && matchDuration > 0) {
+            const [hours, minutes] = selectedTime.split(':').map(Number);
+            const startDateTime = new Date(selectedDate);
+            startDateTime.setHours(hours, minutes, 0, 0);
+            
+            const endDateTime = new Date(startDateTime.getTime() + matchDuration * 60000);
+            
+            const endHours = endDateTime.getHours().toString().padStart(2, '0');
+            const endMinutes = endDateTime.getMinutes().toString().padStart(2, '0');
+            
+            setMatchEndTime(`${endHours}:${endMinutes}`);
+        } else {
+            setMatchEndTime('');
+        }
+    }, [selectedDate, selectedTime, matchDuration]);
+
+    if (!isOpen || !match) return null;
+
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[90]',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) onClose();
+            }
+        },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto' },
+            
+            // Hlavička
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center mb-4' },
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 'Priradiť zápas do haly'),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'text-gray-500 hover:text-gray-700'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-times text-xl' })
+                )
+            ),
+
+            // Informácie o zápase
+            React.createElement(
+                'div',
+                { className: 'mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200' },
+                React.createElement('h4', { className: 'font-semibold text-gray-700 mb-2' }, 'Zápas:'),
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center justify-between' },
+                    React.createElement(
+                        'div',
+                        { className: 'flex-1' },
+                        React.createElement('p', { className: 'text-sm text-gray-600' }, match.homeTeamIdentifier)
+                    ),
+                    React.createElement('i', { className: 'fa-solid fa-vs text-xs text-gray-400 mx-2' }),
+                    React.createElement(
+                        'div',
+                        { className: 'flex-1 text-right' },
+                        React.createElement('p', { className: 'text-sm text-gray-600' }, match.awayTeamIdentifier)
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'mt-2 text-xs text-gray-500' },
+                    React.createElement('span', { className: 'font-medium' }, 'Kategória: '),
+                    match.categoryName,
+                    match.groupName && React.createElement('span', null, ` (${match.groupName})`)
+                ),
+                
+                // Informácia o dĺžke zápasu
+                categoryDetails && React.createElement(
+                    'div',
+                    { className: 'mt-3 p-2 bg-white rounded border border-blue-100' },
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-2 text-sm' },
+                        React.createElement('i', { className: 'fa-solid fa-clock text-blue-600' }),
+                        React.createElement('span', { className: 'font-medium text-gray-700' }, 'Dĺžka zápasu:'),
+                        React.createElement('span', { className: 'text-blue-600 font-semibold' }, `${matchDuration} minút`),
+                        React.createElement('span', { className: 'text-xs text-gray-500 ml-2' },
+                            `(${categoryDetails.periods} × ${categoryDetails.periodDuration} min + ${categoryDetails.breakDuration} min prestávky medzi periódami + ${categoryDetails.matchBreak} min prestávka po zápase)`
+                        )
+                    )
+                )
+            ),
+
+            // Formulár pre priradenie
+            React.createElement(
+                'div',
+                { className: 'space-y-4' },
+                
+                // Výber haly
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                        'Športová hala:'
+                    ),
+                    React.createElement(
+                        'select',
+                        {
+                            value: selectedHallId,
+                            onChange: (e) => setSelectedHallId(e.target.value),
+                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                        },
+                        React.createElement('option', { value: '' }, '-- Vyberte športovú halu --'),
+                        sportHalls.map(hall => 
+                            React.createElement('option', { key: hall.id, value: hall.id }, hall.name)
+                        )
+                    )
+                ),
+
+                // Výber dňa
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                        'Deň konania:'
+                    ),
+                    React.createElement(
+                        'select',
+                        {
+                            value: selectedDate,
+                            onChange: (e) => setSelectedDate(e.target.value),
+                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black',
+                            disabled: availableDates.length === 0
+                        },
+                        React.createElement('option', { value: '' }, '-- Vyberte deň --'),
+                        availableDates.map((date, index) => {
+                            const dateStr = date.toISOString().split('T')[0];
+                            const displayDate = date.toLocaleDateString('sk-SK', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                            });
+                            return React.createElement('option', { key: index, value: dateStr }, displayDate);
+                        })
+                    ),
+                    availableDates.length === 0 && React.createElement(
+                        'p',
+                        { className: 'text-xs text-red-500 mt-1' },
+                        'Nie sú nastavené dátumy turnaja'
+                    )
+                ),
+
+                // Výber času
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                        'Čas začiatku:'
+                    ),
+                    React.createElement('input', {
+                        type: 'time',
+                        value: selectedTime,
+                        onChange: (e) => setSelectedTime(e.target.value),
+                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black',
+                        step: '60'
+                    }),
+                    
+                    // Zobrazenie času ukončenia
+                    matchEndTime && React.createElement(
+                        'p',
+                        { className: 'text-xs text-gray-500 mt-1' },
+                        `Zápas skončí o ${matchEndTime}`
+                    )
+                ),
+
+                // Zhrnutie
+                selectedHallId && selectedDate && selectedTime && React.createElement(
+                    'div',
+                    { className: 'mt-4 p-3 bg-green-50 border border-green-200 rounded-lg' },
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-2 text-green-700' },
+                        React.createElement('i', { className: 'fa-solid fa-check-circle' }),
+                        React.createElement('span', { className: 'font-medium' }, 'Zápas bude priradený:')
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'mt-2 text-sm text-gray-600' },
+                        React.createElement('p', null, 
+                            React.createElement('span', { className: 'font-medium' }, 'Hala: '),
+                            sportHalls.find(h => h.id === selectedHallId)?.name
+                        ),
+                        React.createElement('p', null, 
+                            React.createElement('span', { className: 'font-medium' }, 'Dátum: '),
+                            new Date(selectedDate).toLocaleDateString('sk-SK', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                            })
+                        ),
+                        React.createElement('p', null, 
+                            React.createElement('span', { className: 'font-medium' }, 'Čas: '),
+                            `${selectedTime} - ${matchEndTime} (${matchDuration} min)`
+                        )
+                    )
+                )
+            ),
+
+            // Tlačidlá
+            React.createElement(
+                'div',
+                { className: 'flex justify-end gap-3 mt-6' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
+                    },
+                    'Zrušiť'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => {
+                            if (selectedHallId && selectedDate && selectedTime) {
+                                onAssign({
+                                    matchId: match.id,
+                                    hallId: selectedHallId,
+                                    date: selectedDate,
+                                    time: selectedTime,
+                                    endTime: matchEndTime,
+                                    duration: matchDuration
+                                });
+                                onClose();
+                            }
+                        },
+                        disabled: !selectedHallId || !selectedDate || !selectedTime,
+                        className: `px-4 py-2 text-white rounded-lg transition-colors ${
+                            selectedHallId && selectedDate && selectedTime
+                                ? 'bg-green-600 hover:bg-green-700 cursor-pointer' 
+                                : 'bg-gray-400 cursor-not-allowed'
+                        }`
+                    },
+                    'Priradiť zápas'
+                )
+            )
+        )
+    );
+};
+
 const AddMatchesApp = ({ userProfileData }) => {
     const [sportHalls, setSportHalls] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -947,6 +1247,43 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [tournamentStartDate, setTournamentStartDate] = useState('');
     const [tournamentEndDate, setTournamentEndDate] = useState('');
     const [tournamentDatesLoaded, setTournamentDatesLoaded] = useState(false);
+
+    const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+    const [selectedMatchForAssign, setSelectedMatchForAssign] = useState(null);
+
+    const handleMatchCardClick = (match) => {
+        setSelectedMatchForAssign(match);
+        setIsAssignModalOpen(true);
+    };
+
+    const handleAssignMatch = async (assignment) => {
+        if (!window.db) {
+            window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
+            return;
+        }
+
+        try {
+            const matchRef = doc(window.db, 'matches', assignment.matchId);
+            
+            // Formátovanie času pre uloženie
+            const matchDateTime = new Date(assignment.date);
+            const [hours, minutes] = assignment.time.split(':');
+            matchDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            
+            await updateDoc(matchRef, {
+                hallId: assignment.hallId,
+                scheduledTime: Timestamp.fromDate(matchDateTime),
+                scheduledEndTime: assignment.endTime,
+                duration: assignment.duration,
+                status: 'scheduled'
+            });
+
+            window.showGlobalNotification('Zápas bol úspešne priradený do haly', 'success');
+        } catch (error) {
+            console.error('Chyba pri priradení zápasu:', error);
+            window.showGlobalNotification('Chyba pri priradení zápasu: ' + error.message, 'error');
+        }
+    };
 
     const formatDateForDisplay = (timestamp) => {
         if (!timestamp) return 'neurčené';
@@ -1572,6 +1909,13 @@ const AddMatchesApp = ({ userProfileData }) => {
             }
         }
     }, [tournamentStartDate, tournamentEndDate, tournamentDatesLoaded]);
+
+    useEffect(() => {
+        if (tournamentStartDate && tournamentEndDate) {
+            window.tournamentStartDate = tournamentStartDate;
+            window.tournamentEndDate = tournamentEndDate;
+        }
+    }, [tournamentStartDate, tournamentEndDate]);
 
     // Funkcia na výpočet celkového času zápasu pre kategóriu
     const calculateTotalMatchTime = (category) => {
@@ -2348,6 +2692,17 @@ const AddMatchesApp = ({ userProfileData }) => {
             groupName: pendingBulkDelete?.groupName,
             matchesCount: pendingBulkDelete?.matchesCount || 0
         }),
+        React.createElement(AssignMatchModal, {
+            isOpen: isAssignModalOpen,
+            onClose: () => {
+                setIsAssignModalOpen(false);
+                setSelectedMatchForAssign(null);
+            },
+            match: selectedMatchForAssign,
+            sportHalls: sportHalls,
+            categories: categories,
+            onAssign: handleAssignMatch
+        }),
         React.createElement(
             'div',
             { className: 'flex-grow flex justify-center items-start w-full' },
@@ -2491,7 +2846,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         'div',
                                         { 
                                             key: match.id,
-                                            className: 'bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow relative group'
+                                            className: 'bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow relative group',
+                                            onClick: () => handleMatchCardClick(match)
                                         },
                                         // Tlačidlo pre zmazanie (zobrazí sa pri hoveri)
                                         userProfileData?.role === 'admin' && React.createElement(
