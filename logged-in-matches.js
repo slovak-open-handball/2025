@@ -3822,16 +3822,22 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 if (tournamentStartDate && tournamentEndDate) {
                                     const startDate = new Date(tournamentStartDate);
                                     const endDate = new Date(tournamentEndDate);
-                        
+                                
                                     startDate.setHours(0, 0, 0, 0);
                                     endDate.setHours(0, 0, 0, 0);
-                                
+
                                     const currentDate = new Date(startDate);
                                     
                                     while (currentDate <= endDate) {
                                         const dateStr = currentDate.toISOString().split('T')[0];
                                         
-                                        if (daysWithMatches.has(dateStr)) {
+                                        // Kontrola, či tento deň vyhovuje filtru dňa
+                                        const matchesDayFilter = !selectedDayFilter || selectedDayFilter === dateStr;
+                                        
+                                        // Pridáme deň, ak:
+                                        // 1. Vyhovuje filtru dňa (alebo nie je filter)
+                                        // 2. Má aspoň jeden zápas vyhovujúci filtrom kategórie a skupiny
+                                        if (matchesDayFilter && daysWithMatches.has(dateStr)) {
                                             tournamentDays.push(new Date(currentDate));
                                         }
                                         
