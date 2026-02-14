@@ -3787,10 +3787,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                             { className: 'space-y-4 overflow-y-auto pr-2 flex-1' },
                             filteredSportHalls.map((hall) => {
                                 const typeConfig = typeIcons[hall.type] || { icon: 'fa-futbol', color: '#dc2626' };
-
+                        
                                 // Získame všetky zápasy pre túto halu
                                 const hallMatches = matches.filter(m => m.hallId === hall.id && m.scheduledTime);
-
+                        
                                 // Zápasy vyhovujúce filtrom kategórie a skupiny
                                 const filteredHallMatches = hallMatches.filter(match => {
                                     // Filter podľa kategórie
@@ -3803,7 +3803,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     }
                                     return true;
                                 });
-
+                        
                                 const daysWithMatches = new Set();
                                 filteredHallMatches.forEach(match => {
                                     if (match.scheduledTime) {
@@ -3822,7 +3822,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 if (tournamentStartDate && tournamentEndDate) {
                                     const startDate = new Date(tournamentStartDate);
                                     const endDate = new Date(tournamentEndDate);
-
+                        
                                     startDate.setHours(0, 0, 0, 0);
                                     endDate.setHours(0, 0, 0, 0);
                                 
@@ -3837,6 +3837,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         
                                         currentDate.setDate(currentDate.getDate() + 1);
                                     }
+                                }
+                                
+                                // Ak hala nemá žiadne dni so zápasmi po aplikovaní filtrov, nevracajte nič
+                                if (tournamentDays.length === 0) {
+                                    return null;
                                 }
                                 
                                 return React.createElement(
