@@ -3637,7 +3637,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         { className: 'p-4 bg-gray-50' },
                                         React.createElement(
                                             'div',
-                                            { className: 'flex flex-col space-y-2' },
+                                            { 
+                                                className: 'flex flex-wrap gap-2' // Zmena na flex-wrap a gap namiesto space-y
+                                            },
                                             tournamentDays.map((date, index) => {
                                                 const dateStr = date.toLocaleDateString('sk-SK', {
                                                     day: '2-digit',
@@ -3653,7 +3655,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     'div',
                                                     {
                                                         key: index,
-                                                        className: 'flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group w-full'
+                                                        className: 'flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group min-w-[280px] flex-1' // Pridaná min-width a flex-1 pre rovnomerne široké boxy
                                                     },
                                                     // Hlavička dňa s dátumom a počtom zápasov - klikateľná
                                                     React.createElement(
@@ -3668,8 +3670,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         },
                                                         React.createElement(
                                                             'div',
-                                                            { className: 'flex items-center gap-2' },
-                                                            React.createElement('i', { className: 'fa-solid fa-calendar-day text-gray-400 text-sm' }),
+                                                            { className: 'flex items-center gap-2 whitespace-nowrap' }, // Pridaný whitespace-nowrap
+                                                            React.createElement('i', { className: 'fa-solid fa-calendar-day text-gray-400 text-sm flex-shrink-0' }), // Pridaný flex-shrink-0
                                                             React.createElement(
                                                                 'span',
                                                                 { className: 'text-sm font-semibold text-gray-800' },
@@ -3682,20 +3684,20 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                 if (savedSchedule?.startTime) {
                                                                     return React.createElement(
                                                                         'span',
-                                                                        { className: 'text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full ml-2' },
-                                                                        React.createElement('i', { className: 'fa-regular fa-clock mr-1 text-xs' }),
+                                                                        { className: 'text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full ml-2 whitespace-nowrap' }, // Pridaný whitespace-nowrap
+                                                                        React.createElement('i', { className: 'fa-regular fa-clock mr-1 text-xs flex-shrink-0' }), // Pridaný flex-shrink-0
                                                                         savedSchedule.startTime
                                                                     );
                                                                 }
-                                                                return React.createElement('i', { className: 'fa-regular fa-clock text-xs text-blue-400 ml-1 opacity-0 group-hover:opacity-100 transition-opacity' });
+                                                                return React.createElement('i', { className: 'fa-regular fa-clock text-xs text-blue-400 ml-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0' }); // Pridaný flex-shrink-0
                                                             })()
                                                         ),
                                                         React.createElement(
                                                             'div',
-                                                            { className: 'flex items-center gap-2' },
+                                                            { className: 'flex items-center gap-2 flex-shrink-0' }, // Pridaný flex-shrink-0
                                                             matchesCount > 0 && React.createElement(
                                                                 'span',
-                                                                { className: 'text-xs text-gray-500' },
+                                                                { className: 'text-xs text-gray-500 whitespace-nowrap' }, // Pridaný whitespace-nowrap
                                                                 (() => {
                                                                     // Funkcia pre správne skloňovanie slova "zápas"
                                                                     if (matchesCount === 1) return `${matchesCount} zápas`;
@@ -3705,19 +3707,16 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                             ),
                                                             matchesCount > 0 && React.createElement(
                                                                 'span',
-                                                                { className: 'w-2 h-2 bg-green-500 rounded-full' }
+                                                                { className: 'w-2 h-2 bg-green-500 rounded-full flex-shrink-0' } // Pridaný flex-shrink-0
                                                             )
                                                         )
                                                     ),
                                                     
-                                                    // V časti s kartami pre dni turnaja - upravte časť so zoznamom zápasov
-                                                    // (približne riadok 3100 - zobrazenie zápasov v karte dňa)
-
                                                     // Zoznam zápasov pre tento deň - bez scrollovania, výška sa prispôsobí obsahu
                                                     matchesCount > 0 ? 
                                                         React.createElement(
                                                             'div',
-                                                            { className: 'space-y-1 text-xs' }, // Odstránené max-h a overflow-y
+                                                            { className: 'space-y-1 text-xs' },
                                                             hallMatches
                                                                 .sort((a, b) => {
                                                                     if (!a.scheduledTime) return 1;
@@ -3764,18 +3763,18 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             },
                                                                             React.createElement(
                                                                                 'div',
-                                                                                { className: 'col-span-2 flex items-center gap-1' },
-                                                                                React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs' }),
+                                                                                { className: 'col-span-2 flex items-center gap-1 whitespace-nowrap' }, // Pridaný whitespace-nowrap
+                                                                                React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs flex-shrink-0' }), // Pridaný flex-shrink-0
                                                                                 React.createElement('span', { className: 'font-medium text-blue-700' }, `${matchTime} - ${endTime}`)
                                                                             ),
                                                                             React.createElement(
                                                                                 'div',
-                                                                                { className: 'col-span-3 truncate font-medium text-gray-800' },
+                                                                                { className: 'col-span-3 truncate font-medium text-gray-800' }, // Ponechaný truncate pre dlhé názvy
                                                                                 displayMode === 'both' ? homeDisplay.name : homeDisplay
                                                                             ),
                                                                             React.createElement(
                                                                                 'div',
-                                                                                { className: 'col-span-3 truncate font-medium text-gray-800' },
+                                                                                { className: 'col-span-3 truncate font-medium text-gray-800' }, // Ponechaný truncate pre dlhé názvy
                                                                                 displayMode === 'both' ? awayDisplay.name : awayDisplay
                                                                             ),
                                                                             React.createElement(
@@ -3785,12 +3784,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             ),
                                                                             React.createElement(
                                                                                 'div',
-                                                                                { className: 'col-span-1 truncate text-gray-500 font-mono text-[10px]' },
+                                                                                { className: 'col-span-1 truncate text-gray-500 font-mono text-[10px]' }, // Ponechaný truncate pre ID
                                                                                 displayMode === 'both' ? `(${homeDisplay.id})` : ''
                                                                             ),
                                                                             React.createElement(
                                                                                 'div',
-                                                                                { className: 'col-span-1 truncate text-gray-500 font-mono text-[10px]' },
+                                                                                { className: 'col-span-1 truncate text-gray-500 font-mono text-[10px]' }, // Ponechaný truncate pre ID
                                                                                 displayMode === 'both' ? `(${awayDisplay.id})` : ''
                                                                             ),
                                                                             displayMode !== 'both' && React.createElement('div', { className: 'col-span-2' })
@@ -3802,7 +3801,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             React.createElement(
                                                                                 'button',
                                                                                 {
-                                                                                    className: 'w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md',
+                                                                                    className: 'w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0', // Pridaný flex-shrink-0
                                                                                     onClick: (e) => {
                                                                                         e.stopPropagation();
                                                                                         handleSwapClick(match);
@@ -3814,7 +3813,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             React.createElement(
                                                                                 'button',
                                                                                 {
-                                                                                    className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md',
+                                                                                    className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0', // Pridaný flex-shrink-0
                                                                                     onClick: (e) => {
                                                                                         e.stopPropagation();
                                                                                         handleUnassignMatch(match);
@@ -3830,9 +3829,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         React.createElement(
                                                             'div',
                                                             {
-                                                                className: 'w-full py-2 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-1'
+                                                                className: 'w-full py-2 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-1 whitespace-nowrap' // Pridaný whitespace-nowrap
                                                             },
-                                                            React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-xs' }),
+                                                            React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-xs flex-shrink-0' }), // Pridaný flex-shrink-0
                                                             React.createElement('span', null, 'Žiadne zápasy')
                                                         )
                                                 );
