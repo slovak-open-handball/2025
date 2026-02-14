@@ -1701,6 +1701,13 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [hallSchedules, setHallSchedules] = useState({});
     const [selectedCurrentStartTime, setSelectedCurrentStartTime] = useState(null);
 
+    const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
+    const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
+    const [selectedHallFilter, setSelectedHallFilter] = useState('');
+    const [selectedDayFilter, setSelectedDayFilter] = useState('');
+    const [availableGroupsForFilter, setAvailableGroupsForFilter] = useState([]);
+    const [availableDays, setAvailableDays] = useState([]);
+
     const loadHallSchedules = () => {
         if (!window.db) return;
 
@@ -1824,6 +1831,51 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
         window.location.hash = hash;
     };
+
+    // Aktualizácia dostupných skupín pre filter pri zmene kategórie
+    useEffect(() => {
+        if (selectedCategoryFilter && groupsByCategory[selectedCategoryFilter]) {
+            // Zoradenie skupín podľa abecedy
+            const sortedGroups = [...groupsByCategory[selectedCategoryFilter]].sort((a, b) => 
+                a.name.localeCompare(b.name)
+            );
+            setAvailableGroupsForFilter(sortedGroups);
+        } else {
+            setAvailableGroupsForFilter([]);
+        }
+    }, [selectedCategoryFilter, groupsByCategory]);
+    
+    // Generovanie dostupných dní pre filter
+    useEffect(() => {
+        if (tournamentStartDate && tournamentEndDate) {
+            const days = [];
+            const startDate = new Date(tournamentStartDate);
+            const endDate = new Date(tournamentEndDate);
+            
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(0, 0, 0, 0);
+            
+            const currentDate = new Date(startDate);
+            
+            while (currentDate <= endDate) {
+                const dateStr = currentDate.toISOString().split('T')[0];
+                const displayDate = currentDate.toLocaleDateString('sk-SK', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+                
+                days.push({
+                    value: dateStr,
+                    label: displayDate
+                });
+                
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            
+            setAvailableDays(days);
+        }
+    }, [tournamentStartDate, tournamentEndDate]);
 
     // Načítanie režimu zobrazenia pri zmene URL (ak používateľ zmení URL manuálne)
     useEffect(() => {
@@ -3266,57 +3318,164 @@ const AddMatchesApp = ({ userProfileData }) => {
                 'div',
                 { className: 'w-full bg-white rounded-xl shadow-xl p-8 mx-4' },
                 
-                // Ovládacie prvky - už bez prepínača
+                // Ovládacie prvky - filtre a prepínač
                 React.createElement(
                     'div',
-                    { className: 'flex items-center gap-3 flex-wrap justify-center' },
-                    // Nový prepínač s tromi možnosťami
+                    { className: 'flex flex-col gap-4 mb-4' },
+                    
+                    // Filtre
                     React.createElement(
                         'div',
-                        { className: 'flex items-center gap-2 bg-gray-100 p-1 rounded-lg' },
+                        { className: 'flex flex-wrap items-center gap-4 bg-gray-50 p-4 rounded-lg border border-gray-200' },
+                        
+                        // Filter Kategória
                         React.createElement(
-                            'button',
-                            { 
-                                className: `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                                    displayMode === 'name' 
-                                        ? 'bg-blue-600 text-white shadow-sm' 
-                                        : 'text-gray-600 hover:bg-gray-200'
-                                }`,
-                                onClick: () => handleDisplayModeChange('name')
-                            },
-                            'Názvy'
+                            'div',
+                            { className: 'flex items-center gap-2' },
+                            React.createElement('label', { className: 'text-sm font-medium text-gray-700 whitespace-nowrap' }, 'Kategória:'),
+                            React.createElement(
+                                'select',
+                                {
+                                    value: selectedCategoryFilter,
+                                    onChange: (e) => {
+                                        setSelectedCategoryFilter(e.target.value);
+                                        setSelectedGroupFilter(''); // Reset skupiny pri zmene kategórie
+                                    },
+                                    className: 'px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[150px]'
+                                },
+                                React.createElement('option', { value: '' }, 'Všetky kategórie'),
+                                categories.map(cat => 
+                                    React.createElement('option', { key: cat.id, value: cat.id }, cat.name)
+                                )
+                            )
                         ),
+                        
+                        // Filter Skupina (zablokovaný ak nie je vybratá kategória)
                         React.createElement(
-                            'button',
-                            { 
-                                className: `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                                    displayMode === 'id' 
-                                        ? 'bg-blue-600 text-white shadow-sm' 
-                                        : 'text-gray-600 hover:bg-gray-200'
-                                }`,
-                                onClick: () => handleDisplayModeChange('id')
-                            },
-                            'ID'
+                            'div',
+                            { className: 'flex items-center gap-2' },
+                            React.createElement('label', { className: 'text-sm font-medium text-gray-700 whitespace-nowrap' }, 'Skupina:'),
+                            React.createElement(
+                                'select',
+                                {
+                                    value: selectedGroupFilter,
+                                    onChange: (e) => setSelectedGroupFilter(e.target.value),
+                                    disabled: !selectedCategoryFilter,
+                                    className: `px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[150px] ${!selectedCategoryFilter ? 'bg-gray-100 cursor-not-allowed' : ''}`
+                                },
+                                React.createElement('option', { value: '' }, 'Všetky skupiny'),
+                                availableGroupsForFilter.map(group => 
+                                    React.createElement('option', { key: group.name, value: group.name }, group.name)
+                                )
+                            )
                         ),
+                        
+                        // Filter Hala
+                        React.createElement(
+                            'div',
+                            { className: 'flex items-center gap-2' },
+                            React.createElement('label', { className: 'text-sm font-medium text-gray-700 whitespace-nowrap' }, 'Hala:'),
+                            React.createElement(
+                                'select',
+                                {
+                                    value: selectedHallFilter,
+                                    onChange: (e) => setSelectedHallFilter(e.target.value),
+                                    className: 'px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[150px]'
+                                },
+                                React.createElement('option', { value: '' }, 'Všetky haly'),
+                                sportHalls.map(hall => 
+                                    React.createElement('option', { key: hall.id, value: hall.id }, hall.name)
+                                )
+                            )
+                        ),
+                        
+                        // Filter Deň
+                        React.createElement(
+                            'div',
+                            { className: 'flex items-center gap-2' },
+                            React.createElement('label', { className: 'text-sm font-medium text-gray-700 whitespace-nowrap' }, 'Deň:'),
+                            React.createElement(
+                                'select',
+                                {
+                                    value: selectedDayFilter,
+                                    onChange: (e) => setSelectedDayFilter(e.target.value),
+                                    className: 'px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[150px]'
+                                },
+                                React.createElement('option', { value: '' }, 'Všetky dni'),
+                                availableDays.map(day => 
+                                    React.createElement('option', { key: day.value, value: day.value }, day.label)
+                                )
+                            )
+                        ),
+                        
+                        // Tlačidlo pre reset filtrov
                         React.createElement(
                             'button',
-                            { 
-                                className: `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                                    displayMode === 'both' 
-                                        ? 'bg-blue-600 text-white shadow-sm' 
-                                        : 'text-gray-600 hover:bg-gray-200'
-                                }`,
-                                onClick: () => handleDisplayModeChange('both')
+                            {
+                                onClick: () => {
+                                    setSelectedCategoryFilter('');
+                                    setSelectedGroupFilter('');
+                                    setSelectedHallFilter('');
+                                    setSelectedDayFilter('');
+                                },
+                                className: 'px-3 py-1.5 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors ml-auto'
                             },
-                            'Oboje'
+                            React.createElement('i', { className: 'fa-solid fa-rotate-left mr-1' }),
+                            'Reset'
                         )
                     ),
                     
-                    generationInProgress && React.createElement(
+                    // Prepínač zobrazenia
+                    React.createElement(
                         'div',
-                        { className: 'flex items-center gap-2 text-blue-600 bg-blue-50 px-4 py-2 rounded-lg' },
-                        React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600' }),
-                        React.createElement('span', { className: 'text-sm font-medium' }, 'Generujem zápasy...')
+                        { className: 'flex items-center gap-3 flex-wrap justify-center' },
+                        React.createElement(
+                            'div',
+                            { className: 'flex items-center gap-2 bg-gray-100 p-1 rounded-lg' },
+                            React.createElement(
+                                'button',
+                                { 
+                                    className: `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                                        displayMode === 'name' 
+                                            ? 'bg-blue-600 text-white shadow-sm' 
+                                            : 'text-gray-600 hover:bg-gray-200'
+                                    }`,
+                                    onClick: () => handleDisplayModeChange('name')
+                                },
+                                'Názvy'
+                            ),
+                            React.createElement(
+                                'button',
+                                { 
+                                    className: `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                                        displayMode === 'id' 
+                                            ? 'bg-blue-600 text-white shadow-sm' 
+                                            : 'text-gray-600 hover:bg-gray-200'
+                                    }`,
+                                    onClick: () => handleDisplayModeChange('id')
+                                },
+                                'ID'
+                            ),
+                            React.createElement(
+                                'button',
+                                { 
+                                    className: `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                                        displayMode === 'both' 
+                                            ? 'bg-blue-600 text-white shadow-sm' 
+                                            : 'text-gray-600 hover:bg-gray-200'
+                                    }`,
+                                    onClick: () => handleDisplayModeChange('both')
+                                },
+                                'Oboje'
+                            )
+                        ),
+                        
+                        generationInProgress && React.createElement(
+                            'div',
+                            { className: 'flex items-center gap-2 text-blue-600 bg-blue-50 px-4 py-2 rounded-lg' },
+                            React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600' }),
+                            React.createElement('span', { className: 'text-sm font-medium' }, 'Generujem zápasy...')
+                        )
                     )
                 ),
                 
