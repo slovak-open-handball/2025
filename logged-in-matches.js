@@ -1294,6 +1294,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         }, 100);
     };
 
+/*
     // Funkcia na výpis používateľov pre každý tím
     const logTeamOwners = async () => {
         if (!window.db || !teamData.allTeams) return;
@@ -1400,6 +1401,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         console.log('=== KONIEC VLASTNÍKOV TÍMOV ===');
         console.log('Celkový počet spracovaných tímov:', teamData.allTeams.length);
     };
+*/    
 
     // Funkcia na načítanie používateľov, ktorí vytvorili zápasy
     const loadUsersWithMatches = async () => {
