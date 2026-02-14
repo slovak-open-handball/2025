@@ -3107,7 +3107,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         { className: 'p-4 bg-gray-50' },
                                         React.createElement(
                                             'div',
-                                            { className: 'flex flex-col space-y-2' },  // Zmena z grid na flex-col
+                                            { className: 'flex flex-col space-y-2' },
                                             tournamentDays.map((date, index) => {
                                                 const dateStr = date.toLocaleDateString('sk-SK', {
                                                     day: '2-digit',
@@ -3124,6 +3124,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     {
                                                         key: index,
                                                         className: 'flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group w-full'
+                                                        // Odstránený onClick z celého dňa
                                                     },
                                                     // Hlavička dňa s dátumom a počtom zápasov
                                                     React.createElement(
@@ -3232,18 +3233,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                             })
                                                         ) :
                                                         React.createElement(
-                                                            'button',
+                                                            'div',  // Zmena z button na div - žiadna interakcia pre prázdny deň
                                                             {
-                                                                className: 'w-full py-2 text-xs text-gray-400 hover:text-blue-500 transition-colors flex items-center justify-center gap-1 bg-gray-50 rounded border border-dashed border-gray-300 hover:border-blue-300',
-                                                                onClick: (e) => {
-                                                                    e.stopPropagation();
-                                                                    // Tu môžete otvoriť modálne okno pre priradenie nového zápasu
-                                                                    console.log(`Pridať zápas pre halu ${hall.name} v deň ${dateStr}`);
-                                                                    window.showGlobalNotification(`Funkcia pre pridanie zápasu v deň ${dateStr}`, 'info');
-                                                                }
+                                                                className: 'w-full py-2 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-1'
                                                             },
-                                                            React.createElement('i', { className: 'fa-solid fa-plus text-xs' }),
-                                                            React.createElement('span', null, 'Pridať zápas')
+                                                            React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-xs' }),
+                                                            React.createElement('span', null, 'Žiadne zápasy')
                                                         )
                                                 );
                                             })
