@@ -413,16 +413,6 @@ const ConfirmExistingMatchModal = ({ isOpen, onClose, onConfirm, match, homeTeam
     );
 };
 
-const handleDeleteClick = (match) => {
-    setSelectedMatchForAction(match);
-    setIsDeleteModalOpen(true);
-};
-
-const handleSwapClick = (match) => {
-    setSelectedMatchForAction(match);
-    setIsSwapModalOpen(true);
-};
-
 // Samotné vykonanie zmazania
 const confirmDelete = async () => {
     if (!selectedMatchForAction) return;
@@ -677,6 +667,16 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
     const [selectedMatchForAction, setSelectedMatchForAction] = useState(null);
+
+    const handleDeleteClick = (match) => {
+        setSelectedMatchForAction(match);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleSwapClick = (match) => {
+        setSelectedMatchForAction(match);
+        setIsSwapModalOpen(true);
+    };    
 
     // Funkcia na získanie názvu tímu podľa ID alebo priamo z objektu
     const getTeamName = (team) => {
