@@ -1290,9 +1290,11 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
                         },
                         React.createElement('option', { value: '' }, '-- Vyberte športovú halu --'),
-                        sportHalls.map(hall => 
-                            React.createElement('option', { key: hall.id, value: hall.id }, hall.name)
-                        )
+                        [...sportHalls]
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .map(hall => 
+                                React.createElement('option', { key: hall.id, value: hall.id }, hall.name)
+                            )
                     )
                 ),
 
