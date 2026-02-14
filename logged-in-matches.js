@@ -1874,14 +1874,16 @@ const AddMatchesApp = ({ userProfileData }) => {
             window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
             return;
         }
-
+    
         try {
             const matchRef = doc(window.db, 'matches', assignment.matchId);
             
-            // Formátovanie času pre uloženie
-            const matchDateTime = new Date(assignment.date);
-            const [hours, minutes] = assignment.time.split(':');
-            matchDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            // SPRÁVNE vytvorenie dátumu - rozdelíme YYYY-MM-DD na časti
+            const [year, month, day] = assignment.date.split('-').map(Number);
+            const [hours, minutes] = assignment.time.split(':').map(Number);
+            
+            // Vytvoríme Date objekt v lokálnom časovom pásme
+            const matchDateTime = new Date(year, month - 1, day, hours, minutes, 0);
             
             await updateDoc(matchRef, {
                 hallId: assignment.hallId,
@@ -1890,7 +1892,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 duration: assignment.duration,
                 status: 'scheduled'
             });
-
+    
             window.showGlobalNotification('Zápas bol úspešne priradený do haly', 'success');
         } catch (error) {
             console.error('Chyba pri priradení zápasu:', error);
