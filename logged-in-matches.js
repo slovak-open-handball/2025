@@ -3867,7 +3867,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                             React.createElement(
                                                                 'div',
                                                                 {
-                                                                                    className: 'w-full py-2 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-1 whitespace-nowrap',
+                                                                    className: 'w-full py-2 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-1 whitespace-nowrap',
                                                                     style: { 
                                                                         minWidth: '420px',
                                                                         width: 'fit-content'
