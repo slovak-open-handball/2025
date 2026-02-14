@@ -3834,10 +3834,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         // Kontrola, či tento deň vyhovuje filtru dňa
                                         const matchesDayFilter = !selectedDayFilter || selectedDayFilter === dateStr;
                                         
-                                        // Pridáme deň, ak:
-                                        // 1. Vyhovuje filtru dňa (alebo nie je filter)
-                                        // 2. Má aspoň jeden zápas vyhovujúci filtrom kategórie a skupiny
-                                        if (matchesDayFilter && daysWithMatches.has(dateStr)) {
+                                        // BEZ FILTRA DŇA: Pridáme všetky dni turnaja
+                                        // S FILTROM DŇA: Pridáme len vybraný deň (bez ohľadu na to, či má zápasy)
+                                        if (matchesDayFilter) {
                                             tournamentDays.push(new Date(currentDate));
                                         }
                                         
