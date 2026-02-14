@@ -921,7 +921,10 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     const [categoryDetails, setCategoryDetails] = useState(null);
     const [matchDuration, setMatchDuration] = useState(0);
     const [matchEndTime, setMatchEndTime] = useState('');
+    const [hallStartTime, setHallStartTime] = useState(null);
+    const [timeError, setTimeError] = useState('');
 
+    // Načítanie času začiatku pre vybranú halu a deň
     useEffect(() => {
         const loadHallStartTime = async () => {
             if (selectedHallId && selectedDate && window.db) {
@@ -1031,10 +1034,22 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         }
     }, []);
 
-    // Výpočet času ukončenia zápasu
+    // Výpočet času ukončenia zápasu a kontrola času začiatku
     useEffect(() => {
-        if (selectedDate && selectedTime && matchDuration > 0) {
+        if (selectedDate && selectedTime && matchDuration > 0 && hallStartTime) {
             const [hours, minutes] = selectedTime.split(':').map(Number);
+            const [startHours, startMinutes] = hallStartTime.split(':').map(Number);
+            
+            // Porovnáme časy (prepočítame na minúty od polnoci)
+            const selectedMinutes = hours * 60 + minutes;
+            const hallStartMinutes = startHours * 60 + startMinutes;
+            
+            if (selectedMinutes < hallStartMinutes) {
+                setTimeError(`Čas začiatku zápasu nemôže byť skôr ako ${hallStartTime} (čas začiatku prvého zápasu v tejto hale)`);
+            } else {
+                setTimeError('');
+            }
+            
             const startDateTime = new Date(selectedDate);
             startDateTime.setHours(hours, minutes, 0, 0);
         
@@ -1047,8 +1062,13 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             setMatchEndTime(`${endHours}:${endMinutes}`);
         } else {
             setMatchEndTime('');
+            if (!hallStartTime && selectedHallId && selectedDate) {
+                setTimeError('Pre tento deň nie je nastavený čas začiatku. Najprv ho nastavte kliknutím na hlavičku dňa.');
+            } else {
+                setTimeError('');
+            }
         }
-    }, [selectedDate, selectedTime, matchDuration]);
+    }, [selectedDate, selectedTime, matchDuration, hallStartTime]);
 
     if (!isOpen || !match) return null;
 
@@ -1142,7 +1162,10 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         'select',
                         {
                             value: selectedHallId,
-                            onChange: (e) => setSelectedHallId(e.target.value),
+                            onChange: (e) => {
+                                setSelectedHallId(e.target.value);
+                                setSelectedTime(''); // Resetujeme čas pri zmene haly
+                            },
                             className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
                         },
                         React.createElement('option', { value: '' }, '-- Vyberte športovú halu --'),
@@ -1163,7 +1186,10 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         'select',
                         {
                             value: selectedDate,
-                            onChange: (e) => setSelectedDate(e.target.value),
+                            onChange: (e) => {
+                                setSelectedDate(e.target.value);
+                                setSelectedTime(''); // Resetujeme čas pri zmene dňa
+                            },
                             className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black',
                             disabled: availableDates.length === 0
                         },
@@ -1185,6 +1211,15 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     )
                 ),
 
+                // Zobrazenie času začiatku pre halu (ak existuje)
+                selectedHallId && selectedDate && hallStartTime && React.createElement(
+                    'div',
+                    { className: 'text-sm bg-blue-50 p-2 rounded-lg border border-blue-200' },
+                    React.createElement('i', { className: 'fa-regular fa-clock text-blue-600 mr-1' }),
+                    React.createElement('span', { className: 'font-medium text-blue-700' }, 'Čas začiatku prvého zápasu v tejto hale: '),
+                    React.createElement('span', { className: 'font-bold text-blue-800' }, hallStartTime)
+                ),
+
                 // Výber času
                 React.createElement(
                     'div',
@@ -1196,20 +1231,30 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         type: 'time',
                         value: selectedTime,
                         onChange: (e) => setSelectedTime(e.target.value),
-                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black',
-                        step: '60'
+                        className: `w-full px-3 py-2 border ${timeError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black`,
+                        step: '60',
+                        min: hallStartTime || undefined // Nastavíme minimálny čas ak existuje
                     }),
                     
-                    // Zobrazenie času ukončenia
-                    matchEndTime && React.createElement(
+                    // Zobrazenie chybovej hlášky
+                    timeError && React.createElement(
                         'p',
-                        { className: 'text-xs text-gray-500 mt-1' },
+                        { className: 'text-xs text-red-500 mt-1 flex items-center gap-1' },
+                        React.createElement('i', { className: 'fa-solid fa-exclamation-triangle' }),
+                        timeError
+                    ),
+                    
+                    // Zobrazenie času ukončenia
+                    matchEndTime && !timeError && React.createElement(
+                        'p',
+                        { className: 'text-xs text-green-600 mt-1' },
+                        React.createElement('i', { className: 'fa-regular fa-circle-check mr-1' }),
                         `Zápas skončí o ${matchEndTime}`
                     )
                 ),
 
                 // Zhrnutie
-                selectedHallId && selectedDate && selectedTime && React.createElement(
+                selectedHallId && selectedDate && selectedTime && !timeError && React.createElement(
                     'div',
                     { className: 'mt-4 p-3 bg-green-50 border border-green-200 rounded-lg' },
                     React.createElement(
@@ -1236,6 +1281,12 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         React.createElement('p', null, 
                             React.createElement('span', { className: 'font-medium' }, 'Čas: '),
                             `${selectedTime} - ${matchEndTime} (${matchDuration} min)`
+                        ),
+                        hallStartTime && React.createElement(
+                            'p',
+                            { className: 'text-xs text-green-600 mt-1' },
+                            React.createElement('i', { className: 'fa-regular fa-clock mr-1' }),
+                            `Čas zápasu je v poriadku (začína o ${selectedTime}, čo je po čase začiatku ${hallStartTime})`
                         )
                     )
                 )
@@ -1257,7 +1308,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     'button',
                     {
                         onClick: () => {
-                            if (selectedHallId && selectedDate && selectedTime) {
+                            if (selectedHallId && selectedDate && selectedTime && !timeError) {
                                 onAssign({
                                     matchId: match.id,
                                     hallId: selectedHallId,
@@ -1269,9 +1320,9 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                                 onClose();
                             }
                         },
-                        disabled: !selectedHallId || !selectedDate || !selectedTime,
+                        disabled: !selectedHallId || !selectedDate || !selectedTime || !!timeError,
                         className: `px-4 py-2 text-white rounded-lg transition-colors ${
-                            selectedHallId && selectedDate && selectedTime
+                            selectedHallId && selectedDate && selectedTime && !timeError
                                 ? 'bg-green-600 hover:bg-green-700 cursor-pointer' 
                                 : 'bg-gray-400 cursor-not-allowed'
                         }`
