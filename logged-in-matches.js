@@ -3245,10 +3245,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                 .map((match, idx) => {
                                                                     // Formátovanie času zápasu
                                                                     let matchTime = '--:--';
+                                                                    let endTime = '--:--';
                                                                     if (match.scheduledTime) {
                                                                         try {
                                                                             const date = match.scheduledTime.toDate();
                                                                             matchTime = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+                                                                            endTime = match.scheduledEndTime || '--:--';
                                                                         } catch (e) {
                                                                             console.error('Chyba pri formátovaní času:', e);
                                                                         }
@@ -3280,7 +3282,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 'div',
                                                                                 { className: 'col-span-2 flex items-center gap-1' },
                                                                                 React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs' }),
-                                                                                React.createElement('span', { className: 'font-medium text-blue-700' }, matchTime)
+                                                                                React.createElement('span', { className: 'font-medium text-blue-700' }, `${matchTime} - ${endTime}`)
                                                                             ),
                                                                             
                                                                             // Domáci tím - názov
@@ -3297,10 +3299,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 displayMode === 'both' ? awayDisplay.name : awayDisplay
                                                                             ),
                                                                             
-                                                                            // "vs" v strede
+                                                                            // "vs" v strede (prázdne, len pre zachovanie štruktúry)
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { className: 'col-span-1 text-center text-gray-400' },
+                                                                                ''
                                                                             ),
                                                                             
                                                                             // ID domáceho tímu (ak je režim Oboje)
