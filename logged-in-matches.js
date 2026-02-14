@@ -1511,9 +1511,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                 setTeamData(window.__teamManagerData);
                 
                 // Vypíšeme vlastníkov tímov po krátkom oneskorení (aby sa stihli načítať všetky dáta)
-                setTimeout(() => {
-                    logTeamOwners();
-                }, 1000);
+//                setTimeout(() => {
+//                    logTeamOwners();
+//                }, 1000);
             }
             
             const unsubscribe = window.teamManager.subscribe((data) => {
@@ -1521,9 +1521,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                 setTeamData(data);
                 
                 // Vypíšeme vlastníkov tímov po aktualizácii
-                setTimeout(() => {
-                    logTeamOwners();
-                }, 1000);
+//                setTimeout(() => {
+//                    logTeamOwners();
+//                }, 1000);
             });
             
             return () => {
@@ -1538,9 +1538,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                 console.log('Našiel som window.__teamManagerData, počet tímov:', window.__teamManagerData.allTeams?.length);
                 setTeamData(window.__teamManagerData);
                 
-                setTimeout(() => {
-                    logTeamOwners();
-                }, 1000);
+//                setTimeout(() => {
+//                    logTeamOwners();
+//                }, 1000);
             }
         }
     }, []);
