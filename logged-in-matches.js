@@ -1727,20 +1727,29 @@ const AddMatchesApp = ({ userProfileData }) => {
     const loadFiltersFromURL = () => {
         const params = new URLSearchParams(window.location.search);
     
+        // Načítame názvy z URL
+        const categoryName = params.get('category') || '';
+        const groupName = params.get('group') || '';
+        const hallName = params.get('hall') || '';
+        const day = params.get('day') || '';
+
+        // Nájdeme ID podľa názvu
+        const categoryId = categories.find(c => c.name === categoryName)?.id || '';
+        const hallId = sportHalls.find(h => h.name === hallName)?.id || '';
+
         return {
-            category: params.get('category') || '',
-            group: params.get('group') || '',
-            hall: params.get('hall') || '',
-            day: params.get('day') || ''
+            category: categoryId,
+            group: groupName, // skupina ostáva podľa názvu
+            hall: hallId,
+            day: day
         };
     };
 
     // Načítanie filtrov pri inicializácii
-    const initialFilters = loadFiltersFromURL();
-    const [selectedCategoryFilter, setSelectedCategoryFilter] = useState(initialFilters.category);
-    const [selectedGroupFilter, setSelectedGroupFilter] = useState(initialFilters.group);
-    const [selectedHallFilter, setSelectedHallFilter] = useState(initialFilters.hall);
-    const [selectedDayFilter, setSelectedDayFilter] = useState(initialFilters.day);
+    const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
+    const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
+    const [selectedHallFilter, setSelectedHallFilter] = useState('');
+    const [selectedDayFilter, setSelectedDayFilter] = useState('');
 
     // Nahraďte existujúcu funkciu getFilteredMatches touto:
     const getFilteredMatches = (matchesToFilter, ignoreHallFilter = false, ignoreDayFilter = false) => {
@@ -1785,12 +1794,32 @@ const AddMatchesApp = ({ userProfileData }) => {
     // Funkcia na aktualizáciu URL s aktuálnymi filtrami
     const updateURLWithFilters = (filters) => {
         const params = new URLSearchParams();
-    
-        if (filters.category) params.set('category', filters.category);
-        if (filters.group) params.set('group', filters.group);
-        if (filters.hall) params.set('hall', filters.hall);
-        if (filters.day) params.set('day', filters.day);
-    
+
+        // Nájdeme názov kategórie podľa ID
+        if (filters.category) {
+            const category = categories.find(c => c.id === filters.category);
+            if (category) {
+                params.set('category', category.name);
+            }
+        }
+
+        // Skupinu ukladáme priamo (už je to názov)
+        if (filters.group) {
+            params.set('group', filters.group);
+        }
+
+        // Nájdeme názov haly podľa ID
+        if (filters.hall) {
+            const hall = sportHalls.find(h => h.id === filters.hall);
+            if (hall) {
+                params.set('hall', hall.name);
+            }
+        }
+
+        if (filters.day) {
+            params.set('day', filters.day);
+        }
+
         const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}${window.location.hash}`;
         window.history.replaceState({}, '', newUrl);
     };
@@ -1945,7 +1974,15 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     }, [selectedCategoryFilter, groupsByCategory]);
 
-    
+    useEffect(() => {
+        if (categories.length > 0 && sportHalls.length > 0) {
+            const filters = loadFiltersFromURL();
+            setSelectedCategoryFilter(filters.category);
+            setSelectedGroupFilter(filters.group);
+            setSelectedHallFilter(filters.hall);
+            setSelectedDayFilter(filters.day);
+        }
+    }, [categories, sportHalls]);
     
     // Generovanie dostupných dní pre filter
     useEffect(() => {
