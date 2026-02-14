@@ -3938,7 +3938,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     if (match.scheduledTime) {
                                         try {
                                             const matchDate = match.scheduledTime.toDate();
-                                            const dateStr = getLocalDateStr(currentDate);
+                                            const dateStr = getLocalDateStr(matchDate);
                                             daysWithMatches.add(dateStr);
                                         } catch (e) {
                                             console.error('Chyba pri spracovaní dátumu zápasu:', e);
