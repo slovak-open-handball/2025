@@ -975,7 +975,17 @@ const AddMatchesApp = ({ userProfileData }) => {
     // Funkcia na získanie ID tímu (ak existuje)
     const getTeamId = (team) => {
         if (!team) return null;
-        return team.id || null;
+    
+        // Ak má tím priamo id, vrátime ho
+        if (team.id) return team.id;
+    
+        // Ak nemá id, skúsime vytvoriť z userId a teamName
+        if (team.userId && team.teamName) {
+            return `${team.userId}-${team.teamName}`;
+        }
+        
+        // Fallback
+        return null;
     };
 
     // Funkcia na získanie názvu tímu podľa ID (pre existujúce zápasy)
@@ -1567,10 +1577,22 @@ const AddMatchesApp = ({ userProfileData }) => {
         const matches = [];
         
         // Pre každý tím vytvoríme identifikátor (ID)
-        const teamIdentifiers = teams.map(t => ({
-            id: getTeamId(t),  // Toto by malo vrátiť celé ID (userId-názov)
-            name: getTeamName(t)
-        }));
+        const teamIdentifiers = teams.map(t => {
+            // Ak tím nemá ID, vytvoríme ho z kategórie a názvu
+            let teamId = t.id;
+            
+            // Ak nemáme ID, skúsime vytvoriť z dostupných údajov
+            if (!teamId && t.category && t.teamName) {
+                // Tu by bolo ideálne mať userId, ale ak nie je, použijeme aspoň názov
+                // Toto je fallback - malo by sa to stať len v núdzi
+                teamId = `unknown-${t.teamName}`;
+            }
+            
+            return {
+                id: teamId,
+                name: t.teamName || t.name || 'Neznámy tím'
+            };
+        });
         
         console.log('Generujem zápasy pre tímy:', teamIdentifiers);
         
@@ -1578,7 +1600,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             // Každý s každým doma/vonku v rámci skupiny
             for (let i = 0; i < teamIdentifiers.length; i++) {
                 for (let j = 0; j < teamIdentifiers.length; j++) {
-                    if (i !== j) {
+                    if (i !== j && teamIdentifiers[i].id && teamIdentifiers[j].id) {
                         matches.push({
                             homeTeamId: teamIdentifiers[i].id,  // Používame celé ID
                             awayTeamId: teamIdentifiers[j].id,  // Používame celé ID
@@ -1590,10 +1612,12 @@ const AddMatchesApp = ({ userProfileData }) => {
             // Jedinečné dvojice (každý s každým raz) v rámci skupiny
             for (let i = 0; i < teamIdentifiers.length; i++) {
                 for (let j = i + 1; j < teamIdentifiers.length; j++) {
-                    matches.push({
-                        homeTeamId: teamIdentifiers[i].id,  // Používame celé ID
-                        awayTeamId: teamIdentifiers[j].id,  // Používame celé ID
-                    });
+                    if (teamIdentifiers[i].id && teamIdentifiers[j].id) {
+                        matches.push({
+                            homeTeamId: teamIdentifiers[i].id,  // Používame celé ID
+                            awayTeamId: teamIdentifiers[j].id,  // Používame celé ID
+                        });
+                    }
                 }
             }
         }
