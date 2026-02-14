@@ -931,16 +931,27 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     const formatDateForDisplay = (timestamp) => {
         if (!timestamp) return 'neurčené';
+    
         try {
+            // Ak je to Firebase Timestamp, konvertujeme na Date
             const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-            return date.toLocaleString('sk-SK', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
+        
+            // Skontrolujeme, či je dátum platný
+            if (isNaN(date.getTime())) {
+                return 'neplatný dátum';
+            }
+        
+            // Formátujeme v lokálnom časovom pásme (Slovensko)
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const year = date.getFullYear();
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+        
+            return `${day}. ${month}. ${year} ${hours}:${minutes}`;
+            
         } catch (e) {
+            console.error('Chyba pri formátovaní dátumu:', e);
             return 'neplatný dátum';
         }
     };
@@ -1526,6 +1537,21 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     }, [existingMatchesToProcess, isExistingMatchModalOpen, currentMatchIndex]);
 
+    useEffect(() => {
+        if (tournamentDatesLoaded) {
+            console.log("tournamentStartDate (v stave):", tournamentStartDate);
+            console.log("tournamentEndDate (v stave):", tournamentEndDate);
+        
+            // Ukážka formátovania pre zobrazenie
+            if (tournamentStartDate) {
+                console.log("Formátovaný začiatok:", formatDateForDisplay(tournamentStartDate));
+            }
+            if (tournamentEndDate) {
+                console.log("Formátovaný koniec:", formatDateForDisplay(tournamentEndDate));
+            }
+        }
+    }, [tournamentStartDate, tournamentEndDate, tournamentDatesLoaded]);
+
     // Funkcia na výpočet celkového času zápasu pre kategóriu
     const calculateTotalMatchTime = (category) => {
         if (!category) return { playingTime: 0, breaksBetweenPeriods: 0, totalTimeWithMatchBreak: 0 };
@@ -2045,23 +2071,56 @@ const AddMatchesApp = ({ userProfileData }) => {
                     console.log("Dáta z databázy:", data);
             
                     if (data.tournamentStart) {
-                        console.log("Tournament start (Timestamp):", data.tournamentStart);
-                        console.log("Tournament start (Date):", data.tournamentStart.toDate());
-                        console.log("Tournament start (ISO):", data.tournamentStart.toDate().toISOString());
-                        console.log("Tournament start (formatted):", data.tournamentStart.toDate().toISOString().slice(0, 16));
+                        // Firebase Timestamp
+                        const startTimestamp = data.tournamentStart;
+                        console.log("Tournament start (Firestore Timestamp):", startTimestamp);
                         
-                        setTournamentStartDate(data.tournamentStart.toDate().toISOString().slice(0, 16));
+                        // Konvertujeme na Date (automaticky zohľadní UTC)
+                        const startDate = startTimestamp.toDate();
+                        console.log("Tournament start (Date objekt):", startDate);
+                        console.log("Tournament start (UTC string):", startDate.toUTCString());
+                        console.log("Tournament start (ISO string):", startDate.toISOString());
+                        console.log("Tournament start (lokálny čas):", startDate.toString());
+                        
+                        // Uložíme pre input type="datetime-local" (formát YYYY-MM-DDTHH:MM)
+                        // Toto je v lokálnom časovom pásme
+                        const year = startDate.getFullYear();
+                        const month = (startDate.getMonth() + 1).toString().padStart(2, '0');
+                        const day = startDate.getDate().toString().padStart(2, '0');
+                        const hours = startDate.getHours().toString().padStart(2, '0');
+                        const minutes = startDate.getMinutes().toString().padStart(2, '0');
+                        
+                        const formattedForInput = `${year}-${month}-${day}T${hours}:${minutes}`;
+                        console.log("Tournament start (pre input):", formattedForInput);
+                        
+                        setTournamentStartDate(formattedForInput);
                     } else {
                         console.log("Tournament start nie je nastavený");
                     }
                     
                     if (data.tournamentEnd) {
-                        console.log("Tournament end (Timestamp):", data.tournamentEnd);
-                        console.log("Tournament end (Date):", data.tournamentEnd.toDate());
-                        console.log("Tournament end (ISO):", data.tournamentEnd.toDate().toISOString());
-                        console.log("Tournament end (formatted):", data.tournamentEnd.toDate().toISOString().slice(0, 16));
+                        // Firebase Timestamp
+                        const endTimestamp = data.tournamentEnd;
+                        console.log("Tournament end (Firestore Timestamp):", endTimestamp);
                         
-                        setTournamentEndDate(data.tournamentEnd.toDate().toISOString().slice(0, 16));
+                        // Konvertujeme na Date (automaticky zohľadní UTC)
+                        const endDate = endTimestamp.toDate();
+                        console.log("Tournament end (Date objekt):", endDate);
+                        console.log("Tournament end (UTC string):", endDate.toUTCString());
+                        console.log("Tournament end (ISO string):", endDate.toISOString());
+                        console.log("Tournament end (lokálny čas):", endDate.toString());
+                        
+                        // Uložíme pre input type="datetime-local" (formát YYYY-MM-DDTHH:MM)
+                        const year = endDate.getFullYear();
+                        const month = (endDate.getMonth() + 1).toString().padStart(2, '0');
+                        const day = endDate.getDate().toString().padStart(2, '0');
+                        const hours = endDate.getHours().toString().padStart(2, '0');
+                        const minutes = endDate.getMinutes().toString().padStart(2, '0');
+                        
+                        const formattedForInput = `${year}-${month}-${day}T${hours}:${minutes}`;
+                        console.log("Tournament end (pre input):", formattedForInput);
+                        
+                        setTournamentEndDate(formattedForInput);
                     } else {
                         console.log("Tournament end nie je nastavený");
                     }
