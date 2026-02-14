@@ -1382,6 +1382,27 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [selectedHallForDay, setSelectedHallForDay] = useState(null);
     const [selectedDateForHall, setSelectedDateForHall] = useState(null);
     const [selectedDateStrForHall, setSelectedDateStrForHall] = useState('');
+    const [hallSchedules, setHallSchedules] = useState({});
+
+    const loadHallSchedules = () => {
+        if (!window.db) return;
+
+        const schedulesRef = collection(window.db, 'hallSchedules');
+    
+        const unsubscribe = onSnapshot(schedulesRef, (snapshot) => {
+            const schedules = {};
+            snapshot.forEach((doc) => {
+                schedules[doc.id] = doc.data();
+            });
+            setHallSchedules(schedules);
+            console.log('Načítané rozvrhy hál:', schedules);
+        }, (error) => {
+            console.error('Chyba pri načítaní rozvrhov hál:', error);
+        });
+    
+        return unsubscribe;
+    };
+
 
     const handleHallDayHeaderClick = (hall, date, dateStr) => {
         setSelectedHallForDay(hall);
@@ -1402,14 +1423,10 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
 
         try {
-            // Formátujeme dátum pre uloženie do databázy
             const dateStr = selectedDateForHall.toISOString().split('T')[0];
+            const scheduleId = `${selectedHallForDay.id}_${dateStr}`;
+            const hallDayRef = doc(window.db, 'hallSchedules', scheduleId);
             
-            // Vytvoríme referenciu na dokument pre konkrétnu halu a deň
-            const hallDayRef = doc(window.db, 'hallSchedules', `${selectedHallForDay.id}_${dateStr}`);
-            
-            // POUŽITE setDoc namiesto updateDoc - setDoc vytvorí nový dokument alebo prepíše existujúci
-            // { merge: true } zabezpečí, že sa existujúce polia zachovajú
             await setDoc(hallDayRef, {
                 hallId: selectedHallForDay.id,
                 hallName: selectedHallForDay.name,
@@ -1418,6 +1435,17 @@ const AddMatchesApp = ({ userProfileData }) => {
                 updatedAt: Timestamp.now(),
                 updatedBy: userProfileData?.email || 'unknown'
             }, { merge: true });
+
+            // Manuálne aktualizujeme lokálny state pre okamžité zobrazenie
+            setHallSchedules(prev => ({
+                ...prev,
+                [scheduleId]: {
+                    ...prev[scheduleId],
+                    startTime: startTime,
+                    updatedAt: Timestamp.now(),
+                    updatedBy: userProfileData?.email || 'unknown'
+                }
+            }));
     
             window.showGlobalNotification(
                 `Čas začiatku pre ${selectedHallForDay.name} dňa ${selectedDateStrForHall} bol nastavený na ${startTime}`,
@@ -2718,6 +2746,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         
         // Načítame zápasy
         const unsubscribeMatches = loadMatches();
+        const unsubscribeSchedules = loadHallSchedules();
 
         const loadTournamentDates = async () => {
             try {
@@ -2906,6 +2935,7 @@ const AddMatchesApp = ({ userProfileData }) => {
 
         return () => {
             if (unsubscribeMatches) unsubscribeMatches();
+            if (unsubscribeSchedules) unsubscribeSchedules();
             unsubscribePlaces();
         };
     }, []);
@@ -3424,8 +3454,20 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                 { className: 'text-sm font-semibold text-gray-800' },
                                                                 dateStr
                                                             ),
-                                                            // Pridáme malú ikonku hodín pre indikáciu, že sa dá nastaviť čas
-                                                            React.createElement('i', { className: 'fa-regular fa-clock text-xs text-blue-400 ml-1 opacity-0 group-hover:opacity-100 transition-opacity' })
+                                                            // Zobrazenie uloženého času ak existuje
+                                                            (() => {
+                                                                const scheduleId = `${hall.id}_${date.toISOString().split('T')[0]}`;
+                                                                const savedSchedule = hallSchedules[scheduleId];
+                                                                if (savedSchedule?.startTime) {
+                                                                    return React.createElement(
+                                                                        'span',
+                                                                        { className: 'text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full ml-2' },
+                                                                        React.createElement('i', { className: 'fa-regular fa-clock mr-1 text-xs' }),
+                                                                        savedSchedule.startTime
+                                                                    );
+                                                                }
+                                                                return React.createElement('i', { className: 'fa-regular fa-clock text-xs text-blue-400 ml-1 opacity-0 group-hover:opacity-100 transition-opacity' });
+                                                            })()
                                                         ),
                                                         React.createElement(
                                                             'div',
