@@ -1170,6 +1170,12 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         }
     }, [selectedDate, selectedTime, matchDuration, hallStartTime]);
 
+    const getLocalDateFromStr = (dateStr) => {
+        if (!dateStr) return null;
+        const [year, month, day] = dateStr.split('-').map(Number);
+        return new Date(year, month - 1, day);
+    };
+
     if (!isOpen || !match) return null;
 
     const hasError = timeError || overlappingMatches.length > 0;
