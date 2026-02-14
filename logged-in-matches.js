@@ -569,22 +569,19 @@ const ConfirmExistingMatchModal = ({ isOpen, onClose, onConfirm, match, homeTeam
                 { className: 'mb-6' },
                 React.createElement(
                     'p',
-                    { className: 'text-gray-700 mb-4' },
-                    'Zápas medzi tímami ',
-                    React.createElement('span', { className: 'font-semibold' }, homeTeamDisplay),
-                    ' a ',
-                    React.createElement('span', { className: 'font-semibold' }, awayTeamDisplay),
-                    ' už existuje.'
+                    { className: 'text-gray-700 mb-2' },
+                    'Zápas medzi tímami'
                 ),
-                showTeamId && React.createElement(
+                React.createElement(
                     'div',
-                    { className: 'mt-2 text-xs text-gray-500' },
-                    React.createElement('p', null, `ID: ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`)
+                    { className: 'bg-gray-50 p-3 rounded-lg mb-2' },
+                    React.createElement('p', { className: 'font-semibold text-sm' }, homeTeamDisplay),
+                    React.createElement('p', { className: 'font-semibold text-sm mt-1' }, awayTeamDisplay)
                 ),
                 React.createElement(
                     'p',
-                    { className: 'text-gray-700 mt-2' },
-                    'Chcete ho vygenerovať znovu?'
+                    { className: 'text-gray-700' },
+                    'už existuje. Chcete ho vygenerovať znovu?'
                 )
             ),
 
@@ -616,7 +613,7 @@ const ConfirmExistingMatchModal = ({ isOpen, onClose, onConfirm, match, homeTeam
     );
 };
 
-const ConfirmSwapModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTeamDisplay, homeTeamIdentifier, awayTeamIdentifier }) => {
+const ConfirmSwapModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTeamDisplay }) => {
     if (!isOpen) return null;
 
     return React.createElement(
@@ -658,19 +655,13 @@ const ConfirmSwapModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTea
                 React.createElement(
                     'div',
                     { className: 'flex items-center justify-between bg-gray-50 p-3 rounded-lg' },
-                    React.createElement('div', { className: 'flex flex-col items-center' },
-                        React.createElement('span', { className: 'font-semibold' }, homeTeamDisplay),
-                        showTeamId && homeTeamIdentifier && React.createElement('span', { className: 'text-xs text-gray-500 mt-1' }, homeTeamIdentifier)
-                    ),
+                    React.createElement('span', { className: 'font-semibold text-sm' }, homeTeamDisplay),
                     React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-blue-500 mx-2' }),
-                    React.createElement('div', { className: 'flex flex-col items-center' },
-                        React.createElement('span', { className: 'font-semibold' }, awayTeamDisplay),
-                        showTeamId && awayTeamIdentifier && React.createElement('span', { className: 'text-xs text-gray-500 mt-1' }, awayTeamIdentifier)
-                    )
+                    React.createElement('span', { className: 'font-semibold text-sm' }, awayTeamDisplay)
                 ),
                 React.createElement(
                     'div',
-                    { className: 'flex items-center justify-between mt-2 text-sm text-gray-500' },
+                    { className: 'flex items-center justify-between mt-2 text-xs text-gray-500' },
                     React.createElement('span', null, 'Domáci'),
                     React.createElement('span', null, 'Hosť')
                 )
@@ -704,8 +695,7 @@ const ConfirmSwapModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTea
     );
 };
 
-// Podobne pre ConfirmDeleteModal
-const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTeamDisplay, homeTeamIdentifier, awayTeamIdentifier }) => {
+const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTeamDisplay }) => {
     if (!isOpen) return null;
 
     return React.createElement(
@@ -747,15 +737,9 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayT
                 React.createElement(
                     'div',
                     { className: 'flex items-center justify-between bg-gray-50 p-3 rounded-lg' },
-                    React.createElement('div', { className: 'flex flex-col items-center' },
-                        React.createElement('span', { className: 'font-semibold' }, homeTeamDisplay),
-                        showTeamId && homeTeamIdentifier && React.createElement('span', { className: 'text-xs text-gray-500 mt-1' }, homeTeamIdentifier)
-                    ),
+                    React.createElement('span', { className: 'font-semibold text-sm' }, homeTeamDisplay),
                     React.createElement('i', { className: 'fa-solid fa-vs text-xs text-gray-400 mx-2' }),
-                    React.createElement('div', { className: 'flex flex-col items-center' },
-                        React.createElement('span', { className: 'font-semibold' }, awayTeamDisplay),
-                        showTeamId && awayTeamIdentifier && React.createElement('span', { className: 'text-xs text-gray-500 mt-1' }, awayTeamIdentifier)
-                    )
+                    React.createElement('span', { className: 'font-semibold text-sm' }, awayTeamDisplay)
                 ),
                 React.createElement(
                     'p',
@@ -1035,14 +1019,12 @@ const AddMatchesApp = ({ userProfileData }) => {
     // Funkcia na získanie zobrazovaného textu pre tím
     const getTeamDisplayText = (identifier) => {
         if (!identifier) return '---';
+    
+        // Vždy získame názov tímu
+        const teamName = getTeamNameByIdentifier(identifier);
         
-        if (showTeamId) {
-            // REŽIM ZOBRAZENIA IDENTIFIKÁTORA
-            return identifier;
-        } else {
-            // REŽIM ZOBRAZENIA NÁZVU TÍMU - dynamicky z teamData
-            return getTeamNameByIdentifier(identifier);
-        }
+        // Vrátime oba údaje v požadovanom formáte
+        return `${teamName} (${identifier})`;
     };
 
     // Funkcia na kontrolu, či už boli zápasy pre danú kategóriu/skupinu vygenerované
@@ -2100,53 +2082,16 @@ const AddMatchesApp = ({ userProfileData }) => {
                 'div',
                 { className: 'w-full bg-white rounded-xl shadow-xl p-8 mx-4' },
                 
-                // Hlavička s prepínačom
+                // Ovládacie prvky - už bez prepínača
                 React.createElement(
                     'div',
-                    { className: 'flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl' },
-                    React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center text-gray-800 mb-4' }, 'Zápasy'),
-                    
-                    // Ovládacie prvky
-                    React.createElement(
+                    { className: 'flex items-center gap-3 flex-wrap justify-center' },
+                    // Indikátor generovania (ostáva)
+                    generationInProgress && React.createElement(
                         'div',
-                        { className: 'flex items-center gap-3 flex-wrap justify-center' },
-                        // Prepínač pre zobrazenie ID tímov
-                        React.createElement(
-                            'div',
-                            { className: 'flex items-center gap-3 bg-gray-100 p-2 rounded-lg' },
-                            React.createElement(
-                                'span',
-                                { 
-                                    className: `px-3 py-1 rounded-md text-sm font-medium cursor-pointer transition-colors ${
-                                        !showTeamId 
-                                            ? 'bg-blue-600 text-white shadow-sm' 
-                                            : 'text-gray-600 hover:bg-gray-200'
-                                    }`,
-                                    onClick: () => setShowTeamId(false)
-                                },
-                                'Názvy tímov'
-                            ),
-                            React.createElement(
-                                'span',
-                                { 
-                                    className: `px-3 py-1 rounded-md text-sm font-medium cursor-pointer transition-colors ${
-                                        showTeamId 
-                                            ? 'bg-blue-600 text-white shadow-sm' 
-                                            : 'text-gray-600 hover:bg-gray-200'
-                                    }`,
-                                    onClick: () => setShowTeamId(true)
-                                },
-                                'ID tímov'
-                            )
-                        ),
-                        
-                        // Indikátor generovania
-                        generationInProgress && React.createElement(
-                            'div',
-                            { className: 'flex items-center gap-2 text-blue-600 bg-blue-50 px-4 py-2 rounded-lg' },
-                            React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600' }),
-                            React.createElement('span', { className: 'text-sm font-medium' }, 'Generujem zápasy...')
-                        )
+                        { className: 'flex items-center gap-2 text-blue-600 bg-blue-50 px-4 py-2 rounded-lg' },
+                        React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600' }),
+                        React.createElement('span', { className: 'text-sm font-medium' }, 'Generujem zápasy...')
                     )
                 ),
                 
@@ -2235,8 +2180,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'span',
                                                 { 
-                                                    className: `font-semibold ${showTeamId ? 'font-mono' : ''} text-gray-800`,
-                                                    title: showTeamId ? match.homeTeamId : homeTeamDisplay
+                                                    className: 'font-semibold text-sm text-gray-800',
+                                                    title: `${match.homeTeamIdentifier}` // Tooltip s čistým identifikátorom
                                                 },
                                                 homeTeamDisplay
                                             ),
@@ -2244,8 +2189,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'span',
                                                 { 
-                                                    className: `font-semibold ${showTeamId ? 'font-mono' : ''} text-gray-800`,
-                                                    title: showTeamId ? match.awayTeamId : awayTeamDisplay
+                                                    className: 'font-semibold text-sm text-gray-800',
+                                                    title: `${match.awayTeamIdentifier}` // Tooltip s čistým identifikátorom
                                                 },
                                                 awayTeamDisplay
                                             )
