@@ -972,6 +972,19 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     }, []);
 
+    useEffect(() => {
+        if (existingMatchesToProcess.length > 0 && !isExistingMatchModalOpen && currentMatchIndex === 0) {
+            console.log('useEffect: spúšťam spracovanie existujúcich zápasov', {
+                count: existingMatchesToProcess.length,
+                firstMatch: existingMatchesToProcess[0]
+            });
+            
+            setTimeout(() => {
+                processNextExistingMatch();
+            }, 100);
+        }
+    }, [existingMatchesToProcess, isExistingMatchModalOpen, currentMatchIndex]);
+
     // Funkcia na výpočet celkového času zápasu pre kategóriu
     const calculateTotalMatchTime = (category) => {
         if (!category) return { playingTime: 0, breaksBetweenPeriods: 0, totalTimeWithMatchBreak: 0 };
