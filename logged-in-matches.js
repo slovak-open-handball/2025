@@ -3155,85 +3155,99 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         )
                                                     ),
                                                     
-                                                    // Zoznam zápasov pre tento deň
+                                                    // Zoznam zápasov pre tento deň - zoradené chronologicky podľa času
                                                     matchesCount > 0 ? 
                                                         React.createElement(
                                                             'div',
                                                             { className: 'space-y-1 max-h-[150px] overflow-y-auto text-xs' },
-                                                            hallMatches.map((match, idx) => {
-                                                                // Formátovanie času zápasu
-                                                                let matchTime = '--:--';
-                                                                if (match.scheduledTime) {
+                                                            hallMatches
+                                                                .sort((a, b) => {
+                                                                    // Zoradenie podľa času začiatku (scheduledTime)
+                                                                    if (!a.scheduledTime) return 1;
+                                                                    if (!b.scheduledTime) return -1;
+                                                                    
                                                                     try {
-                                                                        const date = match.scheduledTime.toDate();
-                                                                        matchTime = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+                                                                        const timeA = a.scheduledTime.toDate().getTime();
+                                                                        const timeB = b.scheduledTime.toDate().getTime();
+                                                                        return timeA - timeB;
                                                                     } catch (e) {
-                                                                        console.error('Chyba pri formátovaní času:', e);
+                                                                        return 0;
                                                                     }
-                                                                }
-                                                                
-                                                                // Získame zobrazenie pre domáci a hosťovský tím podľa displayMode
-                                                                const homeDisplay = getTeamDisplayText(match.homeTeamIdentifier);
-                                                                const awayDisplay = getTeamDisplayText(match.awayTeamIdentifier);
-                                                                
-                                                                return React.createElement(
-                                                                    'div',
-                                                                    {
-                                                                        key: idx,
-                                                                        className: 'p-2 bg-blue-50 rounded border border-blue-100 cursor-pointer hover:bg-blue-100 transition-colors',
-                                                                        onClick: (e) => {
-                                                                            e.stopPropagation();
-                                                                            handleMatchCardClick(match);
-                                                                        },
-                                                                        title: `Kliknite pre úpravu zápasu`
-                                                                    },
-                                                                    React.createElement(
+                                                                })
+                                                                .map((match, idx) => {
+                                                                    // Formátovanie času zápasu
+                                                                    let matchTime = '--:--';
+                                                                    if (match.scheduledTime) {
+                                                                        try {
+                                                                            const date = match.scheduledTime.toDate();
+                                                                            matchTime = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+                                                                        } catch (e) {
+                                                                            console.error('Chyba pri formátovaní času:', e);
+                                                                        }
+                                                                    }
+                                                                    
+                                                                    // Získame zobrazenie pre domáci a hosťovský tím podľa displayMode
+                                                                    const homeDisplay = getTeamDisplayText(match.homeTeamIdentifier);
+                                                                    const awayDisplay = getTeamDisplayText(match.awayTeamIdentifier);
+                                                                    
+                                                                    return React.createElement(
                                                                         'div',
-                                                                        { className: 'flex items-center gap-2 text-xs' },
-                                                                        React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs' }),
-                                                                        React.createElement('span', { className: 'font-medium text-blue-700' }, matchTime),
-                                                                        React.createElement('span', { className: 'text-gray-400' }, '|'),
-                                                                        
-                                                                        // Zobrazenie tímov podľa displayMode
-                                                                        displayMode === 'both' 
-                                                                            ? React.createElement(
-                                                                                'div',
-                                                                                { className: 'flex-1 flex items-center gap-1 truncate' },
-                                                                                React.createElement(
-                                                                                    'span',
-                                                                                    { 
-                                                                                        className: 'truncate font-medium',
-                                                                                        title: `${homeDisplay.name} (${homeDisplay.id})`
-                                                                                    },
-                                                                                    homeDisplay.name
-                                                                                ),
-                                                                                React.createElement('span', { className: 'text-gray-400 text-xs' }, 'vs'),
-                                                                                React.createElement(
-                                                                                    'span',
-                                                                                    { 
-                                                                                        className: 'truncate font-medium',
-                                                                                        title: `${awayDisplay.name} (${awayDisplay.id})`
-                                                                                    },
-                                                                                    awayDisplay.name
-                                                                                )
-                                                                            )
-                                                                            : displayMode === 'id'
+                                                                        {
+                                                                            key: idx,
+                                                                            className: 'p-2 bg-blue-50 rounded border border-blue-100 cursor-pointer hover:bg-blue-100 transition-colors',
+                                                                            onClick: (e) => {
+                                                                                e.stopPropagation();
+                                                                                handleMatchCardClick(match);
+                                                                            },
+                                                                            title: `Kliknite pre úpravu zápasu`
+                                                                        },
+                                                                        React.createElement(
+                                                                            'div',
+                                                                            { className: 'flex items-center gap-2 text-xs' },
+                                                                            React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs' }),
+                                                                            React.createElement('span', { className: 'font-medium text-blue-700' }, matchTime),
+                                                                            React.createElement('span', { className: 'text-gray-400' }, '|'),
+                                                                            
+                                                                            // Zobrazenie tímov podľa displayMode
+                                                                            displayMode === 'both' 
                                                                                 ? React.createElement(
-                                                                                    'span',
-                                                                                    { className: 'truncate flex-1 font-mono text-xs' },
-                                                                                    `${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`
+                                                                                    'div',
+                                                                                    { className: 'flex-1 flex items-center gap-1 truncate' },
+                                                                                    React.createElement(
+                                                                                        'span',
+                                                                                        { 
+                                                                                            className: 'truncate font-medium',
+                                                                                            title: `${homeDisplay.name} (${homeDisplay.id})`
+                                                                                        },
+                                                                                        homeDisplay.name
+                                                                                    ),
+                                                                                    React.createElement('span', { className: 'text-gray-400 text-xs' }, 'vs'),
+                                                                                    React.createElement(
+                                                                                        'span',
+                                                                                        { 
+                                                                                            className: 'truncate font-medium',
+                                                                                            title: `${awayDisplay.name} (${awayDisplay.id})`
+                                                                                        },
+                                                                                        awayDisplay.name
+                                                                                    )
                                                                                 )
-                                                                                : React.createElement(
-                                                                                    'span',
-                                                                                    { className: 'truncate flex-1 font-medium' },
-                                                                                    `${homeDisplay} vs ${awayDisplay}`
-                                                                                )
-                                                                    )
-                                                                );
-                                                            })
+                                                                                : displayMode === 'id'
+                                                                                    ? React.createElement(
+                                                                                        'span',
+                                                                                        { className: 'truncate flex-1 font-mono text-xs' },
+                                                                                        `${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`
+                                                                                    )
+                                                                                    : React.createElement(
+                                                                                        'span',
+                                                                                        { className: 'truncate flex-1 font-medium' },
+                                                                                        `${homeDisplay} vs ${awayDisplay}`
+                                                                                    )
+                                                                        )
+                                                                    );
+                                                                })
                                                         ) :
                                                         React.createElement(
-                                                            'div',  // Zmena z button na div - žiadna interakcia pre prázdny deň
+                                                            'div',
                                                             {
                                                                 className: 'w-full py-2 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-1'
                                                             },
