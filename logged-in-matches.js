@@ -929,10 +929,10 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     // Načítanie všetkých zápasov pre vybranú halu a deň
     useEffect(() => {
         const loadExistingMatches = async () => {
-            if (selectedHallId && selectedDate && window.db && window.matches) {
+            if (selectedHallId && selectedDate && allMatches) {
                 try {
                     // Filtrujeme zápasy pre túto halu a deň
-                    const matchesForHallAndDay = window.matches.filter(m => 
+                    const matchesForHallAndDay = allMatches.filter(m => 
                         m.hallId === selectedHallId && 
                         m.scheduledTime && 
                         m.id !== match?.id // Vylúčime aktuálne upravovaný zápas
@@ -943,6 +943,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     });
                     
                     setExistingMatches(matchesForHallAndDay);
+                    console.log('Načítané existujúce zápasy:', matchesForHallAndDay);
                 } catch (error) {
                     console.error('Chyba pri načítaní existujúcich zápasov:', error);
                 }
@@ -952,7 +953,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         };
 
         loadExistingMatches();
-    }, [selectedHallId, selectedDate, match?.id]);
+    }, [selectedHallId, selectedDate, match?.id, allMatches]);
 
     // Kontrola prekrývania časov
     useEffect(() => {
@@ -960,6 +961,12 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             const [newHours, newMinutes] = selectedTime.split(':').map(Number);
             const newStartMinutes = newHours * 60 + newMinutes;
             const newEndMinutes = newStartMinutes + matchDuration;
+
+            console.log('Kontrolujem prekrývanie pre nový zápas:', {
+                start: newStartMinutes,
+                end: newEndMinutes,
+                duration: matchDuration
+            });
 
             // Nájdeme všetky prekrývajúce sa zápasy
             const overlapping = existingMatches.filter(existingMatch => {
@@ -981,6 +988,13 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 }
                 const existingEndMinutes = existingStartMinutes + existingDuration;
 
+                console.log('Porovnávam s existujúcim zápasom:', {
+                    id: existingMatch.id,
+                    start: existingStartMinutes,
+                    end: existingEndMinutes,
+                    duration: existingDuration
+                });
+
                 // Kontrola prekrývania: 
                 // Nový zápas začína pred koncom existujúceho A končí po začiatku existujúceho
                 return (newStartMinutes < existingEndMinutes && newEndMinutes > existingStartMinutes);
@@ -991,7 +1005,21 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     const startTime = om.scheduledTime.toDate();
                     const hours = startTime.getHours().toString().padStart(2, '0');
                     const minutes = startTime.getMinutes().toString().padStart(2, '0');
-                    return `${om.homeTeamIdentifier} vs ${om.awayTeamIdentifier} (${hours}:${minutes})`;
+                    
+                    // Výpočet konca konfliktného zápasu
+                    const omCategory = categories.find(c => c.name === om.categoryName);
+                    let omDuration = 0;
+                    if (omCategory) {
+                        const periods = omCategory.periods || 2;
+                        const periodDuration = omCategory.periodDuration || 20;
+                        const breakDuration = omCategory.breakDuration || 2;
+                        omDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                    }
+                    const endTime = new Date(startTime.getTime() + omDuration * 60000);
+                    const endHours = endTime.getHours().toString().padStart(2, '0');
+                    const endMinutes = endTime.getMinutes().toString().padStart(2, '0');
+                    
+                    return `${om.homeTeamIdentifier} vs ${om.awayTeamIdentifier} (${hours}:${minutes} - ${endHours}:${endMinutes})`;
                 }).join(', ');
                 
                 setOverlapError(`Časový konflikt s existujúcim zápasom/zápasmi: ${conflictMessages}`);
@@ -1115,16 +1143,20 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
 
     // Výpočet času ukončenia zápasu a kontrola času začiatku
     useEffect(() => {
-        if (selectedDate && selectedTime && matchDuration > 0 && hallStartTime) {
+        if (selectedDate && selectedTime && matchDuration > 0) {
             const [hours, minutes] = selectedTime.split(':').map(Number);
-            const [startHours, startMinutes] = hallStartTime.split(':').map(Number);
             
-            // Porovnáme časy (prepočítame na minúty od polnoci)
-            const selectedMinutes = hours * 60 + minutes;
-            const hallStartMinutes = startHours * 60 + startMinutes;
-            
-            if (selectedMinutes < hallStartMinutes) {
-                setTimeError(`Čas začiatku zápasu nemôže byť skôr ako ${hallStartTime} (čas začiatku prvého zápasu v tejto hale)`);
+            // Kontrola času začiatku (ak je nastavený)
+            if (hallStartTime) {
+                const [startHours, startMinutes] = hallStartTime.split(':').map(Number);
+                const selectedMinutes = hours * 60 + minutes;
+                const hallStartMinutes = startHours * 60 + startMinutes;
+                
+                if (selectedMinutes < hallStartMinutes) {
+                    setTimeError(`Čas začiatku zápasu nemôže byť skôr ako ${hallStartTime} (čas začiatku prvého zápasu v tejto hale)`);
+                } else {
+                    setTimeError('');
+                }
             } else {
                 setTimeError('');
             }
