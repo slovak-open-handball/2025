@@ -66,6 +66,16 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
     const [availableGroups, setAvailableGroups] = useState([]);
     const [selectedGroupType, setSelectedGroupType] = useState('');
 
+    useEffect(() => {
+        if (!isOpen) {
+            setSelectedCategory('');
+            setSelectedGroup('');
+            setWithRepetitions(false);
+            setAvailableGroups([]);
+            setSelectedGroupType('');
+        }
+    }, [isOpen]);
+
     // Zoradenie kategórií podľa abecedy
     const sortedCategories = React.useMemo(() => {
         return [...categories].sort((a, b) => a.name.localeCompare(b.name));
@@ -269,6 +279,15 @@ const DeleteMatchesModal = ({ isOpen, onClose, onConfirm, categories, groupsByCa
     const [selectedGroup, setSelectedGroup] = useState('');
     const [availableGroups, setAvailableGroups] = useState([]);
     const [selectedGroupType, setSelectedGroupType] = useState('');
+
+    useEffect(() => {
+        if (!isOpen) {
+            setSelectedCategory('');
+            setSelectedGroup('');
+            setAvailableGroups([]);
+            setSelectedGroupType('');
+        }
+    }, [isOpen]);
 
     // Zoradenie kategórií podľa abecedy
     const sortedCategories = React.useMemo(() => {
@@ -2257,6 +2276,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         React.Fragment,
         null,
         React.createElement(GenerationModal, {
+            key: `generation-modal-${isModalOpen}`,
             isOpen: isModalOpen,
             onClose: () => setIsModalOpen(false),
             onConfirm: handleGenerateClick,
@@ -2308,6 +2328,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             displayMode: displayMode
         }),
         React.createElement(DeleteMatchesModal, {
+            key: `delete-matches-modal-${isDeleteMatchesModalOpen}`,
             isOpen: isDeleteMatchesModalOpen,
             onClose: () => setIsDeleteMatchesModalOpen(false),
             onConfirm: handleBulkDeleteClick,
