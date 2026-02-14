@@ -3636,10 +3636,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         'div',
                                         { 
                                             className: 'p-4 bg-gray-50',
-                                            style = {{ 
-                                                width: 'fit-content', 
-                                                minWidth: '100%' 
-                                            }} // Box haly sa prispôsobí obsahu
+                                            style: { width: 'fit-content', minWidth: '480px' }
                                         },
                                         React.createElement(
                                             'div',
