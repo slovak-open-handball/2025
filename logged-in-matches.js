@@ -3638,12 +3638,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         React.createElement(
                                             'div',
                                             { 
-                                                className: 'overflow-x-auto pb-2' // Pridaný vodorovný posuvník
+                                                className: 'overflow-x-auto pb-2' // Vodorovný posuvník
                                             },
                                             React.createElement(
                                                 'div',
                                                 { 
-                                                    className: 'flex flex-row gap-2' // Zmena na flex-row, žiadne zalamovanie
+                                                    className: 'flex flex-row gap-2' // Flex row bez zalamovania
                                                 },
                                                 tournamentDays.map((date, index) => {
                                                     const dateStr = date.toLocaleDateString('sk-SK', {
@@ -3660,7 +3660,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         'div',
                                                         {
                                                             key: index,
-                                                            className: 'flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group w-fit' // w-fit pre prispôsobenie šírky
+                                                            className: 'flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group',
+                                                            style={{ width: 'fit-content', minWidth: '280px' }} // Pridaný inline style pre width a min-width
                                                         },
                                                         // Hlavička dňa s dátumom a počtom zápasov - klikateľná
                                                         React.createElement(
