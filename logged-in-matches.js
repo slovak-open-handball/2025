@@ -2875,7 +2875,8 @@ const AddMatchesApp = ({ userProfileData }) => {
             },
             onConfirm: handleSaveHallStartTime,
             hallName: selectedHallForDay?.name,
-            date: selectedDateStrForHall
+            date: selectedDateStrForHall,
+            currentStartTime: selectedCurrentStartTime
         }),
         React.createElement(ConfirmExistingMatchModal, {
             isOpen: isExistingMatchModalOpen,
