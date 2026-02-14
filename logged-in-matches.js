@@ -913,7 +913,7 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayT
 };
 
 // Modálne okno pre priradenie/úpravu zápasu do haly
-const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAssign, allMatches }) => {
+const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAssign, allMatches, displayMode, getTeamDisplayText }) => {
     const [selectedHallId, setSelectedHallId] = useState('');
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedTime, setSelectedTime] = useState('');
@@ -3373,7 +3373,9 @@ const AddMatchesApp = ({ userProfileData }) => {
             sportHalls: sportHalls,
             categories: categories,
             onAssign: handleAssignMatch,
-            allMatches: matches
+            allMatches: matches,
+            displayMode: displayMode,
+            getTeamDisplayText: getTeamDisplayText
         }),
         React.createElement(
             'div',
