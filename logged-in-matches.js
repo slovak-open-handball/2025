@@ -3673,7 +3673,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                             matchesCount > 0 && React.createElement(
                                                                 'span',
                                                                 { className: 'text-xs text-gray-500' },
-                                                                `${matchesCount} ${matchesCount === 1 ? 'zápas' : 'zápasy'}`
+                                                                (() => {
+                                                                    // Funkcia pre správne skloňovanie slova "zápas"
+                                                                    if (matchesCount === 1) return `${matchesCount} zápas`;
+                                                                    if (matchesCount >= 2 && matchesCount <= 4) return `${matchesCount} zápasy`;
+                                                                    return `${matchesCount} zápasov`;
+                                                                })()
                                                             ),
                                                             matchesCount > 0 && React.createElement(
                                                                 'span',
