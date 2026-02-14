@@ -772,25 +772,6 @@ const ConfirmSwapModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTea
     );
 };
 
-React.createElement(DeleteMatchesModal, {
-    isOpen: isDeleteMatchesModalOpen,
-    onClose: () => setIsDeleteMatchesModalOpen(false),
-    onConfirm: handleBulkDeleteClick,
-    categories: categories,
-    groupsByCategory: groupsByCategory
-}),
-React.createElement(ConfirmBulkDeleteModal, {
-    isOpen: isBulkDeleteConfirmModalOpen,
-    onClose: () => {
-        setIsBulkDeleteConfirmModalOpen(false);
-        setPendingBulkDelete(null);
-    },
-    onConfirm: confirmBulkDelete,
-    categoryName: pendingBulkDelete?.categoryName,
-    groupName: pendingBulkDelete?.groupName,
-    matchesCount: pendingBulkDelete?.matchesCount || 0
-}),
-
 // Modálne okno pre potvrdenie hromadného mazania
 const ConfirmBulkDeleteModal = ({ isOpen, onClose, onConfirm, categoryName, groupName, matchesCount }) => {
     if (!isOpen) return null;
