@@ -984,6 +984,10 @@ const AddMatchesApp = ({ userProfileData }) => {
             return 'Neznámy tím';
         }
         
+        // Najprv zistíme, z ktorej kategórie je tím (podľa zápasu)
+        const currentMatch = matches.find(m => m.homeTeamId === teamId || m.awayTeamId === teamId);
+        const categoryName = currentMatch?.categoryName;
+        
         // Extrahujeme názov z teamId - berieme všetko ZA PRVOU pomlčkou
         const firstDashIndex = teamId.indexOf('-');
         let extractedName = teamId;
@@ -992,15 +996,40 @@ const AddMatchesApp = ({ userProfileData }) => {
             extractedName = teamId.substring(firstDashIndex + 1);
         }
         
-        // Hľadáme v teamData podľa presného názvu (ignorujeme kategóriu pre hľadanie)
-        if (teamData.allTeams && teamData.allTeams.length > 0) {
-            const team = teamData.allTeams.find(t => t.teamName === extractedName);
-            if (team) {
-                return team.teamName;
+        // Hľadáme podľa kombinácie category + teamName (POVINNÉ)
+        if (categoryName) {
+            // Najprv v teamData
+            if (teamData.allTeams && teamData.allTeams.length > 0) {
+                const team = teamData.allTeams.find(t => 
+                    t.category === categoryName && 
+                    t.teamName === extractedName
+                );
+                
+                if (team) {
+                    return team.teamName;
+                }
+            }
+            
+            // Potom v __teamManagerData
+            if (window.__teamManagerData?.allTeams) {
+                const team = window.__teamManagerData.allTeams.find(t => 
+                    t.category === categoryName && 
+                    t.teamName === extractedName
+                );
+                
+                if (team) {
+                    setTeamData(window.__teamManagerData);
+                    return team.teamName;
+                }
             }
         }
         
-        // Skúsime v __teamManagerData
+        // Fallback - ak nemáme kategóriu, skúsime hľadať len podľa názvu
+        if (teamData.allTeams && teamData.allTeams.length > 0) {
+            const team = teamData.allTeams.find(t => t.teamName === extractedName);
+            if (team) return team.teamName;
+        }
+        
         if (window.__teamManagerData?.allTeams) {
             const team = window.__teamManagerData.allTeams.find(t => t.teamName === extractedName);
             if (team) {
@@ -1009,8 +1038,8 @@ const AddMatchesApp = ({ userProfileData }) => {
             }
         }
         
-        // Fallback - vrátime extrahovaný názov
-        console.warn(`Nenašiel sa tím s názvom "${extractedName}"`);
+        // Ak nič nenašlo, vrátime extrahovaný názov
+        console.warn(`Nenašiel sa tím s kategóriou "${categoryName}" a názvom "${extractedName}"`);
         return extractedName;
     };
     
@@ -1018,19 +1047,31 @@ const AddMatchesApp = ({ userProfileData }) => {
     const getTeamDisplayText = (teamId) => {
         if (!teamId) return '---';
         
+        // Zistíme kategóriu zo zápasu
+        const currentMatch = matches.find(m => m.homeTeamId === teamId || m.awayTeamId === teamId);
+        const categoryName = currentMatch?.categoryName;
+        
         // Extrahujeme názov z teamId
         const firstDashIndex = teamId.indexOf('-');
         const extractedName = firstDashIndex !== -1 ? teamId.substring(firstDashIndex + 1) : teamId;
         
-        // Hľadáme tím podľa názvu
+        // Hľadáme tím podľa kombinácie kategórie a názvu
         let team = null;
         
-        if (teamData.allTeams && teamData.allTeams.length > 0) {
-            team = teamData.allTeams.find(t => t.teamName === extractedName);
-        }
-        
-        if (!team && window.__teamManagerData?.allTeams) {
-            team = window.__teamManagerData.allTeams.find(t => t.teamName === extractedName);
+        if (categoryName) {
+            if (teamData.allTeams && teamData.allTeams.length > 0) {
+                team = teamData.allTeams.find(t => 
+                    t.category === categoryName && 
+                    t.teamName === extractedName
+                );
+            }
+            
+            if (!team && window.__teamManagerData?.allTeams) {
+                team = window.__teamManagerData.allTeams.find(t => 
+                    t.category === categoryName && 
+                    t.teamName === extractedName
+                );
+            }
         }
         
         if (team) {
