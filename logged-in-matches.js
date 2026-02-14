@@ -1120,7 +1120,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     useEffect(() => {
         if (selectedDate && selectedTime && matchDuration > 0) {
             const [hours, minutes] = selectedTime.split(':').map(Number);
-            
+        
             // Kontrola času začiatku (ak je nastavený)
             if (hallStartTime) {
                 const [startHours, startMinutes] = hallStartTime.split(':').map(Number);
@@ -1136,9 +1136,11 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 setTimeError('');
             }
             
-            const startDateTime = new Date(selectedDate);
-            startDateTime.setHours(hours, minutes, 0, 0);
-        
+            // SPRÁVNE vytvorenie dátumu - rozdelíme YYYY-MM-DD na časti
+            const [year, month, day] = selectedDate.split('-').map(Number);
+            // Vytvoríme Date objekt v lokálnom časovom pásme (month je 0-indexed, preto -1)
+            const startDateTime = new Date(year, month - 1, day, hours, minutes, 0);
+            
             // Koniec zápasu je start + matchDuration (čistý čas bez prestávky po zápase)
             const endDateTime = new Date(startDateTime.getTime() + matchDuration * 60000);
             
