@@ -1721,10 +1721,6 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [hallSchedules, setHallSchedules] = useState({});
     const [selectedCurrentStartTime, setSelectedCurrentStartTime] = useState(null);
 
-    const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
-    const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
-    const [selectedHallFilter, setSelectedHallFilter] = useState('');
-    const [selectedDayFilter, setSelectedDayFilter] = useState('');
     const [availableGroupsForFilter, setAvailableGroupsForFilter] = useState([]);
     const [availableDays, setAvailableDays] = useState([]);
 
