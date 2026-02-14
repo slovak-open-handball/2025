@@ -1781,6 +1781,37 @@ const AddMatchesApp = ({ userProfileData }) => {
         return [...filteredSportHalls].sort((a, b) => a.name.localeCompare(b.name));
     }, [filteredSportHalls]);
 
+    const loadFiltersFromURL = () => {
+        const params = new URLSearchParams(window.location.search);
+    
+        return {
+            category: params.get('category') || '',
+            group: params.get('group') || '',
+            hall: params.get('hall') || '',
+            day: params.get('day') || ''
+        };
+    };
+
+    // Funkcia na aktualizáciu URL s aktuálnymi filtrami
+    const updateURLWithFilters = (filters) => {
+        const params = new URLSearchParams();
+    
+        if (filters.category) params.set('category', filters.category);
+        if (filters.group) params.set('group', filters.group);
+        if (filters.hall) params.set('hall', filters.hall);
+        if (filters.day) params.set('day', filters.day);
+    
+        const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}${window.location.hash}`;
+        window.history.replaceState({}, '', newUrl);
+    };
+
+    // Načítanie filtrov pri inicializácii
+    const initialFilters = loadFiltersFromURL();
+    const [selectedCategoryFilter, setSelectedCategoryFilter] = useState(initialFilters.category);
+    const [selectedGroupFilter, setSelectedGroupFilter] = useState(initialFilters.group);
+    const [selectedHallFilter, setSelectedHallFilter] = useState(initialFilters.hall);
+    const [selectedDayFilter, setSelectedDayFilter] = useState(initialFilters.day);
+    
     const loadHallSchedules = () => {
         if (!window.db) return;
 
@@ -1917,6 +1948,8 @@ const AddMatchesApp = ({ userProfileData }) => {
             setAvailableGroupsForFilter([]);
         }
     }, [selectedCategoryFilter, groupsByCategory]);
+
+    
     
     // Generovanie dostupných dní pre filter
     useEffect(() => {
@@ -1949,6 +1982,19 @@ const AddMatchesApp = ({ userProfileData }) => {
             setAvailableDays(days);
         }
     }, [tournamentStartDate, tournamentEndDate]);
+
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            updateURLWithFilters({
+                category: selectedCategoryFilter,
+                group: selectedGroupFilter,
+                hall: selectedHallFilter,
+                day: selectedDayFilter
+            });
+        }, 300); // 300ms oneskorenie
+    
+        return () => clearTimeout(timeoutId);
+    }, [selectedCategoryFilter, selectedGroupFilter, selectedHallFilter, selectedDayFilter]);
 
     // Načítanie režimu zobrazenia pri zmene URL (ak používateľ zmení URL manuálne)
     useEffect(() => {
