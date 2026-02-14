@@ -3661,7 +3661,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         {
                                                             key: index,
                                                             className: 'flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group',
-                                                            style: { width: 'fit-content', minWidth: '280px' }
+                                                            style: { width: 'fit-content', minWidth: '320px' }
                                                         },
                                                         // Hlavička dňa s dátumom a počtom zápasov - klikateľná
                                                         React.createElement(
