@@ -1270,12 +1270,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                 console.log('Nastavujem existingMatchesToProcess:', existingMatches);
                 console.log('Nastavujem newMatches:', newOnes);
                 
-                // Začneme spracovávať prvý existujúci zápas - použijeme useEffect alebo setTimeout
-                setTimeout(() => {
-                    console.log('Spúšťam processNextExistingMatch s indexom 0');
-                    processNextExistingMatch();
-                }, 200); // Zvýšime oneskorenie pre istotu
-                
             } else {
                 // Žiadne existujúce zápasy, rovno uložíme všetky
                 if (allGeneratedMatches.length > 0) {
