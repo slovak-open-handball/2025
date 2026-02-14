@@ -1752,6 +1752,15 @@ const AddMatchesApp = ({ userProfileData }) => {
     const filteredSportHalls = selectedHallFilter ? sportHalls.filter(hall => hall.id === selectedHallFilter) : sportHalls;    
     const filteredAllMatches = getFilteredMatches(matches, false, false);
 
+    const sortedSportHalls = React.useMemo(() => {
+        return [...sportHalls].sort((a, b) => a.name.localeCompare(b.name));
+    }, [sportHalls]);
+
+    // A tiež pre filteredSportHalls (ak používate filter haly)
+    const sortedFilteredSportHalls = React.useMemo(() => {
+        return [...filteredSportHalls].sort((a, b) => a.name.localeCompare(b.name));
+    }, [filteredSportHalls]);
+
     const loadHallSchedules = () => {
         if (!window.db) return;
 
@@ -3440,7 +3449,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     className: 'px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[150px]'
                                 },
                                 React.createElement('option', { value: '' }, 'Všetky haly'),
-                                sportHalls.map(hall => 
+                                sortedSportHalls.map(hall => 
                                     React.createElement('option', { key: hall.id, value: hall.id }, hall.name)
                                 )
                             )
@@ -3785,7 +3794,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                         !loading && sportHalls.length > 0 && React.createElement(
                             'div',
                             { className: 'space-y-4 overflow-y-auto pr-2 flex-1' },
-                            filteredSportHalls.map((hall) => {
+                            sortedFilteredSportHalls.map((hall) => {
                                 const typeConfig = typeIcons[hall.type] || { icon: 'fa-futbol', color: '#dc2626' };
                         
                                 // Získame všetky zápasy pre túto halu
