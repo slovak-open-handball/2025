@@ -1708,6 +1708,50 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [availableGroupsForFilter, setAvailableGroupsForFilter] = useState([]);
     const [availableDays, setAvailableDays] = useState([]);
 
+    const getFilteredMatches = (matchesToFilter) => {
+        return matchesToFilter.filter(match => {
+            // Filter podľa kategórie
+            if (selectedCategoryFilter && match.categoryId !== selectedCategoryFilter) {
+                return false;
+            }
+            
+            // Filter podľa skupiny
+            if (selectedGroupFilter && match.groupName !== selectedGroupFilter) {
+                return false;
+            }
+            
+            // Filter podľa haly
+            if (selectedHallFilter && match.hallId !== selectedHallFilter) {
+                return false;
+            }
+            
+            // Filter podľa dňa
+            if (selectedDayFilter && match.scheduledTime) {
+                try {
+                    const matchDate = match.scheduledTime.toDate();
+                    const matchDateStr = matchDate.toISOString().split('T')[0];
+                    if (matchDateStr !== selectedDayFilter) {
+                        return false;
+                    }
+                } catch (e) {
+                    // Ak nie je možné spracovať dátum, zápas nevyhovuje filtru dňa
+                    return false;
+                }
+            } else if (selectedDayFilter && !match.scheduledTime) {
+                // Ak je filter dňa a zápas nemá naplánovaný čas, nevyhovuje
+                return false;
+            }
+            
+            return true;
+        });
+    };
+    
+    // Filtrované zápasy pre ľavý stĺpec (nepriradené)
+    const filteredUnassignedMatches = getFilteredMatches(matches.filter(m => !m.hallId));
+    
+    // Filtrované zápasy pre všetky zápasy (pre počty v hlavičkách)
+    const filteredAllMatches = getFilteredMatches(matches);
+
     const loadHallSchedules = () => {
         if (!window.db) return;
 
@@ -2212,29 +2256,40 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     };
 
-    // Pridajte túto funkciu do komponentu AddMatchesApp (napr. za getTeamDisplayText)
+    // Nahraďte existujúcu funkciu getMatchesForHallAndDay touto:
     const getMatchesForHallAndDay = (hallId, date) => {
         if (!matches || matches.length === 0) return [];
     
-        // Formátujeme dátum pre porovnanie (rovnaký formát ako v selectedDate)
+        // Formátujeme dátum pre porovnanie
         const dateStr = date.toISOString().split('T')[0];
     
-        return matches.filter(match => {
-            // Zápas musí mať priradenú halu a naplánovaný čas
+        // Najprv získame všetky zápasy pre túto halu a deň
+        const hallDayMatches = matches.filter(match => {
             if (!match.hallId || !match.scheduledTime) return false;
-        
-            // Skontrolujeme, či je zápas pre túto halu
             if (match.hallId !== hallId) return false;
-        
-            // Skonvertujeme scheduledTime na Date a porovnáme dátum
+            
             try {
                 const matchDate = match.scheduledTime.toDate();
                 const matchDateStr = matchDate.toISOString().split('T')[0];
                 return matchDateStr === dateStr;
             } catch (e) {
-                console.error('Chyba pri spracovaní dátumu zápasu:', e);
                 return false;
             }
+        });
+        
+        // Potom na ne aplikujeme filtre (okrem filtra haly, ten už je aplikovaný)
+        return hallDayMatches.filter(match => {
+            // Filter podľa kategórie
+            if (selectedCategoryFilter && match.categoryId !== selectedCategoryFilter) {
+                return false;
+            }
+            
+            // Filter podľa skupiny
+            if (selectedGroupFilter && match.groupName !== selectedGroupFilter) {
+                return false;
+            }
+            
+            return true;
         });
     };
 
@@ -3504,7 +3559,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 React.createElement(
                                     'span',
                                     { className: 'text-sm font-normal text-gray-500' },
-                                    `(${matches.filter(m => !m.hallId).length})`
+                                    `(${filteredUnassignedMatches.length})`
                                 )
                             ),
                             
@@ -3538,7 +3593,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                         ),
                         
                         // Zoznam nepriradených zápasov - filtrujeme len zápasy bez hallId
-                        matches.filter(m => !m.hallId).length === 0 ? 
+                        filteredUnassignedMatches.length === 0 ?
                             React.createElement(
                                 'div',
                                 { className: 'flex-1 flex items-center justify-center text-center py-8 text-gray-500' },
@@ -3552,7 +3607,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                             React.createElement(
                                 'div',
                                 { className: 'flex-1 overflow-y-auto pr-2 space-y-3 mt-4' },
-                                matches.filter(m => !m.hallId).map(match => {
+                                filteredUnassignedMatches.map(match => {
                                     // Použijeme prepínač pre zobrazenie
                                     const homeTeamDisplay = getTeamDisplayText(match.homeTeamIdentifier);
                                     const awayTeamDisplay = getTeamDisplayText(match.awayTeamIdentifier);
