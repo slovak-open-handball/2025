@@ -2795,7 +2795,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     'div',
                     { className: 'flex flex-col lg:flex-row gap-6 mt-4 min-h-[700px]' },
                     
-                    // ĽAVÝ STĹPEC - Zoznam zápasov
+                    // ĽAVÝ STĹPEC - Zoznam nepriradených zápasov
                     React.createElement(
                         'div',
                         { className: 'lg:w-1/3 bg-gray-50 rounded-xl p-4 border border-gray-200 flex flex-col h-full' },
@@ -2810,12 +2810,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 React.createElement(
                                     'h3',
                                     { className: 'text-xl font-semibold text-gray-700' },
-                                    'Zoznam zápasov'
+                                    'Nepriradené zápasy'
                                 ),
                                 React.createElement(
                                     'span',
                                     { className: 'text-sm font-normal text-gray-500' },
-                                    `(${matches.length})`
+                                    `(${matches.filter(m => !m.hallId).length})`
                                 )
                             ),
                             
@@ -2848,8 +2848,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                             )
                         ),
                         
-                        // Zoznam zápasov - nastavíme flex-1 a overflow-auto pre scrollovanie
-                        matches.length === 0 ? 
+                        // Zoznam nepriradených zápasov - filtrujeme len zápasy bez hallId
+                        matches.filter(m => !m.hallId).length === 0 ? 
                             React.createElement(
                                 'div',
                                 { className: 'flex-1 flex items-center justify-center text-center py-8 text-gray-500' },
@@ -2857,13 +2857,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     'div',
                                     null,
                                     React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-4xl mb-3 opacity-30' }),
-                                    React.createElement('p', { className: 'text-sm' }, 'Žiadne zápasy')
+                                    React.createElement('p', { className: 'text-sm' }, 'Žiadne nepriradené zápasy')
                                 )
                             ) :
                             React.createElement(
                                 'div',
                                 { className: 'flex-1 overflow-y-auto pr-2 space-y-3 mt-4' },
-                                matches.map(match => {
+                                matches.filter(m => !m.hallId).map(match => {
                                     // Použijeme prepínač pre zobrazenie
                                     const homeTeamDisplay = getTeamDisplayText(match.homeTeamIdentifier);
                                     const awayTeamDisplay = getTeamDisplayText(match.awayTeamIdentifier);
@@ -2883,7 +2883,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'button',
                                                 {
-                                                    onClick: () => handleSwapClick(match),
+                                                    onClick: (e) => {
+                                                        e.stopPropagation();
+                                                        handleSwapClick(match);
+                                                    },
                                                     className: 'w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md',
                                                     title: 'Vymeniť domáci a hosťovský tím'
                                                 },
@@ -2893,7 +2896,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'button',
                                                 {
-                                                    onClick: () => handleDeleteClick(match),
+                                                    onClick: (e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteClick(match);
+                                                    },
                                                     className: 'w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md',
                                                     title: 'Zmazať zápas'
                                                 },
@@ -2906,7 +2912,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'span',
                                                 { className: 'text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 rounded-full' },
-                                                match.time
+                                                '--:--'
                                             ),
                                             React.createElement(
                                                 'span',
@@ -2983,7 +2989,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             'div',
                                             { className: 'mt-2 text-xs text-gray-500 flex items-center' },
                                             React.createElement('i', { className: 'fa-solid fa-location-dot mr-1 text-gray-400' }),
-                                            match.hallId ? 'Hala' : 'Nepriradené',
+                                            'Nepriradené',
                                             match.groupName && React.createElement(
                                                 'span',
                                                 { className: 'ml-2 px-2 py-0.5 bg-gray-100 rounded-full' },
