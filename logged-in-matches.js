@@ -573,7 +573,7 @@ const ConfirmRegenerateModal = ({ isOpen, onClose, onConfirm, categoryName, grou
     );
 };
 
-const ConfirmExistingMatchModal = ({ isOpen, onClose, onConfirm, match, homeTeamDisplay, awayTeamDisplay }) => {
+const ConfirmExistingMatchModal = ({ isOpen, onClose, onConfirm, match, homeTeamDisplay, awayTeamDisplay, displayMode }) => {
     if (!isOpen || !match) return null;
 
     return React.createElement(
@@ -615,8 +615,23 @@ const ConfirmExistingMatchModal = ({ isOpen, onClose, onConfirm, match, homeTeam
                 React.createElement(
                     'div',
                     { className: 'bg-gray-50 p-3 rounded-lg mb-2' },
-                    React.createElement('p', { className: 'font-semibold text-sm' }, homeTeamDisplay),
-                    React.createElement('p', { className: 'font-semibold text-sm mt-1' }, awayTeamDisplay)
+                    displayMode === 'both' && typeof homeTeamDisplay === 'object'
+                        ? React.createElement(
+                            'div',
+                            { className: 'flex flex-col items-start' },
+                            React.createElement('p', { className: 'font-semibold text-sm' }, homeTeamDisplay.name),
+                            React.createElement('p', { className: 'text-xs text-gray-500' }, `(${homeTeamDisplay.id})`)
+                        )
+                        : React.createElement('p', { className: 'font-semibold text-sm' }, homeTeamDisplay),
+                    
+                    displayMode === 'both' && typeof awayTeamDisplay === 'object'
+                        ? React.createElement(
+                            'div',
+                            { className: 'flex flex-col items-start mt-1' },
+                            React.createElement('p', { className: 'font-semibold text-sm' }, awayTeamDisplay.name),
+                            React.createElement('p', { className: 'text-xs text-gray-500' }, `(${awayTeamDisplay.id})`)
+                        )
+                        : React.createElement('p', { className: 'font-semibold text-sm mt-1' }, awayTeamDisplay)
                 ),
                 React.createElement(
                     'p',
@@ -3471,7 +3486,8 @@ const AddMatchesApp = ({ userProfileData }) => {
             onConfirm: handleConfirmExistingMatch,
             match: currentExistingMatch,
             homeTeamDisplay: currentExistingMatch ? getTeamDisplayText(currentExistingMatch.homeTeamIdentifier) : '',
-            awayTeamDisplay: currentExistingMatch ? getTeamDisplayText(currentExistingMatch.awayTeamIdentifier) : ''
+            awayTeamDisplay: currentExistingMatch ? getTeamDisplayText(currentExistingMatch.awayTeamIdentifier) : '',
+            displayMode: displayMode
         }),
         React.createElement(ConfirmDeleteModal, {
             isOpen: isDeleteModalOpen,
