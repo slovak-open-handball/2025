@@ -952,9 +952,10 @@ const AddMatchesApp = ({ userProfileData }) => {
         try {
             const matchRef = doc(window.db, 'matches', selectedMatchForAction.id);
             
+            // Vymeníme homeTeamIdentifier a awayTeamIdentifier
             await updateDoc(matchRef, {
-                homeTeamId: selectedMatchForAction.awayTeamId,
-                awayTeamId: selectedMatchForAction.homeTeamId
+                homeTeamIdentifier: selectedMatchForAction.awayTeamIdentifier,
+                awayTeamIdentifier: selectedMatchForAction.homeTeamIdentifier
             });
             
             console.log(`Zápas s ID ${selectedMatchForAction.id} bol úspešne upravený - tímy vymenené`);
@@ -1145,8 +1146,8 @@ const AddMatchesApp = ({ userProfileData }) => {
             currentMatchIndex,
             totalExisting: existingMatchesToProcess.length,
             existingMatchesToProcess: existingMatchesToProcess.map(m => ({ 
-                home: m.homeTeamId, 
-                away: m.awayTeamId 
+                home: m.homeTeamIdentifier, 
+                away: m.awayTeamIdentifier 
             }))
         });
     
