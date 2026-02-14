@@ -924,7 +924,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     const [hallStartTime, setHallStartTime] = useState(null);
     const [timeError, setTimeError] = useState('');
     const [existingMatches, setExistingMatches] = useState([]);
-    const [overlapError, setOverlapError] = useState('');
+    const [overlappingMatches, setOverlappingMatches] = useState([]);
 
     // Načítanie všetkých zápasov pre vybranú halu a deň
     useEffect(() => {
@@ -1000,34 +1000,9 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 return (newStartMinutes < existingEndMinutes && newEndMinutes > existingStartMinutes);
             });
 
-            if (overlapping.length > 0) {
-                const conflictMessages = overlapping.map(om => {
-                    const startTime = om.scheduledTime.toDate();
-                    const hours = startTime.getHours().toString().padStart(2, '0');
-                    const minutes = startTime.getMinutes().toString().padStart(2, '0');
-                    
-                    // Výpočet konca konfliktného zápasu
-                    const omCategory = categories.find(c => c.name === om.categoryName);
-                    let omDuration = 0;
-                    if (omCategory) {
-                        const periods = omCategory.periods || 2;
-                        const periodDuration = omCategory.periodDuration || 20;
-                        const breakDuration = omCategory.breakDuration || 2;
-                        omDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                    }
-                    const endTime = new Date(startTime.getTime() + omDuration * 60000);
-                    const endHours = endTime.getHours().toString().padStart(2, '0');
-                    const endMinutes = endTime.getMinutes().toString().padStart(2, '0');
-                    
-                    return `${om.homeTeamIdentifier} vs ${om.awayTeamIdentifier} (${hours}:${minutes} - ${endHours}:${endMinutes})`;
-                }).join(', ');
-                
-                setOverlapError(`Časový konflikt s existujúcim zápasom/zápasmi: ${conflictMessages}`);
-            } else {
-                setOverlapError('');
-            }
+            setOverlappingMatches(overlapping);
         } else {
-            setOverlapError('');
+            setOverlappingMatches([]);
         }
     }, [selectedTime, matchDuration, existingMatches, categories]);
 
@@ -1183,7 +1158,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
 
     if (!isOpen || !match) return null;
 
-    const hasError = timeError || overlapError;
+    const hasError = timeError || overlappingMatches.length > 0;
     const canSave = selectedHallId && selectedDate && selectedTime && !hasError;
 
     return React.createElement(
@@ -1371,16 +1346,25 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                                 const endHours = endDate.getHours().toString().padStart(2, '0');
                                 const endMinutes = endDate.getMinutes().toString().padStart(2, '0');
                                 
+                                // Zvýrazníme konfliktné zápasy
+                                const isOverlapping = overlappingMatches.some(om => om.id === em.id);
+                                
                                 return React.createElement(
                                     'div',
                                     { 
                                         key: idx,
-                                        className: 'flex items-center gap-2 p-1 bg-white rounded border border-gray-100'
+                                        className: `flex items-center gap-2 p-1 rounded border ${isOverlapping ? 'bg-red-50 border-red-300' : 'bg-white border-gray-100'}`
                                     },
                                     React.createElement('span', { className: 'text-gray-500 font-mono' }, `${hours}:${minutes} - ${endHours}:${endMinutes}`),
-                                    React.createElement('span', { className: 'text-gray-700' }, em.homeTeamIdentifier),
+                                    React.createElement('span', { className: isOverlapping ? 'text-red-700 font-medium' : 'text-gray-700' }, em.homeTeamIdentifier),
                                     React.createElement('i', { className: 'fa-solid fa-vs text-xs text-gray-400' }),
-                                    React.createElement('span', { className: 'text-gray-700' }, em.awayTeamIdentifier)
+                                    React.createElement('span', { className: isOverlapping ? 'text-red-700 font-medium' : 'text-gray-700' }, em.awayTeamIdentifier),
+                                    isOverlapping && React.createElement(
+                                        'span',
+                                        { className: 'text-xs text-red-500 ml-auto' },
+                                        React.createElement('i', { className: 'fa-solid fa-circle-exclamation mr-1' }),
+                                        'konflikt'
+                                    )
                                 );
                             })
                     )
@@ -1410,12 +1394,65 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         timeError
                     ),
                     
-                    // Zobrazenie chybovej hlášky (prekrývanie)
-                    overlapError && React.createElement(
-                        'p',
-                        { className: 'text-xs text-red-500 mt-1 flex items-center gap-1' },
-                        React.createElement('i', { className: 'fa-solid fa-circle-exclamation' }),
-                        overlapError
+                    // Zobrazenie konfliktných zápasov pod sebou
+                    overlappingMatches.length > 0 && React.createElement(
+                        'div',
+                        { className: 'mt-3 p-3 bg-red-50 border border-red-200 rounded-lg' },
+                        React.createElement(
+                            'p',
+                            { className: 'text-xs text-red-600 font-medium mb-2 flex items-center gap-1' },
+                            React.createElement('i', { className: 'fa-solid fa-circle-exclamation' }),
+                            `Časový konflikt s ${overlappingMatches.length} ${overlappingMatches.length === 1 ? 'zápasom' : 'zápasmi'}:`
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'space-y-2 max-h-40 overflow-y-auto' },
+                            overlappingMatches
+                                .sort((a, b) => {
+                                    const timeA = a.scheduledTime.toDate().getTime();
+                                    const timeB = b.scheduledTime.toDate().getTime();
+                                    return timeA - timeB;
+                                })
+                                .map((om, idx) => {
+                                    const startTime = om.scheduledTime.toDate();
+                                    const hours = startTime.getHours().toString().padStart(2, '0');
+                                    const minutes = startTime.getMinutes().toString().padStart(2, '0');
+                                    
+                                    // Výpočet konca konfliktného zápasu
+                                    const omCategory = categories.find(c => c.name === om.categoryName);
+                                    let omDuration = 0;
+                                    if (omCategory) {
+                                        const periods = omCategory.periods || 2;
+                                        const periodDuration = omCategory.periodDuration || 20;
+                                        const breakDuration = omCategory.breakDuration || 2;
+                                        omDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                                    }
+                                    const endTime = new Date(startTime.getTime() + omDuration * 60000);
+                                    const endHours = endTime.getHours().toString().padStart(2, '0');
+                                    const endMinutes = endTime.getMinutes().toString().padStart(2, '0');
+                                    
+                                    return React.createElement(
+                                        'div',
+                                        {
+                                            key: idx,
+                                            className: 'flex items-center justify-between p-2 bg-white rounded border border-red-100 text-sm'
+                                        },
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex items-center gap-2' },
+                                            React.createElement('i', { className: 'fa-solid fa-clock text-red-400 text-xs' }),
+                                            React.createElement('span', { className: 'font-mono text-red-600 font-medium' }, `${hours}:${minutes} - ${endHours}:${endMinutes}`)
+                                        ),
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex items-center gap-2 flex-1 ml-3' },
+                                            React.createElement('span', { className: 'text-red-700' }, om.homeTeamIdentifier),
+                                            React.createElement('i', { className: 'fa-solid fa-vs text-xs text-red-300' }),
+                                            React.createElement('span', { className: 'text-red-700' }, om.awayTeamIdentifier)
+                                        )
+                                    );
+                                })
+                        )
                     ),
                     
                     // Zobrazenie času ukončenia
