@@ -1043,55 +1043,62 @@ const AddMatchesApp = ({ userProfileData }) => {
         return extractedName;
     };
     
-    // Funkcia na získanie zobrazovaného textu pre tím (pre modálne okná)
+    // Funkcia na získanie zobrazovaného textu pre tím
     const getTeamDisplayText = (teamId) => {
         if (!teamId) return '---';
         
-        // Zistíme kategóriu zo zápasu
-        const currentMatch = matches.find(m => m.homeTeamId === teamId || m.awayTeamId === teamId);
-        const categoryName = currentMatch?.categoryName;
-        
-        // Extrahujeme názov z teamId
-        const firstDashIndex = teamId.indexOf('-');
-        const extractedName = firstDashIndex !== -1 ? teamId.substring(firstDashIndex + 1) : teamId;
-        
-        // Hľadáme tím podľa kombinácie kategórie a názvu
-        let team = null;
-        
-        if (categoryName) {
-            if (teamData.allTeams && teamData.allTeams.length > 0) {
-                team = teamData.allTeams.find(t => 
-                    t.category === categoryName && 
-                    t.teamName === extractedName
-                );
+        if (showTeamId) {
+            // REŽIM ZOBRAZENIA ID - formát 'kategória skupinaČíslo'
+            
+            // Zistíme kategóriu zo zápasu
+            const currentMatch = matches.find(m => m.homeTeamId === teamId || m.awayTeamId === teamId);
+            const categoryName = currentMatch?.categoryName;
+            
+            // Extrahujeme názov z teamId
+            const firstDashIndex = teamId.indexOf('-');
+            const extractedName = firstDashIndex !== -1 ? teamId.substring(firstDashIndex + 1) : teamId;
+            
+            // Hľadáme tím podľa kombinácie kategórie a názvu
+            let team = null;
+            
+            if (categoryName) {
+                if (teamData.allTeams && teamData.allTeams.length > 0) {
+                    team = teamData.allTeams.find(t => 
+                        t.category === categoryName && 
+                        t.teamName === extractedName
+                    );
+                }
+                
+                if (!team && window.__teamManagerData?.allTeams) {
+                    team = window.__teamManagerData.allTeams.find(t => 
+                        t.category === categoryName && 
+                        t.teamName === extractedName
+                    );
+                }
             }
             
-            if (!team && window.__teamManagerData?.allTeams) {
-                team = window.__teamManagerData.allTeams.find(t => 
-                    t.category === categoryName && 
-                    t.teamName === extractedName
-                );
+            if (team) {
+                // Formát: 'kategória skupinaČíslo' (bez medzery medzi skupinou a číslom)
+                const category = team.category || 'Neznáma kategória';
+                
+                // Odstránime "skupina " z názvu skupiny
+                let groupName = team.groupName || 'Neznáma skupina';
+                if (groupName.startsWith('skupina ')) {
+                    groupName = groupName.substring(8);
+                }
+                
+                const order = team.order || '?';
+                
+                // Spojíme bez medzery medzi groupName a order
+                return `${category} ${groupName}${order}`;
             }
+            
+            // Ak nemáme tím, vrátime extrahovaný názov
+            return extractedName;
+        } else {
+            // REŽIM ZOBRAZENIA NÁZVU TÍMU
+            return getTeamNameById(teamId);
         }
-        
-        if (team) {
-            // Formát: 'kategória skupinaČíslo' (bez medzery medzi skupinou a číslom)
-            const category = team.category || 'Neznáma kategória';
-            
-            // Odstránime "skupina " z názvu skupiny
-            let groupName = team.groupName || 'Neznáma skupina';
-            if (groupName.startsWith('skupina ')) {
-                groupName = groupName.substring(8);
-            }
-            
-            const order = team.order || '?';
-            
-            // Spojíme bez medzery medzi groupName a order
-            return `${category} ${groupName}${order}`;
-        }
-        
-        // Ak nemáme tím, vrátime extrahovaný názov
-        return extractedName;
     };
 
     // Funkcia na kontrolu, či už boli zápasy pre danú kategóriu/skupinu vygenerované
