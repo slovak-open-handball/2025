@@ -1007,35 +1007,67 @@ const AddMatchesApp = ({ userProfileData }) => {
             // Inak to nie je oddeľovač, berieme celý reťazec ako názov
         }
         
-        // Hľadáme podľa kombinácie category + teamName (POVINNÉ)
-        if (categoryName) {
-            // Najprv v teamData
+        // Funkcia na postupné skracovanie názvu pri pomlčkách s medzerami
+        const tryFindTeam = (nameToTry) => {
+            if (!categoryName) return null;
+            
+            // Najprv skúsime presný názov
             if (teamData.allTeams && teamData.allTeams.length > 0) {
                 const team = teamData.allTeams.find(t => 
                     t.category === categoryName && 
-                    t.teamName === extractedName
+                    t.teamName === nameToTry
                 );
-                
-                if (team) {
-                    return team.teamName;
-                }
+                if (team) return team;
             }
             
-            // Potom v __teamManagerData
             if (window.__teamManagerData?.allTeams) {
                 const team = window.__teamManagerData.allTeams.find(t => 
                     t.category === categoryName && 
-                    t.teamName === extractedName
+                    t.teamName === nameToTry
                 );
+                if (team) return team;
+            }
+            
+            return null;
+        };
+        
+        // Najprv skúsime presný extrahovaný názov
+        let foundTeam = null;
+        if (categoryName) {
+            foundTeam = tryFindTeam(extractedName);
+        }
+        
+        // Ak sa nenašiel, skúsime postupne odstraňovať časti za pomlčkami s medzerami
+        if (!foundTeam && categoryName) {
+            let workingName = extractedName;
+            
+            // Hľadáme pomlčky s medzerami (formát " - ")
+            const dashWithSpacesRegex = /\s+-\s+/g;
+            let match;
+            let lastIndex = workingName.length;
+            
+            // Zbierame všetky pozície pomlčiek s medzerami
+            const dashPositions = [];
+            while ((match = dashWithSpacesRegex.exec(workingName)) !== null) {
+                dashPositions.push(match.index);
+            }
+            
+            // Skúšame postupne odstraňovať časti od konca
+            for (let i = dashPositions.length - 1; i >= 0; i--) {
+                const pos = dashPositions[i];
+                const shorterName = workingName.substring(0, pos).trim();
                 
-                if (team) {
-                    setTeamData(window.__teamManagerData);
-                    return team.teamName;
-                }
+                foundTeam = tryFindTeam(shorterName);
+                if (foundTeam) break;
             }
         }
         
-        // Fallback - ak nemáme kategóriu, skúsime hľadať len podľa názvu
+        // Ak sme našli tím, vrátime jeho názov
+        if (foundTeam) {
+            return foundTeam.teamName;
+        }
+        
+        // Fallback - ak nemáme kategóriu, skúsime hľadať len podľa názvu v teamData
         if (teamData.allTeams && teamData.allTeams.length > 0) {
             const team = teamData.allTeams.find(t => t.teamName === extractedName);
             if (team) return team.teamName;
@@ -1057,7 +1089,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     // Funkcia na získanie zobrazovaného textu pre tím
     const getTeamDisplayText = (teamId) => {
         if (!teamId) return '---';
-    
+        
         if (showTeamId) {
             // REŽIM ZOBRAZENIA ID - formát 'kategória skupinaČíslo'
             
@@ -1080,22 +1112,56 @@ const AddMatchesApp = ({ userProfileData }) => {
                 }
             }
             
-            // Hľadáme tím podľa kombinácie kategórie a názvu
-            let team = null;
-            
-            if (categoryName) {
+            // Funkcia na hľadanie tímu s postupným skracovaním
+            const tryFindTeam = (nameToTry) => {
+                if (!categoryName) return null;
+                
                 if (teamData.allTeams && teamData.allTeams.length > 0) {
-                    team = teamData.allTeams.find(t => 
+                    const team = teamData.allTeams.find(t => 
                         t.category === categoryName && 
-                        t.teamName === extractedName
+                        t.teamName === nameToTry
                     );
+                    if (team) return team;
                 }
                 
-                if (!team && window.__teamManagerData?.allTeams) {
-                    team = window.__teamManagerData.allTeams.find(t => 
+                if (window.__teamManagerData?.allTeams) {
+                    const team = window.__teamManagerData.allTeams.find(t => 
                         t.category === categoryName && 
-                        t.teamName === extractedName
+                        t.teamName === nameToTry
                     );
+                    if (team) return team;
+                }
+                
+                return null;
+            };
+            
+            // Hľadáme tím
+            let team = null;
+            if (categoryName) {
+                team = tryFindTeam(extractedName);
+            }
+            
+            // Ak sa nenašiel, skúsime postupne odstraňovať časti za pomlčkami s medzerami
+            if (!team && categoryName) {
+                let workingName = extractedName;
+                
+                // Hľadáme pomlčky s medzerami (formát " - ")
+                const dashWithSpacesRegex = /\s+-\s+/g;
+                let match;
+                
+                // Zbierame všetky pozície pomlčiek s medzerami
+                const dashPositions = [];
+                while ((match = dashWithSpacesRegex.exec(workingName)) !== null) {
+                    dashPositions.push(match.index);
+                }
+                
+                // Skúšame postupne odstraňovať časti od konca
+                for (let i = dashPositions.length - 1; i >= 0; i--) {
+                    const pos = dashPositions[i];
+                    const shorterName = workingName.substring(0, pos).trim();
+                    
+                    team = tryFindTeam(shorterName);
+                    if (team) break;
                 }
             }
             
