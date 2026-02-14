@@ -413,6 +413,244 @@ const ConfirmExistingMatchModal = ({ isOpen, onClose, onConfirm, match, homeTeam
     );
 };
 
+const handleDeleteClick = (match) => {
+    setSelectedMatchForAction(match);
+    setIsDeleteModalOpen(true);
+};
+
+const handleSwapClick = (match) => {
+    setSelectedMatchForAction(match);
+    setIsSwapModalOpen(true);
+};
+
+// Samotné vykonanie zmazania
+const confirmDelete = async () => {
+    if (!selectedMatchForAction) return;
+    
+    if (!window.db) {
+        window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
+        return;
+    }
+
+    if (userProfileData?.role !== 'admin') {
+        window.showGlobalNotification('Na mazanie zápasov potrebujete administrátorské práva', 'error');
+        return;
+    }
+
+    if (!userProfileData?.approved) {
+        window.showGlobalNotification('Váš účet ešte nebol schválený administrátorom.', 'error');
+        return;
+    }
+
+    try {
+        const matchRef = doc(window.db, 'matches', selectedMatchForAction.id);
+        await deleteDoc(matchRef);
+        
+        console.log(`Zápas s ID ${selectedMatchForAction.id} bol úspešne zmazaný`);
+        window.showGlobalNotification('Zápas bol úspešne zmazaný', 'success');
+        setSelectedMatchForAction(null);
+    } catch (error) {
+        console.error('Chyba pri mazaní zápasu:', error);
+        window.showGlobalNotification('Chyba pri mazaní zápasu: ' + error.message, 'error');
+    }
+};
+
+// Samotné vykonanie výmeny
+const confirmSwap = async () => {
+    if (!selectedMatchForAction) return;
+    
+    if (!window.db) {
+        window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
+        return;
+    }
+
+    if (userProfileData?.role !== 'admin') {
+        window.showGlobalNotification('Na úpravu zápasov potrebujete administrátorské práva', 'error');
+        return;
+    }
+
+    if (!userProfileData?.approved) {
+        window.showGlobalNotification('Váš účet ešte nebol schválený administrátorom.', 'error');
+        return;
+    }
+
+    try {
+        const matchRef = doc(window.db, 'matches', selectedMatchForAction.id);
+        
+        await updateDoc(matchRef, {
+            homeTeamId: selectedMatchForAction.awayTeamId,
+            awayTeamId: selectedMatchForAction.homeTeamId
+        });
+        
+        console.log(`Zápas s ID ${selectedMatchForAction.id} bol úspešne upravený - tímy vymenené`);
+        window.showGlobalNotification('Tímy boli úspešne vymenené', 'success');
+        setSelectedMatchForAction(null);
+    } catch (error) {
+        console.error('Chyba pri výmene tímov:', error);
+        window.showGlobalNotification('Chyba pri výmene tímov: ' + error.message, 'error');
+    }
+};
+
+const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTeamDisplay }) => {
+    if (!isOpen) return null;
+
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80]',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) onClose();
+            }
+        },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
+            
+            // Hlavička
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center mb-4' },
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 'Potvrdenie zmazania'),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'text-gray-500 hover:text-gray-700'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-times text-xl' })
+                )
+            ),
+
+            // Obsah
+            React.createElement(
+                'div',
+                { className: 'mb-6' },
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-700 mb-4' },
+                    'Naozaj chcete zmazať zápas medzi tímami ',
+                    React.createElement('span', { className: 'font-semibold' }, homeTeamDisplay),
+                    ' a ',
+                    React.createElement('span', { className: 'font-semibold' }, awayTeamDisplay),
+                    '?'
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-sm text-red-600' },
+                    'Táto akcia je nenávratná.'
+                )
+            ),
+
+            // Tlačidlá
+            React.createElement(
+                'div',
+                { className: 'flex justify-end gap-3' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
+                    },
+                    'Zrušiť'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => {
+                            onConfirm();
+                            onClose();
+                        },
+                        className: 'px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors'
+                    },
+                    'Zmazať'
+                )
+            )
+        )
+    );
+};
+
+const ConfirmSwapModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTeamDisplay }) => {
+    if (!isOpen) return null;
+
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80]',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) onClose();
+            }
+        },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
+            
+            // Hlavička
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center mb-4' },
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 'Potvrdenie výmeny'),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'text-gray-500 hover:text-gray-700'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-times text-xl' })
+                )
+            ),
+
+            // Obsah
+            React.createElement(
+                'div',
+                { className: 'mb-6' },
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-700 mb-4' },
+                    'Naozaj chcete vymeniť domáci a hosťovský tím?'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center justify-between bg-gray-50 p-3 rounded-lg' },
+                    React.createElement('span', { className: 'font-semibold' }, homeTeamDisplay),
+                    React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-blue-500 mx-2' }),
+                    React.createElement('span', { className: 'font-semibold' }, awayTeamDisplay)
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center justify-between mt-2 text-sm text-gray-500' },
+                    React.createElement('span', null, 'Domáci'),
+                    React.createElement('span', null, 'Hosť')
+                )
+            ),
+
+            // Tlačidlá
+            React.createElement(
+                'div',
+                { className: 'flex justify-end gap-3' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
+                    },
+                    'Zrušiť'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => {
+                            onConfirm();
+                            onClose();
+                        },
+                        className: 'px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors'
+                    },
+                    'Vymeniť'
+                )
+            )
+        )
+    );
+};
+
 const AddMatchesApp = ({ userProfileData }) => {
     const [sportHalls, setSportHalls] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -435,6 +673,10 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [existingMatchesToProcess, setExistingMatchesToProcess] = useState([]);
     const [newMatches, setNewMatches] = useState([]);
     const [currentCategoryInfo, setCurrentCategoryInfo] = useState(null);
+
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
+    const [selectedMatchForAction, setSelectedMatchForAction] = useState(null);
 
     // Funkcia na získanie názvu tímu podľa ID alebo priamo z objektu
     const getTeamName = (team) => {
@@ -603,88 +845,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             match.categoryId === categoryId && 
             (groupName ? match.groupName === groupName : true)
         );
-    };
-
-    // Funkcia na zmazanie zápasu
-    const deleteMatch = async (matchId) => {
-        if (!window.db) {
-            window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
-            return;
-        }
-
-        // Skontrolujeme, či je používateľ admin
-        if (userProfileData?.role !== 'admin') {
-            window.showGlobalNotification('Na mazanie zápasov potrebujete administrátorské práva', 'error');
-            return;
-        }
-
-        if (!userProfileData?.approved) {
-            window.showGlobalNotification('Váš účet ešte nebol schválený administrátorom.', 'error');
-            return;
-        }
-
-        // Potvrdenie od používateľa
-        if (!confirm('Naozaj chcete zmazať tento zápas?')) {
-            return;
-        }
-
-        try {
-            const matchRef = doc(window.db, 'matches', matchId);
-            await deleteDoc(matchRef);
-            
-            console.log(`Zápas s ID ${matchId} bol úspešne zmazaný`);
-            window.showGlobalNotification('Zápas bol úspešne zmazaný', 'success');
-        } catch (error) {
-            console.error('Chyba pri mazaní zápasu:', error);
-            window.showGlobalNotification('Chyba pri mazaní zápasu: ' + error.message, 'error');
-        }
-    };
-
-    // Funkcia na výmenu domácich a hostí
-    const swapTeams = async (matchId) => {
-        if (!window.db) {
-            window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
-            return;
-        }
-    
-        // Skontrolujeme, či je používateľ admin
-        if (userProfileData?.role !== 'admin') {
-            window.showGlobalNotification('Na úpravu zápasov potrebujete administrátorské práva', 'error');
-            return;
-        }
-    
-        if (!userProfileData?.approved) {
-            window.showGlobalNotification('Váš účet ešte nebol schválený administrátorom.', 'error');
-            return;
-        }
-    
-        // Potvrdenie od používateľa
-        if (!confirm('Naozaj chcete vymeniť domáci a hosťovský tím?')) {
-            return;
-        }
-    
-        try {
-            // Nájdeme zápas v lokálnom stave
-            const match = matches.find(m => m.id === matchId);
-            if (!match) {
-                window.showGlobalNotification('Zápas sa nenašiel', 'error');
-                return;
-            }
-    
-            const matchRef = doc(window.db, 'matches', matchId);
-            
-            // Vymeníme homeTeamId a awayTeamId
-            await updateDoc(matchRef, {
-                homeTeamId: match.awayTeamId,
-                awayTeamId: match.homeTeamId
-            });
-            
-            console.log(`Zápas s ID ${matchId} bol úspešne upravený - tímy vymenené`);
-            window.showGlobalNotification('Tímy boli úspešne vymenené', 'success');
-        } catch (error) {
-            console.error('Chyba pri výmene tímov:', error);
-            window.showGlobalNotification('Chyba pri výmene tímov: ' + error.message, 'error');
-        }
     };
 
     // Funkcia na kontrolu existujúcich zápasov počas generovania
@@ -1527,6 +1687,26 @@ const AddMatchesApp = ({ userProfileData }) => {
             homeTeamDisplay: currentExistingMatch ? getTeamDisplayText(currentExistingMatch.homeTeamId) : '',
             awayTeamDisplay: currentExistingMatch ? getTeamDisplayText(currentExistingMatch.awayTeamId) : ''
         }),
+        React.createElement(ConfirmDeleteModal, {
+            isOpen: isDeleteModalOpen,
+            onClose: () => {
+                setIsDeleteModalOpen(false);
+                setSelectedMatchForAction(null);
+            },
+            onConfirm: confirmDelete,
+            homeTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.homeTeamId) : '',
+            awayTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.awayTeamId) : ''
+        }),
+        React.createElement(ConfirmSwapModal, {
+            isOpen: isSwapModalOpen,
+            onClose: () => {
+                setIsSwapModalOpen(false);
+                setSelectedMatchForAction(null);
+            },
+            onConfirm: confirmSwap,
+            homeTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.homeTeamId) : '',
+            awayTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.awayTeamId) : ''
+        }),
         React.createElement(
             'div',
             { className: 'flex-grow flex justify-center items-start w-full' },
@@ -1632,9 +1812,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'button',
                                                 {
-                                                    onClick: () => swapTeams(match.id),
+                                                    onClick: () => handleSwapClick(match),  // ZMENENÉ
                                                     className: 'w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md',
-                                                    title: 'Vymeniť tím domáci a tím hostia'
+                                                    title: 'Vymeniť domáci a hosťovský tím'
                                                 },
                                                 React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-sm' })
                                             ),
@@ -1642,7 +1822,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'button',
                                                 {
-                                                    onClick: () => deleteMatch(match.id),
+                                                    onClick: () => handleDeleteClick(match),  // ZMENENÉ
                                                     className: 'w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md',
                                                     title: 'Zmazať zápas'
                                                 },
