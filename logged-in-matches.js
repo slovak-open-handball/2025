@@ -923,6 +923,85 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     const [matchEndTime, setMatchEndTime] = useState('');
     const [hallStartTime, setHallStartTime] = useState(null);
     const [timeError, setTimeError] = useState('');
+    const [existingMatches, setExistingMatches] = useState([]);
+    const [overlapError, setOverlapError] = useState('');
+
+    // Načítanie všetkých zápasov pre vybranú halu a deň
+    useEffect(() => {
+        const loadExistingMatches = async () => {
+            if (selectedHallId && selectedDate && window.db && window.matches) {
+                try {
+                    // Filtrujeme zápasy pre túto halu a deň
+                    const matchesForHallAndDay = window.matches.filter(m => 
+                        m.hallId === selectedHallId && 
+                        m.scheduledTime && 
+                        m.id !== match?.id // Vylúčime aktuálne upravovaný zápas
+                    ).filter(m => {
+                        const matchDate = m.scheduledTime.toDate();
+                        const matchDateStr = matchDate.toISOString().split('T')[0];
+                        return matchDateStr === selectedDate;
+                    });
+                    
+                    setExistingMatches(matchesForHallAndDay);
+                } catch (error) {
+                    console.error('Chyba pri načítaní existujúcich zápasov:', error);
+                }
+            } else {
+                setExistingMatches([]);
+            }
+        };
+
+        loadExistingMatches();
+    }, [selectedHallId, selectedDate, match?.id]);
+
+    // Kontrola prekrývania časov
+    useEffect(() => {
+        if (selectedTime && matchDuration > 0 && existingMatches.length > 0) {
+            const [newHours, newMinutes] = selectedTime.split(':').map(Number);
+            const newStartMinutes = newHours * 60 + newMinutes;
+            const newEndMinutes = newStartMinutes + matchDuration;
+
+            // Nájdeme všetky prekrývajúce sa zápasy
+            const overlapping = existingMatches.filter(existingMatch => {
+                if (!existingMatch.scheduledTime) return false;
+                
+                const existingDate = existingMatch.scheduledTime.toDate();
+                const existingHours = existingDate.getHours();
+                const existingMinutes = existingDate.getMinutes();
+                const existingStartMinutes = existingHours * 60 + existingMinutes;
+                
+                // Získame trvanie existujúceho zápasu podľa jeho kategórie
+                const existingCategory = categories.find(c => c.name === existingMatch.categoryName);
+                let existingDuration = 0;
+                if (existingCategory) {
+                    const periods = existingCategory.periods || 2;
+                    const periodDuration = existingCategory.periodDuration || 20;
+                    const breakDuration = existingCategory.breakDuration || 2;
+                    existingDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                }
+                const existingEndMinutes = existingStartMinutes + existingDuration;
+
+                // Kontrola prekrývania: 
+                // Nový zápas začína pred koncom existujúceho A končí po začiatku existujúceho
+                return (newStartMinutes < existingEndMinutes && newEndMinutes > existingStartMinutes);
+            });
+
+            if (overlapping.length > 0) {
+                const conflictMessages = overlapping.map(om => {
+                    const startTime = om.scheduledTime.toDate();
+                    const hours = startTime.getHours().toString().padStart(2, '0');
+                    const minutes = startTime.getMinutes().toString().padStart(2, '0');
+                    return `${om.homeTeamIdentifier} vs ${om.awayTeamIdentifier} (${hours}:${minutes})`;
+                }).join(', ');
+                
+                setOverlapError(`Časový konflikt s existujúcim zápasom/zápasmi: ${conflictMessages}`);
+            } else {
+                setOverlapError('');
+            }
+        } else {
+            setOverlapError('');
+        }
+    }, [selectedTime, matchDuration, existingMatches, categories]);
 
     // Načítanie času začiatku pre vybranú halu a deň
     useEffect(() => {
@@ -1072,6 +1151,9 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
 
     if (!isOpen || !match) return null;
 
+    const hasError = timeError || overlapError;
+    const canSave = selectedHallId && selectedDate && selectedTime && !hasError;
+
     return React.createElement(
         'div',
         {
@@ -1220,6 +1302,58 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     React.createElement('span', { className: 'font-bold text-blue-800' }, hallStartTime)
                 ),
 
+                // Zobrazenie existujúcich zápasov pre prehľad
+                existingMatches.length > 0 && React.createElement(
+                    'div',
+                    { className: 'text-sm bg-gray-50 p-3 rounded-lg border border-gray-200' },
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-2 mb-2 text-gray-700' },
+                        React.createElement('i', { className: 'fa-solid fa-calendar-check text-gray-500' }),
+                        React.createElement('span', { className: 'font-medium' }, 'Existujúce zápasy v tento deň:')
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'space-y-1 max-h-32 overflow-y-auto text-xs' },
+                        existingMatches
+                            .sort((a, b) => {
+                                const timeA = a.scheduledTime.toDate().getTime();
+                                const timeB = b.scheduledTime.toDate().getTime();
+                                return timeA - timeB;
+                            })
+                            .map((em, idx) => {
+                                const startTime = em.scheduledTime.toDate();
+                                const hours = startTime.getHours().toString().padStart(2, '0');
+                                const minutes = startTime.getMinutes().toString().padStart(2, '0');
+                                
+                                // Výpočet konca existujúceho zápasu
+                                const emCategory = categories.find(c => c.name === em.categoryName);
+                                let emDuration = 0;
+                                if (emCategory) {
+                                    const periods = emCategory.periods || 2;
+                                    const periodDuration = emCategory.periodDuration || 20;
+                                    const breakDuration = emCategory.breakDuration || 2;
+                                    emDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                                }
+                                const endDate = new Date(startTime.getTime() + emDuration * 60000);
+                                const endHours = endDate.getHours().toString().padStart(2, '0');
+                                const endMinutes = endDate.getMinutes().toString().padStart(2, '0');
+                                
+                                return React.createElement(
+                                    'div',
+                                    { 
+                                        key: idx,
+                                        className: 'flex items-center gap-2 p-1 bg-white rounded border border-gray-100'
+                                    },
+                                    React.createElement('span', { className: 'text-gray-500 font-mono' }, `${hours}:${minutes} - ${endHours}:${endMinutes}`),
+                                    React.createElement('span', { className: 'text-gray-700' }, em.homeTeamIdentifier),
+                                    React.createElement('i', { className: 'fa-solid fa-vs text-xs text-gray-400' }),
+                                    React.createElement('span', { className: 'text-gray-700' }, em.awayTeamIdentifier)
+                                );
+                            })
+                    )
+                ),
+
                 // Výber času
                 React.createElement(
                     'div',
@@ -1231,12 +1365,12 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         type: 'time',
                         value: selectedTime,
                         onChange: (e) => setSelectedTime(e.target.value),
-                        className: `w-full px-3 py-2 border ${timeError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black`,
+                        className: `w-full px-3 py-2 border ${hasError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black`,
                         step: '60',
                         min: hallStartTime || undefined // Nastavíme minimálny čas ak existuje
                     }),
                     
-                    // Zobrazenie chybovej hlášky
+                    // Zobrazenie chybovej hlášky (čas začiatku)
                     timeError && React.createElement(
                         'p',
                         { className: 'text-xs text-red-500 mt-1 flex items-center gap-1' },
@@ -1244,8 +1378,16 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         timeError
                     ),
                     
+                    // Zobrazenie chybovej hlášky (prekrývanie)
+                    overlapError && React.createElement(
+                        'p',
+                        { className: 'text-xs text-red-500 mt-1 flex items-center gap-1' },
+                        React.createElement('i', { className: 'fa-solid fa-circle-exclamation' }),
+                        overlapError
+                    ),
+                    
                     // Zobrazenie času ukončenia
-                    matchEndTime && !timeError && React.createElement(
+                    matchEndTime && !hasError && React.createElement(
                         'p',
                         { className: 'text-xs text-green-600 mt-1' },
                         React.createElement('i', { className: 'fa-regular fa-circle-check mr-1' }),
@@ -1254,7 +1396,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 ),
 
                 // Zhrnutie
-                selectedHallId && selectedDate && selectedTime && !timeError && React.createElement(
+                selectedHallId && selectedDate && selectedTime && !hasError && React.createElement(
                     'div',
                     { className: 'mt-4 p-3 bg-green-50 border border-green-200 rounded-lg' },
                     React.createElement(
@@ -1308,7 +1450,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     'button',
                     {
                         onClick: () => {
-                            if (selectedHallId && selectedDate && selectedTime && !timeError) {
+                            if (canSave) {
                                 onAssign({
                                     matchId: match.id,
                                     hallId: selectedHallId,
@@ -1320,9 +1462,9 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                                 onClose();
                             }
                         },
-                        disabled: !selectedHallId || !selectedDate || !selectedTime || !!timeError,
+                        disabled: !canSave,
                         className: `px-4 py-2 text-white rounded-lg transition-colors ${
-                            selectedHallId && selectedDate && selectedTime && !timeError
+                            canSave
                                 ? 'bg-green-600 hover:bg-green-700 cursor-pointer' 
                                 : 'bg-gray-400 cursor-not-allowed'
                         }`
