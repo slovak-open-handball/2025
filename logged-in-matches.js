@@ -1731,17 +1731,17 @@ const AddMatchesApp = ({ userProfileData }) => {
         const categoryName = params.get('category') || '';
         const groupName = params.get('group') || '';
         const hallName = params.get('hall') || '';
-        const day = params.get('day') || '';
+        const day = params.get('day') || ''; // Toto je string YYYY-MM-DD
 
         // Nájdeme ID podľa názvu
         const categoryId = categories.find(c => c.name === categoryName)?.id || '';
         const hallId = sportHalls.find(h => h.name === hallName)?.id || '';
-
+    
         return {
             category: categoryId,
-            group: groupName, // skupina ostáva podľa názvu
+            group: groupName,
             hall: hallId,
-            day: day
+            day: day // Vrátime string, nie Date objekt
         };
     };
 
@@ -1794,7 +1794,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     // Funkcia na aktualizáciu URL s aktuálnymi filtrami
     const updateURLWithFilters = (filters) => {
         const params = new URLSearchParams();
-
+    
         // Nájdeme názov kategórie podľa ID
         if (filters.category) {
             const category = categories.find(c => c.id === filters.category);
@@ -1802,12 +1802,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                 params.set('category', category.name);
             }
         }
-
+    
         // Skupinu ukladáme priamo (už je to názov)
         if (filters.group) {
             params.set('group', filters.group);
         }
-
+    
         // Nájdeme názov haly podľa ID
         if (filters.hall) {
             const hall = sportHalls.find(h => h.id === filters.hall);
@@ -1815,11 +1815,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                 params.set('hall', hall.name);
             }
         }
-
+    
+        // Deň ukladáme bez zmeny - je to string YYYY-MM-DD
         if (filters.day) {
             params.set('day', filters.day);
         }
-
+    
         const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}${window.location.hash}`;
         window.history.replaceState({}, '', newUrl);
     };
