@@ -20,6 +20,13 @@ const typeIcons = {
 
 const getLocalDateStr = (date) => {
     if (!date) return null;
+    
+    // Ak už je to string (napr. z URL), vrátime ho priamo
+    if (typeof date === 'string') {
+        return date;
+    }
+    
+    // Ak je to Date objekt
     const year = date.getFullYear();
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const day = date.getDate().toString().padStart(2, '0');
@@ -1996,16 +2003,19 @@ const AddMatchesApp = ({ userProfileData }) => {
     useEffect(() => {
         if (tournamentStartDate && tournamentEndDate) {
             const days = [];
+            // Konvertujeme stringy z inputov na Date objekty v lokálnom timezone
             const startDate = new Date(tournamentStartDate);
             const endDate = new Date(tournamentEndDate);
             
+            // Nastavíme na začiatok dňa v lokálnom timezone
             startDate.setHours(0, 0, 0, 0);
             endDate.setHours(0, 0, 0, 0);
-            
+        
             const currentDate = new Date(startDate);
             
             while (currentDate <= endDate) {
-                const dateStr = currentDate.toISOString().split('T')[0];
+                // Použijeme getLocalDateStr namiesto toISOString
+                const dateStr = getLocalDateStr(currentDate);
                 const displayDate = currentDate.toLocaleDateString('sk-SK', {
                     day: '2-digit',
                     month: '2-digit',
@@ -3947,17 +3957,16 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 
                                     startDate.setHours(0, 0, 0, 0);
                                     endDate.setHours(0, 0, 0, 0);
-
+                                
                                     const currentDate = new Date(startDate);
                                     
                                     while (currentDate <= endDate) {
-                                        const dateStr = currentDate.toISOString().split('T')[0];
+                                        // Použijeme getLocalDateStr namiesto toISOString
+                                        const dateStr = getLocalDateStr(currentDate);
                                         
                                         // Kontrola, či tento deň vyhovuje filtru dňa
                                         const matchesDayFilter = !selectedDayFilter || selectedDayFilter === dateStr;
                                         
-                                        // BEZ FILTRA DŇA: Pridáme všetky dni turnaja
-                                        // S FILTROM DŇA: Pridáme len vybraný deň (bez ohľadu na to, či má zápasy)
                                         if (matchesDayFilter) {
                                             tournamentDays.push(new Date(currentDate));
                                         }
