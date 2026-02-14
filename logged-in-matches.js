@@ -3784,23 +3784,51 @@ const AddMatchesApp = ({ userProfileData }) => {
                             { className: 'space-y-4 overflow-y-auto pr-2 flex-1' },
                             filteredSportHalls.map((hall) => {
                                 const typeConfig = typeIcons[hall.type] || { icon: 'fa-futbol', color: '#dc2626' };
+
+                                // Získame všetky zápasy pre túto halu
+                                const hallMatches = matches.filter(m => m.hallId === hall.id && m.scheduledTime);
+
+                                // Zápasy vyhovujúce filtrom kategórie a skupiny
+                                const filteredHallMatches = hallMatches.filter(match => {
+                                    // Filter podľa kategórie
+                                    if (selectedCategoryFilter && match.categoryId !== selectedCategoryFilter) {
+                                        return false;
+                                    }
+                                    // Filter podľa skupiny
+                                    if (selectedGroupFilter && match.groupName !== selectedGroupFilter) {
+                                        return false;
+                                    }
+                                    return true;
+                                });
+
+                                const daysWithMatches = new Set();
+                                filteredHallMatches.forEach(match => {
+                                    if (match.scheduledTime) {
+                                        try {
+                                            const matchDate = match.scheduledTime.toDate();
+                                            const dateStr = matchDate.toISOString().split('T')[0];
+                                            daysWithMatches.add(dateStr);
+                                        } catch (e) {
+                                            console.error('Chyba pri spracovaní dátumu zápasu:', e);
+                                        }
+                                    }
+                                });
                                 
                                 // Generovanie zoznamu dní medzi začiatkom a koncom turnaja
                                 const tournamentDays = [];
                                 if (tournamentStartDate && tournamentEndDate) {
                                     const startDate = new Date(tournamentStartDate);
                                     const endDate = new Date(tournamentEndDate);
-    
+
                                     startDate.setHours(0, 0, 0, 0);
                                     endDate.setHours(0, 0, 0, 0);
-    
+                                
                                     const currentDate = new Date(startDate);
                                     
                                     while (currentDate <= endDate) {
                                         const dateStr = currentDate.toISOString().split('T')[0];
                                         
-                                        // Ak je vybratý filter dňa, zobrazíme len tento deň
-                                        if (!selectedDayFilter || selectedDayFilter === dateStr) {
+                                        if (daysWithMatches.has(dateStr)) {
                                             tournamentDays.push(new Date(currentDate));
                                         }
                                         
