@@ -1097,105 +1097,16 @@ const AddMatchesApp = ({ userProfileData }) => {
     };
     
     // Funkcia na získanie zobrazovaného textu pre tím
-    const getTeamDisplayText = (teamId) => {
-        if (!teamId) return '---';
+    const getTeamDisplayText = (teamRef) => {
+        if (!teamRef) return '---';
         
         if (showTeamId) {
-            // REŽIM ZOBRAZENIA ID - formát 'kategória skupinaČíslo'
-            
-            // Zistíme kategóriu zo zápasu
-            const currentMatch = matches.find(m => m.homeTeamId === teamId || m.awayTeamId === teamId);
-            const categoryName = currentMatch?.categoryName;
-            
-            // Extrahujeme názov z teamId - len ak je prvá pomlčka oddeľovač
-            const firstDashIndex = teamId.indexOf('-');
-            let extractedName = teamId;
-            
-            if (firstDashIndex !== -1) {
-                // Skontrolujeme, či je okolo pomlčky medzera
-                const beforeDash = teamId[firstDashIndex - 1];
-                const afterDash = teamId[firstDashIndex + 1];
-                
-                // Ak pred ani za nie je medzera, je to oddeľovač
-                if (beforeDash && beforeDash !== ' ' && afterDash && afterDash !== ' ') {
-                    extractedName = teamId.substring(firstDashIndex + 1);
-                }
-            }
-            
-            // Funkcia na hľadanie tímu s postupným skracovaním
-            const tryFindTeam = (nameToTry) => {
-                if (!categoryName) return null;
-                
-                if (teamData.allTeams && teamData.allTeams.length > 0) {
-                    const team = teamData.allTeams.find(t => 
-                        t.category === categoryName && 
-                        t.teamName === nameToTry
-                    );
-                    if (team) return team;
-                }
-                
-                if (window.__teamManagerData?.allTeams) {
-                    const team = window.__teamManagerData.allTeams.find(t => 
-                        t.category === categoryName && 
-                        t.teamName === nameToTry
-                    );
-                    if (team) return team;
-                }
-                
-                return null;
-            };
-            
-            // Hľadáme tím
-            let team = null;
-            if (categoryName) {
-                team = tryFindTeam(extractedName);
-            }
-            
-            // Ak sa nenašiel, skúsime postupne odstraňovať časti za pomlčkami s medzerami
-            if (!team && categoryName) {
-                let workingName = extractedName;
-                
-                // Hľadáme pomlčky s medzerami (formát " - ")
-                const dashWithSpacesRegex = /\s+-\s+/g;
-                let match;
-                
-                // Zbierame všetky pozície pomlčiek s medzerami
-                const dashPositions = [];
-                while ((match = dashWithSpacesRegex.exec(workingName)) !== null) {
-                    dashPositions.push(match.index);
-                }
-                
-                // Skúšame postupne odstraňovať časti od konca
-                for (let i = dashPositions.length - 1; i >= 0; i--) {
-                    const pos = dashPositions[i];
-                    const shorterName = workingName.substring(0, pos).trim();
-                    
-                    team = tryFindTeam(shorterName);
-                    if (team) break;
-                }
-            }
-            
-            if (team) {
-                // Formát: 'kategória skupinaČíslo' (bez medzery medzi skupinou a číslom)
-                const category = team.category || 'Neznáma kategória';
-                
-                // Odstránime "skupina " z názvu skupiny
-                let groupName = team.groupName || 'Neznáma skupina';
-                if (groupName.startsWith('skupina ')) {
-                    groupName = groupName.substring(8);
-                }
-                
-                const order = team.order || '?';
-                
-                // Spojíme bez medzery medzi groupName a order
-                return `${category} ${groupName}${order}`;
-            }
-            
-            // Ak nemáme tím, vrátime extrahovaný názov
-            return extractedName;
+            // REŽIM ZOBRAZENIA ID - už len vrátime samotný ref
+            return teamRef;
         } else {
-            // REŽIM ZOBRAZENIA NÁZVU TÍMU
-            return getTeamNameById(teamId);
+            // REŽIM ZOBRAZENIA NÁZVU - vrátime len názov (bez kategórie a skupiny)
+            // Tu by bolo ideálne mať mapovanie, ale keďže nepoužívame ID, vrátime celý ref
+            return teamRef;
         }
     };
 
@@ -1214,8 +1125,8 @@ const AddMatchesApp = ({ userProfileData }) => {
         
         matchesToGenerate.forEach(match => {
             const exists = matches.some(existingMatch => 
-                existingMatch.homeTeamId === match.homeTeamId && 
-                existingMatch.awayTeamId === match.awayTeamId &&
+                existingMatch.homeTeamRef === match.homeTeamRef && 
+                existingMatch.awayTeamRef === match.awayTeamRef &&
                 existingMatch.categoryId === match.categoryId
             );
             
@@ -1573,23 +1484,28 @@ const AddMatchesApp = ({ userProfileData }) => {
     };
 
     // Funkcia na generovanie zápasov pre skupinu
-    const generateMatchesForGroup = (teams, withRepetitions) => {
+    const generateMatchesForGroup = (teams, withRepetitions, categoryName) => {
         const matches = [];
         
-        // Pre každý tím vytvoríme identifikátor (ID)
+        // Pre každý tím vytvoríme identifikátor v tvare "kategória skupinačíslo"
         const teamIdentifiers = teams.map(t => {
-            // Ak tím nemá ID, vytvoríme ho z kategórie a názvu
-            let teamId = t.id;
+            // Získame názov kategórie
+            const category = categoryName || t.category || 'Neznáma kategória';
             
-            // Ak nemáme ID, skúsime vytvoriť z dostupných údajov
-            if (!teamId && t.category && t.teamName) {
-                // Tu by bolo ideálne mať userId, ale ak nie je, použijeme aspoň názov
-                // Toto je fallback - malo by sa to stať len v núdzi
-                teamId = `unknown-${t.teamName}`;
+            // Spracujeme názov skupiny - odstránime "skupina " ak existuje
+            let groupName = t.groupName || 'Neznáma skupina';
+            if (groupName.startsWith('skupina ')) {
+                groupName = groupName.substring(8);
             }
             
+            // Pridáme order/číslo tímu
+            const order = t.order || '?';
+            
+            // Vytvoríme identifikátor v požadovanom formáte
+            const teamRef = `${category} ${groupName}${order}`;
+            
             return {
-                id: teamId,
+                ref: teamRef,
                 name: t.teamName || t.name || 'Neznámy tím'
             };
         });
@@ -1600,10 +1516,10 @@ const AddMatchesApp = ({ userProfileData }) => {
             // Každý s každým doma/vonku v rámci skupiny
             for (let i = 0; i < teamIdentifiers.length; i++) {
                 for (let j = 0; j < teamIdentifiers.length; j++) {
-                    if (i !== j && teamIdentifiers[i].id && teamIdentifiers[j].id) {
+                    if (i !== j) {
                         matches.push({
-                            homeTeamId: teamIdentifiers[i].id,  // Používame celé ID
-                            awayTeamId: teamIdentifiers[j].id,  // Používame celé ID
+                            homeTeamRef: teamIdentifiers[i].ref,
+                            awayTeamRef: teamIdentifiers[j].ref,
                         });
                     }
                 }
@@ -1612,12 +1528,10 @@ const AddMatchesApp = ({ userProfileData }) => {
             // Jedinečné dvojice (každý s každým raz) v rámci skupiny
             for (let i = 0; i < teamIdentifiers.length; i++) {
                 for (let j = i + 1; j < teamIdentifiers.length; j++) {
-                    if (teamIdentifiers[i].id && teamIdentifiers[j].id) {
-                        matches.push({
-                            homeTeamId: teamIdentifiers[i].id,  // Používame celé ID
-                            awayTeamId: teamIdentifiers[j].id,  // Používame celé ID
-                        });
-                    }
+                    matches.push({
+                        homeTeamRef: teamIdentifiers[i].ref,
+                        awayTeamRef: teamIdentifiers[j].ref,
+                    });
                 }
             }
         }
@@ -1687,8 +1601,8 @@ const AddMatchesApp = ({ userProfileData }) => {
             try {
                 // Pripravíme dáta pre uloženie
                 const matchData = {
-                    homeTeamId: match.homeTeamId,
-                    awayTeamId: match.awayTeamId,
+                    homeTeamRef: match.homeTeamRef,
+                    awayTeamRef: match.awayTeamRef,
                     time: match.time,
                     hallId: match.hallId,
                     categoryId: match.categoryId,
@@ -1771,12 +1685,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                 }
     
                 // Generovanie zápasov pre túto skupinu
-                const groupMatches = generateMatchesForGroup(teamsInGroup, withRepetitions);
+                const groupMatches = generateMatchesForGroup(teamsInGroup, withRepetitions, category.name);
                 
                 // Pridanie informácií o skupine ku každému zápasu
                 const matchesWithInfo = groupMatches.map((match, index) => ({
-                    homeTeamId: match.homeTeamId,
-                    awayTeamId: match.awayTeamId,
+                    homeTeamRef: match.homeTeamRef,
+                    awayTeamRef: match.awayTeamRef,
                     time: '--:--',
                     hallId: null,
                     categoryId: category.id,
@@ -2255,8 +2169,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 { className: 'space-y-3 max-h-[600px] overflow-y-auto pr-2' },
                                 matches.map(match => {
                                     // Použijeme prepínač pre zobrazenie
-                                    const homeTeamDisplay = getTeamDisplayText(match.homeTeamId);
-                                    const awayTeamDisplay = getTeamDisplayText(match.awayTeamId);
+                                    const homeTeamDisplay = getTeamDisplayText(match.homeTeamRef);
+                                    const awayTeamDisplay = getTeamDisplayText(match.awayTeamRef);
                                     
                                     return React.createElement(
                                         'div',
