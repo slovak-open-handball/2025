@@ -2720,12 +2720,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         { className: 'p-4 bg-gray-50' },
                                         React.createElement(
                                             'div',
-                                            { className: 'flex items-center gap-2 mb-3' },
-                                            React.createElement('i', { className: 'fa-solid fa-calendar-alt text-gray-500' }),
-                                            React.createElement('span', { className: 'font-medium text-gray-700' }, 'Dostupné termíny:')
-                                        ),
-                                        React.createElement(
-                                            'div',
                                             { className: 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2' },
                                             tournamentDays.map((date, index) => {
                                                 const dateStr = date.toLocaleDateString('sk-SK', {
