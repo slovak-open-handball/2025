@@ -912,7 +912,7 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayT
     );
 };
 
-// Modálne okno pre priradenie zápasu do haly
+// Modálne okno pre priradenie/úpravu zápasu do haly
 const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAssign }) => {
     const [selectedHallId, setSelectedHallId] = useState('');
     const [selectedDate, setSelectedDate] = useState('');
@@ -921,6 +921,46 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     const [categoryDetails, setCategoryDetails] = useState(null);
     const [matchDuration, setMatchDuration] = useState(0);
     const [matchEndTime, setMatchEndTime] = useState('');
+
+    // Načítanie existujúcich údajov zápasu pri otvorení modálneho okna
+    useEffect(() => {
+        if (match && isOpen) {
+            // Predvyplnenie haly
+            if (match.hallId) {
+                setSelectedHallId(match.hallId);
+            } else {
+                setSelectedHallId('');
+            }
+            
+            // Predvyplnenie dátumu a času
+            if (match.scheduledTime) {
+                try {
+                    const date = match.scheduledTime.toDate();
+                    
+                    // Formát pre datetime-local input (YYYY-MM-DD)
+                    const year = date.getFullYear();
+                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                    const day = date.getDate().toString().padStart(2, '0');
+                    const dateStr = `${year}-${month}-${day}`;
+                    
+                    // Formát pre time input (HH:MM)
+                    const hours = date.getHours().toString().padStart(2, '0');
+                    const minutes = date.getMinutes().toString().padStart(2, '0');
+                    const timeStr = `${hours}:${minutes}`;
+                    
+                    setSelectedDate(dateStr);
+                    setSelectedTime(timeStr);
+                } catch (e) {
+                    console.error('Chyba pri parsovaní dátumu zápasu:', e);
+                    setSelectedDate('');
+                    setSelectedTime('');
+                }
+            } else {
+                setSelectedDate('');
+                setSelectedTime('');
+            }
+        }
+    }, [match, isOpen]);
 
     useEffect(() => {
         if (match && categories.length > 0) {
@@ -999,7 +1039,9 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mb-4' },
-                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 'Priradiť zápas do haly'),
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 
+                    match.hallId ? 'Upraviť priradenie zápasu' : 'Priradiť zápas do haly'
+                ),
                 React.createElement(
                     'button',
                     {
@@ -1049,7 +1091,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         React.createElement('span', { className: 'font-medium text-gray-700' }, 'Dĺžka zápasu:'),
                         React.createElement('span', { className: 'text-blue-600 font-semibold' }, `${matchDuration} minút`),
                         React.createElement('span', { className: 'text-xs text-gray-500 ml-2' },
-                            `(${categoryDetails.periods} × ${categoryDetails.periodDuration} min + ${categoryDetails.breakDuration} min prestávky medzi periódami + ${categoryDetails.matchBreak} min prestávka po zápase)`
+                            `(${categoryDetails.periods} × ${categoryDetails.periodDuration} min + ${categoryDetails.breakDuration} min prestávky medzi periódami)`
                         )
                     )
                 )
@@ -1205,7 +1247,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                                 : 'bg-gray-400 cursor-not-allowed'
                         }`
                     },
-                    'Priradiť zápas'
+                    match.hallId ? 'Upraviť priradenie' : 'Priradiť zápas'
                 )
             )
         )
