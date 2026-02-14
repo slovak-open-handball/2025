@@ -263,6 +263,198 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
     );
 };
 
+// Modálne okno pre výber mazania zápasov
+const DeleteMatchesModal = ({ isOpen, onClose, onConfirm, categories, groupsByCategory }) => {
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedGroup, setSelectedGroup] = useState('');
+    const [availableGroups, setAvailableGroups] = useState([]);
+    const [selectedGroupType, setSelectedGroupType] = useState('');
+
+    // Zoradenie kategórií podľa abecedy
+    const sortedCategories = React.useMemo(() => {
+        return [...categories].sort((a, b) => a.name.localeCompare(b.name));
+    }, [categories]);
+
+    // Aktualizácia dostupných skupín pri zmene kategórie
+    useEffect(() => {
+        if (selectedCategory && groupsByCategory[selectedCategory]) {
+            // Zoradenie skupín podľa abecedy
+            const sortedGroups = [...groupsByCategory[selectedCategory]].sort((a, b) => 
+                a.name.localeCompare(b.name)
+            );
+            setAvailableGroups(sortedGroups);
+            setSelectedGroup('');
+            setSelectedGroupType('');
+        } else {
+            setAvailableGroups([]);
+            setSelectedGroup('');
+            setSelectedGroupType('');
+        }
+    }, [selectedCategory, groupsByCategory]);
+
+    // Zistenie typu vybranej skupiny
+    useEffect(() => {
+        if (selectedGroup && availableGroups.length > 0) {
+            const group = availableGroups.find(g => g.name === selectedGroup);
+            if (group) {
+                if (group.type === 'základná skupina') {
+                    setSelectedGroupType('Základná skupina');
+                } else if (group.type === 'nadstavbová skupina') {
+                    setSelectedGroupType('Nadstavbová skupina');
+                } else {
+                    setSelectedGroupType('');
+                }
+            } else {
+                setSelectedGroupType('');
+            }
+        } else {
+            setSelectedGroupType('');
+        }
+    }, [selectedGroup, availableGroups]);
+
+    if (!isOpen) return null;
+
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) onClose();
+            }
+        },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
+            
+            // Hlavička
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center mb-4' },
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 'Zmazať zápasy'),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'text-gray-500 hover:text-gray-700'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-times text-xl' })
+                )
+            ),
+
+            // Výber kategórie - zoradené podľa abecedy
+            React.createElement(
+                'div',
+                { className: 'mb-4' },
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                    'Kategória:'
+                ),
+                React.createElement(
+                    'select',
+                    {
+                        value: selectedCategory,
+                        onChange: (e) => setSelectedCategory(e.target.value),
+                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                    },
+                    React.createElement('option', { value: '' }, '-- Vyberte kategóriu --'),
+                    sortedCategories.map(cat => 
+                        React.createElement('option', { key: cat.id, value: cat.id }, cat.name)
+                    )
+                )
+            ),
+
+            // Výber skupiny (ak je kategória vybraná)
+            selectedCategory && React.createElement(
+                'div',
+                { className: 'mb-4' },
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                    'Skupina:'
+                ),
+                React.createElement(
+                    'select',
+                    {
+                        value: selectedGroup,
+                        onChange: (e) => setSelectedGroup(e.target.value),
+                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                    },
+                    React.createElement('option', { value: '' }, '-- Všetky skupiny --'),
+                    availableGroups.map((group, index) => 
+                        React.createElement('option', { key: index, value: group.name }, group.name)
+                    )
+                ),
+                
+                // Zobrazenie typu skupiny pod selectboxom
+                selectedGroup && selectedGroupType && React.createElement(
+                    'div',
+                    { className: 'mt-2 text-sm' },
+                    React.createElement(
+                        'span',
+                        { 
+                            className: `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                selectedGroupType === 'Základná skupina' 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-purple-100 text-purple-800'
+                            }` 
+                        },
+                        React.createElement('i', { 
+                            className: `fa-solid ${
+                                selectedGroupType === 'Základná skupina' 
+                                    ? 'fa-layer-group' 
+                                    : 'fa-chart-line'
+                            } mr-1 text-xs` 
+                        }),
+                        selectedGroupType
+                    )
+                )
+            ),
+
+            // Varovanie
+            React.createElement(
+                'div',
+                { className: 'mb-6 p-3 bg-red-50 border border-red-200 rounded-lg' },
+                React.createElement(
+                    'p',
+                    { className: 'text-sm text-red-600 flex items-center gap-2' },
+                    React.createElement('i', { className: 'fa-solid fa-exclamation-triangle' }),
+                    'Táto akcia je nenávratná. Všetky vybrané zápasy budú natrvalo odstránené.'
+                )
+            ),
+
+            // Tlačidlá
+            React.createElement(
+                'div',
+                { className: 'flex justify-end gap-3' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
+                    },
+                    'Zrušiť'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => {
+                            onConfirm({
+                                categoryId: selectedCategory,
+                                groupName: selectedGroup || null
+                            });
+                            onClose();
+                        },
+                        disabled: !selectedCategory,
+                        className: `px-4 py-2 text-white rounded-lg transition-colors ${
+                            selectedCategory 
+                                ? 'bg-red-600 hover:bg-red-700 cursor-pointer' 
+                                : 'bg-gray-400 cursor-not-allowed'
+                        }`
+                    },
+                    'Zmazať zápasy'
+                )
+            )
+        )
+    );
+};
+
 // Modálne okno pre potvrdenie opätovného generovania
 const ConfirmRegenerateModal = ({ isOpen, onClose, onConfirm, categoryName, groupName }) => {
     if (!isOpen) return null;
@@ -580,6 +772,110 @@ const ConfirmSwapModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTea
     );
 };
 
+React.createElement(DeleteMatchesModal, {
+    isOpen: isDeleteMatchesModalOpen,
+    onClose: () => setIsDeleteMatchesModalOpen(false),
+    onConfirm: handleBulkDeleteClick,
+    categories: categories,
+    groupsByCategory: groupsByCategory
+}),
+React.createElement(ConfirmBulkDeleteModal, {
+    isOpen: isBulkDeleteConfirmModalOpen,
+    onClose: () => {
+        setIsBulkDeleteConfirmModalOpen(false);
+        setPendingBulkDelete(null);
+    },
+    onConfirm: confirmBulkDelete,
+    categoryName: pendingBulkDelete?.categoryName,
+    groupName: pendingBulkDelete?.groupName,
+    matchesCount: pendingBulkDelete?.matchesCount || 0
+}),
+
+// Modálne okno pre potvrdenie hromadného mazania
+const ConfirmBulkDeleteModal = ({ isOpen, onClose, onConfirm, categoryName, groupName, matchesCount }) => {
+    if (!isOpen) return null;
+
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80]',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) onClose();
+            }
+        },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
+            
+            // Hlavička
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center mb-4' },
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 'Potvrdenie hromadného mazania'),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'text-gray-500 hover:text-gray-700'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-times text-xl' })
+                )
+            ),
+
+            // Obsah
+            React.createElement(
+                'div',
+                { className: 'mb-6' },
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-700 mb-2' },
+                    'Naozaj chcete zmazať všetky zápasy pre ',
+                    React.createElement('span', { className: 'font-semibold' }, categoryName),
+                    groupName ? React.createElement('span', null, ' a skupinu ', React.createElement('span', { className: 'font-semibold' }, groupName)) : null,
+                    '?'
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-700 mb-4' },
+                    'Počet zápasov na zmazanie: ',
+                    React.createElement('span', { className: 'font-semibold text-red-600' }, matchesCount)
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-sm text-red-600 flex items-center gap-2' },
+                    React.createElement('i', { className: 'fa-solid fa-exclamation-triangle' }),
+                    'Táto akcia je nenávratná!'
+                )
+            ),
+
+            // Tlačidlá
+            React.createElement(
+                'div',
+                { className: 'flex justify-end gap-3' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
+                    },
+                    'Zrušiť'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => {
+                            onConfirm();
+                            onClose();
+                        },
+                        className: 'px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors'
+                    },
+                    'Áno, zmazať'
+                )
+            )
+        )
+    );
+};
+
 const AddMatchesApp = ({ userProfileData }) => {
     const [sportHalls, setSportHalls] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -606,6 +902,10 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
     const [selectedMatchForAction, setSelectedMatchForAction] = useState(null);
+
+    const [isDeleteMatchesModalOpen, setIsDeleteMatchesModalOpen] = useState(false);
+    const [isBulkDeleteConfirmModalOpen, setIsBulkDeleteConfirmModalOpen] = useState(false);
+    const [pendingBulkDelete, setPendingBulkDelete] = useState(null);
 
     const handleDeleteClick = (match) => {
         setSelectedMatchForAction(match);
@@ -1535,6 +1835,74 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     };
 
+    const handleBulkDeleteClick = (params) => {
+        const category = categories.find(c => c.id === params.categoryId);
+        if (!category) return;
+    
+        // Spočítame zápasy na zmazanie
+        const matchesToDelete = matches.filter(match => 
+            match.categoryId === params.categoryId && 
+            (params.groupName ? match.groupName === params.groupName : true)
+        );
+    
+        if (matchesToDelete.length === 0) {
+            window.showGlobalNotification('Žiadne zápasy na zmazanie', 'info');
+            return;
+        }
+    
+        setPendingBulkDelete({
+            ...params,
+            categoryName: category.name,
+            matchesCount: matchesToDelete.length
+        });
+        setIsBulkDeleteConfirmModalOpen(true);
+    };
+    
+    // Samotné vykonanie hromadného mazania
+    const confirmBulkDelete = async () => {
+        if (!pendingBulkDelete) return;
+    
+        if (!window.db) {
+            window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
+            return;
+        }
+    
+        if (userProfileData?.role !== 'admin') {
+            window.showGlobalNotification('Na mazanie zápasov potrebujete administrátorské práva', 'error');
+            return;
+        }
+    
+        if (!userProfileData?.approved) {
+            window.showGlobalNotification('Váš účet ešte nebol schválený administrátorom.', 'error');
+            return;
+        }
+    
+        try {
+            // Nájdeme všetky zápasy na zmazanie
+            const matchesToDelete = matches.filter(match => 
+                match.categoryId === pendingBulkDelete.categoryId && 
+                (pendingBulkDelete.groupName ? match.groupName === pendingBulkDelete.groupName : true)
+            );
+    
+            // Postupne mažeme všetky zápasy
+            for (const match of matchesToDelete) {
+                const matchRef = doc(window.db, 'matches', match.id);
+                await deleteDoc(matchRef);
+            }
+    
+            console.log(`Úspešne zmazaných ${matchesToDelete.length} zápasov`);
+            window.showGlobalNotification(
+                `Zmazaných ${matchesToDelete.length} zápasov pre ${pendingBulkDelete.categoryName}${pendingBulkDelete.groupName ? ' - ' + pendingBulkDelete.groupName : ''}`,
+                'success'
+            );
+            
+            setPendingBulkDelete(null);
+        } catch (error) {
+            console.error('Chyba pri hromadnom mazaní zápasov:', error);
+            window.showGlobalNotification('Chyba pri mazaní zápasov: ' + error.message, 'error');
+        }
+    };
+
     // Načítanie športových hál a kategórií z Firebase
     useEffect(() => {
         if (!window.db) {
@@ -1885,18 +2253,32 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     );
                                 })
                             ),
-                        
-                        // Tlačidlo pre generovanie zápasov
-                        React.createElement(
-                            'button',
-                            { 
-                                className: `mt-4 w-full py-2 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2`,
-                                onClick: () => setIsModalOpen(true),
-                                disabled: generationInProgress
-                            },
-                            React.createElement('i', { className: 'fa-solid fa-plus-circle' }),
-                            'Generovať zápasy'
-                        )
+                            React.createElement(
+                                'div',
+                                { className: 'flex items-center gap-2' },
+                                // Tlačidlo pre generovanie zápasov (už existuje)
+                                React.createElement(
+                                    'button',
+                                    { 
+                                        className: `w-10 h-10 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white rounded-full flex items-center justify-center transition-colors shadow-md`,
+                                        onClick: () => setIsModalOpen(true),
+                                        disabled: generationInProgress,
+                                        title: 'Generovať zápasy'
+                                    },
+                                    React.createElement('i', { className: 'fa-solid fa-plus text-lg' })
+                                ),
+                                // NOVÉ tlačidlo pre mazanie zápasov
+                                React.createElement(
+                                    'button',
+                                    { 
+                                        className: `w-10 h-10 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'} text-white rounded-full flex items-center justify-center transition-colors shadow-md`,
+                                        onClick: () => setIsDeleteMatchesModalOpen(true),
+                                        disabled: generationInProgress,
+                                        title: 'Zmazať zápasy podľa kategórie/skupiny'
+                                    },
+                                    React.createElement('i', { className: 'fa-solid fa-minus text-lg' })
+                                )
+                            ),
                     ),
                     
                     // PRAVÝ STĹPEC - Športové haly
