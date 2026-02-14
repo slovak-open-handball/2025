@@ -1724,6 +1724,13 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [availableGroupsForFilter, setAvailableGroupsForFilter] = useState([]);
     const [availableDays, setAvailableDays] = useState([]);
 
+    // Načítanie filtrov pri inicializácii
+    const initialFilters = loadFiltersFromURL();
+    const [selectedCategoryFilter, setSelectedCategoryFilter] = useState(initialFilters.category);
+    const [selectedGroupFilter, setSelectedGroupFilter] = useState(initialFilters.group);
+    const [selectedHallFilter, setSelectedHallFilter] = useState(initialFilters.hall);
+    const [selectedDayFilter, setSelectedDayFilter] = useState(initialFilters.day);
+
     // Nahraďte existujúcu funkciu getFilteredMatches touto:
     const getFilteredMatches = (matchesToFilter, ignoreHallFilter = false, ignoreDayFilter = false) => {
         return matchesToFilter.filter(match => {
@@ -1800,13 +1807,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}${window.location.hash}`;
         window.history.replaceState({}, '', newUrl);
     };
-
-    // Načítanie filtrov pri inicializácii
-    const initialFilters = loadFiltersFromURL();
-    const [selectedCategoryFilter, setSelectedCategoryFilter] = useState(initialFilters.category);
-    const [selectedGroupFilter, setSelectedGroupFilter] = useState(initialFilters.group);
-    const [selectedHallFilter, setSelectedHallFilter] = useState(initialFilters.hall);
-    const [selectedDayFilter, setSelectedDayFilter] = useState(initialFilters.day);
     
     const loadHallSchedules = () => {
         if (!window.db) return;
