@@ -1097,16 +1097,15 @@ const AddMatchesApp = ({ userProfileData }) => {
     };
     
     // Funkcia na získanie zobrazovaného textu pre tím
-    const getTeamDisplayText = (teamRef) => {
-        if (!teamRef) return '---';
+    const getTeamDisplayText = (identifier) => {
+        if (!identifier) return '---';
         
         if (showTeamId) {
-            // REŽIM ZOBRAZENIA ID - už len vrátime samotný ref
-            return teamRef;
+            // REŽIM ZOBRAZENIA IDENTIFIKÁTORA
+            return identifier;
         } else {
-            // REŽIM ZOBRAZENIA NÁZVU - vrátime len názov (bez kategórie a skupiny)
-            // Tu by bolo ideálne mať mapovanie, ale keďže nepoužívame ID, vrátime celý ref
-            return teamRef;
+            // REŽIM ZOBRAZENIA NÁZVU TÍMU - dynamicky z teamData
+            return getTeamNameByIdentifier(identifier);
         }
     };
 
@@ -1122,11 +1121,11 @@ const AddMatchesApp = ({ userProfileData }) => {
     const checkExistingMatchesDuringGeneration = (matchesToGenerate) => {
         const existing = [];
         const newOnes = [];
-        
+    
         matchesToGenerate.forEach(match => {
             const exists = matches.some(existingMatch => 
-                existingMatch.homeTeamRef === match.homeTeamRef && 
-                existingMatch.awayTeamRef === match.awayTeamRef &&
+                existingMatch.homeTeamIdentifier === match.homeTeamIdentifier && 
+                existingMatch.awayTeamIdentifier === match.awayTeamIdentifier &&
                 existingMatch.categoryId === match.categoryId
             );
             
@@ -1487,7 +1486,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     const generateMatchesForGroup = (teams, withRepetitions, categoryName) => {
         const matches = [];
         
-        // Pre každý tím vytvoríme identifikátor v tvare "kategória skupinačíslo"
+        // Pre každý tím vytvoríme identifikátor v tvare "kategória_skupina_číslo"
         const teamIdentifiers = teams.map(t => {
             // Získame názov kategórie
             const category = categoryName || t.category || 'Neznáma kategória';
@@ -1501,12 +1500,14 @@ const AddMatchesApp = ({ userProfileData }) => {
             // Pridáme order/číslo tímu
             const order = t.order || '?';
             
-            // Vytvoríme identifikátor v požadovanom formáte
-            const teamRef = `${category} ${groupName}${order}`;
+            // Vytvoríme identifikátor (strojový) - bez názvu tímu
+            const teamIdentifier = `${category}_${groupName}_${order}`;
             
             return {
-                ref: teamRef,
-                name: t.teamName || t.name || 'Neznámy tím'
+                identifier: teamIdentifier,  // Toto použijeme na identifikáciu
+                category: category,
+                groupName: groupName,
+                order: order
             };
         });
         
@@ -1518,8 +1519,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                 for (let j = 0; j < teamIdentifiers.length; j++) {
                     if (i !== j) {
                         matches.push({
-                            homeTeamRef: teamIdentifiers[i].ref,
-                            awayTeamRef: teamIdentifiers[j].ref,
+                            homeTeamIdentifier: teamIdentifiers[i].identifier,
+                            awayTeamIdentifier: teamIdentifiers[j].identifier,
                         });
                     }
                 }
@@ -1529,8 +1530,8 @@ const AddMatchesApp = ({ userProfileData }) => {
             for (let i = 0; i < teamIdentifiers.length; i++) {
                 for (let j = i + 1; j < teamIdentifiers.length; j++) {
                     matches.push({
-                        homeTeamRef: teamIdentifiers[i].ref,
-                        awayTeamRef: teamIdentifiers[j].ref,
+                        homeTeamIdentifier: teamIdentifiers[i].identifier,
+                        awayTeamIdentifier: teamIdentifiers[j].identifier,
                     });
                 }
             }
@@ -1538,6 +1539,54 @@ const AddMatchesApp = ({ userProfileData }) => {
         
         console.log(`Vygenerovaných ${matches.length} zápasov`);
         return matches;
+    };
+
+    // Funkcia na získanie názvu tímu podľa identifikátora
+    const getTeamNameByIdentifier = (identifier) => {
+        if (!identifier) return 'Neznámy tím';
+        
+        // Parsujeme identifikátor na kategóriu, skupinu a order
+        const parts = identifier.split('_');
+        if (parts.length !== 3) {
+            return identifier; // Fallback na identifikátor
+        }
+        
+        const [category, groupName, order] = parts;
+        
+        // Hľadáme v teamData
+        if (teamData.allTeams && teamData.allTeams.length > 0) {
+            // Pripravíme si groupName s "skupina " pre vyhľadávanie
+            const groupNameWithPrefix = `skupina ${groupName}`;
+            
+            const team = teamData.allTeams.find(t => 
+                t.category === category && 
+                (t.groupName === groupNameWithPrefix || t.groupName === groupName) &&
+                t.order?.toString() === order
+            );
+            
+            if (team) {
+                return team.teamName;
+            }
+        }
+        
+        // Skúsime v __teamManagerData
+        if (window.__teamManagerData?.allTeams) {
+            const groupNameWithPrefix = `skupina ${groupName}`;
+            
+            const team = window.__teamManagerData.allTeams.find(t => 
+                t.category === category && 
+                (t.groupName === groupNameWithPrefix || t.groupName === groupName) &&
+                t.order?.toString() === order
+            );
+            
+            if (team) {
+                setTeamData(window.__teamManagerData); // Aktualizujeme teamData
+                return team.teamName;
+            }
+        }
+        
+        // Fallback - vrátime identifikátor v čitateľnej forme
+        return `${category} ${groupName}${order}`;
     };
 
     // Funkcia na získanie všetkých skupín v kategórii
@@ -1601,8 +1650,8 @@ const AddMatchesApp = ({ userProfileData }) => {
             try {
                 // Pripravíme dáta pre uloženie
                 const matchData = {
-                    homeTeamRef: match.homeTeamRef,
-                    awayTeamRef: match.awayTeamRef,
+                    homeTeamIdentifier: match.homeTeamIdentifier,
+                    awayTeamIdentifier: match.awayTeamIdentifier,
                     time: match.time,
                     hallId: match.hallId,
                     categoryId: match.categoryId,
@@ -1689,8 +1738,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                 
                 // Pridanie informácií o skupine ku každému zápasu
                 const matchesWithInfo = groupMatches.map((match, index) => ({
-                    homeTeamRef: match.homeTeamRef,
-                    awayTeamRef: match.awayTeamRef,
+                    homeTeamIdentifier: match.homeTeamIdentifier,
+                    awayTeamIdentifier: match.awayTeamIdentifier,
                     time: '--:--',
                     hallId: null,
                     categoryId: category.id,
@@ -2169,8 +2218,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 { className: 'space-y-3 max-h-[600px] overflow-y-auto pr-2' },
                                 matches.map(match => {
                                     // Použijeme prepínač pre zobrazenie
-                                    const homeTeamDisplay = getTeamDisplayText(match.homeTeamRef);
-                                    const awayTeamDisplay = getTeamDisplayText(match.awayTeamRef);
+                                    const homeTeamDisplay = getTeamDisplayText(match.homeTeamIdentifier);
+                                    const awayTeamDisplay = getTeamDisplayText(match.awayTeamIdentifier);
                                     
                                     return React.createElement(
                                         'div',
