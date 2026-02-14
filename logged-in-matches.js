@@ -2416,12 +2416,52 @@ const AddMatchesApp = ({ userProfileData }) => {
                     React.createElement(
                         'div',
                         { className: 'lg:w-1/3 bg-gray-50 rounded-xl p-4 border border-gray-200 flex flex-col h-full' },
+                        
+                        // Hlavička s nadpisom a tlačidlami
                         React.createElement(
-                            'h3',
-                            { className: 'text-xl font-semibold mb-4 text-gray-700 border-b pb-2 flex items-center flex-shrink-0' },
-                            'Zoznam zápasov',
-                            React.createElement('span', { className: 'ml-2 text-sm font-normal text-gray-500' },
-                                `(${matches.length})`
+                            'div',
+                            { className: 'flex-shrink-0' },
+                            React.createElement(
+                                'div',
+                                { className: 'flex items-center justify-between border-b pb-2' },
+                                React.createElement(
+                                    'h3',
+                                    { className: 'text-xl font-semibold text-gray-700' },
+                                    'Zoznam zápasov'
+                                ),
+                                React.createElement(
+                                    'span',
+                                    { className: 'text-sm font-normal text-gray-500' },
+                                    `(${matches.length})`
+                                )
+                            ),
+                            
+                            // Tlačidlá pre generovanie a mazanie - umiestnené pod nadpisom
+                            React.createElement(
+                                'div',
+                                { className: 'flex items-center gap-2 mt-3' },
+                                // Tlačidlo pre generovanie zápasov
+                                React.createElement(
+                                    'button',
+                                    { 
+                                        className: `w-10 h-10 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white rounded-full flex items-center justify-center transition-colors shadow-md`,
+                                        onClick: () => setIsModalOpen(true),
+                                        disabled: generationInProgress,
+                                        title: 'Generovať zápasy'
+                                    },
+                                    React.createElement('i', { className: 'fa-solid fa-plus text-lg' })
+                                ),
+                                // Tlačidlo pre mazanie zápasov
+                                React.createElement(
+                                    'button',
+                                    { 
+                                        className: `w-10 h-10 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'} text-white rounded-full flex items-center justify-center transition-colors shadow-md`,
+                                        onClick: () => setIsDeleteMatchesModalOpen(true),
+                                        disabled: generationInProgress,
+                                        title: 'Zmazať zápasy podľa kategórie/skupiny'
+                                    },
+                                    React.createElement('i', { className: 'fa-solid fa-minus text-lg' })
+                                )
                             )
                         ),
                         
@@ -2439,7 +2479,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                             ) :
                             React.createElement(
                                 'div',
-                                { className: 'flex-1 overflow-y-auto pr-2 space-y-3' },
+                                { className: 'flex-1 overflow-y-auto pr-2 space-y-3 mt-4' },
                                 matches.map(match => {
                                     // Použijeme prepínač pre zobrazenie
                                     const homeTeamDisplay = getTeamDisplayText(match.homeTeamIdentifier);
@@ -2568,35 +2608,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         )
                                     );
                                 })
-                            ),
-                        
-                        // Tlačidlá pre generovanie a mazanie - pridáme flex-shrink-0 aby sa nezmenšovali
-                        React.createElement(
-                            'div',
-                            { className: 'flex items-center gap-2 mt-4 flex-shrink-0' },
-                            // Tlačidlo pre generovanie zápasov
-                            React.createElement(
-                                'button',
-                                { 
-                                    className: `w-10 h-10 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white rounded-full flex items-center justify-center transition-colors shadow-md`,
-                                    onClick: () => setIsModalOpen(true),
-                                    disabled: generationInProgress,
-                                    title: 'Generovať zápasy'
-                                },
-                                React.createElement('i', { className: 'fa-solid fa-plus text-lg' })
-                            ),
-                            // Tlačidlo pre mazanie zápasov
-                            React.createElement(
-                                'button',
-                                { 
-                                    className: `w-10 h-10 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'} text-white rounded-full flex items-center justify-center transition-colors shadow-md`,
-                                    onClick: () => setIsDeleteMatchesModalOpen(true),
-                                    disabled: generationInProgress,
-                                    title: 'Zmazať zápasy podľa kategórie/skupiny'
-                                },
-                                React.createElement('i', { className: 'fa-solid fa-minus text-lg' })
                             )
-                        )
                     ),
                     
                     // PRAVÝ STĹPEC - Športové haly
