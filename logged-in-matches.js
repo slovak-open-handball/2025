@@ -1486,7 +1486,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     const generateMatchesForGroup = (teams, withRepetitions, categoryName) => {
         const matches = [];
         
-        // Pre každý tím vytvoríme identifikátor v tvare "kategória_skupina_číslo"
+        // Pre každý tím vytvoríme identifikátor v tvare "kategória orderSkupina"
         const teamIdentifiers = teams.map(t => {
             // Získame názov kategórie
             const category = categoryName || t.category || 'Neznáma kategória';
@@ -1500,8 +1500,9 @@ const AddMatchesApp = ({ userProfileData }) => {
             // Pridáme order/číslo tímu
             const order = t.order || '?';
             
-            // Vytvoríme identifikátor (strojový) - bez názvu tímu
-            const teamIdentifier = `${category}_${groupName}_${order}`;
+            // Vytvoríme identifikátor v požadovanom formáte: "kategória orderSkupina" (napr. "U10 D 1A")
+            // Medzera medzi kategóriou a zvyškom, ale žiadna medzera medzi order a skupinou
+            const teamIdentifier = `${category} ${order}${groupName}`;
             
             return {
                 identifier: teamIdentifier,  // Toto použijeme na identifikáciu
@@ -1540,18 +1541,40 @@ const AddMatchesApp = ({ userProfileData }) => {
         console.log(`Vygenerovaných ${matches.length} zápasov`);
         return matches;
     };
-
+    
     // Funkcia na získanie názvu tímu podľa identifikátora
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
         
-        // Parsujeme identifikátor na kategóriu, skupinu a order
-        const parts = identifier.split('_');
-        if (parts.length !== 3) {
+        // Parsujeme identifikátor v tvare "kategória orderSkupina" (napr. "U10 D 1A")
+        // Hľadáme poslednú medzeru, ktorá oddeľuje kategóriu od zvyšku
+        const lastSpaceIndex = identifier.lastIndexOf(' ');
+        if (lastSpaceIndex === -1) {
             return identifier; // Fallback na identifikátor
         }
         
-        const [category, groupName, order] = parts;
+        const category = identifier.substring(0, lastSpaceIndex);
+        const rest = identifier.substring(lastSpaceIndex + 1); // časť "orderSkupina"
+        
+        // Zvyšok rozdelíme na order a groupName
+        // Order je číselná časť na začiatku, groupName je zvyšok
+        let order = '';
+        let groupName = '';
+        
+        for (let i = 0; i < rest.length; i++) {
+            const char = rest[i];
+            if (char >= '0' && char <= '9') {
+                order += char;
+            } else {
+                groupName = rest.substring(i);
+                break;
+            }
+        }
+        
+        if (!order) {
+            order = '?';
+            groupName = rest;
+        }
         
         // Hľadáme v teamData
         if (teamData.allTeams && teamData.allTeams.length > 0) {
