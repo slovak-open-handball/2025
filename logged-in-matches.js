@@ -3380,18 +3380,36 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             displayMode !== 'both' && React.createElement('div', { className: 'col-span-2' })
                                                                         ),
                                                                         
-                                                                        // Ikona koša pre odstránenie priradenia - zobrazí sa pri hoveri
+                                                                        // Akčné tlačidlá - zobrazia sa pri hoveri
                                                                         userProfileData?.role === 'admin' && React.createElement(
-                                                                            'button',
-                                                                            {
-                                                                                className: 'absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity',
-                                                                                onClick: (e) => {
-                                                                                    e.stopPropagation();
-                                                                                    handleUnassignMatch(match);
+                                                                            'div',
+                                                                            { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity' },
+                                                                            // Ikona pre výmenu tímov
+                                                                            React.createElement(
+                                                                                'button',
+                                                                                {
+                                                                                    className: 'w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md',
+                                                                                    onClick: (e) => {
+                                                                                        e.stopPropagation();
+                                                                                        handleSwapClick(match);
+                                                                                    },
+                                                                                    title: 'Vymeniť domáci a hosťovský tím'
                                                                                 },
-                                                                                title: 'Odstrániť priradenie (miesto a čas)'
-                                                                            },
-                                                                            React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                                                                React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-xs' })
+                                                                            ),
+                                                                            // Ikona koša pre odstránenie priradenia
+                                                                            React.createElement(
+                                                                                'button',
+                                                                                {
+                                                                                    className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md',
+                                                                                    onClick: (e) => {
+                                                                                        e.stopPropagation();
+                                                                                        handleUnassignMatch(match);
+                                                                                    },
+                                                                                    title: 'Odstrániť priradenie (miesto a čas)'
+                                                                                },
+                                                                                React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                                                            )
                                                                         )
                                                                     );
                                                                 })
