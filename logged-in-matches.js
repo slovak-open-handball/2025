@@ -3778,7 +3778,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 // Domáci tím - flexibilná šírka
                                                                                 React.createElement(
                                                                                     'div',
-                                                                                    { className: 'font-medium text-gray-800 whitespace-nowrap min-w-[140px] text-right' }, // Zväčšené na min-w-[140px]
+                                                                                    { className: 'font-medium text-gray-800 whitespace-nowrap min-w-[160px] text-right' }, // Zväčšené na min-w-[160px]
                                                                                     displayMode === 'both' ? homeDisplay.name : homeDisplay
                                                                                 ),
                                                                                 
@@ -3792,7 +3792,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 // Hosťovský tím - flexibilná šírka
                                                                                 React.createElement(
                                                                                     'div',
-                                                                                    { className: 'font-medium text-gray-800 whitespace-nowrap min-w-[140px] text-left' }, // Zväčšené na min-w-[140px]
+                                                                                    { className: 'font-medium text-gray-800 whitespace-nowrap min-w-[160px] text-left' }, // Zväčšené na min-w-[160px]
                                                                                     displayMode === 'both' ? awayDisplay.name : awayDisplay
                                                                                 ),
                                                                                 
