@@ -913,7 +913,7 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayT
 };
 
 // Modálne okno pre priradenie/úpravu zápasu do haly
-const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAssign, allMatches, displayMode, getTeamDisplayText }) => {
+const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAssign, allMatches }) => {
     const [selectedHallId, setSelectedHallId] = useState('');
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedTime, setSelectedTime] = useState('');
@@ -1215,33 +1215,39 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     React.createElement(
                         'div',
                         { className: 'flex-1' },
-                        displayMode === 'both' && typeof getTeamDisplayText(match.homeTeamIdentifier) === 'object'
-                            ? React.createElement(
-                                'div',
-                                { className: 'flex flex-col items-start' },
-                                React.createElement('span', { className: 'font-semibold text-sm text-gray-800' }, getTeamDisplayText(match.homeTeamIdentifier).name),
-                                React.createElement('span', { className: 'text-xs text-gray-500' }, `(${getTeamDisplayText(match.homeTeamIdentifier).id})`)
-                            )
-                            : React.createElement('p', { className: 'text-sm text-gray-600' }, 
-                                displayMode === 'name' ? getTeamDisplayText(match.homeTeamIdentifier) : match.homeTeamIdentifier
-                            )
+                        React.createElement('p', { className: 'text-sm text-gray-600' }, match.homeTeamIdentifier)
                     ),
                     React.createElement('i', { className: 'fa-solid fa-vs text-xs text-gray-400 mx-2' }),
                     React.createElement(
                         'div',
                         { className: 'flex-1 text-right' },
-                        displayMode === 'both' && typeof getTeamDisplayText(match.awayTeamIdentifier) === 'object'
-                            ? React.createElement(
-                                'div',
-                                { className: 'flex flex-col items-end' },
-                                React.createElement('span', { className: 'font-semibold text-sm text-gray-800' }, getTeamDisplayText(match.awayTeamIdentifier).name),
-                                React.createElement('span', { className: 'text-xs text-gray-500' }, `(${getTeamDisplayText(match.awayTeamIdentifier).id})`)
-                            )
-                            : React.createElement('p', { className: 'text-sm text-gray-600' }, 
-                                displayMode === 'name' ? getTeamDisplayText(match.awayTeamIdentifier) : match.awayTeamIdentifier
-                            )
+                        React.createElement('p', { className: 'text-sm text-gray-600' }, match.awayTeamIdentifier)
                     )
                 ),
+                React.createElement(
+                    'div',
+                    { className: 'mt-2 text-xs text-gray-500' },
+                    React.createElement('span', { className: 'font-medium' }, 'Kategória: '),
+                    match.categoryName,
+                    match.groupName && React.createElement('span', null, ` (${match.groupName})`)
+                ),
+                
+                // Informácia o dĺžke zápasu a prestávke
+                categoryDetails && React.createElement(
+                    'div',
+                    { className: 'mt-3 p-2 bg-white rounded border border-blue-100' },
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-2 text-sm' },
+                        React.createElement('i', { className: 'fa-solid fa-clock text-blue-600' }),
+                        React.createElement('span', { className: 'font-medium text-gray-700' }, 'Dĺžka zápasu:'),
+                        React.createElement('span', { className: 'text-blue-600 font-semibold' }, `${matchDuration} minút`),
+                        React.createElement('span', { className: 'text-xs text-gray-500 ml-2' },
+                            `(+ ${categoryDetails.matchBreak || 5} min prestávka po zápase)`
+                        )
+                    )
+                )
+            ),
 
             // Formulár pre priradenie
             React.createElement(
@@ -3367,9 +3373,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             sportHalls: sportHalls,
             categories: categories,
             onAssign: handleAssignMatch,
-            allMatches: matches,
-            displayMode: displayMode,
-            getTeamDisplayText: getTeamDisplayText
+            allMatches: matches
         }),
         React.createElement(
             'div',
