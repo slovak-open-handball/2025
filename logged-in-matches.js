@@ -3320,7 +3320,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         'div',
                                                                         {
                                                                             key: idx,
-                                                                            className: 'p-2 bg-blue-50 rounded border border-blue-100 hover:bg-blue-100 transition-colors relative group'
+                                                                            className: 'p-2 bg-white rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group'
                                                                         },
                                                                         // Hlavný obsah - klikateľný pre úpravu
                                                                         React.createElement(
