@@ -413,74 +413,6 @@ const ConfirmExistingMatchModal = ({ isOpen, onClose, onConfirm, match, homeTeam
     );
 };
 
-// Samotné vykonanie zmazania
-const confirmDelete = async () => {
-    if (!selectedMatchForAction) return;
-    
-    if (!window.db) {
-        window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
-        return;
-    }
-
-    if (userProfileData?.role !== 'admin') {
-        window.showGlobalNotification('Na mazanie zápasov potrebujete administrátorské práva', 'error');
-        return;
-    }
-
-    if (!userProfileData?.approved) {
-        window.showGlobalNotification('Váš účet ešte nebol schválený administrátorom.', 'error');
-        return;
-    }
-
-    try {
-        const matchRef = doc(window.db, 'matches', selectedMatchForAction.id);
-        await deleteDoc(matchRef);
-        
-        console.log(`Zápas s ID ${selectedMatchForAction.id} bol úspešne zmazaný`);
-        window.showGlobalNotification('Zápas bol úspešne zmazaný', 'success');
-        setSelectedMatchForAction(null);
-    } catch (error) {
-        console.error('Chyba pri mazaní zápasu:', error);
-        window.showGlobalNotification('Chyba pri mazaní zápasu: ' + error.message, 'error');
-    }
-};
-
-// Samotné vykonanie výmeny
-const confirmSwap = async () => {
-    if (!selectedMatchForAction) return;
-    
-    if (!window.db) {
-        window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
-        return;
-    }
-
-    if (userProfileData?.role !== 'admin') {
-        window.showGlobalNotification('Na úpravu zápasov potrebujete administrátorské práva', 'error');
-        return;
-    }
-
-    if (!userProfileData?.approved) {
-        window.showGlobalNotification('Váš účet ešte nebol schválený administrátorom.', 'error');
-        return;
-    }
-
-    try {
-        const matchRef = doc(window.db, 'matches', selectedMatchForAction.id);
-        
-        await updateDoc(matchRef, {
-            homeTeamId: selectedMatchForAction.awayTeamId,
-            awayTeamId: selectedMatchForAction.homeTeamId
-        });
-        
-        console.log(`Zápas s ID ${selectedMatchForAction.id} bol úspešne upravený - tímy vymenené`);
-        window.showGlobalNotification('Tímy boli úspešne vymenené', 'success');
-        setSelectedMatchForAction(null);
-    } catch (error) {
-        console.error('Chyba pri výmene tímov:', error);
-        window.showGlobalNotification('Chyba pri výmene tímov: ' + error.message, 'error');
-    }
-};
-
 const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTeamDisplay }) => {
     if (!isOpen) return null;
 
@@ -676,7 +608,75 @@ const AddMatchesApp = ({ userProfileData }) => {
     const handleSwapClick = (match) => {
         setSelectedMatchForAction(match);
         setIsSwapModalOpen(true);
-    };    
+    };
+
+    // Samotné vykonanie zmazania
+    const confirmDelete = async () => {
+        if (!selectedMatchForAction) return;
+        
+        if (!window.db) {
+            window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
+            return;
+        }
+    
+        if (userProfileData?.role !== 'admin') {
+            window.showGlobalNotification('Na mazanie zápasov potrebujete administrátorské práva', 'error');
+            return;
+        }
+    
+        if (!userProfileData?.approved) {
+            window.showGlobalNotification('Váš účet ešte nebol schválený administrátorom.', 'error');
+            return;
+        }
+    
+        try {
+            const matchRef = doc(window.db, 'matches', selectedMatchForAction.id);
+            await deleteDoc(matchRef);
+            
+            console.log(`Zápas s ID ${selectedMatchForAction.id} bol úspešne zmazaný`);
+            window.showGlobalNotification('Zápas bol úspešne zmazaný', 'success');
+            setSelectedMatchForAction(null);
+        } catch (error) {
+            console.error('Chyba pri mazaní zápasu:', error);
+            window.showGlobalNotification('Chyba pri mazaní zápasu: ' + error.message, 'error');
+        }
+    };
+    
+    // Samotné vykonanie výmeny
+    const confirmSwap = async () => {
+        if (!selectedMatchForAction) return;
+        
+        if (!window.db) {
+            window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
+            return;
+        }
+    
+        if (userProfileData?.role !== 'admin') {
+            window.showGlobalNotification('Na úpravu zápasov potrebujete administrátorské práva', 'error');
+            return;
+        }
+    
+        if (!userProfileData?.approved) {
+            window.showGlobalNotification('Váš účet ešte nebol schválený administrátorom.', 'error');
+            return;
+        }
+    
+        try {
+            const matchRef = doc(window.db, 'matches', selectedMatchForAction.id);
+            
+            await updateDoc(matchRef, {
+                homeTeamId: selectedMatchForAction.awayTeamId,
+                awayTeamId: selectedMatchForAction.homeTeamId
+            });
+            
+            console.log(`Zápas s ID ${selectedMatchForAction.id} bol úspešne upravený - tímy vymenené`);
+            window.showGlobalNotification('Tímy boli úspešne vymenené', 'success');
+            setSelectedMatchForAction(null);
+        } catch (error) {
+            console.error('Chyba pri výmene tímov:', error);
+            window.showGlobalNotification('Chyba pri výmene tímov: ' + error.message, 'error');
+        }
+    };
 
     // Funkcia na získanie názvu tímu podľa ID alebo priamo z objektu
     const getTeamName = (team) => {
