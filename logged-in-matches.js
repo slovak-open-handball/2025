@@ -1255,6 +1255,32 @@ const AddMatchesApp = ({ userProfileData }) => {
         setSelectedMatchForAssign(match);
         setIsAssignModalOpen(true);
     };
+
+    const handleUnassignMatch = async (match) => {
+        if (!window.db) {
+            window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
+            return;
+        }
+
+        try {
+            const matchRef = doc(window.db, 'matches', match.id);
+            
+            // Odstránime len údaje o priradení, zápas zostáva
+            await updateDoc(matchRef, {
+                hallId: null,
+                scheduledTime: null,
+                scheduledEndTime: null,
+                duration: null,
+                status: 'pending'
+            });
+    
+            window.showGlobalNotification('Priradenie zápasu bolo úspešne odstránené', 'success');
+        } catch (error) {
+            console.error('Chyba pri odstraňovaní priradenia:', error);
+            window.showGlobalNotification('Chyba pri odstraňovaní priradenia: ' + error.message, 'error');
+        }
+    };
+    
     const handleAssignMatch = async (assignment) => {
         if (!window.db) {
             window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
@@ -3194,16 +3220,19 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         'div',
                                                                         {
                                                                             key: idx,
-                                                                            className: 'p-2 bg-blue-50 rounded border border-blue-100 cursor-pointer hover:bg-blue-100 transition-colors',
-                                                                            onClick: (e) => {
-                                                                                e.stopPropagation();
-                                                                                handleMatchCardClick(match);
-                                                                            },
-                                                                            title: `Kliknite pre úpravu zápasu`
+                                                                            className: 'p-2 bg-blue-50 rounded border border-blue-100 hover:bg-blue-100 transition-colors relative group'
                                                                         },
+                                                                        // Hlavný obsah - klikateľný pre úpravu
                                                                         React.createElement(
                                                                             'div',
-                                                                            { className: 'flex items-center gap-2 text-xs' },
+                                                                            { 
+                                                                                className: 'flex items-center gap-2 text-xs cursor-pointer pr-8',
+                                                                                onClick: (e) => {
+                                                                                    e.stopPropagation();
+                                                                                    handleMatchCardClick(match);
+                                                                                },
+                                                                                title: `Kliknite pre úpravu zápasu`
+                                                                            },
                                                                             React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs' }),
                                                                             React.createElement('span', { className: 'font-medium text-blue-700' }, matchTime),
                                                                             React.createElement('span', { className: 'text-gray-400' }, '|'),
@@ -3242,6 +3271,20 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         { className: 'truncate flex-1 font-medium' },
                                                                                         `${homeDisplay} vs ${awayDisplay}`
                                                                                     )
+                                                                        ),
+                                                                        
+                                                                        // Ikona koša pre odstránenie priradenia - zobrazí sa pri hoveri
+                                                                        userProfileData?.role === 'admin' && React.createElement(
+                                                                            'button',
+                                                                            {
+                                                                                className: 'absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity',
+                                                                                onClick: (e) => {
+                                                                                    e.stopPropagation();
+                                                                                    handleUnassignMatch(match);
+                                                                                },
+                                                                                title: 'Odstrániť priradenie (miesto a čas)'
+                                                                            },
+                                                                            React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
                                                                         )
                                                                     );
                                                                 })
