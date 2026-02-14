@@ -640,6 +640,53 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     };
 
+    // Funkcia na výmenu domácich a hostí
+    const swapTeams = async (matchId) => {
+        if (!window.db) {
+            window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
+            return;
+        }
+    
+        // Skontrolujeme, či je používateľ admin
+        if (userProfileData?.role !== 'admin') {
+            window.showGlobalNotification('Na úpravu zápasov potrebujete administrátorské práva', 'error');
+            return;
+        }
+    
+        if (!userProfileData?.approved) {
+            window.showGlobalNotification('Váš účet ešte nebol schválený administrátorom.', 'error');
+            return;
+        }
+    
+        // Potvrdenie od používateľa
+        if (!confirm('Naozaj chcete vymeniť domáci a hosťovský tím?')) {
+            return;
+        }
+    
+        try {
+            // Nájdeme zápas v lokálnom stave
+            const match = matches.find(m => m.id === matchId);
+            if (!match) {
+                window.showGlobalNotification('Zápas sa nenašiel', 'error');
+                return;
+            }
+    
+            const matchRef = doc(window.db, 'matches', matchId);
+            
+            // Vymeníme homeTeamId a awayTeamId
+            await updateDoc(matchRef, {
+                homeTeamId: match.awayTeamId,
+                awayTeamId: match.homeTeamId
+            });
+            
+            console.log(`Zápas s ID ${matchId} bol úspešne upravený - tímy vymenené`);
+            window.showGlobalNotification('Tímy boli úspešne vymenené', 'success');
+        } catch (error) {
+            console.error('Chyba pri výmene tímov:', error);
+            window.showGlobalNotification('Chyba pri výmene tímov: ' + error.message, 'error');
+        }
+    };
+
     // Funkcia na kontrolu existujúcich zápasov počas generovania
     const checkExistingMatchesDuringGeneration = (matchesToGenerate) => {
         const existing = [];
@@ -1579,13 +1626,28 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         },
                                         // Tlačidlo pre zmazanie (zobrazí sa pri hoveri)
                                         userProfileData?.role === 'admin' && React.createElement(
-                                            'button',
-                                            {
-                                                onClick: () => deleteMatch(match.id),
-                                                className: 'absolute top-2 right-2 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md',
-                                                title: 'Zmazať zápas'
-                                            },
-                                            React.createElement('i', { className: 'fa-solid fa-trash-can text-sm' })
+                                            'div',
+                                            { className: 'absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity' },
+                                            // Ikona pre výmenu tímov
+                                            React.createElement(
+                                                'button',
+                                                {
+                                                    onClick: () => swapTeams(match.id),
+                                                    className: 'w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md',
+                                                    title: 'Vymeniť tím domáci a tím hostia'
+                                                },
+                                                React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-sm' })
+                                            ),
+                                            // Ikona pre zmazanie
+                                            React.createElement(
+                                                'button',
+                                                {
+                                                    onClick: () => deleteMatch(match.id),
+                                                    className: 'w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md',
+                                                    title: 'Zmazať zápas'
+                                                },
+                                                React.createElement('i', { className: 'fa-solid fa-trash-can text-sm' })
+                                            )
                                         ),
                                         React.createElement(
                                             'div',
