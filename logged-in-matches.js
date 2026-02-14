@@ -3301,7 +3301,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { className: 'col-span-1 text-center text-gray-400' },
-                                                                                'vs'
                                                                             ),
                                                                             
                                                                             // ID domáceho tímu (ak je režim Oboje)
