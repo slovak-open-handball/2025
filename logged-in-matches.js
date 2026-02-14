@@ -984,189 +984,114 @@ const AddMatchesApp = ({ userProfileData }) => {
             return 'Neznámy tím';
         }
         
-        // Najprv zistíme, z ktorej kategórie je tím (podľa zápasu) - TOTO JE POVINNÉ
+        // Najprv zistíme, z ktorej kategórie je tím (podľa zápasu)
         const currentMatch = matches.find(m => m.homeTeamId === teamId || m.awayTeamId === teamId);
         const categoryName = currentMatch?.categoryName;
         
-        // Ak nemáme kategóriu, nemôžeme správne identifikovať tím
-        if (!categoryName) {
-            console.warn('Chýba kategória pre tím s ID:', teamId);
-            // Pokúsime sa extrahovať názov ako fallback
-            const parts = teamId.split('-');
-            if (parts.length > 1) {
-                return parts.slice(1).join('-');
-            }
-            return teamId;
-        }
-        
-        // Extrahujeme názov z teamId (všetko za prvým pomlčkou)
-        const parts = teamId.split('-');
-        let extractedName = teamId; // Predvolene celé ID
-        
-        if (parts.length >= 2) {
-            extractedName = parts.slice(1).join('-');
-        }
-        
-        // Hľadáme tím PRESNE podľa kategórie A názvu
+        // Hľadáme v teamData podľa presného ID (priorita)
         if (teamData.allTeams && teamData.allTeams.length > 0) {
-            // Najprv skúsime hľadať podľa extrahovaného názvu (za pomlčkou)
-            const teamByExtractedName = teamData.allTeams.find(t => 
-                t.category === categoryName && 
-                t.teamName === extractedName
-            );
-            
-            if (teamByExtractedName) {
-                return teamByExtractedName.teamName;
-            }
-            
-            // Ak sa nenašlo podľa extrahovaného názvu, skúsime hľadať podľa celého ID
-            const teamById = teamData.allTeams.find(t => 
-                t.category === categoryName && 
-                t.id === teamId
-            );
-            
-            if (teamById) {
-                return teamById.teamName;
-            }
-            
-            // Skúsime ešte podľa ID kdekoľvek (pre staršie dáta)
-            const teamByAnyId = teamData.allTeams.find(t => t.id === teamId);
-            if (teamByAnyId) {
-                return teamByAnyId.teamName;
+            // Najprv skúsime nájsť podľa presného ID (toto je najspoľahlivejšie)
+            const teamByExactId = teamData.allTeams.find(t => t.id === teamId);
+            if (teamByExactId) {
+                return teamByExactId.teamName;
             }
         }
         
-        // Ak nie je v teamData, skúsime priamo z window.__teamManagerData
+        // Ak nemáme presné ID, skúsime podľa kategórie + extrahovaného názvu
+        if (categoryName) {
+            // Extrahujeme potenciálny názov - berieme všetko ZA PRVOU pomlčkou
+            // Toto je len pre prípady, keď ID je v tvare "userId-názovTímu"
+            const firstDashIndex = teamId.indexOf('-');
+            let extractedName = teamId;
+            
+            if (firstDashIndex !== -1) {
+                extractedName = teamId.substring(firstDashIndex + 1);
+            }
+            
+            if (teamData.allTeams && teamData.allTeams.length > 0) {
+                const teamByExtractedName = teamData.allTeams.find(t => 
+                    t.category === categoryName && 
+                    t.teamName === extractedName
+                );
+                
+                if (teamByExtractedName) {
+                    return teamByExtractedName.teamName;
+                }
+            }
+            
+            if (window.__teamManagerData?.allTeams) {
+                const teamByExtractedName = window.__teamManagerData.allTeams.find(t => 
+                    t.category === categoryName && 
+                    t.teamName === extractedName
+                );
+                
+                if (teamByExtractedName) {
+                    setTeamData(window.__teamManagerData);
+                    return teamByExtractedName.teamName;
+                }
+            }
+        }
+        
+        // Skúsime ešte podľa ID v __teamManagerData
         if (window.__teamManagerData?.allTeams) {
-            // Najprv podľa extrahovaného názvu
-            const teamByExtractedName = window.__teamManagerData.allTeams.find(t => 
-                t.category === categoryName && 
-                t.teamName === extractedName
-            );
-            
-            if (teamByExtractedName) {
+            const teamByExactId = window.__teamManagerData.allTeams.find(t => t.id === teamId);
+            if (teamByExactId) {
                 setTeamData(window.__teamManagerData);
-                return teamByExtractedName.teamName;
-            }
-            
-            // Potom podľa celého ID
-            const teamById = window.__teamManagerData.allTeams.find(t => 
-                t.category === categoryName && 
-                t.id === teamId
-            );
-            
-            if (teamById) {
-                setTeamData(window.__teamManagerData);
-                return teamById.teamName;
-            }
-            
-            // Nakoniec podľa ID kdekoľvek
-            const teamByAnyId = window.__teamManagerData.allTeams.find(t => t.id === teamId);
-            if (teamByAnyId) {
-                setTeamData(window.__teamManagerData);
-                return teamByAnyId.teamName;
+                return teamByExactId.teamName;
             }
         }
         
-        // Fallback - ak máme aspoň pomlčku, vrátime časť za ňou, inak celé ID
-        if (parts.length > 1) {
-            return parts.slice(1).join('-');
-        }
-        
-        console.warn(`Nenašiel sa tím s kategóriou "${categoryName}" a ID "${teamId}"`);
+        // Ak nič nenašlo, vrátime celé ID ako názov (rešpektujeme pôvodný formát)
+        console.warn(`Nenašiel sa tím s ID "${teamId}", zobrazujem celý reťazec`);
         return teamId;
     };
     
     // Funkcia na získanie zobrazovaného textu pre tím
     const getTeamDisplayText = (teamId) => {
         if (showTeamId) {
-            // Zobraziť ID v požadovanom formáte: 'kategória skupina číslo' (bez medzier medzi skupinou a číslom)
+            // Režim zobrazenia ID
             if (!teamId) return '---';
             
-            // Najprv zistíme, z ktorej kategórie je tím (podľa zápasu) - TOTO JE POVINNÉ
+            // Najprv zistíme, z ktorej kategórie je tím (podľa zápasu)
             const currentMatch = matches.find(m => m.homeTeamId === teamId || m.awayTeamId === teamId);
             const categoryName = currentMatch?.categoryName;
             
-            // Extrahujeme názov z teamId
-            const parts = teamId.split('-');
-            const extractedName = parts.length > 1 ? parts.slice(1).join('-') : teamId;
-            
-            // Hľadáme tím PRESNE podľa kategórie A názvu
+            // Hľadáme tím podľa presného ID
             let team = null;
             
-            if (categoryName) {
-                if (teamData.allTeams && teamData.allTeams.length > 0) {
-                    // Najprv podľa extrahovaného názvu
-                    team = teamData.allTeams.find(t => 
-                        t.category === categoryName && 
-                        t.teamName === extractedName
-                    );
-                    
-                    // Ak nie, podľa celého ID
-                    if (!team) {
-                        team = teamData.allTeams.find(t => 
-                            t.category === categoryName && 
-                            t.id === teamId
-                        );
-                    }
-                }
-                
-                if (!team && window.__teamManagerData?.allTeams) {
-                    // Najprv podľa extrahovaného názvu
-                    team = window.__teamManagerData.allTeams.find(t => 
-                        t.category === categoryName && 
-                        t.teamName === extractedName
-                    );
-                    
-                    // Ak nie, podľa celého ID
-                    if (!team) {
-                        team = window.__teamManagerData.allTeams.find(t => 
-                            t.category === categoryName && 
-                            t.id === teamId
-                        );
-                    }
-                }
+            if (teamData.allTeams && teamData.allTeams.length > 0) {
+                team = teamData.allTeams.find(t => t.id === teamId);
             }
             
-            // Ak sme nenašli podľa kategórie + názvu/ID, skúsime podľa ID kdekoľvek
-            if (!team) {
-                if (teamData.allTeams && teamData.allTeams.length > 0) {
-                    team = teamData.allTeams.find(t => t.id === teamId);
-                }
-                if (!team && window.__teamManagerData?.allTeams) {
-                    team = window.__teamManagerData.allTeams.find(t => t.id === teamId);
-                }
+            if (!team && window.__teamManagerData?.allTeams) {
+                team = window.__teamManagerData.allTeams.find(t => t.id === teamId);
             }
             
             if (team) {
                 // Máme tím, zobrazíme kategória skupina číslo (bez medzery medzi skupinou a číslom)
                 const category = team.category || 'Neznáma kategória';
                 
-                // Odstránime text "skupina " z názvu skupiny, ak existuje
                 let groupName = team.groupName || 'Neznáma skupina';
                 if (groupName.startsWith('skupina ')) {
-                    groupName = groupName.substring(8); // Odstráni prvých 8 znakov ("skupina ")
+                    groupName = groupName.substring(8);
                 }
                 
                 const order = team.order || '?';
                 
-                // Spojíme bez medzery medzi groupName a order
                 return `${category} ${groupName}${order}`;
             }
             
-            // Fallback - použijeme údaje zo zápasu
-            if (currentMatch && currentMatch.categoryName && currentMatch.groupName) {
-                let groupName = currentMatch.groupName;
-                if (groupName.startsWith('skupina ')) {
-                    groupName = groupName.substring(8);
-                }
-                return `${currentMatch.categoryName} ${groupName}?`;
+            // Ak nemáme tím, skúsime extrahovať z formátu userId-názov
+            const firstDashIndex = teamId.indexOf('-');
+            if (firstDashIndex !== -1) {
+                // Vrátime časť za prvou pomlčkou (potenciálny názov)
+                return teamId.substring(firstDashIndex + 1);
             }
             
-            // Ak nemáme žiadne informácie, vrátime extrahovaný názov alebo celé ID
-            return extractedName;
+            // Ak nie je pomlčka, vrátime celé ID
+            return teamId;
         } else {
-            // Zobraziť názov tímu
+            // Režim zobrazenia názvu tímu
             return getTeamNameById(teamId);
         }
     };
