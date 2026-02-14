@@ -925,6 +925,25 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [pendingBulkDelete, setPendingBulkDelete] = useState(null);
 
     const [displayMode, setDisplayMode] = useState('name');
+    const [tournamentStartDate, setTournamentStartDate] = useState('');
+    const [tournamentEndDate, setTournamentEndDate] = useState('');
+    const [tournamentDatesLoaded, setTournamentDatesLoaded] = useState(false);
+
+    const formatDateForDisplay = (timestamp) => {
+        if (!timestamp) return 'neurčené';
+        try {
+            const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+            return date.toLocaleString('sk-SK', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (e) {
+            return 'neplatný dátum';
+        }
+    };
 
     const handleDeleteClick = (match) => {
         setSelectedMatchForAction(match);
@@ -2013,6 +2032,26 @@ const AddMatchesApp = ({ userProfileData }) => {
         
         // Načítame zápasy
         const unsubscribeMatches = loadMatches();
+
+        const loadTournamentDates = async () => {
+            try {
+                const settingsDocRef = doc(window.db, 'settings', 'registration');
+                const settingsSnap = await getDoc(settingsDocRef);
+                
+                if (settingsSnap.exists()) {
+                    const data = settingsSnap.data();
+                    if (data.tournamentStart) {
+                        setTournamentStartDate(data.tournamentStart.toDate().toISOString().slice(0, 16));
+                    }
+                    if (data.tournamentEnd) {
+                        setTournamentEndDate(data.tournamentEnd.toDate().toISOString().slice(0, 16));
+                    }
+                }
+                setTournamentDatesLoaded(true);
+            } catch (error) {
+                console.error("Chyba pri načítaní dátumov turnaja:", error);
+            }
+        };
         
         // Načítame nastavenia kategórií
         const loadCategorySettings = async () => {
@@ -2071,7 +2110,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                 console.error("AddMatchesApp: Chyba pri načítaní nastavení kategórií:", error);
             }
         };
-        
+
+        loadTournamentDates();
         loadCategorySettings();
 
         // Načítanie skupín
