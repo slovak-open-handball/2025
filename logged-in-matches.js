@@ -927,7 +927,7 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayT
 };
 
 // Modálne okno pre priradenie/úpravu zápasu do haly
-const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAssign, allMatches, displayMode, getTeamDisplayText }) => {
+const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAssign, allMatches, displayMode, getTeamDisplayText, initialFilters }) => {
     const [selectedHallId, setSelectedHallId] = useState('');
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedTime, setSelectedTime] = useState('');
@@ -939,6 +939,87 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     const [timeError, setTimeError] = useState('');
     const [existingMatches, setExistingMatches] = useState([]);
     const [overlappingMatches, setOverlappingMatches] = useState([]);
+    const [filtersApplied, setFiltersApplied] = useState(false);
+
+     useEffect(() => {
+        if (isOpen && match && !filtersApplied) {
+            // Najprv predvyplníme z existujúceho zápasu (ak má priradenú halu)
+            if (match.hallId) {
+                setSelectedHallId(match.hallId);
+            } 
+            // Ak nemá priradenú halu, skúsime predvyplniť z filtra haly
+            else if (initialFilters?.hallId) {
+                setSelectedHallId(initialFilters.hallId);
+            }
+            
+            // Predvyplnenie dátumu
+            if (match.scheduledTime) {
+                try {
+                    const date = match.scheduledTime.toDate();
+                    
+                    // Formát pre datetime-local input (YYYY-MM-DD)
+                    const year = date.getFullYear();
+                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                    const day = date.getDate().toString().padStart(2, '0');
+                    const dateStr = `${year}-${month}-${day}`;
+                    
+                    setSelectedDate(dateStr);
+                    
+                    // Formát pre time input (HH:MM)
+                    const hours = date.getHours().toString().padStart(2, '0');
+                    const minutes = date.getMinutes().toString().padStart(2, '0');
+                    const timeStr = `${hours}:${minutes}`;
+                    
+                    setSelectedTime(timeStr);
+                } catch (e) {
+                    console.error('Chyba pri parsovaní dátumu zápasu:', e);
+                }
+            } 
+            // Ak nemá priradený dátum, skúsime predvyplniť z filtra dňa
+            else if (initialFilters?.day) {
+                setSelectedDate(initialFilters.day);
+            }
+            
+            setFiltersApplied(true);
+        }
+        
+        // Reset pri zatvorení
+        if (!isOpen) {
+            setFiltersApplied(false);
+        }
+    }, [isOpen, match, initialFilters]);
+
+    useEffect(() => {
+        if (match && isOpen && !filtersApplied) {
+            // Toto sa spustí len ak sme ešte neaplikovali filtre
+            // Predvyplnenie haly (len ak nemáme z filtra)
+            if (match.hallId && !selectedHallId) {
+                setSelectedHallId(match.hallId);
+            }
+            
+            // Predvyplnenie dátumu a času (len ak nemáme z filtra)
+            if (match.scheduledTime && !selectedDate) {
+                try {
+                    const date = match.scheduledTime.toDate();
+                    
+                    const year = date.getFullYear();
+                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                    const day = date.getDate().toString().padStart(2, '0');
+                    const dateStr = `${year}-${month}-${day}`;
+                    
+                    setSelectedDate(dateStr);
+                    
+                    const hours = date.getHours().toString().padStart(2, '0');
+                    const minutes = date.getMinutes().toString().padStart(2, '0');
+                    const timeStr = `${hours}:${minutes}`;
+                    
+                    setSelectedTime(timeStr);
+                } catch (e) {
+                    console.error('Chyba pri parsovaní dátumu zápasu:', e);
+                }
+            }
+        }
+    }, [match, isOpen, filtersApplied, selectedHallId, selectedDate]);
 
     // Načítanie všetkých zápasov pre vybranú halu a deň
     useEffect(() => {
@@ -3493,7 +3574,11 @@ const AddMatchesApp = ({ userProfileData }) => {
             onAssign: handleAssignMatch,
             allMatches: matches,
             displayMode: displayMode,
-            getTeamDisplayText: getTeamDisplayText
+            getTeamDisplayText: getTeamDisplayText,
+            initialFilters: {
+                hallId: selectedHallFilter || null,
+                day: selectedDayFilter || null
+            }
         }),
         React.createElement(
             'div',
