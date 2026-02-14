@@ -1485,11 +1485,16 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         ),
                         React.createElement('p', null, 
                             React.createElement('span', { className: 'font-medium' }, 'Dátum: '),
-                            new Date(selectedDate).toLocaleDateString('sk-SK', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric'
-                            })
+                            // SPRÁVNE zobrazenie dátumu - rozdelíme YYYY-MM-DD na časti
+                            (() => {
+                                const [year, month, day] = selectedDate.split('-').map(Number);
+                                const date = new Date(year, month - 1, day);
+                                return date.toLocaleDateString('sk-SK', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric'
+                                });
+                            })()
                         ),
                         React.createElement('p', null, 
                             React.createElement('span', { className: 'font-medium' }, 'Čas: '),
@@ -1502,7 +1507,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             `Čas zápasu je v poriadku (začína o ${selectedTime}, čo je po čase začiatku ${hallStartTime})`
                         )
                     )
-                )
             ),
 
             // Tlačidlá
