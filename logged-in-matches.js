@@ -3661,7 +3661,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         {
                                                             key: index,
                                                             className: 'flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group',
-                                                            style: { width: 'fit-content', minWidth: '320px' }
+                                                            style: { width: 'fit-content', minWidth: '320px' } // Zvýšená min-width na 320px
                                                         },
                                                         // Hlavička dňa s dátumom a počtom zápasov - klikateľná
                                                         React.createElement(
@@ -3721,7 +3721,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         matchesCount > 0 ? 
                                                             React.createElement(
                                                                 'div',
-                                                                { className: 'space-y-1 text-xs' },
+                                                                { className: 'space-y-1 text-xs', style: { minWidth: '300px' } }, // Pridaná min-width pre zoznam zápasov
                                                                 hallMatches
                                                                     .sort((a, b) => {
                                                                         if (!a.scheduledTime) return 1;
@@ -3764,7 +3764,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         e.stopPropagation();
                                                                                         handleMatchCardClick(match);
                                                                                     },
-                                                                                    title: `Kliknite pre úpravu zápasu`
+                                                                                    title: `Kliknite pre úpravu zápasu`,
+                                                                                    style: { minWidth: '280px' } // Pridaná min-width pre grid
                                                                                 },
                                                                                 React.createElement(
                                                                                     'div',
@@ -3834,7 +3835,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                             React.createElement(
                                                                 'div',
                                                                 {
-                                                                    className: 'w-full py-2 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-1 whitespace-nowrap'
+                                                                    className: 'w-full py-2 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-1 whitespace-nowrap',
+                                                                    style: { minWidth: '300px' } // Pridaná min-width pre prázdny stav
                                                                 },
                                                                 React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-xs flex-shrink-0' }),
                                                                 React.createElement('span', null, 'Žiadne zápasy')
