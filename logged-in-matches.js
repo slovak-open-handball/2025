@@ -2995,7 +2995,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         'div',
                                         { 
                                             key: match.id,
-                                            className: 'bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow relative group',
+                                            className: 'bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow relative group cursor-pointer',
                                             onClick: () => handleMatchCardClick(match)
                                         },
                                         // Tlačidlo pre zmazanie (zobrazí sa pri hoveri)
