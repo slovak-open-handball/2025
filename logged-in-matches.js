@@ -1860,9 +1860,14 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     const handleHallDayHeaderClick = (hall, date, dateStr) => {
         // Získame existujúci čas pre túto halu a deň
-        const scheduleId = `${hall.id}_${date.toISOString().split('T')[0]}`;
-        const existingSchedule = hallSchedules[scheduleId];
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        const localDateStr = `${year}-${month}-${day}`;
+
+        const scheduleId = `${hall.id}_${localDateStr}`;
         const currentStartTime = existingSchedule?.startTime;
+        const existingSchedule = hallSchedules[scheduleId];
     
         setSelectedHallForDay(hall);
         setSelectedDateForHall(date);
