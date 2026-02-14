@@ -988,12 +988,23 @@ const AddMatchesApp = ({ userProfileData }) => {
         const currentMatch = matches.find(m => m.homeTeamId === teamId || m.awayTeamId === teamId);
         const categoryName = currentMatch?.categoryName;
         
-        // Extrahujeme názov z teamId - berieme všetko ZA PRVOU pomlčkou
+        // Zistenie, či je prvá pomlčka oddeľovačom
+        // Oddeľovač je, ak nemá okolo seba medzery (formát "userId-názov")
         const firstDashIndex = teamId.indexOf('-');
         let extractedName = teamId;
+        let isFirstDashSeparator = false;
         
         if (firstDashIndex !== -1) {
-            extractedName = teamId.substring(firstDashIndex + 1);
+            // Skontrolujeme, či je okolo pomlčky medzera
+            const beforeDash = teamId[firstDashIndex - 1];
+            const afterDash = teamId[firstDashIndex + 1];
+            
+            // Ak pred ani za nie je medzera, je to oddeľovač
+            if (beforeDash && beforeDash !== ' ' && afterDash && afterDash !== ' ') {
+                isFirstDashSeparator = true;
+                extractedName = teamId.substring(firstDashIndex + 1);
+            }
+            // Inak to nie je oddeľovač, berieme celý reťazec ako názov
         }
         
         // Hľadáme podľa kombinácie category + teamName (POVINNÉ)
@@ -1046,7 +1057,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     // Funkcia na získanie zobrazovaného textu pre tím
     const getTeamDisplayText = (teamId) => {
         if (!teamId) return '---';
-        
+    
         if (showTeamId) {
             // REŽIM ZOBRAZENIA ID - formát 'kategória skupinaČíslo'
             
@@ -1054,9 +1065,20 @@ const AddMatchesApp = ({ userProfileData }) => {
             const currentMatch = matches.find(m => m.homeTeamId === teamId || m.awayTeamId === teamId);
             const categoryName = currentMatch?.categoryName;
             
-            // Extrahujeme názov z teamId
+            // Extrahujeme názov z teamId - len ak je prvá pomlčka oddeľovač
             const firstDashIndex = teamId.indexOf('-');
-            const extractedName = firstDashIndex !== -1 ? teamId.substring(firstDashIndex + 1) : teamId;
+            let extractedName = teamId;
+            
+            if (firstDashIndex !== -1) {
+                // Skontrolujeme, či je okolo pomlčky medzera
+                const beforeDash = teamId[firstDashIndex - 1];
+                const afterDash = teamId[firstDashIndex + 1];
+                
+                // Ak pred ani za nie je medzera, je to oddeľovač
+                if (beforeDash && beforeDash !== ' ' && afterDash && afterDash !== ' ') {
+                    extractedName = teamId.substring(firstDashIndex + 1);
+                }
+            }
             
             // Hľadáme tím podľa kombinácie kategórie a názvu
             let team = null;
