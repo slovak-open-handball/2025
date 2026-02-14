@@ -533,7 +533,6 @@ const ConfirmRegenerateModal = ({ isOpen, onClose, onConfirm, categoryName, grou
     );
 };
 
-// Modálne okno pre potvrdenie pri existujúcom zápase
 const ConfirmExistingMatchModal = ({ isOpen, onClose, onConfirm, match, homeTeamDisplay, awayTeamDisplay }) => {
     if (!isOpen || !match) return null;
 
@@ -577,9 +576,14 @@ const ConfirmExistingMatchModal = ({ isOpen, onClose, onConfirm, match, homeTeam
                     React.createElement('span', { className: 'font-semibold' }, awayTeamDisplay),
                     ' už existuje.'
                 ),
+                showTeamId && React.createElement(
+                    'div',
+                    { className: 'mt-2 text-xs text-gray-500' },
+                    React.createElement('p', null, `ID: ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`)
+                ),
                 React.createElement(
                     'p',
-                    { className: 'text-gray-700' },
+                    { className: 'text-gray-700 mt-2' },
                     'Chcete ho vygenerovať znovu?'
                 )
             ),
@@ -690,7 +694,7 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayT
     );
 };
 
-const ConfirmSwapModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTeamDisplay }) => {
+const ConfirmSwapModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTeamDisplay, homeTeamIdentifier, awayTeamIdentifier }) => {
     if (!isOpen) return null;
 
     return React.createElement(
@@ -732,9 +736,15 @@ const ConfirmSwapModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTea
                 React.createElement(
                     'div',
                     { className: 'flex items-center justify-between bg-gray-50 p-3 rounded-lg' },
-                    React.createElement('span', { className: 'font-semibold' }, homeTeamDisplay),
+                    React.createElement('div', { className: 'flex flex-col items-center' },
+                        React.createElement('span', { className: 'font-semibold' }, homeTeamDisplay),
+                        showTeamId && homeTeamIdentifier && React.createElement('span', { className: 'text-xs text-gray-500 mt-1' }, homeTeamIdentifier)
+                    ),
                     React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-blue-500 mx-2' }),
-                    React.createElement('span', { className: 'font-semibold' }, awayTeamDisplay)
+                    React.createElement('div', { className: 'flex flex-col items-center' },
+                        React.createElement('span', { className: 'font-semibold' }, awayTeamDisplay),
+                        showTeamId && awayTeamIdentifier && React.createElement('span', { className: 'text-xs text-gray-500 mt-1' }, awayTeamIdentifier)
+                    )
                 ),
                 React.createElement(
                     'div',
@@ -772,8 +782,8 @@ const ConfirmSwapModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTea
     );
 };
 
-// Modálne okno pre potvrdenie hromadného mazania
-const ConfirmBulkDeleteModal = ({ isOpen, onClose, onConfirm, categoryName, groupName, matchesCount }) => {
+// Podobne pre ConfirmDeleteModal
+const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTeamDisplay, homeTeamIdentifier, awayTeamIdentifier }) => {
     if (!isOpen) return null;
 
     return React.createElement(
@@ -792,7 +802,7 @@ const ConfirmBulkDeleteModal = ({ isOpen, onClose, onConfirm, categoryName, grou
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center mb-4' },
-                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 'Potvrdenie hromadného mazania'),
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 'Potvrdenie zmazania'),
                 React.createElement(
                     'button',
                     {
@@ -809,23 +819,26 @@ const ConfirmBulkDeleteModal = ({ isOpen, onClose, onConfirm, categoryName, grou
                 { className: 'mb-6' },
                 React.createElement(
                     'p',
-                    { className: 'text-gray-700 mb-2' },
-                    'Naozaj chcete zmazať všetky zápasy pre ',
-                    React.createElement('span', { className: 'font-semibold' }, categoryName),
-                    groupName ? React.createElement('span', null, ' a skupinu ', React.createElement('span', { className: 'font-semibold' }, groupName)) : null,
-                    '?'
-                ),
-                React.createElement(
-                    'p',
                     { className: 'text-gray-700 mb-4' },
-                    'Počet zápasov na zmazanie: ',
-                    React.createElement('span', { className: 'font-semibold text-red-600' }, matchesCount)
+                    'Naozaj chcete zmazať zápas medzi tímami?'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center justify-between bg-gray-50 p-3 rounded-lg' },
+                    React.createElement('div', { className: 'flex flex-col items-center' },
+                        React.createElement('span', { className: 'font-semibold' }, homeTeamDisplay),
+                        showTeamId && homeTeamIdentifier && React.createElement('span', { className: 'text-xs text-gray-500 mt-1' }, homeTeamIdentifier)
+                    ),
+                    React.createElement('i', { className: 'fa-solid fa-vs text-xs text-gray-400 mx-2' }),
+                    React.createElement('div', { className: 'flex flex-col items-center' },
+                        React.createElement('span', { className: 'font-semibold' }, awayTeamDisplay),
+                        showTeamId && awayTeamIdentifier && React.createElement('span', { className: 'text-xs text-gray-500 mt-1' }, awayTeamIdentifier)
+                    )
                 ),
                 React.createElement(
                     'p',
-                    { className: 'text-sm text-red-600 flex items-center gap-2' },
-                    React.createElement('i', { className: 'fa-solid fa-exclamation-triangle' }),
-                    'Táto akcia je nenávratná!'
+                    { className: 'text-sm text-red-600 mt-4' },
+                    'Táto akcia je nenávratná.'
                 )
             ),
 
@@ -850,7 +863,7 @@ const ConfirmBulkDeleteModal = ({ isOpen, onClose, onConfirm, categoryName, grou
                         },
                         className: 'px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors'
                     },
-                    'Áno, zmazať'
+                    'Zmazať'
                 )
             )
         )
@@ -2123,8 +2136,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                 setSelectedMatchForAction(null);
             },
             onConfirm: confirmDelete,
-            homeTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.homeTeamId) : '',
-            awayTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.awayTeamId) : ''
+            homeTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.homeTeamIdentifier) : '',
+            awayTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.awayTeamIdentifier) : '',
+            homeTeamIdentifier: selectedMatchForAction?.homeTeamIdentifier,
+            awayTeamIdentifier: selectedMatchForAction?.awayTeamIdentifier
         }),
         React.createElement(ConfirmSwapModal, {
             isOpen: isSwapModalOpen,
@@ -2133,8 +2148,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                 setSelectedMatchForAction(null);
             },
             onConfirm: confirmSwap,
-            homeTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.homeTeamId) : '',
-            awayTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.awayTeamId) : ''
+            homeTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.homeTeamIdentifier) : '',
+            awayTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.awayTeamIdentifier) : '',
+            homeTeamIdentifier: selectedMatchForAction?.homeTeamIdentifier,
+            awayTeamIdentifier: selectedMatchForAction?.awayTeamIdentifier
         }),
         React.createElement(DeleteMatchesModal, {
             isOpen: isDeleteMatchesModalOpen,
