@@ -2217,6 +2217,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                             'Oboje'
                         )
                     ),
+                    
+                    generationInProgress && React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-2 text-blue-600 bg-blue-50 px-4 py-2 rounded-lg' },
+                        React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600' }),
+                        React.createElement('span', { className: 'text-sm font-medium' }, 'Generujem zápasy...')
+                    )
+                ),
                 
                 // Dva stĺpce - ľavý pre zápasy, pravý pre haly
                 React.createElement(
