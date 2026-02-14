@@ -2138,7 +2138,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 status: 'pending'
             });
     
-            window.showGlobalNotification('Priradenie zápasu bolo úspešne odstránené', 'success');
+            window.showGlobalNotification('Priradenie zápasu bolo odstránené', 'success');
         } catch (error) {
             console.error('Chyba pri odstraňovaní priradenia:', error);
             window.showGlobalNotification('Chyba pri odstraňovaní priradenia: ' + error.message, 'error');
@@ -2169,7 +2169,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 status: 'scheduled'
             });
     
-            window.showGlobalNotification('Zápas bol úspešne priradený do haly', 'success');
+            window.showGlobalNotification('Zápas bol priradený do haly', 'success');
         } catch (error) {
             console.error('Chyba pri priradení zápasu:', error);
             window.showGlobalNotification('Chyba pri priradení zápasu: ' + error.message, 'error');
@@ -2236,8 +2236,8 @@ const AddMatchesApp = ({ userProfileData }) => {
             const matchRef = doc(window.db, 'matches', selectedMatchForAction.id);
             await deleteDoc(matchRef);
             
-            console.log(`Zápas s ID ${selectedMatchForAction.id} bol úspešne zmazaný`);
-            window.showGlobalNotification('Zápas bol úspešne zmazaný', 'success');
+            console.log(`Zápas s ID ${selectedMatchForAction.id} bol zmazaný`);
+            window.showGlobalNotification('Zápas bol zmazaný', 'success');
             setSelectedMatchForAction(null);
         } catch (error) {
             console.error('Chyba pri mazaní zápasu:', error);
@@ -2273,8 +2273,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                 awayTeamIdentifier: selectedMatchForAction.homeTeamIdentifier
             });
             
-            console.log(`Zápas s ID ${selectedMatchForAction.id} bol úspešne upravený - tímy vymenené`);
-            window.showGlobalNotification('Tímy boli úspešne vymenené', 'success');
+            console.log(`Zápas s ID ${selectedMatchForAction.id} bol upravený - tímy vymenené`);
+            window.showGlobalNotification('Tímy boli vymenené', 'success');
             setSelectedMatchForAction(null);
         } catch (error) {
             console.error('Chyba pri výmene tímov:', error);
@@ -3126,7 +3126,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     // Uložíme do Firebase
                     const savedMatches = await saveMatchesToFirebase(allGeneratedMatches);
                     
-                    console.log(`Úspešne uložených ${savedMatches.length} zápasov`);
+                    console.log(`uložených ${savedMatches.length} zápasov`);
                     
                     window.showGlobalNotification(
                         `Vygenerovaných a uložených ${savedMatches.length} zápasov pre ${category.name}${groupName ? ' - ' + groupName : ''}`,
@@ -3221,7 +3221,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 await deleteDoc(matchRef);
             }
     
-            console.log(`Úspešne zmazaných ${matchesToDelete.length} zápasov`);
+            console.log(`zmazaných ${matchesToDelete.length} zápasov`);
             window.showGlobalNotification(
                 `Zmazaných ${matchesToDelete.length} zápasov pre ${pendingBulkDelete.categoryName}${pendingBulkDelete.groupName ? ' - ' + pendingBulkDelete.groupName : ''}`,
                 'success'
