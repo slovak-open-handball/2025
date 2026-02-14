@@ -944,6 +944,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     useEffect(() => {
         if (isOpen && match && !initialized) {
             console.log('Inicializujem modálne okno s filtrami:', initialFilters);
+            console.log('Match data:', match);
             
             // 1. Predvyplnenie haly - priorita: existujúci zápas > filter
             if (match.hallId) {
