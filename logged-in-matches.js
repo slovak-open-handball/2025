@@ -922,6 +922,35 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     const [matchDuration, setMatchDuration] = useState(0);
     const [matchEndTime, setMatchEndTime] = useState('');
 
+    useEffect(() => {
+        const loadHallStartTime = async () => {
+            if (selectedHallId && selectedDate && window.db) {
+                try {
+                    const scheduleId = `${selectedHallId}_${selectedDate}`;
+                    const scheduleRef = doc(window.db, 'hallSchedules', scheduleId);
+                    const scheduleSnap = await getDoc(scheduleRef);
+                    
+                    if (scheduleSnap.exists()) {
+                        const data = scheduleSnap.data();
+                        setHallStartTime(data.startTime);
+                        setTimeError(''); // Resetujeme chybu pri zmene
+                    } else {
+                        setHallStartTime(null);
+                        setTimeError('Pre tento deň nie je nastavený čas začiatku. Najprv ho nastavte kliknutím na hlavičku dňa.');
+                    }
+                } catch (error) {
+                    console.error('Chyba pri načítaní času začiatku haly:', error);
+                    setHallStartTime(null);
+                }
+            } else {
+                setHallStartTime(null);
+                setTimeError('');
+            }
+        };
+
+        loadHallStartTime();
+    }, [selectedHallId, selectedDate]);
+
     // Načítanie existujúcich údajov zápasu pri otvorení modálneho okna
     useEffect(() => {
         if (match && isOpen) {
