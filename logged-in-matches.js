@@ -892,6 +892,8 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [isBulkDeleteConfirmModalOpen, setIsBulkDeleteConfirmModalOpen] = useState(false);
     const [pendingBulkDelete, setPendingBulkDelete] = useState(null);
 
+    const [displayMode, setDisplayMode] = useState('name');
+
     const handleDeleteClick = (match) => {
         setSelectedMatchForAction(match);
         setIsDeleteModalOpen(true);
@@ -1105,11 +1107,18 @@ const AddMatchesApp = ({ userProfileData }) => {
     const getTeamDisplayText = (identifier) => {
         if (!identifier) return '---';
     
-        // Vždy získame názov tímu
         const teamName = getTeamNameByIdentifier(identifier);
         
-        // Vrátime oba údaje v požadovanom formáte
-        return `${teamName} (${identifier})`;
+        switch (displayMode) {
+            case 'name':
+                return teamName;
+            case 'id':
+                return identifier;
+            case 'both':
+                return `${teamName} (${identifier})`;
+            default:
+                return teamName;
+        }
     };
 
     // Funkcia na kontrolu, či už boli zápasy pre danú kategóriu/skupinu vygenerované
@@ -2126,9 +2135,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             },
             onConfirm: confirmDelete,
             homeTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.homeTeamIdentifier) : '',
-            awayTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.awayTeamIdentifier) : '',
-            homeTeamIdentifier: selectedMatchForAction?.homeTeamIdentifier,
-            awayTeamIdentifier: selectedMatchForAction?.awayTeamIdentifier
+            awayTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.awayTeamIdentifier) : ''
         }),
         React.createElement(ConfirmSwapModal, {
             isOpen: isSwapModalOpen,
@@ -2138,9 +2145,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             },
             onConfirm: confirmSwap,
             homeTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.homeTeamIdentifier) : '',
-            awayTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.awayTeamIdentifier) : '',
-            homeTeamIdentifier: selectedMatchForAction?.homeTeamIdentifier,
-            awayTeamIdentifier: selectedMatchForAction?.awayTeamIdentifier
+            awayTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.awayTeamIdentifier) : ''
         }),
         React.createElement(DeleteMatchesModal, {
             isOpen: isDeleteMatchesModalOpen,
@@ -2171,14 +2176,47 @@ const AddMatchesApp = ({ userProfileData }) => {
                 React.createElement(
                     'div',
                     { className: 'flex items-center gap-3 flex-wrap justify-center' },
-                    // Indikátor generovania (ostáva)
-                    generationInProgress && React.createElement(
+                    // Nový prepínač s tromi možnosťami
+                    React.createElement(
                         'div',
-                        { className: 'flex items-center gap-2 text-blue-600 bg-blue-50 px-4 py-2 rounded-lg' },
-                        React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600' }),
-                        React.createElement('span', { className: 'text-sm font-medium' }, 'Generujem zápasy...')
-                    )
-                ),
+                        { className: 'flex items-center gap-2 bg-gray-100 p-1 rounded-lg' },
+                        React.createElement(
+                            'button',
+                            { 
+                                className: `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                                    displayMode === 'name' 
+                                        ? 'bg-blue-600 text-white shadow-sm' 
+                                        : 'text-gray-600 hover:bg-gray-200'
+                                }`,
+                                onClick: () => setDisplayMode('name')
+                            },
+                            'Názvy'
+                        ),
+                        React.createElement(
+                            'button',
+                            { 
+                                className: `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                                    displayMode === 'id' 
+                                        ? 'bg-blue-600 text-white shadow-sm' 
+                                        : 'text-gray-600 hover:bg-gray-200'
+                                }`,
+                                onClick: () => setDisplayMode('id')
+                            },
+                            'ID'
+                        ),
+                        React.createElement(
+                            'button',
+                            { 
+                                className: `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                                    displayMode === 'both' 
+                                        ? 'bg-blue-600 text-white shadow-sm' 
+                                        : 'text-gray-600 hover:bg-gray-200'
+                                }`,
+                                onClick: () => setDisplayMode('both')
+                            },
+                            'Oboje'
+                        )
+                    ),
                 
                 // Dva stĺpce - ľavý pre zápasy, pravý pre haly
                 React.createElement(
