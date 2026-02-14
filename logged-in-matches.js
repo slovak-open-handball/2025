@@ -2609,30 +2609,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                             )
                         ),
                         
-                        // Zobrazenie dátumov turnaja
-                        tournamentDatesLoaded && (tournamentStartDate || tournamentEndDate) && React.createElement(
-                            'div',
-                            { className: 'mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg' },
-                            React.createElement(
-                                'div',
-                                { className: 'flex items-center gap-4 flex-wrap' },
-                                tournamentStartDate && React.createElement(
-                                    'div',
-                                    { className: 'flex items-center gap-2' },
-                                    React.createElement('i', { className: 'fa-solid fa-calendar-day text-blue-600' }),
-                                    React.createElement('span', { className: 'text-sm text-gray-700' }, 'Začiatok:'),
-                                    React.createElement('span', { className: 'font-semibold text-sm text-blue-700' }, formatDateForDisplay(tournamentStartDate))
-                                ),
-                                tournamentEndDate && React.createElement(
-                                    'div',
-                                    { className: 'flex items-center gap-2' },
-                                    React.createElement('i', { className: 'fa-solid fa-calendar-check text-blue-600' }),
-                                    React.createElement('span', { className: 'text-sm text-gray-700' }, 'Koniec:'),
-                                    React.createElement('span', { className: 'font-semibold text-sm text-blue-700' }, formatDateForDisplay(tournamentEndDate))
-                                )
-                            )
-                        ),
-                        
                         // Indikátor načítavania
                         loading && React.createElement(
                             'div',
