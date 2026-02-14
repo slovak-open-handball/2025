@@ -2051,7 +2051,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             setMatches(loadedMatches);
             
             // Po načítaní zápasov načítame používateľov
-            loadUsersWithMatches();
+//            loadUsersWithMatches();
             
         }, (error) => {
             console.error('Chyba pri načítaní zápasov:', error);
