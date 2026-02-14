@@ -3655,7 +3655,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     'div',
                                                     {
                                                         key: index,
-                                                        className: 'flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group min-w-[280px] flex-1' // Pridaná min-width a flex-1 pre rovnomerne široké boxy
+                                                        className: 'flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group w-fit' // Zmena na w-fit (prispôsobí sa obsahu)
                                                     },
                                                     // Hlavička dňa s dátumom a počtom zápasov - klikateľná
                                                     React.createElement(
@@ -3769,12 +3769,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             ),
                                                                             React.createElement(
                                                                                 'div',
-                                                                                { className: 'col-span-3 font-medium text-gray-800' },
+                                                                                { className: 'col-span-3 font-medium text-gray-800 whitespace-nowrap' }, // Pridaný whitespace-nowrap
                                                                                 displayMode === 'both' ? homeDisplay.name : homeDisplay
                                                                             ),
                                                                             React.createElement(
                                                                                 'div',
-                                                                                { className: 'col-span-3 font-medium text-gray-800' },
+                                                                                { className: 'col-span-3 font-medium text-gray-800 whitespace-nowrap' }, // Pridaný whitespace-nowrap
                                                                                 displayMode === 'both' ? awayDisplay.name : awayDisplay
                                                                             ),
                                                                             React.createElement(
@@ -3784,12 +3784,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             ),
                                                                             React.createElement(
                                                                                 'div',
-                                                                                { className: 'col-span-1 text-gray-500 font-mono text-[10px]' }, 
+                                                                                { className: 'col-span-1 text-gray-500 font-mono text-[10px] whitespace-nowrap' }, // Pridaný whitespace-nowrap
                                                                                 displayMode === 'both' ? `(${homeDisplay.id})` : ''
                                                                             ),
                                                                             React.createElement(
                                                                                 'div',
-                                                                                { className: 'col-span-1 text-gray-500 font-mono text-[10px]' },
+                                                                                { className: 'col-span-1 text-gray-500 font-mono text-[10px] whitespace-nowrap' }, // Pridaný whitespace-nowrap
                                                                                 displayMode === 'both' ? `(${awayDisplay.id})` : ''
                                                                             ),
                                                                             displayMode !== 'both' && React.createElement('div', { className: 'col-span-2' })
