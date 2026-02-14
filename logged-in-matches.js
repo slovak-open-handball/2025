@@ -1285,13 +1285,65 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [isBulkDeleteConfirmModalOpen, setIsBulkDeleteConfirmModalOpen] = useState(false);
     const [pendingBulkDelete, setPendingBulkDelete] = useState(null);
 
-    const [displayMode, setDisplayMode] = useState('name');
+    // Načítanie režimu zobrazenia z URL pri inicializácii
+    const getInitialDisplayMode = () => {
+        if (window.location.hash) {
+            const hash = window.location.hash.substring(1); // odstránime #
+            if (hash === 'nazvy' || hash === 'id' || hash === 'oboje') {
+                return hash;
+            }
+        }
+        return 'name'; // predvolená hodnota
+    };
+
+    const [displayMode, setDisplayMode] = useState(getInitialDisplayMode);
     const [tournamentStartDate, setTournamentStartDate] = useState('');
     const [tournamentEndDate, setTournamentEndDate] = useState('');
     const [tournamentDatesLoaded, setTournamentDatesLoaded] = useState(false);
 
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [selectedMatchForAssign, setSelectedMatchForAssign] = useState(null);
+
+    // Funkcia na zmenu režimu zobrazenia a aktualizáciu URL
+    const handleDisplayModeChange = (mode) => {
+        setDisplayMode(mode);
+        
+        // Aktualizujeme URL hash
+        let hash = '';
+        switch (mode) {
+            case 'name':
+                hash = 'nazvy';
+                break;
+            case 'id':
+                hash = 'id';
+                break;
+            case 'both':
+                hash = 'oboje';
+                break;
+            default:
+                hash = 'nazvy';
+        }
+        window.location.hash = hash;
+    };
+
+    // Načítanie režimu zobrazenia pri zmene URL (ak používateľ zmení URL manuálne)
+    useEffect(() => {
+        const handleHashChange = () => {
+            if (window.location.hash) {
+                const hash = window.location.hash.substring(1);
+                if (hash === 'nazvy') {
+                    setDisplayMode('name');
+                } else if (hash === 'id') {
+                    setDisplayMode('id');
+                } else if (hash === 'oboje') {
+                    setDisplayMode('both');
+                }
+            }
+        };
+
+        window.addEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, []);
 
     const handleMatchCardClick = (match) => {
         setSelectedMatchForAssign(match);
@@ -2819,7 +2871,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         ? 'bg-blue-600 text-white shadow-sm' 
                                         : 'text-gray-600 hover:bg-gray-200'
                                 }`,
-                                onClick: () => setDisplayMode('name')
+                                onClick: () => handleDisplayModeChange('name')
                             },
                             'Názvy'
                         ),
@@ -2831,7 +2883,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         ? 'bg-blue-600 text-white shadow-sm' 
                                         : 'text-gray-600 hover:bg-gray-200'
                                 }`,
-                                onClick: () => setDisplayMode('id')
+                                onClick: () => handleDisplayModeChange('id')
                             },
                             'ID'
                         ),
@@ -2843,7 +2895,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         ? 'bg-blue-600 text-white shadow-sm' 
                                         : 'text-gray-600 hover:bg-gray-200'
                                 }`,
-                                onClick: () => setDisplayMode('both')
+                                onClick: () => handleDisplayModeChange('both')
                             },
                             'Oboje'
                         )
