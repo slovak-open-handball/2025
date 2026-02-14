@@ -3769,12 +3769,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             ),
                                                                             React.createElement(
                                                                                 'div',
-                                                                                { className: 'col-span-3 truncate font-medium text-gray-800' }, // Ponechaný truncate pre dlhé názvy
+                                                                                { className: 'col-span-3 font-medium text-gray-800' },
                                                                                 displayMode === 'both' ? homeDisplay.name : homeDisplay
                                                                             ),
                                                                             React.createElement(
                                                                                 'div',
-                                                                                { className: 'col-span-3 truncate font-medium text-gray-800' }, // Ponechaný truncate pre dlhé názvy
+                                                                                { className: 'col-span-3 font-medium text-gray-800' },
                                                                                 displayMode === 'both' ? awayDisplay.name : awayDisplay
                                                                             ),
                                                                             React.createElement(
@@ -3784,12 +3784,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             ),
                                                                             React.createElement(
                                                                                 'div',
-                                                                                { className: 'col-span-1 truncate text-gray-500 font-mono text-[10px]' }, // Ponechaný truncate pre ID
+                                                                                { className: 'col-span-1 text-gray-500 font-mono text-[10px]' }, 
                                                                                 displayMode === 'both' ? `(${homeDisplay.id})` : ''
                                                                             ),
                                                                             React.createElement(
                                                                                 'div',
-                                                                                { className: 'col-span-1 truncate text-gray-500 font-mono text-[10px]' }, // Ponechaný truncate pre ID
+                                                                                { className: 'col-span-1 text-gray-500 font-mono text-[10px]' },
                                                                                 displayMode === 'both' ? `(${awayDisplay.id})` : ''
                                                                             ),
                                                                             displayMode !== 'both' && React.createElement('div', { className: 'col-span-2' })
