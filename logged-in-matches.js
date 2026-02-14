@@ -1,5 +1,5 @@
 // Importy pre Firebase funkcie
-import { doc, getDoc, getDocs, onSnapshot, updateDoc, addDoc, deleteDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, getDocs, setDoc, onSnapshot, updateDoc, addDoc, deleteDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const { useState, useEffect } = React;
@@ -1408,16 +1408,17 @@ const AddMatchesApp = ({ userProfileData }) => {
             // Vytvoríme referenciu na dokument pre konkrétnu halu a deň
             const hallDayRef = doc(window.db, 'hallSchedules', `${selectedHallForDay.id}_${dateStr}`);
             
-            // Uložíme nastavenia
-            await updateDoc(hallDayRef, {
+            // POUŽITE setDoc namiesto updateDoc - setDoc vytvorí nový dokument alebo prepíše existujúci
+            // { merge: true } zabezpečí, že sa existujúce polia zachovajú
+            await setDoc(hallDayRef, {
                 hallId: selectedHallForDay.id,
                 hallName: selectedHallForDay.name,
                 date: dateStr,
                 startTime: startTime,
                 updatedAt: Timestamp.now(),
                 updatedBy: userProfileData?.email || 'unknown'
-            }, { merge: true }); // Použijeme merge pre prípad, že dokument už existuje
-
+            }, { merge: true });
+    
             window.showGlobalNotification(
                 `Čas začiatku pre ${selectedHallForDay.name} dňa ${selectedDateStrForHall} bol nastavený na ${startTime}`,
                 'success'
