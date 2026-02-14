@@ -655,9 +655,25 @@ const ConfirmSwapModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTea
                 React.createElement(
                     'div',
                     { className: 'flex items-center justify-between bg-gray-50 p-3 rounded-lg' },
-                    React.createElement('span', { className: 'font-semibold text-sm' }, homeTeamDisplay),
+                    displayMode === 'both' && typeof homeTeamDisplay === 'object'
+                        ? React.createElement(
+                            'div',
+                            { className: 'flex flex-col items-start' },
+                            React.createElement('span', { className: 'font-semibold text-sm' }, homeTeamDisplay.name),
+                            React.createElement('span', { className: 'text-xs text-gray-500' }, `(${homeTeamDisplay.id})`)
+                        )
+                        : React.createElement('span', { className: 'font-semibold text-sm' }, homeTeamDisplay),
+                    
                     React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-blue-500 mx-2' }),
-                    React.createElement('span', { className: 'font-semibold text-sm' }, awayTeamDisplay)
+                    
+                    displayMode === 'both' && typeof awayTeamDisplay === 'object'
+                        ? React.createElement(
+                            'div',
+                            { className: 'flex flex-col items-start' },
+                            React.createElement('span', { className: 'font-semibold text-sm' }, awayTeamDisplay.name),
+                            React.createElement('span', { className: 'text-xs text-gray-500' }, `(${awayTeamDisplay.id})`)
+                        )
+                        : React.createElement('span', { className: 'font-semibold text-sm' }, awayTeamDisplay)
                 ),
                 React.createElement(
                     'div',
@@ -822,9 +838,25 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayT
                 React.createElement(
                     'div',
                     { className: 'flex items-center justify-between bg-gray-50 p-3 rounded-lg' },
-                    React.createElement('span', { className: 'font-semibold text-sm' }, homeTeamDisplay),
-                    React.createElement('i', { className: 'fa-solid fa-vs text-xs text-gray-400 mx-2' }),
-                    React.createElement('span', { className: 'font-semibold text-sm' }, awayTeamDisplay)
+                    displayMode === 'both' && typeof homeTeamDisplay === 'object'
+                        ? React.createElement(
+                            'div',
+                            { className: 'flex flex-col items-start' },
+                            React.createElement('span', { className: 'font-semibold text-sm' }, homeTeamDisplay.name),
+                            React.createElement('span', { className: 'text-xs text-gray-500' }, `(${homeTeamDisplay.id})`)
+                        )
+                        : React.createElement('span', { className: 'font-semibold text-sm' }, homeTeamDisplay),
+                    
+                    React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-blue-500 mx-2' }),
+                    
+                    displayMode === 'both' && typeof awayTeamDisplay === 'object'
+                        ? React.createElement(
+                            'div',
+                            { className: 'flex flex-col items-start' },
+                            React.createElement('span', { className: 'font-semibold text-sm' }, awayTeamDisplay.name),
+                            React.createElement('span', { className: 'text-xs text-gray-500' }, `(${awayTeamDisplay.id})`)
+                        )
+                        : React.createElement('span', { className: 'font-semibold text-sm' }, awayTeamDisplay)
                 ),
                 React.createElement(
                     'p',
@@ -1106,7 +1138,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     // Funkcia na získanie zobrazovaného textu pre tím
     const getTeamDisplayText = (identifier) => {
         if (!identifier) return '---';
-    
+        
         const teamName = getTeamNameByIdentifier(identifier);
         
         switch (displayMode) {
@@ -1115,7 +1147,8 @@ const AddMatchesApp = ({ userProfileData }) => {
             case 'id':
                 return identifier;
             case 'both':
-                return `${teamName} (${identifier})`;
+                // Pre režim "Oboje" vrátime objekt, nie string
+                return { name: teamName, id: identifier };
             default:
                 return teamName;
         }
@@ -2308,23 +2341,67 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         React.createElement(
                                             'div',
                                             { className: 'flex items-center justify-between' },
-                                            React.createElement(
-                                                'span',
-                                                { 
-                                                    className: 'font-semibold text-sm text-gray-800',
-                                                    title: `${match.homeTeamIdentifier}` // Tooltip s čistým identifikátorom
-                                                },
-                                                homeTeamDisplay
-                                            ),
+                                            displayMode === 'both' 
+                                                ? React.createElement(
+                                                    'div',
+                                                    { className: 'flex flex-col items-start' },
+                                                    React.createElement(
+                                                        'span',
+                                                        { 
+                                                            className: 'font-semibold text-sm text-gray-800',
+                                                            title: match.homeTeamIdentifier
+                                                        },
+                                                        homeTeamDisplay.name
+                                                    ),
+                                                    React.createElement(
+                                                        'span',
+                                                        { 
+                                                            className: 'text-xs text-gray-500 mt-0.5',
+                                                            title: match.homeTeamIdentifier
+                                                        },
+                                                        `(${homeTeamDisplay.id})`
+                                                    )
+                                                )
+                                                : React.createElement(
+                                                    'span',
+                                                    { 
+                                                        className: 'font-semibold text-sm text-gray-800',
+                                                        title: match.homeTeamIdentifier
+                                                    },
+                                                    homeTeamDisplay
+                                                ),
+                                            
                                             React.createElement('i', { className: 'fa-solid fa-vs text-xs text-gray-400 mx-2' }),
-                                            React.createElement(
-                                                'span',
-                                                { 
-                                                    className: 'font-semibold text-sm text-gray-800',
-                                                    title: `${match.awayTeamIdentifier}` // Tooltip s čistým identifikátorom
-                                                },
-                                                awayTeamDisplay
-                                            )
+                                            
+                                            displayMode === 'both' 
+                                                ? React.createElement(
+                                                    'div',
+                                                    { className: 'flex flex-col items-start' },
+                                                    React.createElement(
+                                                        'span',
+                                                        { 
+                                                            className: 'font-semibold text-sm text-gray-800',
+                                                            title: match.awayTeamIdentifier
+                                                        },
+                                                        awayTeamDisplay.name
+                                                    ),
+                                                    React.createElement(
+                                                        'span',
+                                                        { 
+                                                            className: 'text-xs text-gray-500 mt-0.5',
+                                                            title: match.awayTeamIdentifier
+                                                        },
+                                                        `(${awayTeamDisplay.id})`
+                                                    )
+                                                )
+                                                : React.createElement(
+                                                    'span',
+                                                    { 
+                                                        className: 'font-semibold text-sm text-gray-800',
+                                                        title: match.awayTeamIdentifier
+                                                    },
+                                                    awayTeamDisplay
+                                                )
                                         ),
                                         React.createElement(
                                             'div',
