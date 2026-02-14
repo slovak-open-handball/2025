@@ -18,6 +18,20 @@ const typeIcons = {
     sportova_hala: { icon: 'fa-futbol', color: '#dc2626' },
 };
 
+const getLocalDateStr = (date) => {
+    if (!date) return null;
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const getLocalDateFromStr = (dateStr) => {
+    if (!dateStr) return null;
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+};
+
 /**
  * Globálna funkcia pre zobrazenie notifikácií
  */
@@ -938,7 +952,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         m.id !== match?.id // Vylúčime aktuálne upravovaný zápas
                     ).filter(m => {
                         const matchDate = m.scheduledTime.toDate();
-                        const matchDateStr = matchDate.toISOString().split('T')[0];
+                        const matchDateStr = getLocalDateStr(matchDate);
                         return matchDateStr === selectedDate;
                     });
                     
@@ -1324,7 +1338,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         },
                         React.createElement('option', { value: '' }, '-- Vyberte deň --'),
                         availableDates.map((date, index) => {
-                            const dateStr = date.toISOString().split('T')[0];
+                            const dateStr = getLocalDateStr(date);
                             const displayDate = date.toLocaleDateString('sk-SK', {
                                 day: '2-digit',
                                 month: '2-digit',
@@ -1528,14 +1542,12 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         React.createElement('p', null, 
                             React.createElement('span', { className: 'font-medium' }, 'Dátum: '),
                             (() => {
-                                const [year, month, day] = selectedDate.split('-').map(Number);
-                                // Vytvoríme Date objekt a potom ho naformátujeme
-                                const date = new Date(year, month - 1, day);
-                                return date.toLocaleDateString('sk-SK', {
+                                const date = getLocalDateFromStr(selectedDate);
+                                return date ? date.toLocaleDateString('sk-SK', {
                                     day: '2-digit',
                                     month: '2-digit',
                                     year: 'numeric'
-                                });
+                                }) : 'neplatný dátum';
                             })()
                         ),
                         React.createElement('p', null, 
@@ -1784,7 +1796,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 
                 try {
                     const matchDate = match.scheduledTime.toDate();
-                    const matchDateStr = matchDate.toISOString().split('T')[0];
+                    const matchDateStr = getLocalDateStr(matchDate);
                     if (matchDateStr !== selectedDayFilter) {
                         return false;
                     }
@@ -1863,22 +1875,17 @@ const AddMatchesApp = ({ userProfileData }) => {
         return unsubscribe;
     };
 
-
     const handleHallDayHeaderClick = (hall, date, dateStr) => {
         // Získame existujúci čas pre túto halu a deň
-        const year = date.getFullYear();
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const day = date.getDate().toString().padStart(2, '0');
-        const localDateStr = `${year}-${month}-${day}`;
-
+        const localDateStr = getLocalDateStr(date);
         const scheduleId = `${hall.id}_${localDateStr}`;
-        const currentStartTime = existingSchedule?.startTime;
         const existingSchedule = hallSchedules[scheduleId];
-    
+        const currentStartTime = existingSchedule?.startTime;
+
         setSelectedHallForDay(hall);
         setSelectedDateForHall(date);
         setSelectedDateStrForHall(dateStr);
-        setSelectedCurrentStartTime(currentStartTime); // Uložíme existujúci čas
+        setSelectedCurrentStartTime(currentStartTime);
         setIsHallDayModalOpen(true);
     };
 
@@ -1894,7 +1901,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
 
         try {
-            const dateStr = selectedDateForHall.toISOString().split('T')[0];
+            const dateStr = getLocalDateStr(selectedDateForHall);
             const scheduleId = `${selectedHallForDay.id}_${dateStr}`;
             const hallDayRef = doc(window.db, 'hallSchedules', scheduleId);
             
@@ -2381,7 +2388,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         if (!matches || matches.length === 0) return [];
     
         // Formátujeme dátum pre porovnanie
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = getLocalDateStr(date);
     
         // Najprv získame všetky zápasy pre túto halu a deň
         const hallDayMatches = matches.filter(match => {
@@ -2390,7 +2397,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             
             try {
                 const matchDate = match.scheduledTime.toDate();
-                const matchDateStr = matchDate.toISOString().split('T')[0];
+                const matchDateStr = getLocalDateStr(matchDate);
                 return matchDateStr === dateStr;
             } catch (e) {
                 return false;
@@ -3931,7 +3938,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     if (match.scheduledTime) {
                                         try {
                                             const matchDate = match.scheduledTime.toDate();
-                                            const dateStr = matchDate.toISOString().split('T')[0];
+                                            const dateStr = getLocalDateStr(currentDate);
                                             daysWithMatches.add(dateStr);
                                         } catch (e) {
                                             console.error('Chyba pri spracovaní dátumu zápasu:', e);
@@ -4073,7 +4080,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                 ),
                                                                 // Zobrazenie uloženého času ak existuje
                                                                 (() => {
-                                                                    const scheduleId = `${hall.id}_${date.toISOString().split('T')[0]}`;
+                                                                    const scheduleId = `${hall.id}_${getLocalDateStr(date)}`;
                                                                     const savedSchedule = hallSchedules[scheduleId];
                                                                     if (savedSchedule?.startTime) {
                                                                         return React.createElement(
