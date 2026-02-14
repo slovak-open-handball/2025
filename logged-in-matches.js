@@ -1724,6 +1724,17 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [availableGroupsForFilter, setAvailableGroupsForFilter] = useState([]);
     const [availableDays, setAvailableDays] = useState([]);
 
+    const loadFiltersFromURL = () => {
+        const params = new URLSearchParams(window.location.search);
+    
+        return {
+            category: params.get('category') || '',
+            group: params.get('group') || '',
+            hall: params.get('hall') || '',
+            day: params.get('day') || ''
+        };
+    };
+
     // Načítanie filtrov pri inicializácii
     const initialFilters = loadFiltersFromURL();
     const [selectedCategoryFilter, setSelectedCategoryFilter] = useState(initialFilters.category);
@@ -1770,30 +1781,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             return true;
         });
     };
-    
-    const filteredUnassignedMatches = getFilteredMatches(matches.filter(m => !m.hallId), true, true);
-    const filteredSportHalls = selectedHallFilter ? sportHalls.filter(hall => hall.id === selectedHallFilter) : sportHalls;    
-    const filteredAllMatches = getFilteredMatches(matches, false, false);
-
-    const sortedSportHalls = React.useMemo(() => {
-        return [...sportHalls].sort((a, b) => a.name.localeCompare(b.name));
-    }, [sportHalls]);
-
-    // A tiež pre filteredSportHalls (ak používate filter haly)
-    const sortedFilteredSportHalls = React.useMemo(() => {
-        return [...filteredSportHalls].sort((a, b) => a.name.localeCompare(b.name));
-    }, [filteredSportHalls]);
-
-    const loadFiltersFromURL = () => {
-        const params = new URLSearchParams(window.location.search);
-    
-        return {
-            category: params.get('category') || '',
-            group: params.get('group') || '',
-            hall: params.get('hall') || '',
-            day: params.get('day') || ''
-        };
-    };
 
     // Funkcia na aktualizáciu URL s aktuálnymi filtrami
     const updateURLWithFilters = (filters) => {
@@ -1807,6 +1794,19 @@ const AddMatchesApp = ({ userProfileData }) => {
         const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}${window.location.hash}`;
         window.history.replaceState({}, '', newUrl);
     };
+    
+    const filteredUnassignedMatches = getFilteredMatches(matches.filter(m => !m.hallId), true, true);
+    const filteredSportHalls = selectedHallFilter ? sportHalls.filter(hall => hall.id === selectedHallFilter) : sportHalls;    
+    const filteredAllMatches = getFilteredMatches(matches, false, false);
+
+    const sortedSportHalls = React.useMemo(() => {
+        return [...sportHalls].sort((a, b) => a.name.localeCompare(b.name));
+    }, [sportHalls]);
+
+    // A tiež pre filteredSportHalls (ak používate filter haly)
+    const sortedFilteredSportHalls = React.useMemo(() => {
+        return [...filteredSportHalls].sort((a, b) => a.name.localeCompare(b.name));
+    }, [filteredSportHalls]);
     
     const loadHallSchedules = () => {
         if (!window.db) return;
