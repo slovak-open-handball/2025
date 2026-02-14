@@ -946,12 +946,37 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     const [existingMatches, setExistingMatches] = useState([]);
     const [overlappingMatches, setOverlappingMatches] = useState([]);
     const [initialized, setInitialized] = useState(false);
+    const [datesLoaded, setDatesLoaded] = useState(false); // Nový stav pre sledovanie načítania dátumov
+
+    // Generovanie dostupných dátumov - TOTO PRESUNIEME PRED useEffect pre inicializáciu
+    useEffect(() => {
+        if (window.tournamentStartDate && window.tournamentEndDate) {
+            const dates = [];
+            const startDate = new Date(window.tournamentStartDate);
+            const endDate = new Date(window.tournamentEndDate);
+            
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(0, 0, 0, 0);
+            
+            const currentDate = new Date(startDate);
+            
+            while (currentDate <= endDate) {
+                dates.push(new Date(currentDate));
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            
+            setAvailableDates(dates);
+            setDatesLoaded(true); // Označíme, že dátumy sú načítané
+            console.log('Dostupné dátumy boli nastavené:', dates.length);
+        }
+    }, []); // Tento useEffect sa spustí iba raz pri mounte komponentu
 
     // Inicializácia pri otvorení modálneho okna
     useEffect(() => {
         if (isOpen && match && !initialized) {
             console.log('Inicializujem modálne okno s filtrami:', initialFilters);
             console.log('Match data:', match);
+            console.log('Dostupné dátumy:', availableDates.length, datesLoaded ? 'načítané' : 'nenáčítané');
             
             // 1. Predvyplnenie haly - priorita: existujúci zápas > filter
             if (match.hallId) {
@@ -984,10 +1009,23 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 } catch (e) {
                     console.error('Chyba pri parsovaní dátumu zápasu:', e);
                 }
-            } else if (initialFilters?.day) {
-                setSelectedDate(initialFilters.day);
-                console.log('Nastavujem dátum z filtra:', initialFilters.day);
-                // Čas neriešime, necháme prázdny
+            } else if (initialFilters?.day && datesLoaded) {
+                // Skontrolujeme, či filter dátum existuje v dostupných dátumoch
+                const dateExists = availableDates.some(date => {
+                    const dateStr = getLocalDateStr(date);
+                    return dateStr === initialFilters.day;
+                });
+                
+                if (dateExists) {
+                    setSelectedDate(initialFilters.day);
+                    console.log('Nastavujem dátum z filtra (existuje v dostupných):', initialFilters.day);
+                } else {
+                    console.log('Filter dátum', initialFilters.day, 'nie je v dostupných dátumoch');
+                }
+            } else if (initialFilters?.day && !datesLoaded) {
+                console.log('Dátumy ešte nie sú načítané, počkám na ne...');
+                // Ak dátumy ešte nie sú načítané, nastavíme selectedDate až keď budú načítané
+                // Toto ošetríme v samostatnom useEffect nižšie
             }
             
             setInitialized(true);
@@ -1003,8 +1041,25 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             setTimeError('');
             setExistingMatches([]);
             setOverlappingMatches([]);
+            setDatesLoaded(false); // Resetujeme pri zatvorení
         }
-    }, [isOpen, match, initialFilters]);
+    }, [isOpen, match, initialFilters, availableDates, datesLoaded]); // Pridáme availableDates a datesLoaded ako závislosti
+
+    // Dodatočný useEffect pre nastavenie dátumu z filtra až po načítaní dátumov
+    useEffect(() => {
+        if (isOpen && match && !match.scheduledTime && initialFilters?.day && datesLoaded && !selectedDate) {
+            // Ak máme filter na dátum, dátumy sú načítané, ale selectedDate ešte nie je nastavený
+            const dateExists = availableDates.some(date => {
+                const dateStr = getLocalDateStr(date);
+                return dateStr === initialFilters.day;
+            });
+            
+            if (dateExists) {
+                setSelectedDate(initialFilters.day);
+                console.log('Nastavujem dátum z filtra po načítaní dátumov:', initialFilters.day);
+            }
+        }
+    }, [isOpen, match, initialFilters, datesLoaded, availableDates, selectedDate]);
 
     // Načítanie detailov kategórie
     useEffect(() => {
@@ -1120,27 +1175,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
 
         loadHallStartTime();
     }, [selectedHallId, selectedDate]);
-
-    // Generovanie dostupných dátumov
-    useEffect(() => {
-        if (window.tournamentStartDate && window.tournamentEndDate) {
-            const dates = [];
-            const startDate = new Date(window.tournamentStartDate);
-            const endDate = new Date(window.tournamentEndDate);
-            
-            startDate.setHours(0, 0, 0, 0);
-            endDate.setHours(0, 0, 0, 0);
-            
-            const currentDate = new Date(startDate);
-            
-            while (currentDate <= endDate) {
-                dates.push(new Date(currentDate));
-                currentDate.setDate(currentDate.getDate() + 1);
-            }
-            
-            setAvailableDates(dates);
-        }
-    }, []);
 
     // Výpočet času ukončenia
     useEffect(() => {
