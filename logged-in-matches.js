@@ -613,7 +613,7 @@ const ConfirmExistingMatchModal = ({ isOpen, onClose, onConfirm, match, homeTeam
     );
 };
 
-const ConfirmSwapModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTeamDisplay }) => {
+const ConfirmSwapModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTeamDisplay, displayMode }) => {
     if (!isOpen) return null;
 
     return React.createElement(
@@ -796,7 +796,7 @@ const ConfirmBulkDeleteModal = ({ isOpen, onClose, onConfirm, categoryName, grou
     );
 };
 
-const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTeamDisplay }) => {
+const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTeamDisplay, displayMode }) => {
     if (!isOpen) return null;
 
     return React.createElement(
@@ -2168,7 +2168,8 @@ const AddMatchesApp = ({ userProfileData }) => {
             },
             onConfirm: confirmDelete,
             homeTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.homeTeamIdentifier) : '',
-            awayTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.awayTeamIdentifier) : ''
+            awayTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.awayTeamIdentifier) : '',
+            displayMode: displayMode
         }),
         React.createElement(ConfirmSwapModal, {
             isOpen: isSwapModalOpen,
@@ -2178,7 +2179,8 @@ const AddMatchesApp = ({ userProfileData }) => {
             },
             onConfirm: confirmSwap,
             homeTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.homeTeamIdentifier) : '',
-            awayTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.awayTeamIdentifier) : ''
+            awayTeamDisplay: selectedMatchForAction ? getTeamDisplayText(selectedMatchForAction.awayTeamIdentifier) : '',
+            displayMode: displayMode
         }),
         React.createElement(DeleteMatchesModal, {
             isOpen: isDeleteMatchesModalOpen,
