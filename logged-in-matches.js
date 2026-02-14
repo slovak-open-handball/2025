@@ -2037,17 +2037,41 @@ const AddMatchesApp = ({ userProfileData }) => {
             try {
                 const settingsDocRef = doc(window.db, 'settings', 'registration');
                 const settingsSnap = await getDoc(settingsDocRef);
+        
+                console.log("Načítavam dátumy turnaja...");
                 
                 if (settingsSnap.exists()) {
                     const data = settingsSnap.data();
+                    console.log("Dáta z databázy:", data);
+            
                     if (data.tournamentStart) {
+                        console.log("Tournament start (Timestamp):", data.tournamentStart);
+                        console.log("Tournament start (Date):", data.tournamentStart.toDate());
+                        console.log("Tournament start (ISO):", data.tournamentStart.toDate().toISOString());
+                        console.log("Tournament start (formatted):", data.tournamentStart.toDate().toISOString().slice(0, 16));
+                        
                         setTournamentStartDate(data.tournamentStart.toDate().toISOString().slice(0, 16));
+                    } else {
+                        console.log("Tournament start nie je nastavený");
                     }
+                    
                     if (data.tournamentEnd) {
+                        console.log("Tournament end (Timestamp):", data.tournamentEnd);
+                        console.log("Tournament end (Date):", data.tournamentEnd.toDate());
+                        console.log("Tournament end (ISO):", data.tournamentEnd.toDate().toISOString());
+                        console.log("Tournament end (formatted):", data.tournamentEnd.toDate().toISOString().slice(0, 16));
+                        
                         setTournamentEndDate(data.tournamentEnd.toDate().toISOString().slice(0, 16));
+                    } else {
+                        console.log("Tournament end nie je nastavený");
                     }
+                } else {
+                    console.log("Dokument 'settings/registration' neexistuje");
                 }
+                
                 setTournamentDatesLoaded(true);
+                console.log("Tournament dates loaded:", tournamentDatesLoaded);
+                
             } catch (error) {
                 console.error("Chyba pri načítaní dátumov turnaja:", error);
             }
