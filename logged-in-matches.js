@@ -3396,9 +3396,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     className: 'px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[150px]'
                                 },
                                 React.createElement('option', { value: '' }, 'Všetky kategórie'),
-                                categories.map(cat => 
-                                    React.createElement('option', { key: cat.id, value: cat.id }, cat.name)
-                                )
+                                [...categories]
+                                    .sort((a, b) => a.name.localeCompare(b.name))
+                                    .map(cat => 
+                                        React.createElement('option', { key: cat.id, value: cat.id }, cat.name)
+                                    )
                             )
                         ),
                         
