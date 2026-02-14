@@ -1485,15 +1485,10 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         ),
                         React.createElement('p', null, 
                             React.createElement('span', { className: 'font-medium' }, 'Dátum: '),
-                            // SPRÁVNE zobrazenie dátumu - rozdelíme YYYY-MM-DD na časti
+                            // Použijeme priamo selectedDate a naformátujeme ho bez vytvárania Date objektu
                             (() => {
-                                const [year, month, day] = selectedDate.split('-').map(Number);
-                                const date = new Date(year, month - 1, day);
-                                return date.toLocaleDateString('sk-SK', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric'
-                                });
+                                const [year, month, day] = selectedDate.split('-');
+                                return `${day}. ${month}. ${year}`;
                             })()
                         ),
                         React.createElement('p', null, 
