@@ -3789,15 +3789,20 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 if (tournamentStartDate && tournamentEndDate) {
                                     const startDate = new Date(tournamentStartDate);
                                     const endDate = new Date(tournamentEndDate);
-                                    
-                                    // Nastavíme na začiatok dňa pre správne porovnávanie
+    
                                     startDate.setHours(0, 0, 0, 0);
                                     endDate.setHours(0, 0, 0, 0);
-                                    
+    
                                     const currentDate = new Date(startDate);
                                     
                                     while (currentDate <= endDate) {
-                                        tournamentDays.push(new Date(currentDate));
+                                        const dateStr = currentDate.toISOString().split('T')[0];
+                                        
+                                        // Ak je vybratý filter dňa, zobrazíme len tento deň
+                                        if (!selectedDayFilter || selectedDayFilter === dateStr) {
+                                            tournamentDays.push(new Date(currentDate));
+                                        }
+                                        
                                         currentDate.setDate(currentDate.getDate() + 1);
                                     }
                                 }
