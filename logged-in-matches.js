@@ -3101,13 +3101,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         )
                                     ),
                                     
-                                    // Karty pre jednotlivé dni turnaja
+                                    // Karty pre jednotlivé dni turnaja - teraz zoradené vertikálne pod sebou
                                     tournamentDays.length > 0 && React.createElement(
                                         'div',
                                         { className: 'p-4 bg-gray-50' },
                                         React.createElement(
                                             'div',
-                                            { className: 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2' },
+                                            { className: 'flex flex-col space-y-2' },  // Zmena z grid na flex-col
                                             tournamentDays.map((date, index) => {
                                                 const dateStr = date.toLocaleDateString('sk-SK', {
                                                     day: '2-digit',
@@ -3123,28 +3123,42 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     'div',
                                                     {
                                                         key: index,
-                                                        className: 'flex flex-col p-2 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group'
+                                                        className: 'flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group w-full'
                                                     },
-                                                    // Dátum
+                                                    // Hlavička dňa s dátumom a počtom zápasov
                                                     React.createElement(
                                                         'div',
-                                                        { className: 'flex items-center justify-between mb-2' },
+                                                        { className: 'flex items-center justify-between mb-2 pb-1 border-b border-gray-100' },
                                                         React.createElement(
-                                                            'span',
-                                                            { className: 'text-sm font-semibold text-gray-800' },
-                                                            dateStr
+                                                            'div',
+                                                            { className: 'flex items-center gap-2' },
+                                                            React.createElement('i', { className: 'fa-solid fa-calendar-day text-gray-400 text-sm' }),
+                                                            React.createElement(
+                                                                'span',
+                                                                { className: 'text-sm font-semibold text-gray-800' },
+                                                                dateStr
+                                                            )
                                                         ),
-                                                        matchesCount > 0 && React.createElement(
-                                                            'span',
-                                                            { className: 'w-2 h-2 bg-green-500 rounded-full' }
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'flex items-center gap-2' },
+                                                            matchesCount > 0 && React.createElement(
+                                                                'span',
+                                                                { className: 'text-xs text-gray-500' },
+                                                                `${matchesCount} ${matchesCount === 1 ? 'zápas' : 'zápasy'}`
+                                                            ),
+                                                            matchesCount > 0 && React.createElement(
+                                                                'span',
+                                                                { className: 'w-2 h-2 bg-green-500 rounded-full' }
+                                                            )
                                                         )
                                                     ),
                                                     
-                                                    // V časti, kde sa renderujú zápasy v karte dňa (v rámci sportHalls.map)
+                                                    // Zoznam zápasov pre tento deň
                                                     matchesCount > 0 ? 
                                                         React.createElement(
                                                             'div',
-                                                            { className: 'space-y-1 max-h-[100px] overflow-y-auto text-xs' },
+                                                            { className: 'space-y-1 max-h-[150px] overflow-y-auto text-xs' },
                                                             hallMatches.map((match, idx) => {
                                                                 // Formátovanie času zápasu
                                                                 let matchTime = '--:--';
@@ -3165,7 +3179,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                     'div',
                                                                     {
                                                                         key: idx,
-                                                                        className: 'p-1 bg-blue-50 rounded border border-blue-100 cursor-pointer hover:bg-blue-100 transition-colors',
+                                                                        className: 'p-2 bg-blue-50 rounded border border-blue-100 cursor-pointer hover:bg-blue-100 transition-colors',
                                                                         onClick: (e) => {
                                                                             e.stopPropagation();
                                                                             handleMatchCardClick(match);
@@ -3174,10 +3188,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                     },
                                                                     React.createElement(
                                                                         'div',
-                                                                        { className: 'flex items-center gap-1 text-[10px]' },
-                                                                        React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-[8px]' }),
+                                                                        { className: 'flex items-center gap-2 text-xs' },
+                                                                        React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs' }),
                                                                         React.createElement('span', { className: 'font-medium text-blue-700' }, matchTime),
-                                                                        React.createElement('span', { className: 'text-gray-600' }, '·'),
+                                                                        React.createElement('span', { className: 'text-gray-400' }, '|'),
                                                                         
                                                                         // Zobrazenie tímov podľa displayMode
                                                                         displayMode === 'both' 
@@ -3187,16 +3201,16 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 React.createElement(
                                                                                     'span',
                                                                                     { 
-                                                                                        className: 'truncate',
+                                                                                        className: 'truncate font-medium',
                                                                                         title: `${homeDisplay.name} (${homeDisplay.id})`
                                                                                     },
                                                                                     homeDisplay.name
                                                                                 ),
-                                                                                React.createElement('span', { className: 'text-gray-400' }, 'vs'),
+                                                                                React.createElement('span', { className: 'text-gray-400 text-xs' }, 'vs'),
                                                                                 React.createElement(
                                                                                     'span',
                                                                                     { 
-                                                                                        className: 'truncate',
+                                                                                        className: 'truncate font-medium',
                                                                                         title: `${awayDisplay.name} (${awayDisplay.id})`
                                                                                     },
                                                                                     awayDisplay.name
@@ -3205,12 +3219,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             : displayMode === 'id'
                                                                                 ? React.createElement(
                                                                                     'span',
-                                                                                    { className: 'truncate flex-1' },
+                                                                                    { className: 'truncate flex-1 font-mono text-xs' },
                                                                                     `${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`
                                                                                 )
                                                                                 : React.createElement(
                                                                                     'span',
-                                                                                    { className: 'truncate flex-1' },
+                                                                                    { className: 'truncate flex-1 font-medium' },
                                                                                     `${homeDisplay} vs ${awayDisplay}`
                                                                                 )
                                                                     )
@@ -3220,7 +3234,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         React.createElement(
                                                             'button',
                                                             {
-                                                                className: 'w-full py-1 text-xs text-gray-400 hover:text-blue-500 transition-colors flex items-center justify-center gap-1',
+                                                                className: 'w-full py-2 text-xs text-gray-400 hover:text-blue-500 transition-colors flex items-center justify-center gap-1 bg-gray-50 rounded border border-dashed border-gray-300 hover:border-blue-300',
                                                                 onClick: (e) => {
                                                                     e.stopPropagation();
                                                                     // Tu môžete otvoriť modálne okno pre priradenie nového zápasu
