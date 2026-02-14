@@ -1120,7 +1120,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     useEffect(() => {
         if (selectedDate && selectedTime && matchDuration > 0) {
             const [hours, minutes] = selectedTime.split(':').map(Number);
-        
+            
             // Kontrola času začiatku (ak je nastavený)
             if (hallStartTime) {
                 const [startHours, startMinutes] = hallStartTime.split(':').map(Number);
@@ -1507,6 +1507,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             `Čas zápasu je v poriadku (začína o ${selectedTime}, čo je po čase začiatku ${hallStartTime})`
                         )
                     )
+                )
             ),
 
             // Tlačidlá
