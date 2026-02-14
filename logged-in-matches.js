@@ -3635,13 +3635,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     tournamentDays.length > 0 && React.createElement(
                                         'div',
                                         { 
-                                            className: 'p-4 bg-gray-50',
-                                            style: { width: 'fit-content', minWidth: '480px' }
+                                            className: 'overflow-x-auto pb-2', // HORIZONTÁLNY POSUVNÍK PRE CELÝ BOX HALY
+                                            style: { maxWidth: '100%' }
                                         },
                                         React.createElement(
                                             'div',
                                             { 
-                                                className: 'overflow-x-auto pb-2' // Vodorovný posuvník
+                                                className: 'p-4 bg-gray-50',
+                                                style: { width: 'fit-content', minWidth: '100%' }
                                             },
                                             React.createElement(
                                                 'div',
@@ -3731,7 +3732,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                     className: 'space-y-1 text-xs',
                                                                     style: { 
                                                                         minWidth: '450px',
-                                                                        width: 'fit-content' // Prispôsobí sa obsahu
+                                                                        width: 'fit-content'
                                                                     }
                                                                 },
                                                                 hallMatches
@@ -3769,7 +3770,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 className: 'p-2 bg-white rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group',
                                                                                 style: { 
                                                                                     minWidth: '420px',
-                                                                                    width: 'fit-content' // Prispôsobí sa obsahu
+                                                                                    width: 'fit-content'
                                                                                 }
                                                                             },
                                                                             React.createElement(
@@ -3781,7 +3782,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         handleMatchCardClick(match);
                                                                                     },
                                                                                     title: `Kliknite pre úpravu zápasu`,
-                                                                                    style: { width: 'fit-content' } // Prispôsobí sa obsahu
+                                                                                    style: { width: 'fit-content' }
                                                                                 },
                                                                                 // Časový údaj - fixná šírka
                                                                                 React.createElement(
