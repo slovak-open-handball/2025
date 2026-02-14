@@ -93,7 +93,14 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
         if (selectedGroup && availableGroups.length > 0) {
             const group = availableGroups.find(g => g.name === selectedGroup);
             if (group) {
-                setSelectedGroupType(group.type === 'basic' ? 'Základná skupina' : 'Nadstavbová skupina');
+                // Skupiny môžu mať typ 'základná skupina', 'nadstavbová skupina', 'basic', 'advanced'
+                if (group.type === 'základná skupina') {
+                    setSelectedGroupType('Základná skupina');
+                } else if (group.type === 'nadstavbová skupina') {
+                    setSelectedGroupType('Nadstavbová skupina');
+                } else {
+                    setSelectedGroupType('');
+                }
             } else {
                 setSelectedGroupType('');
             }
