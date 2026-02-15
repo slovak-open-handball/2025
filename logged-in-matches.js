@@ -3601,8 +3601,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 className: 'fa-solid fa-plus text-2xl',
                                 style: {
                                     position: 'absolute',
-                                    top: '30%',
-                                    left: '30%',
+                                    top: '35%',
+                                    left: '35%',
                                     transform: 'translate(-50%, -50%)'
                                 }
                             }
@@ -3640,8 +3640,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 className: 'fa-solid fa-minus text-2xl',
                                 style: {
                                     position: 'absolute',
-                                    bottom: '30%',
-                                    right: '30%',
+                                    bottom: '35%',
+                                    right: '35%',
                                     transform: 'translate(50%, 50%)'
                                 }
                             }
