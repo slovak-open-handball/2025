@@ -3550,7 +3550,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             }
         }),
 
-        // NOVÉ: Rozdelené kruhové tlačidlo v pravom dolnom rohu - ROVNOMERNÉ ROZDELENIE
+        // NOVÉ: Rozdelené kruhové tlačidlo v pravom dolnom rohu - TEXT V POLOVICIACH
         React.createElement(
             'div',
             { 
@@ -3574,7 +3574,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 React.createElement(
                     'button',
                     { 
-                        className: `absolute inset-0 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'} text-white flex items-center justify-center transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0`,
+                        className: `absolute inset-0 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'} text-white transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0`,
                         style: { 
                             clipPath: 'polygon(0 0, 100% 0, 0 100%)', // Diagonálne rozdelenie - horná ľavá časť
                         },
@@ -3591,17 +3591,29 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 width: '100%',
-                                height: '100%'
+                                height: '100%',
+                                position: 'relative'
                             }
                         },
-                        React.createElement('i', { className: 'fa-solid fa-plus text-2xl' })
+                        React.createElement(
+                            'i', 
+                            { 
+                                className: 'fa-solid fa-plus text-2xl',
+                                style: {
+                                    position: 'absolute',
+                                    top: '30%',
+                                    left: '30%',
+                                    transform: 'translate(-50%, -50%)'
+                                }
+                            }
+                        )
                     )
                 ),
                 // Druhá polovica - Červená (Zmazať)
                 React.createElement(
                     'button',
                     { 
-                        className: `absolute inset-0 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'} text-white flex items-center justify-center transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0`,
+                        className: `absolute inset-0 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'} text-white transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0`,
                         style: { 
                             clipPath: 'polygon(100% 0, 100% 100%, 0 100%)', // Diagonálne rozdelenie - dolná pravá časť
                         },
@@ -3618,10 +3630,22 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 width: '100%',
-                                height: '100%'
+                                height: '100%',
+                                position: 'relative'
                             }
                         },
-                        React.createElement('i', { className: 'fa-solid fa-minus text-2xl' })
+                        React.createElement(
+                            'i', 
+                            { 
+                                className: 'fa-solid fa-minus text-2xl',
+                                style: {
+                                    position: 'absolute',
+                                    bottom: '30%',
+                                    right: '30%',
+                                    transform: 'translate(50%, 50%)'
+                                }
+                            }
+                        )
                     )
                 )
             )
