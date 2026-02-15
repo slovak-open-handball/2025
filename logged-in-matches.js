@@ -4183,7 +4183,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                         { className: `${filteredUnassignedMatches.length > 0 ? 'lg:w-2/3' : 'lg:w-full'} flex flex-col` }, 
                         React.createElement(
                             'h3',
-                            { className: 'text-xl font-semibold mb-4 text-gray-700 border-b pb-2 flex-shrink-0' },
+                            { className: 'text-xl font-semibold mb-4 text-gray-700 pb-2 flex-shrink-0' },
                             React.createElement('i', { className: 'fa-solid fa-futbol mr-2 text-red-500' }),
                             'Športové haly',
                             React.createElement('span', { className: 'ml-2 text-sm font-normal text-gray-500' },
