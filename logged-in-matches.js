@@ -3613,9 +3613,8 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     // ZJEDNODUŠENÝ RENDER - dva stĺpce (ľavý - zápasy, pravý - haly)
     return React.createElement(
-        {
-            className: 'w-full
-        },
+        'div',
+        { className: 'w-full' },
         React.Fragment,
         null,
         React.createElement(GenerationModal, {
