@@ -3554,44 +3554,52 @@ const AddMatchesApp = ({ userProfileData }) => {
         React.createElement(
             'div',
             { 
-                className: 'fixed bottom-8 right-8 z-50 flex items-center justify-center shadow-2xl rounded-full overflow-hidden',
+                className: 'fixed bottom-8 right-8 z-50',
                 style: { 
                     filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.2))',
                     width: '64px',
                     height: '64px'
                 }
             },
-            // Ľavá polovica - Zelená (Generovať)
+            // Hlavný kruhový kontajner
             React.createElement(
-                'button',
-                { 
-                    className: `w-8 h-16 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'} text-white flex items-center justify-center transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0 box-border`,
-                    style: { 
-                        width: '32px',
-                        borderTopLeftRadius: '9999px',
-                        borderBottomLeftRadius: '9999px'
-                    },
-                    onClick: () => setIsModalOpen(true),
-                    disabled: generationInProgress,
-                    title: 'Generovať zápasy'
+                'div',
+                {
+                    className: 'relative w-full h-full rounded-full overflow-hidden',
+                    style: {
+                        transform: 'rotate(22.5deg)' // Otočenie celého kruhu o 22.5°
+                    }
                 },
-                React.createElement('i', { className: 'fa-solid fa-plus text-2xl' })
-            ),
-            // Pravá polovica - Červená (Zmazať)
-            React.createElement(
-                'button',
-                { 
-                    className: `w-8 h-16 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'} text-white flex items-center justify-center transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0 box-border`,
-                    style: { 
-                        width: '32px',
-                        borderTopRightRadius: '9999px',
-                        borderBottomRightRadius: '9999px'
+                // Ľavá polovica - Zelená (Generovať) - ale teraz je to vlastne horná časť
+                React.createElement(
+                    'button',
+                    { 
+                        className: `absolute top-0 left-0 w-1/2 h-full ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'} text-white flex items-center justify-center transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0 box-border`,
+                        style: { 
+                            clipPath: 'polygon(0 0, 100% 0, 50% 100%, 0 100%)', // Tvar pre ľavú polovicu po otočení
+                            transform: 'rotate(-22.5deg)', // Kompenzácia otočenia pre obsah
+                        },
+                        onClick: () => setIsModalOpen(true),
+                        disabled: generationInProgress,
+                        title: 'Generovať zápasy'
                     },
-                    onClick: () => setIsDeleteMatchesModalOpen(true),
-                    disabled: generationInProgress,
-                    title: 'Zmazať zápasy podľa kategórie/skupiny'
-                },
-                React.createElement('i', { className: 'fa-solid fa-minus text-2xl' })
+                    React.createElement('i', { className: 'fa-solid fa-plus text-2xl' })
+                ),
+                // Pravá polovica - Červená (Zmazať) - ale teraz je to vlastne spodná časť
+                React.createElement(
+                    'button',
+                    { 
+                        className: `absolute bottom-0 right-0 w-1/2 h-full ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'} text-white flex items-center justify-center transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0 box-border`,
+                        style: { 
+                            clipPath: 'polygon(50% 0, 100% 0, 100% 100%, 0 100%)', // Tvar pre pravú polovicu po otočení
+                            transform: 'rotate(-22.5deg)', // Kompenzácia otočenia pre obsah
+                        },
+                        onClick: () => setIsDeleteMatchesModalOpen(true),
+                        disabled: generationInProgress,
+                        title: 'Zmazať zápasy podľa kategórie/skupiny'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-minus text-2xl' })
+                )
             )
         ),
                 
