@@ -964,6 +964,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     const [initialized, setInitialized] = useState(false);
     const [datesLoaded, setDatesLoaded] = useState(false);
     const [suggestedTime, setSuggestedTime] = useState(null);
+    const [shouldSetDateFromFilter, setShouldSetDateFromFilter] = useState(false); // Nový stav
 
     // Generovanie dostupných dátumov
     useEffect(() => {
@@ -1085,23 +1086,25 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 } catch (e) {
                     console.error('Chyba pri parsovaní dátumu zápasu:', e);
                 }
-            } else if (initialFilters?.day && datesLoaded) {
-                // Skontrolujeme, či filter dátum existuje v dostupných dátumoch
-                const dateExists = availableDates.some(date => {
-                    const dateStr = getLocalDateStr(date);
-                    return dateStr === initialFilters.day;
-                });
-                
-                if (dateExists) {
-                    setSelectedDate(initialFilters.day);
-                    console.log('Nastavujem dátum z filtra (existuje v dostupných):', initialFilters.day);
+            } else if (initialFilters?.day) {
+                if (datesLoaded) {
+                    // Dátumy sú už načítané, môžeme nastaviť filter
+                    const dateExists = availableDates.some(date => {
+                        const dateStr = getLocalDateStr(date);
+                        return dateStr === initialFilters.day;
+                    });
+                    
+                    if (dateExists) {
+                        setSelectedDate(initialFilters.day);
+                        console.log('Nastavujem dátum z filtra (existuje v dostupných):', initialFilters.day);
+                    } else {
+                        console.log('Filter dátum', initialFilters.day, 'nie je v dostupných dátumoch');
+                    }
                 } else {
-                    console.log('Filter dátum', initialFilters.day, 'nie je v dostupných dátumoch');
+                    // Dátumy ešte nie sú načítané, nastavíme príznak, že ich treba nastaviť neskôr
+                    console.log('Dátumy ešte nie sú načítané, nastavujem príznak pre neskoršie nastavenie');
+                    setShouldSetDateFromFilter(true);
                 }
-            } else if (initialFilters?.day && !datesLoaded) {
-                console.log('Dátumy ešte nie sú načítané, počkám na ne...');
-                // Ak dátumy ešte nie sú načítané, nastavíme selectedDate až keď budú načítané
-                // Toto ošetríme v samostatnom useEffect nižšie
             }
             
             setInitialized(true);
@@ -1119,13 +1122,14 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             setOverlappingMatches([]);
             setDatesLoaded(false);
             setSuggestedTime(null);
+            setShouldSetDateFromFilter(false); // Resetujeme príznak
         }
     }, [isOpen, match, initialFilters, availableDates, datesLoaded]);
 
     // Dodatočný useEffect pre nastavenie dátumu z filtra až po načítaní dátumov
     useEffect(() => {
-        if (isOpen && match && !match.scheduledTime && initialFilters?.day && datesLoaded && !selectedDate) {
-            // Ak máme filter na dátum, dátumy sú načítané, ale selectedDate ešte nie je nastavený
+        // Ak máme nastavený príznak, dátumy sú načítané, a ešte nemáme vybraný dátum
+        if (shouldSetDateFromFilter && datesLoaded && initialFilters?.day && selectedDate === '') {
             const dateExists = availableDates.some(date => {
                 const dateStr = getLocalDateStr(date);
                 return dateStr === initialFilters.day;
@@ -1133,10 +1137,11 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             
             if (dateExists) {
                 setSelectedDate(initialFilters.day);
-                console.log('Nastavujem dátum z filtra po načítaní dátumov:', initialFilters.day);
+                console.log('Nastavujem dátum z filtra po načítaní dátumov (cez príznak):', initialFilters.day);
+                setShouldSetDateFromFilter(false); // Resetujeme príznak
             }
         }
-    }, [isOpen, match, initialFilters, datesLoaded, availableDates, selectedDate]);
+    }, [shouldSetDateFromFilter, datesLoaded, initialFilters, availableDates, selectedDate]);
 
     // Načítanie detailov kategórie
     useEffect(() => {
