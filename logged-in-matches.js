@@ -3818,11 +3818,17 @@ const AddMatchesApp = ({ userProfileData }) => {
                 
         React.createElement(
             'div',
-            { className: 'space-y-4 w-full' },
-//            { className: 'flex-grow flex justify-center items-start w-full' },
+            { className: 'flex-grow flex justify-center items-start w-full' },
             React.createElement(
                 'div',
-                { className: 'w-full bg-white rounded-xl shadow-xl p-8 mx-4' },
+                { 
+                    className: 'w-full bg-white rounded-xl shadow-xl p-8 mx-4',
+                    style: { 
+                        width: 'fit-content', // Pridané - kontajner sa prispôsobí obsahu
+                        minWidth: 'min(100%, 1200px)', // Voliteľné: maximálna šírka, ale nie menšia ako rodič
+                        margin: '0 auto' // Centrovanie
+                    }
+                },
                 
                 // Ovládacie prvky - filtre a prepínač
                 React.createElement(
