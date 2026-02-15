@@ -4169,10 +4169,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                             )
                     ),
                     
-                    // PRAVÝ STĹPEC - Športové haly (OPRAVENÉ - box haly sa prispôsobí obsahu)
+                    // PRAVÝ STĹPEC - Športové haly (OPRAVENÉ - box haly sa roztiahne doprava)
                     React.createElement(
                         'div',
-                        { className: `${filteredUnassignedMatches.length > 0 ? 'lg:w-2/3' : 'lg:w-full'} flex flex-col` },
+                        { className: `${filteredUnassignedMatches.length > 0 ? 'lg:w-2/3' : 'lg:w-full'} flex flex-col overflow-x-auto` }, // POSUVNÍK NA ÚROVNI STĹPCA
                         React.createElement(
                             'h3',
                             { className: 'text-xl font-semibold mb-4 text-gray-700 border-b pb-2 flex-shrink-0' },
@@ -4207,10 +4207,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                         !loading && sportHalls.length > 0 && React.createElement(
                             'div',
                             { 
-                                className: 'space-y-4 flex-1',
+                                className: 'space-y-4',
                                 style: { 
-                                    overflowX: 'auto', // Horizontálny posuvník pre celý stĺpec
-                                    minWidth: '100%'
+                                    width: 'fit-content', // Celý kontajner sa prispôsobí obsahu
+                                    minWidth: '100%' // Ale zaberá aspoň celú šírku
                                 }
                             },
                             sortedFilteredSportHalls.map((hall) => {
@@ -4327,8 +4327,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         { 
                                             className: 'p-4 bg-gray-50',
                                             style: { 
-                                                width: 'fit-content', // Tento div sa prispôsobí obsahu
-                                                minWidth: '100%' // Ale zaberá aspoň celú šírku rodiča
+                                                width: 'fit-content' // Tento div sa prispôsobí obsahu
                                             }
                                         },
                                         React.createElement(
