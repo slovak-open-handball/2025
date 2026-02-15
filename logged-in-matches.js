@@ -962,9 +962,10 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     const [existingMatches, setExistingMatches] = useState([]);
     const [overlappingMatches, setOverlappingMatches] = useState([]);
     const [initialized, setInitialized] = useState(false);
-    const [datesLoaded, setDatesLoaded] = useState(false); // Nový stav pre sledovanie načítania dátumov
+    const [datesLoaded, setDatesLoaded] = useState(false);
+    const [suggestedTime, setSuggestedTime] = useState(null); // Nový stav pre navrhovaný čas
 
-    // Generovanie dostupných dátumov - TOTO PRESUNIEME PRED useEffect pre inicializáciu
+    // Generovanie dostupných dátumov
     useEffect(() => {
         if (window.tournamentStartDate && window.tournamentEndDate) {
             const dates = [];
@@ -982,17 +983,74 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             }
             
             setAvailableDates(dates);
-            setDatesLoaded(true); // Označíme, že dátumy sú načítané
+            setDatesLoaded(true);
             console.log('Dostupné dátumy boli nastavené:', dates.length);
         }
-    }, []); // Tento useEffect sa spustí iba raz pri mounte komponentu
+    }, []);
+
+    // Funkcia na výpočet prvého dostupného času
+    const calculateFirstAvailableTime = (hallId, date, existingMatchesList, hallStartTimeStr, matchDur) => {
+        if (!hallId || !date || !hallStartTimeStr || matchDur === 0) return null;
+        
+        // Konvertujeme hallStartTime na minúty
+        const [startHours, startMinutes] = hallStartTimeStr.split(':').map(Number);
+        let currentTimeMinutes = startHours * 60 + startMinutes;
+        
+        // Zoradíme existujúce zápasy podľa času
+        const sortedMatches = [...existingMatchesList]
+            .filter(m => m.scheduledTime)
+            .sort((a, b) => {
+                const timeA = a.scheduledTime.toDate().getTime();
+                const timeB = b.scheduledTime.toDate().getTime();
+                return timeA - timeB;
+            });
+        
+        // Ak nie sú žiadne existujúce zápasy, vrátime hallStartTime
+        if (sortedMatches.length === 0) {
+            return hallStartTimeStr;
+        }
+        
+        // Prejdeme všetky existujúce zápasy a hľadáme medzeru
+        for (const existingMatch of sortedMatches) {
+            // Vypočítame čas konca existujúceho zápasu (vrátane prestávky)
+            const matchStart = existingMatch.scheduledTime.toDate();
+            const matchStartMinutes = matchStart.getHours() * 60 + matchStart.getMinutes();
+            
+            const existingCategory = categories.find(c => c.name === existingMatch.categoryName);
+            let existingDuration = 0;
+            let existingMatchBreak = 5;
+            
+            if (existingCategory) {
+                const periods = existingCategory.periods || 2;
+                const periodDuration = existingCategory.periodDuration || 20;
+                const breakDuration = existingCategory.breakDuration || 2;
+                existingDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                existingMatchBreak = existingCategory.matchBreak || 5;
+            }
+            
+            const matchEndMinutes = matchStartMinutes + existingDuration + existingMatchBreak;
+            
+            // Ak je aktuálny čas pred začiatkom tohto zápasu a je dostatok miesta pre nový zápas
+            if (currentTimeMinutes + matchDur + (categoryDetails?.matchBreak || 5) <= matchStartMinutes) {
+                // Našli sme medzeru pred týmto zápasom
+                break;
+            }
+            
+            // Posunieme aktuálny čas za koniec tohto zápasu
+            currentTimeMinutes = Math.max(currentTimeMinutes, matchEndMinutes);
+        }
+        
+        // Konvertujeme minúty naspäť na čas vo formáte HH:MM
+        const hours = Math.floor(currentTimeMinutes / 60).toString().padStart(2, '0');
+        const minutes = (currentTimeMinutes % 60).toString().padStart(2, '0');
+        
+        return `${hours}:${minutes}`;
+    };
 
     // Inicializácia pri otvorení modálneho okna
     useEffect(() => {
         if (isOpen && match && !initialized) {
             console.log('Inicializujem modálne okno s filtrami:', initialFilters);
-            console.log('Match data:', match);
-            console.log('Dostupné dátumy:', availableDates.length, datesLoaded ? 'načítané' : 'nenáčítané');
             
             // 1. Predvyplnenie haly - priorita: existujúci zápas > filter
             if (match.hallId) {
@@ -1026,7 +1084,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     console.error('Chyba pri parsovaní dátumu zápasu:', e);
                 }
             } else if (initialFilters?.day && datesLoaded) {
-                // Skontrolujeme, či filter dátum existuje v dostupných dátumoch
                 const dateExists = availableDates.some(date => {
                     const dateStr = getLocalDateStr(date);
                     return dateStr === initialFilters.day;
@@ -1035,13 +1092,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 if (dateExists) {
                     setSelectedDate(initialFilters.day);
                     console.log('Nastavujem dátum z filtra (existuje v dostupných):', initialFilters.day);
-                } else {
-                    console.log('Filter dátum', initialFilters.day, 'nie je v dostupných dátumoch');
                 }
-            } else if (initialFilters?.day && !datesLoaded) {
-                console.log('Dátumy ešte nie sú načítané, počkám na ne...');
-                // Ak dátumy ešte nie sú načítané, nastavíme selectedDate až keď budú načítané
-                // Toto ošetríme v samostatnom useEffect nižšie
             }
             
             setInitialized(true);
@@ -1057,14 +1108,14 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             setTimeError('');
             setExistingMatches([]);
             setOverlappingMatches([]);
-            setDatesLoaded(false); // Resetujeme pri zatvorení
+            setDatesLoaded(false);
+            setSuggestedTime(null);
         }
-    }, [isOpen, match, initialFilters, availableDates, datesLoaded]); // Pridáme availableDates a datesLoaded ako závislosti
+    }, [isOpen, match, initialFilters, availableDates, datesLoaded]);
 
     // Dodatočný useEffect pre nastavenie dátumu z filtra až po načítaní dátumov
     useEffect(() => {
         if (isOpen && match && !match.scheduledTime && initialFilters?.day && datesLoaded && !selectedDate) {
-            // Ak máme filter na dátum, dátumy sú načítané, ale selectedDate ešte nie je nastavený
             const dateExists = availableDates.some(date => {
                 const dateStr = getLocalDateStr(date);
                 return dateStr === initialFilters.day;
@@ -1121,6 +1172,56 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         loadExistingMatches();
     }, [selectedHallId, selectedDate, match?.id, allMatches]);
 
+    // Načítanie času začiatku pre vybranú halu a deň a výpočet prvého dostupného času
+    useEffect(() => {
+        const loadHallStartTime = async () => {
+            if (selectedHallId && selectedDate && window.db) {
+                try {
+                    const scheduleId = `${selectedHallId}_${selectedDate}`;
+                    const scheduleRef = doc(window.db, 'hallSchedules', scheduleId);
+                    const scheduleSnap = await getDoc(scheduleRef);
+                    
+                    let startTime = null;
+                    
+                    if (scheduleSnap.exists()) {
+                        const data = scheduleSnap.data();
+                        startTime = data.startTime;
+                        setHallStartTime(startTime);
+                        setTimeError('');
+                    } else {
+                        setHallStartTime(null);
+                        setTimeError('Pre tento deň nie je nastavený čas začiatku. Najprv ho nastavte kliknutím na hlavičku dňa.');
+                    }
+                    
+                    // Ak nemáme vybraný čas a máme všetky potrebné údaje, vypočítame prvý dostupný čas
+                    if (!selectedTime && startTime && matchDuration > 0 && categoryDetails) {
+                        const firstAvailable = calculateFirstAvailableTime(
+                            selectedHallId,
+                            selectedDate,
+                            existingMatches,
+                            startTime,
+                            matchDuration
+                        );
+                        
+                        if (firstAvailable) {
+                            setSuggestedTime(firstAvailable);
+                            console.log('Navrhovaný prvý dostupný čas:', firstAvailable);
+                        }
+                    }
+                    
+                } catch (error) {
+                    console.error('Chyba pri načítaní času začiatku haly:', error);
+                    setHallStartTime(null);
+                }
+            } else {
+                setHallStartTime(null);
+                setTimeError('');
+            }
+        };
+
+        loadHallStartTime();
+    }, [selectedHallId, selectedDate, matchDuration, categoryDetails, existingMatches, selectedTime]);
+
     // Kontrola prekrývania časov
     useEffect(() => {
         if (selectedTime && matchDuration > 0 && existingMatches.length > 0) {
@@ -1162,36 +1263,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         }
     }, [selectedTime, matchDuration, existingMatches, categories, match?.categoryName]);
 
-    // Načítanie času začiatku pre vybranú halu a deň
-    useEffect(() => {
-        const loadHallStartTime = async () => {
-            if (selectedHallId && selectedDate && window.db) {
-                try {
-                    const scheduleId = `${selectedHallId}_${selectedDate}`;
-                    const scheduleRef = doc(window.db, 'hallSchedules', scheduleId);
-                    const scheduleSnap = await getDoc(scheduleRef);
-                    
-                    if (scheduleSnap.exists()) {
-                        const data = scheduleSnap.data();
-                        setHallStartTime(data.startTime);
-                        setTimeError('');
-                    } else {
-                        setHallStartTime(null);
-                        setTimeError('Pre tento deň nie je nastavený čas začiatku. Najprv ho nastavte kliknutím na hlavičku dňa.');
-                    }
-                } catch (error) {
-                    console.error('Chyba pri načítaní času začiatku haly:', error);
-                    setHallStartTime(null);
-                }
-            } else {
-                setHallStartTime(null);
-                setTimeError('');
-            }
-        };
-
-        loadHallStartTime();
-    }, [selectedHallId, selectedDate]);
-
     // Výpočet času ukončenia
     useEffect(() => {
         if (selectedDate && selectedTime && matchDuration > 0) {
@@ -1229,6 +1300,12 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             }
         }
     }, [selectedDate, selectedTime, matchDuration, hallStartTime]);
+
+    const handleApplySuggestedTime = () => {
+        if (suggestedTime) {
+            setSelectedTime(suggestedTime);
+        }
+    };
 
     const getLocalDateFromStr = (dateStr) => {
         if (!dateStr) return null;
@@ -1352,6 +1429,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             onChange: (e) => {
                                 setSelectedHallId(e.target.value);
                                 setSelectedTime(''); // Resetujeme čas pri zmene haly
+                                setSuggestedTime(null);
                             },
                             className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
                         },
@@ -1378,6 +1456,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             onChange: (e) => {
                                 setSelectedDate(e.target.value);
                                 setSelectedTime(''); // Resetujeme čas pri zmene dňa
+                                setSuggestedTime(null);
                             },
                             className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black',
                             disabled: availableDates.length === 0
@@ -1472,21 +1551,34 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                     )
                 ),
 
-                // Výber času
+                // Výber času s možnosťou použiť navrhovaný čas
                 React.createElement(
                     'div',
                     null,
                     React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
                         'Čas začiatku:'
                     ),
-                    React.createElement('input', {
-                        type: 'time',
-                        value: selectedTime,
-                        onChange: (e) => setSelectedTime(e.target.value),
-                        className: `w-full px-3 py-2 border ${hasError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black`,
-                        step: '60',
-                        min: hallStartTime || undefined // Nastavíme minimálny čas ak existuje
-                    }),
+                    React.createElement('div', { className: 'flex gap-2' },
+                        React.createElement('input', {
+                            type: 'time',
+                            value: selectedTime,
+                            onChange: (e) => setSelectedTime(e.target.value),
+                            className: `flex-1 px-3 py-2 border ${hasError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black`,
+                            step: '60',
+                            min: hallStartTime || undefined
+                        }),
+                        
+                        // Tlačidlo pre použitie navrhovaného času (zobrazí sa len ak existuje návrh a nie je vybraný čas)
+                        suggestedTime && !selectedTime && React.createElement(
+                            'button',
+                            {
+                                onClick: handleApplySuggestedTime,
+                                className: 'px-3 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-colors text-sm font-medium whitespace-nowrap flex items-center gap-1'
+                            },
+                            React.createElement('i', { className: 'fa-regular fa-clock' }),
+                            'Použiť ' + suggestedTime
+                        )
+                    ),
                     
                     // Zobrazenie chybovej hlášky (čas začiatku)
                     timeError && React.createElement(
