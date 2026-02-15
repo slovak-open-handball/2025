@@ -1585,7 +1585,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             className: `flex-1 px-3 py-2 border ${hasError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black`,
                             step: '60',
                             min: hallStartTime || undefined,
-                            // Pridáme kontrolu pri manuálnom zadaní
+                            // Kontrola pri manuálnom zadaní - len zobrazenie chyby, bez prepisovania
                             onBlur: (e) => {
                                 const timeValue = e.target.value;
                                 if (timeValue && hallStartTime) {
@@ -1596,16 +1596,13 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                                     const startMinutesTotal = startHours * 60 + startMinutes;
                                     
                                     if (selectedMinutes < startMinutesTotal) {
-                                        // Ak je zadaný čas skôr, nastavíme ho na čas začiatku haly
-                                        setSelectedTime(hallStartTime);
+                                        // LEN zobrazíme chybovú hlášku, neprepisujeme čas
                                         setTimeError(`Čas začiatku zápasu nemôže byť skôr ako ${hallStartTime} (čas začiatku prvého zápasu v tejto hale)`);
-                                        
-                                        // Po krátkom oneskorení odstránime chybu, ale ponecháme nastavený čas
-                                        setTimeout(() => {
-                                            if (selectedTime === hallStartTime) {
-                                                setTimeError('');
-                                            }
-                                        }, 3000);
+                                    } else {
+                                        // Ak je čas v poriadku, odstránime chybovú hlášku (ak nejaká bola)
+                                        if (timeError && timeError.includes('nemôže byť skôr')) {
+                                            setTimeError('');
+                                        }
                                     }
                                 }
                             }
