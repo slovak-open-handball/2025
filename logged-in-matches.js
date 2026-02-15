@@ -3823,7 +3823,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             React.createElement(
                 'div',
 // { className: 'w-full bg-white rounded-xl shadow-xl p-8 mx-4' },
-                { className: 'w-full max-w-full bg-white rounded-xl shadow-xl p-8', style: { width: '100%', boxSizing: 'border-box' } }
+                { className: 'w-full max-w-full bg-white rounded-xl shadow-xl p-8', style: { width: '100%', boxSizing: 'border-box' } },
                 
                 // Ovládacie prvky - filtre a prepínač
                 React.createElement(
