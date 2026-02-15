@@ -1571,11 +1571,13 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         React.createElement('input', {
                             type: 'time',
                             value: selectedTime,
+                            // Dočasne upravíme onChange, aby sme videli, či sa timeError hneď nemaže
                             onChange: (e) => {
                                 const newTime = e.target.value;
+                                console.log('onChange - newTime:', newTime);
+                                console.log('onChange - hallStartTime:', hallStartTime);
                                 setSelectedTime(newTime);
-                                
-                                // Okamžitá kontrola pri zmene
+    
                                 if (newTime && hallStartTime) {
                                     const [hours, minutes] = newTime.split(':').map(Number);
                                     const [startHours, startMinutes] = hallStartTime.split(':').map(Number);
@@ -1584,11 +1586,15 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                                     const startMinutesTotal = startHours * 60 + startMinutes;
                                     
                                     if (selectedMinutes < startMinutesTotal) {
-                                        setTimeError(`Čas začiatku zápasu nemôže byť skôr ako ${hallStartTime} (čas začiatku prvého zápasu v tejto hale)`);
+                                        const errorMsg = `Čas začiatku zápasu nemôže byť skôr ako ${hallStartTime} (čas začiatku prvého zápasu v tejto hale)`;
+                                        console.log('onChange - nastavujem chybu:', errorMsg);
+                                        setTimeError(errorMsg);
                                     } else {
+                                        console.log('onChange - čas OK, mažem chybu');
                                         setTimeError('');
                                     }
                                 } else {
+                                    console.log('onChange - null time, mažem chybu');
                                     setTimeError('');
                                 }
                             },
