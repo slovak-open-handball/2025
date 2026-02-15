@@ -4315,7 +4315,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     dayCards.length > 0 && React.createElement(
                                         'div',
                                         { 
-                                            className: 'overflow-x-auto pb-2', // HORIZONTÁLNY POSUVNÍK PRE CELÝ BOX HALY
+                                            className: 'pb-2', // HORIZONTÁLNY POSUVNÍK PRE CELÝ BOX HALY
+//                                            className: 'overflow-x-auto pb-2', // HORIZONTÁLNY POSUVNÍK PRE CELÝ BOX HALY
                                             style: { maxWidth: '100%' }
                                         },
                                         React.createElement(
@@ -4327,7 +4328,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { 
-                                                    className: 'flex flex-row gap-2' // Flex row bez zalamovania
+                                                    className: 'flex flex-row gap-2',
+                                                    style: { 
+                                                        width: 'fit-content'
+                                                    }
                                                 },
                                                 dayCards.map((dayCard, index) => {
                                                     const date = dayCard.date;
@@ -4342,7 +4346,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                             key: index,
                                                             className: 'flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group',
                                                             style: { 
-                                                                width: 'fit-content', 
+                                                                width: 'auto', 
                                                                 minWidth: '480px' // Minimálna šírka boxu dňa
                                                             }
                                                         },
