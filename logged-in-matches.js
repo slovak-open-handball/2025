@@ -1584,7 +1584,31 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             onChange: (e) => setSelectedTime(e.target.value),
                             className: `flex-1 px-3 py-2 border ${hasError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black`,
                             step: '60',
-                            min: hallStartTime || undefined
+                            min: hallStartTime || undefined,
+                            // Pridáme kontrolu pri manuálnom zadaní
+                            onBlur: (e) => {
+                                const timeValue = e.target.value;
+                                if (timeValue && hallStartTime) {
+                                    const [hours, minutes] = timeValue.split(':').map(Number);
+                                    const [startHours, startMinutes] = hallStartTime.split(':').map(Number);
+                                    
+                                    const selectedMinutes = hours * 60 + minutes;
+                                    const startMinutesTotal = startHours * 60 + startMinutes;
+                                    
+                                    if (selectedMinutes < startMinutesTotal) {
+                                        // Ak je zadaný čas skôr, nastavíme ho na čas začiatku haly
+                                        setSelectedTime(hallStartTime);
+                                        setTimeError(`Čas začiatku zápasu nemôže byť skôr ako ${hallStartTime} (čas začiatku prvého zápasu v tejto hale)`);
+                                        
+                                        // Po krátkom oneskorení odstránime chybu, ale ponecháme nastavený čas
+                                        setTimeout(() => {
+                                            if (selectedTime === hallStartTime) {
+                                                setTimeError('');
+                                            }
+                                        }, 3000);
+                                    }
+                                }
+                            }
                         }),
                         
                         // Tlačidlo pre použitie navrhovaného času (zobrazí sa len ak existuje návrh a nie je vybraný čas)
