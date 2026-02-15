@@ -3819,7 +3819,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         React.createElement(
             'div',
 // { className: 'flex-grow flex justify-center items-start w-full' },
-            { className: 'flex-grow flex justify-center items-start w-full px-4' },
+            { className: 'flex-grow flex justify-center items-start w-full' },
             React.createElement(
                 'div',
 // { className: 'w-full bg-white rounded-xl shadow-xl p-8 mx-4' },
