@@ -1320,8 +1320,17 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
 
     if (!isOpen || !match) return null;
 
+    console.log('DEBUG - timeError:', timeError);
+    console.log('DEBUG - overlappingMatches.length:', overlappingMatches.length);
+    console.log('DEBUG - selectedHallId:', selectedHallId);
+    console.log('DEBUG - selectedDate:', selectedDate);
+    console.log('DEBUG - selectedTime:', selectedTime);
+
     const hasError = timeError || overlappingMatches.length > 0;
     const canSave = selectedHallId && selectedDate && selectedTime && !hasError;
+
+    console.log('DEBUG - hasError:', hasError);
+    console.log('DEBUG - canSave:', canSave);
 
     // Zobrazenie pre kontrolu
     console.log('Render modálneho okna - selectedDate:', selectedDate);
