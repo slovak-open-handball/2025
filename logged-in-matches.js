@@ -4329,7 +4329,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 { 
                                                     className: 'flex flex-row gap-2',
                                                     style: { 
-                                                        display: 'flex',
+                                                        display: 'inline-flex',
                                                     }
                                                 },
                                                 dayCards.map((dayCard, index) => {
@@ -4346,7 +4346,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                             className: 'flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group',
                                                             style: { 
                                                                 width: 'auto', 
-                                                                minWidth: '480px' // Minimálna šírka boxu dňa
+ //                                                               minWidth: '480px' // Minimálna šírka boxu dňa
                                                             }
                                                         },
                                                         // Hlavička dňa s dátumom a počtom zápasov - klikateľná
@@ -4459,7 +4459,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             key: idx,
                                                                             className: 'p-2 bg-white rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group',
                                                                             style: { 
-                                                                                minWidth: '420px',
+//                                                                                minWidth: '420px',
                                                                                 width: 'fit-content'
                                                                             }
                                                                         },
