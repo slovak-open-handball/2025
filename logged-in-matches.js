@@ -964,7 +964,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     const [initialized, setInitialized] = useState(false);
     const [datesLoaded, setDatesLoaded] = useState(false);
     const [suggestedTime, setSuggestedTime] = useState(null);
-    const [shouldSetDateFromFilter, setShouldSetDateFromFilter] = useState(false); // Nový stav
+    const [shouldSetDateFromFilter, setShouldSetDateFromFilter] = useState(false);
 
     // Generovanie dostupných dátumov
     useEffect(() => {
@@ -1122,7 +1122,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             setOverlappingMatches([]);
             setDatesLoaded(false);
             setSuggestedTime(null);
-            setShouldSetDateFromFilter(false); // Resetujeme príznak
+            setShouldSetDateFromFilter(false);
         }
     }, [isOpen, match, initialFilters, availableDates, datesLoaded]);
 
@@ -1138,7 +1138,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             if (dateExists) {
                 setSelectedDate(initialFilters.day);
                 console.log('Nastavujem dátum z filtra po načítaní dátumov (cez príznak):', initialFilters.day);
-                setShouldSetDateFromFilter(false); // Resetujeme príznak
+                setShouldSetDateFromFilter(false);
             }
         }
     }, [shouldSetDateFromFilter, datesLoaded, initialFilters, availableDates, selectedDate]);
@@ -1757,101 +1757,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         }`
                     },
                     match.hallId ? 'Upraviť priradenie' : 'Priradiť zápas'
-                )
-            )
-        )
-    );
-};
-
-const HallDayStartTimeModal = ({ isOpen, onClose, onConfirm, hallName, date, currentStartTime }) => {
-    const [startTime, setStartTime] = useState(currentStartTime || '08:00');
-
-    useEffect(() => {
-        if (isOpen) {
-            setStartTime(currentStartTime || '08:00');
-        }
-    }, [isOpen, currentStartTime]);
-
-    if (!isOpen) return null;
-
-    return React.createElement(
-        'div',
-        {
-            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]',
-            onClick: (e) => {
-                if (e.target === e.currentTarget) onClose();
-            }
-        },
-        React.createElement(
-            'div',
-            { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
-            
-            // Hlavička
-            React.createElement(
-                'div',
-                { className: 'flex justify-between items-center mb-4' },
-                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 
-                    currentStartTime ? 'Upraviť čas začiatku' : 'Nastavenie času začiatku'
-                ),
-                React.createElement(
-                    'button',
-                    {
-                        onClick: onClose,
-                        className: 'text-gray-500 hover:text-gray-700'
-                    },
-                    React.createElement('i', { className: 'fa-solid fa-times text-xl' })
-                )
-            ),
-
-            // Obsah
-            React.createElement(
-                'div',
-                { className: 'mb-6' },
-                React.createElement(
-                    'p',
-                    { className: 'text-gray-700 mb-4' },
-                    React.createElement('span', { className: 'font-semibold' }, hallName),
-                    ' - ',
-                    React.createElement('span', { className: 'font-semibold' }, date)
-                ),
-                React.createElement(
-                    'div',
-                    null,
-                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
-                        'Čas začiatku prvého zápasu:'
-                    ),
-                    React.createElement('input', {
-                        type: 'time',
-                        value: startTime,
-                        onChange: (e) => setStartTime(e.target.value),
-                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black',
-                        step: '60'
-                    })
-                )
-            ),
-
-            // Tlačidlá
-            React.createElement(
-                'div',
-                { className: 'flex justify-end gap-3' },
-                React.createElement(
-                    'button',
-                    {
-                        onClick: onClose,
-                        className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
-                    },
-                    'Zrušiť'
-                ),
-                React.createElement(
-                    'button',
-                    {
-                        onClick: () => {
-                            onConfirm(startTime);
-                            onClose();
-                        },
-                        className: 'px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors'
-                    },
-                    currentStartTime ? 'Upraviť' : 'Uložiť'
                 )
             )
         )
