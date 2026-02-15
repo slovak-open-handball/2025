@@ -1283,19 +1283,8 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         if (selectedDate && selectedTime && matchDuration > 0) {
             const [hours, minutes] = selectedTime.split(':').map(Number);
             
-            if (hallStartTime) {
-                const [startHours, startMinutes] = hallStartTime.split(':').map(Number);
-                const selectedMinutes = hours * 60 + minutes;
-                const hallStartMinutes = startHours * 60 + startMinutes;
-                
-                if (selectedMinutes < hallStartMinutes) {
-                    setTimeError(`Čas začiatku zápasu nemôže byť skôr ako ${hallStartTime} (čas začiatku prvého zápasu v tejto hale)`);
-                } else {
-                    setTimeError('');
-                }
-            } else {
-                setTimeError('');
-            }
+            // Kontrola času začiatku - TOTO UŽ ROBÍME PRIAMO V onChange
+            // Takže tu už nebudeme nastavovať timeError, len vypočítame koniec
             
             const [year, month, day] = selectedDate.split('-').map(Number);
             const startDateTime = new Date(year, month - 1, day, hours, minutes, 0);
@@ -1304,17 +1293,17 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             
             const endHours = endDateTime.getHours().toString().padStart(2, '0');
             const endMinutes = endDateTime.getMinutes().toString().padStart(2, '0');
-            
+        
             setMatchEndTime(`${endHours}:${endMinutes}`);
         } else {
             setMatchEndTime('');
+            // Túto chybu necháme len ak nie je nastavený čas začiatku haly
             if (!hallStartTime && selectedHallId && selectedDate) {
                 setTimeError('Pre tento deň nie je nastavený čas začiatku. Najprv ho nastavte kliknutím na hlavičku dňa.');
-            } else {
-                setTimeError('');
             }
+            // V ostatných prípadoch timeError nemažeme - necháme ho tak, ako ho nastavil onChange
         }
-    }, [selectedDate, selectedTime, matchDuration, hallStartTime]);
+    }, [selectedDate, selectedTime, matchDuration, hallStartTime]); // Odstránili sme setTimeError z tohto useEffect
 
     const handleApplySuggestedTime = () => {
         if (suggestedTime) {
@@ -1581,31 +1570,30 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         React.createElement('input', {
                             type: 'time',
                             value: selectedTime,
-                            onChange: (e) => setSelectedTime(e.target.value),
-                            className: `flex-1 px-3 py-2 border ${hasError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black`,
-                            step: '60',
-                            min: hallStartTime || undefined,
-                            // Kontrola pri manuálnom zadaní - len zobrazenie chyby, bez prepisovania
-                            onBlur: (e) => {
-                                const timeValue = e.target.value;
-                                if (timeValue && hallStartTime) {
-                                    const [hours, minutes] = timeValue.split(':').map(Number);
+                            onChange: (e) => {
+                                const newTime = e.target.value;
+                                setSelectedTime(newTime);
+                                
+                                // Okamžitá kontrola pri zmene
+                                if (newTime && hallStartTime) {
+                                    const [hours, minutes] = newTime.split(':').map(Number);
                                     const [startHours, startMinutes] = hallStartTime.split(':').map(Number);
                                     
                                     const selectedMinutes = hours * 60 + minutes;
                                     const startMinutesTotal = startHours * 60 + startMinutes;
                                     
                                     if (selectedMinutes < startMinutesTotal) {
-                                        // LEN zobrazíme chybovú hlášku, neprepisujeme čas
                                         setTimeError(`Čas začiatku zápasu nemôže byť skôr ako ${hallStartTime} (čas začiatku prvého zápasu v tejto hale)`);
                                     } else {
-                                        // Ak je čas v poriadku, odstránime chybovú hlášku (ak nejaká bola)
-                                        if (timeError && timeError.includes('nemôže byť skôr')) {
-                                            setTimeError('');
-                                        }
+                                        setTimeError('');
                                     }
+                                } else {
+                                    setTimeError('');
                                 }
-                            }
+                            },
+                            className: `flex-1 px-3 py-2 border ${hasError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black`,
+                            step: '60',
+                            min: hallStartTime || undefined
                         }),
                         
                         // Tlačidlo pre použitie navrhovaného času (zobrazí sa len ak existuje návrh a nie je vybraný čas)
