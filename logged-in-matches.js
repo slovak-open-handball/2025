@@ -4317,13 +4317,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         { 
                                             className: 'pb-2', // HORIZONTÁLNY POSUVNÍK PRE CELÝ BOX HALY
 //                                            className: 'overflow-x-auto pb-2', // HORIZONTÁLNY POSUVNÍK PRE CELÝ BOX HALY
-                                            style: { maxWidth: '100%' }
+                                            style: { width: 'fit-content' }
                                         },
                                         React.createElement(
                                             'div',
                                             { 
                                                 className: 'p-4 bg-gray-50',
-                                                style: { width: 'fit-content', minWidth: '100%' }
+                                                style: { width: 'fit-content' }
                                             },
                                             React.createElement(
                                                 'div',
