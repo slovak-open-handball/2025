@@ -3823,7 +3823,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             React.createElement(
                 'div',
 // { className: 'w-full bg-white rounded-xl shadow-xl p-8 mx-4' },
-                { className: 'bg-white rounded-xl shadow-xl p-8', 
+                { className: 'bg-white p-8', 
                     style: { 
                         width: '100%',        // Zmeniť z fit-content na 100%
                         maxWidth: '100%'       // Ponechať
