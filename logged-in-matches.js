@@ -1209,7 +1209,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         console.log('loadHallStartTime - našiel som startTime:', startTime);
                         setHallStartTime(startTime);
                         
-                        // Kontrola času
+                        // Po úspešnom načítaní skontrolujeme, či nemáme zbytočnú chybu
                         if (selectedTime) {
                             const [hours, minutes] = selectedTime.split(':').map(Number);
                             const [startHours, startMinutes] = startTime.split(':').map(Number);
@@ -1219,6 +1219,16 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             
                             if (selectedMinutes < startMinutesTotal) {
                                 setTimeError(`Čas začiatku zápasu nemôže byť skôr ako ${startTime} (čas začiatku prvého zápasu v tejto hale)`);
+                            } else {
+                                // Ak je čas v poriadku, odstránime chybu (ak je to chyba o chýbajúcom čase)
+                                if (timeError && timeError.includes('nie je nastavený čas začiatku')) {
+                                    setTimeError('');
+                                }
+                            }
+                        } else {
+                            // Ak nie je vybraný čas, odstránime chybu o chýbajúcom čase (už máme čas)
+                            if (timeError && timeError.includes('nie je nastavený čas začiatku')) {
+                                setTimeError('');
                             }
                         }
                     } else {
@@ -1319,13 +1329,16 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             console.log('useEffect výpočtu konca - timeError:', timeError);
         } else {
             setMatchEndTime('');
-            // Túto chybu nastavíme len ak nie je loading a naozaj nemáme hallStartTime
-            if (!loadingHallStartTime && !hallStartTime && selectedHallId && selectedDate) {
+            // Túto chybu nastavíme len ak:
+            // 1. Nie sme v stave načítavania
+            // 2. selectedHallId a selectedDate sú nastavené
+            // 3. hallStartTime je null (a nie je to len dočasný stav)
+            if (!loadingHallStartTime && selectedHallId && selectedDate && hallStartTime === null) {
                 console.log('useEffect výpočtu konca - nastavujem chybu: chýba hallStartTime');
                 setTimeError('Pre tento deň nie je nastavený čas začiatku. Najprv ho nastavte kliknutím na hlavičku dňa.');
             }
         }
-    }, [selectedDate, selectedTime, matchDuration, hallStartTime, loadingHallStartTime]);
+    }, [selectedDate, selectedTime, matchDuration, hallStartTime, loadingHallStartTime, selectedHallId]);
 
     const handleApplySuggestedTime = () => {
         if (suggestedTime) {
