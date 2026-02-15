@@ -1278,32 +1278,33 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         }
     }, [selectedTime, matchDuration, existingMatches, categories, match?.categoryName]);
 
-    // Výpočet času ukončenia
+    // Výpočet času ukončenia - upravený
     useEffect(() => {
         if (selectedDate && selectedTime && matchDuration > 0) {
             const [hours, minutes] = selectedTime.split(':').map(Number);
             
-            // Kontrola času začiatku - TOTO UŽ ROBÍME PRIAMO V onChange
-            // Takže tu už nebudeme nastavovať timeError, len vypočítame koniec
-            
+            // Tu už NENASTAVUJEME timeError, necháme to na onChange
+        
             const [year, month, day] = selectedDate.split('-').map(Number);
             const startDateTime = new Date(year, month - 1, day, hours, minutes, 0);
             
             const endDateTime = new Date(startDateTime.getTime() + matchDuration * 60000);
-            
+        
             const endHours = endDateTime.getHours().toString().padStart(2, '0');
             const endMinutes = endDateTime.getMinutes().toString().padStart(2, '0');
         
             setMatchEndTime(`${endHours}:${endMinutes}`);
+            
+            // Logovanie pre ladenie
+            console.log('useEffect výpočtu konca - timeError:', timeError);
         } else {
             setMatchEndTime('');
             // Túto chybu necháme len ak nie je nastavený čas začiatku haly
             if (!hallStartTime && selectedHallId && selectedDate) {
                 setTimeError('Pre tento deň nie je nastavený čas začiatku. Najprv ho nastavte kliknutím na hlavičku dňa.');
             }
-            // V ostatných prípadoch timeError nemažeme - necháme ho tak, ako ho nastavil onChange
         }
-    }, [selectedDate, selectedTime, matchDuration, hallStartTime]); // Odstránili sme setTimeError z tohto useEffect
+    }, [selectedDate, selectedTime, matchDuration, hallStartTime]);
 
     const handleApplySuggestedTime = () => {
         if (suggestedTime) {
