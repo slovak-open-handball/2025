@@ -3550,7 +3550,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             }
         }),
 
-        // NOVÉ: Rozdelené kruhové tlačidlo v pravom dolnom rohu - OPRAVENÉ
+        // NOVÉ: Rozdelené kruhové tlačidlo v pravom dolnom rohu - BEZ MEDZERY
         React.createElement(
             'div',
             { 
@@ -3570,35 +3570,59 @@ const AddMatchesApp = ({ userProfileData }) => {
                         transform: 'rotate(22.5deg)' // Otočenie celého kruhu o 22.5°
                     }
                 },
-                // Ľavá polovica - Zelená (Generovať) - ale teraz je to vlastne horná časť
+                // Prvá polovica - Zelená (Generovať)
                 React.createElement(
                     'button',
                     { 
-                        className: `absolute top-0 left-0 w-1/2 h-full ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'} text-white flex items-center justify-center transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0 box-border`,
+                        className: `absolute inset-0 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'} text-white flex items-center justify-center transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0`,
                         style: { 
-                            clipPath: 'polygon(0 0, 100% 0, 50% 100%, 0 100%)', // Tvar pre ľavú polovicu po otočení
-                            transform: 'rotate(-22.5deg)', // Kompenzácia otočenia pre obsah
+                            clipPath: 'polygon(0 0, 100% 0, 50% 100%, 0 100%)', // Diagonálne rozdelenie
                         },
                         onClick: () => setIsModalOpen(true),
                         disabled: generationInProgress,
                         title: 'Generovať zápasy'
                     },
-                    React.createElement('i', { className: 'fa-solid fa-plus text-2xl' })
+                    React.createElement(
+                        'div',
+                        {
+                            style: {
+                                transform: 'rotate(-22.5deg)', // Kompenzácia otočenia pre obsah
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '100%',
+                                height: '100%'
+                            }
+                        },
+                        React.createElement('i', { className: 'fa-solid fa-plus text-2xl' })
+                    )
                 ),
-                // Pravá polovica - Červená (Zmazať) - ale teraz je to vlastne spodná časť
+                // Druhá polovica - Červená (Zmazať)
                 React.createElement(
                     'button',
                     { 
-                        className: `absolute bottom-0 right-0 w-1/2 h-full ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'} text-white flex items-center justify-center transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0 box-border`,
+                        className: `absolute inset-0 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'} text-white flex items-center justify-center transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0`,
                         style: { 
-                            clipPath: 'polygon(50% 0, 100% 0, 100% 100%, 0 100%)', // Tvar pre pravú polovicu po otočení
-                            transform: 'rotate(-22.5deg)', // Kompenzácia otočenia pre obsah
+                            clipPath: 'polygon(50% 0, 100% 0, 100% 100%, 0 100%)', // Diagonálne rozdelenie
                         },
                         onClick: () => setIsDeleteMatchesModalOpen(true),
                         disabled: generationInProgress,
                         title: 'Zmazať zápasy podľa kategórie/skupiny'
                     },
-                    React.createElement('i', { className: 'fa-solid fa-minus text-2xl' })
+                    React.createElement(
+                        'div',
+                        {
+                            style: {
+                                transform: 'rotate(-22.5deg)', // Kompenzácia otočenia pre obsah
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '100%',
+                                height: '100%'
+                            }
+                        },
+                        React.createElement('i', { className: 'fa-solid fa-minus text-2xl' })
+                    )
                 )
             )
         ),
