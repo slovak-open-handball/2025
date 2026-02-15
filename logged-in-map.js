@@ -114,6 +114,7 @@ const MapApp = ({ userProfileData }) => {
     const [selectedAccommodationTypeFilter, setSelectedAccommodationTypeFilter] = useState(null);
 
     const [isPlaceAssigned, setIsPlaceAssigned] = useState(false);
+    const [isSportHallAssigned, setIsSportHallAssigned] = useState(false);
 
     const formatPrice = (price) => {
         if (price == null) return '';
@@ -203,6 +204,41 @@ const MapApp = ({ userProfileData }) => {
             }
         }, 200);
     }, [selectedPlace]);
+
+    useEffect(() => {
+        const checkIfSportHallHasMatches = async () => {
+            if (!selectedPlace || !window.db || selectedPlace.type !== 'sportova_hala') {
+                setIsSportHallAssigned(false);
+                return;
+            }
+            
+            try {
+                // Načítaj všetky zápasy, ktoré majú priradenú túto halu
+                const matchesRef = collection(window.db, 'matches');
+                const matchesSnapshot = await getDocs(matchesRef);
+                
+                let hasMatches = false;
+                
+                matchesSnapshot.forEach((matchDoc) => {
+                    const matchData = matchDoc.data();
+                    if (matchData.hallId === selectedPlace.id) {
+                        hasMatches = true;
+                    }
+                });
+                
+                setIsSportHallAssigned(hasMatches);
+                
+                if (hasMatches) {
+                    console.log(`Športová hala ${selectedPlace.name} má priradené zápasy - tlačidlo na odstránenie bude zablokované`);
+                }
+            } catch (err) {
+                console.error("Chyba pri kontrole priradenia zápasov pre športovú halu:", err);
+                setIsSportHallAssigned(false);
+            }
+        };
+        
+        checkIfSportHallHasMatches();
+    }, [selectedPlace, places]);
 
     useEffect(() => {
       const checkIfPlaceIsAssigned = async () => {
@@ -2298,16 +2334,25 @@ const MapApp = ({ userProfileData }) => {
                         className: 'w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition'
                       }, 'Upraviť polohu'),
                   React.createElement('button', {
-                    onClick: isPlaceAssigned ? null : handleDeletePlace,
-                    disabled: isPlaceAssigned,
-                    className: `w-full py-3 font-medium rounded-lg transition flex items-center justify-center gap-2
-                      ${isPlaceAssigned 
-                        ? 'bg-white text-red-600 border-2 border-red-600 opacity-100 hover:cursor-not-allowed' 
-                        : 'bg-red-600 hover:bg-red-700 text-white'
-                      }`,
-                    title: isPlaceAssigned ? 'Miesto nie je možné odstrániť' : 'Odstrániť miesto'
+                      onClick: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
+                               (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned) ? 
+                               null : handleDeletePlace,
+                      disabled: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
+                                (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned),
+                      className: `w-full py-3 font-medium rounded-lg transition flex items-center justify-center gap-2
+                        ${((selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
+                           (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned))
+                          ? 'bg-white text-red-600 border-2 border-red-600 opacity-100 hover:cursor-not-allowed' 
+                          : 'bg-red-600 hover:bg-red-700 text-white'
+                        }`,
+                      title: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) 
+                             ? 'Miesto nie je možné odstrániť (priradené tímy)'
+                             : (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned)
+                               ? 'Halu nie je možné odstrániť (priradené zápasy)'
+                               : 'Odstrániť miesto'
                   }, 
-                    isPlaceAssigned 
+                      ((selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
+                       (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned))
                       ? React.createElement(React.Fragment, null,
                           React.createElement('i', { 
                             className: 'fa-solid fa-trash-alt mr-2',
