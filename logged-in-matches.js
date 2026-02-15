@@ -4169,7 +4169,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                             )
                     ),
                     
-                    // PRAVÝ STĹPEC - Športové haly (upravená časť s posuvníkom)
+                    // PRAVÝ STĹPEC - Športové haly (opravená časť s posuvníkom)
                     React.createElement(
                         'div',
                         { className: `${filteredUnassignedMatches.length > 0 ? 'lg:w-2/3' : 'lg:w-full'} flex flex-col` },
@@ -4203,7 +4203,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                             )
                         ),
                         
-                        // Grid zoznam športových hál s kartami pre jednotlivé dni
+                        // Grid zoznam športových hál s kartami pre jednotlivé dni - OPRAVENÉ
                         !loading && sportHalls.length > 0 && React.createElement(
                             'div',
                             { className: 'space-y-4 overflow-y-auto pr-2 flex-1' },
@@ -4315,257 +4315,251 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     dayCards.length > 0 && React.createElement(
                                         'div',
                                         { 
-                                            className: 'pb-2', // HORIZONTÁLNY POSUVNÍK PRE CELÝ BOX HALY
-//                                            className: 'overflow-x-auto pb-2', // HORIZONTÁLNY POSUVNÍK PRE CELÝ BOX HALY
+                                            className: 'p-4 bg-gray-50 overflow-x-auto' // Toto zabezpečí horizontálne posúvanie
                                         },
                                         React.createElement(
                                             'div',
                                             { 
-                                                className: 'p-4 bg-gray-50',
-                                                style: { width: 'fit-content' }
+                                                className: 'flex flex-row gap-2',
+                                                style: { 
+                                                    display: 'inline-flex', // Spôsobí, že šírka sa prispôsobí obsahu
+                                                    minWidth: 'min-content' // Minimalizuje šírku na minimum potrebné pre obsah
+                                                }
                                             },
-                                            React.createElement(
-                                                'div',
-                                                { 
-                                                    className: 'flex flex-row gap-2',
-                                                    style: { 
-                                                        display: 'inline-flex',
-                                                    }
-                                                },
-                                                dayCards.map((dayCard, index) => {
-                                                    const date = dayCard.date;
-                                                    const dateStr = dayCard.dateStr;
-                                                    const hallMatches = dayCard.matches;
-                                                    const matchesCount = dayCard.matchesCount;
-                                                    const isEmpty = dayCard.isEmpty;
-                                                    
-                                                    return React.createElement(
+                                            dayCards.map((dayCard, index) => {
+                                                const date = dayCard.date;
+                                                const dateStr = dayCard.dateStr;
+                                                const hallMatches = dayCard.matches;
+                                                const matchesCount = dayCard.matchesCount;
+                                                const isEmpty = dayCard.isEmpty;
+                                                
+                                                return React.createElement(
+                                                    'div',
+                                                    {
+                                                        key: index,
+                                                        className: 'flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group',
+                                                        style: { 
+                                                            width: 'auto', // Automatická šírka podľa obsahu
+                                                        }
+                                                    },
+                                                    // Hlavička dňa s dátumom a počtom zápasov - klikateľná
+                                                    React.createElement(
                                                         'div',
-                                                        {
-                                                            key: index,
-                                                            className: 'flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group',
-                                                            style: { 
-                                                                width: 'auto', 
- //                                                               minWidth: '480px' // Minimálna šírka boxu dňa
-                                                            }
+                                                        { 
+                                                            className: 'flex items-center justify-between mb-2 pb-1 border-b border-gray-100 cursor-pointer hover:bg-blue-50 p-2 -m-2 rounded transition-colors',
+                                                            onClick: (e) => {
+                                                                e.stopPropagation();
+                                                                handleHallDayHeaderClick(hall, date, dateStr);
+                                                            },
+                                                            title: 'Kliknite pre nastavenie času začiatku prvého zápasu'
                                                         },
-                                                        // Hlavička dňa s dátumom a počtom zápasov - klikateľná
                                                         React.createElement(
                                                             'div',
-                                                            { 
-                                                                className: 'flex items-center justify-between mb-2 pb-1 border-b border-gray-100 cursor-pointer hover:bg-blue-50 p-2 -m-2 rounded transition-colors',
-                                                                onClick: (e) => {
-                                                                    e.stopPropagation();
-                                                                    handleHallDayHeaderClick(hall, date, dateStr);
-                                                                },
-                                                                title: 'Kliknite pre nastavenie času začiatku prvého zápasu'
-                                                            },
+                                                            { className: 'flex items-center gap-2 whitespace-nowrap' },
+                                                            React.createElement('i', { className: 'fa-solid fa-calendar-day text-gray-400 text-sm flex-shrink-0' }),
                                                             React.createElement(
-                                                                'div',
-                                                                { className: 'flex items-center gap-2 whitespace-nowrap' },
-                                                                React.createElement('i', { className: 'fa-solid fa-calendar-day text-gray-400 text-sm flex-shrink-0' }),
+                                                                'span',
+                                                                { className: 'text-sm font-semibold text-gray-800' },
+                                                                date.toLocaleDateString('sk-SK', {
+                                                                    day: '2-digit',
+                                                                    month: '2-digit',
+                                                                    year: 'numeric'
+                                                                })
+                                                            ),
+                                                            // Zobrazenie uloženého času ak existuje
+                                                            (() => {
+                                                                const scheduleId = `${hall.id}_${getLocalDateStr(date)}`;
+                                                                const savedSchedule = hallSchedules[scheduleId];
+                                                                if (savedSchedule?.startTime) {
+                                                                    return React.createElement(
+                                                                        'span',
+                                                                        { className: 'text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full ml-2 whitespace-nowrap' },
+                                                                        React.createElement('i', { className: 'fa-regular fa-clock mr-1 text-xs flex-shrink-0' }),
+                                                                        savedSchedule.startTime
+                                                                    );
+                                                                }
+                                                                return React.createElement('i', { className: 'fa-regular fa-clock text-xs text-blue-400 ml-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0' });
+                                                            })()
+                                                        ),
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'flex items-center gap-2 flex-shrink-0' },
+                                                            isEmpty ? React.createElement(
+                                                                'span',
+                                                                { className: 'text-xs text-gray-400 whitespace-nowrap' },
+                                                                'Žiadne zápasy'
+                                                            ) : React.createElement(
+                                                                React.Fragment,
+                                                                null,
                                                                 React.createElement(
                                                                     'span',
-                                                                    { className: 'text-sm font-semibold text-gray-800' },
-                                                                    date.toLocaleDateString('sk-SK', {
-                                                                        day: '2-digit',
-                                                                        month: '2-digit',
-                                                                        year: 'numeric'
-                                                                    })
+                                                                    { className: 'text-xs text-gray-500 whitespace-nowrap' },
+                                                                    (() => {
+                                                                        if (matchesCount === 1) return `${matchesCount} zápas`;
+                                                                        if (matchesCount >= 2 && matchesCount <= 4) return `${matchesCount} zápasy`;
+                                                                        return `${matchesCount} zápasov`;
+                                                                    })()
                                                                 ),
-                                                                // Zobrazenie uloženého času ak existuje
-                                                                (() => {
-                                                                    const scheduleId = `${hall.id}_${getLocalDateStr(date)}`;
-                                                                    const savedSchedule = hallSchedules[scheduleId];
-                                                                    if (savedSchedule?.startTime) {
-                                                                        return React.createElement(
-                                                                            'span',
-                                                                            { className: 'text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full ml-2 whitespace-nowrap' },
-                                                                            React.createElement('i', { className: 'fa-regular fa-clock mr-1 text-xs flex-shrink-0' }),
-                                                                            savedSchedule.startTime
-                                                                        );
-                                                                    }
-                                                                    return React.createElement('i', { className: 'fa-regular fa-clock text-xs text-blue-400 ml-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0' });
-                                                                })()
-                                                            ),
-                                                            React.createElement(
-                                                                'div',
-                                                                { className: 'flex items-center gap-2 flex-shrink-0' },
-                                                                isEmpty ? React.createElement(
+                                                                React.createElement(
                                                                     'span',
-                                                                    { className: 'text-xs text-gray-400 whitespace-nowrap' },
-                                                                    'Žiadne zápasy'
-                                                                ) : React.createElement(
-                                                                    React.Fragment,
-                                                                    null,
-                                                                    React.createElement(
-                                                                        'span',
-                                                                        { className: 'text-xs text-gray-500 whitespace-nowrap' },
-                                                                        (() => {
-                                                                            if (matchesCount === 1) return `${matchesCount} zápas`;
-                                                                            if (matchesCount >= 2 && matchesCount <= 4) return `${matchesCount} zápasy`;
-                                                                            return `${matchesCount} zápasov`;
-                                                                        })()
-                                                                    ),
-                                                                    React.createElement(
-                                                                        'span',
-                                                                        { className: 'w-2 h-2 bg-green-500 rounded-full flex-shrink-0' }
-                                                                    )
+                                                                    { className: 'w-2 h-2 bg-green-500 rounded-full flex-shrink-0' }
                                                                 )
                                                             )
-                                                        ),
-                                                        
-                                                        // Zoznam zápasov pre tento deň (alebo prázdny placeholder)
-                                                        !isEmpty ? React.createElement(
-                                                            'div',
-                                                            { 
-                                                                className: 'space-y-1 text-xs',
-                                                                style: { 
-                                                                    minWidth: '450px',
-                                                                    width: 'fit-content'
+                                                        )
+                                                    ),
+                                                    
+                                                    // Zoznam zápasov pre tento deň (alebo prázdny placeholder)
+                                                    !isEmpty ? React.createElement(
+                                                        'div',
+                                                        { 
+                                                            className: 'space-y-1 text-xs',
+                                                            style: { 
+                                                                width: '100%' // Zabezpečí, že vnútorný div zaberá celú šírku
+                                                            }
+                                                        },
+                                                        hallMatches
+                                                            .sort((a, b) => {
+                                                                if (!a.scheduledTime) return 1;
+                                                                if (!b.scheduledTime) return -1;
+                                                                try {
+                                                                    const timeA = a.scheduledTime.toDate().getTime();
+                                                                    const timeB = b.scheduledTime.toDate().getTime();
+                                                                    return timeA - timeB;
+                                                                } catch (e) {
+                                                                    return 0;
                                                                 }
-                                                            },
-                                                            hallMatches
-                                                                .sort((a, b) => {
-                                                                    if (!a.scheduledTime) return 1;
-                                                                    if (!b.scheduledTime) return -1;
+                                                            })
+                                                            .map((match, idx) => {
+                                                                let matchTime = '--:--';
+                                                                let endTime = '--:--';
+                                                                if (match.scheduledTime) {
                                                                     try {
-                                                                        const timeA = a.scheduledTime.toDate().getTime();
-                                                                        const timeB = b.scheduledTime.toDate().getTime();
-                                                                        return timeA - timeB;
+                                                                        const date = match.scheduledTime.toDate();
+                                                                        matchTime = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+                                                                        endTime = match.scheduledEndTime || '--:--';
                                                                     } catch (e) {
-                                                                        return 0;
+                                                                        console.error('Chyba pri formátovaní času:', e);
                                                                     }
-                                                                })
-                                                                .map((match, idx) => {
-                                                                    let matchTime = '--:--';
-                                                                    let endTime = '--:--';
-                                                                    if (match.scheduledTime) {
-                                                                        try {
-                                                                            const date = match.scheduledTime.toDate();
-                                                                            matchTime = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-                                                                            endTime = match.scheduledEndTime || '--:--';
-                                                                        } catch (e) {
-                                                                            console.error('Chyba pri formátovaní času:', e);
+                                                                }
+                                                                
+                                                                const homeDisplay = getTeamDisplayText(match.homeTeamIdentifier);
+                                                                const awayDisplay = getTeamDisplayText(match.awayTeamIdentifier);
+                                                                
+                                                                return React.createElement(
+                                                                    'div',
+                                                                    {
+                                                                        key: idx,
+                                                                        className: 'p-2 bg-white rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group',
+                                                                        style: { 
+                                                                            width: '100%' // Každý zápas zaberá celú šírku rodiča
                                                                         }
-                                                                    }
-                                                                    
-                                                                    const homeDisplay = getTeamDisplayText(match.homeTeamIdentifier);
-                                                                    const awayDisplay = getTeamDisplayText(match.awayTeamIdentifier);
-                                                                    
-                                                                    return React.createElement(
+                                                                    },
+                                                                    React.createElement(
                                                                         'div',
-                                                                        {
-                                                                            key: idx,
-                                                                            className: 'p-2 bg-white rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group',
+                                                                        { 
+                                                                            className: 'flex items-center gap-2 text-xs cursor-pointer',
+                                                                            onClick: (e) => {
+                                                                                e.stopPropagation();
+                                                                                handleMatchCardClick(match);
+                                                                            },
+                                                                            title: `Kliknite pre úpravu zápasu`,
                                                                             style: { 
-//                                                                                minWidth: '420px',
-                                                                                width: 'fit-content'
+                                                                                width: '100%',
+                                                                                display: 'flex',
+                                                                                flexWrap: 'nowrap'
                                                                             }
                                                                         },
+                                                                        // Časový údaj - fixná šírka
                                                                         React.createElement(
                                                                             'div',
-                                                                            { 
-                                                                                className: 'flex items-center gap-2 text-xs cursor-pointer',
-                                                                                onClick: (e) => {
-                                                                                    e.stopPropagation();
-                                                                                    handleMatchCardClick(match);
-                                                                                },
-                                                                                title: `Kliknite pre úpravu zápasu`,
-                                                                                style: { width: 'fit-content' }
-                                                                            },
-                                                                            // Časový údaj - fixná šírka
-                                                                            React.createElement(
-                                                                                'div',
-                                                                                { className: 'flex items-center gap-1 whitespace-nowrap w-28 flex-shrink-0' },
-                                                                                React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs flex-shrink-0' }),
-                                                                                React.createElement('span', { className: 'font-medium text-blue-700' }, `${matchTime} - ${endTime}`)
-                                                                            ),
-                                                                            
-                                                                            // Domáci tím - flexibilná šírka
-                                                                            React.createElement(
-                                                                                'div',
-                                                                                { className: 'font-medium text-gray-800 whitespace-nowrap min-w-[160px] text-right' },
-                                                                                displayMode === 'both' ? homeDisplay.name : homeDisplay
-                                                                            ),
-                                                                            
-                                                                            // VS ikona - fixná šírka
-                                                                            React.createElement(
-                                                                                'div',
-                                                                                { className: 'text-gray-400 w-8 text-center flex-shrink-0' },
-                                                                                'vs'
-                                                                            ),
-                                                                            
-                                                                            // Hosťovský tím - flexibilná šírka
-                                                                            React.createElement(
-                                                                                'div',
-                                                                                { className: 'font-medium text-gray-800 whitespace-nowrap min-w-[160px] text-left' },
-                                                                                displayMode === 'both' ? awayDisplay.name : awayDisplay
-                                                                            ),
-                                                                            
-                                                                            // ID domáceho tímu (ak je režim both)
-                                                                            displayMode === 'both' && React.createElement(
-                                                                                'div',
-                                                                                { className: 'text-gray-500 font-mono text-[10px] whitespace-nowrap w-24 text-right flex-shrink-0' },
-                                                                                `(${homeDisplay.id})`
-                                                                            ),
-                                                                            
-                                                                            // ID hosťovského tímu (ak je režim both)
-                                                                            displayMode === 'both' && React.createElement(
-                                                                                'div',
-                                                                                { className: 'text-gray-500 font-mono text-[10px] whitespace-nowrap w-24 text-left flex-shrink-0' },
-                                                                                `(${awayDisplay.id})`
-                                                                            ),
-                                                                            
-                                                                            // Prázdny div pre zarovnanie, ak nie je režim both
-                                                                            displayMode !== 'both' && React.createElement('div', { className: 'w-24 flex-shrink-0' })
+                                                                            { className: 'flex items-center gap-1 whitespace-nowrap w-28 flex-shrink-0' },
+                                                                            React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs flex-shrink-0' }),
+                                                                            React.createElement('span', { className: 'font-medium text-blue-700' }, `${matchTime} - ${endTime}`)
                                                                         ),
                                                                         
-                                                                        userProfileData?.role === 'admin' && React.createElement(
+                                                                        // Domáci tím - minimálna šírka
+                                                                        React.createElement(
                                                                             'div',
-                                                                            { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity' },
-                                                                            React.createElement(
-                                                                                'button',
-                                                                                {
-                                                                                    className: 'w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                                                    onClick: (e) => {
-                                                                                        e.stopPropagation();
-                                                                                        handleSwapClick(match);
-                                                                                    },
-                                                                                    title: 'Vymeniť domáci a hosťovský tím'
+                                                                            { className: 'font-medium text-gray-800 whitespace-nowrap min-w-[160px] text-right flex-shrink-0' },
+                                                                            displayMode === 'both' ? homeDisplay.name : homeDisplay
+                                                                        ),
+                                                                        
+                                                                        // VS ikona - fixná šírka
+                                                                        React.createElement(
+                                                                            'div',
+                                                                            { className: 'text-gray-400 w-8 text-center flex-shrink-0' },
+                                                                            'vs'
+                                                                        ),
+                                                                        
+                                                                        // Hosťovský tím - minimálna šírka
+                                                                        React.createElement(
+                                                                            'div',
+                                                                            { className: 'font-medium text-gray-800 whitespace-nowrap min-w-[160px] text-left flex-shrink-0' },
+                                                                            displayMode === 'both' ? awayDisplay.name : awayDisplay
+                                                                        ),
+                                                                        
+                                                                        // ID domáceho tímu (ak je režim both)
+                                                                        displayMode === 'both' && React.createElement(
+                                                                            'div',
+                                                                            { className: 'text-gray-500 font-mono text-[10px] whitespace-nowrap w-24 text-right flex-shrink-0' },
+                                                                            `(${homeDisplay.id})`
+                                                                        ),
+                                                                        
+                                                                        // ID hosťovského tímu (ak je režim both)
+                                                                        displayMode === 'both' && React.createElement(
+                                                                            'div',
+                                                                            { className: 'text-gray-500 font-mono text-[10px] whitespace-nowrap w-24 text-left flex-shrink-0' },
+                                                                            `(${awayDisplay.id})`
+                                                                        ),
+                                                                        
+                                                                        // Prázdny div pre zarovnanie, ak nie je režim both
+                                                                        displayMode !== 'both' && React.createElement('div', { className: 'w-24 flex-shrink-0' })
+                                                                    ),
+                                                                    
+                                                                    userProfileData?.role === 'admin' && React.createElement(
+                                                                        'div',
+                                                                        { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity' },
+                                                                        React.createElement(
+                                                                            'button',
+                                                                            {
+                                                                                className: 'w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                onClick: (e) => {
+                                                                                    e.stopPropagation();
+                                                                                    handleSwapClick(match);
                                                                                 },
-                                                                                React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-xs' })
-                                                                            ),
-                                                                            React.createElement(
-                                                                                'button',
-                                                                                {
-                                                                                    className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                                                    onClick: (e) => {
-                                                                                        e.stopPropagation();
-                                                                                        handleUnassignMatch(match);
-                                                                                    },
-                                                                                    title: 'Odstrániť priradenie (miesto a čas)'
+                                                                                title: 'Vymeniť domáci a hosťovský tím'
+                                                                            },
+                                                                            React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-xs' })
+                                                                        ),
+                                                                        React.createElement(
+                                                                            'button',
+                                                                            {
+                                                                                className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                onClick: (e) => {
+                                                                                    e.stopPropagation();
+                                                                                    handleUnassignMatch(match);
                                                                                 },
-                                                                                React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
-                                                                            )
+                                                                                title: 'Odstrániť priradenie (miesto a čas)'
+                                                                            },
+                                                                            React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
                                                                         )
-                                                                    );
-                                                                })
-                                                        ) : React.createElement(
-                                                            'div',
-                                                            {
-                                                                className: 'w-full py-2 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-1 whitespace-nowrap',
-                                                                style: { 
-                                                                    minWidth: '420px',
-                                                                    width: 'fit-content'
-                                                                }
-                                                            },
-                                                            React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-xs flex-shrink-0' }),
-                                                            React.createElement('span', null, 'Žiadne zápasy')
-                                                        )
-                                                    );
-                                                })
-                                            )
+                                                                    )
+                                                                );
+                                                            })
+                                                    ) : React.createElement(
+                                                        'div',
+                                                        {
+                                                            className: 'w-full py-2 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-1 whitespace-nowrap',
+                                                            style: { 
+                                                                minWidth: '500px', // Minimálna šírka pre prázdny deň
+                                                                width: '100%'
+                                                            }
+                                                        },
+                                                        React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-xs flex-shrink-0' }),
+                                                        React.createElement('span', null, 'Žiadne zápasy')
+                                                    )
+                                                );
+                                            })
                                         )
                                     ),
                                     
