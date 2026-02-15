@@ -3613,10 +3613,8 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     // ZJEDNODUŠENÝ RENDER - dva stĺpce (ľavý - zápasy, pravý - haly)
     return React.createElement(
-        'div',
-        { className: 'w-full' },
         React.Fragment,
-        null,
+        { className: 'w-full' },
         React.createElement(GenerationModal, {
             key: `generation-modal-${isModalOpen}`,
             isOpen: isModalOpen,
