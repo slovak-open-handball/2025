@@ -3566,11 +3566,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                 'button',
                 { 
                     className: `w-8 h-16 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'} text-white flex items-center justify-center transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0 box-border`,
-                    style={{ 
+                    style: { 
                         width: '32px',
                         borderTopLeftRadius: '9999px',
                         borderBottomLeftRadius: '9999px'
-                    }},
+                    },
                     onClick: () => setIsModalOpen(true),
                     disabled: generationInProgress,
                     title: 'Generovať zápasy'
@@ -3582,11 +3582,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                 'button',
                 { 
                     className: `w-8 h-16 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'} text-white flex items-center justify-center transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0 box-border`,
-                    style={{ 
+                    style: { 
                         width: '32px',
                         borderTopRightRadius: '9999px',
                         borderBottomRightRadius: '9999px'
-                    }},
+                    },
                     onClick: () => setIsDeleteMatchesModalOpen(true),
                     disabled: generationInProgress,
                     title: 'Zmazať zápasy podľa kategórie/skupiny'
@@ -3594,7 +3594,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 React.createElement('i', { className: 'fa-solid fa-minus text-2xl' })
             )
         ),
-        
+                
         React.createElement(
             'div',
             { className: 'flex-grow flex justify-center items-start w-full' },
