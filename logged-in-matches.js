@@ -4172,7 +4172,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     // PRAVÝ STĹPEC - Športové haly (OPRAVENÉ - box haly sa roztiahne doprava)
                     React.createElement(
                         'div',
-                        { className: `${filteredUnassignedMatches.length > 0 ? 'lg:w-2/3' : 'lg:w-full'} flex flex-col overflow-x-auto` }, // POSUVNÍK NA ÚROVNI STĹPCA
+                        { className: `${filteredUnassignedMatches.length > 0 ? 'lg:w-2/3' : 'lg:w-full'} flex flex-col` }, 
                         React.createElement(
                             'h3',
                             { className: 'text-xl font-semibold mb-4 text-gray-700 border-b pb-2 flex-shrink-0' },
