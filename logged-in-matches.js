@@ -4305,7 +4305,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                 React.createElement(
                                                                     'span',
                                                                     { className: 'text-sm font-semibold text-gray-800' },
-                                                                    dateStr
+                                                                    date.toLocaleDateString('sk-SK', {
+                                                                        day: '2-digit',
+                                                                        month: '2-digit',
+                                                                        year: 'numeric'
+                                                                    })
                                                                 ),
                                                                 // Zobrazenie uloženého času ak existuje
                                                                 (() => {
