@@ -3822,7 +3822,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     { className: 'flex flex-col lg:flex-row gap-6 mt-4 min-h-[700px]' },
                     
                     // ĽAVÝ STĹPEC - Zoznam nepriradených zápasov
-                    React.createElement(
+                    filteredUnassignedMatches.length > 0 && React.createElement(
                         'div',
                         { className: 'lg:w-1/3 bg-gray-50 rounded-xl p-4 border border-gray-200 flex flex-col h-full' },
                         
@@ -4002,7 +4002,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     // PRAVÝ STĹPEC - Športové haly (upravená časť s posuvníkom)
                     React.createElement(
                         'div',
-                        { className: 'lg:w-2/3 flex flex-col' },
+                        { className: `${filteredUnassignedMatches.length > 0 ? 'lg:w-2/3' : 'lg:w-full'} flex flex-col` },
                         React.createElement(
                             'h3',
                             { className: 'text-xl font-semibold mb-4 text-gray-700 border-b pb-2 flex-shrink-0' },
