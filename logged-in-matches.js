@@ -3821,7 +3821,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             { className: 'flex-grow flex justify-center items-start w-full' },
             React.createElement(
                 'div',
-                { className: 'w-full bg-white rounded-xl shadow-xl p-8 mx-4' },
+                { className: 'flex-grow bg-white rounded-xl shadow-xl p-8 mx-4' },
                 
                 // Ovládacie prvky - filtre a prepínač
                 React.createElement(
