@@ -954,7 +954,8 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedTime, setSelectedTime] = useState('');
     const [availableDates, setAvailableDates] = useState([]);
-    const [categoryDetails, setCategoryDetails] = useState(null);    const [matchDuration, setMatchDuration] = useState(0);
+    const [categoryDetails, setCategoryDetails] = useState(null);    
+    const [matchDuration, setMatchDuration] = useState(0);
     const [matchEndTime, setMatchEndTime] = useState('');
     const [hallStartTime, setHallStartTime] = useState(null);
     const [timeError, setTimeError] = useState('');
