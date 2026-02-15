@@ -3567,7 +3567,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 {
                     className: 'relative w-full h-full rounded-full overflow-hidden',
                     style: {
-                        transform: 'rotate(11.25deg)' // Otočenie celého kruhu o 11.25°
+                        transform: 'rotate(0deg)' // Otočenie celého kruhu o 11.25°
                     }
                 },
                 // Prvá polovica - Zelená (Generovať)
@@ -3586,7 +3586,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                         'div',
                         {
                             style: {
-                                transform: 'rotate(-11.25deg)', // Kompenzácia otočenia pre obsah
+                                transform: 'rotate(-0deg)', // Kompenzácia otočenia pre obsah
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -3625,7 +3625,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                         'div',
                         {
                             style: {
-                                transform: 'rotate(-11.25deg)', // Kompenzácia otočenia pre obsah
+                                transform: 'rotate(-0deg)', // Kompenzácia otočenia pre obsah
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
