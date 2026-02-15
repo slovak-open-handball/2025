@@ -3549,17 +3549,27 @@ const AddMatchesApp = ({ userProfileData }) => {
             }
         }),
 
+        // NOVÉ: Rozdelené kruhové tlačidlo v pravom dolnom rohu - OPRAVENÉ
         React.createElement(
             'div',
             { 
-                className: 'fixed bottom-8 right-8 z-50 flex shadow-2xl',
-                style: { filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.2))' }
+                className: 'fixed bottom-8 right-8 z-50 flex items-center justify-center shadow-2xl rounded-full overflow-hidden',
+                style: { 
+                    filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.2))',
+                    width: '64px',
+                    height: '64px'
+                }
             },
             // Ľavá polovica - Zelená (Generovať)
             React.createElement(
                 'button',
                 { 
-                    className: `w-16 h-16 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'} text-white rounded-l-full flex items-center justify-center transition-all duration-200 border-r border-green-400`,
+                    className: `w-8 h-16 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'} text-white flex items-center justify-center transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0 box-border`,
+                    style={{ 
+                        width: '32px',
+                        borderTopLeftRadius: '9999px',
+                        borderBottomLeftRadius: '9999px'
+                    }},
                     onClick: () => setIsModalOpen(true),
                     disabled: generationInProgress,
                     title: 'Generovať zápasy'
@@ -3570,7 +3580,12 @@ const AddMatchesApp = ({ userProfileData }) => {
             React.createElement(
                 'button',
                 { 
-                    className: `w-16 h-16 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'} text-white rounded-r-full flex items-center justify-center transition-all duration-200`,
+                    className: `w-8 h-16 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'} text-white flex items-center justify-center transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0 box-border`,
+                    style={{ 
+                        width: '32px',
+                        borderTopRightRadius: '9999px',
+                        borderBottomRightRadius: '9999px'
+                    }},
                     onClick: () => setIsDeleteMatchesModalOpen(true),
                     disabled: generationInProgress,
                     title: 'Zmazať zápasy podľa kategórie/skupiny'
