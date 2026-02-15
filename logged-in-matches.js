@@ -4169,7 +4169,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                             )
                     ),
                     
-                    // PRAVÝ STĹPEC - Športové haly (opravená časť s posuvníkom)
+                    // PRAVÝ STĹPEC - Športové haly (OPRAVENÉ - box haly sa prispôsobí obsahu)
                     React.createElement(
                         'div',
                         { className: `${filteredUnassignedMatches.length > 0 ? 'lg:w-2/3' : 'lg:w-full'} flex flex-col` },
@@ -4206,7 +4206,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                         // Grid zoznam športových hál s kartami pre jednotlivé dni - OPRAVENÉ
                         !loading && sportHalls.length > 0 && React.createElement(
                             'div',
-                            { className: 'space-y-4 overflow-y-auto pr-2 flex-1' },
+                            { 
+                                className: 'space-y-4 flex-1',
+                                style: { 
+                                    overflowX: 'auto', // Horizontálny posuvník pre celý stĺpec
+                                    minWidth: '100%'
+                                }
+                            },
                             sortedFilteredSportHalls.map((hall) => {
                                 const typeConfig = typeIcons[hall.type] || { icon: 'fa-futbol', color: '#dc2626' };
                                 
@@ -4274,9 +4280,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     'div',
                                     { 
                                         key: hall.id,
-                                        className: 'bg-white rounded-xl border-2 border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden'
+                                        className: 'bg-white rounded-xl border-2 border-gray-200 shadow-sm hover:shadow-md transition-shadow',
+                                        style: { 
+                                            width: 'fit-content', // Box haly sa prispôsobí obsahu
+                                            minWidth: '100%' // Ale zaberá aspoň celú šírku rodiča
+                                        }
                                     },
-                                    // Hlavička haly
+                                    // Hlavička haly - fixná šírka
                                     React.createElement(
                                         'div',
                                         { className: 'p-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200' },
@@ -4315,15 +4325,20 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     dayCards.length > 0 && React.createElement(
                                         'div',
                                         { 
-                                            className: 'p-4 bg-gray-50 overflow-x-auto' // Toto zabezpečí horizontálne posúvanie
+                                            className: 'p-4 bg-gray-50',
+                                            style: { 
+                                                width: 'fit-content', // Tento div sa prispôsobí obsahu
+                                                minWidth: '100%' // Ale zaberá aspoň celú šírku rodiča
+                                            }
                                         },
                                         React.createElement(
                                             'div',
                                             { 
                                                 className: 'flex flex-row gap-2',
                                                 style: { 
-                                                    display: 'inline-flex', // Spôsobí, že šírka sa prispôsobí obsahu
-                                                    minWidth: 'min-content' // Minimalizuje šírku na minimum potrebné pre obsah
+                                                    display: 'flex',
+                                                    flexDirection: 'row',
+                                                    width: 'fit-content' // Flexbox sa prispôsobí obsahu
                                                 }
                                             },
                                             dayCards.map((dayCard, index) => {
@@ -4339,7 +4354,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         key: index,
                                                         className: 'flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group',
                                                         style: { 
-                                                            width: 'auto', // Automatická šírka podľa obsahu
+                                                            width: 'fit-content' // Každý box dňa sa prispôsobí obsahu
                                                         }
                                                     },
                                                     // Hlavička dňa s dátumom a počtom zápasov - klikateľná
@@ -4351,7 +4366,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                 e.stopPropagation();
                                                                 handleHallDayHeaderClick(hall, date, dateStr);
                                                             },
-                                                            title: 'Kliknite pre nastavenie času začiatku prvého zápasu'
+                                                            title: 'Kliknite pre nastavenie času začiatku prvého zápasu',
+                                                            style: { width: '100%' }
                                                         },
                                                         React.createElement(
                                                             'div',
@@ -4414,7 +4430,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         { 
                                                             className: 'space-y-1 text-xs',
                                                             style: { 
-                                                                width: '100%' // Zabezpečí, že vnútorný div zaberá celú šírku
+                                                                width: 'fit-content' // Prispôsobí sa najširšiemu zápasu
                                                             }
                                                         },
                                                         hallMatches
@@ -4451,7 +4467,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         key: idx,
                                                                         className: 'p-2 bg-white rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group',
                                                                         style: { 
-                                                                            width: '100%' // Každý zápas zaberá celú šírku rodiča
+                                                                            width: 'fit-content' // Každý zápas sa prispôsobí obsahu
                                                                         }
                                                                     },
                                                                     React.createElement(
@@ -4464,9 +4480,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             },
                                                                             title: `Kliknite pre úpravu zápasu`,
                                                                             style: { 
-                                                                                width: '100%',
                                                                                 display: 'flex',
-                                                                                flexWrap: 'nowrap'
+                                                                                flexWrap: 'nowrap',
+                                                                                width: 'fit-content'
                                                                             }
                                                                         },
                                                                         // Časový údaj - fixná šírka
@@ -4551,8 +4567,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         {
                                                             className: 'w-full py-2 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-1 whitespace-nowrap',
                                                             style: { 
-                                                                minWidth: '500px', // Minimálna šírka pre prázdny deň
-                                                                width: '100%'
+                                                                minWidth: '500px' // Minimálna šírka pre prázdny deň
                                                             }
                                                         },
                                                         React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-xs flex-shrink-0' }),
