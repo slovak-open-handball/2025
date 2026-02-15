@@ -1206,7 +1206,22 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         startTime = data.startTime;
                         console.log('loadHallStartTime - našiel som startTime:', startTime);
                         setHallStartTime(startTime);
-                        setTimeError('');
+                        
+                        // NEMAŽEME timeError AUTOMATICKY!
+                        // Skontrolujeme, či aktuálne vybraný čas nie je skôr ako nový hallStartTime
+                        if (selectedTime) {
+                            const [hours, minutes] = selectedTime.split(':').map(Number);
+                            const [startHours, startMinutes] = startTime.split(':').map(Number);
+                            
+                            const selectedMinutes = hours * 60 + minutes;
+                            const startMinutesTotal = startHours * 60 + startMinutes;
+                            
+                            if (selectedMinutes < startMinutesTotal) {
+                                setTimeError(`Čas začiatku zápasu nemôže byť skôr ako ${startTime} (čas začiatku prvého zápasu v tejto hale)`);
+                            }
+                            // Ak je čas v poriadku, chybu nemažeme - necháme ju tak, ako ju nastavil onChange
+                            // (onChange ju už aj tak vymaže, keď je čas OK)
+                        }
                     } else {
                         console.log('loadHallStartTime - nenašiel som startTime');
                         setHallStartTime(null);
