@@ -3720,6 +3720,179 @@ const AddMatchesApp = ({ userProfileData }) => {
             }
         }),
 
+        // Ovládacie prvky - filtre a prepínač
+        React.createElement(
+            'div',
+            { 
+                className: 'fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-4xl px-4',
+                style: { pointerEvents: 'none' } // Umožní preklikávanie cez priesvitné miesta
+            },
+            React.createElement(
+                'div',
+                { 
+                    className: 'flex flex-col gap-2',
+                    style: { pointerEvents: 'auto' } // Samotné ovládacie prvky sú klikateľné
+                },
+                
+                // Filtre
+                React.createElement(
+                    'div',
+                    { className: 'flex flex-wrap items-center justify-center gap-2 bg-white/95 backdrop-blur-sm p-3 rounded-xl shadow-lg border border-gray-200' },
+                    
+                    // Filter Kategória
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-1' },
+                        React.createElement('label', { className: 'text-sm font-medium text-gray-700 whitespace-nowrap' }, 'Kategória:'),
+                        React.createElement(
+                            'select',
+                            {
+                                value: selectedCategoryFilter,
+                                onChange: (e) => {
+                                    setSelectedCategoryFilter(e.target.value);
+                                    setSelectedGroupFilter(''); // Reset skupiny pri zmene kategórie
+                                },
+                                className: 'px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[140px]'
+                            },
+                            React.createElement('option', { value: '' }, 'Všetky kategórie'),
+                            [...categories]
+                                .sort((a, b) => a.name.localeCompare(b.name))
+                                .map(cat => 
+                                    React.createElement('option', { key: cat.id, value: cat.id }, cat.name)
+                                )
+                        )
+                    ),
+                    
+                    // Filter Skupina (zablokovaný ak nie je vybratá kategória)
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-1' },
+                        React.createElement('label', { className: 'text-sm font-medium text-gray-700 whitespace-nowrap' }, 'Skupina:'),
+                        React.createElement(
+                            'select',
+                            {
+                                value: selectedGroupFilter,
+                                onChange: (e) => setSelectedGroupFilter(e.target.value),
+                                disabled: !selectedCategoryFilter,
+                                className: `px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[140px] ${!selectedCategoryFilter ? 'bg-gray-100 cursor-not-allowed' : ''}`
+                            },
+                            React.createElement('option', { value: '' }, 'Všetky skupiny'),
+                            availableGroupsForFilter.map(group => 
+                                React.createElement('option', { key: group.name, value: group.name }, group.name)
+                            )
+                        )
+                    ),
+                    
+                    // Filter Hala
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-1' },
+                        React.createElement('label', { className: 'text-sm font-medium text-gray-700 whitespace-nowrap' }, 'Hala:'),
+                        React.createElement(
+                            'select',
+                            {
+                                value: selectedHallFilter,
+                                onChange: (e) => setSelectedHallFilter(e.target.value),
+                                className: 'px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[140px]'
+                            },
+                            React.createElement('option', { value: '' }, 'Všetky haly'),
+                            sortedSportHalls.map(hall => 
+                                React.createElement('option', { key: hall.id, value: hall.id }, hall.name)
+                            )
+                        )
+                    ),
+                    
+                    // Filter Deň
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-1' },
+                        React.createElement('label', { className: 'text-sm font-medium text-gray-700 whitespace-nowrap' }, 'Deň:'),
+                        React.createElement(
+                            'select',
+                            {
+                                value: selectedDayFilter,
+                                onChange: (e) => setSelectedDayFilter(e.target.value),
+                                className: 'px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[140px]'
+                            },
+                            React.createElement('option', { value: '' }, 'Všetky dni'),
+                            availableDays.map(day => 
+                                React.createElement('option', { key: day.value, value: day.value }, day.label)
+                            )
+                        )
+                    ),
+                    
+                    // Tlačidlo pre reset filtrov
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => {
+                                setSelectedCategoryFilter('');
+                                setSelectedGroupFilter('');
+                                setSelectedHallFilter('');
+                                setSelectedDayFilter('');
+                            },
+                            className: 'px-2 py-1 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors'
+                        },
+                        React.createElement('i', { className: 'fa-solid fa-rotate-left mr-1' }),
+                        'Reset'
+                    )
+                ),
+                
+                // Prepínač zobrazenia
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center justify-center gap-3 flex-wrap' },
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-2 bg-gray-100/90 backdrop-blur-sm p-1 rounded-lg shadow-md border border-gray-200' },
+                        React.createElement(
+                            'button',
+                            { 
+                                className: `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                                    displayMode === 'name' 
+                                        ? 'bg-blue-600 text-white shadow-sm' 
+                                        : 'text-gray-600 hover:bg-gray-200'
+                                }`,
+                                onClick: () => handleDisplayModeChange('name')
+                            },
+                            'Názvy'
+                        ),
+                        React.createElement(
+                            'button',
+                            { 
+                                className: `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                                    displayMode === 'id' 
+                                        ? 'bg-blue-600 text-white shadow-sm' 
+                                        : 'text-gray-600 hover:bg-gray-200'
+                                }`,
+                                onClick: () => handleDisplayModeChange('id')
+                            },
+                            'ID'
+                        ),
+                        React.createElement(
+                            'button',
+                            { 
+                                className: `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                                    displayMode === 'both' 
+                                        ? 'bg-blue-600 text-white shadow-sm' 
+                                        : 'text-gray-600 hover:bg-gray-200'
+                                }`,
+                                onClick: () => handleDisplayModeChange('both')
+                            },
+                            'Oboje'
+                        )
+                    ),
+                    
+                    generationInProgress && React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-2 text-blue-600 bg-blue-50/90 backdrop-blur-sm px-4 py-2 rounded-lg shadow-md border border-blue-200' },
+                        React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600' }),
+                        React.createElement('span', { className: 'text-sm font-medium' }, 'Generujem zápasy...')
+                    )
+                )
+            )
+        ),
+
         // NOVÉ: Rozdelené kruhové tlačidlo v pravom dolnom rohu - TEXT V POLOVICIACH
         React.createElement(
             'div',
@@ -3830,169 +4003,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                         // margin: '0 auto'    // Odstrániť
                     }
                 },
-                
-                // Ovládacie prvky - filtre a prepínač
-                React.createElement(
-                    'div',
-                    { className: 'flex flex-col gap-4 mb-4' },
-                    
-                    // Filtre
-                    React.createElement(
-                        'div',
-                        { className: 'flex flex-wrap items-center gap-4 bg-gray-50 p-4 rounded-lg border border-gray-200' },
-                        
-                        // Filter Kategória
-                        React.createElement(
-                            'div',
-                            { className: 'flex items-center gap-2' },
-                            React.createElement('label', { className: 'text-sm font-medium text-gray-700 whitespace-nowrap' }, 'Kategória:'),
-                            React.createElement(
-                                'select',
-                                {
-                                    value: selectedCategoryFilter,
-                                    onChange: (e) => {
-                                        setSelectedCategoryFilter(e.target.value);
-                                        setSelectedGroupFilter(''); // Reset skupiny pri zmene kategórie
-                                    },
-                                    className: 'px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[150px]'
-                                },
-                                React.createElement('option', { value: '' }, 'Všetky kategórie'),
-                                [...categories]
-                                    .sort((a, b) => a.name.localeCompare(b.name))
-                                    .map(cat => 
-                                        React.createElement('option', { key: cat.id, value: cat.id }, cat.name)
-                                    )
-                            )
-                        ),
-                        
-                        // Filter Skupina (zablokovaný ak nie je vybratá kategória)
-                        React.createElement(
-                            'div',
-                            { className: 'flex items-center gap-2' },
-                            React.createElement('label', { className: 'text-sm font-medium text-gray-700 whitespace-nowrap' }, 'Skupina:'),
-                            React.createElement(
-                                'select',
-                                {
-                                    value: selectedGroupFilter,
-                                    onChange: (e) => setSelectedGroupFilter(e.target.value),
-                                    disabled: !selectedCategoryFilter,
-                                    className: `px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[150px] ${!selectedCategoryFilter ? 'bg-gray-100 cursor-not-allowed' : ''}`
-                                },
-                                React.createElement('option', { value: '' }, 'Všetky skupiny'),
-                                availableGroupsForFilter.map(group => 
-                                    React.createElement('option', { key: group.name, value: group.name }, group.name)
-                                )
-                            )
-                        ),
-                        
-                        // Filter Hala
-                        React.createElement(
-                            'div',
-                            { className: 'flex items-center gap-2' },
-                            React.createElement('label', { className: 'text-sm font-medium text-gray-700 whitespace-nowrap' }, 'Hala:'),
-                            React.createElement(
-                                'select',
-                                {
-                                    value: selectedHallFilter,
-                                    onChange: (e) => setSelectedHallFilter(e.target.value),
-                                    className: 'px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[150px]'
-                                },
-                                React.createElement('option', { value: '' }, 'Všetky haly'),
-                                sortedSportHalls.map(hall => 
-                                    React.createElement('option', { key: hall.id, value: hall.id }, hall.name)
-                                )
-                            )
-                        ),
-                        
-                        // Filter Deň
-                        React.createElement(
-                            'div',
-                            { className: 'flex items-center gap-2' },
-                            React.createElement('label', { className: 'text-sm font-medium text-gray-700 whitespace-nowrap' }, 'Deň:'),
-                            React.createElement(
-                                'select',
-                                {
-                                    value: selectedDayFilter,
-                                    onChange: (e) => setSelectedDayFilter(e.target.value),
-                                    className: 'px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[150px]'
-                                },
-                                React.createElement('option', { value: '' }, 'Všetky dni'),
-                                availableDays.map(day => 
-                                    React.createElement('option', { key: day.value, value: day.value }, day.label)
-                                )
-                            )
-                        ),
-                        
-                        // Tlačidlo pre reset filtrov
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: () => {
-                                    setSelectedCategoryFilter('');
-                                    setSelectedGroupFilter('');
-                                    setSelectedHallFilter('');
-                                    setSelectedDayFilter('');
-                                },
-                                className: 'px-3 py-1.5 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors ml-auto'
-                            },
-                            React.createElement('i', { className: 'fa-solid fa-rotate-left mr-1' }),
-                            'Reset'
-                        )
-                    ),
-                    
-                    // Prepínač zobrazenia
-                    React.createElement(
-                        'div',
-                        { className: 'flex items-center gap-3 flex-wrap justify-center' },
-                        React.createElement(
-                            'div',
-                            { className: 'flex items-center gap-2 bg-gray-100 p-1 rounded-lg' },
-                            React.createElement(
-                                'button',
-                                { 
-                                    className: `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                                        displayMode === 'name' 
-                                            ? 'bg-blue-600 text-white shadow-sm' 
-                                            : 'text-gray-600 hover:bg-gray-200'
-                                    }`,
-                                    onClick: () => handleDisplayModeChange('name')
-                                },
-                                'Názvy'
-                            ),
-                            React.createElement(
-                                'button',
-                                { 
-                                    className: `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                                        displayMode === 'id' 
-                                            ? 'bg-blue-600 text-white shadow-sm' 
-                                            : 'text-gray-600 hover:bg-gray-200'
-                                    }`,
-                                    onClick: () => handleDisplayModeChange('id')
-                                },
-                                'ID'
-                            ),
-                            React.createElement(
-                                'button',
-                                { 
-                                    className: `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                                        displayMode === 'both' 
-                                            ? 'bg-blue-600 text-white shadow-sm' 
-                                            : 'text-gray-600 hover:bg-gray-200'
-                                    }`,
-                                    onClick: () => handleDisplayModeChange('both')
-                                },
-                                'Oboje'
-                            )
-                        ),
-                        
-                        generationInProgress && React.createElement(
-                            'div',
-                            { className: 'flex items-center gap-2 text-blue-600 bg-blue-50 px-4 py-2 rounded-lg' },
-                            React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600' }),
-                            React.createElement('span', { className: 'text-sm font-medium' }, 'Generujem zápasy...')
-                        )
-                    )
-                ),
                 
                 // Dva stĺpce - ľavý pre zápasy, pravý pre haly
                 React.createElement(
