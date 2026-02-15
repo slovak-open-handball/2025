@@ -964,6 +964,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     const [initialized, setInitialized] = useState(false);
     const [suggestedTime, setSuggestedTime] = useState(null);
     const [shouldSetDateFromFilter, setShouldSetDateFromFilter] = useState(false);
+    const [loadingHallStartTime, setLoadingHallStartTime] = useState(false);
 
     // Funkcia na načítanie dostupných dátumov
     const loadAvailableDates = () => {
@@ -1189,11 +1190,12 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         loadExistingMatches();
     }, [selectedHallId, selectedDate, match?.id, allMatches]);
 
-    // Načítanie času začiatku pre vybranú halu a deň a výpočet prvého dostupného času
+    // Upravte loadHallStartTime
     useEffect(() => {
         const loadHallStartTime = async () => {
             console.log('loadHallStartTime - spúšťam sa, selectedHallId:', selectedHallId, 'selectedDate:', selectedDate);
             if (selectedHallId && selectedDate && window.db) {
+                setLoadingHallStartTime(true); // Nastavíme loading
                 try {
                     const scheduleId = `${selectedHallId}_${selectedDate}`;
                     const scheduleRef = doc(window.db, 'hallSchedules', scheduleId);
@@ -1207,8 +1209,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         console.log('loadHallStartTime - našiel som startTime:', startTime);
                         setHallStartTime(startTime);
                         
-                        // NEMAŽEME timeError AUTOMATICKY!
-                        // Skontrolujeme, či aktuálne vybraný čas nie je skôr ako nový hallStartTime
+                        // Kontrola času
                         if (selectedTime) {
                             const [hours, minutes] = selectedTime.split(':').map(Number);
                             const [startHours, startMinutes] = startTime.split(':').map(Number);
@@ -1219,8 +1220,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             if (selectedMinutes < startMinutesTotal) {
                                 setTimeError(`Čas začiatku zápasu nemôže byť skôr ako ${startTime} (čas začiatku prvého zápasu v tejto hale)`);
                             }
-                            // Ak je čas v poriadku, chybu nemažeme - necháme ju tak, ako ju nastavil onChange
-                            // (onChange ju už aj tak vymaže, keď je čas OK)
                         }
                     } else {
                         console.log('loadHallStartTime - nenašiel som startTime');
@@ -1247,11 +1246,14 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 } catch (error) {
                     console.error('Chyba pri načítaní času začiatku haly:', error);
                     setHallStartTime(null);
+                } finally {
+                    setLoadingHallStartTime(false); // Ukončíme loading
                 }
             } else {
                 console.log('loadHallStartTime - neplatné parametre');
                 setHallStartTime(null);
                 setTimeError('');
+                setLoadingHallStartTime(false);
             }
         };
     
@@ -1299,32 +1301,31 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         }
     }, [selectedTime, matchDuration, existingMatches, categories, match?.categoryName]);
 
-    // Výpočet času ukončenia - upravený
+    // Upravte useEffect pre výpočet konca
     useEffect(() => {
         if (selectedDate && selectedTime && matchDuration > 0) {
             const [hours, minutes] = selectedTime.split(':').map(Number);
-            
+        
             const [year, month, day] = selectedDate.split('-').map(Number);
             const startDateTime = new Date(year, month - 1, day, hours, minutes, 0);
-            
+        
             const endDateTime = new Date(startDateTime.getTime() + matchDuration * 60000);
-            
+        
             const endHours = endDateTime.getHours().toString().padStart(2, '0');
             const endMinutes = endDateTime.getMinutes().toString().padStart(2, '0');
-            
+        
             setMatchEndTime(`${endHours}:${endMinutes}`);
-            
-            // Logovanie pre ladenie
+        
             console.log('useEffect výpočtu konca - timeError:', timeError);
         } else {
             setMatchEndTime('');
-            // Túto chybu necháme len ak nie je nastavený čas začiatku haly
-            if (!hallStartTime && selectedHallId && selectedDate) {
+            // Túto chybu nastavíme len ak nie je loading a naozaj nemáme hallStartTime
+            if (!loadingHallStartTime && !hallStartTime && selectedHallId && selectedDate) {
                 console.log('useEffect výpočtu konca - nastavujem chybu: chýba hallStartTime');
                 setTimeError('Pre tento deň nie je nastavený čas začiatku. Najprv ho nastavte kliknutím na hlavičku dňa.');
             }
         }
-    }, [selectedDate, selectedTime, matchDuration, hallStartTime]);
+    }, [selectedDate, selectedTime, matchDuration, hallStartTime, loadingHallStartTime]);
 
     const handleApplySuggestedTime = () => {
         if (suggestedTime) {
