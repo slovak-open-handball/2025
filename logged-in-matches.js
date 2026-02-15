@@ -3819,11 +3819,11 @@ const AddMatchesApp = ({ userProfileData }) => {
         React.createElement(
             'div',
 // { className: 'flex-grow flex justify-center items-start w-full' },
-            { className: 'flex-grow flex justify-center items-start w-full' },
+            { className: 'flex-grow flex justify-center items-start w-full px-4' },
             React.createElement(
                 'div',
 // { className: 'w-full bg-white rounded-xl shadow-xl p-8 mx-4' },
-                { className: 'w-full bg-white rounded-xl shadow-xl p-8 mx-4', style: { width: 'calc(100% - 32px)', boxSizing: 'border-box' } },
+                { className: 'bg-white rounded-xl shadow-xl p-8', style: { width: 'fit-content', maxWidth: '100%', margin: '0 auto' } },
                 
                 // Ovládacie prvky - filtre a prepínač
                 React.createElement(
