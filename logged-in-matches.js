@@ -3724,7 +3724,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         React.createElement(
             'div',
             { 
-                className: 'fixed top-20 left-0 right-0 z-50 flex justify-center pt-2',
+                className: 'fixed top-5 left-0 right-0 z-50 flex justify-center pt-2',
                 style: { pointerEvents: 'none' } // Umožní preklikávanie cez priesvitné miesta
             },
             React.createElement(
