@@ -3825,7 +3825,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                     className: 'w-full bg-white rounded-xl shadow-xl p-8 mx-4',
                     style: { 
                         width: 'fit-content', // Pridané - kontajner sa prispôsobí obsahu
-                        minWidth: 'min(100%, 1200px)', // Voliteľné: maximálna šírka, ale nie menšia ako rodič
                         margin: '0 auto' // Centrovanie
                     }
                 },
