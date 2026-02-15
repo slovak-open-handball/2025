@@ -3550,7 +3550,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             }
         }),
 
-        // NOVÉ: Rozdelené kruhové tlačidlo v pravom dolnom rohu - BEZ MEDZERY
+        // NOVÉ: Rozdelené kruhové tlačidlo v pravom dolnom rohu - ROVNOMERNÉ ROZDELENIE
         React.createElement(
             'div',
             { 
@@ -3576,7 +3576,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     { 
                         className: `absolute inset-0 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'} text-white flex items-center justify-center transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0`,
                         style: { 
-                            clipPath: 'polygon(0 0, 100% 0, 50% 100%, 0 100%)', // Diagonálne rozdelenie
+                            clipPath: 'polygon(0 0, 100% 0, 0 100%)', // Diagonálne rozdelenie - horná ľavá časť
                         },
                         onClick: () => setIsModalOpen(true),
                         disabled: generationInProgress,
@@ -3603,7 +3603,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                     { 
                         className: `absolute inset-0 ${generationInProgress ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'} text-white flex items-center justify-center transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0`,
                         style: { 
-                            clipPath: 'polygon(50% 0, 100% 0, 100% 100%, 0 100%)', // Diagonálne rozdelenie
+                            clipPath: 'polygon(100% 0, 100% 100%, 0 100%)', // Diagonálne rozdelenie - dolná pravá časť
                         },
                         onClick: () => setIsDeleteMatchesModalOpen(true),
                         disabled: generationInProgress,
