@@ -3818,10 +3818,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                 
         React.createElement(
             'div',
-            { className: 'flex-grow flex justify-center items-start w-full' },
+// { className: 'flex-grow flex justify-center items-start w-full' },
+            { className: 'flex-grow flex justify-center items-start w-full px-4' },
             React.createElement(
                 'div',
-                { className: 'w-full bg-white rounded-xl shadow-xl p-8 mx-4' },
+// { className: 'w-full bg-white rounded-xl shadow-xl p-8 mx-4' },
+                { className: 'w-full max-w-full bg-white rounded-xl shadow-xl p-8', style: { width: '100%', boxSizing: 'border-box' } }
                 
                 // Ovládacie prvky - filtre a prepínač
                 React.createElement(
