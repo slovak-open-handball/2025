@@ -4317,7 +4317,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         { 
                                             className: 'pb-2', // HORIZONTÁLNY POSUVNÍK PRE CELÝ BOX HALY
 //                                            className: 'overflow-x-auto pb-2', // HORIZONTÁLNY POSUVNÍK PRE CELÝ BOX HALY
-                                            style: { width: 'fit-content' }
                                         },
                                         React.createElement(
                                             'div',
@@ -4330,7 +4329,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 { 
                                                     className: 'flex flex-row gap-2',
                                                     style: { 
-                                                        width: 'fit-content'
+                                                        display: 'flex',
                                                     }
                                                 },
                                                 dayCards.map((dayCard, index) => {
