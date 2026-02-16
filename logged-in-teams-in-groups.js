@@ -184,6 +184,9 @@ const AddTeamsGroupApp = (props) => {
     const [deleteGapModal, setDeleteGapModal] = useState(null);
     const [showCategoryPrefix, setShowCategoryPrefix] = useState(true);
     const [selectedGroupType, setSelectedGroupType] = useState('');
+    
+    // NOVÝ STAV: Sledovanie zápasov
+    const [matchesData, setMatchesData] = useState([]);
   
     const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
     if (!window.db || !categoryName || !groupName || gapPosition == null) return;
@@ -1782,11 +1785,28 @@ const NewTeamModal = ({
             }
             setAllGroupsByCategoryId(groupsByCategoryId);
         });
+        
+        // NOVÝ LISTENER: Sledovanie zápasov
+        const unsubscribeMatches = onSnapshot(collection(window.db, 'matches'), (snapshot) => {
+            const loadedMatches = [];
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                loadedMatches.push({
+                    id: doc.id,
+                    ...data
+                });
+            });
+            setMatchesData(loadedMatches);
+        }, (error) => {
+            console.error('Chyba pri načítaní zápasov:', error);
+        });
+        
         return () => {
             unsubscribeUsers();
             unsubscribeSuperstructure();
             unsubscribeCategories();
             unsubscribeGroups();
+            unsubscribeMatches();
         };
     }, []);
     useEffect(() => {
@@ -1860,6 +1880,16 @@ const NewTeamModal = ({
             default: return 'bg-white';
         }
     };
+    
+    // NOVÁ FUNKCIA: Kontrola, či už pre túto skupinu existujú zápasy
+    const hasMatchesInGroup = (categoryName, groupName) => {
+        if (!matchesData || matchesData.length === 0) return false;
+        return matchesData.some(match => 
+            match.categoryName === categoryName && 
+            match.groupName === groupName
+        );
+    };
+    
     const renderTeamList = (teamsToRender, targetGroupId, targetCategoryId, isWithoutGroup = false) => {
         // Pomocná funkcia na získanie "čistého" mena bez prefixu kategórie
         const getCleanDisplayName = (team) => {
@@ -1945,6 +1975,10 @@ const NewTeamModal = ({
         // ────────────────────────────────────────────────
         // Skupina → zoradíme podľa order + doplníme missing placeholder-y
         // ────────────────────────────────────────────────
+        
+        // NOVÁ KONTROLA: Existujú pre túto skupinu zápasy?
+        const categoryName = categoryIdToNameMap[targetCategoryId];
+        const groupHasMatches = categoryName && targetGroupId ? hasMatchesInGroup(categoryName, targetGroupId) : false;
    
         const sortedTeams = [...teamsToRender].sort((a, b) => {
             const oa = typeof a.order === 'number' ? a.order : Infinity;
@@ -1969,44 +2003,46 @@ const NewTeamModal = ({
             const hasDuplicate = teamsAtThisPosition.length > 1;
    
             if (teamsAtThisPosition.length === 0) {
-              // CHÝBAJÚCI tím → placeholder + kôš
-              items.push(
-                React.createElement(
-                  'li',
-                  {
-                    key: `missing-${targetGroupId || 'global'}-${pos}`,
-                    className: 'flex items-center justify-between px-4 py-3 rounded-lg border-2 border-dashed border-gray-400 bg-gray-50/60 italic text-gray-500 text-sm'
-                  },
-                  React.createElement(
-                    'div',
-                    { className: 'flex items-center space-x-3 flex-grow' },
+              // CHÝBAJÚCI tím → placeholder + kôš (len ak nie sú zápasy)
+              if (!groupHasMatches) {
+                  items.push(
                     React.createElement(
-                      'span',
-                      { className: 'text-center flex-grow' },
-                      `V skupine chýba tím s poradovým číslom ${pos}.`
-                    )
-                  ),
-                  React.createElement(
-                    'button',
-                    {
-                      onClick: () => {
-                        // otvoríme modálne okno na potvrdenie odstránenia diery
-                        setDeleteGapModal({
-                          categoryName: categoryIdToNameMap[targetCategoryId],
-                          groupName: targetGroupId,
-                          position: pos,
-                          open: true
-                        });
+                      'li',
+                      {
+                        key: `missing-${targetGroupId || 'global'}-${pos}`,
+                        className: 'flex items-center justify-between px-4 py-3 rounded-lg border-2 border-dashed border-gray-400 bg-gray-50/60 italic text-gray-500 text-sm'
                       },
-                      className: 'text-gray-500 hover:text-red-600 p-1.5 rounded-full hover:bg-red-50 transition-colors',
-                      title: 'Odstrániť voľné miesto (posunúť nasledujúce tímy)'
-                    },
-                    React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-                      React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
+                      React.createElement(
+                        'div',
+                        { className: 'flex items-center space-x-3 flex-grow' },
+                        React.createElement(
+                          'span',
+                          { className: 'text-center flex-grow' },
+                          `V skupine chýba tím s poradovým číslom ${pos}.`
+                        )
+                      ),
+                      React.createElement(
+                        'button',
+                        {
+                          onClick: () => {
+                            // otvoríme modálne okno na potvrdenie odstránenia diery
+                            setDeleteGapModal({
+                              categoryName: categoryIdToNameMap[targetCategoryId],
+                              groupName: targetGroupId,
+                              position: pos,
+                              open: true
+                            });
+                          },
+                          className: 'text-gray-500 hover:text-red-600 p-1.5 rounded-full hover:bg-red-50 transition-colors',
+                          title: 'Odstrániť voľné miesto (posunúť nasledujúce tímy)'
+                        },
+                        React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+                          React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
+                        )
+                      )
                     )
-                  )
-                )
-              );
+                  );
+              }
             } else {
                 // Jeden alebo viac tímov na tomto poradovom čísle
                 teamsAtThisPosition.forEach((team, teamIdx) => {
@@ -2028,26 +2064,42 @@ const NewTeamModal = ({
                             React.createElement(
                                 'div',
                                 { className: 'flex items-center space-x-1' },
+                                // UPRAVENÉ: Ceruzka - zakázaná ak už existujú zápasy v skupine
                                 React.createElement(
                                     'button',
                                     {
-                                        onClick: () => {
+                                        onClick: groupHasMatches ? undefined : () => {
                                             setTeamToEdit(team);
                                             setIsModalOpen(true);
                                         },
-                                        className: 'text-gray-500 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-colors',
-                                        title: 'Upraviť tím'
+                                        className: `p-1.5 rounded-full transition-colors ${
+                                            groupHasMatches 
+                                                ? 'text-gray-300 cursor-not-allowed' 
+                                                : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50'
+                                        }`,
+                                        title: groupHasMatches 
+                                            ? 'Pre túto skupinu už existujú zápasy, nie je možné upravovať tímy' 
+                                            : 'Upraviť tím',
+                                        disabled: groupHasMatches
                                     },
                                     React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
                                         React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
                                     )
                                 ),
+                                // UPRAVENÉ: Kôš - zakázaný ak už existujú zápasy v skupine
                                 React.createElement(
                                     'button',
                                     {
-                                        onClick: () => handleRemoveOrDeleteTeam(team),
-                                        className: 'text-gray-500 hover:text-red-600 p-1.5 rounded-full hover:bg-red-50 transition-colors',
-                                        title: team.isSuperstructureTeam ? 'Odstrániť tím' : 'Zrušiť zaradenie do skupiny'
+                                        onClick: groupHasMatches ? undefined : () => handleRemoveOrDeleteTeam(team),
+                                        className: `p-1.5 rounded-full transition-colors ${
+                                            groupHasMatches 
+                                                ? 'text-gray-300 cursor-not-allowed' 
+                                                : 'text-gray-500 hover:text-red-600 hover:bg-red-50'
+                                        }`,
+                                        title: groupHasMatches 
+                                            ? 'Pre túto skupinu už existujú zápasy, nie je možné odstrániť tím' 
+                                            : (team.isSuperstructureTeam ? 'Odstrániť tím' : 'Zrušiť zaradenie do skupiny'),
+                                        disabled: groupHasMatches
                                     },
                                     React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
                                         React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
@@ -2077,30 +2129,46 @@ const NewTeamModal = ({
                             { className: 'flex-grow text-orange-800' },
                             `${team.order}. ${displayName} (vyššie ako aktuálne maximum)`
                         ),
-                        // tlačidlá edit / delete (rovnaké ako vyššie)
+                        // tlačidlá edit / delete (rovnaké ako vyššie, s kontrolou zápasov)
                         React.createElement(
                             'div',
                             { className: 'flex items-center space-x-1' },
                             React.createElement(
                                 'div',
                                 { className: 'flex items-center space-x-1' },
+                                // UPRAVENÉ: Ceruzka - zakázaná ak už existujú zápasy v skupine
                                 React.createElement(
                                     'button',
                                     {
-                                        onClick: () => { setTeamToEdit(team); setIsModalOpen(true); },
-                                        className: 'text-gray-500 hover:text-indigo-600 p-1.5 rounded-full hover:bg-indigo-50 transition-colors',
-                                        title: 'Upraviť tím'
+                                        onClick: groupHasMatches ? undefined : () => { setTeamToEdit(team); setIsModalOpen(true); },
+                                        className: `p-1.5 rounded-full transition-colors ${
+                                            groupHasMatches 
+                                                ? 'text-gray-300 cursor-not-allowed' 
+                                                : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50'
+                                        }`,
+                                        title: groupHasMatches 
+                                            ? 'Pre túto skupinu už existujú zápasy, nie je možné upravovať tímy' 
+                                            : 'Upraviť tím',
+                                        disabled: groupHasMatches
                                     },
                                     React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
                                         React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
                                     )
                                 ),
+                                // UPRAVENÉ: Kôš - zakázaný ak už existujú zápasy v skupine
                                 React.createElement(
                                     'button',
                                     {
-                                        onClick: () => handleRemoveOrDeleteTeam(team),
-                                        className: 'text-gray-500 hover:text-red-600 p-1.5 rounded-full hover:bg-red-50 transition-colors',
-                                        title: team.isSuperstructureTeam ? 'Odstrániť tím' : 'Zrušiť zaradenie do skupiny'
+                                        onClick: groupHasMatches ? undefined : () => handleRemoveOrDeleteTeam(team),
+                                        className: `p-1.5 rounded-full transition-colors ${
+                                            groupHasMatches 
+                                                ? 'text-gray-300 cursor-not-allowed' 
+                                                : 'text-gray-500 hover:text-red-600 hover:bg-red-50'
+                                        }`,
+                                        title: groupHasMatches 
+                                            ? 'Pre túto skupinu už existujú zápasy, nie je možné odstrániť tím' 
+                                            : (team.isSuperstructureTeam ? 'Odstrániť tím' : 'Zrušiť zaradenie do skupiny'),
+                                        disabled: groupHasMatches
                                     },
                                     React.createElement('svg', { className: 'w-5 h-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
                                         React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' })
