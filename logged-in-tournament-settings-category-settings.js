@@ -1152,9 +1152,9 @@ export function CategorySettings({
                                             'Toto nastavenie nie je možné meniť, pretože pre túto kategóriu už existujú zápasy.'
                                         )
                                     ),
-
-                                    // Farba pre rozlosovanie
-                                    hasMatches && React.createElement(
+                                    
+                                    // Farba pre rozlosovanie - ZABLOKOVANÁ ak existujú zápasy
+                                    React.createElement(
                                         'div',
                                         { className: 'space-y-1' },
                                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
@@ -1167,14 +1167,26 @@ export function CategorySettings({
                                                 type: 'color',
                                                 value: editedDrawColor[selectedCategory.id] ?? selectedCategory.drawColor,
                                                 onChange: e => handleDrawColorChange(selectedCategory.id, e.target.value),
-                                                className: 'w-12 h-10 border border-gray-300 rounded-lg cursor-pointer'
+                                                disabled: hasMatches,
+                                                className: `w-12 h-10 border border-gray-300 rounded-lg cursor-pointer ${
+                                                    hasMatches ? 'opacity-75 cursor-not-allowed' : ''
+                                                }`
                                             }),
                                             React.createElement('input', {
                                                 type: 'text',
                                                 value: editedDrawColor[selectedCategory.id] ?? selectedCategory.drawColor,
                                                 onChange: e => handleDrawColorChange(selectedCategory.id, e.target.value),
-                                                className: 'flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black font-mono'
+                                                disabled: hasMatches,
+                                                className: `flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black font-mono ${
+                                                    hasMatches ? 'bg-gray-100 cursor-not-allowed opacity-75' : ''
+                                                }`
                                             })
+                                        ),
+                                        hasMatches && React.createElement(
+                                            'p',
+                                            { className: 'text-xs text-orange-600 mt-1 flex items-center gap-1' },
+                                            React.createElement('i', { className: 'fa-solid fa-lock' }),
+                                            'Farbu pre rozlosovanie nie je možné meniť, pretože pre túto kategóriu už existujú zápasy.'
                                         )
                                     ),
 
