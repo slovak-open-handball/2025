@@ -4688,35 +4688,87 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             className: 'bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow relative group cursor-pointer',
                                             onClick: () => handleMatchCardClick(match)
                                         },
-                                        // Tlačidlo pre zmazanie (zobrazí sa pri hoveri)
+                                        // Admin tlačidlá (zobrazia sa pri hover)
                                         userProfileData?.role === 'admin' && React.createElement(
                                             'div',
-                                            { className: 'absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity' },
-                                            // Ikona pre výmenu tímov
+                                            { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/match:opacity-100 transition-opacity' },
+                                            // Tlačidlo pre medzeru PRED zápasom
                                             React.createElement(
                                                 'button',
                                                 {
+                                                    className: 'w-6 h-6 bg-purple-500 hover:bg-purple-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                    onClick: (e) => {
+                                                        e.stopPropagation();
+                                                        // Tu by bola logika pre medzeru pred zápasom
+                                                        window.showGlobalNotification('Funkcia pre medzeru pred zápasom sa pripravuje', 'info');
+                                                    },
+                                                    title: 'Vytvoriť medzeru PRED zápasom'
+                                                },
+                                                React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
+                                            ),
+                                            // Tlačidlo pre výmenu tímov
+                                            React.createElement(
+                                                'button',
+                                                {
+                                                    className: 'w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
                                                     onClick: (e) => {
                                                         e.stopPropagation();
                                                         handleSwapClick(match);
                                                     },
-                                                    className: 'w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md',
                                                     title: 'Vymeniť domáci a hosťovský tím'
                                                 },
-                                                React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-sm' })
+                                                React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-xs' })
                                             ),
-                                            // Ikona pre zmazanie
+                                            // Tlačidlo pre medzeru ZA zápasom
                                             React.createElement(
                                                 'button',
                                                 {
+                                                    className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
                                                     onClick: (e) => {
                                                         e.stopPropagation();
-                                                        handleDeleteClick(match);
+                                                        // Vypočítame koniec aktuálneho zápasu
+                                                        const currentStartTime = match.scheduledTime.toDate();
+                                                        const currentStartMinutes = currentStartTime.getHours() * 60 + currentStartTime.getMinutes();
+                                                        
+                                                        const currentCategory = categories.find(c => c.name === match.categoryName);
+                                                        let currentDuration = 0;
+                                                        let currentMatchBreak = 5;
+                                                        
+                                                        if (currentCategory) {
+                                                            const periods = currentCategory.periods || 2;
+                                                            const periodDuration = currentCategory.periodDuration || 20;
+                                                            const breakDuration = currentCategory.breakDuration || 2;
+                                                            currentDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                                                            currentMatchBreak = currentCategory.matchBreak || 5;
+                                                        }
+                                                        
+                                                        const currentEndMinutes = currentStartMinutes + currentDuration + currentMatchBreak;
+                                                        
+                                                        // Otvoríme modál pre vytvorenie medzery
+                                                        setGapTime('00:30');
+                                                        setShowGapCreator({
+                                                            hallId: hall.id,
+                                                            dateStr: dateStr,
+                                                            afterMatchId: match.id,
+                                                            afterMatchEndMinutes: currentEndMinutes
+                                                        });
                                                     },
-                                                    className: 'w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md',
-                                                    title: 'Zmazať zápas'
+                                                    title: 'Vytvoriť medzeru ZA zápasom'
                                                 },
-                                                React.createElement('i', { className: 'fa-solid fa-trash-can text-sm' })
+                                                React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
+                                            ),
+                                            // Tlačidlo pre odstránenie priradenia
+                                            React.createElement(
+                                                'button',
+                                                {
+                                                    className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                    onClick: (e) => {
+                                                        e.stopPropagation();
+                                                        handleUnassignMatch(match);
+                                                    },
+                                                    title: 'Odstrániť priradenie (miesto a čas)'
+                                                },
+                                                React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
                                             )
                                         ),
                                         React.createElement(
