@@ -3092,7 +3092,10 @@ const AddMatchesApp = ({ userProfileData }) => {
             const shiftMinutes = newTimeMinutes - currentTimeMinutes;
     
             if (position === 'before') {
-                // Medzera PRED zápasom - posúvame aktuálny zápas a všetky nasledujúce
+                // Medzera PRED zápasom - posúvame aktuálny zápas A VŠETKY NASLEDUJÚCE
+                console.log(`Pridávam medzeru PRED zápasom. Posúvam aktuálny a ${afterMatches.length} nasledujúcich zápasov o ${shiftMinutes} minút.`);
+                
+                // 1. Posunieme aktuálny zápas
                 const matchRef = doc(window.db, 'matches', matchId);
                 const newDateTime = new Date(matchDate);
                 newDateTime.setMinutes(newDateTime.getMinutes() + shiftMinutes);
@@ -3100,8 +3103,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                 await updateDoc(matchRef, {
                     scheduledTime: Timestamp.fromDate(newDateTime)
                 });
+                console.log(`Aktuálny zápas ${matchId} posunutý na ${newDateTime.toLocaleTimeString()}`);
     
-                // Posunieme všetky nasledujúce zápasy
+                // 2. Posunieme všetky nasledujúce zápasy
                 for (const m of afterMatches) {
                     const mRef = doc(window.db, 'matches', m.id);
                     const mDateTime = new Date(m.scheduledTimeObj);
@@ -3110,15 +3114,19 @@ const AddMatchesApp = ({ userProfileData }) => {
                     await updateDoc(mRef, {
                         scheduledTime: Timestamp.fromDate(mDateTime)
                     });
+                    console.log(`Nasledujúci zápas ${m.id} posunutý na ${mDateTime.toLocaleTimeString()}`);
                 }
     
                 window.showGlobalNotification(
-                    `Pridaná ${duration} minútová medzera pred zápasom. Aktuálny a nasledujúce zápasy boli posunuté.`,
+                    `Pridaná ${duration} minútová medzera pred zápasom. Aktuálny a ${afterMatches.length} nasledujúcich zápasov bolo posunutých.`,
                     'success'
                 );
     
             } else {
-                // Medzera ZA zápasom - posúvame LEN nasledujúce zápasy (aktuálny zostáva)
+                // Medzera ZA zápasom - posúvame LEN NASLEDUJÚCE zápasy (aktuálny zostáva)
+                console.log(`Pridávam medzeru ZA zápasom. Posúvam ${afterMatches.length} nasledujúcich zápasov o ${shiftMinutes} minút.`);
+                
+                // Posunieme LEN nasledujúce zápasy (aktuálny zostáva na svojom mieste)
                 for (const m of afterMatches) {
                     const mRef = doc(window.db, 'matches', m.id);
                     const mDateTime = new Date(m.scheduledTimeObj);
@@ -3127,10 +3135,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                     await updateDoc(mRef, {
                         scheduledTime: Timestamp.fromDate(mDateTime)
                     });
+                    console.log(`Nasledujúci zápas ${m.id} posunutý na ${mDateTime.toLocaleTimeString()}`);
                 }
     
                 window.showGlobalNotification(
-                    `Pridaná ${duration} minútová medzera za zápasom. Nasledujúce zápasy boli posunuté.`,
+                    `Pridaná ${duration} minútová medzera za zápasom. ${afterMatches.length} nasledujúcich zápasov bolo posunutých.`,
                     'success'
                 );
             }
