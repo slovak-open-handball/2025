@@ -5254,330 +5254,342 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                             )
                                                         ),
                                                     
-                                                    // Zoznam zápasov pre tento deň (alebo prázdny placeholder)
-                                                    !isEmpty ? React.createElement(
-                                                        'div',
-                                                        { 
-                                                            className: 'space-y-1 text-xs',
-                                                            style: { 
-                                                                width: 'fit-content' // Prispôsobí sa najširšiemu zápasu
-                                                            }
-                                                        },
-                                                        hallMatches
-                                                            .sort((a, b) => {
-                                                                if (!a.scheduledTime) return 1;
-                                                                if (!b.scheduledTime) return -1;
-                                                                try {
-                                                                    const timeA = a.scheduledTime.toDate().getTime();
-                                                                    const timeB = b.scheduledTime.toDate().getTime();
-                                                                    return timeA - timeB;
-                                                                } catch (e) {
-                                                                    return 0;
+                                                        // Zoznam zápasov pre tento deň (alebo prázdny placeholder)
+                                                        !isEmpty ? React.createElement(
+                                                            'div',
+                                                            { 
+                                                                className: 'space-y-1 text-xs',
+                                                                style: { 
+                                                                    width: 'fit-content' // Prispôsobí sa najširšiemu zápasu
                                                                 }
-                                                            })
-                                                            .map((match, idx, sortedArray) => {
-                                                                let matchTime = '--:--';
-                                                                let endTime = '--:--';
-                                                                let matchEndMinutes = 0;
-                                                                
-                                                                if (match.scheduledTime) {
+                                                            },
+                                                            hallMatches
+                                                                .sort((a, b) => {
+                                                                    if (!a.scheduledTime) return 1;
+                                                                    if (!b.scheduledTime) return -1;
                                                                     try {
-                                                                        const date = match.scheduledTime.toDate();
-                                                                        matchTime = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-                                                                        
-                                                                        // Výpočet času konca zápasu (vrátane prestávky)
-                                                                        const matchCategory = categories.find(c => c.name === match.categoryName);
-                                                                        let matchDuration = 0;
-                                                                        let matchBreak = 5;
-                                                                        
-                                                                        if (matchCategory) {
-                                                                            const periods = matchCategory.periods || 2;
-                                                                            const periodDuration = matchCategory.periodDuration || 20;
-                                                                            const breakDuration = matchCategory.breakDuration || 2;
-                                                                            matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                                                                            matchBreak = matchCategory.matchBreak || 5;
-                                                                        }
-                                                                        
-                                                                        const endDateTime = new Date(date.getTime() + matchDuration * 60000);
-                                                                        endTime = `${endDateTime.getHours().toString().padStart(2, '0')}:${endDateTime.getMinutes().toString().padStart(2, '0')}`;
-                                                                        
-                                                                        matchEndMinutes = endDateTime.getHours() * 60 + endDateTime.getMinutes();
-                                                                        
+                                                                        const timeA = a.scheduledTime.toDate().getTime();
+                                                                        const timeB = b.scheduledTime.toDate().getTime();
+                                                                        return timeA - timeB;
                                                                     } catch (e) {
-                                                                        console.error('Chyba pri formátovaní času:', e);
+                                                                        return 0;
                                                                     }
-                                                                }
-                                                                
-                                                                const homeDisplay = getTeamDisplayText(match.homeTeamIdentifier);
-                                                                const awayDisplay = getTeamDisplayText(match.awayTeamIdentifier);
-                                                                
-                                                                const matchGroup = match.groupName;
-                                                                const alignment = groupAlignmentMap[matchGroup] || 'center';
-                                                                const alignmentStyle = alignmentStyles[alignment] || { textAlign: 'center' };
-                                                                
-                                                                // Výpočet medzery medzi zápasmi
-                                                                let breakBetweenMatches = null;
-                                                                if (idx < sortedArray.length - 1) {
-                                                                    const nextMatch = sortedArray[idx + 1];
-                                                                    if (nextMatch.scheduledTime) {
+                                                                })
+                                                                .map((match, idx, sortedArray) => {
+                                                                    let matchTime = '--:--';
+                                                                    let endTime = '--:--';
+                                                                    let matchEndMinutes = 0;
+                                                                    
+                                                                    if (match.scheduledTime) {
                                                                         try {
-                                                                            const nextDate = nextMatch.scheduledTime.toDate();
-                                                                            const nextStartMinutes = nextDate.getHours() * 60 + nextDate.getMinutes();
+                                                                            const date = match.scheduledTime.toDate();
+                                                                            matchTime = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
                                                                             
-                                                                            // Výpočet konca aktuálneho zápasu VRÁTANE PRESTÁVKY
-                                                                            const currentCategory = categories.find(c => c.name === match.categoryName);
-                                                                            let currentDuration = 0;
-                                                                            let currentBreak = 5;
+                                                                            // Výpočet času konca zápasu (vrátane prestávky)
+                                                                            const matchCategory = categories.find(c => c.name === match.categoryName);
+                                                                            let matchDuration = 0;
+                                                                            let matchBreak = 5;
                                                                             
-                                                                            if (currentCategory) {
-                                                                                const periods = currentCategory.periods || 2;
-                                                                                const periodDuration = currentCategory.periodDuration || 20;
-                                                                                const breakDuration = currentCategory.breakDuration || 2;
-                                                                                currentDuration = (periodDuration + breakDuration) * periods - breakDuration;
-                                                                                currentBreak = currentCategory.matchBreak || 5;
+                                                                            if (matchCategory) {
+                                                                                const periods = matchCategory.periods || 2;
+                                                                                const periodDuration = matchCategory.periodDuration || 20;
+                                                                                const breakDuration = matchCategory.breakDuration || 2;
+                                                                                matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                                                                                matchBreak = matchCategory.matchBreak || 5;
                                                                             }
                                                                             
-                                                                            const currentEndWithBreakMinutes = matchEndMinutes + currentBreak;
+                                                                            const endDateTime = new Date(date.getTime() + matchDuration * 60000);
+                                                                            endTime = `${endDateTime.getHours().toString().padStart(2, '0')}:${endDateTime.getMinutes().toString().padStart(2, '0')}`;
                                                                             
-                                                                            // Vypočítame medzeru v minútach
-                                                                            const gapMinutes = nextStartMinutes - currentEndWithBreakMinutes;
+                                                                            matchEndMinutes = endDateTime.getHours() * 60 + endDateTime.getMinutes();
                                                                             
-                                                                            if (gapMinutes > 0) {
-                                                                                breakBetweenMatches = gapMinutes;
-                                                                            }
                                                                         } catch (e) {
-                                                                            console.error('Chyba pri výpočte medzery:', e);
+                                                                            console.error('Chyba pri formátovaní času:', e);
                                                                         }
                                                                     }
-                                                                }
-                                                                
-                                                                return React.createElement(
-                                                                    React.Fragment,
-                                                                    { key: idx },
-                                                                    // Zápas
-                                                                    React.createElement(
-                                                                        'div',
-                                                                        {
-                                                                            className: `p-2 rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match ${
-                                                                                colorHighlight ? '' : 'bg-white'
-                                                                            }`,
-                                                                            style: { 
-                                                                                width: 'fit-content',
-                                                                                backgroundColor: colorHighlight && match.categoryName ? 
-                                                                                    (categories.find(c => c.name === match.categoryName)?.drawColor || 'white') 
-                                                                                    : 'white'
+                                                                    
+                                                                    const homeDisplay = getTeamDisplayText(match.homeTeamIdentifier);
+                                                                    const awayDisplay = getTeamDisplayText(match.awayTeamIdentifier);
+                                                                    
+                                                                    const matchGroup = match.groupName;
+                                                                    const alignment = groupAlignmentMap[matchGroup] || 'center';
+                                                                    const alignmentStyle = alignmentStyles[alignment] || { textAlign: 'center' };
+                                                                    
+                                                                    // Výpočet medzery medzi zápasmi
+                                                                    let breakBetweenMatches = null;
+                                                                    let breakStartTime = null;
+                                                                    let breakEndTime = null;
+                                                                    
+                                                                    if (idx < sortedArray.length - 1) {
+                                                                        const nextMatch = sortedArray[idx + 1];
+                                                                        if (nextMatch.scheduledTime) {
+                                                                            try {
+                                                                                const nextDate = nextMatch.scheduledTime.toDate();
+                                                                                const nextStartMinutes = nextDate.getHours() * 60 + nextDate.getMinutes();
+                                                                                
+                                                                                // Výpočet konca aktuálneho zápasu VRÁTANE PRESTÁVKY
+                                                                                const currentCategory = categories.find(c => c.name === match.categoryName);
+                                                                                let currentDuration = 0;
+                                                                                let currentBreak = 5;
+                                                                                
+                                                                                if (currentCategory) {
+                                                                                    const periods = currentCategory.periods || 2;
+                                                                                    const periodDuration = currentCategory.periodDuration || 20;
+                                                                                    const breakDuration = currentCategory.breakDuration || 2;
+                                                                                    currentDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                                                                                    currentBreak = currentCategory.matchBreak || 5;
+                                                                                }
+                                                                                
+                                                                                const currentEndWithBreakMinutes = matchEndMinutes + currentBreak;
+                                                                                
+                                                                                // Vypočítame medzeru v minútach
+                                                                                const gapMinutes = nextStartMinutes - currentEndWithBreakMinutes;
+                                                                                
+                                                                                if (gapMinutes > 0) {
+                                                                                    breakBetweenMatches = gapMinutes;
+                                                                                    
+                                                                                    // Vypočítame čas začiatku a konca medzery
+                                                                                    const breakStartHours = Math.floor(currentEndWithBreakMinutes / 60).toString().padStart(2, '0');
+                                                                                    const breakStartMins = (currentEndWithBreakMinutes % 60).toString().padStart(2, '0');
+                                                                                    breakStartTime = `${breakStartHours}:${breakStartMins}`;
+                                                                                    
+                                                                                    const breakEndHours = Math.floor(nextStartMinutes / 60).toString().padStart(2, '0');
+                                                                                    const breakEndMins = (nextStartMinutes % 60).toString().padStart(2, '0');
+                                                                                    breakEndTime = `${breakEndHours}:${breakEndMins}`;
+                                                                                }
+                                                                            } catch (e) {
+                                                                                console.error('Chyba pri výpočte medzery:', e);
                                                                             }
-                                                                        },
+                                                                        }
+                                                                    }
+                                                                    
+                                                                    return React.createElement(
+                                                                        React.Fragment,
+                                                                        { key: idx },
+                                                                        // Zápas
                                                                         React.createElement(
                                                                             'div',
-                                                                            { 
-                                                                                className: 'flex items-center gap-2 text-xs cursor-pointer',
-                                                                                onClick: (e) => {
-                                                                                    e.stopPropagation();
-                                                                                    handleMatchCardClick(match);
-                                                                                },
-                                                                                title: `Kliknite pre úpravu zápasu`,
+                                                                            {
+                                                                                className: `p-2 rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match ${
+                                                                                    colorHighlight ? '' : 'bg-white'
+                                                                                }`,
                                                                                 style: { 
-                                                                                    display: 'flex',
-                                                                                    flexWrap: 'nowrap',
-                                                                                    width: 'fit-content'
+                                                                                    width: 'fit-content',
+                                                                                    backgroundColor: colorHighlight && match.categoryName ? 
+                                                                                        (categories.find(c => c.name === match.categoryName)?.drawColor || 'white') 
+                                                                                        : 'white'
                                                                                 }
                                                                             },
-                                                                            // Časový údaj - fixná šírka
-                                                                            React.createElement(
-                                                                                'div',
-                                                                                { className: 'flex items-center gap-1 whitespace-nowrap w-28 flex-shrink-0' },
-                                                                                React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs flex-shrink-0' }),
-                                                                                React.createElement('span', { className: 'font-medium text-blue-700' }, `${matchTime} - ${endTime}`)
-                                                                            ),
-                                                                            
-                                                                            // Domáci tím - minimálna šírka
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
-                                                                                    className: `font-medium text-gray-800 whitespace-nowrap min-w-[160px] flex-shrink-0`,
-                                                                                    style: alignmentStyle
+                                                                                    className: 'flex items-center gap-2 text-xs cursor-pointer',
+                                                                                    onClick: (e) => {
+                                                                                        e.stopPropagation();
+                                                                                        handleMatchCardClick(match);
+                                                                                    },
+                                                                                    title: `Kliknite pre úpravu zápasu`,
+                                                                                    style: { 
+                                                                                        display: 'flex',
+                                                                                        flexWrap: 'nowrap',
+                                                                                        width: 'fit-content'
+                                                                                    }
                                                                                 },
-                                                                                displayMode === 'both' ? homeDisplay.name : homeDisplay
+                                                                                // Časový údaj - fixná šírka
+                                                                                React.createElement(
+                                                                                    'div',
+                                                                                    { className: 'flex items-center gap-1 whitespace-nowrap w-28 flex-shrink-0' },
+                                                                                    React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs flex-shrink-0' }),
+                                                                                    React.createElement('span', { className: 'font-medium text-blue-700' }, `${matchTime} - ${endTime}`)
+                                                                                ),
+                                                                                
+                                                                                // Domáci tím - minimálna šírka
+                                                                                React.createElement(
+                                                                                    'div',
+                                                                                    { 
+                                                                                        className: `font-medium text-gray-800 whitespace-nowrap min-w-[160px] flex-shrink-0`,
+                                                                                        style: alignmentStyle
+                                                                                    },
+                                                                                    displayMode === 'both' ? homeDisplay.name : homeDisplay
+                                                                                ),
+                                                                                
+                                                                                // VS ikona - fixná šírka
+                                                                                React.createElement(
+                                                                                    'div',
+                                                                                    { className: 'text-gray-400 w-8 text-center flex-shrink-0' },
+                                                                                    ''
+                                                                                ),
+                                                                                
+                                                                                // Hosťovský tím - minimálna šírka
+                                                                                React.createElement(
+                                                                                    'div',
+                                                                                    { 
+                                                                                        className: `font-medium text-gray-800 whitespace-nowrap min-w-[160px] flex-shrink-0`,
+                                                                                        style: alignmentStyle
+                                                                                    },
+                                                                                    displayMode === 'both' ? awayDisplay.name : awayDisplay
+                                                                                ),
+                                                                                
+                                                                                // ID domáceho tímu (ak je režim both)
+                                                                                displayMode === 'both' && React.createElement(
+                                                                                    'div',
+                                                                                    { 
+                                                                                        className: `text-gray-500 font-mono text-[10px] whitespace-nowrap w-24 flex-shrink-0`,
+                                                                                        style: alignmentStyle
+                                                                                    },
+                                                                                    `(${homeDisplay.id})`
+                                                                                ),
+                                                                                
+                                                                                // ID hosťovského tímu (ak je režim both)
+                                                                                displayMode === 'both' && React.createElement(
+                                                                                    'div',
+                                                                                    { 
+                                                                                        className: `text-gray-500 font-mono text-[10px] whitespace-nowrap w-24 flex-shrink-0`,
+                                                                                        style: alignmentStyle
+                                                                                    },
+                                                                                    `(${awayDisplay.id})`
+                                                                                ),
+                                                                                
+                                                                                // Prázdny div pre zarovnanie, ak nie je režim both
+                                                                                displayMode !== 'both' && React.createElement('div', { className: 'w-24 flex-shrink-0' })
                                                                             ),
                                                                             
-                                                                            // VS ikona - fixná šírka
-                                                                            React.createElement(
+                                                                            userProfileData?.role === 'admin' && React.createElement(
                                                                                 'div',
-                                                                                { className: 'text-gray-400 w-8 text-center flex-shrink-0' },
-                                                                                ''
-                                                                            ),
-                                                                            
-                                                                            // Hosťovský tím - minimálna šírka
-                                                                            React.createElement(
-                                                                                'div',
-                                                                                { 
-                                                                                    className: `font-medium text-gray-800 whitespace-nowrap min-w-[160px] flex-shrink-0`,
-                                                                                    style: alignmentStyle
-                                                                                },
-                                                                                displayMode === 'both' ? awayDisplay.name : awayDisplay
-                                                                            ),
-                                                                            
-                                                                            // ID domáceho tímu (ak je režim both)
-                                                                            displayMode === 'both' && React.createElement(
-                                                                                'div',
-                                                                                { 
-                                                                                    className: `text-gray-500 font-mono text-[10px] whitespace-nowrap w-24 flex-shrink-0`,
-                                                                                    style: alignmentStyle
-                                                                                },
-                                                                                `(${homeDisplay.id})`
-                                                                            ),
-                                                                            
-                                                                            // ID hosťovského tímu (ak je režim both)
-                                                                            displayMode === 'both' && React.createElement(
-                                                                                'div',
-                                                                                { 
-                                                                                    className: `text-gray-500 font-mono text-[10px] whitespace-nowrap w-24 flex-shrink-0`,
-                                                                                    style: alignmentStyle
-                                                                                },
-                                                                                `(${awayDisplay.id})`
-                                                                            ),
-                                                                            
-                                                                            // Prázdny div pre zarovnanie, ak nie je režim both
-                                                                            displayMode !== 'both' && React.createElement('div', { className: 'w-24 flex-shrink-0' })
+                                                                                { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/match:opacity-100 transition-opacity' },
+                                                                                // Nové zelené tlačidlo pre pridanie medzery
+                                                                                React.createElement(
+                                                                                    'button',
+                                                                                    {
+                                                                                        className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                        onClick: (e) => {
+                                                                                            e.stopPropagation();
+                                                                                            setSelectedMatchForBreak(match);
+                                                                                            setSelectedMatchCurrentTime(matchTime);
+                                                                                            setIsBreakModalOpen(true);
+                                                                                        },
+                                                                                        title: 'Pridať medzeru pred/za zápas'
+                                                                                    },
+                                                                                    React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
+                                                                                ),
+                                                                                // Modré tlačidlo pre výmenu
+                                                                                React.createElement(
+                                                                                    'button',
+                                                                                    {
+                                                                                        className: 'w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                        onClick: (e) => {
+                                                                                            e.stopPropagation();
+                                                                                            handleSwapClick(match);
+                                                                                        },
+                                                                                        title: 'Vymeniť domáci a hosťovský tím'
+                                                                                    },
+                                                                                    React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-xs' })
+                                                                                ),
+                                                                                // Červené tlačidlo pre odstránenie priradenia
+                                                                                React.createElement(
+                                                                                    'button',
+                                                                                    {
+                                                                                        className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                        onClick: (e) => {
+                                                                                            e.stopPropagation();
+                                                                                            handleUnassignMatch(match);
+                                                                                        },
+                                                                                        title: 'Odstrániť priradenie (miesto a čas)'
+                                                                                    },
+                                                                                    React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                                                                )
+                                                                            )
                                                                         ),
-                                                                        
-                                                                        userProfileData?.role === 'admin' && React.createElement(
+                                                                        // Informačný riadok o medzere (ak existuje) - zobrazený ako samostatný "zápas"
+                                                                        breakBetweenMatches !== null && React.createElement(
                                                                             'div',
-                                                                            { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/match:opacity-100 transition-opacity' },
-                                                                            // Nové zelené tlačidlo pre pridanie medzery
+                                                                            {
+                                                                                className: `p-2 rounded border border-dashed border-green-300 bg-green-50 transition-all`,
+                                                                                style: { 
+                                                                                    width: 'fit-content',
+                                                                                }
+                                                                            },
                                                                             React.createElement(
-                                                                                'button',
-                                                                                {
-                                                                                    className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                                                    onClick: (e) => {
-                                                                                        e.stopPropagation();
-                                                                                        setSelectedMatchForBreak(match);
-                                                                                        setSelectedMatchCurrentTime(matchTime);
-                                                                                        setIsBreakModalOpen(true);
-                                                                                    },
-                                                                                    title: 'Pridať medzeru pred/za zápas'
+                                                                                'div',
+                                                                                { 
+                                                                                    className: 'flex items-center gap-2 text-xs',
+                                                                                    style: { 
+                                                                                        display: 'flex',
+                                                                                        flexWrap: 'nowrap',
+                                                                                        width: 'fit-content'
+                                                                                    }
                                                                                 },
-                                                                                React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
-                                                                            ),
-                                                                            // Modré tlačidlo pre výmenu
-                                                                            React.createElement(
-                                                                                'button',
-                                                                                {
-                                                                                    className: 'w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                                                    onClick: (e) => {
-                                                                                        e.stopPropagation();
-                                                                                        handleSwapClick(match);
+                                                                                // Časový údaj medzery - rovnaká šírka ako pri zápase, ale sivý
+                                                                                React.createElement(
+                                                                                    'div',
+                                                                                    { className: 'flex items-center gap-1 whitespace-nowrap w-28 flex-shrink-0 text-gray-500' },
+                                                                                    React.createElement('i', { className: 'fa-solid fa-clock text-gray-400 text-xs flex-shrink-0' }),
+                                                                                    React.createElement('span', { className: 'font-medium' }, `${breakStartTime} - ${breakEndTime}`)
+                                                                                ),
+                                                                                
+                                                                                // Dĺžka medzery - zaberá rovnakú šírku ako tímy
+                                                                                React.createElement(
+                                                                                    'div',
+                                                                                    { 
+                                                                                        className: `text-green-700 font-medium whitespace-nowrap min-w-[160px] flex-shrink-0`,
+                                                                                        style: alignmentStyle
                                                                                     },
-                                                                                    title: 'Vymeniť domáci a hosťovský tím'
-                                                                                },
-                                                                                React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-xs' })
-                                                                            ),
-                                                                            // Červené tlačidlo pre odstránenie priradenia
-                                                                            React.createElement(
-                                                                                'button',
-                                                                                {
-                                                                                    className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                                                    onClick: (e) => {
-                                                                                        e.stopPropagation();
-                                                                                        handleUnassignMatch(match);
+                                                                                    `${breakBetweenMatches} minút`
+                                                                                ),
+                                                                                
+                                                                                // Prázdne miesto pre VS ikonu
+                                                                                React.createElement(
+                                                                                    'div',
+                                                                                    { className: 'w-8 flex-shrink-0' },
+                                                                                    ''
+                                                                                ),
+                                                                                
+                                                                                // Text "voľný čas" - zaberá rovnakú šírku ako hosťovský tím
+                                                                                React.createElement(
+                                                                                    'div',
+                                                                                    { 
+                                                                                        className: `text-green-600 whitespace-nowrap min-w-[160px] flex-shrink-0`,
+                                                                                        style: alignmentStyle
                                                                                     },
-                                                                                    title: 'Odstrániť priradenie (miesto a čas)'
-                                                                                },
-                                                                                React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                                                                    'voľný čas'
+                                                                                ),
+                                                                                
+                                                                                // Prázdne miesta pre ID (ak je režim both)
+                                                                                displayMode === 'both' && React.createElement(
+                                                                                    'div',
+                                                                                    { 
+                                                                                        className: `text-gray-400 font-mono text-[10px] whitespace-nowrap w-24 flex-shrink-0`,
+                                                                                        style: alignmentStyle
+                                                                                    },
+                                                                                    ''
+                                                                                ),
+                                                                                
+                                                                                displayMode === 'both' && React.createElement(
+                                                                                    'div',
+                                                                                    { 
+                                                                                        className: `text-gray-400 font-mono text-[10px] whitespace-nowrap w-24 flex-shrink-0`,
+                                                                                        style: alignmentStyle
+                                                                                    },
+                                                                                    ''
+                                                                                ),
+                                                                                
+                                                                                // Prázdny div pre zarovnanie, ak nie je režim both
+                                                                                displayMode !== 'both' && React.createElement('div', { className: 'w-24 flex-shrink-0' })
                                                                             )
                                                                         )
-                                                                    ),
-                                                                    // Informačný riadok o medzere (ak existuje) - zobrazený ako samostatný "zápas"
-                                                                    breakBetweenMatches !== null && React.createElement(
-                                                                        'div',
-                                                                        {
-                                                                            className: `p-2 rounded border border-dashed border-green-300 bg-green-50 transition-all`,
-                                                                            style: { 
-                                                                                width: 'fit-content',
-                                                                            }
-                                                                        },
-                                                                        React.createElement(
-                                                                            'div',
-                                                                            { 
-                                                                                className: 'flex items-center gap-2 text-xs',
-                                                                                style: { 
-                                                                                    display: 'flex',
-                                                                                    flexWrap: 'nowrap',
-                                                                                    width: 'fit-content'
-                                                                                }
-                                                                            },
-                                                                            // Časový údaj - rovnaká šírka ako pri zápase, ale sivý
-                                                                            React.createElement(
-                                                                                'div',
-                                                                                { className: 'flex items-center gap-1 whitespace-nowrap w-28 flex-shrink-0 text-gray-500' },
-                                                                                React.createElement('i', { className: 'fa-solid fa-clock text-gray-400 text-xs flex-shrink-0' }),
-                                                                                React.createElement('span', { className: 'font-medium' }, '⟳ voľno')
-                                                                            ),
-                                                                            
-                                                                            // Medzera - zaberá rovnakú šírku ako tímy
-                                                                            React.createElement(
-                                                                                'div',
-                                                                                { 
-                                                                                    className: `text-green-700 font-medium whitespace-nowrap min-w-[160px] flex-shrink-0`,
-                                                                                    style: alignmentStyle
-                                                                                },
-                                                                                `${breakBetweenMatches} minút`
-                                                                            ),
-                                                                            
-                                                                            // Prázdne miesto pre VS ikonu
-                                                                            React.createElement(
-                                                                                'div',
-                                                                                { className: 'w-8 flex-shrink-0' },
-                                                                                ''
-                                                                            ),
-                                                                            
-                                                                            // Text "medzera" - zaberá rovnakú šírku ako hosťovský tím
-                                                                            React.createElement(
-                                                                                'div',
-                                                                                { 
-                                                                                    className: `text-green-600 whitespace-nowrap min-w-[160px] flex-shrink-0`,
-                                                                                    style: alignmentStyle
-                                                                                },
-                                                                                'voľný čas'
-                                                                            ),
-                                                                            
-                                                                            // Prázdne miesta pre ID (ak je režim both)
-                                                                            displayMode === 'both' && React.createElement(
-                                                                                'div',
-                                                                                { 
-                                                                                    className: `text-gray-400 font-mono text-[10px] whitespace-nowrap w-24 flex-shrink-0`,
-                                                                                    style: alignmentStyle
-                                                                                },
-                                                                                ''
-                                                                            ),
-                                                                            
-                                                                            displayMode === 'both' && React.createElement(
-                                                                                'div',
-                                                                                { 
-                                                                                    className: `text-gray-400 font-mono text-[10px] whitespace-nowrap w-24 flex-shrink-0`,
-                                                                                    style: alignmentStyle
-                                                                                },
-                                                                                ''
-                                                                            ),
-                                                                            
-                                                                            // Prázdny div pre zarovnanie, ak nie je režim both
-                                                                            displayMode !== 'both' && React.createElement('div', { className: 'w-24 flex-shrink-0' })
-                                                                        )
-                                                                    )
-                                                                );
-                                                            })
-                                                    ) : React.createElement(
-                                                        'div',
-                                                        {
-                                                            className: 'w-full py-2 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-1 whitespace-nowrap',
-                                                            style: { 
-                                                                minWidth: '500px' // Minimálna šírka pre prázdny deň
-                                                            }
-                                                        },
-                                                        React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-xs flex-shrink-0' }),
-                                                        React.createElement('span', null, 'Žiadne zápasy')
-                                                    )
+                                                                    );
+                                                                })
+                                                        ) : React.createElement(
+                                                            'div',
+                                                            {
+                                                                className: 'w-full py-2 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-1 whitespace-nowrap',
+                                                                style: { 
+                                                                    minWidth: '500px' // Minimálna šírka pre prázdny deň
+                                                                }
+                                                            },
+                                                            React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-xs flex-shrink-0' }),
+                                                            React.createElement('span', null, 'Žiadne zápasy')
+                                                        )
                                                 );
                                             })
                                         )
