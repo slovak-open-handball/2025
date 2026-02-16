@@ -4310,18 +4310,35 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 'div',
                                 { className: 'flex-1 overflow-y-auto pr-2 space-y-3 mt-4' },
                                 filteredUnassignedMatches.map(match => {
-                                    // Získame zobrazenie pre tímy
+                                    // Získame zobrazenie pre tímy podľa prepínača
                                     const homeTeamDisplay = getTeamDisplayText(match.homeTeamIdentifier);
                                     const awayTeamDisplay = getTeamDisplayText(match.awayTeamIdentifier);
                                     
-                                    // Pre režim "Oboje" potrebujeme extrahovať ID
-                                    let homeId = match.homeTeamIdentifier;
-                                    let awayId = match.awayTeamIdentifier;
+                                    // Premenné pre zobrazenie v strede karty
+                                    let homeDisplayText = '';
+                                    let awayDisplayText = '';
+                                    let homeIdOnly = '';
+                                    let awayIdOnly = '';
                                     
-                                    // Ak je režim both, homeTeamDisplay je objekt s name a id
+                                    // Spracujeme podľa režimu zobrazenia
                                     if (displayMode === 'both' && typeof homeTeamDisplay === 'object') {
-                                        homeId = homeTeamDisplay.id;
-                                        awayId = awayTeamDisplay.id;
+                                        // Režim "Oboje" - zobrazíme názov + ID v zátvorkách
+                                        homeDisplayText = `${homeTeamDisplay.name} (${homeTeamDisplay.id})`;
+                                        awayDisplayText = `${awayTeamDisplay.name} (${awayTeamDisplay.id})`;
+                                        homeIdOnly = homeTeamDisplay.id;
+                                        awayIdOnly = awayTeamDisplay.id;
+                                    } else if (displayMode === 'name') {
+                                        // Režim "Názvy" - zobrazíme len názvy
+                                        homeDisplayText = homeTeamDisplay;
+                                        awayDisplayText = awayTeamDisplay;
+                                        homeIdOnly = match.homeTeamIdentifier;
+                                        awayIdOnly = match.awayTeamIdentifier;
+                                    } else {
+                                        // Režim "ID" - zobrazíme len ID
+                                        homeDisplayText = match.homeTeamIdentifier;
+                                        awayDisplayText = match.awayTeamIdentifier;
+                                        homeIdOnly = match.homeTeamIdentifier;
+                                        awayIdOnly = match.awayTeamIdentifier;
                                     }
                                     
                                     // Zistíme, či má zápas kategóriu
@@ -4380,31 +4397,73 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             )
                                         ),
                                         
-                                        // Zobrazenie zápasu vždy v rovnakom formáte ako v priradených zápasoch
+                                        // Zobrazenie zápasu v strede karty podľa prepínača
                                         React.createElement(
                                             'div',
-                                            { className: 'flex items-center justify-between' },
+                                            { className: 'flex flex-col items-center justify-center py-2' },
                                             
-                                            // Domáci tím - vždy zobrazíme ID (bez názvu kategórie)
+                                            // Pre režim "Oboje" zobrazíme názvy a pod nimi ID
+                                            displayMode === 'both' ? React.createElement(
+                                                React.Fragment,
+                                                null,
+                                                React.createElement(
+                                                    'div',
+                                                    { className: 'flex items-center justify-center mb-1' },
+                                                    React.createElement(
+                                                        'span',
+                                                        { 
+                                                            className: 'font-semibold text-sm text-gray-800 text-right',
+                                                            title: match.homeTeamIdentifier
+                                                        },
+                                                        homeTeamDisplay.name
+                                                    ),
+                                                    React.createElement('i', { className: 'fa-solid fa-minus text-xs text-gray-400 mx-2' }),
+                                                    React.createElement(
+                                                        'span',
+                                                        { 
+                                                            className: 'font-semibold text-sm text-gray-800 text-left',
+                                                            title: match.awayTeamIdentifier
+                                                        },
+                                                        awayTeamDisplay.name
+                                                    )
+                                                ),
+                                                React.createElement(
+                                                    'div',
+                                                    { className: 'flex items-center justify-center text-xs text-gray-500' },
+                                                    React.createElement(
+                                                        'span',
+                                                        { className: 'font-mono' },
+                                                        homeTeamDisplay.id
+                                                    ),
+                                                    React.createElement('span', { className: 'mx-1' }, '-'),
+                                                    React.createElement(
+                                                        'span',
+                                                        { className: 'font-mono' },
+                                                        awayTeamDisplay.id
+                                                    )
+                                                )
+                                            ) : 
+                                            // Pre režimy "Názvy" a "ID" zobrazíme v jednom riadku
                                             React.createElement(
-                                                'span',
-                                                { 
-                                                    className: 'font-semibold text-sm text-gray-800',
-                                                    title: match.homeTeamIdentifier
-                                                },
-                                                homeId
-                                            ),
-                                            
-                                            React.createElement('i', { className: 'fa-solid fa-vs text-xs text-gray-400 mx-2' }),
-                                            
-                                            // Hosťovský tím - vždy zobrazíme ID (bez názvu kategórie)
-                                            React.createElement(
-                                                'span',
-                                                { 
-                                                    className: 'font-semibold text-sm text-gray-800',
-                                                    title: match.awayTeamIdentifier
-                                                },
-                                                awayId
+                                                'div',
+                                                { className: 'flex items-center justify-center' },
+                                                React.createElement(
+                                                    'span',
+                                                    { 
+                                                        className: 'font-semibold text-sm text-gray-800 text-right',
+                                                        title: match.homeTeamIdentifier
+                                                    },
+                                                    homeDisplayText
+                                                ),
+                                                React.createElement('i', { className: 'fa-solid fa-minus text-xs text-gray-400 mx-2' }),
+                                                React.createElement(
+                                                    'span',
+                                                    { 
+                                                        className: 'font-semibold text-sm text-gray-800 text-left',
+                                                        title: match.awayTeamIdentifier
+                                                    },
+                                                    awayDisplayText
+                                                )
                                             )
                                         ),
                                         
