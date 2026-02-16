@@ -5676,14 +5676,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 )
                                         ),
                                         
-                                        React.createElement(
+                                        match.groupName && React.createElement(
                                             'div',
                                             { className: 'mt-2 text-xs text-gray-500 flex items-center' },
-                                            React.createElement('i', { className: 'fa-solid fa-location-dot mr-1 text-gray-400' }),
-                                            'Nepriradené',
-                                            match.groupName && React.createElement(
+                                            React.createElement(
                                                 'span',
-                                                { className: 'ml-2 px-2 py-0.5 bg-gray-100 rounded-full' },
+                                                { className: 'px-2 py-0.5 bg-gray-100 rounded-full' },
                                                 match.groupName
                                             )
                                         )
