@@ -4314,31 +4314,42 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     const homeTeamDisplay = getTeamDisplayText(match.homeTeamIdentifier);
                                     const awayTeamDisplay = getTeamDisplayText(match.awayTeamIdentifier);
                                     
+                                    // Extrahujeme čisté ID bez kategórie (napr. z "U10 A1" extrahujeme "A1")
+                                    const extractPureId = (identifier) => {
+                                        if (!identifier) return '';
+                                        
+                                        // Rozdelíme podľa medzier
+                                        const parts = identifier.split(' ');
+                                        
+                                        // Ak máme aspoň 2 časti, posledná časť je skupina+order (napr. "A1")
+                                        if (parts.length >= 2) {
+                                            return parts[parts.length - 1];
+                                        }
+                                        
+                                        // Fallback - vrátime pôvodný identifikátor
+                                        return identifier;
+                                    };
+                                    
+                                    const homePureId = extractPureId(match.homeTeamIdentifier);
+                                    const awayPureId = extractPureId(match.awayTeamIdentifier);
+                                    
                                     // Premenné pre zobrazenie v strede karty
                                     let homeDisplayText = '';
                                     let awayDisplayText = '';
-                                    let homeIdOnly = '';
-                                    let awayIdOnly = '';
                                     
                                     // Spracujeme podľa režimu zobrazenia
                                     if (displayMode === 'both' && typeof homeTeamDisplay === 'object') {
                                         // Režim "Oboje" - zobrazíme názov + ID v zátvorkách
                                         homeDisplayText = `${homeTeamDisplay.name} (${homeTeamDisplay.id})`;
                                         awayDisplayText = `${awayTeamDisplay.name} (${awayTeamDisplay.id})`;
-                                        homeIdOnly = homeTeamDisplay.id;
-                                        awayIdOnly = awayTeamDisplay.id;
                                     } else if (displayMode === 'name') {
                                         // Režim "Názvy" - zobrazíme len názvy
                                         homeDisplayText = homeTeamDisplay;
                                         awayDisplayText = awayTeamDisplay;
-                                        homeIdOnly = match.homeTeamIdentifier;
-                                        awayIdOnly = match.awayTeamIdentifier;
                                     } else {
                                         // Režim "ID" - zobrazíme len ID
                                         homeDisplayText = match.homeTeamIdentifier;
                                         awayDisplayText = match.awayTeamIdentifier;
-                                        homeIdOnly = match.homeTeamIdentifier;
-                                        awayIdOnly = match.awayTeamIdentifier;
                                     }
                                     
                                     // Zistíme, či má zápas kategóriu
@@ -4402,51 +4413,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             'div',
                                             { className: 'flex flex-col items-center justify-center py-2' },
                                             
-                                            // Pre režim "Oboje" zobrazíme názvy a pod nimi ID
-                                            displayMode === 'both' ? React.createElement(
-                                                React.Fragment,
-                                                null,
-                                                React.createElement(
-                                                    'div',
-                                                    { className: 'flex items-center justify-center mb-1' },
-                                                    React.createElement(
-                                                        'span',
-                                                        { 
-                                                            className: 'font-semibold text-sm text-gray-800 text-right',
-                                                            title: match.homeTeamIdentifier
-                                                        },
-                                                        homeTeamDisplay.name
-                                                    ),
-                                                    React.createElement('i', { className: 'fa-solid fa-minus text-xs text-gray-400 mx-2' }),
-                                                    React.createElement(
-                                                        'span',
-                                                        { 
-                                                            className: 'font-semibold text-sm text-gray-800 text-left',
-                                                            title: match.awayTeamIdentifier
-                                                        },
-                                                        awayTeamDisplay.name
-                                                    )
-                                                ),
-                                                React.createElement(
-                                                    'div',
-                                                    { className: 'flex items-center justify-center text-xs text-gray-500' },
-                                                    React.createElement(
-                                                        'span',
-                                                        { className: 'font-mono' },
-                                                        homeTeamDisplay.id
-                                                    ),
-                                                    React.createElement('span', { className: 'mx-1' }, '-'),
-                                                    React.createElement(
-                                                        'span',
-                                                        { className: 'font-mono' },
-                                                        awayTeamDisplay.id
-                                                    )
-                                                )
-                                            ) : 
-                                            // Pre režimy "Názvy" a "ID" zobrazíme v jednom riadku
+                                            // Prvý riadok - podľa prepínača (názvy, ID alebo oboje)
                                             React.createElement(
                                                 'div',
-                                                { className: 'flex items-center justify-center' },
+                                                { className: 'flex items-center justify-center mb-1' },
                                                 React.createElement(
                                                     'span',
                                                     { 
@@ -4463,6 +4433,23 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         title: match.awayTeamIdentifier
                                                     },
                                                     awayDisplayText
+                                                )
+                                            ),
+                                            
+                                            // Druhý riadok - VŽDY čisté ID (bez kategórie)
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex items-center justify-center text-xs text-gray-500' },
+                                                React.createElement(
+                                                    'span',
+                                                    { className: 'font-mono' },
+                                                    homePureId
+                                                ),
+                                                React.createElement('span', { className: 'mx-1' }, '-'),
+                                                React.createElement(
+                                                    'span',
+                                                    { className: 'font-mono' },
+                                                    awayPureId
                                                 )
                                             )
                                         ),
