@@ -2064,6 +2064,24 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [showGapCreator, setShowGapCreator] = useState(null);
     const [gapTime, setGapTime] = useState('00:30');
 
+    const [hoverPosition, setHoverPosition] = useState(null);
+
+    const handleMatchMouseMove = (e, matchId) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const mouseY = e.clientY - rect.top;
+        const height = rect.height;
+    
+        // Ak je myš v hornej polovici, pozícia je 'top', inak 'bottom'
+        const position = mouseY < height / 2 ? 'top' : 'bottom';
+        
+        setHoverPosition({ matchId, position });
+    };
+    
+    const handleMatchMouseLeave = () => {
+        setHoverPosition(null);
+    };
+    
+
     const handleCreateGap = async (hallId, date, afterMatchId, afterMatchEndMinutes) => {
         if (!window.db) {
             window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
@@ -2145,7 +2163,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             );
             
             setShowGapCreator(null);
-            setGapTime('00:05'); // Resetujeme na predvolenú hodnotu
+            setGapTime('00:30'); // Resetujeme na predvolenú hodnotu
     
         } catch (error) {
             console.error('Chyba pri vytváraní medzery:', error);
@@ -2155,11 +2173,11 @@ const AddMatchesApp = ({ userProfileData }) => {
     
     // Pridajte modálne okno pre vytvorenie medzery
     const GapCreatorModal = ({ isOpen, onClose, onConfirm, hallName, dateStr, afterMatchInfo }) => {
-        const [gapTime, setGapTime] = useState('00:05');
+        const [gapTime, setGapTime] = useState('00:30');
     
         useEffect(() => {
             if (isOpen) {
-                setGapTime('00:05');
+                setGapTime('00:30');
             }
         }, [isOpen]);
     
@@ -5481,7 +5499,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         
                                                                         // Po pridaní zápasu, ak nie sme na poslednom indexe, pridáme tlačidlo
                                                                         if (idx < array.length - 1) {
-                                                                            // Pridáme prázdny div s relatívnou pozíciou, ktorý bude obsahovať tlačidlo
                                                                             elements.push(
                                                                                 React.createElement(
                                                                                     'div',
@@ -5490,8 +5507,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         className: 'relative',
                                                                                         style: { 
                                                                                             width: 'fit-content',
-                                                                                            height: '0', // Žiadna výška, tlačidlo bude absolútne pozicionované
-                                                                                            margin: '0', // Žiadne margin
+                                                                                            height: '0',
+                                                                                            margin: '0',
                                                                                             position: 'relative'
                                                                                         }
                                                                                     },
@@ -5501,7 +5518,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                             className: 'absolute left-1/2 -translate-x-1/2 opacity-0 group-hover/gap-creator:opacity-100 transition-opacity z-10',
                                                                                             style: { 
                                                                                                 transform: 'translate(-50%, -50%)',
-                                                                                                top: '0', // Tlačidlo bude presne na rozhraní
+                                                                                                top: '0',
                                                                                                 pointerEvents: 'auto'
                                                                                             }
                                                                                         },
@@ -5526,6 +5543,101 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     )
                                                                                 )
                                                                             );
+                                                                        }
+                                                                        
+                                                                        // Potom pridáme tlačidlá pre hornú a dolnú pozíciu (podľa hoverPosition)
+                                                                        if (hoverPosition?.matchId === match.id) {
+                                                                            if (hoverPosition.position === 'top') {
+                                                                                elements.push(
+                                                                                    React.createElement(
+                                                                                        'div',
+                                                                                        {
+                                                                                            key: `gap-creator-top-${idx}`,
+                                                                                            className: 'relative',
+                                                                                            style: { 
+                                                                                                width: 'fit-content',
+                                                                                                height: '0',
+                                                                                                margin: '0',
+                                                                                                position: 'relative'
+                                                                                            }
+                                                                                        },
+                                                                                        React.createElement(
+                                                                                            'div',
+                                                                                            { 
+                                                                                                className: 'absolute left-1/2 -translate-x-1/2 opacity-100 transition-opacity z-20',
+                                                                                                style: { 
+                                                                                                    transform: 'translate(-50%, -100%)', // Nad zápasom
+                                                                                                    top: '0',
+                                                                                                    pointerEvents: 'auto'
+                                                                                                }
+                                                                                            },
+                                                                                            React.createElement(
+                                                                                                'button',
+                                                                                                {
+                                                                                                    onClick: (e) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        setGapTime('00:30');
+                                                                                                        setShowGapCreator({
+                                                                                                            hallId: hall.id,
+                                                                                                            dateStr: dateStr,
+                                                                                                            afterMatchId: match.id,
+                                                                                                            afterMatchEndMinutes: currentEndMinutes
+                                                                                                        });
+                                                                                                    },
+                                                                                                    className: 'w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg',
+                                                                                                    title: 'Vytvoriť medzeru nad zápasom'
+                                                                                                },
+                                                                                                React.createElement('i', { className: 'fa-solid fa-plus text-sm' })
+                                                                                            )
+                                                                                        )
+                                                                                    )
+                                                                                );
+                                                                            } else if (hoverPosition.position === 'bottom') {
+                                                                                elements.push(
+                                                                                    React.createElement(
+                                                                                        'div',
+                                                                                        {
+                                                                                            key: `gap-creator-bottom-${idx}`,
+                                                                                            className: 'relative',
+                                                                                            style: { 
+                                                                                                width: 'fit-content',
+                                                                                                height: '0',
+                                                                                                margin: '0',
+                                                                                                position: 'relative'
+                                                                                            }
+                                                                                        },
+                                                                                        React.createElement(
+                                                                                            'div',
+                                                                                            { 
+                                                                                                className: 'absolute left-1/2 -translate-x-1/2 opacity-100 transition-opacity z-20',
+                                                                                                style: { 
+                                                                                                    transform: 'translate(-50%, 0)', // Pod zápasom
+                                                                                                    top: '0',
+                                                                                                    pointerEvents: 'auto'
+                                                                                                }
+                                                                                            },
+                                                                                            React.createElement(
+                                                                                                'button',
+                                                                                                {
+                                                                                                    onClick: (e) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        setGapTime('00:30');
+                                                                                                        setShowGapCreator({
+                                                                                                            hallId: hall.id,
+                                                                                                            dateStr: dateStr,
+                                                                                                            afterMatchId: match.id,
+                                                                                                            afterMatchEndMinutes: currentEndMinutes
+                                                                                                        });
+                                                                                                    },
+                                                                                                    className: 'w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg',
+                                                                                                    title: 'Vytvoriť medzeru pod zápasom'
+                                                                                                },
+                                                                                                React.createElement('i', { className: 'fa-solid fa-plus text-sm' })
+                                                                                            )
+                                                                                        )
+                                                                                    )
+                                                                                );
+                                                                            }
                                                                         }
                                                                         
                                                                         // Vrátime všetky elementy pre tento index
