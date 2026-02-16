@@ -4672,23 +4672,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         // Tlačidlo pre zmazanie (zobrazí sa pri hoveri)
                                         userProfileData?.role === 'admin' && React.createElement(
                                             'div',
-                                            { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/match:opacity-100 transition-opacity' },
-                                            // Nové zelené tlačidlo pre pridanie medzery
-                                            React.createElement(
-                                                'button',
-                                                {
-                                                    className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                    onClick: (e) => {
-                                                        e.stopPropagation();
-                                                        setSelectedMatchForBreak(match);
-                                                        setSelectedMatchCurrentTime(matchTime);
-                                                        setIsBreakModalOpen(true);
-                                                    },
-                                                    title: 'Pridať medzeru pred/za zápas'
-                                                },
-                                                React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
-                                            ),
-                                            // Existujúce modré tlačidlo pre výmenu
+                                            { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity' },
+                                            // Modré tlačidlo pre výmenu (pre nepriradené zápasy)
                                             React.createElement(
                                                 'button',
                                                 {
@@ -4701,16 +4686,16 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 },
                                                 React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-xs' })
                                             ),
-                                            // Existujúce červené tlačidlo pre odstránenie priradenia
+                                            // Červené tlačidlo pre zmazanie
                                             React.createElement(
                                                 'button',
                                                 {
                                                     className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
                                                     onClick: (e) => {
                                                         e.stopPropagation();
-                                                        handleUnassignMatch(match);
+                                                        handleDeleteClick(match);
                                                     },
-                                                    title: 'Odstrániť priradenie (miesto a čas)'
+                                                    title: 'Zmazať zápas'
                                                 },
                                                 React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
                                             )
@@ -5341,6 +5326,22 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                     userProfileData?.role === 'admin' && React.createElement(
                                                                         'div',
                                                                         { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/match:opacity-100 transition-opacity' },
+                                                                        // Nové zelené tlačidlo pre pridanie medzery
+                                                                        React.createElement(
+                                                                            'button',
+                                                                            {
+                                                                                className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                onClick: (e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setSelectedMatchForBreak(match);
+                                                                                    setSelectedMatchCurrentTime(matchTime);
+                                                                                    setIsBreakModalOpen(true);
+                                                                                },
+                                                                                title: 'Pridať medzeru pred/za zápas'
+                                                                            },
+                                                                            React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
+                                                                        ),
+                                                                        // Modré tlačidlo pre výmenu
                                                                         React.createElement(
                                                                             'button',
                                                                             {
@@ -5353,6 +5354,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             },
                                                                             React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-xs' })
                                                                         ),
+                                                                        // Červené tlačidlo pre odstránenie priradenia
                                                                         React.createElement(
                                                                             'button',
                                                                             {
