@@ -79,26 +79,20 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
-// Funkcia na generovanie zápasov pre skupinu - UPRAVENÁ
+// Funkcia na generovanie zápasov pre skupinu - UPRAVENÁ S PARAMETROM transferFromBasicGroup
 const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferFromBasicGroup = false) => {
     const matches = [];
     
     // Pre každý tím vytvoríme identifikátor v tvare "kategória skupinaorder"
     const teamIdentifiers = teams.map(t => {
-        // Získame názov kategórie
         const category = categoryName || t.category || 'Neznáma kategória';
         
-        // Spracujeme názov skupiny - odstránime "skupina " ak existuje
         let groupName = t.groupName || 'Neznáma skupina';
         if (groupName.startsWith('skupina ')) {
             groupName = groupName.substring(8);
         }
         
-        // Pridáme order/číslo tímu
         const order = t.order || '?';
-        
-        // Vytvoríme identifikátor v požadovanom formáte: "kategória skupinaorder" (napr. "U10 A1")
-        // Medzera len medzi kategóriou a skupinou, žiadna medzera medzi skupinou a orderom
         const teamIdentifier = `${category} ${groupName}${order}`;
         
         return {
@@ -106,10 +100,7 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferF
             category: category,
             groupName: groupName,
             order: order,
-            // Extrahujeme posledný znak pre kontrolu prenosu zo základnej skupiny
-            // Predpokladáme, že order môže byť niečo ako "1", "2", "3", atď.
-            // Alebo to môže byť kombinácia písmen a číslic - extrahujeme POSLEDNÝ ZNAK
-            lastChar: order ? order.toString().slice(-1) : '' // NOVÉ - posledný znak orderu
+            lastChar: order ? order.toString().slice(-1) : '' // Posledný znak pre kontrolu
         };
     });
     
@@ -117,23 +108,19 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferF
     console.log('transferFromBasicGroup:', transferFromBasicGroup);
     
     if (withRepetitions) {
-        // Každý s každým doma/vonku v rámci skupiny
+        // Každý s každým doma/vonku
         for (let i = 0; i < teamIdentifiers.length; i++) {
             for (let j = 0; j < teamIdentifiers.length; j++) {
                 if (i !== j) {
-                    // Kontrola pre transferFromBasicGroup
                     if (transferFromBasicGroup) {
-                        // Ak je transferFromBasicGroup true, NEPOVOLÍME zápasy medzi tímami s rovnakým posledným znakom
+                        // Ak je transferFromBasicGroup true, preskočíme zápasy s rovnakým posledným znakom
                         if (teamIdentifiers[i].lastChar !== teamIdentifiers[j].lastChar) {
                             matches.push({
                                 homeTeamIdentifier: teamIdentifiers[i].identifier,
                                 awayTeamIdentifier: teamIdentifiers[j].identifier,
                             });
-                        } else {
-                            console.log(`Preskakujem zápas medzi ${teamIdentifiers[i].identifier} a ${teamIdentifiers[j].identifier} - rovnaký posledný znak (${teamIdentifiers[i].lastChar})`);
                         }
                     } else {
-                        // Normálne generovanie
                         matches.push({
                             homeTeamIdentifier: teamIdentifiers[i].identifier,
                             awayTeamIdentifier: teamIdentifiers[j].identifier,
@@ -143,22 +130,17 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferF
             }
         }
     } else {
-        // Jedinečné dvojice (každý s každým raz) v rámci skupiny
+        // Jedinečné dvojice
         for (let i = 0; i < teamIdentifiers.length; i++) {
             for (let j = i + 1; j < teamIdentifiers.length; j++) {
-                // Kontrola pre transferFromBasicGroup
                 if (transferFromBasicGroup) {
-                    // Ak je transferFromBasicGroup true, NEPOVOLÍME zápasy medzi tímami s rovnakým posledným znakom
                     if (teamIdentifiers[i].lastChar !== teamIdentifiers[j].lastChar) {
                         matches.push({
                             homeTeamIdentifier: teamIdentifiers[i].identifier,
                             awayTeamIdentifier: teamIdentifiers[j].identifier,
                         });
-                    } else {
-                        console.log(`Preskakujem zápas medzi ${teamIdentifiers[i].identifier} a ${teamIdentifiers[j].identifier} - rovnaký posledný znak (${teamIdentifiers[i].lastChar})`);
                     }
                 } else {
-                    // Normálne generovanie
                     matches.push({
                         homeTeamIdentifier: teamIdentifiers[i].identifier,
                         awayTeamIdentifier: teamIdentifiers[j].identifier,
@@ -2116,6 +2098,248 @@ const HallDayStartTimeModal = ({ isOpen, onClose, onConfirm, hallName, date, cur
                         className: 'px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors'
                     },
                     currentStartTime ? 'Upraviť' : 'Uložiť'
+                )
+            )
+        )
+    );
+};
+
+// Modálne okno pre výber typu generovania - PRIDANÝ CHECKBOX PRE NADSTAVBOVÉ SKUPINY
+const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCategory }) => {
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedGroup, setSelectedGroup] = useState('');
+    const [withRepetitions, setWithRepetitions] = useState(false);
+    const [transferFromBasicGroup, setTransferFromBasicGroup] = useState(false);
+    const [availableGroups, setAvailableGroups] = useState([]);
+    const [selectedGroupType, setSelectedGroupType] = useState('');
+
+    useEffect(() => {
+        if (!isOpen) {
+            setSelectedCategory('');
+            setSelectedGroup('');
+            setWithRepetitions(false);
+            setTransferFromBasicGroup(false);
+            setAvailableGroups([]);
+            setSelectedGroupType('');
+        }
+    }, [isOpen]);
+
+    // Zoradenie kategórií podľa abecedy
+    const sortedCategories = React.useMemo(() => {
+        return [...categories].sort((a, b) => a.name.localeCompare(b.name));
+    }, [categories]);
+
+    // Aktualizácia dostupných skupín pri zmene kategórie
+    useEffect(() => {
+        if (selectedCategory && groupsByCategory[selectedCategory]) {
+            const sortedGroups = [...groupsByCategory[selectedCategory]].sort((a, b) => 
+                a.name.localeCompare(b.name)
+            );
+            setAvailableGroups(sortedGroups);
+            setSelectedGroup('');
+            setSelectedGroupType('');
+            setTransferFromBasicGroup(false);
+        } else {
+            setAvailableGroups([]);
+            setSelectedGroup('');
+            setSelectedGroupType('');
+            setTransferFromBasicGroup(false);
+        }
+    }, [selectedCategory, groupsByCategory]);
+
+    // Zistenie typu vybranej skupiny
+    useEffect(() => {
+        if (selectedGroup && availableGroups.length > 0) {
+            const group = availableGroups.find(g => g.name === selectedGroup);
+            if (group) {
+                if (group.type === 'základná skupina') {
+                    setSelectedGroupType('Základná skupina');
+                } else if (group.type === 'nadstavbová skupina') {
+                    setSelectedGroupType('Nadstavbová skupina');
+                } else {
+                    setSelectedGroupType('');
+                }
+            } else {
+                setSelectedGroupType('');
+            }
+        } else {
+            setSelectedGroupType('');
+        }
+    }, [selectedGroup, availableGroups]);
+
+    if (!isOpen) return null;
+
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) onClose();
+            }
+        },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
+            
+            // Hlavička
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center mb-4' },
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 'Generovať zápasy'),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'text-gray-500 hover:text-gray-700'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-times text-xl' })
+                )
+            ),
+
+            // Výber kategórie
+            React.createElement(
+                'div',
+                { className: 'mb-4' },
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                    'Kategória:'
+                ),
+                React.createElement(
+                    'select',
+                    {
+                        value: selectedCategory,
+                        onChange: (e) => setSelectedCategory(e.target.value),
+                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                    },
+                    React.createElement('option', { value: '' }, '-- Vyberte kategóriu --'),
+                    sortedCategories.map(cat => 
+                        React.createElement('option', { key: cat.id, value: cat.id }, cat.name)
+                    )
+                )
+            ),
+
+            // Výber skupiny
+            selectedCategory && React.createElement(
+                'div',
+                { className: 'mb-4' },
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                    'Skupina:'
+                ),
+                React.createElement(
+                    'select',
+                    {
+                        value: selectedGroup,
+                        onChange: (e) => setSelectedGroup(e.target.value),
+                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                    },
+                    React.createElement('option', { value: '' }, '-- Všetky skupiny --'),
+                    availableGroups.map((group, index) => 
+                        React.createElement('option', { key: index, value: group.name }, group.name)
+                    )
+                ),
+                
+                // Zobrazenie typu skupiny
+                selectedGroup && selectedGroupType && React.createElement(
+                    'div',
+                    { className: 'mt-2 text-sm' },
+                    React.createElement(
+                        'span',
+                        { 
+                            className: `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                selectedGroupType === 'Základná skupina' 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-purple-100 text-purple-800'
+                            }` 
+                        },
+                        React.createElement('i', { 
+                            className: `fa-solid ${
+                                selectedGroupType === 'Základná skupina' 
+                                    ? 'fa-layer-group' 
+                                    : 'fa-chart-line'
+                            } mr-1 text-xs` 
+                        }),
+                        selectedGroupType
+                    )
+                )
+            ),
+
+            // Checkbox pre kombinácie s opakovaním
+            React.createElement(
+                'div',
+                { className: 'mb-6' },
+                React.createElement(
+                    'label',
+                    { className: 'flex items-center gap-2 cursor-pointer' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        checked: withRepetitions,
+                        onChange: (e) => setWithRepetitions(e.target.checked),
+                        className: 'w-4 h-4 text-blue-600 rounded'
+                    }),
+                    React.createElement('span', { className: 'text-gray-700' }, 'Kombinácie s opakovaním (každý s každým doma/vonku)')
+                ),
+                !withRepetitions && React.createElement(
+                    'p',
+                    { className: 'text-xs text-gray-500 mt-1 ml-6' },
+                    'Vygenerujú sa jedinečné dvojice, každý tím sa stretne s každým práve raz'
+                )
+            ),
+
+            // NOVÝ: Checkbox pre prenos zo základnej skupiny (len pre nadstavbové skupiny)
+            selectedGroup && selectedGroupType === 'Nadstavbová skupina' && React.createElement(
+                'div',
+                { className: 'mb-6 p-3 bg-purple-50 rounded-lg border border-purple-200' },
+                React.createElement(
+                    'label',
+                    { className: 'flex items-start gap-2 cursor-pointer' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        checked: transferFromBasicGroup,
+                        onChange: (e) => setTransferFromBasicGroup(e.target.checked),
+                        className: 'w-4 h-4 text-purple-600 rounded mt-0.5'
+                    }),
+                    React.createElement(
+                        'div',
+                        null,
+                        React.createElement('span', { className: 'text-gray-700 font-medium' }, 'Zápas zo základnej skupiny sa prenáša'),
+                        React.createElement('p', { className: 'text-xs text-gray-500 mt-1' },
+                            'Nebudú sa generovať zápasy medzi tímami, ktoré majú rovnaký posledný znak v názve (t.j. pochádzajú z rovnakej základnej skupiny)'
+                        )
+                    )
+                )
+            ),
+
+            // Tlačidlá
+            React.createElement(
+                'div',
+                { className: 'flex justify-end gap-3' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
+                    },
+                    'Zrušiť'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => {
+                            onConfirm({
+                                categoryId: selectedCategory,
+                                groupName: selectedGroup || null,
+                                withRepetitions,
+                                transferFromBasicGroup
+                            });
+                            onClose();
+                        },
+                        disabled: !selectedCategory,
+                        className: `px-4 py-2 text-white rounded-lg transition-colors ${
+                            selectedCategory 
+                                ? 'bg-green-600 hover:bg-green-700 cursor-pointer' 
+                                : 'bg-gray-400 cursor-not-allowed'
+                        }`
+                    },
+                    'Generovať'
                 )
             )
         )
