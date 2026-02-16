@@ -4520,14 +4520,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     return null;
                                 }
                                 
-                                return React.createElement(
+                                return React.createElement(return React.createElement(
                                     'div',
                                     { 
                                         key: hall.id,
                                         className: 'bg-white rounded-xl border-2 border-gray-200 shadow-sm hover:shadow-md transition-shadow',
                                         style: { 
-                                            width: 'fit-content', // Box haly sa prispôsobí obsahu
-                                            minWidth: '100%' // Ale zaberá aspoň celú šírku rodiča
+                                            width: 'fit-content',
+                                            minWidth: '100%'
                                         }
                                     },
                                     React.createElement(
@@ -4555,8 +4555,21 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 { className: 'flex-1' },
                                                 React.createElement(
                                                     'div',
-                                                    { className: 'flex items-center justify-between group' }, // PRIDANÉ group
-                                                    React.createElement('h4', { className: 'font-bold text-xl text-gray-800' }, hall.name),
+                                                    { className: 'flex items-center justify-between' },
+                                                    React.createElement('h4', { className: 'font-bold text-xl text-gray-800' }, hall.name)
+                                                ),
+                                                React.createElement(
+                                                    'div',
+                                                    { className: 'flex items-center gap-2 mt-1' },
+                                                    React.createElement('span', { 
+                                                        className: 'inline-block px-3 py-1 text-xs font-medium rounded-full',
+                                                        style: { 
+                                                            backgroundColor: typeConfig.color + '20',
+                                                            color: typeConfig.color
+                                                        }
+                                                    }, 'Športová hala'),
+                                                    
+                                                    // Ikona koša je teraz v riadku za typom miesta
                                                     userProfileData?.role === 'admin' && React.createElement(
                                                         'button',
                                                         {
@@ -4569,14 +4582,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         },
                                                         React.createElement('i', { className: 'fa-solid fa-trash-can text-sm' })
                                                     )
-                                                ),
-                                                React.createElement('span', { 
-                                                    className: 'inline-block px-3 py-1 text-xs font-medium rounded-full mt-1',
-                                                    style: { 
-                                                        backgroundColor: typeConfig.color + '20',
-                                                        color: typeConfig.color
-                                                    }
-                                                }, 'Športová hala')
+                                                )
                                             )
                                         )
                                     ),
