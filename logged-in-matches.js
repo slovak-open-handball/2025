@@ -1126,19 +1126,6 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                 )
             ),
 
-            // Vyhľadávanie
-            React.createElement(
-                'div',
-                { className: 'mb-4' },
-                React.createElement('input', {
-                    type: 'text',
-                    placeholder: 'Vyhľadať zápas...',
-                    value: searchTerm,
-                    onChange: (e) => setSearchTerm(e.target.value),
-                    className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                })
-            ),
-
             // Zoznam zápasov
             filteredMatches.length === 0 ? React.createElement(
                 'div',
