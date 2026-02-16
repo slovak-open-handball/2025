@@ -6153,8 +6153,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                     toggleBlockBreak(
                                                                                                         hall.id, 
                                                                                                         dateStr, 
-                                                                                                        breakBeforeStartTime, 
-                                                                                                        breakBeforeEndTime,
+                                                                                                        breakStartTime,
+                                                                                                        breakEndTime,
                                                                                                         gapMinutes
                                                                                                     );
                                                                                                 },
@@ -6551,8 +6551,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                             toggleBlockBreak(
                                                                                                 hall.id, 
                                                                                                 dateStr, 
-                                                                                                breakBeforeStartTime, 
-                                                                                                breakBeforeEndTime,
+                                                                                                breakStartTime,
+                                                                                                breakEndTime,
                                                                                                 gapMinutes
                                                                                             );
                                                                                         },
