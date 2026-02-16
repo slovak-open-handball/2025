@@ -1686,7 +1686,7 @@ const createTeamAssignmentNotification = async (action, team) => {
                       value: group.name,
                       disabled: group.isLocked ? true : undefined // Zakázať možnosť ak je skupina zablokovaná
                     }, 
-                    group.isLocked ? `${group.name} (❌ už existujú zápasy)` : group.name
+                    group.isLocked ? `${group.name} (už existujú zápasy)` : group.name
                   )
                 )
               ),
