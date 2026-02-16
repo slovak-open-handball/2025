@@ -2403,8 +2403,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             const hallDayMatches = matches
                 .filter(m => 
                     m.hallId === match.hallId && 
-                    m.scheduledTime &&
-                    m.id !== matchId
+                    m.scheduledTime
                 )
                 .map(m => ({
                     ...m,
@@ -2430,35 +2429,49 @@ const AddMatchesApp = ({ userProfileData }) => {
             const currentTimeMinutes = matchDate.getHours() * 60 + matchDate.getMinutes();
             const shiftMinutes = newTimeMinutes - currentTimeMinutes;
     
-            // Aktualizujeme aktuálny zápas
-            const matchRef = doc(window.db, 'matches', matchId);
-            const newDateTime = new Date(matchDate);
-            newDateTime.setMinutes(newDateTime.getMinutes() + shiftMinutes);
-            
-            await updateDoc(matchRef, {
-                scheduledTime: Timestamp.fromDate(newDateTime)
-            });
-    
-            // Posunieme všetky nasledujúce zápasy (ak je medzera pridaná pred aktuálnym, posúvame všetky)
-            const matchesToShift = position === 'before' 
-                ? [...beforeMatches, ...afterMatches] // Ak pred, posúvame všetky
-                : afterMatches; // Ak za, posúvame len tie po
-    
-            for (const m of matchesToShift) {
-                const mRef = doc(window.db, 'matches', m.id);
-                const mDateTime = new Date(m.scheduledTimeObj);
-                mDateTime.setMinutes(mDateTime.getMinutes() + shiftMinutes);
+            if (position === 'before') {
+                // Medzera PRED zápasom - posúvame aktuálny zápas a všetky nasledujúce
+                const matchRef = doc(window.db, 'matches', matchId);
+                const newDateTime = new Date(matchDate);
+                newDateTime.setMinutes(newDateTime.getMinutes() + shiftMinutes);
                 
-                await updateDoc(mRef, {
-                    scheduledTime: Timestamp.fromDate(mDateTime)
+                await updateDoc(matchRef, {
+                    scheduledTime: Timestamp.fromDate(newDateTime)
                 });
-            }
     
-            const message = position === 'before'
-                ? `Pridaná ${duration} minútová medzera pred zápasom. Všetky nasledujúce zápasy boli posunuté.`
-                : `Pridaná ${duration} minútová medzera za zápasom. Nasledujúce zápasy boli posunuté.`;
-            
-            window.showGlobalNotification(message, 'success');
+                // Posunieme všetky nasledujúce zápasy
+                for (const m of afterMatches) {
+                    const mRef = doc(window.db, 'matches', m.id);
+                    const mDateTime = new Date(m.scheduledTimeObj);
+                    mDateTime.setMinutes(mDateTime.getMinutes() + shiftMinutes);
+                    
+                    await updateDoc(mRef, {
+                        scheduledTime: Timestamp.fromDate(mDateTime)
+                    });
+                }
+    
+                window.showGlobalNotification(
+                    `Pridaná ${duration} minútová medzera pred zápasom. Aktuálny a nasledujúce zápasy boli posunuté.`,
+                    'success'
+                );
+    
+            } else {
+                // Medzera ZA zápasom - posúvame LEN nasledujúce zápasy (aktuálny zostáva)
+                for (const m of afterMatches) {
+                    const mRef = doc(window.db, 'matches', m.id);
+                    const mDateTime = new Date(m.scheduledTimeObj);
+                    mDateTime.setMinutes(mDateTime.getMinutes() + shiftMinutes);
+                    
+                    await updateDoc(mRef, {
+                        scheduledTime: Timestamp.fromDate(mDateTime)
+                    });
+                }
+    
+                window.showGlobalNotification(
+                    `Pridaná ${duration} minútová medzera za zápasom. Nasledujúce zápasy boli posunuté.`,
+                    'success'
+                );
+            }
     
         } catch (error) {
             console.error('Chyba pri pridávaní medzery:', error);
