@@ -6119,7 +6119,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         React.createElement(
                                                                                             'div',
                                                                                             { 
-                                                                                                className: `text-green-600 whitespace-nowrap min-w-[280px] flex-shrink-0`,
+                                                                                                className: `text-green-600 whitespace-nowrap min-w-[200px] flex-shrink-0`,
                                                                                                 style: { textAlign: 'left' }
                                                                                             },
                                                                                             'voľný čas'
@@ -6521,7 +6521,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 React.createElement(
                                                                                     'div',
                                                                                     { 
-                                                                                        className: `text-green-600 whitespace-nowrap min-w-[280px] flex-shrink-0`,
+                                                                                        className: `text-green-600 whitespace-nowrap min-w-[200px] flex-shrink-0`,
                                                                                         style: { textAlign: 'left' }
                                                                                     },
                                                                                     'voľný čas'
