@@ -1040,6 +1040,13 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
     const [selectedMatchId, setSelectedMatchId] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
 
+    useEffect(() => {
+        if (isOpen) {
+            setSelectedMatchId('');
+            setSearchTerm('');
+        }
+    }, [isOpen]);
+
     if (!isOpen) return null;
 
     // Filtrovanie zápasov podľa vyhľadávania
