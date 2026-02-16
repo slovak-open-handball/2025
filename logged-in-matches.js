@@ -5479,20 +5479,23 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             shouldShow: idx < array.length - 1 && array[idx + 1].type === 'match'
                                                                         });
                                                                         
-                                                                        // Ak nie sme na poslednom indexe a nasledujúci item je zápas (nie medzera), pridáme tlačidlo pre vytvorenie medzery
-                                                                        if (idx < array.length - 1 && array[idx + 1].type === 'match') {
+                                                                        if (idx < array.length - 1) {
                                                                             elements.push(
                                                                                 React.createElement(
                                                                                     'div',
                                                                                     {
                                                                                         key: `gap-creator-${idx}`,
-                                                                                        className: 'relative h-2 group/gap-creator my-1',
-                                                                                        style: { width: 'fit-content' }
+                                                                                        className: 'relative flex justify-center items-center',
+                                                                                        style: { 
+                                                                                            width: 'fit-content',
+                                                                                            height: '32px', // Výška pre medzeru
+                                                                                            margin: '4px 0' // Vertikálne odsadenie
+                                                                                        }
                                                                                     },
                                                                                     React.createElement(
                                                                                         'div',
                                                                                         { 
-                                                                                            className: 'absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 opacity-100 transition-opacity z-100',
+                                                                                            className: 'absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 opacity-0 group-hover/gap-creator:opacity-100 transition-opacity z-10',
                                                                                             style: { 
                                                                                                 transform: 'translate(-50%, -50%)'
                                                                                             }
