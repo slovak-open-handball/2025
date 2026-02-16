@@ -1,4 +1,4 @@
-import { doc, onSnapshot, getDocs, setDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, onSnapshot, setDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Funkcia na vytvorenie notifikácie o zmene nastavení kategórie
 const createCategorySettingsChangeNotification = async (actionType, changesArray, categoryData) => {
@@ -54,7 +54,7 @@ export function CategorySettings({
     const [previousValues, setPreviousValues] = React.useState({});
     const [isInitialLoad, setIsInitialLoad] = React.useState(true);
 
-    // NOVÝ: State pre existujúce zápasy
+    // NOVÝ: State pre existujúce zápasy - TERAZ S onSnapshot
     const [existingMatches, setExistingMatches] = React.useState({});
 
     // REF pre uloženie pôvodných hodnôt kategórií
@@ -92,47 +92,57 @@ export function CategorySettings({
         setSelectedCategoryId(catId);
     };
 
-    // NOVÁ FUNKCIA: Načítanie existujúcich zápasov pre každú kategóriu
-    const loadExistingMatches = async () => {
-        if (!db) return;
+    // NOVÁ FUNKCIA: Sledovanie existujúcich zápasov v reálnom čase
+    const subscribeToMatches = () => {
+        if (!db) return null;
 
         try {
             const matchesRef = collection(db, 'matches');
-            const matchesSnap = await getDocs(matchesRef);
             
-            const matchesByCategory = {};
-            
-            matchesSnap.forEach((doc) => {
-                const match = doc.data();
-                if (match.categoryId) {
-                    if (!matchesByCategory[match.categoryId]) {
-                        matchesByCategory[match.categoryId] = [];
+            // Používame onSnapshot pre automatické aktualizácie
+            const unsubscribe = onSnapshot(matchesRef, (snapshot) => {
+                const matchesByCategory = {};
+                
+                snapshot.forEach((doc) => {
+                    const match = doc.data();
+                    if (match.categoryId) {
+                        if (!matchesByCategory[match.categoryId]) {
+                            matchesByCategory[match.categoryId] = [];
+                        }
+                        matchesByCategory[match.categoryId].push({
+                            id: doc.id,
+                            ...match
+                        });
                     }
-                    matchesByCategory[match.categoryId].push(match);
-                }
+                });
+                
+                setExistingMatches(matchesByCategory);
+                console.log("[CategorySettings] Aktualizované existujúce zápasy:", 
+                    Object.keys(matchesByCategory).map(catId => 
+                        `${catId}: ${matchesByCategory[catId].length} zápasov`
+                    ).join(', ')
+                );
+            }, (err) => {
+                console.error("[CategorySettings] Chyba pri sledovaní zápasov:", err);
             });
             
-            setExistingMatches(matchesByCategory);
-            console.log("[CategorySettings] Načítané existujúce zápasy:", 
-                Object.keys(matchesByCategory).map(catId => 
-                    `${catId}: ${matchesByCategory[catId].length} zápasov`
-                )
-            );
+            return unsubscribe;
         } catch (err) {
-            console.error("[CategorySettings] Chyba pri načítaní existujúcich zápasov:", err);
+            console.error("[CategorySettings] Chyba pri nastavovaní sledovania zápasov:", err);
+            return null;
         }
     };
 
-    // Načítavanie kategórií a existujúcich zápasov
+    // Načítavanie kategórií a sledovanie existujúcich zápasov
     React.useEffect(() => {
         if (!db || !userProfileData || userProfileData.role !== 'admin') return;
 
-        // Načítame existujúce zápasy
-        loadExistingMatches();
+        // Spustíme sledovanie zápasov
+        const unsubscribeMatches = subscribeToMatches();
 
         const catRef = doc(db, 'settings', 'categories');
 
-        const unsubscribe = onSnapshot(catRef, snap => {
+        const unsubscribeCategories = onSnapshot(catRef, snap => {
             if (snap.exists()) {
                 const data = snap.data() || {};
                 const list = Object.entries(data).map(([id, obj]) => ({
@@ -339,7 +349,13 @@ export function CategorySettings({
             setIsInitialLoad(false);
         });
 
-        return () => unsubscribe();
+        // Cleanup - odhlásime oba snapshoty
+        return () => {
+            unsubscribeCategories();
+            if (unsubscribeMatches) {
+                unsubscribeMatches();
+            }
+        };
     }, [db, userProfileData, showNotification]);
 
     // Handlery pre jednotlivé inputy
@@ -678,7 +694,7 @@ export function CategorySettings({
                 for (const catChange of categoriesWithChanges) {
                     if (catChange.changes.length > 0) {
                         const mainChanges = [
-                            `Úprava nastavení kategórie: '''${catChange.categoryName}'`,
+                            `Úprava nastavení kategórie: '${catChange.categoryName}'`,
                             ...catChange.changes
                         ];
                         
@@ -917,7 +933,7 @@ export function CategorySettings({
                                         className: 'text-xl font-semibold text-gray-800'
                                     }, selectedCategory.name),
                                     
-                                    // NOVÉ: Varovanie o existujúcich zápasoch
+                                    // NOVÉ: Varovanie o existujúcich zápasoch - TERAZ SA AUTOMATICKY AKTUALIZUJE
                                     hasExistingMatchesForCategory(selectedCategory.id) && React.createElement(
                                         'span',
                                         { 
@@ -938,7 +954,7 @@ export function CategorySettings({
                                 )
                             ),
 
-                            // NOVÉ: Zistenie, či je kategória zablokovaná pre úpravy
+                            // NOVÉ: Zistenie, či je kategória zablokovaná pre úpravy - TERAZ SA AUTOMATICKY AKTUALIZUJE
                             (() => {
                                 const hasMatches = hasExistingMatchesForCategory(selectedCategory.id);
                                 
@@ -1137,8 +1153,8 @@ export function CategorySettings({
                                         )
                                     ),
 
-                                    // Farba pre rozlosovanie - NIE JE ZABLOKOVANÁ (môže sa meniť)
-                                    React.createElement(
+                                    // Farba pre rozlosovanie
+                                    hasMatches && React.createElement(
                                         'div',
                                         { className: 'space-y-1' },
                                         React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
@@ -1151,26 +1167,14 @@ export function CategorySettings({
                                                 type: 'color',
                                                 value: editedDrawColor[selectedCategory.id] ?? selectedCategory.drawColor,
                                                 onChange: e => handleDrawColorChange(selectedCategory.id, e.target.value),
-                                                disabled: hasMatches,
-                                                className: `w-12 h-10 border border-gray-300 rounded-lg cursor-pointer ${
-                                                    hasMatches ? 'opacity-75' : ''
-                                                }`
+                                                className: 'w-12 h-10 border border-gray-300 rounded-lg cursor-pointer'
                                             }),
                                             React.createElement('input', {
                                                 type: 'text',
                                                 value: editedDrawColor[selectedCategory.id] ?? selectedCategory.drawColor,
                                                 onChange: e => handleDrawColorChange(selectedCategory.id, e.target.value),
-                                                disabled: hasMatches,
-                                                className: `flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black font-mono ${
-                                                    hasMatches ? 'bg-gray-100 cursor-not-allowed opacity-75' : ''
-                                                }`
+                                                className: 'flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black font-mono'
                                             })
-                                        ),
-                                        hasMatches && React.createElement(
-                                            'p',
-                                            { className: 'text-xs text-orange-600 mt-1 flex items-center gap-1' },
-                                            React.createElement('i', { className: 'fa-solid fa-lock' }),
-                                            'Farba pre rozlosovanie nie je možné meniť, pretože pre túto kategóriu už existujú zápasy.'
                                         )
                                     ),
 
@@ -1188,26 +1192,14 @@ export function CategorySettings({
                                                 type: 'color',
                                                 value: editedTransportColor[selectedCategory.id] ?? selectedCategory.transportColor,
                                                 onChange: e => handleTransportColorChange(selectedCategory.id, e.target.value),
-                                                disabled: hasMatches,
-                                                className: `w-12 h-10 border border-gray-300 rounded-lg cursor-pointer ${
-                                                    hasMatches ? 'opacity-75' : ''
-                                                }`
+                                                className: 'w-12 h-10 border border-gray-300 rounded-lg cursor-pointer'
                                             }),
                                             React.createElement('input', {
                                                 type: 'text',
                                                 value: editedTransportColor[selectedCategory.id] ?? selectedCategory.transportColor,
                                                 onChange: e => handleTransportColorChange(selectedCategory.id, e.target.value),
-                                                disabled: hasMatches,
-                                                className: `flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black font-mono ${
-                                                    hasMatches ? 'bg-gray-100 cursor-not-allowed opacity-75' : ''
-                                                }`
+                                                className: 'flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black font-mono'
                                             })
-                                        ),
-                                        hasMatches && React.createElement(
-                                            'p',
-                                            { className: 'text-xs text-orange-600 mt-1 flex items-center gap-1' },
-                                            React.createElement('i', { className: 'fa-solid fa-lock' }),
-                                            'Farba pre dopravu nie je možné meniť, pretože pre túto kategóriu už existujú zápasy.'
                                         )
                                     )
                                 );
