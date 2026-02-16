@@ -81,6 +81,9 @@ window.showGlobalNotification = (message, type = 'success') => {
 
 // Funkcia na generovanie zápasov pre skupinu - UPRAVENÁ S VÝPISOM CELÉHO DOKUMENTU TÍMU
 const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferFromBasicGroup = false) => {
+
+    console.log('generateMatchesForGroup - parameter transferFromBasicGroup:', transferFromBasicGroup);
+    
     const matches = [];
     
     // Pre každý tím vytvoríme identifikátor v tvare "kategória skupinaorder"
