@@ -1036,7 +1036,7 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayT
     );
 };
 
-const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches, breakStartTime, breakEndTime, breakDuration, hallId, date, categories }) => {
+const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches, breakStartTime, breakEndTime, breakDuration, hallId, date, categories, displayMode, getTeamDisplayText }) => {
     const [selectedMatchId, setSelectedMatchId] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -1045,10 +1045,38 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
     // Filtrovanie zápasov podľa vyhľadávania
     const filteredMatches = availableMatches.filter(match => {
         const searchLower = searchTerm.toLowerCase();
-        return match.homeTeamIdentifier.toLowerCase().includes(searchLower) ||
+        
+        // Získame zobrazovaný text pre domáci a hosťovský tím podľa aktuálneho režimu
+        const homeDisplay = getTeamDisplayText ? getTeamDisplayText(match.homeTeamIdentifier) : match.homeTeamIdentifier;
+        const awayDisplay = getTeamDisplayText ? getTeamDisplayText(match.awayTeamIdentifier) : match.awayTeamIdentifier;
+        
+        const homeText = typeof homeDisplay === 'object' ? homeDisplay.name : homeDisplay;
+        const awayText = typeof awayDisplay === 'object' ? awayDisplay.name : awayDisplay;
+        
+        return homeText.toLowerCase().includes(searchLower) ||
+               awayText.toLowerCase().includes(searchLower) ||
+               match.homeTeamIdentifier.toLowerCase().includes(searchLower) ||
                match.awayTeamIdentifier.toLowerCase().includes(searchLower) ||
                (match.categoryName && match.categoryName.toLowerCase().includes(searchLower));
     });
+
+    // Funkcia na získanie zobrazenia tímu podľa režimu
+    const getTeamDisplay = (identifier) => {
+        if (!getTeamDisplayText) return identifier;
+        
+        const display = getTeamDisplayText(identifier);
+        
+        switch (displayMode) {
+            case 'name':
+                return typeof display === 'object' ? display.name : display;
+            case 'id':
+                return identifier;
+            case 'both':
+                return typeof display === 'object' ? display : { name: display, id: identifier };
+            default:
+                return typeof display === 'object' ? display.name : display;
+        }
+    };
 
     return React.createElement(
         'div',
@@ -1134,6 +1162,10 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                     // Kontrola, či sa zápas zmestí do voľného času
                     const fitsInBreak = matchDuration <= breakDuration;
 
+                    // Získame zobrazenie pre tímy podľa režimu
+                    const homeDisplay = getTeamDisplay(match.homeTeamIdentifier);
+                    const awayDisplay = getTeamDisplay(match.awayTeamIdentifier);
+
                     return React.createElement(
                         'div',
                         {
@@ -1151,13 +1183,42 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                             React.createElement(
                                 'div',
                                 { className: 'flex-1' },
-                                React.createElement(
-                                    'div',
-                                    { className: 'flex items-center gap-2' },
-                                    React.createElement('span', { className: 'font-medium text-gray-800' }, match.homeTeamIdentifier),
-                                    React.createElement('i', { className: 'fa-solid fa-vs text-xs text-gray-400' }),
-                                    React.createElement('span', { className: 'font-medium text-gray-800' }, match.awayTeamIdentifier)
+                                // Zobrazenie podľa režimu
+                                displayMode === 'both' && typeof homeDisplay === 'object' && typeof awayDisplay === 'object' ? (
+                                    // Režim "Oboje" - zobrazíme názvy aj ID
+                                    React.createElement(
+                                        React.Fragment,
+                                        null,
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex items-center gap-2' },
+                                            React.createElement('span', { className: 'font-medium text-gray-800' }, homeDisplay.name),
+                                            React.createElement('i', { className: 'fa-solid fa-vs text-xs text-gray-400' }),
+                                            React.createElement('span', { className: 'font-medium text-gray-800' }, awayDisplay.name)
+                                        ),
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex items-center gap-2 mt-1 text-xs text-gray-500' },
+                                            React.createElement('span', { className: 'font-mono' }, `(${homeDisplay.id})`),
+                                            React.createElement('span', { className: 'text-gray-300' }, '|'),
+                                            React.createElement('span', { className: 'font-mono' }, `(${awayDisplay.id})`)
+                                        )
+                                    )
+                                ) : (
+                                    // Režim "Názvy" alebo "ID"
+                                    React.createElement(
+                                        React.Fragment,
+                                        null,
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex items-center gap-2' },
+                                            React.createElement('span', { className: 'font-medium text-gray-800' }, homeDisplay),
+                                            React.createElement('i', { className: 'fa-solid fa-vs text-xs text-gray-400' }),
+                                            React.createElement('span', { className: 'font-medium text-gray-800' }, awayDisplay)
+                                        )
+                                    )
                                 ),
+                                // Kategória a dĺžka
                                 React.createElement(
                                     'div',
                                     { className: 'flex items-center gap-2 mt-1 text-xs text-gray-500' },
