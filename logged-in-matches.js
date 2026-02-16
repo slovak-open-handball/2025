@@ -4530,7 +4530,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             minWidth: '100%' // Ale zaberá aspoň celú šírku rodiča
                                         }
                                     },
-                                    // Hlavička haly - fixná šírka
                                     React.createElement(
                                         'div',
                                         { className: 'p-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200' },
@@ -4553,19 +4552,23 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             ),
                                             React.createElement(
                                                 'div',
-                                                { className: 'flex-1 flex items-center justify-between' }, // Pridaný flex a justify-between
-                                                React.createElement('h4', { className: 'font-bold text-xl text-gray-800' }, hall.name),
-                                                userProfileData?.role === 'admin' && React.createElement(
-                                                    'button',
-                                                    {
-                                                        className: 'ml-auto opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 bg-orange-500 hover:bg-orange-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                        onClick: (e) => {
-                                                            e.stopPropagation();
-                                                            handleBulkUnassign(hall.id, null, true);
+                                                { className: 'flex-1' },
+                                                React.createElement(
+                                                    'div',
+                                                    { className: 'flex items-center justify-between group' }, // PRIDANÉ group
+                                                    React.createElement('h4', { className: 'font-bold text-xl text-gray-800' }, hall.name),
+                                                    userProfileData?.role === 'admin' && React.createElement(
+                                                        'button',
+                                                        {
+                                                            className: 'opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                            onClick: (e) => {
+                                                                e.stopPropagation();
+                                                                handleBulkUnassign(hall.id, null, true);
+                                                            },
+                                                            title: 'Odstrániť priradenie všetkých zápasov z tejto haly'
                                                         },
-                                                        title: 'Odstrániť priradenie všetkých zápasov z tejto haly'
-                                                    },
-                                                    React.createElement('i', { className: 'fa-solid fa-trash-can text-sm' })
+                                                        React.createElement('i', { className: 'fa-solid fa-trash-can text-sm' })
+                                                    )
                                                 ),
                                                 React.createElement('span', { 
                                                     className: 'inline-block px-3 py-1 text-xs font-medium rounded-full mt-1',
@@ -4576,7 +4579,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 }, 'Športová hala')
                                             )
                                         )
-                                    ),
+                                    )
                                     
                                     dayCards.length > 0 && React.createElement(
                                         'div',
@@ -4655,7 +4658,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         !isEmpty && userProfileData?.role === 'admin' && React.createElement(
                                                             'button',
                                                             {
-                                                                className: 'ml-2 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 bg-orange-500 hover:bg-orange-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                className: 'ml-2 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
                                                                 onClick: (e) => {
                                                                     e.stopPropagation();
                                                                     handleBulkUnassign(hall.id, dateStr, false);
