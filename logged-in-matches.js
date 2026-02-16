@@ -6533,8 +6533,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 // Prázdny div pre zarovnanie
                                                                                 displayMode !== 'both' && React.createElement('div', { className: 'w-24 flex-shrink-0' })
                                                                             ),
-                                                                            
-                                                                            // Tlačidlá pre správu medzery
+                                                                                                                                                        
+                                                                            // Tlačidlá pre správu medzery (pre medzeru MEDZI ZÁPASMI)
                                                                             userProfileData?.role === 'admin' && React.createElement(
                                                                                 'div',
                                                                                 { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/break:opacity-100 transition-opacity' },
@@ -6542,7 +6542,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     'button',
                                                                                     {
                                                                                         className: `w-6 h-6 ${
-                                                                                            isBreakBlocked(hall.id, dateStr, breakBeforeStartTime)
+                                                                                            isBreakBlocked(hall.id, dateStr, breakStartTime)  // <--- OPRAVENÉ: breakStartTime
                                                                                                 ? 'bg-yellow-500 hover:bg-yellow-600' 
                                                                                                 : 'bg-orange-500 hover:bg-orange-600'
                                                                                         } text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
@@ -6551,15 +6551,15 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                             toggleBlockBreak(
                                                                                                 hall.id, 
                                                                                                 dateStr, 
-                                                                                                breakBeforeStartTime,
-                                                                                                breakBeforeEndTime,
-                                                                                                gapMinute
+                                                                                                breakStartTime,
+                                                                                                breakEndTime, 
+                                                                                                breakBetweenMatches
                                                                                             );
                                                                                         },
-                                                                                        title: isBreakBlocked(hall.id, dateStr, breakBeforeStartTime) ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas (nebude ponúkaný)'
+                                                                                        title: isBreakBlocked(hall.id, dateStr, breakStartTime) ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas (nebude ponúkaný)'  // <--- OPRAVENÉ
                                                                                     },
                                                                                     React.createElement('i', { 
-                                                                                        className: `fa-solid ${isBreakBlocked(hall.id, dateStr, breakBeforeStartTime) ? 'fa-lock-open' : 'fa-lock'} text-xs` 
+                                                                                        className: `fa-solid ${isBreakBlocked(hall.id, dateStr, breakStartTime) ? 'fa-lock-open' : 'fa-lock'} text-xs`  // <--- OPRAVENÉ
                                                                                     })
                                                                                 ),
                                                                                 // Tlačidlo pre pridanie zápasu do voľného času
