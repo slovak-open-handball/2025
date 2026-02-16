@@ -3809,6 +3809,22 @@ const AddMatchesApp = ({ userProfileData }) => {
         };
     }, []);
 
+    const alignmentClasses = {
+        left: 'text-left',
+        'center-left': 'text-center',
+        center: 'text-center',
+        'center-right': 'text-center',
+        right: 'text-right'
+    };
+    
+    const alignmentStyles = {
+        left: { textAlign: 'left' },
+        'center-left': { textAlign: 'center', paddingRight: '10%' },
+        center: { textAlign: 'center' },
+        'center-right': { textAlign: 'center', paddingLeft: '10%' },
+        right: { textAlign: 'right' }
+    };
+
     // ZJEDNODUŠENÝ RENDER - dva stĺpce (ľavý - zápasy, pravý - haly)
     return React.createElement(
         React.Fragment,
@@ -4457,23 +4473,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     minWidth: '100%' // Ale zaberá aspoň celú šírku
                                 }
                             },
-                            const alignmentClasses = {
-                                left: 'text-left',
-                                'center-left': 'text-center', // Stred ale s miernym posunom doľava
-                                center: 'text-center',
-                                'center-right': 'text-center', // Stred ale s miernym posunom doprava
-                                right: 'text-right'
-                            };
-                            
-                            // Pre groupAlignmentMap môžeme pridať aj jemné doladenie pre center-left a center-right
-                            // pomocou prídavnej triedy alebo štýlu
-                            const alignmentStyles = {
-                                left: { textAlign: 'left' },
-                                'center-left': { textAlign: 'center', paddingRight: '10%' },
-                                center: { textAlign: 'center' },
-                                'center-right': { textAlign: 'center', paddingLeft: '10%' },
-                                right: { textAlign: 'right' }
-                            };
                             
                             sortedFilteredSportHalls.map((hall) => {
                                 const typeConfig = typeIcons[hall.type] || { icon: 'fa-futbol', color: '#dc2626' };
