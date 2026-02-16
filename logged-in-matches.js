@@ -79,7 +79,7 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
-// Funkcia na generovanie zápasov pre skupinu - UPRAVENÁ S PARAMETROM transferFromBasicGroup
+// Funkcia na generovanie zápasov pre skupinu - UPRAVENÁ S VÝPISOM CELÉHO DOKUMENTU TÍMU
 const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferFromBasicGroup = false) => {
     const matches = [];
     
@@ -94,6 +94,34 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferF
         
         const order = t.order || '?';
         const teamIdentifier = `${category} ${groupName}${order}`;
+        
+        // VÝPIS CELÉHO DOKUMENTU TÍMU PRE NADSTAVBOVÚ SKUPINU
+        if (transferFromBasicGroup) {
+            console.log('=== CELÝ DOKUMENT TÍMU Z DATABÁZY (nadstavbová skupina) ===');
+            console.log('Tím:', t);
+            console.log('ID:', t.id);
+            console.log('Názov tímu:', t.teamName);
+            console.log('Kategória:', t.category);
+            console.log('Skupina:', t.groupName);
+            console.log('Order:', t.order);
+            console.log('Posledný znak:', order ? order.toString().slice(-1) : '');
+            console.log('Vytvorený používateľom:', t.createdBy);
+            console.log('UID používateľa:', t.createdByUid);
+            console.log('Čas vytvorenia:', t.createdAt);
+            console.log('Vlastnosti tímu:', {
+                id: t.id,
+                teamName: t.teamName,
+                category: t.category,
+                groupName: t.groupName,
+                order: t.order,
+                createdBy: t.createdBy,
+                createdByUid: t.createdByUid,
+                createdAt: t.createdAt,
+                // Všetky ostatné vlastnosti
+                ...t
+            });
+            console.log('===========================================');
+        }
         
         return {
             identifier: teamIdentifier,
@@ -115,10 +143,16 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferF
                     if (transferFromBasicGroup) {
                         // Ak je transferFromBasicGroup true, preskočíme zápasy s rovnakým posledným znakom
                         if (teamIdentifiers[i].lastChar !== teamIdentifiers[j].lastChar) {
+                            // VÝPIS PRE KAŽDÝ GENEROVANÝ ZÁPAS
+                            console.log(`Generujem zápas: ${teamIdentifiers[i].identifier} vs ${teamIdentifiers[j].identifier}`);
+                            console.log(`  Kontrola znakov: ${teamIdentifiers[i].lastChar} vs ${teamIdentifiers[j].lastChar}`);
+                            
                             matches.push({
                                 homeTeamIdentifier: teamIdentifiers[i].identifier,
                                 awayTeamIdentifier: teamIdentifiers[j].identifier,
                             });
+                        } else {
+                            console.log(`PRESKAKUJEM zápas (rovnaký posledný znak ${teamIdentifiers[i].lastChar}): ${teamIdentifiers[i].identifier} vs ${teamIdentifiers[j].identifier}`);
                         }
                     } else {
                         matches.push({
@@ -135,10 +169,16 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferF
             for (let j = i + 1; j < teamIdentifiers.length; j++) {
                 if (transferFromBasicGroup) {
                     if (teamIdentifiers[i].lastChar !== teamIdentifiers[j].lastChar) {
+                        // VÝPIS PRE KAŽDÝ GENEROVANÝ ZÁPAS
+                        console.log(`Generujem zápas: ${teamIdentifiers[i].identifier} vs ${teamIdentifiers[j].identifier}`);
+                        console.log(`  Kontrola znakov: ${teamIdentifiers[i].lastChar} vs ${teamIdentifiers[j].lastChar}`);
+                        
                         matches.push({
                             homeTeamIdentifier: teamIdentifiers[i].identifier,
                             awayTeamIdentifier: teamIdentifiers[j].identifier,
                         });
+                    } else {
+                        console.log(`PRESKAKUJEM zápas (rovnaký posledný znak ${teamIdentifiers[i].lastChar}): ${teamIdentifiers[i].identifier} vs ${teamIdentifiers[j].identifier}`);
                     }
                 } else {
                     matches.push({
@@ -4031,81 +4071,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             breaksBetweenPeriods,
             totalTimeWithMatchBreak
         };
-    };
-
-    // Funkcia na generovanie zápasov pre skupinu - OPRAVENÁ S PARAMETROM transferFromBasicGroup
-    const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferFromBasicGroup = false) => {
-        const matches = [];
-        
-        // Pre každý tím vytvoríme identifikátor v tvare "kategória skupinaorder"
-        const teamIdentifiers = teams.map(t => {
-            const category = categoryName || t.category || 'Neznáma kategória';
-            
-            let groupName = t.groupName || 'Neznáma skupina';
-            if (groupName.startsWith('skupina ')) {
-                groupName = groupName.substring(8);
-            }
-            
-            const order = t.order || '?';
-            const teamIdentifier = `${category} ${groupName}${order}`;
-            
-            return {
-                identifier: teamIdentifier,
-                category: category,
-                groupName: groupName,
-                order: order,
-                lastChar: order ? order.toString().slice(-1) : '' // Posledný znak pre kontrolu
-            };
-        });
-        
-        console.log('Generujem zápasy pre tímy:', teamIdentifiers);
-        console.log('transferFromBasicGroup:', transferFromBasicGroup);
-        
-        if (withRepetitions) {
-            // Každý s každým doma/vonku
-            for (let i = 0; i < teamIdentifiers.length; i++) {
-                for (let j = 0; j < teamIdentifiers.length; j++) {
-                    if (i !== j) {
-                        if (transferFromBasicGroup) {
-                            // Ak je transferFromBasicGroup true, preskočíme zápasy s rovnakým posledným znakom
-                            if (teamIdentifiers[i].lastChar !== teamIdentifiers[j].lastChar) {
-                                matches.push({
-                                    homeTeamIdentifier: teamIdentifiers[i].identifier,
-                                    awayTeamIdentifier: teamIdentifiers[j].identifier,
-                                });
-                            }
-                        } else {
-                            matches.push({
-                                homeTeamIdentifier: teamIdentifiers[i].identifier,
-                                awayTeamIdentifier: teamIdentifiers[j].identifier,
-                            });
-                        }
-                    }
-                }
-            }
-        } else {
-            // Jedinečné dvojice
-            for (let i = 0; i < teamIdentifiers.length; i++) {
-                for (let j = i + 1; j < teamIdentifiers.length; j++) {
-                    if (transferFromBasicGroup) {
-                        if (teamIdentifiers[i].lastChar !== teamIdentifiers[j].lastChar) {
-                            matches.push({
-                                homeTeamIdentifier: teamIdentifiers[i].identifier,
-                                awayTeamIdentifier: teamIdentifiers[j].identifier,
-                            });
-                        }
-                    } else {
-                        matches.push({
-                            homeTeamIdentifier: teamIdentifiers[i].identifier,
-                            awayTeamIdentifier: teamIdentifiers[j].identifier,
-                        });
-                    }
-                }
-            }
-        }
-        
-        console.log(`Vygenerovaných ${matches.length} zápasov`);
-        return matches;
     };
     
     // Funkcia na získanie názvu tímu podľa identifikátora
