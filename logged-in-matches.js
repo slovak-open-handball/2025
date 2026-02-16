@@ -4314,6 +4314,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     const homeTeamDisplay = getTeamDisplayText(match.homeTeamIdentifier);
                                     const awayTeamDisplay = getTeamDisplayText(match.awayTeamIdentifier);
                                     
+                                    // Zistíme, či má zápas kategóriu
+                                    const hasCategory = match.categoryName && match.categoryName !== 'Neznáma kategória';
+                                    
                                     return React.createElement(
                                         'div',
                                         { 
@@ -4362,11 +4365,21 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             ),
                                             React.createElement(
                                                 'span',
-                                                { className: 'text-xs text-gray-500' },
-                                                match.categoryName || 'Neznáma kategória'
+                                                { className: `text-xs ${!hasCategory ? 'text-gray-400' : 'text-gray-500'}` },
+                                                !hasCategory ? '—' : (match.categoryName || 'Neznáma kategória')
                                             )
                                         ),
-                                        React.createElement(
+                                        
+                                        // Pre zápasy bez kategórie zobrazíme pomlčku v strede
+                                        !hasCategory ? React.createElement(
+                                            'div',
+                                            { className: 'flex items-center justify-center py-4' },
+                                            React.createElement(
+                                                'span',
+                                                { className: 'text-3xl font-light text-gray-300' },
+                                                '—'
+                                            )
+                                        ) : React.createElement(
                                             'div',
                                             { className: 'flex items-center justify-between' },
                                             displayMode === 'both' 
@@ -4431,6 +4444,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     awayTeamDisplay
                                                 )
                                         ),
+                                        
                                         React.createElement(
                                             'div',
                                             { className: 'mt-2 text-xs text-gray-500 flex items-center' },
