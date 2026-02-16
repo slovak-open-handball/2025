@@ -1237,8 +1237,8 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         return false;
     };
 
-    // Funkcia na výpočet prvého dostupného času
-    const calculateFirstAvailableTime = (hallId, date, existingMatchesList, hallStartTimeStr, matchDur) => {
+    // Upravená funkcia calculateFirstAvailableTime v AssignMatchModal
+    const calculateFirstAvailableTime = (hallId, date, existingMatchesList, hallStartTimeStr, matchDur, blockedBreaks) => {
         if (!hallId || !date || !hallStartTimeStr || matchDur === 0) return null;
         
         // Konvertujeme hallStartTime na minúty
@@ -1254,12 +1254,70 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                 return timeA - timeB;
             });
         
-        // Ak nie sú žiadne existujúce zápasy, vrátime hallStartTime
+        // Vytvoríme si zoznam zablokovaných intervalov pre túto halu a deň
+        const blockedIntervals = [];
+        if (blockedBreaks) {
+            Object.keys(blockedBreaks).forEach(key => {
+                if (key.startsWith(`${hallId}_${date}_`)) {
+                    const [,, breakStartTime] = key.split('_');
+                    if (breakStartTime) {
+                        const [breakHours, breakMinutes] = breakStartTime.split(':').map(Number);
+                        const breakStartMinutes = breakHours * 60 + breakMinutes;
+                        
+                        // Predpokladáme, že zablokovaný interval má rovnakú dĺžku ako matchDur?
+                        // V skutočnosti by sme mali vedieť dĺžku zablokovaného intervalu
+                        // Pre jednoduchosť predpokladáme, že zablokovaný interval má rovnakú dĺžku ako zápas
+                        // V praxi by bolo lepšie ukladať aj dĺžku intervalu
+                        const breakEndMinutes = breakStartMinutes + matchDur;
+                        
+                        blockedIntervals.push({
+                            start: breakStartMinutes,
+                            end: breakEndMinutes
+                        });
+                    }
+                }
+            });
+        }
+        
+        // Funkcia na kontrolu, či časový úsek koliduje so zablokovaným intervalom
+        const isBlocked = (startMinutes, endMinutes) => {
+            return blockedIntervals.some(interval => 
+                (startMinutes < interval.end && endMinutes > interval.start)
+            );
+        };
+        
+        // Ak nie sú žiadne existujúce zápasy, skontrolujeme, či nie je zablokovaný čas od hallStartTime
         if (sortedMatches.length === 0) {
-            return hallStartTimeStr;
+            // Skontrolujeme, či je hallStartTime zablokovaný
+            const endMinutes = currentTimeMinutes + matchDur + (categoryDetails?.matchBreak || 5);
+            
+            if (!isBlocked(currentTimeMinutes, endMinutes)) {
+                return hallStartTimeStr;
+            } else {
+                // Ak je hallStartTime zablokovaný, hľadáme prvý voľný čas po zablokovanom intervale
+                // Zoradíme zablokované intervaly
+                blockedIntervals.sort((a, b) => a.start - b.start);
+                
+                // Posunieme currentTimeMinutes za koniec prvého zablokovaného intervalu
+                for (const interval of blockedIntervals) {
+                    if (currentTimeMinutes < interval.end) {
+                        currentTimeMinutes = interval.end;
+                    }
+                }
+                
+                // Skontrolujeme, či nový čas nie je zase zablokovaný (rekurzívne by bolo lepšie, ale pre zjednodušenie to robíme len raz)
+                const newEndMinutes = currentTimeMinutes + matchDur + (categoryDetails?.matchBreak || 5);
+                if (!isBlocked(currentTimeMinutes, newEndMinutes)) {
+                    const hours = Math.floor(currentTimeMinutes / 60).toString().padStart(2, '0');
+                    const minutes = (currentTimeMinutes % 60).toString().padStart(2, '0');
+                    return `${hours}:${minutes}`;
+                }
+            }
         }
         
         // Prejdeme všetky existujúce zápasy a hľadáme medzeru
+        let lastEndMinutes = currentTimeMinutes;
+        
         for (const existingMatch of sortedMatches) {
             // Vypočítame čas konca existujúceho zápasu (vrátane prestávky)
             const matchStart = existingMatch.scheduledTime.toDate();
@@ -1279,21 +1337,72 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             
             const matchEndMinutes = matchStartMinutes + existingDuration + existingMatchBreak;
             
-            // Ak je aktuálny čas pred začiatkom tohto zápasu a je dostatok miesta pre nový zápas
-            if (currentTimeMinutes + matchDur + (categoryDetails?.matchBreak || 5) <= matchStartMinutes) {
-                // Našli sme medzeru pred týmto zápasom
-                break;
+            // Čas pred týmto zápasom
+            const potentialStartMinutes = lastEndMinutes;
+            const potentialEndMinutes = potentialStartMinutes + matchDur + (categoryDetails?.matchBreak || 5);
+            
+            // Skontrolujeme, či sa zmestíme pred tento zápas a či nie je zablokovaný
+            if (potentialStartMinutes + matchDur + (categoryDetails?.matchBreak || 5) <= matchStartMinutes) {
+                // Skontrolujeme, či tento čas nie je zablokovaný
+                if (!isBlocked(potentialStartMinutes, potentialEndMinutes)) {
+                    // Našli sme medzeru pred týmto zápasom
+                    const hours = Math.floor(potentialStartMinutes / 60).toString().padStart(2, '0');
+                    const minutes = (potentialStartMinutes % 60).toString().padStart(2, '0');
+                    return `${hours}:${minutes}`;
+                } else {
+                    // Ak je čas zablokovaný, skúsime posunúť za zablokovaný interval
+                    // Zoradíme zablokované intervaly
+                    const relevantBlocked = blockedIntervals
+                        .filter(interval => interval.start >= potentialStartMinutes && interval.start < matchStartMinutes)
+                        .sort((a, b) => a.start - b.start);
+                    
+                    let newPotentialStart = potentialStartMinutes;
+                    for (const interval of relevantBlocked) {
+                        if (newPotentialStart < interval.end) {
+                            newPotentialStart = interval.end;
+                        }
+                    }
+                    
+                    // Skúsime znova s novým časom
+                    const newPotentialEnd = newPotentialStart + matchDur + (categoryDetails?.matchBreak || 5);
+                    if (newPotentialStart + matchDur + (categoryDetails?.matchBreak || 5) <= matchStartMinutes) {
+                        const hours = Math.floor(newPotentialStart / 60).toString().padStart(2, '0');
+                        const minutes = (newPotentialStart % 60).toString().padStart(2, '0');
+                        return `${hours}:${minutes}`;
+                    }
+                }
             }
             
-            // Posunieme aktuálny čas za koniec tohto zápasu
-            currentTimeMinutes = Math.max(currentTimeMinutes, matchEndMinutes);
+            // Posunieme lastEndMinutes za koniec tohto zápasu
+            lastEndMinutes = Math.max(lastEndMinutes, matchEndMinutes);
         }
         
-        // Konvertujeme minúty naspäť na čas vo formáte HH:MM
-        const hours = Math.floor(currentTimeMinutes / 60).toString().padStart(2, '0');
-        const minutes = (currentTimeMinutes % 60).toString().padStart(2, '0');
+        // Skúsime čas po poslednom zápase
+        const finalStartMinutes = lastEndMinutes;
+        const finalEndMinutes = finalStartMinutes + matchDur + (categoryDetails?.matchBreak || 5);
         
-        return `${hours}:${minutes}`;
+        // Skontrolujeme, či nie je zablokovaný
+        if (!isBlocked(finalStartMinutes, finalEndMinutes)) {
+            const hours = Math.floor(finalStartMinutes / 60).toString().padStart(2, '0');
+            const minutes = (finalStartMinutes % 60).toString().padStart(2, '0');
+            return `${hours}:${minutes}`;
+        } else {
+            // Ak je zablokovaný, posunieme za zablokované intervaly
+            const relevantBlocked = blockedIntervals
+                .filter(interval => interval.start >= finalStartMinutes)
+                .sort((a, b) => a.start - b.start);
+            
+            let newFinalStart = finalStartMinutes;
+            for (const interval of relevantBlocked) {
+                if (newFinalStart < interval.end) {
+                    newFinalStart = interval.end;
+                }
+            }
+            
+            const hours = Math.floor(newFinalStart / 60).toString().padStart(2, '0');
+            const minutes = (newFinalStart % 60).toString().padStart(2, '0');
+            return `${hours}:${minutes}`;
+        }
     };
 
     // Inicializácia pri otvorení modálneho okna - NAČÍTAME DÁTUMY OKAMŽITE
@@ -1491,7 +1600,8 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             selectedDate,
                             existingMatches,
                             startTime,
-                            matchDuration
+                            matchDuration,
+                            blockedBreaks
                         );
                         
                         if (firstAvailable) {
@@ -2721,6 +2831,32 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [isAssignToBreakModalOpen, setIsAssignToBreakModalOpen] = useState(false);
     const [selectedBreakForAssign, setSelectedBreakForAssign] = useState(null);
 
+    const [blockedBreaks, setBlockedBreaks] = useState({});
+
+    const toggleBlockBreak = (hallId, dateStr, breakStartTime, breakEndTime, breakDuration) => {
+        const breakKey = `${hallId}_${dateStr}_${breakStartTime}`;
+    
+        setBlockedBreaks(prev => {
+            const newBlockedBreaks = { ...prev };
+            
+            if (newBlockedBreaks[breakKey]) {
+                delete newBlockedBreaks[breakKey];
+            } else {
+                newBlockedBreaks[breakKey] = {
+                    startTime: breakStartTime,
+                    endTime: breakEndTime,
+                    duration: breakDuration
+                };
+            }
+            return newBlockedBreaks;
+        });
+    };
+
+    const isBreakBlocked = (hallId, dateStr, breakStartTime) => {
+        const breakKey = `${hallId}_${dateStr}_${breakStartTime}`;
+        return !!blockedBreaks[breakKey];
+    };
+
     const handleAssignMatchToBreak = async ({ matchId, breakStartTime, breakDuration, hallId, date }) => {
         if (!window.db) {
             window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
@@ -3349,6 +3485,21 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
         window.location.hash = hash;
     };
+
+    useEffect(() => {
+        const savedBlockedBreaks = localStorage.getItem('blockedBreaks');
+        if (savedBlockedBreaks) {
+            try {
+                setBlockedBreaks(JSON.parse(savedBlockedBreaks));
+            } catch (e) {
+                console.error('Chyba pri načítaní z localStorage:', e);
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem('blockedBreaks', JSON.stringify(blockedBreaks));
+    }, [blockedBreaks]);
 
     // Aktualizácia dostupných skupín pre filter pri zmene kategórie
     useEffect(() => {
