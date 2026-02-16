@@ -4743,7 +4743,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                     'div',
                                                                     {
                                                                         key: idx,
-                                                                        className: 'p-2 bg-white rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group',
+                                                                        className: 'p-2 bg-white rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match',
                                                                         style: { 
                                                                             width: 'fit-content' // Každý zápas sa prispôsobí obsahu
                                                                         }
@@ -4812,7 +4812,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                     
                                                                     userProfileData?.role === 'admin' && React.createElement(
                                                                         'div',
-                                                                        { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity' },
+                                                                        { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/match:opacity-100 transition-opacity' },
                                                                         React.createElement(
                                                                             'button',
                                                                             {
