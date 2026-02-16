@@ -6102,7 +6102,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         React.createElement(
                                                                                             'div',
                                                                                             { 
-                                                                                                className: `text-green-700 font-medium whitespace-nowrap min-w-[250px] flex-shrink-0`,
+                                                                                                className: `text-green-700 font-medium whitespace-nowrap min-w-[300px] flex-shrink-0`,
                                                                                                 style: { textAlign: 'left' }
                                                                                             },
                                                                                             `${gapMinutes} minút`
@@ -6119,7 +6119,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         React.createElement(
                                                                                             'div',
                                                                                             { 
-                                                                                                className: `text-green-600 whitespace-nowrap min-w-[250px] flex-shrink-0`,
+                                                                                                className: `text-green-600 whitespace-nowrap min-w-[300px] flex-shrink-0`,
                                                                                                 style: { textAlign: 'left' }
                                                                                             },
                                                                                             'voľný čas'
@@ -6129,7 +6129,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         displayMode === 'both' && React.createElement(
                                                                                             'div',
                                                                                             { 
-                                                                                                className: `text-gray-400 font-mono text-[10px] whitespace-nowrap min-w-[250px] flex-shrink-0`,
+                                                                                                className: `text-gray-400 font-mono text-[10px] whitespace-nowrap min-w-[300px] flex-shrink-0`,
                                                                                                 style: alignmentStyle
                                                                                             },
                                                                                             ''
@@ -6138,14 +6138,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         displayMode === 'both' && React.createElement(
                                                                                             'div',
                                                                                             { 
-                                                                                                className: `text-gray-400 font-mono text-[10px] whitespace-nowrap min-w-[250px] flex-shrink-0`,
+                                                                                                className: `text-gray-400 font-mono text-[10px] whitespace-nowrap min-w-[300px] flex-shrink-0`,
                                                                                                 style: alignmentStyle
                                                                                             },
                                                                                             ''
                                                                                         ),
                                                                                         
                                                                                         // Prázdny div pre zarovnanie
-                                                                                        displayMode !== 'both' && React.createElement('div', { className: 'min-w-[250px] flex-shrink-0' })
+                                                                                        displayMode !== 'both' && React.createElement('div', { className: 'min-w-[300px] flex-shrink-0' })
                                                                                     ),
                                                                                     
                                                                                     // Tlačidlá pre správu medzery
@@ -6371,7 +6371,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
-                                                                                    className: `font-medium text-gray-800 whitespace-nowrap min-w-[250px] flex-shrink-0 px-2 border-r border-gray-300`, // ZMENENÉ: pridané px-2 a border-r
+                                                                                    className: `font-medium text-gray-800 whitespace-nowrap min-w-[300px] flex-shrink-0 px-2 border-r border-gray-300`, // ZMENENÉ: pridané px-2 a border-r
                                                                                     style: alignmentStyle
                                                                                 },
                                                                                 displayMode === 'both' ? homeDisplay.name : homeDisplay
@@ -6388,7 +6388,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
-                                                                                    className: `font-medium text-gray-800 whitespace-nowrap min-w-[250px] flex-shrink-0 px-2 border-r border-gray-300`, // ZMENENÉ: pridané px-2 a border-r
+                                                                                    className: `font-medium text-gray-800 whitespace-nowrap min-w-[300px] flex-shrink-0 px-2 border-r border-gray-300`, // ZMENENÉ: pridané px-2 a border-r
                                                                                     style: alignmentStyle
                                                                                 },
                                                                                 displayMode === 'both' ? awayDisplay.name : awayDisplay
@@ -6398,7 +6398,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             displayMode === 'both' && React.createElement(
                                                                                 'div',
                                                                                 { 
-                                                                                    className: `text-gray-500 font-mono text-[10px] whitespace-nowrap min-w-[150px] flex-shrink-0 px-2 border-r border-gray-300`, // ZMENENÉ: pridané px-2 a border-r
+                                                                                    className: `text-gray-500 font-mono text-[10px] whitespace-nowrap min-w-[300px] flex-shrink-0 px-2 border-r border-gray-300`, // ZMENENÉ: pridané px-2 a border-r
                                                                                     style: alignmentStyle
                                                                                 },
                                                                                 `(${homeDisplay.id})`
@@ -6408,14 +6408,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             displayMode === 'both' && React.createElement(
                                                                                 'div',
                                                                                 { 
-                                                                                    className: `text-gray-500 font-mono text-[10px] whitespace-nowrap min-w-[150px] flex-shrink-0 px-2`, // ZMENENÉ: pridané px-2, BEZ border-r (posledná bunka)
+                                                                                    className: `text-gray-500 font-mono text-[10px] whitespace-nowrap min-w-[300px] flex-shrink-0 px-2`, // ZMENENÉ: pridané px-2, BEZ border-r (posledná bunka)
                                                                                     style: alignmentStyle
                                                                                 },
                                                                                 `(${awayDisplay.id})`
                                                                             ),
                                                                             
                                                                             // Prázdny div pre zarovnanie, ak nie je režim both
-                                                                            displayMode !== 'both' && React.createElement('div', { className: 'min-w-[150px] flex-shrink-0 px-2' }) // ZMENENÉ: pridané px-2
+                                                                            displayMode !== 'both' && React.createElement('div', { className: 'min-w-[300px] flex-shrink-0 px-2' }) // ZMENENÉ: pridané px-2
                                                                         ),
                                                                         
                                                                         userProfileData?.role === 'admin' && React.createElement(
@@ -6504,7 +6504,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 React.createElement(
                                                                                     'div',
                                                                                     { 
-                                                                                        className: `text-green-700 font-medium whitespace-nowrap min-w-[150px] flex-shrink-0`,
+                                                                                        className: `text-green-700 font-medium whitespace-nowrap min-w-[300px] flex-shrink-0`,
                                                                                         style: { textAlign: 'left' }
                                                                                     },
                                                                                     `${breakBetweenMatches} minút`
@@ -6521,7 +6521,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 React.createElement(
                                                                                     'div',
                                                                                     { 
-                                                                                        className: `text-green-600 whitespace-nowrap min-w-[150px] flex-shrink-0`,
+                                                                                        className: `text-green-600 whitespace-nowrap min-w-[300px] flex-shrink-0`,
                                                                                         style: { textAlign: 'left' }
                                                                                     },
                                                                                     'voľný čas'
@@ -6531,7 +6531,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 displayMode === 'both' && React.createElement(
                                                                                     'div',
                                                                                     { 
-                                                                                        className: `text-gray-400 font-mono text-[10px] whitespace-nowrap min-w-[150px] flex-shrink-0`,
+                                                                                        className: `text-gray-400 font-mono text-[10px] whitespace-nowrap min-w-[300px] flex-shrink-0`,
                                                                                         style: alignmentStyle
                                                                                     },
                                                                                     ''
@@ -6540,14 +6540,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 displayMode === 'both' && React.createElement(
                                                                                     'div',
                                                                                     { 
-                                                                                        className: `text-gray-400 font-mono text-[10px] whitespace-nowrap min-w-[150px] flex-shrink-0`,
+                                                                                        className: `text-gray-400 font-mono text-[10px] whitespace-nowrap min-w-[300px] flex-shrink-0`,
                                                                                         style: alignmentStyle
                                                                                     },
                                                                                     ''
                                                                                 ),
                                                                                 
                                                                                 // Prázdny div pre zarovnanie
-                                                                                displayMode !== 'both' && React.createElement('div', { className: 'min-w-[150px] flex-shrink-0' })
+                                                                                displayMode !== 'both' && React.createElement('div', { className: 'min-w-[300px] flex-shrink-0' })
                                                                             ),
                                                                                                                                                         
                                                                             // Tlačidlá pre správu medzery (pre medzeru MEDZI ZÁPASMI)
