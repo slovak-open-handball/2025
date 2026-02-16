@@ -4333,7 +4333,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     const homePureId = extractPureId(match.homeTeamIdentifier);
                                     const awayPureId = extractPureId(match.awayTeamIdentifier);
                                     
-                                    // Premenné pre zobrazenie v strede karty
+                                    // Premenné pre zobrazenie v prvom riadku
                                     let homeDisplayText = '';
                                     let awayDisplayText = '';
                                     
@@ -4408,47 +4408,47 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             )
                                         ),
                                         
-                                        // Zobrazenie zápasu v strede karty podľa prepínača
+                                        // Zobrazenie zápasu v strede karty
                                         React.createElement(
                                             'div',
-                                            { className: 'flex flex-col items-center justify-center py-2' },
+                                            { className: 'flex flex-col items-center justify-center py-2 w-full' },
                                             
-                                            // Prvý riadok - podľa prepínača (názvy, ID alebo oboje)
+                                            // Prvý riadok - domáci doľava, hostia doprava
                                             React.createElement(
                                                 'div',
-                                                { className: 'flex items-center justify-center mb-1' },
+                                                { className: 'flex items-center justify-between w-full' },
                                                 React.createElement(
                                                     'span',
                                                     { 
-                                                        className: 'font-semibold text-sm text-gray-800 text-right',
+                                                        className: 'font-semibold text-sm text-gray-800 text-left flex-1 truncate',
                                                         title: match.homeTeamIdentifier
                                                     },
                                                     homeDisplayText
                                                 ),
-                                                React.createElement('i', { className: 'fa-solid fa-minus text-xs text-gray-400 mx-2' }),
+                                                React.createElement('i', { className: 'fa-solid fa-minus text-xs text-gray-400 mx-2 flex-shrink-0' }),
                                                 React.createElement(
                                                     'span',
                                                     { 
-                                                        className: 'font-semibold text-sm text-gray-800 text-left',
+                                                        className: 'font-semibold text-sm text-gray-800 text-right flex-1 truncate',
                                                         title: match.awayTeamIdentifier
                                                     },
                                                     awayDisplayText
                                                 )
                                             ),
                                             
-                                            // Druhý riadok - VŽDY čisté ID (bez kategórie)
+                                            // Druhý riadok - VŽDY čisté ID (bez kategórie) - tiež domáci doľava, hostia doprava
                                             React.createElement(
                                                 'div',
-                                                { className: 'flex items-center justify-center text-xs text-gray-500' },
+                                                { className: 'flex items-center justify-between w-full mt-1' },
                                                 React.createElement(
                                                     'span',
-                                                    { className: 'font-mono' },
+                                                    { className: 'text-xs text-gray-500 font-mono text-left flex-1 truncate' },
                                                     homePureId
                                                 ),
-                                                React.createElement('span', { className: 'mx-1' }, '-'),
+                                                React.createElement('span', { className: 'text-xs text-gray-500 mx-2 flex-shrink-0' }, '—'),
                                                 React.createElement(
                                                     'span',
-                                                    { className: 'font-mono' },
+                                                    { className: 'text-xs text-gray-500 font-mono text-right flex-1 truncate' },
                                                     awayPureId
                                                 )
                                             )
