@@ -2710,34 +2710,34 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
             ),
 
             // Náhľad nového času
-            React.createElement(
-                'div',
-                { className: 'mb-6 p-3 bg-green-50 rounded-lg border border-green-200' },
-                React.createElement(
-                    'div',
-                    { className: 'flex items-center justify-between' },
-                    React.createElement(
-                        'div',
-                        null,
-                        React.createElement('p', { className: 'text-xs text-gray-500' }, 'Pôvodný čas:'),
-                        React.createElement('p', { className: 'font-medium' }, currentTime)
-                    ),
-                    React.createElement('i', { className: 'fa-solid fa-arrow-right text-green-600' }),
-                    React.createElement(
-                        'div',
-                        null,
-                        React.createElement('p', { className: 'text-xs text-gray-500' }, 'Nový čas:'),
-                        React.createElement('p', { className: `font-bold ${newTime ? 'text-green-700' : 'text-red-500'}` }, 
-                            newTime || 'Neplatný čas'
-                        )
-                    )
-                ),
-                newTime && React.createElement(
-                    'p',
-                    { className: 'text-xs text-gray-500 mt-2 text-center' },
-                    'Ostatné zápasy v tento deň sa automaticky posunú'
-                )
-            ),
+//            React.createElement(
+//                'div',
+//                { className: 'mb-6 p-3 bg-green-50 rounded-lg border border-green-200' },
+//                React.createElement(
+//                    'div',
+//                    { className: 'flex items-center justify-between' },
+//                    React.createElement(
+//                        'div',
+//                        null,
+//                        React.createElement('p', { className: 'text-xs text-gray-500' }, 'Pôvodný čas:'),
+//                        React.createElement('p', { className: 'font-medium' }, currentTime)
+//                    ),
+//                    React.createElement('i', { className: 'fa-solid fa-arrow-right text-green-600' }),
+//                    React.createElement(
+//                        'div',
+//                        null,
+//                        React.createElement('p', { className: 'text-xs text-gray-500' }, 'Nový čas:'),
+//                        React.createElement('p', { className: `font-bold ${newTime ? 'text-green-700' : 'text-red-500'}` }, 
+//                            newTime || 'Neplatný čas'
+//                        )
+//                    )
+//                ),
+//                newTime && React.createElement(
+//                    'p',
+//                    { className: 'text-xs text-gray-500 mt-2 text-center' },
+//                    'Ostatné zápasy v tento deň sa automaticky posunú'
+//                )
+//            ),
 
             // Tlačidlá
             React.createElement(
