@@ -4520,7 +4520,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     return null;
                                 }
                                 
-                                return React.createElement(return React.createElement(
+                                return React.createElement(
                                     'div',
                                     { 
                                         key: hall.id,
