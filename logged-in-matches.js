@@ -4579,7 +4579,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 }, 'Športová hala')
                                             )
                                         )
-                                    )
+                                    ),
                                     
                                     dayCards.length > 0 && React.createElement(
                                         'div',
