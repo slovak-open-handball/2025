@@ -2005,6 +2005,207 @@ const HallDayStartTimeModal = ({ isOpen, onClose, onConfirm, hallName, date, cur
     );
 };
 
+const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, currentTime }) => {
+    const [breakPosition, setBreakPosition] = useState('after'); // 'before' alebo 'after'
+    const [breakDuration, setBreakDuration] = useState(5); // predvolene 5 minút
+    const [newTime, setNewTime] = useState('');
+
+    useEffect(() => {
+        if (isOpen && match && currentTime) {
+            // Vypočítame nový čas podľa pozície
+            const [hours, minutes] = currentTime.split(':').map(Number);
+            const currentMinutes = hours * 60 + minutes;
+            
+            let newMinutes;
+            if (breakPosition === 'before') {
+                newMinutes = currentMinutes - breakDuration;
+            } else {
+                newMinutes = currentMinutes + breakDuration;
+            }
+            
+            const newHours = Math.floor(newMinutes / 60).toString().padStart(2, '0');
+            const newMins = (newMinutes % 60).toString().padStart(2, '0');
+            setNewTime(`${newHours}:${newMins}`);
+        }
+    }, [isOpen, match, currentTime, breakPosition, breakDuration]);
+
+    useEffect(() => {
+        if (!isOpen) {
+            setBreakPosition('after');
+            setBreakDuration(5);
+            setNewTime('');
+        }
+    }, [isOpen]);
+
+    if (!isOpen || !match) return null;
+
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[95]',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) onClose();
+            }
+        },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
+            
+            // Hlavička
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center mb-4' },
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 'Pridať medzeru'),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'text-gray-500 hover:text-gray-700'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-times text-xl' })
+                )
+            ),
+
+            // Informácie o zápase
+            React.createElement(
+                'div',
+                { className: 'mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200' },
+                React.createElement('p', { className: 'text-sm font-medium text-gray-700' }, 'Zápas:'),
+                React.createElement('p', { className: 'text-sm' }, 
+                    `${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`
+                ),
+                React.createElement('p', { className: 'text-xs text-gray-500 mt-1' },
+                    `Aktuálny čas: ${currentTime}`
+                )
+            ),
+
+            // Výber pozície
+            React.createElement(
+                'div',
+                { className: 'mb-4' },
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' },
+                    'Pridať medzeru:'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex gap-4' },
+                    React.createElement(
+                        'label',
+                        { className: 'flex items-center gap-2 cursor-pointer' },
+                        React.createElement('input', {
+                            type: 'radio',
+                            name: 'breakPosition',
+                            value: 'before',
+                            checked: breakPosition === 'before',
+                            onChange: (e) => setBreakPosition(e.target.value),
+                            className: 'w-4 h-4 text-blue-600'
+                        }),
+                        React.createElement('span', { className: 'text-gray-700' }, 'Pred zápasom')
+                    ),
+                    React.createElement(
+                        'label',
+                        { className: 'flex items-center gap-2 cursor-pointer' },
+                        React.createElement('input', {
+                            type: 'radio',
+                            name: 'breakPosition',
+                            value: 'after',
+                            checked: breakPosition === 'after',
+                            onChange: (e) => setBreakPosition(e.target.value),
+                            className: 'w-4 h-4 text-blue-600'
+                        }),
+                        React.createElement('span', { className: 'text-gray-700' }, 'Za zápasom')
+                    )
+                )
+            ),
+
+            // Výber dĺžky medzery
+            React.createElement(
+                'div',
+                { className: 'mb-4' },
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                    'Dĺžka medzery (minúty):'
+                ),
+                React.createElement(
+                    'select',
+                    {
+                        value: breakDuration,
+                        onChange: (e) => setBreakDuration(parseInt(e.target.value)),
+                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                    },
+                    React.createElement('option', { value: 5 }, '5 minút'),
+                    React.createElement('option', { value: 10 }, '10 minút'),
+                    React.createElement('option', { value: 15 }, '15 minút'),
+                    React.createElement('option', { value: 20 }, '20 minút'),
+                    React.createElement('option', { value: 30 }, '30 minút')
+                )
+            ),
+
+            // Náhľad nového času
+            React.createElement(
+                'div',
+                { className: 'mb-6 p-3 bg-green-50 rounded-lg border border-green-200' },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center justify-between' },
+                    React.createElement(
+                        'div',
+                        null,
+                        React.createElement('p', { className: 'text-xs text-gray-500' }, 'Pôvodný čas:'),
+                        React.createElement('p', { className: 'font-medium' }, currentTime)
+                    ),
+                    React.createElement('i', { className: 'fa-solid fa-arrow-right text-green-600' }),
+                    React.createElement(
+                        'div',
+                        null,
+                        React.createElement('p', { className: 'text-xs text-gray-500' }, 'Nový čas:'),
+                        React.createElement('p', { className: 'font-bold text-green-700' }, newTime || '--:--')
+                    )
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-xs text-gray-500 mt-2 text-center' },
+                    'Ostatné zápasy v tento deň sa automaticky posunú'
+                )
+            ),
+
+            // Tlačidlá
+            React.createElement(
+                'div',
+                { className: 'flex justify-end gap-3' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
+                    },
+                    'Zrušiť'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => {
+                            onConfirm({
+                                matchId: match.id,
+                                position: breakPosition,
+                                duration: breakDuration,
+                                newTime: newTime
+                            });
+                            onClose();
+                        },
+                        disabled: !newTime,
+                        className: `px-4 py-2 text-white rounded-lg transition-colors ${
+                            newTime 
+                                ? 'bg-green-600 hover:bg-green-700 cursor-pointer' 
+                                : 'bg-gray-400 cursor-not-allowed'
+                        }`
+                    },
+                    'Pridať medzeru'
+                )
+            )
+        )
+    );
+};
+
 const AddMatchesApp = ({ userProfileData }) => {
     const [sportHalls, setSportHalls] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -2050,6 +2251,95 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [pendingBulkUnassign, setPendingBulkUnassign] = useState(null);
 
     const [colorHighlight, setColorHighlight] = useState(false);
+
+    const [isBreakModalOpen, setIsBreakModalOpen] = useState(false);
+    const [selectedMatchForBreak, setSelectedMatchForBreak] = useState(null);
+    const [selectedMatchCurrentTime, setSelectedMatchCurrentTime] = useState('');
+
+    const handleAddBreak = async ({ matchId, position, duration, newTime }) => {
+        if (!window.db) {
+            window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
+            return;
+        }
+    
+        if (userProfileData?.role !== 'admin') {
+            window.showGlobalNotification('Na úpravu rozvrhu potrebujete administrátorské práva', 'error');
+            return;
+        }
+    
+        try {
+            const match = matches.find(m => m.id === matchId);
+            if (!match || !match.scheduledTime) return;
+    
+            // Získame všetky zápasy pre tú istú halu a deň
+            const matchDate = match.scheduledTime.toDate();
+            const dateStr = getLocalDateStr(matchDate);
+            
+            const hallDayMatches = matches
+                .filter(m => 
+                    m.hallId === match.hallId && 
+                    m.scheduledTime &&
+                    m.id !== matchId
+                )
+                .map(m => ({
+                    ...m,
+                    scheduledTimeObj: m.scheduledTime.toDate()
+                }))
+                .filter(m => {
+                    const mDateStr = getLocalDateStr(m.scheduledTimeObj);
+                    return mDateStr === dateStr;
+                })
+                .sort((a, b) => a.scheduledTimeObj.getTime() - b.scheduledTimeObj.getTime());
+    
+            // Nájdeme index aktuálneho zápasu
+            const currentIndex = hallDayMatches.findIndex(m => m.id === matchId);
+            
+            // Rozdelíme na zápasy pred a po
+            const beforeMatches = hallDayMatches.slice(0, currentIndex);
+            const afterMatches = hallDayMatches.slice(currentIndex + 1);
+    
+            // Vypočítame posun v minútach
+            const [newHours, newMinutes] = newTime.split(':').map(Number);
+            const newTimeMinutes = newHours * 60 + newMinutes;
+            
+            const currentTimeMinutes = matchDate.getHours() * 60 + matchDate.getMinutes();
+            const shiftMinutes = newTimeMinutes - currentTimeMinutes;
+    
+            // Aktualizujeme aktuálny zápas
+            const matchRef = doc(window.db, 'matches', matchId);
+            const newDateTime = new Date(matchDate);
+            newDateTime.setMinutes(newDateTime.getMinutes() + shiftMinutes);
+            
+            await updateDoc(matchRef, {
+                scheduledTime: Timestamp.fromDate(newDateTime)
+            });
+    
+            // Posunieme všetky nasledujúce zápasy (ak je medzera pridaná pred aktuálnym, posúvame všetky)
+            const matchesToShift = position === 'before' 
+                ? [...beforeMatches, ...afterMatches] // Ak pred, posúvame všetky
+                : afterMatches; // Ak za, posúvame len tie po
+    
+            for (const m of matchesToShift) {
+                const mRef = doc(window.db, 'matches', m.id);
+                const mDateTime = new Date(m.scheduledTimeObj);
+                mDateTime.setMinutes(mDateTime.getMinutes() + shiftMinutes);
+                
+                await updateDoc(mRef, {
+                    scheduledTime: Timestamp.fromDate(mDateTime)
+                });
+            }
+    
+            const message = position === 'before'
+                ? `Pridaná ${duration} minútová medzera pred zápasom. Všetky nasledujúce zápasy boli posunuté.`
+                : `Pridaná ${duration} minútová medzera za zápasom. Nasledujúce zápasy boli posunuté.`;
+            
+            window.showGlobalNotification(message, 'success');
+    
+        } catch (error) {
+            console.error('Chyba pri pridávaní medzery:', error);
+            window.showGlobalNotification('Chyba: ' + error.message, 'error');
+        }
+    };
 
     const handleBulkUnassign = async (hallId, date, isWholeHall = false) => {
         if (!window.db) {
@@ -3947,6 +4237,19 @@ const AddMatchesApp = ({ userProfileData }) => {
                 day: selectedDayFilter || null
             }
         }),
+        React.createElement(AddBreakModal, {
+            isOpen: isBreakModalOpen,
+            onClose: () => {
+                setIsBreakModalOpen(false);
+                setSelectedMatchForBreak(null);
+                setSelectedMatchCurrentTime('');
+            },
+            onConfirm: handleAddBreak,
+            match: selectedMatchForBreak,
+            hallName: selectedMatchForBreak ? sportHalls.find(h => h.id === selectedMatchForBreak.hallId)?.name : '',
+            date: selectedMatchForBreak?.scheduledTime ? formatDateForDisplay(selectedMatchForBreak.scheduledTime) : '',
+            currentTime: selectedMatchCurrentTime
+        }),
 
         // Ovládacie prvky - filtre a prepínač (skryté, zobrazia sa pri hover)
         React.createElement(
@@ -4369,32 +4672,47 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         // Tlačidlo pre zmazanie (zobrazí sa pri hoveri)
                                         userProfileData?.role === 'admin' && React.createElement(
                                             'div',
-                                            { className: 'absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity' },
-                                            // Ikona pre výmenu tímov
+                                            { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/match:opacity-100 transition-opacity' },
+                                            // Nové zelené tlačidlo pre pridanie medzery
                                             React.createElement(
                                                 'button',
                                                 {
+                                                    className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                    onClick: (e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedMatchForBreak(match);
+                                                        setSelectedMatchCurrentTime(matchTime);
+                                                        setIsBreakModalOpen(true);
+                                                    },
+                                                    title: 'Pridať medzeru pred/za zápas'
+                                                },
+                                                React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
+                                            ),
+                                            // Existujúce modré tlačidlo pre výmenu
+                                            React.createElement(
+                                                'button',
+                                                {
+                                                    className: 'w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
                                                     onClick: (e) => {
                                                         e.stopPropagation();
                                                         handleSwapClick(match);
                                                     },
-                                                    className: 'w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md',
                                                     title: 'Vymeniť domáci a hosťovský tím'
                                                 },
-                                                React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-sm' })
+                                                React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-xs' })
                                             ),
-                                            // Ikona pre zmazanie
+                                            // Existujúce červené tlačidlo pre odstránenie priradenia
                                             React.createElement(
                                                 'button',
                                                 {
+                                                    className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
                                                     onClick: (e) => {
                                                         e.stopPropagation();
-                                                        handleDeleteClick(match);
+                                                        handleUnassignMatch(match);
                                                     },
-                                                    className: 'w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md',
-                                                    title: 'Zmazať zápas'
+                                                    title: 'Odstrániť priradenie (miesto a čas)'
                                                 },
-                                                React.createElement('i', { className: 'fa-solid fa-trash-can text-sm' })
+                                                React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
                                             )
                                         ),
                                         React.createElement(
