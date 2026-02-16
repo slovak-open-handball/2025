@@ -5617,6 +5617,16 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                             { className: 'text-xs text-gray-500 font-mono' },
                                                             `${homePureId}-${awayPureId}`
                                                         )
+                                                    ),
+
+                                                    (match.groupName && match.groupName.toLowerCase().includes('nadstavbová')) && React.createElement(
+                                                        'div',
+                                                        { className: 'flex items-center justify-center w-full mt-1' },
+                                                        React.createElement(
+                                                            'span',
+                                                            { className: 'text-xs text-gray-400 font-mono border-t border-gray-200 pt-1' },
+                                                            `${homeName}-${awayName}`
+                                                        )
                                                     )
                                                 )
                                             :
