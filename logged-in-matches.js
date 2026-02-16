@@ -5302,7 +5302,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                             return React.createElement(
                                                                 'div',
                                                                 { 
-                                                                    className: 'space-y-1 text-xs',
+                                                                    className: 'space-y-1 text-xs group/matches-container',
                                                                     style: { 
                                                                         width: 'fit-content' // Prispôsobí sa najširšiemu zápasu
                                                                     }
@@ -5497,28 +5497,24 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             shouldShow: idx < array.length - 1 && array[idx + 1].type === 'match'
                                                                         });
                                                                         
-                                                                        // Po pridaní zápasu, ak nie sme na poslednom indexe, pridáme tlačidlo
+                                                                        // Po pridaní zápasu, ak nie sme na poslednom indexe, pridáme priestor pre tlačidlo
                                                                         if (idx < array.length - 1) {
                                                                             elements.push(
                                                                                 React.createElement(
                                                                                     'div',
                                                                                     {
-                                                                                        key: `gap-creator-${idx}`,
-                                                                                        className: 'relative',
+                                                                                        key: `gap-space-${idx}`,
+                                                                                        className: 'relative h-8 flex items-center justify-center group/gap-space',
                                                                                         style: { 
                                                                                             width: 'fit-content',
-                                                                                            height: '0',
-                                                                                            margin: '0',
-                                                                                            position: 'relative'
+                                                                                            margin: '2px 0'
                                                                                         }
                                                                                     },
                                                                                     React.createElement(
                                                                                         'div',
                                                                                         { 
-                                                                                            className: 'absolute left-1/2 -translate-x-1/2 opacity-0 group-hover/gap-creator:opacity-100 transition-opacity z-10',
+                                                                                            className: 'absolute left-1/2 -translate-x-1/2 opacity-0 group-hover/gap-space:opacity-100 transition-opacity z-10',
                                                                                             style: { 
-                                                                                                transform: 'translate(-50%, -50%)',
-                                                                                                top: '0',
                                                                                                 pointerEvents: 'auto'
                                                                                             }
                                                                                         },
@@ -5544,7 +5540,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 )
                                                                             );
                                                                         }
-                                                                        
+                                                                                                                                                
                                                                         // Potom pridáme tlačidlá pre hornú a dolnú pozíciu (podľa hoverPosition)
                                                                         if (hoverPosition?.matchId === match.id) {
                                                                             if (hoverPosition.position === 'top') {
