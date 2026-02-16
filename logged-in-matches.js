@@ -6093,7 +6093,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     'div',
                                                                                     {
                                                                                         key: 'break-before-first',
-                                                                                        className: `p-2 rounded border border-dashed border-green-300 bg-green-50 transition-all relative group/break`,
+                                                                                        className: `p-2 rounded border border-dashed transition-all relative group/break ${
+                                                                                            isBreakBlocked(hall.id, dateStr, breakBeforeStartTime)
+                                                                                                ? 'bg-orange-100 border-orange-300' 
+                                                                                                : 'border-green-300 bg-green-50'
+                                                                                        }`,
                                                                                         style: { 
                                                                                             width: 'fit-content',
                                                                                         }
@@ -6491,7 +6495,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             'div',
                                                                             {
                                                                                 key: `break-${match.id}`,
-                                                                                className: `p-2 rounded border border-dashed border-green-300 bg-green-50 transition-all relative group/break`,
+                                                                                className: `p-2 rounded border border-dashed transition-all relative group/break ${
+                                                                                    isBreakBlocked(hall.id, dateStr, breakStartTime)
+                                                                                        ? 'bg-orange-100 border-orange-300' 
+                                                                                        : 'border-green-300 bg-green-50'
+                                                                                }`,
                                                                                 style: { 
                                                                                     width: 'fit-content',
                                                                                 }
