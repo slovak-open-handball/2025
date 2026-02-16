@@ -2009,35 +2009,85 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
     const [breakPosition, setBreakPosition] = useState('after'); // 'before' alebo 'after'
     const [breakDuration, setBreakDuration] = useState(5); // predvolene 5 minút
     const [newTime, setNewTime] = useState('');
+    const [durationError, setDurationError] = useState('');
 
     useEffect(() => {
         if (isOpen && match && currentTime) {
-            // Vypočítame nový čas podľa pozície
-            const [hours, minutes] = currentTime.split(':').map(Number);
-            const currentMinutes = hours * 60 + minutes;
-            
-            let newMinutes;
-            if (breakPosition === 'before') {
-                newMinutes = currentMinutes - breakDuration;
-            } else {
-                newMinutes = currentMinutes + breakDuration;
-            }
-            
+            calculateNewTime();
+        }
+    }, [isOpen, match, currentTime, breakPosition, breakDuration]);
+
+    const calculateNewTime = () => {
+        if (!currentTime || breakDuration <= 0) {
+            setNewTime('');
+            return;
+        }
+
+        const [hours, minutes] = currentTime.split(':').map(Number);
+        const currentMinutes = hours * 60 + minutes;
+        
+        let newMinutes;
+        if (breakPosition === 'before') {
+            newMinutes = currentMinutes - breakDuration;
+        } else {
+            newMinutes = currentMinutes + breakDuration;
+        }
+        
+        // Kontrola, či čas nepresahuje 24:00
+        if (newMinutes < 0) {
+            setDurationError('Čas nemôže byť záporný');
+            setNewTime('');
+        } else if (newMinutes >= 24 * 60) {
+            setDurationError('Čas nemôže presiahnuť 24:00');
+            setNewTime('');
+        } else {
+            setDurationError('');
             const newHours = Math.floor(newMinutes / 60).toString().padStart(2, '0');
             const newMins = (newMinutes % 60).toString().padStart(2, '0');
             setNewTime(`${newHours}:${newMins}`);
         }
-    }, [isOpen, match, currentTime, breakPosition, breakDuration]);
+    };
+
+    const handleDurationChange = (e) => {
+        const value = parseInt(e.target.value);
+        
+        // Ak je prázdny string, nastavíme na 0
+        if (e.target.value === '') {
+            setBreakDuration(0);
+            setDurationError('Zadajte dĺžku medzery');
+            return;
+        }
+        
+        // Kontrola, či je to číslo
+        if (isNaN(value)) {
+            setDurationError('Zadajte platné číslo');
+            return;
+        }
+        
+        // Kontrola rozsahu (1-180 minút)
+        if (value < 1) {
+            setDurationError('Minimálna dĺžka je 1 minúta');
+        } else if (value > 180) {
+            setDurationError('Maximálna dĺžka je 180 minút (3 hodiny)');
+        } else {
+            setDurationError('');
+        }
+        
+        setBreakDuration(value);
+    };
 
     useEffect(() => {
         if (!isOpen) {
             setBreakPosition('after');
             setBreakDuration(5);
             setNewTime('');
+            setDurationError('');
         }
     }, [isOpen]);
 
     if (!isOpen || !match) return null;
+
+    const isValid = breakDuration > 0 && !durationError && newTime;
 
     return React.createElement(
         'div',
@@ -2118,25 +2168,33 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
                 )
             ),
 
-            // Výber dĺžky medzery
+            // Výber dĺžky medzery - ZMENENÉ NA INPUT
             React.createElement(
                 'div',
                 { className: 'mb-4' },
                 React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
                     'Dĺžka medzery (minúty):'
                 ),
+                React.createElement('input', {
+                    type: 'number',
+                    value: breakDuration,
+                    onChange: handleDurationChange,
+                    min: '1',
+                    max: '180',
+                    step: '1',
+                    className: `w-full px-3 py-2 border ${durationError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black`,
+                    placeholder: 'Zadajte počet minút'
+                }),
+                durationError && React.createElement(
+                    'p',
+                    { className: 'text-xs text-red-500 mt-1 flex items-center gap-1' },
+                    React.createElement('i', { className: 'fa-solid fa-exclamation-triangle' }),
+                    durationError
+                ),
                 React.createElement(
-                    'select',
-                    {
-                        value: breakDuration,
-                        onChange: (e) => setBreakDuration(parseInt(e.target.value)),
-                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                    },
-                    React.createElement('option', { value: 5 }, '5 minút'),
-                    React.createElement('option', { value: 10 }, '10 minút'),
-                    React.createElement('option', { value: 15 }, '15 minút'),
-                    React.createElement('option', { value: 20 }, '20 minút'),
-                    React.createElement('option', { value: 30 }, '30 minút')
+                    'p',
+                    { className: 'text-xs text-gray-500 mt-1' },
+                    'Rozsah: 1 - 180 minút'
                 )
             ),
 
@@ -2158,10 +2216,12 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
                         'div',
                         null,
                         React.createElement('p', { className: 'text-xs text-gray-500' }, 'Nový čas:'),
-                        React.createElement('p', { className: 'font-bold text-green-700' }, newTime || '--:--')
+                        React.createElement('p', { className: `font-bold ${newTime ? 'text-green-700' : 'text-red-500'}` }, 
+                            newTime || 'Neplatný čas'
+                        )
                     )
                 ),
-                React.createElement(
+                newTime && React.createElement(
                     'p',
                     { className: 'text-xs text-gray-500 mt-2 text-center' },
                     'Ostatné zápasy v tento deň sa automaticky posunú'
@@ -2192,9 +2252,9 @@ const AddBreakModal = ({ isOpen, onClose, onConfirm, match, hallName, date, curr
                             });
                             onClose();
                         },
-                        disabled: !newTime,
+                        disabled: !isValid,
                         className: `px-4 py-2 text-white rounded-lg transition-colors ${
-                            newTime 
+                            isValid
                                 ? 'bg-green-600 hover:bg-green-700 cursor-pointer' 
                                 : 'bg-gray-400 cursor-not-allowed'
                         }`
