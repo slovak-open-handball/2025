@@ -5374,7 +5374,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 'div',
                                                                                 {
                                                                                     key: `match-${idx}`,
-                                                                                    className: `p-2 rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match ${
+                                                                                    className: `p-1 rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match ${
                                                                                         colorHighlight ? '' : 'bg-white'
                                                                                     }`,
                                                                                     style: { 
@@ -5497,19 +5497,19 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             shouldShow: idx < array.length - 1 && array[idx + 1].type === 'match'
                                                                         });
                                                                         
-                                                                        // Po pridaní zápasu, ak nie sme na poslednom indexe, pridáme priestor pre tlačidlo
+                                                                        // Po pridaní zápasu, ak nie sme na poslednom indexe, pridáme tlačidlo
                                                                         if (idx < array.length - 1) {
                                                                             elements.push(
                                                                                 React.createElement(
                                                                                     'div',
                                                                                     {
                                                                                         key: `gap-space-${idx}`,
-                                                                                        className: 'relative h-8 flex items-center justify-center group/gap-space',
+                                                                                        className: 'relative h-8 flex items-center justify-center my-1 group/gap-space',
                                                                                         style: { 
-                                                                                            width: 'fit-content',
-                                                                                            margin: '2px 0'
+                                                                                            width: 'fit-content'
                                                                                         }
                                                                                     },
+                                                                                    // Prvok, ktorý sa zobrazí pri hover na celý priestor
                                                                                     React.createElement(
                                                                                         'div',
                                                                                         { 
@@ -5536,6 +5536,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                             },
                                                                                             React.createElement('i', { className: 'fa-solid fa-plus text-sm' })
                                                                                         )
+                                                                                    ),
+                                                                                    // Neviditeľný hover priestor
+                                                                                    React.createElement(
+                                                                                        'div',
+                                                                                        {
+                                                                                            className: 'w-full h-full cursor-pointer'
+                                                                                        }
                                                                                     )
                                                                                 )
                                                                             );
