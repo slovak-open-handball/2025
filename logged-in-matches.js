@@ -1212,7 +1212,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     const [suggestedTime, setSuggestedTime] = useState(null);
     const [shouldSetDateFromFilter, setShouldSetDateFromFilter] = useState(false);
     const [loadingHallStartTime, setLoadingHallStartTime] = useState(false);
-    const [blockedBreaks, setBlockedBreaks] = useState({});
 
     // Funkcia na načítanie dostupných dátumov
     const loadAvailableDates = () => {
