@@ -6348,7 +6348,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             { 
                                                                                 className: 'grid items-center text-xs cursor-pointer border border-gray-300 rounded',
                                                                                 style: { 
-                                                                                    gridTemplateColumns: '130px 280px 40px 280px 80px 80px', // Pevne definované stĺpce
+                                                                                    gridTemplateColumns: '130px 280px 40px 280px 160px 1600px', // Pevne definované stĺpce
                                                                                     width: 'fit-content'
                                                                                 },
                                                                                 onClick: (e) => {
@@ -6360,7 +6360,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             // Časový údaj
                                                                             React.createElement(
                                                                                 'div',
-                                                                                { className: 'flex items-center gap-1 px-2 py-1 border-r border-gray-300 h-full' },
+                                                                                { className: 'flex items-center justify-center gap-1 px-2 py-1 border-r border-gray-300 h-full' },
                                                                                 React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs flex-shrink-0' }),
                                                                                 React.createElement('span', { className: 'font-medium text-blue-700 truncate' }, `${matchTime} - ${endTime}`)
                                                                             ),
