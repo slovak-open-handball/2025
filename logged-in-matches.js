@@ -1255,7 +1255,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                             }
                         },
                         disabled: !selectedMatchId,
-                        className: `px-4 py-2 text-white rounded-lg transition-colors ${
+                        className: `px-4 py-2 text-white rounded-lg border-2 transition-colors ${
                             selectedMatchId
                                 ? 'bg-green-600 hover:bg-green-700 text-white border-green-600 cursor-pointer'
                                 : 'bg-white text-green-600 border-green-600 cursor-not-allowed opacity-70'
