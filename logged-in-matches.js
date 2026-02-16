@@ -6140,6 +6140,30 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     userProfileData?.role === 'admin' && React.createElement(
                                                                                         'div',
                                                                                         { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/break:opacity-100 transition-opacity' },
+                                                                                        React.createElement(
+                                                                                            'button',
+                                                                                            {
+                                                                                                className: `w-6 h-6 ${
+                                                                                                    isThisBreakBlocked 
+                                                                                                        ? 'bg-yellow-500 hover:bg-yellow-600' 
+                                                                                                        : 'bg-orange-500 hover:bg-orange-600'
+                                                                                                } text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
+                                                                                                onClick: (e) => {
+                                                                                                    e.stopPropagation();
+                                                                                                    toggleBlockBreak(
+                                                                                                        hall.id, 
+                                                                                                        dateStr, 
+                                                                                                        breakBeforeStartTime, 
+                                                                                                        breakBeforeEndTime,
+                                                                                                        gapMinutes
+                                                                                                    );
+                                                                                                },
+                                                                                                title: isThisBreakBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas (nebude ponúkaný)'
+                                                                                            },
+                                                                                            React.createElement('i', { 
+                                                                                                className: `fa-solid ${isThisBreakBlocked ? 'fa-lock-open' : 'fa-lock'} text-xs` 
+                                                                                            })
+                                                                                        ),
                                                                                         // Tlačidlo pre pridanie zápasu do voľného času
                                                                                         React.createElement(
                                                                                             'button',
@@ -6514,6 +6538,30 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             userProfileData?.role === 'admin' && React.createElement(
                                                                                 'div',
                                                                                 { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/break:opacity-100 transition-opacity' },
+                                                                                React.createElement(
+                                                                                    'button',
+                                                                                    {
+                                                                                        className: `w-6 h-6 ${
+                                                                                            isThisBreakBlocked 
+                                                                                                ? 'bg-yellow-500 hover:bg-yellow-600' 
+                                                                                                : 'bg-orange-500 hover:bg-orange-600'
+                                                                                        } text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
+                                                                                        onClick: (e) => {
+                                                                                            e.stopPropagation();
+                                                                                            toggleBlockBreak(
+                                                                                                hall.id, 
+                                                                                                dateStr, 
+                                                                                                breakBeforeStartTime, 
+                                                                                                breakBeforeEndTime,
+                                                                                                gapMinutes
+                                                                                            );
+                                                                                        },
+                                                                                        title: isThisBreakBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas (nebude ponúkaný)'
+                                                                                    },
+                                                                                    React.createElement('i', { 
+                                                                                        className: `fa-solid ${isThisBreakBlocked ? 'fa-lock-open' : 'fa-lock'} text-xs` 
+                                                                                    })
+                                                                                ),
                                                                                 // Tlačidlo pre pridanie zápasu do voľného času
                                                                                 React.createElement(
                                                                                     'button',
