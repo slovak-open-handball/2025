@@ -4457,6 +4457,24 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     minWidth: '100%' // Ale zaberá aspoň celú šírku
                                 }
                             },
+                            const alignmentClasses = {
+                                left: 'text-left',
+                                'center-left': 'text-center', // Stred ale s miernym posunom doľava
+                                center: 'text-center',
+                                'center-right': 'text-center', // Stred ale s miernym posunom doprava
+                                right: 'text-right'
+                            };
+                            
+                            // Pre groupAlignmentMap môžeme pridať aj jemné doladenie pre center-left a center-right
+                            // pomocou prídavnej triedy alebo štýlu
+                            const alignmentStyles = {
+                                left: { textAlign: 'left' },
+                                'center-left': { textAlign: 'center', paddingRight: '10%' },
+                                center: { textAlign: 'center' },
+                                'center-right': { textAlign: 'center', paddingLeft: '10%' },
+                                right: { textAlign: 'right' }
+                            };
+                            
                             sortedFilteredSportHalls.map((hall) => {
                                 const typeConfig = typeIcons[hall.type] || { icon: 'fa-futbol', color: '#dc2626' };
 
@@ -4613,6 +4631,41 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 const hallMatches = dayCard.matches;
                                                 const matchesCount = dayCard.matchesCount;
                                                 const isEmpty = dayCard.isEmpty;
+
+                                                // Vo vnútri dayCards.map, pred hallMatches.map
+                                                // Zistíme všetky skupiny pre túto halu a deň
+                                                const uniqueGroups = [...new Set(hallMatches.map(m => m.groupName).filter(Boolean))];
+                                                const groupsCount = uniqueGroups.length;
+
+                                                // Vytvoríme mapu skupina -> zarovnanie
+                                                const groupAlignmentMap = {};
+                                                
+                                                if (groupsCount === 1) {
+                                                    // Len jedna skupina - všetky zápasy na stred
+                                                    groupAlignmentMap[uniqueGroups[0]] = 'center';
+                                                } else if (groupsCount === 2) {
+                                                    // Dve skupiny - prvá doľava, druhá doprava
+                                                    groupAlignmentMap[uniqueGroups[0]] = 'left';
+                                                    groupAlignmentMap[uniqueGroups[1]] = 'right';
+                                                } else if (groupsCount === 3) {
+                                                    // Tri skupiny - doľava, stred, doprava
+                                                    groupAlignmentMap[uniqueGroups[0]] = 'left';
+                                                    groupAlignmentMap[uniqueGroups[1]] = 'center';
+                                                    groupAlignmentMap[uniqueGroups[2]] = 'right';
+                                                } else if (groupsCount === 4) {
+                                                    // Štyri skupiny - doľava, stred-ľavý, stred-pravý, doprava
+                                                    groupAlignmentMap[uniqueGroups[0]] = 'left';
+                                                    groupAlignmentMap[uniqueGroups[1]] = 'center-left';
+                                                    groupAlignmentMap[uniqueGroups[2]] = 'center-right';
+                                                    groupAlignmentMap[uniqueGroups[3]] = 'right';
+                                                } else if (groupsCount >= 5) {
+                                                    // Pre viac skupín - rovnomerne rozložíme
+                                                    uniqueGroups.forEach((group, index) => {
+                                                        if (index === 0) groupAlignmentMap[group] = 'left';
+                                                        else if (index === groupsCount - 1) groupAlignmentMap[group] = 'right';
+                                                        else groupAlignmentMap[group] = 'center';
+                                                    });
+                                                };
                                                 
                                                 return React.createElement(
                                                     'div',
@@ -4738,6 +4791,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                 
                                                                 const homeDisplay = getTeamDisplayText(match.homeTeamIdentifier);
                                                                 const awayDisplay = getTeamDisplayText(match.awayTeamIdentifier);
+
+                                                                const matchGroup = match.groupName;
+                                                                const alignment = groupAlignmentMap[matchGroup] || 'center';
+                                                                const alignmentStyle = alignmentStyles[alignment] || { textAlign: 'center' };
                                                                 
                                                                 return React.createElement(
                                                                     'div',
@@ -4774,7 +4831,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         // Domáci tím - minimálna šírka
                                                                         React.createElement(
                                                                             'div',
-                                                                            { className: 'font-medium text-gray-800 whitespace-nowrap min-w-[160px] text-right flex-shrink-0' },
+                                                                            { 
+                                                                                className: `font-medium text-gray-800 whitespace-nowrap min-w-[160px] flex-shrink-0`,
+                                                                                style: alignmentStyle
+                                                                            },
                                                                             displayMode === 'both' ? homeDisplay.name : homeDisplay
                                                                         ),
                                                                         
@@ -4788,21 +4848,30 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         // Hosťovský tím - minimálna šírka
                                                                         React.createElement(
                                                                             'div',
-                                                                            { className: 'font-medium text-gray-800 whitespace-nowrap min-w-[160px] text-left flex-shrink-0' },
+                                                                            { 
+                                                                                className: `font-medium text-gray-800 whitespace-nowrap min-w-[160px] flex-shrink-0`,
+                                                                                style: alignmentStyle
+                                                                            },
                                                                             displayMode === 'both' ? awayDisplay.name : awayDisplay
                                                                         ),
                                                                         
                                                                         // ID domáceho tímu (ak je režim both)
                                                                         displayMode === 'both' && React.createElement(
                                                                             'div',
-                                                                            { className: 'text-gray-500 font-mono text-[10px] whitespace-nowrap w-24 text-right flex-shrink-0' },
+                                                                            { 
+                                                                                className: `text-gray-500 font-mono text-[10px] whitespace-nowrap w-24 flex-shrink-0`,
+                                                                                style: alignmentStyle
+                                                                            },
                                                                             `(${homeDisplay.id})`
                                                                         ),
                                                                         
                                                                         // ID hosťovského tímu (ak je režim both)
                                                                         displayMode === 'both' && React.createElement(
                                                                             'div',
-                                                                            { className: 'text-gray-500 font-mono text-[10px] whitespace-nowrap w-24 text-left flex-shrink-0' },
+                                                                            { 
+                                                                                className: `text-gray-500 font-mono text-[10px] whitespace-nowrap w-24 flex-shrink-0`,
+                                                                                style: alignmentStyle
+                                                                            },
                                                                             `(${awayDisplay.id})`
                                                                         ),
                                                                         
