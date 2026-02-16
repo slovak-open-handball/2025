@@ -5495,7 +5495,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         // Tlačidlo pre zmazanie (zobrazí sa pri hoveri)
                                         userProfileData?.role === 'admin' && React.createElement(
                                             'div',
-                                            { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity' },
+                                            { className: 'absolute right-2 top-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10' },
                                             // Modré tlačidlo pre výmenu (pre nepriradené zápasy)
                                             React.createElement(
                                                 'button',
