@@ -2301,6 +2301,83 @@ const AddMatchesApp = ({ userProfileData }) => {
         return unsubscribe;
     };
 
+    const handleRemoveGap = async (hallId, date, gapStartMinutes, gapEndMinutes) => {
+        if (!window.db) {
+            window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
+            return;
+        }
+    
+        if (userProfileData?.role !== 'admin') {
+            window.showGlobalNotification('Na úpravu časov potrebujete administrátorské práva', 'error');
+            return;
+        }
+    
+        try {
+            const gapDuration = gapEndMinutes - gapStartMinutes;
+            
+            // Nájdeme všetky zápasy pre túto halu a deň, ktoré sú po medzere
+            const matchesToUpdate = matches.filter(match => {
+                if (!match.hallId || match.hallId !== hallId) return false;
+                if (!match.scheduledTime) return false;
+                
+                try {
+                    const matchDate = match.scheduledTime.toDate();
+                    const matchDateStr = getLocalDateStr(matchDate);
+                    if (matchDateStr !== date) return false;
+                    
+                    const matchMinutes = matchDate.getHours() * 60 + matchDate.getMinutes();
+                    return matchMinutes >= gapEndMinutes; // Zápasy začínajúce po medzere
+                } catch (e) {
+                    return false;
+                }
+            });
+    
+            if (matchesToUpdate.length === 0) {
+                window.showGlobalNotification('Žiadne zápasy na posunutie', 'info');
+                return;
+            }
+    
+            window.showGlobalNotification(`Posúvam ${matchesToUpdate.length} zápasov...`, 'info');
+    
+            // Posunieme každý zápas o gapDuration minút dozadu
+            for (const match of matchesToUpdate) {
+                const matchRef = doc(window.db, 'matches', match.id);
+                const currentTime = match.scheduledTime.toDate();
+                
+                // Vytvoríme nový čas posunutý dozadu
+                const newTime = new Date(currentTime.getTime() - gapDuration * 60000);
+                
+                // Vypočítame nový koniec zápasu
+                const matchCategory = categories.find(c => c.name === match.categoryName);
+                let matchDuration = 0;
+                if (matchCategory) {
+                    const periods = matchCategory.periods || 2;
+                    const periodDuration = matchCategory.periodDuration || 20;
+                    const breakDuration = matchCategory.breakDuration || 2;
+                    matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
+                }
+                
+                const newEndTime = new Date(newTime.getTime() + matchDuration * 60000);
+                const endHours = newEndTime.getHours().toString().padStart(2, '0');
+                const endMinutes = newEndTime.getMinutes().toString().padStart(2, '0');
+                
+                await updateDoc(matchRef, {
+                    scheduledTime: Timestamp.fromDate(newTime),
+                    scheduledEndTime: `${endHours}:${endMinutes}`
+                });
+            }
+    
+            window.showGlobalNotification(
+                `Medzera odstránená, ${matchesToUpdate.length} zápasov posunutých o ${gapDuration} minút dozadu`,
+                'success'
+            );
+    
+        } catch (error) {
+            console.error('Chyba pri odstraňovaní medzery:', error);
+            window.showGlobalNotification('Chyba pri odstraňovaní medzery: ' + error.message, 'error');
+        }
+    };
+
     const handleHallDayHeaderClick = (hall, date, dateStr) => {
         // Získame existujúci čas pre túto halu a deň
         const localDateStr = getLocalDateStr(date);
@@ -5153,78 +5230,100 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             )
                                                                         );
                                                                         
-                                                                    } else if (item.type === 'gap') {
-                                                                        // Prázdny riadok pre časovú medzeru
-                                                                        return React.createElement(
-                                                                            'div',
-                                                                            {
-                                                                                key: `gap-${idx}`,
-                                                                                className: 'p-2 rounded border border-dashed border-gray-300 bg-gray-50/50',
-                                                                                style: { width: 'fit-content' }
-                                                                            },
-                                                                            React.createElement(
+                                                                        } else if (item.type === 'gap') {
+                                                                            // Prázdny riadok pre časovú medzeru
+                                                                            return React.createElement(
                                                                                 'div',
-                                                                                { 
-                                                                                    className: 'flex items-center gap-2 text-xs text-gray-500',
-                                                                                    style: { 
-                                                                                        display: 'flex',
-                                                                                        flexWrap: 'nowrap',
-                                                                                        width: 'fit-content'
-                                                                                    }
+                                                                                {
+                                                                                    key: `gap-${idx}`,
+                                                                                    className: 'p-2 rounded border border-dashed border-gray-300 bg-gray-50/50 relative group/gap',
+                                                                                    style: { width: 'fit-content' }
                                                                                 },
-                                                                                // Časový údaj medzery
+                                                                                // Tlačidlo pre odstránenie medzery (zobrazí sa pri hoveri)
+                                                                                userProfileData?.role === 'admin' && React.createElement(
+                                                                                    'div',
+                                                                                    { className: 'absolute -right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover/gap:opacity-100 transition-opacity z-10' },
+                                                                                    React.createElement(
+                                                                                        'button',
+                                                                                        {
+                                                                                            onClick: (e) => {
+                                                                                                e.stopPropagation();
+                                                                                                handleRemoveGap(
+                                                                                                    hall.id,
+                                                                                                    dateStr,
+                                                                                                    item.startMinutes,
+                                                                                                    item.endMinutes
+                                                                                                );
+                                                                                            },
+                                                                                            className: 'w-8 h-8 bg-orange-500 hover:bg-orange-600 text-white rounded-full flex items-center justify-center shadow-md',
+                                                                                            title: 'Odstrániť medzeru (posunúť nasledujúce zápasy)'
+                                                                                        },
+                                                                                        React.createElement('i', { className: 'fa-solid fa-arrow-left text-sm' })
+                                                                                    )
+                                                                                ),
                                                                                 React.createElement(
                                                                                     'div',
-                                                                                    { className: 'flex items-center gap-1 whitespace-nowrap w-28 flex-shrink-0' },
-                                                                                    React.createElement('i', { className: 'fa-regular fa-clock text-gray-400 text-xs flex-shrink-0' }),
-                                                                                    React.createElement('span', { className: 'font-medium text-gray-500' }, `${item.startTime} - ${item.endTime}`)
-                                                                                ),
-                                                                                
-                                                                                // Prázdne miesto pre domáci tím
-                                                                                React.createElement(
-                                                                                    'div',
-                                                                                    { className: 'whitespace-nowrap min-w-[160px] flex-shrink-0 text-gray-400 italic' },
-                                                                                    ''
-                                                                                ),
-                                                                                
-                                                                                // VS ikona - fixná šírka
-                                                                                React.createElement(
-                                                                                    'div',
-                                                                                    { className: 'text-gray-300 w-8 text-center flex-shrink-0' },
-                                                                                    ''
-                                                                                ),
-                                                                                
-                                                                                // Prázdne miesto pre hosťovský tím
-                                                                                React.createElement(
-                                                                                    'div',
-                                                                                    { className: 'whitespace-nowrap min-w-[160px] flex-shrink-0 text-gray-400 italic' },
-                                                                                    ''
-                                                                                ),
-                                                                                
-                                                                                // Prázdne miesta pre ID (ak je režim both)
-                                                                                displayMode === 'both' && React.createElement(
-                                                                                    'div',
-                                                                                    { className: 'whitespace-nowrap w-24 flex-shrink-0' },
-                                                                                    ''
-                                                                                ),
-                                                                                
-                                                                                displayMode === 'both' && React.createElement(
-                                                                                    'div',
-                                                                                    { className: 'whitespace-nowrap w-24 flex-shrink-0' },
-                                                                                    ''
-                                                                                ),
-                                                                                
-                                                                                displayMode !== 'both' && React.createElement('div', { className: 'w-24 flex-shrink-0' }),
-                                                                                
-                                                                                // Informácia o dĺžke medzery
-                                                                                React.createElement(
-                                                                                    'div',
-                                                                                    { className: 'ml-2 text-xs text-gray-400' },
-                                                                                    `(${item.duration} min)`
+                                                                                    { 
+                                                                                        className: 'flex items-center gap-2 text-xs text-gray-500',
+                                                                                        style: { 
+                                                                                            display: 'flex',
+                                                                                            flexWrap: 'nowrap',
+                                                                                            width: 'fit-content'
+                                                                                        }
+                                                                                    },
+                                                                                    // Časový údaj medzery
+                                                                                    React.createElement(
+                                                                                        'div',
+                                                                                        { className: 'flex items-center gap-1 whitespace-nowrap w-28 flex-shrink-0' },
+                                                                                        React.createElement('i', { className: 'fa-regular fa-clock text-gray-400 text-xs flex-shrink-0' }),
+                                                                                        React.createElement('span', { className: 'font-medium text-gray-500' }, `${item.startTime} - ${item.endTime}`)
+                                                                                    ),
+                                                                                    
+                                                                                    // Prázdne miesto pre domáci tím
+                                                                                    React.createElement(
+                                                                                        'div',
+                                                                                        { className: 'whitespace-nowrap min-w-[160px] flex-shrink-0 text-gray-400 italic' },
+                                                                                        ''
+                                                                                    ),
+                                                                                    
+                                                                                    // VS ikona - fixná šírka
+                                                                                    React.createElement(
+                                                                                        'div',
+                                                                                        { className: 'text-gray-300 w-8 text-center flex-shrink-0' },
+                                                                                        ''
+                                                                                    ),
+                                                                                    
+                                                                                    // Prázdne miesto pre hosťovský tím
+                                                                                    React.createElement(
+                                                                                        'div',
+                                                                                        { className: 'whitespace-nowrap min-w-[160px] flex-shrink-0 text-gray-400 italic' },
+                                                                                        ''
+                                                                                    ),
+                                                                                    
+                                                                                    // Prázdne miesta pre ID (ak je režim both)
+                                                                                    displayMode === 'both' && React.createElement(
+                                                                                        'div',
+                                                                                        { className: 'whitespace-nowrap w-24 flex-shrink-0' },
+                                                                                        ''
+                                                                                    ),
+                                                                                    
+                                                                                    displayMode === 'both' && React.createElement(
+                                                                                        'div',
+                                                                                        { className: 'whitespace-nowrap w-24 flex-shrink-0' },
+                                                                                        ''
+                                                                                    ),
+                                                                                    
+                                                                                    displayMode !== 'both' && React.createElement('div', { className: 'w-24 flex-shrink-0' }),
+                                                                                    
+                                                                                    // Informácia o dĺžke medzery
+                                                                                    React.createElement(
+                                                                                        'div',
+                                                                                        { className: 'ml-2 text-xs text-gray-400' },
+                                                                                        `(${item.duration} min)`
+                                                                                    )
                                                                                 )
-                                                                            )
-                                                                        );
-                                                                    }
+                                                                            );
+                                                                        }
                                                                 })
                                                             );
                                                         })() : React.createElement(
