@@ -5382,9 +5382,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         backgroundColor: colorHighlight && match.categoryName ? 
                                                                                             (categories.find(c => c.name === match.categoryName)?.drawColor || 'white') 
                                                                                             : 'white'
-                                                                                    },
-                                                                                    onMouseMove={(e) => handleMatchMouseMove(e, match.id)},
-                                                                                    onMouseLeave={handleMatchMouseLeave}
+                                                                                    }
                                                                                 },
                                                                                 React.createElement(
                                                                                     'div',
@@ -5506,12 +5504,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     'div',
                                                                                     {
                                                                                         key: `gap-space-${idx}`,
-                                                                                        className: 'relative h-6 flex items-center justify-center my-0.5 group/gap-space',
+                                                                                        className: 'relative h-8 flex items-center justify-center my-1 group/gap-space',
                                                                                         style: { 
                                                                                             width: 'fit-content'
                                                                                         }
                                                                                     },
-                                                                                    // Tlačidlo, ktoré sa zobrazí pri hover na celý priestor
+                                                                                    // Prvok, ktorý sa zobrazí pri hover na celý priestor
                                                                                     React.createElement(
                                                                                         'div',
                                                                                         { 
@@ -5533,13 +5531,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                         afterMatchEndMinutes: currentEndMinutes
                                                                                                     });
                                                                                                 },
-                                                                                                className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg',
+                                                                                                className: 'w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg',
                                                                                                 title: 'Vytvoriť medzeru'
                                                                                             },
-                                                                                            React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
+                                                                                            React.createElement('i', { className: 'fa-solid fa-plus text-sm' })
                                                                                         )
                                                                                     ),
-                                                                                    // Neviditeľný hover priestor - zabezpečuje, že hover funguje na celý riadok
+                                                                                    // Neviditeľný hover priestor
                                                                                     React.createElement(
                                                                                         'div',
                                                                                         {
