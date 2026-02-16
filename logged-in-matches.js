@@ -1196,7 +1196,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
 };
 
 // Modálne okno pre priradenie/úpravu zápasu do haly
-const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAssign, allMatches, displayMode, getTeamDisplayText, initialFilters }) => {
+const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAssign, allMatches, displayMode, getTeamDisplayText, initialFilters, blockedBreaks }) => {
     const [selectedHallId, setSelectedHallId] = useState('');
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedTime, setSelectedTime] = useState('');
@@ -1212,6 +1212,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
     const [suggestedTime, setSuggestedTime] = useState(null);
     const [shouldSetDateFromFilter, setShouldSetDateFromFilter] = useState(false);
     const [loadingHallStartTime, setLoadingHallStartTime] = useState(false);
+    const [blockedBreaks, setBlockedBreaks] = useState({});
 
     // Funkcia na načítanie dostupných dátumov
     const loadAvailableDates = () => {
@@ -1404,6 +1405,17 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
             return `${hours}:${minutes}`;
         }
     };
+
+    useEffect(() => {
+        const savedBlockedBreaks = localStorage.getItem('blockedBreaks');
+        if (savedBlockedBreaks) {
+            try {
+                setBlockedBreaks(JSON.parse(savedBlockedBreaks));
+            } catch (e) {
+                console.error('Chyba pri načítaní z localStorage:', e);
+            }
+        }
+    }, []);
 
     // Inicializácia pri otvorení modálneho okna - NAČÍTAME DÁTUMY OKAMŽITE
     useEffect(() => {
@@ -5037,7 +5049,8 @@ const AddMatchesApp = ({ userProfileData }) => {
             initialFilters: {
                 hallId: selectedHallFilter || null,
                 day: selectedDayFilter || null
-            }
+            },
+            blockedBreaks: blockedBreaks
         }),
         React.createElement(AddBreakModal, {
             isOpen: isBreakModalOpen,
