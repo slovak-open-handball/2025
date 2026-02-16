@@ -5382,7 +5382,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         backgroundColor: colorHighlight && match.categoryName ? 
                                                                                             (categories.find(c => c.name === match.categoryName)?.drawColor || 'white') 
                                                                                             : 'white'
-                                                                                    }
+                                                                                    },
+                                                                                    onMouseMove={(e) => handleMatchMouseMove(e, match.id)},
+                                                                                    onMouseLeave={handleMatchMouseLeave}
                                                                                 },
                                                                                 React.createElement(
                                                                                     'div',
