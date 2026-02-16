@@ -6102,7 +6102,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         React.createElement(
                                                                                             'div',
                                                                                             { 
-                                                                                                className: `text-green-700 font-medium whitespace-nowrap min-w-[250px] flex-shrink-0`,
+                                                                                                className: `text-green-700 font-medium whitespace-nowrap min-w-[300px] flex-shrink-0`,
                                                                                                 style: { textAlign: 'left' }
                                                                                             },
                                                                                             `${gapMinutes} minút`
@@ -6119,7 +6119,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         React.createElement(
                                                                                             'div',
                                                                                             { 
-                                                                                                className: `text-green-600 whitespace-nowrap min-w-[250px] flex-shrink-0`,
+                                                                                                className: `text-green-600 whitespace-nowrap min-w-[300px] flex-shrink-0`,
                                                                                                 style: { textAlign: 'left' }
                                                                                             },
                                                                                             'voľný čas'
@@ -6371,7 +6371,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
-                                                                                    className: `font-medium text-gray-800 whitespace-nowrap min-w-[250px] flex-shrink-0`,
+                                                                                    className: `font-medium text-gray-800 whitespace-nowrap min-w-[300px] flex-shrink-0`,
                                                                                     style: alignmentStyle
                                                                                 },
                                                                                 displayMode === 'both' ? homeDisplay.name : homeDisplay
@@ -6388,7 +6388,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
-                                                                                    className: `font-medium text-gray-800 whitespace-nowrap min-w-[250px] flex-shrink-0`,
+                                                                                    className: `font-medium text-gray-800 whitespace-nowrap min-w-[300px] flex-shrink-0`,
                                                                                     style: alignmentStyle
                                                                                 },
                                                                                 displayMode === 'both' ? awayDisplay.name : awayDisplay
@@ -6504,7 +6504,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 React.createElement(
                                                                                     'div',
                                                                                     { 
-                                                                                        className: `text-green-700 font-medium whitespace-nowrap min-w-[250px] flex-shrink-0`,
+                                                                                        className: `text-green-700 font-medium whitespace-nowrap min-w-[300px] flex-shrink-0`,
                                                                                         style: { textAlign: 'left' }
                                                                                     },
                                                                                     `${breakBetweenMatches} minút`
@@ -6521,7 +6521,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 React.createElement(
                                                                                     'div',
                                                                                     { 
-                                                                                        className: `text-green-600 whitespace-nowrap min-w-[250px] flex-shrink-0`,
+                                                                                        className: `text-green-600 whitespace-nowrap min-w-[300px] flex-shrink-0`,
                                                                                         style: { textAlign: 'left' }
                                                                                     },
                                                                                     'voľný čas'
