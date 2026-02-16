@@ -6130,7 +6130,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                             'div',
                                                                                             { 
                                                                                                 className: `text-gray-400 font-mono text-[10px] whitespace-nowrap min-w-[280px] flex-shrink-0`,
-                                                                                                style: alignmentStyle
+                                                                                                style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
                                                                                             },
                                                                                             ''
                                                                                         ),
@@ -6139,7 +6139,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                             'div',
                                                                                             { 
                                                                                                 className: `text-gray-400 font-mono text-[10px] whitespace-nowrap min-w-[280px] flex-shrink-0`,
-                                                                                                style: alignmentStyle
+                                                                                                style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
                                                                                             },
                                                                                             ''
                                                                                         ),
@@ -6543,7 +6543,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     'div',
                                                                                     { 
                                                                                         className: `text-gray-400 font-mono text-[10px] whitespace-nowrap min-w-[280px] flex-shrink-0`,
-                                                                                        style: alignmentStyle
+                                                                                        style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
                                                                                     },
                                                                                     ''
                                                                                 ),
@@ -6552,7 +6552,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     'div',
                                                                                     { 
                                                                                         className: `text-gray-400 font-mono text-[10px] whitespace-nowrap min-w-[280px] flex-shrink-0`,
-                                                                                        style: alignmentStyle
+                                                                                        style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
                                                                                     },
                                                                                     ''
                                                                                 ),
