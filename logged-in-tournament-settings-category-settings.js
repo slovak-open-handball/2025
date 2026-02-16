@@ -1168,8 +1168,8 @@ export function CategorySettings({
                                                 value: editedDrawColor[selectedCategory.id] ?? selectedCategory.drawColor,
                                                 onChange: e => handleDrawColorChange(selectedCategory.id, e.target.value),
                                                 disabled: hasMatches,
-                                                className: `w-12 h-10 border border-gray-300 rounded-lg cursor-pointer ${
-                                                    hasMatches ? 'opacity-75 cursor-not-allowed' : ''
+                                                className: `w-12 h-10 border border-gray-300 rounded-lg ${
+                                                    hasMatches ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'
                                                 }`
                                             }),
                                             React.createElement('input', {
