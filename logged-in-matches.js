@@ -3741,18 +3741,28 @@ const AddMatchesApp = ({ userProfileData }) => {
         );
     };
 
-    // Funkcia na kontrolu existujúcich zápasov počas generovania
-    const checkExistingMatchesDuringGeneration = (matchesToGenerate) => {
+    // Funkcia na kontrolu existujúcich zápasov počas generovania - UPRAVENÁ
+    const checkExistingMatchesDuringGeneration = (matchesToGenerate, withRepetitions = false) => {
         const existing = [];
         const newOnes = [];
-    
+
         matchesToGenerate.forEach(match => {
-            const exists = matches.some(existingMatch => 
+            // Najprv skúsime nájsť presnú zhodu (home = home, away = away)
+            let exists = matches.some(existingMatch => 
                 existingMatch.homeTeamIdentifier === match.homeTeamIdentifier && 
                 existingMatch.awayTeamIdentifier === match.awayTeamIdentifier &&
                 existingMatch.categoryId === match.categoryId
             );
-            
+
+            // Ak nie je zaškrtnuté "Kombinácie s opakovaním", skontrolujeme aj vymenené tímy
+            if (!withRepetitions && !exists) {
+                exists = matches.some(existingMatch => 
+                    existingMatch.homeTeamIdentifier === match.awayTeamIdentifier && 
+                    existingMatch.awayTeamIdentifier === match.homeTeamIdentifier &&
+                    existingMatch.categoryId === match.categoryId
+                );
+            }
+    
             if (exists) {
                 existing.push(match);
             } else {
@@ -4369,7 +4379,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             }
     
             // Skontrolujeme existujúce zápasy
-            const { existingMatches, newMatches: newOnes } = checkExistingMatchesDuringGeneration(allGeneratedMatches);
+            const { existingMatches, newMatches: newOnes } = checkExistingMatchesDuringGeneration(allGeneratedMatches, withRepetitions);
     
             console.log('Rozdelenie zápasov:', {
                 celkovyPocet: allGeneratedMatches.length,
