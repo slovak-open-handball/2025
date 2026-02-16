@@ -5428,6 +5428,15 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     const isAdvancedGroup = match.groupName && groupsByCategory[match.categoryId]?.some(
                                         group => group.name === match.groupName && group.type === 'nadstavbová skupina'
                                     );
+
+                                    const removeCategoryFromName = (teamName, categoryName) => {
+                                        if (!teamName || !categoryName) return teamName;
+                                        // Odstráni názov kategórie z názvu tímu
+                                        return teamName.replace(categoryName, '').replace(/^skupina\s+/i, '').trim();
+                                    };
+        
+                                    const homeNameWithoutCategory = removeCategoryFromName(homeName, match.categoryName);
+                                    const awayNameWithoutCategory = removeCategoryFromName(awayName, match.categoryName);
                                     
                                     // Extrahujeme čisté ID bez kategórie (napr. z "U10 A1" extrahujeme "A1")
                                     const extractPureId = (identifier) => {
@@ -5630,7 +5639,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         React.createElement(
                                                             'span',
                                                             { className: 'text-xs text-gray-400 font-mono border-t border-gray-200 pt-1' },
-                                                            `${homeName} - ${awayName}`
+                                                            `${homeNameWithoutCategory} - ${awayNameWithoutCategory}`
                                                         )
                                                     )
                                                 )
