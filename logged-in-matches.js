@@ -5479,25 +5479,30 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             shouldShow: idx < array.length - 1 && array[idx + 1].type === 'match'
                                                                         });
                                                                         
+                                                                        // Po pridaní zápasu, ak nie sme na poslednom indexe, pridáme tlačidlo
                                                                         if (idx < array.length - 1) {
+                                                                            // Pridáme prázdny div s relatívnou pozíciou, ktorý bude obsahovať tlačidlo
                                                                             elements.push(
                                                                                 React.createElement(
                                                                                     'div',
                                                                                     {
                                                                                         key: `gap-creator-${idx}`,
-                                                                                        className: 'relative flex justify-center items-center',
+                                                                                        className: 'relative',
                                                                                         style: { 
                                                                                             width: 'fit-content',
-                                                                                            height: '32px', // Výška pre medzeru
-                                                                                            margin: '4px 0' // Vertikálne odsadenie
+                                                                                            height: '0', // Žiadna výška, tlačidlo bude absolútne pozicionované
+                                                                                            margin: '0', // Žiadne margin
+                                                                                            position: 'relative'
                                                                                         }
                                                                                     },
                                                                                     React.createElement(
                                                                                         'div',
                                                                                         { 
-                                                                                            className: 'absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 opacity-0 group-hover/gap-creator:opacity-100 transition-opacity z-10',
+                                                                                            className: 'absolute left-1/2 -translate-x-1/2 opacity-0 group-hover/gap-creator:opacity-100 transition-opacity z-10',
                                                                                             style: { 
-                                                                                                transform: 'translate(-50%, -50%)'
+                                                                                                transform: 'translate(-50%, -50%)',
+                                                                                                top: '0', // Tlačidlo bude presne na rozhraní
+                                                                                                pointerEvents: 'auto'
                                                                                             }
                                                                                         },
                                                                                         React.createElement(
