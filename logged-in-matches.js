@@ -5641,7 +5641,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         React.createElement(
                                                             'span',
                                                             { className: 'text-xs text-gray-400 font-mono border-t border-gray-200 pt-1' },
-                                                            `${homeNameWithoutCategory} - ${awayNameWithoutCategory}`
+                                                            `${homeNameWithoutCategory}-${awayNameWithoutCategory}`
                                                         )
                                                     )
                                                 )
