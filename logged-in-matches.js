@@ -6033,11 +6033,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     
                                                             // Vytvoríme pole pre všetky elementy
                                                             const allElements = [];
-                                                    
                                                             // --- KONTROLA MEDZERY PRED PRVÝM ZÁPASOM ---
                                                             const scheduleIdForBreak = `${hall.id}_${dateStr}`;
                                                             const hallStartTimeForBreak = hallSchedules[scheduleIdForBreak]?.startTime;
-                                                    
+
                                                             // --- NOVÉ: Medzera pred prvým zápasom sa zobrazí LEN ak NIE JE aktívny filter ---
                                                             if (sortedMatches.length > 0 && hallStartTimeForBreak && !isFilterActiveForDay) {
                                                                 const firstMatch = sortedMatches[0];
@@ -6060,12 +6059,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             const breakEndHours = Math.floor(firstMatchStartMinutes / 60).toString().padStart(2, '0');
                                                                             const breakEndMins = (firstMatchStartMinutes % 60).toString().padStart(2, '0');
                                                                             const breakBeforeEndTime = `${breakEndHours}:${breakEndMins}`;
-                                                    
+                                                            
                                                                             // Získame alignment pre prvý zápas
                                                                             const firstMatchGroup = firstMatch.groupName;
                                                                             const alignment = groupAlignmentMap[firstMatchGroup] || 'center';
                                                                             const alignmentStyle = alignmentStyles[alignment] || { textAlign: 'center' };
-                                                    
+                                                            
                                                                             // Pridáme medzeru do poľa
                                                                             allElements.push(
                                                                                 React.createElement(
@@ -6157,7 +6156,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                             'button',
                                                                                             {
                                                                                                 className: `w-6 h-6 ${
-                                                                                                    isBreakBlocked(hall.id, dateStr, breakStartTime)
+                                                                                                    isBreakBlocked(hall.id, dateStr, breakBeforeStartTime)
                                                                                                         ? 'bg-yellow-500 hover:bg-yellow-600' 
                                                                                                         : 'bg-orange-500 hover:bg-orange-600'
                                                                                                 } text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
@@ -6166,9 +6165,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                     toggleBlockBreak(
                                                                                                         hall.id, 
                                                                                                         dateStr, 
-                                                                                                        breakStartTime,
-                                                                                                        breakEndTime,
-                                                                                                        breakBetweenMatches
+                                                                                                        breakBeforeStartTime,
+                                                                                                        breakBeforeEndTime,
+                                                                                                        gapMinutes  // OPRAVA: používame gapMinutes namiesto nedefinovanej premennej
                                                                                                     );
                                                                                                 },
                                                                                                 title: isBreakBlocked(hall.id, dateStr, breakBeforeStartTime) ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas (nebude ponúkaný)'
@@ -6196,13 +6195,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                             matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
                                                                                                         }
                                                                                                         return { ...m, duration: matchDuration };
-                                                                                                    }).filter(m => m.duration <= gapMinutes);
+                                                                                                    }).filter(m => m.duration <= gapMinutes);  // OPRAVA: používame gapMinutes
                                                                                                     
                                                                                                     setSelectedBreakForAssign({
                                                                                                         matchId: null,
                                                                                                         breakStartTime: breakBeforeStartTime,
                                                                                                         breakEndTime: breakBeforeEndTime,
-                                                                                                        breakDuration: gapMinutes,
+                                                                                                        breakDuration: gapMinutes,  // OPRAVA: používame gapMinutes
                                                                                                         hallId: hall.id,
                                                                                                         date: dateStr,
                                                                                                         availableMatches
@@ -6222,7 +6221,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                     e.stopPropagation();
                                                                                                     handleDeleteBreakBefore({
                                                                                                         matchId: firstMatch.id,
-                                                                                                        breakDuration: gapMinutes
+                                                                                                        breakDuration: gapMinutes  // OPRAVA: používame gapMinutes
                                                                                                     });
                                                                                                 },
                                                                                                 title: 'Posunúť prvý zápas neskôr (odstrániť medzeru)'
