@@ -6083,17 +6083,16 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     React.createElement(
                                                                                         'div',
                                                                                         { 
-                                                                                            className: 'flex items-center gap-2 text-xs',
+                                                                                            className: 'grid items-center text-xs',
                                                                                             style: { 
-                                                                                                display: 'flex',
-                                                                                                flexWrap: 'nowrap',
+                                                                                                gridTemplateColumns: '130px 280px 10px 280px 160px 160px', // Rovnaké stĺpce ako zápasy
                                                                                                 width: 'fit-content'
                                                                                             }
                                                                                         },
                                                                                         // Časový údaj medzery
                                                                                         React.createElement(
                                                                                             'div',
-                                                                                            { className: 'flex items-center gap-1 whitespace-nowrap w-28 flex-shrink-0 text-gray-500' },
+                                                                                            { className: 'flex items-center justify-center gap-1 px-2 py-1 text-gray-500 border-r border-gray-300 h-full' },
                                                                                             React.createElement('i', { className: 'fa-solid fa-clock text-gray-400 text-xs flex-shrink-0' }),
                                                                                             React.createElement('span', { className: 'font-medium' }, `${breakBeforeStartTime} - ${breakBeforeEndTime}`)
                                                                                         ),
@@ -6102,7 +6101,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         React.createElement(
                                                                                             'div',
                                                                                             { 
-                                                                                                className: `text-green-700 font-medium whitespace-nowrap min-w-[280px] flex-shrink-0`,
+                                                                                                className: 'px-2 py-1 text-green-700 font-medium border-r border-gray-300 h-full flex items-center',
                                                                                                 style: { textAlign: 'left' }
                                                                                             },
                                                                                             `${gapMinutes} minút`
@@ -6111,41 +6110,35 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         // Prázdne miesto pre VS ikonu
                                                                                         React.createElement(
                                                                                             'div',
-                                                                                            { className: 'w-8 flex-shrink-0' },
-                                                                                            ''
+                                                                                            { className: 'px-2 py-1 border-r border-gray-300 h-full' }
                                                                                         ),
                                                                                         
                                                                                         // Text "voľný čas"
                                                                                         React.createElement(
                                                                                             'div',
                                                                                             { 
-                                                                                                className: `text-green-600 whitespace-nowrap min-w-[240px] flex-shrink-0`,
+                                                                                                className: 'px-2 py-1 text-green-600 border-r border-gray-300 h-full flex items-center',
                                                                                                 style: { textAlign: 'left' }
                                                                                             },
                                                                                             'voľný čas'
                                                                                         ),
                                                                                         
                                                                                         // Prázdne miesta pre ID (ak je režim both)
-                                                                                        displayMode === 'both' && React.createElement(
+                                                                                        displayMode === 'both' ? React.createElement(
                                                                                             'div',
                                                                                             { 
-                                                                                                className: `text-gray-400 font-mono text-[10px] whitespace-nowrap min-w-[280px] flex-shrink-0`,
+                                                                                                className: 'px-2 py-1 border-r border-gray-300 h-full',
                                                                                                 style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
-                                                                                            },
-                                                                                            ''
-                                                                                        ),
+                                                                                            }
+                                                                                        ) : React.createElement('div', { className: 'px-2 py-1 border-r border-gray-300 h-full' }),
                                                                                         
-                                                                                        displayMode === 'both' && React.createElement(
+                                                                                        displayMode === 'both' ? React.createElement(
                                                                                             'div',
                                                                                             { 
-                                                                                                className: `text-gray-400 font-mono text-[10px] whitespace-nowrap min-w-[280px] flex-shrink-0`,
+                                                                                                className: 'px-2 py-1 h-full',
                                                                                                 style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
-                                                                                            },
-                                                                                            ''
-                                                                                        ),
-                                                                                        
-                                                                                        // Prázdny div pre zarovnanie
-                                                                                        displayMode !== 'both' && React.createElement('div', { className: 'min-w-[280px] flex-shrink-0' })
+                                                                                            }
+                                                                                        ) : React.createElement('div', { className: 'px-2 py-1 h-full' })
                                                                                     ),
                                                                                     
                                                                                     // Tlačidlá pre správu medzery
@@ -6496,17 +6489,16 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
-                                                                                    className: 'flex items-center gap-2 text-xs',
+                                                                                    className: 'grid items-center text-xs',
                                                                                     style: { 
-                                                                                        display: 'flex',
-                                                                                        flexWrap: 'nowrap',
+                                                                                        gridTemplateColumns: '130px 280px 10px 280px 160px 160px', // Rovnaké stĺpce ako zápasy
                                                                                         width: 'fit-content'
                                                                                     }
                                                                                 },
                                                                                 // Časový údaj medzery
                                                                                 React.createElement(
                                                                                     'div',
-                                                                                    { className: 'flex items-center gap-1 whitespace-nowrap w-28 flex-shrink-0 text-gray-500' },
+                                                                                    { className: 'flex items-center justify-center gap-1 px-2 py-1 text-gray-500 border-r border-gray-300 h-full' },
                                                                                     React.createElement('i', { className: 'fa-solid fa-clock text-gray-400 text-xs flex-shrink-0' }),
                                                                                     React.createElement('span', { className: 'font-medium' }, `${breakStartTime} - ${breakEndTime}`)
                                                                                 ),
@@ -6515,7 +6507,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 React.createElement(
                                                                                     'div',
                                                                                     { 
-                                                                                        className: `text-green-700 font-medium whitespace-nowrap min-w-[280px] flex-shrink-0`,
+                                                                                        className: 'px-2 py-1 text-green-700 font-medium border-r border-gray-300 h-full flex items-center',
                                                                                         style: { textAlign: 'left' }
                                                                                     },
                                                                                     `${breakBetweenMatches} minút`
@@ -6524,41 +6516,35 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 // Prázdne miesto pre VS ikonu
                                                                                 React.createElement(
                                                                                     'div',
-                                                                                    { className: 'w-8 flex-shrink-0' },
-                                                                                    ''
+                                                                                    { className: 'px-2 py-1 border-r border-gray-300 h-full' }
                                                                                 ),
                                                                                 
                                                                                 // Text "voľný čas"
                                                                                 React.createElement(
                                                                                     'div',
                                                                                     { 
-                                                                                        className: `text-green-600 whitespace-nowrap min-w-[240px] flex-shrink-0`,
+                                                                                        className: 'px-2 py-1 text-green-600 border-r border-gray-300 h-full flex items-center',
                                                                                         style: { textAlign: 'left' }
                                                                                     },
                                                                                     'voľný čas'
                                                                                 ),
                                                                                 
                                                                                 // Prázdne miesta pre ID (ak je režim both)
-                                                                                displayMode === 'both' && React.createElement(
+                                                                                displayMode === 'both' ? React.createElement(
                                                                                     'div',
                                                                                     { 
-                                                                                        className: `text-gray-400 font-mono text-[10px] whitespace-nowrap min-w-[280px] flex-shrink-0`,
+                                                                                        className: 'px-2 py-1 border-r border-gray-300 h-full',
                                                                                         style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
-                                                                                    },
-                                                                                    ''
-                                                                                ),
+                                                                                    }
+                                                                                ) : React.createElement('div', { className: 'px-2 py-1 border-r border-gray-300 h-full' }),
                                                                                 
-                                                                                displayMode === 'both' && React.createElement(
+                                                                                displayMode === 'both' ? React.createElement(
                                                                                     'div',
                                                                                     { 
-                                                                                        className: `text-gray-400 font-mono text-[10px] whitespace-nowrap min-w-[280px] flex-shrink-0`,
+                                                                                        className: 'px-2 py-1 h-full',
                                                                                         style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
-                                                                                    },
-                                                                                    ''
-                                                                                ),
-                                                                                
-                                                                                // Prázdny div pre zarovnanie
-                                                                                displayMode !== 'both' && React.createElement('div', { className: 'min-w-[280px] flex-shrink-0' })
+                                                                                    }
+                                                                                ) : React.createElement('div', { className: 'px-2 py-1 h-full' })
                                                                             ),
                                                                                                                                                         
                                                                             // Tlačidlá pre správu medzery (pre medzeru MEDZI ZÁPASMI)
