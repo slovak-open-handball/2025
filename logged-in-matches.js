@@ -5511,11 +5511,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         React.createElement(
                                             'div',
                                             { className: 'flex justify-between items-start mb-2' },
-                                            React.createElement(
-                                                'span',
-                                                { className: 'text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 rounded-full' },
-                                                '--:--'
-                                            ),
+//                                            React.createElement(
+//                                                'span',
+//                                                { className: 'text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 rounded-full' },
+//                                                '--:--'
+//                                            ),
                                             React.createElement(
                                                 'span',
                                                 { className: `text-xs ${!hasCategory ? 'text-gray-400' : 'text-gray-500'}` },
