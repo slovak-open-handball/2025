@@ -4524,7 +4524,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     'div',
                                     { 
                                         key: hall.id,
-                                        className: 'bg-white rounded-xl border-2 border-gray-200 shadow-sm hover:shadow-md transition-shadow',
+                                        className: 'bg-white rounded-xl border-2 border-gray-200 shadow-sm hover:shadow-md transition-shadow group',
                                         style: { 
                                             width: 'fit-content',
                                             minWidth: '100%'
