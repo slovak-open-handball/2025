@@ -4033,58 +4033,73 @@ const AddMatchesApp = ({ userProfileData }) => {
         };
     };
 
-    // Funkcia na generovanie zápasov pre skupinu
-    const generateMatchesForGroup = (teams, withRepetitions, categoryName) => {
+    // Funkcia na generovanie zápasov pre skupinu - OPRAVENÁ S PARAMETROM transferFromBasicGroup
+    const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferFromBasicGroup = false) => {
         const matches = [];
         
         // Pre každý tím vytvoríme identifikátor v tvare "kategória skupinaorder"
         const teamIdentifiers = teams.map(t => {
-            // Získame názov kategórie
             const category = categoryName || t.category || 'Neznáma kategória';
             
-            // Spracujeme názov skupiny - odstránime "skupina " ak existuje
             let groupName = t.groupName || 'Neznáma skupina';
             if (groupName.startsWith('skupina ')) {
                 groupName = groupName.substring(8);
             }
             
-            // Pridáme order/číslo tímu
             const order = t.order || '?';
-            
-            // Vytvoríme identifikátor v požadovanom formáte: "kategória skupinaorder" (napr. "U10 A1")
-            // Medzera len medzi kategóriou a skupinou, žiadna medzera medzi skupinou a orderom
             const teamIdentifier = `${category} ${groupName}${order}`;
             
             return {
-                identifier: teamIdentifier,  // Toto použijeme na identifikáciu
+                identifier: teamIdentifier,
                 category: category,
                 groupName: groupName,
-                order: order
+                order: order,
+                lastChar: order ? order.toString().slice(-1) : '' // Posledný znak pre kontrolu
             };
         });
         
         console.log('Generujem zápasy pre tímy:', teamIdentifiers);
+        console.log('transferFromBasicGroup:', transferFromBasicGroup);
         
         if (withRepetitions) {
-            // Každý s každým doma/vonku v rámci skupiny
+            // Každý s každým doma/vonku
             for (let i = 0; i < teamIdentifiers.length; i++) {
                 for (let j = 0; j < teamIdentifiers.length; j++) {
                     if (i !== j) {
+                        if (transferFromBasicGroup) {
+                            // Ak je transferFromBasicGroup true, preskočíme zápasy s rovnakým posledným znakom
+                            if (teamIdentifiers[i].lastChar !== teamIdentifiers[j].lastChar) {
+                                matches.push({
+                                    homeTeamIdentifier: teamIdentifiers[i].identifier,
+                                    awayTeamIdentifier: teamIdentifiers[j].identifier,
+                                });
+                            }
+                        } else {
+                            matches.push({
+                                homeTeamIdentifier: teamIdentifiers[i].identifier,
+                                awayTeamIdentifier: teamIdentifiers[j].identifier,
+                            });
+                        }
+                    }
+                }
+            }
+        } else {
+            // Jedinečné dvojice
+            for (let i = 0; i < teamIdentifiers.length; i++) {
+                for (let j = i + 1; j < teamIdentifiers.length; j++) {
+                    if (transferFromBasicGroup) {
+                        if (teamIdentifiers[i].lastChar !== teamIdentifiers[j].lastChar) {
+                            matches.push({
+                                homeTeamIdentifier: teamIdentifiers[i].identifier,
+                                awayTeamIdentifier: teamIdentifiers[j].identifier,
+                            });
+                        }
+                    } else {
                         matches.push({
                             homeTeamIdentifier: teamIdentifiers[i].identifier,
                             awayTeamIdentifier: teamIdentifiers[j].identifier,
                         });
                     }
-                }
-            }
-        } else {
-            // Jedinečné dvojice (každý s každým raz) v rámci skupiny
-            for (let i = 0; i < teamIdentifiers.length; i++) {
-                for (let j = i + 1; j < teamIdentifiers.length; j++) {
-                    matches.push({
-                        homeTeamIdentifier: teamIdentifiers[i].identifier,
-                        awayTeamIdentifier: teamIdentifiers[j].identifier,
-                    });
                 }
             }
         }
