@@ -6144,7 +6144,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                             'button',
                                                                                             {
                                                                                                 className: `w-6 h-6 ${
-                                                                                                    isThisBreakBlocked 
+                                                                                                    isBreakBlocked(hall.id, dateStr, breakBeforeStartTime) 
                                                                                                         ? 'bg-yellow-500 hover:bg-yellow-600' 
                                                                                                         : 'bg-orange-500 hover:bg-orange-600'
                                                                                                 } text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
@@ -6158,7 +6158,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                         gapMinutes
                                                                                                     );
                                                                                                 },
-                                                                                                title: isThisBreakBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas (nebude ponúkaný)'
+                                                                                                title: isBreakBlocked(hall.id, dateStr, breakBeforeStartTime) ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas (nebude ponúkaný)'
                                                                                             },
                                                                                             React.createElement('i', { 
                                                                                                 className: `fa-solid ${isThisBreakBlocked ? 'fa-lock-open' : 'fa-lock'} text-xs` 
@@ -6556,7 +6556,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                 gapMinutes
                                                                                             );
                                                                                         },
-                                                                                        title: isThisBreakBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas (nebude ponúkaný)'
+                                                                                        title: isBreakBlocked(hall.id, dateStr, breakBeforeStartTime) ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas (nebude ponúkaný)'
                                                                                     },
                                                                                     React.createElement('i', { 
                                                                                         className: `fa-solid ${isThisBreakBlocked ? 'fa-lock-open' : 'fa-lock'} text-xs` 
