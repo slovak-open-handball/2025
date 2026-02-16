@@ -4088,7 +4088,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 type: 'checkbox',
                                 id: 'color-highlight',
                                 checked: colorHighlight,
-                                onChange: (e) => setColorHighlight(e.target.value),
+                                onChange: (e) => setColorHighlight(e.target.checked),
                                 className: 'w-4 h-4 text-blue-600 rounded cursor-pointer'
                             }),
                             React.createElement('label', { 
