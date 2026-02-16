@@ -3093,7 +3093,7 @@ const AddMatchesApp = ({ userProfileData }) => {
     
             if (position === 'before') {
                 // Medzera PRED zápasom - posúvame aktuálny zápas A VŠETKY NASLEDUJÚCE
-                console.log(`Pridávam medzeru PRED zápasom. Posúvam aktuálny a ${afterMatches.length} nasledujúcich zápasov o ${shiftMinutes} minút.`);
+                console.log(`Pridávam medzeru PRED zápasom. Posúvam aktuálny a ${afterMatches.length} nasledujúcich zápasov o ${shiftMinutes} minút dopredu.`);
                 
                 // 1. Posunieme aktuálny zápas
                 const matchRef = doc(window.db, 'matches', matchId);
@@ -3118,13 +3118,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                 }
     
                 window.showGlobalNotification(
-                    `Pridaná ${duration} minútová medzera pred zápasom. Aktuálny a ${afterMatches.length} nasledujúcich zápasov bolo posunutých.`,
+                    `Pridaná ${duration} minútová medzera pred zápasom. Aktuálny a ${afterMatches.length} nasledujúcich zápasov bolo posunutých dopredu.`,
                     'success'
                 );
     
             } else {
                 // Medzera ZA zápasom - posúvame LEN NASLEDUJÚCE zápasy (aktuálny zostáva)
-                console.log(`Pridávam medzeru ZA zápasom. Posúvam ${afterMatches.length} nasledujúcich zápasov o ${shiftMinutes} minút.`);
+                console.log(`Pridávam medzeru ZA zápasom. Posúvam ${afterMatches.length} nasledujúcich zápasov o ${shiftMinutes} minút dopredu.`);
                 
                 // Posunieme LEN nasledujúce zápasy (aktuálny zostáva na svojom mieste)
                 for (const m of afterMatches) {
@@ -3139,7 +3139,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 }
     
                 window.showGlobalNotification(
-                    `Pridaná ${duration} minútová medzera za zápasom. ${afterMatches.length} nasledujúcich zápasov bolo posunutých.`,
+                    `Pridaná ${duration} minútová medzera za zápasom. ${afterMatches.length} nasledujúcich zápasov bolo posunutých dopredu.`,
                     'success'
                 );
             }
