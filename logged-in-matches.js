@@ -4436,20 +4436,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 )
                                             ),
                                             
-                                            // Druhý riadok - VŽDY čisté ID (bez kategórie) - tiež domáci doľava, hostia doprava
+                                            // Druhý riadok - VŽDY čisté ID (bez kategórie) spojené do stredu
                                             React.createElement(
                                                 'div',
-                                                { className: 'flex items-center justify-between w-full mt-1' },
+                                                { className: 'flex items-center justify-center w-full mt-1' },
                                                 React.createElement(
                                                     'span',
-                                                    { className: 'text-xs text-gray-500 font-mono text-left flex-1 truncate' },
-                                                    homePureId
-                                                ),
-                                                React.createElement('span', { className: 'text-xs text-gray-500 mx-2 flex-shrink-0' }, '—'),
-                                                React.createElement(
-                                                    'span',
-                                                    { className: 'text-xs text-gray-500 font-mono text-right flex-1 truncate' },
-                                                    awayPureId
+                                                    { className: 'text-xs text-gray-500 font-mono' },
+                                                    `${homePureId}-${awayPureId}`
                                                 )
                                             )
                                         ),
