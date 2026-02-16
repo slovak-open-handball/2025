@@ -6347,7 +6347,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         React.createElement(
                                                                             'div',
                                                                             { 
-                                                                                className: 'flex items-center gap-2 text-xs cursor-pointer',
+                                                                                className: 'flex items-center text-xs cursor-pointer border-l border-gray-300', // ZMENENÉ: pridaná border-l, odstránené gap-2
                                                                                 onClick: (e) => {
                                                                                     e.stopPropagation();
                                                                                     handleMatchCardClick(match);
@@ -6359,36 +6359,36 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     width: 'fit-content'
                                                                                 }
                                                                             },
-                                                                            // Časový údaj - fixná šírka
+                                                                            // Časový údaj - fixná šírka s border-right
                                                                             React.createElement(
                                                                                 'div',
-                                                                                { className: 'flex items-center gap-1 whitespace-nowrap w-28 flex-shrink-0' },
+                                                                                { className: 'flex items-center gap-1 whitespace-nowrap w-28 flex-shrink-0 px-2 border-r border-gray-300' }, // ZMENENÉ: pridané px-2 a border-r
                                                                                 React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs flex-shrink-0' }),
                                                                                 React.createElement('span', { className: 'font-medium text-blue-700' }, `${matchTime} - ${endTime}`)
                                                                             ),
                                                                             
-                                                                            // Domáci tím - minimálna šírka
+                                                                            // Domáci tím - minimálna šírka s border-right
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
-                                                                                    className: `font-medium text-gray-800 whitespace-nowrap min-w-[300px] flex-shrink-0`,
+                                                                                    className: `font-medium text-gray-800 whitespace-nowrap min-w-[300px] flex-shrink-0 px-2 border-r border-gray-300`, // ZMENENÉ: pridané px-2 a border-r
                                                                                     style: alignmentStyle
                                                                                 },
                                                                                 displayMode === 'both' ? homeDisplay.name : homeDisplay
                                                                             ),
                                                                             
-                                                                            // VS ikona - fixná šírka
+                                                                            // VS ikona - fixná šírka s border-right
                                                                             React.createElement(
                                                                                 'div',
-                                                                                { className: 'text-gray-400 w-8 text-center flex-shrink-0' },
-                                                                                ''
+                                                                                { className: 'text-gray-400 w-8 text-center flex-shrink-0 px-2 border-r border-gray-300' }, // ZMENENÉ: pridané px-2 a border-r, pridaná VS ikona (bola prázdna)
+                                                                                React.createElement('i', { className: 'fa-solid fa-vs text-xs' }) // ZMENENÉ: pridaná ikona namiesto prázdneho stringu
                                                                             ),
                                                                             
-                                                                            // Hosťovský tím - minimálna šírka
+                                                                            // Hosťovský tím - minimálna šírka s border-right
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
-                                                                                    className: `font-medium text-gray-800 whitespace-nowrap min-w-[300px] flex-shrink-0`,
+                                                                                    className: `font-medium text-gray-800 whitespace-nowrap min-w-[300px] flex-shrink-0 px-2 border-r border-gray-300`, // ZMENENÉ: pridané px-2 a border-r
                                                                                     style: alignmentStyle
                                                                                 },
                                                                                 displayMode === 'both' ? awayDisplay.name : awayDisplay
@@ -6398,7 +6398,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             displayMode === 'both' && React.createElement(
                                                                                 'div',
                                                                                 { 
-                                                                                    className: `text-gray-500 font-mono text-[10px] whitespace-nowrap w-24 flex-shrink-0`,
+                                                                                    className: `text-gray-500 font-mono text-[10px] whitespace-nowrap w-24 flex-shrink-0 px-2 border-r border-gray-300`, // ZMENENÉ: pridané px-2 a border-r
                                                                                     style: alignmentStyle
                                                                                 },
                                                                                 `(${homeDisplay.id})`
@@ -6408,14 +6408,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             displayMode === 'both' && React.createElement(
                                                                                 'div',
                                                                                 { 
-                                                                                    className: `text-gray-500 font-mono text-[10px] whitespace-nowrap w-24 flex-shrink-0`,
+                                                                                    className: `text-gray-500 font-mono text-[10px] whitespace-nowrap w-24 flex-shrink-0 px-2`, // ZMENENÉ: pridané px-2, BEZ border-r (posledná bunka)
                                                                                     style: alignmentStyle
                                                                                 },
                                                                                 `(${awayDisplay.id})`
                                                                             ),
                                                                             
                                                                             // Prázdny div pre zarovnanie, ak nie je režim both
-                                                                            displayMode !== 'both' && React.createElement('div', { className: 'w-24 flex-shrink-0' })
+                                                                            displayMode !== 'both' && React.createElement('div', { className: 'w-24 flex-shrink-0 px-2' }) // ZMENENÉ: pridané px-2
                                                                         ),
                                                                         
                                                                         userProfileData?.role === 'admin' && React.createElement(
