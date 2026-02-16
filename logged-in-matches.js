@@ -6348,7 +6348,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             { 
                                                                                 className: 'grid items-center text-xs cursor-pointer border border-gray-300 rounded',
                                                                                 style: { 
-                                                                                    gridTemplateColumns: '130px 280px 40px 280px 160px 1600px', // Pevne definované stĺpce
+                                                                                    gridTemplateColumns: '130px 280px 40px 280px 160px 160px', // Pevne definované stĺpce
                                                                                     width: 'fit-content'
                                                                                 },
                                                                                 onClick: (e) => {
