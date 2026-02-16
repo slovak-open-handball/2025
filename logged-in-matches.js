@@ -4419,60 +4419,97 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             
                                             // Podľa režimu zobrazenia
                                             displayMode === 'both' ? 
-                                                // Režim "Oboje" - každý tím má svoj stĺpec s názvom a pod ním ID
+                                                // Režim "Oboje" - každý tím má svoj stĺpec s názvom a pod ním ID, plus tretí riadok s čistými ID
                                                 React.createElement(
-                                                    'div',
-                                                    { className: 'flex items-start justify-between w-full' },
-                                                    
-                                                    // Domáci tím
+                                                    React.Fragment,
+                                                    null,
+                                                    // Prvý riadok - názvy tímov
                                                     React.createElement(
                                                         'div',
-                                                        { className: 'flex flex-col items-start flex-1' },
+                                                        { className: 'flex items-start justify-between w-full mb-1' },
+                                                        
+                                                        // Domáci tím - názov
                                                         React.createElement(
-                                                            'span',
-                                                            { 
-                                                                className: 'font-semibold text-sm text-gray-800 text-left truncate w-full',
-                                                                title: match.homeTeamIdentifier
-                                                            },
-                                                            homeName
+                                                            'div',
+                                                            { className: 'flex flex-col items-start flex-1' },
+                                                            React.createElement(
+                                                                'span',
+                                                                { 
+                                                                    className: 'font-semibold text-sm text-gray-800 text-left break-words w-full',
+                                                                    title: match.homeTeamIdentifier
+                                                                },
+                                                                homeName
+                                                            )
                                                         ),
+                                                        
+                                                        // VS ikona
+                                                        React.createElement('i', { className: 'fa-solid fa-minus text-xs text-gray-400 mx-2 flex-shrink-0 self-center' }),
+                                                        
+                                                        // Hosťovský tím - názov
                                                         React.createElement(
-                                                            'span',
-                                                            { 
-                                                                className: 'text-xs text-gray-500 font-mono text-left truncate w-full',
-                                                                title: homeId
-                                                            },
-                                                            homeId
+                                                            'div',
+                                                            { className: 'flex flex-col items-end flex-1' },
+                                                            React.createElement(
+                                                                'span',
+                                                                { 
+                                                                    className: 'font-semibold text-sm text-gray-800 text-right break-words w-full',
+                                                                    title: match.awayTeamIdentifier
+                                                                },
+                                                                awayName
+                                                            )
                                                         )
                                                     ),
                                                     
-                                                    // VS ikona
-                                                    React.createElement('i', { className: 'fa-solid fa-minus text-xs text-gray-400 mx-2 flex-shrink-0 self-center' }),
-                                                    
-                                                    // Hosťovský tím
+                                                    // Druhý riadok - ID tímov
                                                     React.createElement(
                                                         'div',
-                                                        { className: 'flex flex-col items-end flex-1' },
+                                                        { className: 'flex items-start justify-between w-full mb-1' },
+                                                        
+                                                        // Domáci tím - ID
                                                         React.createElement(
-                                                            'span',
-                                                            { 
-                                                                className: 'font-semibold text-sm text-gray-800 text-right truncate w-full',
-                                                                title: match.awayTeamIdentifier
-                                                            },
-                                                            awayName
+                                                            'div',
+                                                            { className: 'flex flex-col items-start flex-1' },
+                                                            React.createElement(
+                                                                'span',
+                                                                { 
+                                                                    className: 'text-xs text-gray-500 font-mono text-left break-words w-full',
+                                                                    title: homeId
+                                                                },
+                                                                homeId
+                                                            )
                                                         ),
+                                                        
+                                                        // VS ikona (prázdna pre zachovanie medzery)
+                                                        React.createElement('div', { className: 'mx-2 flex-shrink-0 w-3' }),
+                                                        
+                                                        // Hosťovský tím - ID
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'flex flex-col items-end flex-1' },
+                                                            React.createElement(
+                                                                'span',
+                                                                { 
+                                                                    className: 'text-xs text-gray-500 font-mono text-right break-words w-full',
+                                                                    title: awayId
+                                                                },
+                                                                awayId
+                                                            )
+                                                        )
+                                                    ),
+                                                    
+                                                    // Tretí riadok - čisté ID (bez kategórie) spojené do stredu
+                                                    React.createElement(
+                                                        'div',
+                                                        { className: 'flex items-center justify-center w-full mt-1' },
                                                         React.createElement(
                                                             'span',
-                                                            { 
-                                                                className: 'text-xs text-gray-500 font-mono text-right truncate w-full',
-                                                                title: awayId
-                                                            },
-                                                            awayId
+                                                            { className: 'text-xs text-gray-500 font-mono' },
+                                                            `${homePureId}-${awayPureId}`
                                                         )
                                                     )
                                                 )
                                             :
-                                                // Režimy "Názvy" a "ID" - jeden riadok s oboma tímami
+                                                // Režimy "Názvy" a "ID" - dva riadky
                                                 React.createElement(
                                                     'div',
                                                     { className: 'flex flex-col items-center justify-center w-full' },
@@ -4484,7 +4521,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         React.createElement(
                                                             'span',
                                                             { 
-                                                                className: 'font-semibold text-sm text-gray-800 text-left flex-1 truncate',
+                                                                className: 'font-semibold text-sm text-gray-800 text-left flex-1 break-words',
                                                                 title: match.homeTeamIdentifier
                                                             },
                                                             displayMode === 'name' ? homeName : homeId
@@ -4493,7 +4530,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         React.createElement(
                                                             'span',
                                                             { 
-                                                                className: 'font-semibold text-sm text-gray-800 text-right flex-1 truncate',
+                                                                className: 'font-semibold text-sm text-gray-800 text-right flex-1 break-words',
                                                                 title: match.awayTeamIdentifier
                                                             },
                                                             displayMode === 'name' ? awayName : awayId
@@ -4946,7 +4983,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         React.createElement(
                                                                             'div',
                                                                             { className: 'text-gray-400 w-8 text-center flex-shrink-0' },
-                                                                            'vs'
+                                                                            ''
                                                                         ),
                                                                         
                                                                         // Hosťovský tím - minimálna šírka
