@@ -2049,6 +2049,8 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [isBulkUnassignModalOpen, setIsBulkUnassignModalOpen] = useState(false);
     const [pendingBulkUnassign, setPendingBulkUnassign] = useState(null);
 
+    const [colorHighlight, setColorHighlight] = useState(false);
+
     const handleBulkUnassign = async (hallId, date, isWholeHall = false) => {
         if (!window.db) {
             window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
@@ -4078,6 +4080,22 @@ const AddMatchesApp = ({ userProfileData }) => {
                             React.createElement('i', { className: 'fa-solid fa-rotate-left mr-1' }),
                             'Reset'
                         ),
+
+                        React.createElement(
+                            'div',
+                            { className: 'flex items-center gap-1 ml-2' },
+                            React.createElement('input', {
+                                type: 'checkbox',
+                                id: 'color-highlight',
+                                checked: colorHighlight,
+                                onChange: (e) => setColorHighlight(e.target.value),
+                                className: 'w-4 h-4 text-blue-600 rounded cursor-pointer'
+                            }),
+                            React.createElement('label', { 
+                                htmlFor: 'color-highlight',
+                                className: 'text-sm font-medium text-gray-700 whitespace-nowrap cursor-pointer' 
+                            }, 'Podfarbenie')
+                        ),
                         
                         // Oddeľovač
                         React.createElement('div', { className: 'w-px h-8 bg-gray-300 mx-1' }),
@@ -4799,9 +4817,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                     'div',
                                                                     {
                                                                         key: idx,
-                                                                        className: 'p-2 bg-white rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match',
+                                                                        className: `p-2 rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match ${
+                                                                            colorHighlight ? '' : 'bg-white'
+                                                                        }`,
                                                                         style: { 
-                                                                            width: 'fit-content' // Každý zápas sa prispôsobí obsahu
+                                                                            width: 'fit-content',
+                                                                            backgroundColor: colorHighlight && match.categoryName ? 
+                                                                                (categories.find(c => c.name === match.categoryName)?.drawColor || 'white') 
+                                                                                : 'white'
                                                                         }
                                                                     },
                                                                     React.createElement(
