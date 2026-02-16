@@ -6161,7 +6161,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                 title: isBreakBlocked(hall.id, dateStr, breakBeforeStartTime) ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas (nebude ponúkaný)'
                                                                                             },
                                                                                             React.createElement('i', { 
-                                                                                                className: `fa-solid ${isThisBreakBlocked ? 'fa-lock-open' : 'fa-lock'} text-xs` 
+                                                                                                className: `fa-solid ${isBreakBlocked(hall.id, dateStr, breakBeforeStartTime) ? 'fa-lock-open' : 'fa-lock'} text-xs` 
                                                                                             })
                                                                                         ),
                                                                                         // Tlačidlo pre pridanie zápasu do voľného času
@@ -6553,13 +6553,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                 dateStr, 
                                                                                                 breakBeforeStartTime,
                                                                                                 breakBeforeEndTime,
-                                                                                                gapMinutes
+                                                                                                breakBetweenMatches
                                                                                             );
                                                                                         },
                                                                                         title: isBreakBlocked(hall.id, dateStr, breakBeforeStartTime) ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas (nebude ponúkaný)'
                                                                                     },
                                                                                     React.createElement('i', { 
-                                                                                        className: `fa-solid ${isThisBreakBlocked ? 'fa-lock-open' : 'fa-lock'} text-xs` 
+                                                                                        className: `fa-solid ${isBreakBlocked(hall.id, dateStr, breakBeforeStartTime) ? 'fa-lock-open' : 'fa-lock'} text-xs` 
                                                                                     })
                                                                                 ),
                                                                                 // Tlačidlo pre pridanie zápasu do voľného času
