@@ -766,6 +766,94 @@ const ConfirmSwapModal = ({ isOpen, onClose, onConfirm, homeTeamDisplay, awayTea
     );
 };
 
+// Modálne okno pre potvrdenie hromadného odstránenia zápasov z haly/dňa
+const ConfirmBulkUnassignModal = ({ isOpen, onClose, onConfirm, hallName, date, matchesCount, isWholeHall }) => {
+    if (!isOpen) return null;
+
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) onClose();
+            }
+        },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
+            
+            // Hlavička
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center mb-4' },
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 
+                    isWholeHall ? 'Odstrániť všetky zápasy z haly' : 'Odstrániť zápasy z dňa'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'text-gray-500 hover:text-gray-700'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-times text-xl' })
+                )
+            ),
+
+            // Obsah
+            React.createElement(
+                'div',
+                { className: 'mb-6' },
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-700 mb-2' },
+                    'Naozaj chcete odstrániť priradenie všetkých zápasov ',
+                    isWholeHall 
+                        ? React.createElement('span', null, 'z haly ', React.createElement('span', { className: 'font-semibold' }, hallName))
+                        : React.createElement('span', null, 'dňa ', React.createElement('span', { className: 'font-semibold' }, date)),
+                    '?'
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-700 mb-4' },
+                    'Počet zápasov na odstránenie: ',
+                    React.createElement('span', { className: 'font-semibold text-orange-600' }, matchesCount)
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-sm text-orange-600 flex items-center gap-2' },
+                    React.createElement('i', { className: 'fa-solid fa-exclamation-triangle' }),
+                    'Zápasy zostanú v systéme, ale budú presunuté do nepriradených.'
+                )
+            ),
+
+            // Tlačidlá
+            React.createElement(
+                'div',
+                { className: 'flex justify-end gap-3' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
+                    },
+                    'Zrušiť'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => {
+                            onConfirm();
+                            onClose();
+                        },
+                        className: 'px-4 py-2 text-white bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors'
+                    },
+                    'Odstrániť priradenie'
+                )
+            )
+        )
+    );
+};
+
 // Modálne okno pre potvrdenie hromadného mazania
 const ConfirmBulkDeleteModal = ({ isOpen, onClose, onConfirm, categoryName, groupName, matchesCount }) => {
     if (!isOpen) return null;
@@ -1957,6 +2045,116 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     const [availableGroupsForFilter, setAvailableGroupsForFilter] = useState([]);
     const [availableDays, setAvailableDays] = useState([]);
+
+    const [isBulkUnassignModalOpen, setIsBulkUnassignModalOpen] = useState(false);
+    const [pendingBulkUnassign, setPendingBulkUnassign] = useState(null);
+
+    const handleBulkUnassign = async (hallId, date, isWholeHall = false) => {
+        if (!window.db) {
+            window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
+            return;
+        }
+    
+        if (userProfileData?.role !== 'admin') {
+            window.showGlobalNotification('Na odstraňovanie priradení potrebujete administrátorské práva', 'error');
+            return;
+        }
+    
+        try {
+            // Nájdeme všetky zápasy pre túto halu (a prípadne deň)
+            const matchesToUpdate = matches.filter(match => {
+                if (!match.hallId || match.hallId !== hallId) return false;
+                
+                if (!isWholeHall && date) {
+                    // Ak nie je celá hala, filtrujeme aj podľa dňa
+                    if (!match.scheduledTime) return false;
+                    try {
+                        const matchDate = match.scheduledTime.toDate();
+                        const matchDateStr = getLocalDateStr(matchDate);
+                        return matchDateStr === date;
+                    } catch (e) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            });
+    
+            if (matchesToUpdate.length === 0) {
+                window.showGlobalNotification('Žiadne zápasy na odstránenie', 'info');
+                return;
+            }
+    
+            // Otvoríme modálne okno pre potvrdenie
+            const hall = sportHalls.find(h => h.id === hallId);
+            setPendingBulkUnassign({
+                hallId,
+                hallName: hall?.name || 'Neznáma hala',
+                date,
+                dateStr: date ? new Date(date).toLocaleDateString('sk-SK', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                }) : '',
+                matchesCount: matchesToUpdate.length,
+                isWholeHall
+            });
+            setIsBulkUnassignModalOpen(true);
+    
+        } catch (error) {
+            console.error('Chyba pri príprave hromadného odstránenia:', error);
+            window.showGlobalNotification('Chyba: ' + error.message, 'error');
+        }
+    };
+    
+    // Samotné vykonanie hromadného odstránenia priradení
+    const confirmBulkUnassign = async () => {
+        if (!pendingBulkUnassign || !window.db) return;
+    
+        try {
+            const { hallId, date, isWholeHall } = pendingBulkUnassign;
+            
+            // Nájdeme všetky zápasy pre túto halu (a prípadne deň)
+            const matchesToUpdate = matches.filter(match => {
+                if (!match.hallId || match.hallId !== hallId) return false;
+                
+                if (!isWholeHall && date) {
+                    if (!match.scheduledTime) return false;
+                    try {
+                        const matchDate = match.scheduledTime.toDate();
+                        const matchDateStr = getLocalDateStr(matchDate);
+                        return matchDateStr === date;
+                    } catch (e) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            });
+    
+            // Postupne aktualizujeme všetky zápasy - odstránime priradenie
+            for (const match of matchesToUpdate) {
+                const matchRef = doc(window.db, 'matches', match.id);
+                await updateDoc(matchRef, {
+                    hallId: null,
+                    scheduledTime: null,
+                    scheduledEndTime: null,
+                    duration: null,
+                    status: 'pending'
+                });
+            }
+    
+            const message = isWholeHall
+                ? `Odstránené priradenie všetkých ${matchesToUpdate.length} zápasov z haly ${pendingBulkUnassign.hallName}`
+                : `Odstránené priradenie ${matchesToUpdate.length} zápasov z dňa ${pendingBulkUnassign.dateStr}`;
+            
+            window.showGlobalNotification(message, 'success');
+            
+        } catch (error) {
+            console.error('Chyba pri hromadnom odstraňovaní priradení:', error);
+            window.showGlobalNotification('Chyba: ' + error.message, 'error');
+        }
+    };
 
     const loadFiltersFromURL = () => {
         const params = new URLSearchParams(window.location.search);
@@ -3701,6 +3899,18 @@ const AddMatchesApp = ({ userProfileData }) => {
             groupName: pendingBulkDelete?.groupName,
             matchesCount: pendingBulkDelete?.matchesCount || 0
         }),
+        React.createElement(ConfirmBulkUnassignModal, {
+            isOpen: isBulkUnassignModalOpen,
+            onClose: () => {
+                setIsBulkUnassignModalOpen(false);
+                setPendingBulkUnassign(null);
+            },
+            onConfirm: confirmBulkUnassign,
+            hallName: pendingBulkUnassign?.hallName,
+            date: pendingBulkUnassign?.dateStr,
+            matchesCount: pendingBulkUnassign?.matchesCount || 0,
+            isWholeHall: pendingBulkUnassign?.isWholeHall || false
+        }),    
         React.createElement(AssignMatchModal, {
             isOpen: isAssignModalOpen,
             onClose: () => {
@@ -4345,6 +4555,18 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 'div',
                                                 { className: 'flex-1' },
                                                 React.createElement('h4', { className: 'font-bold text-xl text-gray-800' }, hall.name),
+                                                userProfileData?.role === 'admin' && React.createElement(
+                                                    'button',
+                                                    {
+                                                        className: 'ml-auto opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 bg-orange-500 hover:bg-orange-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                        onClick: (e) => {
+                                                            e.stopPropagation();
+                                                            handleBulkUnassign(hall.id, null, true);
+                                                        },
+                                                        title: 'Odstrániť priradenie všetkých zápasov z tejto haly'
+                                                    },
+                                                    React.createElement('i', { className: 'fa-solid fa-trash-can text-sm' })
+                                                ),
                                                 React.createElement('span', { 
                                                     className: 'inline-block px-3 py-1 text-xs font-medium rounded-full mt-1',
                                                     style: { 
@@ -4429,6 +4651,18 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                 }
                                                                 return React.createElement('i', { className: 'fa-regular fa-clock text-xs text-blue-400 ml-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0' });
                                                             })()
+                                                        ),
+                                                        !isEmpty && userProfileData?.role === 'admin' && React.createElement(
+                                                            'button',
+                                                            {
+                                                                className: 'ml-2 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 bg-orange-500 hover:bg-orange-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                onClick: (e) => {
+                                                                    e.stopPropagation();
+                                                                    handleBulkUnassign(hall.id, dateStr, false);
+                                                                },
+                                                                title: 'Odstrániť priradenie všetkých zápasov z tohto dňa'
+                                                            },
+                                                            React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
                                                         ),
                                                         React.createElement(
                                                             'div',
