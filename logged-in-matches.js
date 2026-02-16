@@ -5492,7 +5492,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     React.createElement(
                                                                                         'div',
                                                                                         { 
-                                                                                            className: 'absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 opacity-0 group-hover/gap-creator:opacity-100 transition-opacity z-10',
+                                                                                            className: 'absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 opacity-100 transition-opacity z-100',
                                                                                             style: { 
                                                                                                 transform: 'translate(-50%, -50%)'
                                                                                             }
