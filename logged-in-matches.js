@@ -4553,7 +4553,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             ),
                                             React.createElement(
                                                 'div',
-                                                { className: 'flex-1' },
+                                                { className: 'flex-1 flex items-center justify-between' }, // Pridaný flex a justify-between
                                                 React.createElement('h4', { className: 'font-bold text-xl text-gray-800' }, hall.name),
                                                 userProfileData?.role === 'admin' && React.createElement(
                                                     'button',
