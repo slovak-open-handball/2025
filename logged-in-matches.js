@@ -6103,7 +6103,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                             'div',
                                                                                             { 
                                                                                                 className: `text-green-700 font-medium whitespace-nowrap min-w-[250px] flex-shrink-0`,
-                                                                                                style: alignmentStyle
+                                                                                                style: { textAlign: 'left' }
                                                                                             },
                                                                                             `${gapMinutes} minút`
                                                                                         ),
@@ -6120,7 +6120,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                             'div',
                                                                                             { 
                                                                                                 className: `text-green-600 whitespace-nowrap min-w-[250px] flex-shrink-0`,
-                                                                                                style: alignmentStyle
+                                                                                                style: { textAlign: 'left' }
                                                                                             },
                                                                                             'voľný čas'
                                                                                         ),
@@ -6505,7 +6505,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     'div',
                                                                                     { 
                                                                                         className: `text-green-700 font-medium whitespace-nowrap min-w-[250px] flex-shrink-0`,
-                                                                                        style: alignmentStyle
+                                                                                        style: { textAlign: 'left' }
                                                                                     },
                                                                                     `${breakBetweenMatches} minút`
                                                                                 ),
@@ -6522,7 +6522,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     'div',
                                                                                     { 
                                                                                         className: `text-green-600 whitespace-nowrap min-w-[250px] flex-shrink-0`,
-                                                                                        style: alignmentStyle
+                                                                                        style: { textAlign: 'left' }
                                                                                     },
                                                                                     'voľný čas'
                                                                                 ),
