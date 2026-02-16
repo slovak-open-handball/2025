@@ -1959,7 +1959,17 @@ const HallDayStartTimeModal = ({ isOpen, onClose, onConfirm, hallName, date, cur
                     { className: 'text-gray-700 mb-4' },
                     React.createElement('span', { className: 'font-semibold' }, hallName),
                     ' - ',
-                    React.createElement('span', { className: 'font-semibold' }, date)
+                    React.createElement('span', { className: 'font-semibold' }, 
+                        date ? (() => {
+                            // Skúsime parsovať dátum vo formáte YYYY-MM-DD
+                            const parts = date.split('-');
+                            if (parts.length === 3) {
+                                // Vytvoríme dátum v lokálnom formáte
+                                return `${parts[2]}. ${parts[1]}. ${parts[0]}`;
+                            }
+                            return date; // Fallback na pôvodný formát
+                        })() : ''
+                    )
                 ),
                 React.createElement(
                     'div',
