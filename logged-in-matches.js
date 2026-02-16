@@ -2315,6 +2315,71 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [isBreakModalOpen, setIsBreakModalOpen] = useState(false);
     const [selectedMatchForBreak, setSelectedMatchForBreak] = useState(null);
     const [selectedMatchCurrentTime, setSelectedMatchCurrentTime] = useState('');
+    const [selectedBreakForDelete, setSelectedBreakForDelete] = useState(null);
+
+    const handleDeleteBreak = async ({ matchId, nextMatchId, breakDuration }) => {
+        if (!window.db) {
+            window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
+            return;
+        }
+    
+        if (userProfileData?.role !== 'admin') {
+            window.showGlobalNotification('Na úpravu rozvrhu potrebujete administrátorské práva', 'error');
+            return;
+        }
+    
+        try {
+            const currentMatch = matches.find(m => m.id === matchId);
+            const nextMatch = matches.find(m => m.id === nextMatchId);
+            
+            if (!currentMatch || !nextMatch || !currentMatch.scheduledTime || !nextMatch.scheduledTime) return;
+    
+            // Získame všetky zápasy pre tú istú halu a deň
+            const matchDate = currentMatch.scheduledTime.toDate();
+            const dateStr = getLocalDateStr(matchDate);
+            
+            const hallDayMatches = matches
+                .filter(m => 
+                    m.hallId === currentMatch.hallId && 
+                    m.scheduledTime
+                )
+                .map(m => ({
+                    ...m,
+                    scheduledTimeObj: m.scheduledTime.toDate()
+                }))
+                .filter(m => {
+                    const mDateStr = getLocalDateStr(m.scheduledTimeObj);
+                    return mDateStr === dateStr;
+                })
+                .sort((a, b) => a.scheduledTimeObj.getTime() - b.scheduledTimeObj.getTime());
+    
+            // Nájdeme index aktuálneho zápasu
+            const currentIndex = hallDayMatches.findIndex(m => m.id === matchId);
+            
+            // Všetky zápasy PO aktuálnom (vrátane nasledujúceho)
+            const afterMatches = hallDayMatches.slice(currentIndex + 1);
+    
+            // Posunieme všetky nasledujúce zápasy o breakDuration skôr
+            for (const m of afterMatches) {
+                const mRef = doc(window.db, 'matches', m.id);
+                const mDateTime = new Date(m.scheduledTimeObj);
+                mDateTime.setMinutes(mDateTime.getMinutes() - breakDuration);
+                
+                await updateDoc(mRef, {
+                    scheduledTime: Timestamp.fromDate(mDateTime)
+                });
+            }
+    
+            window.showGlobalNotification(
+                `Medzera ${breakDuration} minút bola odstránená. Nasledujúce zápasy boli posunuté skôr.`,
+                'success'
+            );
+    
+        } catch (error) {
+            console.error('Chyba pri odstraňovaní medzery:', error);
+            window.showGlobalNotification('Chyba: ' + error.message, 'error');
+        }
+    };
 
     const handleAddBreak = async ({ matchId, position, duration, newTime }) => {
         if (!window.db) {
@@ -5504,7 +5569,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         breakBetweenMatches !== null && React.createElement(
                                                                             'div',
                                                                             {
-                                                                                className: `p-2 rounded border border-dashed border-green-300 bg-green-50 transition-all`,
+                                                                                className: `p-2 rounded border border-dashed border-green-300 bg-green-50 transition-all relative group/break`,
                                                                                 style: { 
                                                                                     width: 'fit-content',
                                                                                 }
@@ -5575,6 +5640,30 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 
                                                                                 // Prázdny div pre zarovnanie, ak nie je režim both
                                                                                 displayMode !== 'both' && React.createElement('div', { className: 'w-24 flex-shrink-0' })
+                                                                            ),
+                                                                            
+                                                                            // Tlačidlo na odstránenie medzery (zobrazí sa pri hover)
+                                                                            userProfileData?.role === 'admin' && React.createElement(
+                                                                                'div',
+                                                                                { className: 'absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/break:opacity-100 transition-opacity' },
+                                                                                React.createElement(
+                                                                                    'button',
+                                                                                    {
+                                                                                        className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                        onClick: (e) => {
+                                                                                            e.stopPropagation();
+                                                                                            // Získame nasledujúci zápas
+                                                                                            const nextMatch = sortedArray[idx + 1];
+                                                                                            handleDeleteBreak({
+                                                                                                matchId: match.id,
+                                                                                                nextMatchId: nextMatch.id,
+                                                                                                breakDuration: breakBetweenMatches
+                                                                                            });
+                                                                                        },
+                                                                                        title: 'Odstrániť medzeru'
+                                                                                    },
+                                                                                    React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                                                                )
                                                                             )
                                                                         )
                                                                     );
