@@ -1858,12 +1858,12 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             React.createElement('span', { className: 'font-medium' }, 'Čas: '),
                             `${selectedTime} - ${matchEndTime} (${matchDuration} min + ${categoryDetails?.matchBreak || 5} min prestávka)`
                         ),
-                        hallStartTime && React.createElement(
-                            'p',
-                            { className: 'text-xs text-green-600 mt-1' },
-                            React.createElement('i', { className: 'fa-regular fa-clock mr-1' }),
-                            `Čas zápasu je v poriadku (začína o ${selectedTime}, čo je po čase začiatku ${hallStartTime})`
-                        )
+//                        hallStartTime && React.createElement(
+//                            'p',
+//                            { className: 'text-xs text-green-600 mt-1' },
+//                            React.createElement('i', { className: 'fa-regular fa-clock mr-1' }),
+//                            `Čas zápasu je v poriadku (začína o ${selectedTime}, čo je po čase začiatku ${hallStartTime})`
+//                        )
                     )
                 )
             ),
