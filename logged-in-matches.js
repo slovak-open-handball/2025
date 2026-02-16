@@ -1406,17 +1406,6 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
         }
     };
 
-    useEffect(() => {
-        const savedBlockedBreaks = localStorage.getItem('blockedBreaks');
-        if (savedBlockedBreaks) {
-            try {
-                setBlockedBreaks(JSON.parse(savedBlockedBreaks));
-            } catch (e) {
-                console.error('Chyba pri načítaní z localStorage:', e);
-            }
-        }
-    }, []);
-
     // Inicializácia pri otvorení modálneho okna - NAČÍTAME DÁTUMY OKAMŽITE
     useEffect(() => {
         if (isOpen && match && !initialized) {
