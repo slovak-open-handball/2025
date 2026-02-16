@@ -4364,22 +4364,22 @@ const AddMatchesApp = ({ userProfileData }) => {
                 // Pre každú skupinu vygenerujeme zápasy
                 for (const group of groups) {
                     const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, group.name);
-                    
+    
                     if (teamsInGroup.length >= 2) {
                         console.log(`Generujem zápasy pre skupinu ${group.name} s ${teamsInGroup.length} tímami`);
                         
                         // Zistíme typ skupiny
                         const groupInfo = groupsByCategory[category.id]?.find(g => g.name === group.name);
                         const isAdvancedGroup = groupInfo?.type === 'nadstavbová skupina';
-                        
+        
                         // Pre skupinu použijeme transferFromBasicGroup LEN ak je to nadstavbová skupina
                         const shouldTransferFromBasicGroup = isAdvancedGroup && (transferFromBasicGroup || false);
                         
                         const groupMatches = generateMatchesForGroup(teamsInGroup, withRepetitions, category.name, shouldTransferFromBasicGroup);
                         
                         const matchesWithInfo = groupMatches.map((match, index) => ({
-                            homeTeamId: match.homeTeamId,
-                            awayTeamId: match.awayTeamId,
+                            homeTeamIdentifier: match.homeTeamIdentifier,
+                            awayTeamIdentifier: match.awayTeamIdentifier, 
                             time: '--:--',
                             hallId: null,
                             categoryId: category.id,
@@ -4387,7 +4387,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                             groupName: group.name,
                             status: 'pending'
                         }));
-            
+                
                         allGeneratedMatches = [...allGeneratedMatches, ...matchesWithInfo];
                     }
                 }
