@@ -54,6 +54,9 @@ export function CategorySettings({
     const [previousValues, setPreviousValues] = React.useState({});
     const [isInitialLoad, setIsInitialLoad] = React.useState(true);
 
+    // NOVÝ: State pre existujúce zápasy
+    const [existingMatches, setExistingMatches] = React.useState({});
+
     // REF pre uloženie pôvodných hodnôt kategórií
     const originalCategoriesRef = React.useRef({});
 
@@ -89,9 +92,43 @@ export function CategorySettings({
         setSelectedCategoryId(catId);
     };
 
-    // Načítavanie kategórií
+    // NOVÁ FUNKCIA: Načítanie existujúcich zápasov pre každú kategóriu
+    const loadExistingMatches = async () => {
+        if (!db) return;
+
+        try {
+            const matchesRef = collection(db, 'matches');
+            const matchesSnap = await getDocs(matchesRef);
+            
+            const matchesByCategory = {};
+            
+            matchesSnap.forEach((doc) => {
+                const match = doc.data();
+                if (match.categoryId) {
+                    if (!matchesByCategory[match.categoryId]) {
+                        matchesByCategory[match.categoryId] = [];
+                    }
+                    matchesByCategory[match.categoryId].push(match);
+                }
+            });
+            
+            setExistingMatches(matchesByCategory);
+            console.log("[CategorySettings] Načítané existujúce zápasy:", 
+                Object.keys(matchesByCategory).map(catId => 
+                    `${catId}: ${matchesByCategory[catId].length} zápasov`
+                )
+            );
+        } catch (err) {
+            console.error("[CategorySettings] Chyba pri načítaní existujúcich zápasov:", err);
+        }
+    };
+
+    // Načítavanie kategórií a existujúcich zápasov
     React.useEffect(() => {
         if (!db || !userProfileData || userProfileData.role !== 'admin') return;
+
+        // Načítame existujúce zápasy
+        loadExistingMatches();
 
         const catRef = doc(db, 'settings', 'categories');
 
@@ -761,6 +798,11 @@ export function CategorySettings({
 
     // Získanie vybranej kategórie
     const selectedCategory = categories.find(cat => cat.id === selectedCategoryId);
+    
+    // NOVÁ FUNKCIA: Kontrola, či má kategória existujúce zápasy
+    const hasExistingMatchesForCategory = (catId) => {
+        return existingMatches[catId] && existingMatches[catId].length > 0;
+    };
 
     if (isInitialLoad) {
         return React.createElement(
@@ -811,6 +853,9 @@ export function CategorySettings({
                                     editedTimeoutDuration[cat.id] !== cat.timeoutDuration ||
                                     editedExclusionTime[cat.id] !== cat.exclusionTime;
                                 
+                                // NOVÉ: Kontrola existujúcich zápasov pre túto kategóriu
+                                const hasMatches = hasExistingMatchesForCategory(cat.id);
+                                
                                 return React.createElement(
                                     'button',
                                     {
@@ -821,13 +866,23 @@ export function CategorySettings({
                                                 ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-300 ring-offset-2'
                                                 : hasCategoryChanges
                                                     ? 'bg-yellow-100 text-gray-700 hover:bg-yellow-200 hover:shadow border-2 border-yellow-500'
-                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow'
+                                                    : hasMatches
+                                                        ? 'bg-orange-100 text-gray-700 hover:bg-orange-200 hover:shadow border-2 border-orange-400'
+                                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow'
                                         }`
                                     },
                                     cat.name,
                                     hasCategoryChanges && !saving && React.createElement(
                                         'span',
                                         { className: 'absolute -top-2 -right-2 w-4 h-4 bg-yellow-500 rounded-full animate-pulse' }
+                                    ),
+                                    // NOVÉ: Indikátor existujúcich zápasov (iba ak nemá zmeny)
+                                    !hasCategoryChanges && hasMatches && React.createElement(
+                                        'span',
+                                        { 
+                                            className: 'absolute -top-2 -right-2 w-4 h-4 bg-orange-500 rounded-full',
+                                            title: 'Pre túto kategóriu existujú zápasy - niektoré nastavenia sú zablokované'
+                                        }
                                     )
                                 );
                             })
@@ -855,9 +910,24 @@ export function CategorySettings({
                             React.createElement(
                                 'div',
                                 { className: 'flex justify-between items-center mb-6' },
-                                React.createElement('h3', {
-                                    className: 'text-xl font-semibold text-gray-800'
-                                }, selectedCategory.name),
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex items-center gap-2' },
+                                    React.createElement('h3', {
+                                        className: 'text-xl font-semibold text-gray-800'
+                                    }, selectedCategory.name),
+                                    
+                                    // NOVÉ: Varovanie o existujúcich zápasoch
+                                    hasExistingMatchesForCategory(selectedCategory.id) && React.createElement(
+                                        'span',
+                                        { 
+                                            className: 'inline-flex items-center gap-1 px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium',
+                                            title: 'Pre túto kategóriu existujú zápasy. Niektoré nastavenia nie je možné meniť.'
+                                        },
+                                        React.createElement('i', { className: 'fa-solid fa-exclamation-triangle' }),
+                                        `Existuje ${existingMatches[selectedCategory.id].length} ${existingMatches[selectedCategory.id].length === 1 ? 'zápas' : existingMatches[selectedCategory.id].length < 5 ? 'zápasy' : 'zápasov'}`
+                                    )
+                                ),
                                 React.createElement(
                                     'button',
                                     {
@@ -868,189 +938,280 @@ export function CategorySettings({
                                 )
                             ),
 
-                            // Všetky polia
-                            React.createElement(
-                                'div',
-                                { className: 'space-y-4' },
+                            // NOVÉ: Zistenie, či je kategória zablokovaná pre úpravy
+                            (() => {
+                                const hasMatches = hasExistingMatchesForCategory(selectedCategory.id);
                                 
-                                // Maximálny počet tímov
-                                React.createElement(
+                                return React.createElement(
                                     'div',
-                                    { className: 'space-y-1' },
-                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
-                                        'Maximálny počet tímov:'
-                                    ),
-                                    React.createElement('input', {
-                                        type: 'number',
-                                        min: 1,
-                                        value: editedMaxTeams[selectedCategory.id] ?? selectedCategory.maxTeams,
-                                        onChange: e => handleMaxTeamsChange(selectedCategory.id, e.target.value),
-                                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                                    })
-                                ),
-
-                                // Počet periód
-                                React.createElement(
-                                    'div',
-                                    { className: 'space-y-1' },
-                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
-                                        'Počet periód:'
-                                    ),
-                                    React.createElement('input', {
-                                        type: 'number',
-                                        min: 1,
-                                        value: editedPeriods[selectedCategory.id] ?? selectedCategory.periods,
-                                        onChange: e => handlePeriodsChange(selectedCategory.id, e.target.value),
-                                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                                    })
-                                ),
-
-                                // Trvanie periódy
-                                React.createElement(
-                                    'div',
-                                    { className: 'space-y-1' },
-                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
-                                        'Trvanie periódy (min):'
-                                    ),
-                                    React.createElement('input', {
-                                        type: 'number',
-                                        min: 1,
-                                        value: editedPeriodDuration[selectedCategory.id] ?? selectedCategory.periodDuration,
-                                        onChange: e => handlePeriodDurationChange(selectedCategory.id, e.target.value),
-                                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                                    })
-                                ),
-
-                                // PODMIENENÉ ZOBRAZENIE: Prestávka medzi periódami - zobrazí sa len ak je počet periód > 1
-                                (editedPeriods[selectedCategory.id] ?? selectedCategory.periods) > 1 && React.createElement(
-                                    'div',
-                                    { className: 'space-y-1' },
-                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
-                                        'Prestávka medzi periódami (min):'
-                                    ),
-                                    React.createElement('input', {
-                                        type: 'number',
-                                        min: 0,
-                                        value: editedBreakDuration[selectedCategory.id] ?? selectedCategory.breakDuration,
-                                        onChange: e => handleBreakDurationChange(selectedCategory.id, e.target.value),
-                                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                                    })
-                                ),
-
-                                // Prestávka medzi zápasmi
-                                React.createElement(
-                                    'div',
-                                    { className: 'space-y-1' },
-                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
-                                        'Prestávka medzi zápasmi (min):'
-                                    ),
-                                    React.createElement('input', {
-                                        type: 'number',
-                                        min: 0,
-                                        value: editedMatchBreak[selectedCategory.id] ?? selectedCategory.matchBreak,
-                                        onChange: e => handleMatchBreakChange(selectedCategory.id, e.target.value),
-                                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                                    })
-                                ),
-
-                                // NOVÉ: Nastavenia pre timeout
-                                React.createElement(
-                                    'div',
-                                    { className: 'space-y-1' },
-                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
-                                        'Počet timeoutov na zápas:'
-                                    ),
-                                    React.createElement('input', {
-                                        type: 'number',
-                                        min: 0,
-                                        value: editedTimeoutCount[selectedCategory.id] ?? selectedCategory.timeoutCount ?? 2,
-                                        onChange: e => handleTimeoutCountChange(selectedCategory.id, e.target.value),
-                                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                                    })
-                                ),
-
-                                // NOVÉ: PODMIENENÉ ZOBRAZENIE - Trvanie timeoutu - zobrazí sa len ak je počet timeoutov > 0
-                                (editedTimeoutCount[selectedCategory.id] ?? selectedCategory.timeoutCount) > 0 && React.createElement(
-                                    'div',
-                                    { className: 'space-y-1' },
-                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
-                                        'Trvanie timeoutu (min):'
-                                    ),
-                                    React.createElement('input', {
-                                        type: 'number',
-                                        min: 0,
-                                        value: editedTimeoutDuration[selectedCategory.id] ?? selectedCategory.timeoutDuration ?? 1,
-                                        onChange: e => handleTimeoutDurationChange(selectedCategory.id, e.target.value),
-                                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                                    })
-                                ),
-
-                                // NOVÉ: Čas vylúčenia
-                                React.createElement(
-                                    'div',
-                                    { className: 'space-y-1' },
-                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
-                                        'Čas vylúčenia (min):'
-                                    ),
-                                    React.createElement('input', {
-                                        type: 'number',
-                                        min: 0,
-                                        value: editedExclusionTime[selectedCategory.id] ?? selectedCategory.exclusionTime ?? 2,
-                                        onChange: e => handleExclusionTimeChange(selectedCategory.id, e.target.value),
-                                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                                    })
-                                ),
-
-                                // Farba pre rozlosovanie
-                                React.createElement(
-                                    'div',
-                                    { className: 'space-y-1' },
-                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
-                                        'Farba pre rozlosovanie:'
-                                    ),
+                                    { className: 'space-y-4' },
+                                    
+                                    // Maximálny počet tímov - NIE JE ZABLOKOVANÝ (môže sa meniť)
                                     React.createElement(
                                         'div',
-                                        { className: 'flex gap-2' },
+                                        { className: 'space-y-1' },
+                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                            'Maximálny počet tímov:'
+                                        ),
                                         React.createElement('input', {
-                                            type: 'color',
-                                            value: editedDrawColor[selectedCategory.id] ?? selectedCategory.drawColor,
-                                            onChange: e => handleDrawColorChange(selectedCategory.id, e.target.value),
-                                            className: 'w-12 h-10 border border-gray-300 rounded-lg cursor-pointer'
-                                        }),
-                                        React.createElement('input', {
-                                            type: 'text',
-                                            value: editedDrawColor[selectedCategory.id] ?? selectedCategory.drawColor,
-                                            onChange: e => handleDrawColorChange(selectedCategory.id, e.target.value),
-                                            className: 'flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black font-mono'
+                                            type: 'number',
+                                            min: 1,
+                                            value: editedMaxTeams[selectedCategory.id] ?? selectedCategory.maxTeams,
+                                            onChange: e => handleMaxTeamsChange(selectedCategory.id, e.target.value),
+                                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
                                         })
-                                    )
-                                ),
-
-                                // Farba pre dopravu
-                                React.createElement(
-                                    'div',
-                                    { className: 'space-y-1' },
-                                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
-                                        'Farba pre dopravu:'
                                     ),
+
+                                    // Počet periód - ZABLOKOVANÝ ak existujú zápasy
                                     React.createElement(
                                         'div',
-                                        { className: 'flex gap-2' },
+                                        { className: 'space-y-1' },
+                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                            'Počet periód:'
+                                        ),
                                         React.createElement('input', {
-                                            type: 'color',
-                                            value: editedTransportColor[selectedCategory.id] ?? selectedCategory.transportColor,
-                                            onChange: e => handleTransportColorChange(selectedCategory.id, e.target.value),
-                                            className: 'w-12 h-10 border border-gray-300 rounded-lg cursor-pointer'
+                                            type: 'number',
+                                            min: 1,
+                                            value: editedPeriods[selectedCategory.id] ?? selectedCategory.periods,
+                                            onChange: e => handlePeriodsChange(selectedCategory.id, e.target.value),
+                                            disabled: hasMatches,
+                                            className: `w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${
+                                                hasMatches ? 'bg-gray-100 cursor-not-allowed opacity-75' : ''
+                                            }`
                                         }),
+                                        hasMatches && React.createElement(
+                                            'p',
+                                            { className: 'text-xs text-orange-600 mt-1 flex items-center gap-1' },
+                                            React.createElement('i', { className: 'fa-solid fa-lock' }),
+                                            'Toto nastavenie nie je možné meniť, pretože pre túto kategóriu už existujú zápasy.'
+                                        )
+                                    ),
+
+                                    // Trvanie periódy - ZABLOKOVANÝ ak existujú zápasy
+                                    React.createElement(
+                                        'div',
+                                        { className: 'space-y-1' },
+                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                            'Trvanie periódy (min):'
+                                        ),
                                         React.createElement('input', {
-                                            type: 'text',
-                                            value: editedTransportColor[selectedCategory.id] ?? selectedCategory.transportColor,
-                                            onChange: e => handleTransportColorChange(selectedCategory.id, e.target.value),
-                                            className: 'flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black font-mono'
-                                        })
+                                            type: 'number',
+                                            min: 1,
+                                            value: editedPeriodDuration[selectedCategory.id] ?? selectedCategory.periodDuration,
+                                            onChange: e => handlePeriodDurationChange(selectedCategory.id, e.target.value),
+                                            disabled: hasMatches,
+                                            className: `w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${
+                                                hasMatches ? 'bg-gray-100 cursor-not-allowed opacity-75' : ''
+                                            }`
+                                        }),
+                                        hasMatches && React.createElement(
+                                            'p',
+                                            { className: 'text-xs text-orange-600 mt-1 flex items-center gap-1' },
+                                            React.createElement('i', { className: 'fa-solid fa-lock' }),
+                                            'Toto nastavenie nie je možné meniť, pretože pre túto kategóriu už existujú zápasy.'
+                                        )
+                                    ),
+
+                                    // PODMIENENÉ ZOBRAZENIE: Prestávka medzi periódami - ZABLOKOVANÝ ak existujú zápasy
+                                    (editedPeriods[selectedCategory.id] ?? selectedCategory.periods) > 1 && React.createElement(
+                                        'div',
+                                        { className: 'space-y-1' },
+                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                            'Prestávka medzi periódami (min):'
+                                        ),
+                                        React.createElement('input', {
+                                            type: 'number',
+                                            min: 0,
+                                            value: editedBreakDuration[selectedCategory.id] ?? selectedCategory.breakDuration,
+                                            onChange: e => handleBreakDurationChange(selectedCategory.id, e.target.value),
+                                            disabled: hasMatches,
+                                            className: `w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${
+                                                hasMatches ? 'bg-gray-100 cursor-not-allowed opacity-75' : ''
+                                            }`
+                                        }),
+                                        hasMatches && React.createElement(
+                                            'p',
+                                            { className: 'text-xs text-orange-600 mt-1 flex items-center gap-1' },
+                                            React.createElement('i', { className: 'fa-solid fa-lock' }),
+                                            'Toto nastavenie nie je možné meniť, pretože pre túto kategóriu už existujú zápasy.'
+                                        )
+                                    ),
+
+                                    // Prestávka medzi zápasmi - ZABLOKOVANÝ ak existujú zápasy
+                                    React.createElement(
+                                        'div',
+                                        { className: 'space-y-1' },
+                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                            'Prestávka medzi zápasmi (min):'
+                                        ),
+                                        React.createElement('input', {
+                                            type: 'number',
+                                            min: 0,
+                                            value: editedMatchBreak[selectedCategory.id] ?? selectedCategory.matchBreak,
+                                            onChange: e => handleMatchBreakChange(selectedCategory.id, e.target.value),
+                                            disabled: hasMatches,
+                                            className: `w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${
+                                                hasMatches ? 'bg-gray-100 cursor-not-allowed opacity-75' : ''
+                                            }`
+                                        }),
+                                        hasMatches && React.createElement(
+                                            'p',
+                                            { className: 'text-xs text-orange-600 mt-1 flex items-center gap-1' },
+                                            React.createElement('i', { className: 'fa-solid fa-lock' }),
+                                            'Toto nastavenie nie je možné meniť, pretože pre túto kategóriu už existujú zápasy.'
+                                        )
+                                    ),
+
+                                    // NOVÉ: Nastavenia pre timeout - ZABLOKOVANÉ ak existujú zápasy
+                                    React.createElement(
+                                        'div',
+                                        { className: 'space-y-1' },
+                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                            'Počet timeoutov na zápas:'
+                                        ),
+                                        React.createElement('input', {
+                                            type: 'number',
+                                            min: 0,
+                                            value: editedTimeoutCount[selectedCategory.id] ?? selectedCategory.timeoutCount ?? 2,
+                                            onChange: e => handleTimeoutCountChange(selectedCategory.id, e.target.value),
+                                            disabled: hasMatches,
+                                            className: `w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${
+                                                hasMatches ? 'bg-gray-100 cursor-not-allowed opacity-75' : ''
+                                            }`
+                                        }),
+                                        hasMatches && React.createElement(
+                                            'p',
+                                            { className: 'text-xs text-orange-600 mt-1 flex items-center gap-1' },
+                                            React.createElement('i', { className: 'fa-solid fa-lock' }),
+                                            'Toto nastavenie nie je možné meniť, pretože pre túto kategóriu už existujú zápasy.'
+                                        )
+                                    ),
+
+                                    // NOVÉ: PODMIENENÉ ZOBRAZENIE - Trvanie timeoutu - ZABLOKOVANÉ ak existujú zápasy
+                                    (editedTimeoutCount[selectedCategory.id] ?? selectedCategory.timeoutCount) > 0 && React.createElement(
+                                        'div',
+                                        { className: 'space-y-1' },
+                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                            'Trvanie timeoutu (min):'
+                                        ),
+                                        React.createElement('input', {
+                                            type: 'number',
+                                            min: 0,
+                                            value: editedTimeoutDuration[selectedCategory.id] ?? selectedCategory.timeoutDuration ?? 1,
+                                            onChange: e => handleTimeoutDurationChange(selectedCategory.id, e.target.value),
+                                            disabled: hasMatches,
+                                            className: `w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${
+                                                hasMatches ? 'bg-gray-100 cursor-not-allowed opacity-75' : ''
+                                            }`
+                                        }),
+                                        hasMatches && React.createElement(
+                                            'p',
+                                            { className: 'text-xs text-orange-600 mt-1 flex items-center gap-1' },
+                                            React.createElement('i', { className: 'fa-solid fa-lock' }),
+                                            'Toto nastavenie nie je možné meniť, pretože pre túto kategóriu už existujú zápasy.'
+                                        )
+                                    ),
+
+                                    // NOVÉ: Čas vylúčenia - ZABLOKOVANÝ ak existujú zápasy
+                                    React.createElement(
+                                        'div',
+                                        { className: 'space-y-1' },
+                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                            'Čas vylúčenia (min):'
+                                        ),
+                                        React.createElement('input', {
+                                            type: 'number',
+                                            min: 0,
+                                            value: editedExclusionTime[selectedCategory.id] ?? selectedCategory.exclusionTime ?? 2,
+                                            onChange: e => handleExclusionTimeChange(selectedCategory.id, e.target.value),
+                                            disabled: hasMatches,
+                                            className: `w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${
+                                                hasMatches ? 'bg-gray-100 cursor-not-allowed opacity-75' : ''
+                                            }`
+                                        }),
+                                        hasMatches && React.createElement(
+                                            'p',
+                                            { className: 'text-xs text-orange-600 mt-1 flex items-center gap-1' },
+                                            React.createElement('i', { className: 'fa-solid fa-lock' }),
+                                            'Toto nastavenie nie je možné meniť, pretože pre túto kategóriu už existujú zápasy.'
+                                        )
+                                    ),
+
+                                    // Farba pre rozlosovanie - NIE JE ZABLOKOVANÁ (môže sa meniť)
+                                    React.createElement(
+                                        'div',
+                                        { className: 'space-y-1' },
+                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                            'Farba pre rozlosovanie:'
+                                        ),
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex gap-2' },
+                                            React.createElement('input', {
+                                                type: 'color',
+                                                value: editedDrawColor[selectedCategory.id] ?? selectedCategory.drawColor,
+                                                onChange: e => handleDrawColorChange(selectedCategory.id, e.target.value),
+                                                disabled: hasMatches,
+                                                className: `w-12 h-10 border border-gray-300 rounded-lg cursor-pointer ${
+                                                    hasMatches ? 'opacity-75' : ''
+                                                }`
+                                            }),
+                                            React.createElement('input', {
+                                                type: 'text',
+                                                value: editedDrawColor[selectedCategory.id] ?? selectedCategory.drawColor,
+                                                onChange: e => handleDrawColorChange(selectedCategory.id, e.target.value),
+                                                disabled: hasMatches,
+                                                className: `flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black font-mono ${
+                                                    hasMatches ? 'bg-gray-100 cursor-not-allowed opacity-75' : ''
+                                                }`
+                                            })
+                                        ),
+                                        hasMatches && React.createElement(
+                                            'p',
+                                            { className: 'text-xs text-orange-600 mt-1 flex items-center gap-1' },
+                                            React.createElement('i', { className: 'fa-solid fa-lock' }),
+                                            'Farba pre rozlosovanie nie je možné meniť, pretože pre túto kategóriu už existujú zápasy.'
+                                        )
+                                    ),
+
+                                    // Farba pre dopravu - NIE JE ZABLOKOVANÁ (môže sa meniť)
+                                    React.createElement(
+                                        'div',
+                                        { className: 'space-y-1' },
+                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                            'Farba pre dopravu:'
+                                        ),
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex gap-2' },
+                                            React.createElement('input', {
+                                                type: 'color',
+                                                value: editedTransportColor[selectedCategory.id] ?? selectedCategory.transportColor,
+                                                onChange: e => handleTransportColorChange(selectedCategory.id, e.target.value),
+                                                disabled: hasMatches,
+                                                className: `w-12 h-10 border border-gray-300 rounded-lg cursor-pointer ${
+                                                    hasMatches ? 'opacity-75' : ''
+                                                }`
+                                            }),
+                                            React.createElement('input', {
+                                                type: 'text',
+                                                value: editedTransportColor[selectedCategory.id] ?? selectedCategory.transportColor,
+                                                onChange: e => handleTransportColorChange(selectedCategory.id, e.target.value),
+                                                disabled: hasMatches,
+                                                className: `flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black font-mono ${
+                                                    hasMatches ? 'bg-gray-100 cursor-not-allowed opacity-75' : ''
+                                                }`
+                                            })
+                                        ),
+                                        hasMatches && React.createElement(
+                                            'p',
+                                            { className: 'text-xs text-orange-600 mt-1 flex items-center gap-1' },
+                                            React.createElement('i', { className: 'fa-solid fa-lock' }),
+                                            'Farba pre dopravu nie je možné meniť, pretože pre túto kategóriu už existujú zápasy.'
+                                        )
                                     )
-                                )
-                            ),
+                                );
+                            })(),
 
                             // Výpočet celkového času zápasu
                             React.createElement(
