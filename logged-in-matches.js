@@ -5424,19 +5424,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     // Získame zobrazenie pre tímy podľa prepínača
                                     const homeTeamDisplay = getTeamDisplayText(match.homeTeamIdentifier);
                                     const awayTeamDisplay = getTeamDisplayText(match.awayTeamIdentifier);
-
+                                
+                                    // Zistenie, či je skupina nadstavbová
                                     const isAdvancedGroup = match.groupName && groupsByCategory[match.categoryId]?.some(
                                         group => group.name === match.groupName && group.type === 'nadstavbová skupina'
                                     );
-
-                                    const removeCategoryFromName = (teamName, categoryName) => {
-                                        if (!teamName || !categoryName) return teamName;
-                                        // Odstráni názov kategórie z názvu tímu
-                                        return teamName.replace(categoryName, '').replace(/^skupina\s+/i, '').trim();
-                                    };
-        
-                                    const homeNameWithoutCategory = removeCategoryFromName(homeName, match.categoryName);
-                                    const awayNameWithoutCategory = removeCategoryFromName(awayName, match.categoryName);
                                     
                                     // Extrahujeme čisté ID bez kategórie (napr. z "U10 A1" extrahujeme "A1")
                                     const extractPureId = (identifier) => {
@@ -5462,7 +5454,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     let awayName = '';
                                     let homeId = '';
                                     let awayId = '';
-                                    
+    
                                     // Spracujeme podľa režimu zobrazenia
                                     if (displayMode === 'both' && typeof homeTeamDisplay === 'object') {
                                         // Režim "Oboje" - máme objekt s name a id
@@ -5479,6 +5471,16 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         homeId = match.homeTeamIdentifier;
                                         awayId = match.awayTeamIdentifier;
                                     }
+
+                                    // Funkcia na odstránenie názvu kategórie z názvu tímu - TERAZ UŽ MÔŽE POUŽIŤ homeName a awayName
+                                    const removeCategoryFromName = (teamName, categoryName) => {
+                                        if (!teamName || !categoryName) return teamName;
+                                        // Odstráni názov kategórie z názvu tímu
+                                        return teamName.replace(categoryName, '').replace(/^skupina\s+/i, '').trim();
+                                    };
+
+                                    const homeNameWithoutCategory = removeCategoryFromName(homeName, match.categoryName);
+                                    const awayNameWithoutCategory = removeCategoryFromName(awayName, match.categoryName);
                                     
                                     // Zistíme, či má zápas kategóriu
                                     const hasCategory = match.categoryName && match.categoryName !== 'Neznáma kategória';
