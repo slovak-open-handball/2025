@@ -5470,6 +5470,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 )
                                                                             )
                                                                         );
+
+                                                                        console.log('Checking gap creator:', { 
+                                                                            idx, 
+                                                                            totalItems: array.length, 
+                                                                            isLast: idx === array.length - 1,
+                                                                            nextItemType: array[idx + 1]?.type,
+                                                                            shouldShow: idx < array.length - 1 && array[idx + 1].type === 'match'
+                                                                        });
                                                                         
                                                                         // Ak nie sme na poslednom indexe a nasledujúci item je zápas (nie medzera), pridáme tlačidlo pre vytvorenie medzery
                                                                         if (idx < array.length - 1 && array[idx + 1].type === 'match') {
