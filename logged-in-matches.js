@@ -4739,7 +4739,9 @@ const AddMatchesApp = ({ userProfileData }) => {
             breakDuration: selectedBreakForAssign?.breakDuration,
             hallId: selectedBreakForAssign?.hallId,
             date: selectedBreakForAssign?.date,
-            categories: categories
+            categories: categories,
+            displayMode: displayMode,
+            getTeamDisplayText: getTeamDisplayText
         }),
         React.createElement(AssignMatchModal, {
             isOpen: isAssignModalOpen,
