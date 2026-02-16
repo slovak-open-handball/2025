@@ -6155,7 +6155,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                         dateStr, 
                                                                                                         breakStartTime,
                                                                                                         breakEndTime,
-                                                                                                        gapMinutes
+                                                                                                        breakBetweenMatches
                                                                                                     );
                                                                                                 },
                                                                                                 title: isBreakBlocked(hall.id, dateStr, breakBeforeStartTime) ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas (nebude ponúkaný)'
@@ -6551,8 +6551,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                             toggleBlockBreak(
                                                                                                 hall.id, 
                                                                                                 dateStr, 
-                                                                                                breakStartTime,
-                                                                                                breakEndTime,
+                                                                                                breakBeforeStartTime,
+                                                                                                breakBeforeEndTime,
                                                                                                 gapMinutes
                                                                                             );
                                                                                         },
