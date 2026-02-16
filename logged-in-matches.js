@@ -4250,7 +4250,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 return showGapCreator.dateStr;
             })() : '',
             afterMatchInfo: showGapCreator
-        })
+        }),
 
         // Ovládacie prvky - filtre a prepínač (skryté, zobrazia sa pri hover)
         React.createElement(
