@@ -3026,7 +3026,7 @@ const AddMatchesApp = ({ userProfileData }) => {
 
         return unsubscribe;
     };
-
+    
     // Prihlásenie na odber zmien v teamManager
     useEffect(() => {
         if (window.teamManager) {
@@ -4459,6 +4459,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                             },
                             sortedFilteredSportHalls.map((hall) => {
                                 const typeConfig = typeIcons[hall.type] || { icon: 'fa-futbol', color: '#dc2626' };
+
+                                const hasAnyMatch = matches.some(match => match.hallId === hall.id);
                                 
                                 // Zistíme, či je aktívny nejaký filter (kategória alebo skupina)
                                 const isFilterActive = selectedCategoryFilter || selectedGroupFilter;
@@ -4570,7 +4572,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     }, 'Športová hala'),
                                                     
                                                     // Ikona koša je teraz v riadku za typom miesta
-                                                    userProfileData?.role === 'admin' && React.createElement(
+                                                    userProfileData?.role === 'admin' && hasAnyMatch && React.createElement(
                                                         'button',
                                                         {
                                                             className: 'opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
