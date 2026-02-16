@@ -1060,6 +1060,13 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                (match.categoryName && match.categoryName.toLowerCase().includes(searchLower));
     });
 
+    // Funkcia na získanie správneho tvaru slova "zápas" podľa počtu
+    const getMatchCountText = (count) => {
+        if (count === 1) return 'zápas';
+        if (count >= 2 && count <= 4) return 'zápasy';
+        return 'zápasov';
+    };
+
     // Funkcia na získanie zobrazenia tímu podľa režimu
     const getTeamDisplay = (identifier) => {
         if (!getTeamDisplayText) return identifier;
@@ -1121,7 +1128,7 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                     React.createElement(
                         'span',
                         { className: 'text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full' },
-                        `${filteredMatches.length} zápasov k dispozícii`
+                        `${filteredMatches.length} ${getMatchCountText(filteredMatches.length)} k dispozícii`
                     )
                 )
             ),
@@ -1250,8 +1257,8 @@ const AssignMatchToBreakModal = ({ isOpen, onClose, onConfirm, availableMatches,
                         disabled: !selectedMatchId,
                         className: `px-4 py-2 text-white rounded-lg transition-colors ${
                             selectedMatchId
-                                ? 'bg-green-600 hover:bg-green-700 cursor-pointer'
-                                : 'bg-gray-400 cursor-not-allowed'
+                                ? 'bg-green-600 hover:bg-green-700 text-white border-green-600 cursor-pointer'
+                                : 'bg-white text-green-600 border-green-600 cursor-not-allowed opacity-70'
                         }`
                     },
                     'Priradiť zápas'
