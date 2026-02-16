@@ -881,8 +881,7 @@ const createTeamAssignmentNotification = async (action, team) => {
       defaultGroupName = '',
       unifiedSaveHandler,
       showCategoryPrefix = true,
-      matchesData = [], // NOVÝ PROP: údaje o zápasoch
-      categoryIdToNameMap // Už existuje, ale potrebujeme ho pre hasMatchesInGroup
+      matchesData = []
     }) => {
       const [orderInputValue, setOrderInputValue] = useState(null);
       const [selectedCategory, setSelectedCategory] = useState('');
