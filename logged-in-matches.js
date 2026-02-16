@@ -2512,9 +2512,19 @@ const AddMatchesApp = ({ userProfileData }) => {
             const match = matches.find(m => m.id === matchId);
             if (!match) return;
     
+            // Výpočet dĺžky zápasu
+            const category = categories.find(c => c.name === match.categoryName);
+            let matchDuration = 0;
+            if (category) {
+                const periods = category.periods || 2;
+                const periodDuration = category.periodDuration || 20;
+                const breakDuration = category.breakDuration || 2;
+                matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
+            }
+    
             // Získame všetky zápasy pre tú istú halu a deň
-            const matchDate = new Date(date);
-            const dateStr = getLocalDateStr(matchDate);
+            const dateStr = date; // date už je v tvare YYYY-MM-DD
+            const [year, month, day] = dateStr.split('-').map(Number);
             
             const hallDayMatches = matches
                 .filter(m => 
@@ -2535,13 +2545,13 @@ const AddMatchesApp = ({ userProfileData }) => {
             const [breakHours, breakMinutes] = breakStartTime.split(':').map(Number);
             const breakTimeMinutes = breakHours * 60 + breakMinutes;
             
+            // Zápasy po tomto čase (vrátane tých, čo začínajú presne v tomto čase)
             const afterMatches = hallDayMatches.filter(m => {
                 const matchMinutes = m.scheduledTimeObj.getHours() * 60 + m.scheduledTimeObj.getMinutes();
                 return matchMinutes >= breakTimeMinutes;
             });
     
             // Vytvoríme nový dátum pre zápas
-            const [year, month, day] = dateStr.split('-').map(Number);
             const matchDateTime = new Date(year, month - 1, day, breakHours, breakMinutes, 0);
     
             // Aktualizujeme zápas
@@ -2552,30 +2562,20 @@ const AddMatchesApp = ({ userProfileData }) => {
                 status: 'scheduled'
             });
     
-            // Posunieme všetky nasledujúce zápasy o dĺžku tohto zápasu
-            const category = categories.find(c => c.name === match.categoryName);
-            let matchDuration = 0;
-            if (category) {
-                const periods = category.periods || 2;
-                const periodDuration = category.periodDuration || 20;
-                const breakDuration = category.breakDuration || 2;
-                matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
+            // Ak sa zápas zmestí presne (matchDuration === breakDuration), nemusíme nič posúvať
+            // Ak je zápas kratší, vznikne nová medzera (nasledujúce zápasy zostávajú na svojich miestach)
+            // Teda v oboch prípadoch NEPOSÚVAME nasledujúce zápasy
+            
+            let message = `Zápas bol priradený do voľného času o ${breakStartTime}`;
+            
+            if (matchDuration === breakDuration) {
+                message += '. Voľný čas bol úplne vyplnený.';
+            } else if (matchDuration < breakDuration) {
+                const remainingBreak = breakDuration - matchDuration;
+                message += `. Zostáva ${remainingBreak} minút voľného času.`;
             }
     
-            for (const m of afterMatches) {
-                const mRef = doc(window.db, 'matches', m.id);
-                const mDateTime = new Date(m.scheduledTimeObj);
-                mDateTime.setMinutes(mDateTime.getMinutes() + matchDuration);
-                
-                await updateDoc(mRef, {
-                    scheduledTime: Timestamp.fromDate(mDateTime)
-                });
-            }
-    
-            window.showGlobalNotification(
-                `Zápas bol priradený do voľného času o ${breakStartTime}`,
-                'success'
-            );
+            window.showGlobalNotification(message, 'success');
     
         } catch (error) {
             console.error('Chyba pri priradení zápasu do voľného času:', error);
