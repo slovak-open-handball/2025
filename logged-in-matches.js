@@ -5248,17 +5248,19 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         {
                                                                                             onClick: (e) => {
                                                                                                 e.stopPropagation();
-                                                                                                handleRemoveGap(
-                                                                                                    hall.id,
-                                                                                                    dateStr,
-                                                                                                    item.startMinutes,
-                                                                                                    item.endMinutes
-                                                                                                );
+                                                                                                if (confirm('Naozaj chcete odstrániť túto časovú medzeru? Všetky nasledujúce zápasy sa posunú o ' + item.duration + ' minút dozadu.')) {
+                                                                                                    handleRemoveGap(
+                                                                                                        hall.id,
+                                                                                                        dateStr,
+                                                                                                        item.startMinutes,
+                                                                                                        item.endMinutes
+                                                                                                    );
+                                                                                                }
                                                                                             },
-                                                                                            className: 'w-8 h-8 bg-orange-500 hover:bg-orange-600 text-white rounded-full flex items-center justify-center shadow-md',
+                                                                                            className: 'w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md',
                                                                                             title: 'Odstrániť medzeru (posunúť nasledujúce zápasy)'
                                                                                         },
-                                                                                        React.createElement('i', { className: 'fa-solid fa-arrow-left text-sm' })
+                                                                                        React.createElement('i', { className: 'fa-solid fa-trash-can text-sm' })
                                                                                     )
                                                                                 ),
                                                                                 React.createElement(
