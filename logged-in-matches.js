@@ -5174,7 +5174,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 React.createElement(
                                                                                     'div',
                                                                                     { className: 'whitespace-nowrap min-w-[160px] flex-shrink-0 text-gray-400 italic' },
-                                                                                    'voľno'
+                                                                                    ''
                                                                                 ),
                                                                                 
                                                                                 // VS ikona - fixná šírka
@@ -5188,7 +5188,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 React.createElement(
                                                                                     'div',
                                                                                     { className: 'whitespace-nowrap min-w-[160px] flex-shrink-0 text-gray-400 italic' },
-                                                                                    'voľno'
+                                                                                    ''
                                                                                 ),
                                                                                 
                                                                                 // Prázdne miesta pre ID (ak je režim both)
