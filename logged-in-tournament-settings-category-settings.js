@@ -1,4 +1,4 @@
-import { doc, onSnapshot, setDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, onSnapshot, getDocs, setDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Funkcia na vytvorenie notifikácie o zmene nastavení kategórie
 const createCategorySettingsChangeNotification = async (actionType, changesArray, categoryData) => {
