@@ -4251,10 +4251,10 @@ const AddMatchesApp = ({ userProfileData }) => {
         return savedMatches;
     };
 
-    // Funkcia na generovanie zápasov
-    const generateMatches = async ({ categoryId, groupName, withRepetitions }) => {
+    // Funkcia na generovanie zápasov - OPRAVENÁ
+    const generateMatches = async ({ categoryId, groupName, withRepetitions, transferFromBasicGroup }) => {
         try {
-            console.log('Generujem zápasy:', { categoryId, groupName, withRepetitions });
+            console.log('Generujem zápasy:', { categoryId, groupName, withRepetitions, transferFromBasicGroup });
     
             // DEBUG: Skontrolujeme admin práva
             console.log('Kontrola admin práv v generateMatches:');
@@ -4282,7 +4282,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             setGenerationInProgress(true);
             let allGeneratedMatches = [];
     
-            // Vo funkcii generateMatches, v časti pre konkrétnu skupinu (približne riadok 2110)
             if (groupName) {
                 // Konkrétna skupina
                 const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, groupName);
@@ -4305,7 +4304,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 const isAdvancedGroup = groupInfo?.type === 'nadstavbová skupina';
                 
                 // Ak je to nadstavbová skupina a je zaškrtnutý transferFromBasicGroup, použijeme ho, inak false
-                const shouldTransferFromBasicGroup = isAdvancedGroup && (params.transferFromBasicGroup || false);
+                const shouldTransferFromBasicGroup = isAdvancedGroup && (transferFromBasicGroup || false);
                 
                 // Generovanie zápasov pre túto skupinu - ODOVZDÁME PARAMETER
                 const groupMatches = generateMatchesForGroup(teamsInGroup, withRepetitions, category.name, shouldTransferFromBasicGroup);
@@ -4325,7 +4324,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 allGeneratedMatches = [...allGeneratedMatches, ...matchesWithInfo];
                 
             } else {
-                // Všetky skupiny v kategórii - TOTO JE ZLOŽITEJŠIE, LEBO MÁME VIACERO SKUPÍN RÔZNYCH TYPOV
+                // Všetky skupiny v kategórii
                 const groups = getAllGroupsInCategory(category.name);
                 
                 if (groups.length === 0) {
@@ -4337,7 +4336,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 console.log(`Našiel som ${groups.length} skupín v kategórii ${category.name}:`, 
                     groups.map(g => g.name));
             
-                // Pre každú skupinu vygenerujeme zápasy (skupiny sú už zoradené z getAllGroupsInCategory)
+                // Pre každú skupinu vygenerujeme zápasy
                 for (const group of groups) {
                     const teamsInGroup = await window.teamManager.getTeamsByGroup(category.name, group.name);
                     
@@ -4349,7 +4348,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                         const isAdvancedGroup = groupInfo?.type === 'nadstavbová skupina';
                         
                         // Pre skupinu použijeme transferFromBasicGroup LEN ak je to nadstavbová skupina
-                        const shouldTransferFromBasicGroup = isAdvancedGroup && (params.transferFromBasicGroup || false);
+                        const shouldTransferFromBasicGroup = isAdvancedGroup && (transferFromBasicGroup || false);
                         
                         const groupMatches = generateMatchesForGroup(teamsInGroup, withRepetitions, category.name, shouldTransferFromBasicGroup);
                         
