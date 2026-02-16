@@ -6083,7 +6083,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     React.createElement(
                                                                                         'div',
                                                                                         { 
-                                                                                            className: 'grid items-center text-xs',
+                                                                                            className: 'grid items-center text-xs h-8 border border-gray-300 rounded',
                                                                                             style: { 
                                                                                                 gridTemplateColumns: '130px 280px 10px 280px 160px 160px',
                                                                                                 width: 'fit-content'
@@ -6489,7 +6489,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         React.createElement(
                                                                             'div',
                                                                             { 
-                                                                                className: 'grid items-center text-xs h-8',
+                                                                               className: 'grid items-center text-xs border border-gray-300 rounded',
                                                                                 style: { 
                                                                                     gridTemplateColumns: '130px 280px 10px 280px 160px 160px',
                                                                                     width: 'fit-content'
