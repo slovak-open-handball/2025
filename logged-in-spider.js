@@ -280,29 +280,29 @@ const SpiderApp = ({ userProfileData }) => {
                             transition: 'opacity 300ms ease-in-out'
                         },
                         onMouseLeave: (e) => {
-                            // Zrušíme existujúci timeout ak existuje
-                            const existingTimeout = window.spiderPanelTimeout;
-                            if (existingTimeout) {
-                                clearTimeout(existingTimeout);
-                            }
-                            
-                            // Nastavíme timeout na skrytie po 750ms
-                            window.spiderPanelTimeout = setTimeout(() => {
-                                // Skontrolujeme, či myš nie je nad panelom alebo selectom
-                                const panel = e.currentTarget;
-                                const hoveredElement = document.querySelector(':hover');
-                                
-                                // Skontrolujeme, či hoveredElement je panel alebo jeho potomok
-                                const isHovering = hoveredElement && (hoveredElement === panel || panel.contains(hoveredElement));
-                                
-                                // Ak nie je hover, skryjeme panel
-                                if (!isHovering) {
-                                    panel.style.opacity = '0';
-                                }
-                                
-                                window.spiderPanelTimeout = null;
-                            }, 750);
-                        },
+        	                // Zrušíme existujúci timeout ak existuje
+    	                    const existingTimeout = window.spiderPanelTimeout;
+        	                if (existingTimeout) {
+            	                clearTimeout(existingTimeout);
+        	                }
+    	                    
+        	                // Nastavíme timeout na skrytie po 750ms
+        	                window.spiderPanelTimeout = setTimeout(() => {
+            	                // Skontrolujeme, či myš nie je nad panelom alebo selectom
+            	                const panel = e.currentTarget;
+            	                const hoveredElement = document.querySelector(':hover');
+        
+            	                // Skontrolujeme, či hoveredElement existuje A JE panel alebo jeho potomok
+            	                const isHovering = hoveredElement && (hoveredElement === panel || panel.contains(hoveredElement));
+    	                        
+            	                // Ak nie je hover, skryjeme panel
+            	                if (!isHovering) {
+                	                panel.style.opacity = '0';
+            	                }
+    	                        
+            	                window.spiderPanelTimeout = null;
+        	                }, 750);
+    	                },
                         onMouseEnter: (e) => {
                             // Zrušíme timeout ak existuje
                             if (window.spiderPanelTimeout) {
@@ -357,6 +357,7 @@ const SpiderApp = ({ userProfileData }) => {
                                             // Nastavíme nový timeout
                                             window.spiderPanelTimeout = setTimeout(() => {
                                                 const hoveredElement = document.querySelector(':hover');
+                                                // Skontrolujeme, či hoveredElement existuje A JE panel alebo jeho potomok
                                                 const isHoveringPanel = hoveredElement && (hoveredElement === panel || panel.contains(hoveredElement));
                                                 
                                                 if (!isHoveringPanel) {
