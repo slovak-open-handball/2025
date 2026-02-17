@@ -137,6 +137,7 @@ const SpiderApp = ({ userProfileData }) => {
     const [spiderData, setSpiderData] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [allMatches, setAllMatches] = useState([]); // Všetky zápasy z databázy (aj bežné, aj pavúkové)
+    const [isSelectOpen, setIsSelectOpen] = useState(false); // NOVÝ STAV - sleduje, či je selectbox rozbalený
 
     // Definícia isFilterActive - filter je aktívny, ak je vybratá nejaká kategória
     const isFilterActive = selectedCategory !== '';
@@ -435,6 +436,20 @@ const SpiderApp = ({ userProfileData }) => {
         }
     };
 
+    // Funkcia na kontrolu, či máme skryť panel
+    const shouldHidePanel = () => {
+        // Ak je selectbox rozbalený, panel neskrývame
+        if (isSelectOpen) {
+            return false;
+        }
+        
+        // Ináč použijeme štandardnú kontrolu hoveru
+        const hoveredElement = document.querySelector(':hover');
+        const panel = document.querySelector('[style*="pointer-events: auto"]');
+        
+        return !(hoveredElement !== null && panel && (hoveredElement === panel || panel.contains(hoveredElement)));
+    };
+
     // Komponent pre zobrazenie jedného zápasu v pavúkovom zobrazení
     const MatchCell = ({ match, title = '' }) => {
         const matchDate = match.date ? new Date(match.date) : null;
@@ -528,12 +543,8 @@ const SpiderApp = ({ userProfileData }) => {
                                 }
                                 
                                 window.spiderPanelTimeout = setTimeout(() => {
-                                    const hoveredElement = document.querySelector(':hover');
-                                    // BEZPEČNÁ KONTROLA
-                                    const isHoveringPanel = hoveredElement !== null && 
-                                                           (hoveredElement === panel || panel.contains(hoveredElement));
-                                    
-                                    if (!isHoveringPanel) {
+                                    // Použijeme funkciu shouldHidePanel pre kontrolu
+                                    if (shouldHidePanel()) {
                                         panel.style.opacity = '0';
                                     }
                                     
@@ -577,12 +588,8 @@ const SpiderApp = ({ userProfileData }) => {
         
                                             // Nastavíme nový timeout
                                             window.spiderPanelTimeout = setTimeout(() => {
-                                                const hoveredElement = document.querySelector(':hover');
-                                                // BEZPEČNÁ KONTROLA - opravené
-                                                const isHoveringPanel = hoveredElement !== null && 
-                                                                       (hoveredElement === panel || panel.contains(hoveredElement));
-                                                
-                                                if (!isHoveringPanel) {
+                                                // Použijeme funkciu shouldHidePanel pre kontrolu
+                                                if (shouldHidePanel()) {
                                                     panel.style.opacity = '0';
                                                 }
                                                 
@@ -614,12 +621,8 @@ const SpiderApp = ({ userProfileData }) => {
                                             
                                             // Nastavíme nový timeout
                                             window.spiderPanelTimeout = setTimeout(() => {
-                                                const hoveredElement = document.querySelector(':hover');
-                                                // BEZPEČNÁ KONTROLA - opravené
-                                                const isHoveringPanel = hoveredElement !== null && 
-                                                                       (hoveredElement === panel || panel.contains(hoveredElement));
-                                                
-                                                if (!isHoveringPanel) {
+                                                // Použijeme funkciu shouldHidePanel pre kontrolu
+                                                if (shouldHidePanel()) {
                                                     panel.style.opacity = '0';
                                                 }
                                                 
@@ -627,6 +630,9 @@ const SpiderApp = ({ userProfileData }) => {
                                             }, 750);
                                         }
                                     },
+                                    onFocus: () => setIsSelectOpen(true), // NOVÉ - select je rozbalený
+                                    onBlur: () => setIsSelectOpen(false), // NOVÉ - select je zatvorený
+                                    onMouseDown: () => setIsSelectOpen(true), // NOVÉ - pre prípad, že by focus nefungoval
                                     className: 'px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[180px]'
                                 },
                                 React.createElement('option', { value: '' }, '-- Vyberte kategóriu --'),
@@ -675,12 +681,8 @@ const SpiderApp = ({ userProfileData }) => {
                                         }
         
                                         window.spiderPanelTimeout = setTimeout(() => {
-                                            const hoveredElement = document.querySelector(':hover');
-                                            // BEZPEČNÁ KONTROLA - toto je správne
-                                            const isHoveringPanel = hoveredElement !== null && 
-                                                                   (hoveredElement === panel || panel.contains(hoveredElement));
-                                            
-                                            if (!isHoveringPanel) {
+                                            // Použijeme funkciu shouldHidePanel pre kontrolu
+                                            if (shouldHidePanel()) {
                                                 panel.style.opacity = '0';
                                             }
                                             
