@@ -473,7 +473,7 @@ const SpiderApp = ({ userProfileData }) => {
     
             setSpiderData(null);
             
-            window.showGlobalNotification(`zmazaných ${existingSpiderMatches.length} pavúkových zápasov`, 'success');
+            window.showGlobalNotification(getDeletionMessage(existingSpiderMatches.length), 'success');
     
         } catch (error) {
             console.error('Chyba pri mazaní pavúka:', error);
