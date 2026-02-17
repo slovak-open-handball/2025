@@ -281,35 +281,35 @@ const SpiderApp = ({ userProfileData }) => {
                         },
                         onMouseLeave: (e) => {
                             // Zrušíme existujúci timeout ak existuje
-                            const existingTimeout = e.currentTarget.dataset.hideTimeout;
+                            const existingTimeout = window.spiderPanelTimeout;
                             if (existingTimeout) {
-                                clearTimeout(parseInt(existingTimeout));
+                                clearTimeout(existingTimeout);
                             }
                             
                             // Nastavíme timeout na skrytie po 750ms
-                            const timeoutId = setTimeout(() => {
-                                // Skontrolujeme, či myš nie je stále nad elementom
+                            window.spiderPanelTimeout = setTimeout(() => {
+                                // Skontrolujeme, či myš nie je nad panelom alebo selectom
                                 const panel = e.currentTarget;
                                 const hoveredElement = document.querySelector(':hover');
                                 
-                                // Ak nie je žiadny hoverovaný element ALEBO panel neobsahuje hoverovaný element
-                                if (!hoveredElement || !panel.contains(hoveredElement)) {
+                                // Skontrolujeme, či hoveredElement je panel alebo jeho potomok
+                                const isHovering = hoveredElement && (hoveredElement === panel || panel.contains(hoveredElement));
+                                
+                                // Ak nie je hover, skryjeme panel
+                                if (!isHovering) {
                                     panel.style.opacity = '0';
                                 }
-                                delete panel.dataset.hideTimeout;
+                                
+                                window.spiderPanelTimeout = null;
                             }, 750);
-                            
-                            // Uložíme timeout ID do dataset pre prípadné zrušenie
-                            e.currentTarget.dataset.hideTimeout = timeoutId;
                         },
                         onMouseEnter: (e) => {
                             // Zrušíme timeout ak existuje
-                            const timeoutId = e.currentTarget.dataset.hideTimeout;
-                            if (timeoutId) {
-                                clearTimeout(parseInt(timeoutId));
-                                delete e.currentTarget.dataset.hideTimeout;
+                            if (window.spiderPanelTimeout) {
+                                clearTimeout(window.spiderPanelTimeout);
+                                window.spiderPanelTimeout = null;
                             }
-                            // Nastavíme opacity na 1 (zabezpečíme viditeľnosť)
+                            // Nastavíme opacity na 1
                             e.currentTarget.style.opacity = '1';
                         }
                     },
@@ -327,28 +327,44 @@ const SpiderApp = ({ userProfileData }) => {
                                     value: selectedCategory,
                                     onChange: (e) => {
                                         setSelectedCategory(e.target.value);
-                                        // Odstránime focus z selectboxu po výbere
                                         e.target.blur();
                                         
-                                        // Spustíme timeout na skrytie panelu po 750ms
+                                        // Po výbere hodnoty NESCHOVÁVAME panel hneď
+                                        // Necháme ho viditeľný a timeout sa spustí až pri mouseleave
+                                    },
+                                    onMouseEnter: (e) => {
+                                        // Keď myš vojde do selectu, zrušíme timeout
+                                        if (window.spiderPanelTimeout) {
+                                            clearTimeout(window.spiderPanelTimeout);
+                                            window.spiderPanelTimeout = null;
+                                        }
+                                        
+                                        // Zabezpečíme, že panel je viditeľný
                                         const panel = e.currentTarget.closest('[style*="pointer-events: auto"]');
                                         if (panel) {
-                                            // Zrušíme existujúci timeout ak existuje
-                                            const existingTimeout = panel.dataset.hideTimeout;
-                                            if (existingTimeout) {
-                                                clearTimeout(parseInt(existingTimeout));
+                                            panel.style.opacity = '1';
+                                        }
+                                    },
+                                    onMouseLeave: (e) => {
+                                        // Keď myš opustí select, spustíme timeout na skrytie panelu
+                                        const panel = e.currentTarget.closest('[style*="pointer-events: auto"]');
+                                        if (panel) {
+                                            // Zrušíme existujúci timeout
+                                            if (window.spiderPanelTimeout) {
+                                                clearTimeout(window.spiderPanelTimeout);
                                             }
                                             
-                                            const timeoutId = setTimeout(() => {
+                                            // Nastavíme nový timeout
+                                            window.spiderPanelTimeout = setTimeout(() => {
                                                 const hoveredElement = document.querySelector(':hover');
-                                                if (!hoveredElement || !panel.contains(hoveredElement)) {
+                                                const isHoveringPanel = hoveredElement && (hoveredElement === panel || panel.contains(hoveredElement));
+                                                
+                                                if (!isHoveringPanel) {
                                                     panel.style.opacity = '0';
                                                 }
-                                                delete panel.dataset.hideTimeout;
+                                                
+                                                window.spiderPanelTimeout = null;
                                             }, 750);
-                                            
-                                            // Uložíme timeout ID pre prípadné zrušenie pri mouseEnter
-                                            panel.dataset.hideTimeout = timeoutId;
                                         }
                                     },
                                     className: 'px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[180px]'
@@ -367,6 +383,19 @@ const SpiderApp = ({ userProfileData }) => {
                                     const url = new URL(window.location.href);
                                     url.searchParams.set('view', 'matches');
                                     window.location.href = url.toString();
+                                },
+                                onMouseEnter: (e) => {
+                                    // Keď myš vojde do tlačidla, zrušíme timeout
+                                    if (window.spiderPanelTimeout) {
+                                        clearTimeout(window.spiderPanelTimeout);
+                                        window.spiderPanelTimeout = null;
+                                    }
+                                    
+                                    // Zabezpečíme, že panel je viditeľný
+                                    const panel = e.currentTarget.closest('[style*="pointer-events: auto"]');
+                                    if (panel) {
+                                        panel.style.opacity = '1';
+                                    }
                                 },
                                 className: 'px-4 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors whitespace-nowrap',
                                 title: 'Prejsť do zobrazenia zápasov'
