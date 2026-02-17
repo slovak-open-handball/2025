@@ -5242,7 +5242,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 getAllUniqueTeamIds().map(teamId => {
                                     // Získame názov tímu pre lepšiu identifikáciu (ak je k dispozícii)
                                     const teamName = getTeamNameByIdentifier(teamId);
-                                    const displayText = teamName !== teamId ? `${teamName} (${teamId})` : teamId;
+                                    const displayText = teamName !== teamId ? `${teamId} - ${teamName}` : teamId;
             
                                     return React.createElement('option', { 
                                         key: teamId, 
