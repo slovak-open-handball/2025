@@ -1,4 +1,4 @@
-// logged-in-spider.js (upravený - jedna dlhá zvislá čiara)
+// logged-in-spider.js (upravený - symetrické rozloženie)
 import { doc, getDoc, getDocs, setDoc, onSnapshot, updateDoc, addDoc, deleteDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { useState, useEffect } = React;
@@ -345,7 +345,7 @@ const SpiderApp = ({ userProfileData }) => {
                         React.createElement(
                             'div',
                             { 
-                                className: 'flex flex-col items-center w-full relative'
+                                className: 'flex flex-col items-center w-full relative py-8'
                             },
                             
                             // JEDNA DLHÁ ZVISLÁ ČIARA - prechádza celým pavúkom
@@ -355,18 +355,18 @@ const SpiderApp = ({ userProfileData }) => {
                                     className: 'absolute w-0.5 bg-gray-400',
                                     style: { 
                                         left: '50%',
-                                        top: '10%',
-                                        bottom: '10%',
+                                        top: '0',
+                                        bottom: '0',
                                         transform: 'translateX(-50%)',
                                         zIndex: 1
                                     }
                                 }
                             ),
                             
-                            // FINÁLE - hore
+                            // FINÁLE - hore (s rovnakým odsadením zhora)
                             React.createElement(
                                 'div',
-                                { className: 'relative z-10' },
+                                { className: 'relative z-10 mt-8' },
                                 React.createElement(MatchCell, { 
                                     match: spiderData.final, 
                                     title: 'Finále'
@@ -377,7 +377,7 @@ const SpiderApp = ({ userProfileData }) => {
                             React.createElement(
                                 'div',
                                 { 
-                                    className: 'flex justify-center items-center gap-16 w-full relative z-10'
+                                    className: 'flex justify-center items-center gap-16 w-full relative z-10 mt-8'
                                 },
                                 
                                 // Semifinále 1
@@ -406,10 +406,10 @@ const SpiderApp = ({ userProfileData }) => {
                                 })
                             ),
                             
-                            // Zápas o 3. miesto - dole
+                            // Zápas o 3. miesto - dole (s rovnakým odsadením dole)
                             React.createElement(
                                 'div',
-                                { className: 'relative z-10 mt-8' },
+                                { className: 'relative z-10 mt-8 mb-8' },
                                 React.createElement(MatchCell, { 
                                     match: spiderData.thirdPlace, 
                                     title: 'O 3. miesto'
