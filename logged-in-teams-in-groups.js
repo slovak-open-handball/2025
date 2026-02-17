@@ -1063,48 +1063,91 @@ const createTeamAssignmentNotification = async (action, team) => {
         }
       };
     
-      // Efekt pre validáciu koncovky a čísla poradia
-      useEffect(() => {
-        if (!isOpen || teamToEdit || !selectedCategory || !teamName.trim()) {
-          setGroupEndingMismatch(false);
-          setOrderMismatchMessage(null);
-          return;
-        }
-    
-        const trimmed = teamName.trim();
-        const lastChar = trimmed.slice(-1).toLowerCase();
-        const groups = allGroupsByCategoryId[selectedCategory] || [];
-    
-        // Iba základné skupiny
-        const basicGroups = groups.filter(g => g.type === 'základná skupina');
+  // Efekt pre validáciu koncovky a čísla poradia
+  useEffect(() => {
+    if (!isOpen || teamToEdit || !selectedCategory || !teamName.trim()) {
+      setGroupEndingMismatch(false);
+      setOrderMismatchMessage(null);
+      return;
+    }
+  
+    const trimmed = teamName.trim();
+    const lastChar = trimmed.slice(-1).toLowerCase();
+    const groups = allGroupsByCategoryId[selectedCategory] || [];
+  
+    // Zistíme typ vybranej skupiny
+    const isBasicGroup = selectedGroupType === 'základná skupina';
+    const isSuperGroup = selectedGroupType === 'nadstavbová skupina';
+  
+    if (isBasicGroup) {
+      // KONTROLA PRE ZÁKLADNÉ SKUPINY
+      const basicGroups = groups.filter(g => g.type === 'základná skupina');
+      
+      // Existuje aspoň jedna základná skupina končiaca na dané písmeno?
+      const hasMatchingBasicGroup = basicGroups.some(
+        g => g.name.slice(-1).toLowerCase() === lastChar
+      );
+      
+      setGroupEndingMismatch(!hasMatchingBasicGroup);
+      
+      // Ak existuje základná skupina a je pred písmenom aspoň 1 znak → kontrola čísla
+      if (hasMatchingBasicGroup && trimmed.length >= 2) {
+        const numberPart = trimmed.slice(0, -1).trim();
+        const requestedOrder = parseInt(numberPart, 10);
         
-        // Existuje aspoň jedna základná skupina končiaca na dané písmeno?
-        const hasMatchingBasicGroup = basicGroups.some(
-          g => g.name.slice(-1).toLowerCase() === lastChar
-        );
-        
-        setGroupEndingMismatch(!hasMatchingBasicGroup);
-    
-        // Ak existuje základná skupina a je pred písmenom aspoň 1 znak → kontrola čísla
-        if (hasMatchingBasicGroup && trimmed.length >= 2) {
-          const numberPart = trimmed.slice(0, -1).trim();
-          const requestedOrder = parseInt(numberPart, 10);
+        if (!isNaN(requestedOrder) && requestedOrder >= 1) {
+          // nájdeme prvú základnú skupinu končiacu na lastChar
+          const matchingBasicGroup = basicGroups.find(
+            g => g.name.slice(-1).toLowerCase() === lastChar
+          );
           
-          if (!isNaN(requestedOrder) && requestedOrder >= 1) {
-            // nájdeme prvú základnú skupinu končiacu na lastChar
-            const matchingBasicGroup = basicGroups.find(
-              g => g.name.slice(-1).toLowerCase() === lastChar
+          if (!matchingBasicGroup) {
+            setOrderMismatchMessage(null);
+            return;
+          }
+          
+          const groupName = matchingBasicGroup.name;
+          const categoryName = categoryIdToNameMap[selectedCategory];
+          
+          // počet tímov iba v tejto základnej skupine
+          const teamsInGroup = allTeams.filter(
+            t => t.category === categoryName && t.groupName === groupName
+          );
+          
+          const currentCount = teamsInGroup.length;
+          if (currentCount < requestedOrder) {
+            setOrderMismatchMessage(
+              `V základnej skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}.`
             );
-            
-            if (!matchingBasicGroup) {
-              setOrderMismatchMessage(null);
-              return;
-            }
-            
-            const groupName = matchingBasicGroup.name;
+          } else {
+            setOrderMismatchMessage(null);
+          }
+        } else {
+          setOrderMismatchMessage(null);
+        }
+      } else {
+        setOrderMismatchMessage(null);
+      }
+    } 
+    else if (isSuperGroup) {
+      // KONTROLA PRE NADSTAVBOVÉ SKUPINY
+      const superGroups = groups.filter(g => g.type === 'nadstavbová skupina');
+      
+      // Pre nadstavbové skupiny ignorujeme posledný znak - nechceme kontrolovať koncovku
+      setGroupEndingMismatch(false);
+      
+      // Kontrola poradia pre nadstavbové skupiny (ak je zadané)
+      if (trimmed.length >= 2) {
+        const numberPart = trimmed.slice(0, -1).trim(); // Odstránime posledný znak
+        const requestedOrder = parseInt(numberPart, 10);
+        
+        if (!isNaN(requestedOrder) && requestedOrder >= 1) {
+          // Zoberieme prvú nadstavbovú skupinu (ak existuje)
+          if (superGroups.length > 0) {
+            const groupName = selectedGroup || superGroups[0].name;
             const categoryName = categoryIdToNameMap[selectedCategory];
             
-            // počet tímov iba v tejto základnej skupine
+            // počet tímov v nadstavbovej skupine
             const teamsInGroup = allTeams.filter(
               t => t.category === categoryName && t.groupName === groupName
             );
@@ -1112,7 +1155,7 @@ const createTeamAssignmentNotification = async (action, team) => {
             const currentCount = teamsInGroup.length;
             if (currentCount < requestedOrder) {
               setOrderMismatchMessage(
-                `V základnej skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}.`
+                `V nadstavbovej skupine ${groupName} nie je tím s poradovým číslom ${requestedOrder}.`
               );
             } else {
               setOrderMismatchMessage(null);
@@ -1123,15 +1166,25 @@ const createTeamAssignmentNotification = async (action, team) => {
         } else {
           setOrderMismatchMessage(null);
         }
-      }, [
-        teamName,
-        selectedCategory,
-        isOpen,
-        teamToEdit,
-        allTeams,
-        allGroupsByCategoryId,
-        categoryIdToNameMap
-      ]);
+      } else {
+        setOrderMismatchMessage(null);
+      }
+    } else {
+      // Ak nie je vybratý typ skupiny, neriešime nič
+      setGroupEndingMismatch(false);
+      setOrderMismatchMessage(null);
+    }
+  }, [
+    teamName,
+    selectedCategory,
+    selectedGroupType, // Pridaná závislosť na type skupiny
+    isOpen,
+    teamToEdit,
+    allTeams,
+    allGroupsByCategoryId,
+    categoryIdToNameMap,
+    selectedGroup
+  ]);
     
       // Efekt pre order input - VYMAZANÝ PÔVODNÝ EFEKT A PRIDANÝ NOVÝ
       // Teraz vždy nastavíme orderInputValue, aj keď nie je vybratá skupina
@@ -1545,7 +1598,7 @@ const createTeamAssignmentNotification = async (action, team) => {
                 },
                 teamNameError
               ) : null,
-    
+            
               // Chyba formátu názvu - ČERVENÁ
               teamNameError && 
               teamNameError !== "Zadaný názov tímu má správny formát." && 
@@ -1556,26 +1609,45 @@ const createTeamAssignmentNotification = async (action, team) => {
                 },
                 teamNameError
               ) : null,
-    
+            
               // Duplicita - červená
               isDuplicate ? React.createElement(
                 'p',
                 { className: 'text-sm text-red-600 font-medium' },
                 ' Tím s týmto názvom už existuje!'
               ) : null,
-          
-              // Nezhoda koncovky skupiny
-              groupEndingMismatch ? React.createElement(
+            
+              // Nezhoda koncovky skupiny - LEN PRE ZÁKLADNÉ SKUPINY
+              (selectedGroupType === 'základná skupina' && groupEndingMismatch) ? React.createElement(
                 'p',
                 { className: 'text-sm text-red-600 font-medium' },
                 ` V tejto kategórii neexistuje žiadna základná skupina ${teamName.trim().slice(-1).toUpperCase()}`
               ) : null,
               
-              // Chyba poradia
+              // ŽLTÁ INFORMÁCIA PRE NADSTAVBOVÉ SKUPINY
+              (selectedGroupType === 'nadstavbová skupina' && teamName.trim().length > 0) ? React.createElement(
+                'p',
+                { className: 'text-sm text-yellow-700 bg-yellow-50 p-2 rounded-lg border border-yellow-300 font-medium' },
+                React.createElement('i', { className: 'fa-solid fa-circle-info mr-2' }),
+                `Tím bude zaradený do nadstavbovej skupiny. Posledné písmeno názvu (${teamName.trim().slice(-1).toUpperCase()}) neurčuje skupinu.`
+              ) : null,
+              
+              // Chyba poradia (môže byť pre oba typy skupín)
               orderMismatchMessage ? React.createElement(
                 'p',
-                { className: 'text-sm text-red-600 font-medium' },
-                ` ${orderMismatchMessage}`
+                { 
+                  className: `text-sm font-medium ${
+                    selectedGroupType === 'nadstavbová skupina' 
+                      ? 'text-yellow-700 bg-yellow-50 p-2 rounded-lg border border-yellow-300' 
+                      : 'text-red-600'
+                  }`
+                },
+                selectedGroupType === 'nadstavbová skupina' 
+                  ? React.createElement(React.Fragment, null,
+                      React.createElement('i', { className: 'fa-solid fa-circle-info mr-2' }),
+                      orderMismatchMessage
+                    )
+                  : orderMismatchMessage
               ) : null,
               
               // NOVÁ CHYBA: Skupina je zablokovaná kvôli existujúcim zápasom
@@ -1585,7 +1657,7 @@ const createTeamAssignmentNotification = async (action, team) => {
                 ' Pre túto skupinu už existujú zápasy, nie je možné priradiť ďalšie tímy.'
               ) : null
             ),
-        
+                    
             // NÁHĽAD - TERAZ POD CHYBOVÝMI SPRÁVAMI
             (shouldShowPreview && finalTeamNamePreview) ? React.createElement(
               'div',
