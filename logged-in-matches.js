@@ -5911,19 +5911,81 @@ const AddMatchesApp = ({ userProfileData }) => {
                             )
                     ),
                     
-                    // PRAVÝ STĹPEC - Športové haly (OPRAVENÉ - box haly sa roztiahne doprava)
-                    React.createElement(
-                        'div',
-                        { className: `${filteredUnassignedMatches.length > 0 ? 'lg:w-2/3' : 'lg:w-full'} flex flex-col` }, 
+                        // PRAVÝ STĹPEC - Športové haly (OPRAVENÉ - box haly sa roztiahne doprava)
                         React.createElement(
-                            'h3',
-                            { className: 'text-xl font-semibold mb-4 text-gray-700 pb-2 flex-shrink-0' },
-                            React.createElement('i', { className: 'fa-solid fa-futbol mr-2 text-red-500' }),
-                            'Športové haly',
-                            React.createElement('span', { className: 'ml-2 text-sm font-normal text-gray-500' },
-                                `(${filteredSportHalls.length} ${filteredSportHalls.length === 1 ? 'hala' : filteredSportHalls.length < 5 ? 'haly' : 'hál'})`
-                            )
-                        ),
+                            'div',
+                            { className: `${filteredUnassignedMatches.length > 0 ? 'lg:w-2/3' : 'lg:w-full'} flex flex-col` }, 
+                            (() => {
+                                // Zistíme, či je aktívny filter
+                                const isFilterActive = selectedCategoryFilter || selectedGroupFilter || selectedHallFilter || selectedDayFilter || selectedTeamIdFilter;
+            
+                                // Zistíme, či existujú nejaké haly na zobrazenie
+                                const hasVisibleHalls = !loading && sportHalls.length > 0 && 
+                                (() => {
+                                    // Prejdeme všetky haly a zistíme, či aspoň jedna má viditeľné karty dní
+                                    for (const hall of sportHalls) {
+                                        // Ak je filter podľa haly aktívny, berieme len vybranú halu
+                                        if (selectedHallFilter && hall.id !== selectedHallFilter) continue;
+                                        
+                                        // Prejdeme všetky dni turnaja
+                                        if (tournamentStartDate && tournamentEndDate) {
+                                            const startDate = new Date(tournamentStartDate);
+                                            const endDate = new Date(tournamentEndDate);
+                                            startDate.setHours(0, 0, 0, 0);
+                                            endDate.setHours(0, 0, 0, 0);
+                                            
+                                            const currentDate = new Date(startDate);
+                                            
+                                            while (currentDate <= endDate) {
+                                                const dateStr = getLocalDateStr(currentDate);
+                                                
+                                                // Kontrola filtra dňa
+                                                if (selectedDayFilter && selectedDayFilter !== dateStr) {
+                                                    currentDate.setDate(currentDate.getDate() + 1);
+                                                    continue;
+                                                }
+                                                
+                                                // Získame zápasy pre túto halu a deň
+                                                const hallMatchesForDay = getMatchesForHallAndDay(hall.id, currentDate);
+                                                
+                                                // Ak je filter aktívny, hľadáme aspoň jeden zápas
+                                                if (isFilterActive) {
+                                                    if (hallMatchesForDay.length > 0) {
+                                                        return true;
+                                                    }
+                                                } else {
+                                                    // Ak filter nie je aktívny, hala je vždy viditeľná
+                                                    return true;
+                                                }
+                                                
+                                                currentDate.setDate(currentDate.getDate() + 1);
+                                            }
+                                        }
+                                    }
+                                    return false;
+                                })();
+                            
+                            // Ak je filter aktívny a nie sú žiadne haly na zobrazenie, zobrazíme špeciálny text
+                            if (isFilterActive && !hasVisibleHals) {
+                                return React.createElement(
+                                    'div',
+                                    { className: 'text-center py-8 text-gray-500 bg-gray-50 rounded-lg mb-4' },
+                                    React.createElement('i', { className: 'fa-solid fa-filter-circle-xmark text-4xl mb-3 opacity-30' }),
+                                    React.createElement('p', { className: 'text-lg' }, 'Pre zvolené filtre neexistujú žiadne zápasy.')
+                                );
+                            }
+                            
+                            // Inak zobrazíme štandardný nadpis
+                            return React.createElement(
+                                'h3',
+                                { className: 'text-xl font-semibold mb-4 text-gray-700 pb-2 flex-shrink-0' },
+                                React.createElement('i', { className: 'fa-solid fa-futbol mr-2 text-red-500' }),
+                                'Športové haly',
+                                React.createElement('span', { className: 'ml-2 text-sm font-normal text-gray-500' },
+                                    `(${filteredSportHalls.length} ${filteredSportHalls.length === 1 ? 'hala' : filteredSportHalls.length < 5 ? 'haly' : 'hál'})`
+                                )
+                            );
+                        })(),
                         
                         // Indikátor načítavania
                         loading && React.createElement(
