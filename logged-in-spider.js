@@ -832,13 +832,6 @@ const SpiderApp = ({ userProfileData }) => {
                                     title: 'O 3. miesto'
                                 })
                             )
-                        ),
-                        
-                        // Legenda
-                        React.createElement(
-                            'div',
-                            { className: 'mt-12 text-sm text-gray-500 border-t pt-4 w-full text-center' },
-                            React.createElement('p', null, '--- označuje nezapojený tím alebo voľný žreb')
                         )
                     )
                 )
