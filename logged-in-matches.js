@@ -5064,11 +5064,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 if (select.size > 1) {
                                     isAnyDropdownOpen = true;
                                 } else {
-                                    // Pre jednoduché selecty - ak je select vo focus a myš je nad ním,
-                                    // pravdepodobne je otvorený dropdown
+                                    // Pre jednoduché selecty - ak je select vo focus, predpokladáme, že je otvorený dropdown
                                     if (select.matches(':focus')) {
-                                        // Ak je select vo focus, predpokladáme, že je otvorený dropdown
-                                        // Toto je najspoľahlivejšie riešenie pre väčšinu prehliadačov
                                         isAnyDropdownOpen = true;
                                     }
                                 }
@@ -5106,6 +5103,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                         if (e.target.tagName === 'SELECT') {
                             // Po výbere možnosti sa dropdown zatvorí, odstránime triedu
                             target.classList.remove('dropdown-open');
+                            
+                            // Odstránime focus z tohto selectboxu
+                            e.target.blur();
                         }
                     }
                 },
@@ -5143,6 +5143,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     onChange: (e) => {
                                         setSelectedCategoryFilter(e.target.value);
                                         setSelectedGroupFilter(''); // Reset skupiny pri zmene kategórie
+                                        e.target.blur(); // Odstránime focus po výbere
                                     },
                                     className: 'px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[180px]'
                                 },
@@ -5169,7 +5170,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 'select',
                                 {
                                     value: selectedGroupFilter,
-                                    onChange: (e) => setSelectedGroupFilter(e.target.value),
+                                    onChange: (e) => {
+                                        setSelectedGroupFilter(e.target.value);
+                                        e.target.blur(); // Odstránime focus po výbere
+                                    },
                                     disabled: !selectedCategoryFilter,
                                     className: `px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[140px] ${!selectedCategoryFilter ? 'bg-gray-100 cursor-not-allowed' : ''}`
                                 },
@@ -5189,7 +5193,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 'select',
                                 {
                                     value: selectedHallFilter,
-                                    onChange: (e) => setSelectedHallFilter(e.target.value),
+                                    onChange: (e) => {
+                                        setSelectedHallFilter(e.target.value);
+                                        e.target.blur(); // Odstránime focus po výbere
+                                    },
                                     className: 'px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[140px]'
                                 },
                                 React.createElement('option', { value: '' }, 'Všetky haly'),
@@ -5208,7 +5215,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 'select',
                                 {
                                     value: selectedDayFilter,
-                                    onChange: (e) => setSelectedDayFilter(e.target.value),
+                                    onChange: (e) => {
+                                        setSelectedDayFilter(e.target.value);
+                                        e.target.blur(); // Odstránime focus po výbere
+                                    },
                                     className: 'px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[140px]'
                                 },
                                 React.createElement('option', { value: '' }, 'Všetky dni'),
