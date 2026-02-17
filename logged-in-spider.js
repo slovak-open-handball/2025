@@ -276,7 +276,31 @@ const SpiderApp = ({ userProfileData }) => {
                     { 
                         className: `transition-opacity duration-300 ease-in-out opacity-0 group-hover:opacity-100 group-focus-within:opacity-100`,
                         style: { 
-                            pointerEvents: 'auto'
+                            pointerEvents: 'auto',
+                            transition: 'opacity 300ms ease-in-out, visibility 300ms ease-in-out'
+                        },
+                        onMouseLeave: (e) => {
+                            // Nastavíme timeout na skrytie po 750ms
+                            const timeoutId = setTimeout(() => {
+                                // Skontrolujeme, či myš nie je stále nad elementom alebo jeho deťmi
+                                const panel = e.currentTarget;
+                                if (!panel.matches(':hover') && !panel.contains(document.querySelector(':hover'))) {
+                                    panel.style.opacity = '0';
+                                }
+                            }, 750);
+                            
+                            // Uložíme timeout ID do dataset pre prípadné zrušenie
+                            e.currentTarget.dataset.hideTimeout = timeoutId;
+                        },
+                        onMouseEnter: (e) => {
+                            // Zrušíme timeout ak existuje
+                            const timeoutId = e.currentTarget.dataset.hideTimeout;
+                            if (timeoutId) {
+                                clearTimeout(parseInt(timeoutId));
+                                delete e.currentTarget.dataset.hideTimeout;
+                            }
+                            // Nastavíme opacity na 1 (zabezpečíme viditeľnosť)
+                            e.currentTarget.style.opacity = '1';
                         }
                     },
                     React.createElement(
