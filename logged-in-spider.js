@@ -422,7 +422,7 @@ const SpiderApp = ({ userProfileData }) => {
     
             setSpiderData(spiderStructure);
             
-            window.showGlobalNotification(`Pavúk bol úspešne vygenerovaný a uložených ${savedMatches.length} zápasov do databázy`, 'success');
+            window.showGlobalNotification(`Pavúk bol vygenerovaný a uložených ${savedMatches.length} zápasov do databázy`, 'success');
     
         } catch (error) {
             console.error('Chyba pri generovaní pavúka:', error);
@@ -473,7 +473,7 @@ const SpiderApp = ({ userProfileData }) => {
     
             setSpiderData(null);
             
-            window.showGlobalNotification(`Úspešne zmazaných ${existingSpiderMatches.length} pavúkových zápasov`, 'success');
+            window.showGlobalNotification(`zmazaných ${existingSpiderMatches.length} pavúkových zápasov`, 'success');
     
         } catch (error) {
             console.error('Chyba pri mazaní pavúka:', error);
