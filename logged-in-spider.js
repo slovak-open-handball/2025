@@ -274,18 +274,18 @@ const SpiderApp = ({ userProfileData }) => {
                 await deleteDoc(doc(window.db, 'matches', match.id));
             }
     
-            // Získanie názvu kategórie pre vytvorenie ID tímov
+            // Získanie názvu kategórie pre vytvorenie zobrazenia
             const category = categories.find(c => c.id === categoryId);
             const categoryName = category ? category.name : `Kategória ${categoryId}`;
             
-            // Odstránenie diakritiky z názvu kategórie, ale zachovanie medzier
+            // Odstránenie diakritiky z názvu kategórie pre zobrazenie
             const categoryWithoutDiacritics = categoryName
                 .normalize('NFD')
                 .replace(/[\u0300-\u036f]/g, ''); // odstráni diakritiku, ale zachová medzery
             
             // Vytvoríme zápasy pre databázu (do kolekcie 'matches')
             const matchesToSave = [
-                // Semifinále 1
+                // Semifinále 1 - použijeme priamo '---' pre neobsadené miesta
                 {
                     homeTeam: '---',
                     awayTeam: '---',
@@ -318,10 +318,10 @@ const SpiderApp = ({ userProfileData }) => {
                     createdBy: userProfileData?.email || 'unknown',
                     createdByUid: userProfileData?.uid || null
                 },
-                // Finále - s špecifickými ID pre tímy (s medzerou za názvom kategórie)
+                // Finále - použijeme priamo text, ktorý sa má zobraziť
                 {
-                    homeTeam: `${categoryWithoutDiacritics} WSF01`, // Víťaz semifinále 1 (s medzerou)
-                    awayTeam: `${categoryWithoutDiacritics} WSF02`, // Víťaz semifinále 2 (s medzerou)
+                    homeTeam: `${categoryWithoutDiacritics} WSF01`, // Toto sa zobrazí priamo ako text
+                    awayTeam: `${categoryWithoutDiacritics} WSF02`, // Toto sa zobrazí priamo ako text
                     homeScore: '',
                     awayScore: '',
                     date: null,
@@ -334,10 +334,10 @@ const SpiderApp = ({ userProfileData }) => {
                     createdBy: userProfileData?.email || 'unknown',
                     createdByUid: userProfileData?.uid || null
                 },
-                // O 3. miesto - s špecifickými ID pre tímy (s medzerou za názvom kategórie)
+                // O 3. miesto - použijeme priamo text, ktorý sa má zobraziť
                 {
-                    homeTeam: `${categoryWithoutDiacritics} LSF01`, // Porazený zo semifinále 1 (s medzerou)
-                    awayTeam: `${categoryWithoutDiacritics} LSF02`, // Porazený zo semifinále 2 (s medzerou)
+                    homeTeam: `${categoryWithoutDiacritics} LSF01`,
+                    awayTeam: `${categoryWithoutDiacritics} LSF02`,
                     homeScore: '',
                     awayScore: '',
                     date: null,
