@@ -39,6 +39,22 @@ const getLocalDateFromStr = (dateStr) => {
     return new Date(year, month - 1, day);
 };
 
+const getDayName = (date) => {
+    const days = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
+    return days[date.getDay()];
+};
+
+// Funkcia na formátovanie dátumu s dňom v týždni
+const formatDateWithDay = (date) => {
+    const dayName = getDayName(date);
+    const formattedDate = date.toLocaleDateString('sk-SK', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+    return `${dayName} ${formattedDate}`;
+};
+
 /**
  * Globálna funkcia pre zobrazenie notifikácií
  */
