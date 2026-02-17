@@ -2814,6 +2814,11 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     const [selectedTeamIdFilter, setSelectedTeamIdFilter] = useState('');
 
+    const isFilterActive = selectedCategoryFilter || selectedGroupFilter || selectedHallFilter || selectedDayFilter || selectedTeamIdFilter;
+
+    // Pre hasVisibleHalls budeme potrebovať funkciu, ktorá to vypočíta
+    const [hasVisibleHalls, setHasVisibleHalls] = useState(false);
+
     const getAllUniqueTeamIds = () => {
         const teamIds = new Set();
         
@@ -3521,6 +3526,53 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
         window.location.hash = hash;
     };
+
+    useEffect(() => {
+        const checkVisibleHalls = () => {
+            if (!tournamentStartDate || !tournamentEndDate || loading) return;
+            
+            let visible = false;
+            for (const hall of sportHalls) {
+                if (selectedHallFilter && hall.id !== selectedHallFilter) continue;
+                
+                const startDate = new Date(tournamentStartDate);
+                const endDate = new Date(tournamentEndDate);
+                startDate.setHours(0, 0, 0, 0);
+                endDate.setHours(0, 0, 0, 0);
+                
+                const currentDate = new Date(startDate);
+                
+                while (currentDate <= endDate) {
+                    const dateStr = getLocalDateStr(currentDate);
+                    
+                    if (selectedDayFilter && selectedDayFilter !== dateStr) {
+                        currentDate.setDate(currentDate.getDate() + 1);
+                        continue;
+                    }
+                    
+                    const hallMatchesForDay = getMatchesForHallAndDay(hall.id, currentDate);
+                    
+                    if (isFilterActive) {
+                        if (hallMatchesForDay.length > 0) {
+                            visible = true;
+                            break;
+                        }
+                    } else {
+                        visible = true;
+                        break;
+                    }
+                    
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+                
+                if (visible) break;
+            }
+            
+            setHasVisibleHalls(visible);
+        };
+        
+        checkVisibleHalls();
+    }, [selectedCategoryFilter, selectedGroupFilter, selectedHallFilter, selectedDayFilter, selectedTeamIdFilter, tournamentStartDate, tournamentEndDate, sportHalls, matches, loading]);
 
     useEffect(() => {
         const savedBlockedBreaks = localStorage.getItem('blockedBreaks');
@@ -5166,7 +5218,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             currentTime: selectedMatchCurrentTime
         }),
 
-        // Ovládacie prvky - filtre a prepínač (skryté, zobrazia sa pri hover)
+        // Ovládacie prvky - filtre a prepínač (upravené)
         React.createElement(
             'div',
             { 
@@ -5176,11 +5228,13 @@ const AddMatchesApp = ({ userProfileData }) => {
             React.createElement(
                 'div',
                 { 
-                    className: 'group',
+                    // Pridáme podmienenú triedu pre vždy viditeľný panel, ak je aktívny filter a nie sú žiadne zápasy
+                    className: `group ${(isFilterActive && !hasVisibleHalls) ? 'always-visible' : ''}`,
                     style: { pointerEvents: 'auto' }, // Samotné ovládacie prvky sú klikateľné
                     onMouseLeave: (e) => {
-                        // Pridáme oneskorenie pred skrytím, aby sa používateľ mohol presunúť do dropdownu
+                        // Pôvodná funkcionalita - ale preskočíme ak je always-visible
                         const target = e.currentTarget;
+                        if (target.classList.contains('always-visible')) return;
                         
                         setTimeout(() => {
                             // Skontrolujeme, či je nejaký selectbox rozbalený (dropdown otvorený)
@@ -5243,11 +5297,16 @@ const AddMatchesApp = ({ userProfileData }) => {
                     { className: 'w-full h-2 bg-transparent' }
                 ),
                 
-                // Panel filtrov - zobrazí sa pri hover, alebo trvalo keď je otvorený dropdown
+                // Panel filtrov - upravené podmienky zobrazenia
                 React.createElement(
                     'div',
                     { 
-                        className: 'flex flex-col gap-2 opacity-0 group-hover:opacity-100 group-[.dropdown-open]:opacity-100 transition-opacity duration-300 ease-in-out',
+                        // Ak je always-visible, zobrazíme vždy, inak len pri hover alebo otvorenom dropdown
+                        className: `flex flex-col gap-2 transition-opacity duration-300 ease-in-out ${
+                            (isFilterActive && !hasVisibleHalls) 
+                                ? 'opacity-100' 
+                                : 'opacity-0 group-hover:opacity-100 group-[.dropdown-open]:opacity-100'
+                        }`,
                         style: { 
                             transform: 'translateY(0)',
                             pointerEvents: 'auto'
