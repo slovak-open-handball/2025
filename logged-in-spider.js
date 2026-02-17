@@ -1,10 +1,10 @@
-// Importy pre Firebase funkcie
+// logged-in-spider.js
 import { doc, getDoc, getDocs, setDoc, onSnapshot, updateDoc, addDoc, deleteDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { useState, useEffect } = React;
 
 // Stav pre aktuálny režim zobrazenia (globálny)
-window.currentViewMode = window.currentViewMode || 'matches'; // 'matches' alebo 'spider'
+window.currentViewMode = window.currentViewMode || 'matches';
 
 // Funkcia na získanie názvu dňa v týždni v slovenčine
 const getDayName = (date) => {
@@ -43,10 +43,7 @@ const SpiderApp = ({ userProfileData }) => {
     const [availableGroups, setAvailableGroups] = useState([]);
     const [spiderData, setSpiderData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [tournamentDates, setTournamentDates] = useState({ start: null, end: null });
-    const [sportHalls, setSportHalls] = useState([]);
-    const [hallSchedules, setHallSchedules] = useState({});
-    const [displayMode, setDisplayMode] = useState('name'); // 'name', 'id', 'both'
+    const [displayMode, setDisplayMode] = useState('name');
 
     // Načítanie všetkých potrebných dát
     useEffect(() => {
@@ -57,29 +54,6 @@ const SpiderApp = ({ userProfileData }) => {
         }
 
         console.log("SpiderApp: Načítavam dáta...");
-
-        const loadTournamentDates = async () => {
-            try {
-                const settingsDocRef = doc(window.db, 'settings', 'registration');
-                const settingsSnap = await getDoc(settingsDocRef);
-                
-                if (settingsSnap.exists()) {
-                    const data = settingsSnap.data();
-                    
-                    if (data.tournamentStart) {
-                        const startDate = data.tournamentStart.toDate();
-                        setTournamentDates(prev => ({ ...prev, start: startDate }));
-                    }
-                    
-                    if (data.tournamentEnd) {
-                        const endDate = data.tournamentEnd.toDate();
-                        setTournamentDates(prev => ({ ...prev, end: endDate }));
-                    }
-                }
-            } catch (error) {
-                console.error("Chyba pri načítaní dátumov turnaja:", error);
-            }
-        };
 
         const loadCategorySettings = async () => {
             try {
@@ -94,13 +68,6 @@ const SpiderApp = ({ userProfileData }) => {
                         categoriesList.push({
                             id: id,
                             name: obj.name || `Kategória ${id}`,
-                            maxTeams: obj.maxTeams ?? 12,
-                            periods: obj.periods ?? 2,
-                            periodDuration: obj.periodDuration ?? 20,
-                            breakDuration: obj.breakDuration ?? 2,
-                            matchBreak: obj.matchBreak ?? 5,
-                            drawColor: obj.drawColor ?? '#3B82F6',
-                            transportColor: obj.transportColor ?? '#10B981',
                         });
                     });
                     
@@ -137,8 +104,10 @@ const SpiderApp = ({ userProfileData }) => {
                 });
                 loadedMatches.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
                 setMatches(loadedMatches);
+                setLoading(false);
             }, (error) => {
                 console.error('Chyba pri načítaní zápasov:', error);
+                setLoading(false);
             });
 
             return unsubscribe;
@@ -160,54 +129,12 @@ const SpiderApp = ({ userProfileData }) => {
             }
         };
 
-        const loadHalls = () => {
-            const placesRef = collection(window.db, 'places');
-            
-            const unsubscribe = onSnapshot(placesRef, (snapshot) => {
-                const loadedPlaces = [];
-                snapshot.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    loadedPlaces.push({
-                        id: docSnap.id,
-                        name: data.name,
-                        type: data.type,
-                    });
-                });
-                
-                const filteredHalls = loadedPlaces.filter(place => place.type === 'sportova_hala');
-                setSportHalls(filteredHalls);
-            });
-
-            return unsubscribe;
-        };
-
-        const loadHallSchedules = () => {
-            const schedulesRef = collection(window.db, 'hallSchedules');
-            
-            const unsubscribe = onSnapshot(schedulesRef, (snapshot) => {
-                const schedules = {};
-                snapshot.forEach((doc) => {
-                    schedules[doc.id] = doc.data();
-                });
-                setHallSchedules(schedules);
-            });
-
-            return unsubscribe;
-        };
-
-        loadTournamentDates();
         loadCategorySettings();
         loadGroups();
-
-        const unsubscribeMatches = loadMatches();
-        const unsubscribeHalls = loadHalls();
-        const unsubscribeSchedules = loadHallSchedules();
+        loadMatches();
         const unsubscribeTeams = loadTeams();
 
         return () => {
-            if (unsubscribeMatches) unsubscribeMatches();
-            if (unsubscribeHalls) unsubscribeHalls();
-            if (unsubscribeSchedules) unsubscribeSchedules();
             if (unsubscribeTeams) unsubscribeTeams();
         };
     }, []);
@@ -264,7 +191,6 @@ const SpiderApp = ({ userProfileData }) => {
         
         const { category, groupName, order } = parsed;
         
-        // Hľadáme v tímoch
         const groupNameWithPrefix = `skupina ${groupName}`;
         
         const team = teams.find(t => 
@@ -298,7 +224,7 @@ const SpiderApp = ({ userProfileData }) => {
         }
     };
 
-    // Funkcia na extrahovanie čistého ID (bez kategórie)
+    // Funkcia na extrahovanie čistého ID
     const extractPureId = (identifier) => {
         if (!identifier) return '';
         const parts = identifier.split(' ');
@@ -318,7 +244,6 @@ const SpiderApp = ({ userProfileData }) => {
         setLoading(true);
         
         try {
-            // Získame všetky zápasy pre vybranú kategóriu a skupinu
             let filteredMatches = matches.filter(m => m.categoryId === selectedCategory);
             
             if (selectedGroup) {
@@ -331,7 +256,6 @@ const SpiderApp = ({ userProfileData }) => {
                 return;
             }
             
-            // Získame všetky unikátne tímy
             const teamIdentifiers = new Set();
             filteredMatches.forEach(match => {
                 teamIdentifiers.add(match.homeTeamIdentifier);
@@ -340,7 +264,6 @@ const SpiderApp = ({ userProfileData }) => {
             
             const teamsList = Array.from(teamIdentifiers).sort();
             
-            // Vytvoríme maticu výsledkov
             const matrix = {};
             const teamNames = {};
             const teamPureIds = {};
@@ -349,33 +272,22 @@ const SpiderApp = ({ userProfileData }) => {
                 matrix[teamId] = {};
                 teamsList.forEach(opponentId => {
                     if (teamId !== opponentId) {
-                        matrix[teamId][opponentId] = null; // null znamená žiadny zápas
+                        matrix[teamId][opponentId] = null;
                     }
                 });
-                
-                // Uložíme názvy pre zobrazenie
                 teamNames[teamId] = getTeamNameByIdentifier(teamId);
                 teamPureIds[teamId] = extractPureId(teamId);
             });
             
-            // Spracujeme zápasy a vložíme výsledky
             filteredMatches.forEach(match => {
                 const home = match.homeTeamIdentifier;
                 const away = match.awayTeamIdentifier;
                 
                 if (matrix[home] && matrix[home][away] !== undefined) {
-                    // Tu by sa dali spracovať skóre, zatiaľ len označíme že zápas existuje
-                    matrix[home][away] = { 
-                        exists: true,
-                        matchId: match.id,
-                        scheduled: !!match.scheduledTime,
-                        hallId: match.hallId,
-                        time: match.scheduledTime ? match.scheduledTime.toDate() : null
-                    };
+                    matrix[home][away] = { exists: true };
                 }
             });
             
-            // Vytvoríme štatistiky pre každý tím
             const statistics = {};
             teamsList.forEach(teamId => {
                 statistics[teamId] = {
@@ -389,8 +301,6 @@ const SpiderApp = ({ userProfileData }) => {
                 };
             });
             
-            // Tu by sa dali dopočítať štatistiky podľa skóre zápasov
-            // Zatiaľ len spočítame odohrané zápasy
             filteredMatches.forEach(match => {
                 const home = match.homeTeamIdentifier;
                 const away = match.awayTeamIdentifier;
@@ -416,25 +326,23 @@ const SpiderApp = ({ userProfileData }) => {
         }
     };
 
-    // Funkcia na zmenu režimu zobrazenia
     const handleDisplayModeChange = (mode) => {
         setDisplayMode(mode);
     };
 
-    // Zoradené kategórie
     const sortedCategories = React.useMemo(() => {
         return [...categories].sort((a, b) => a.name.localeCompare(b.name));
     }, [categories]);
 
-    // Zistenie, či je aktívny filter
-    const isFilterActive = selectedCategory || selectedGroup;
+    const switchToMatches = () => {
+        window.currentViewMode = 'matches';
+        localStorage.setItem('preferredViewMode', 'matches');
+        window.location.href = window.location.pathname + '?view=matches';
+    };
 
-    // Hlavný render
     return React.createElement(
         React.Fragment,
         null,
-
-        // Ovládacie prvky
         React.createElement(
             'div',
             { 
@@ -456,7 +364,6 @@ const SpiderApp = ({ userProfileData }) => {
                         'div',
                         { className: 'flex flex-wrap items-center justify-center gap-2 bg-white/95 backdrop-blur-sm p-3 rounded-xl shadow-lg border border-gray-200' },
                         
-                        // Výber kategórie
                         React.createElement(
                             'div',
                             { className: 'flex items-center gap-1' },
@@ -475,7 +382,6 @@ const SpiderApp = ({ userProfileData }) => {
                             )
                         ),
                         
-                        // Výber skupiny
                         React.createElement(
                             'div',
                             { className: 'flex items-center gap-1' },
@@ -495,7 +401,6 @@ const SpiderApp = ({ userProfileData }) => {
                             )
                         ),
                         
-                        // Tlačidlo pre generovanie pavúka
                         React.createElement(
                             'button',
                             {
@@ -510,10 +415,8 @@ const SpiderApp = ({ userProfileData }) => {
                             loading ? 'Načítavam...' : 'Generovať pavúka'
                         ),
                         
-                        // Oddeľovač
                         React.createElement('div', { className: 'w-px h-8 bg-gray-300 mx-1' }),
                         
-                        // Prepínač zobrazenia
                         React.createElement(
                             'div',
                             { className: 'flex items-center gap-1 bg-white/95 p-1 rounded-lg border border-gray-200' },
@@ -555,14 +458,10 @@ const SpiderApp = ({ userProfileData }) => {
                             )
                         ),
                         
-                        // Tlačidlo pre prepínanie režimov
                         React.createElement(
                             'button',
                             {
-                                onClick: () => {
-                                    window.currentViewMode = 'matches';
-                                    window.dispatchEvent(new CustomEvent('viewModeChanged', { detail: 'matches' }));
-                                },
+                                onClick: switchToMatches,
                                 className: 'px-4 py-1.5 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors whitespace-nowrap ml-2'
                             },
                             React.createElement('i', { className: 'fa-solid fa-calendar-alt mr-1' }),
@@ -573,7 +472,6 @@ const SpiderApp = ({ userProfileData }) => {
             )
         ),
 
-        // Hlavný obsah
         React.createElement(
             'div',
             { className: 'flex-grow flex justify-center items-start w-full pt-24' },
@@ -582,7 +480,6 @@ const SpiderApp = ({ userProfileData }) => {
                 { className: 'bg-white p-8', style: { width: '100%', maxWidth: '100%' } },
                 
                 !spiderData ? (
-                    // Úvodná obrazovka
                     React.createElement(
                         'div',
                         { className: 'text-center py-16 text-gray-500' },
@@ -591,15 +488,12 @@ const SpiderApp = ({ userProfileData }) => {
                         React.createElement('p', { className: 'text-lg' }, 'Vyberte kategóriu a kliknite na "Generovať pavúka"')
                     )
                 ) : (
-                    // Pavúková tabuľka
                     React.createElement(
                         'div',
                         { className: 'overflow-x-auto' },
                         React.createElement(
                             'table',
                             { className: 'min-w-full border-collapse border border-gray-300 text-sm' },
-                            
-                            // Hlavička tabuľky
                             React.createElement(
                                 'thead',
                                 null,
@@ -639,8 +533,6 @@ const SpiderApp = ({ userProfileData }) => {
                                     )
                                 )
                             ),
-                            
-                            // Telo tabuľky
                             React.createElement(
                                 'tbody',
                                 null,
@@ -656,7 +548,6 @@ const SpiderApp = ({ userProfileData }) => {
                                             key: teamId,
                                             className: rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                                         },
-                                        // Názov tímu (prvý stĺpec)
                                         React.createElement(
                                             'td',
                                             { className: 'border border-gray-300 p-2 font-medium sticky left-0 z-10',
@@ -671,10 +562,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                 : (displayMode === 'name' ? teamName : pureId)
                                         ),
                                         
-                                        // Bunky pre jednotlivé zápasy
                                         spiderData.teams.map(opponentId => {
                                             if (teamId === opponentId) {
-                                                // Diagonála - prázdna
                                                 return React.createElement(
                                                     'td',
                                                     { key: opponentId, className: 'border border-gray-300 p-2 bg-gray-200' }
@@ -696,7 +585,6 @@ const SpiderApp = ({ userProfileData }) => {
                                             );
                                         }),
                                         
-                                        // Štatistiky
                                         React.createElement(
                                             'td',
                                             { className: 'border border-gray-300 p-2 text-center' },
@@ -705,7 +593,6 @@ const SpiderApp = ({ userProfileData }) => {
                                                 { className: 'flex flex-col items-center text-xs' },
                                                 React.createElement('span', null, `Z: ${stats.played}`),
                                                 React.createElement('span', null, `V: ${stats.wins} R: ${stats.draws} P: ${stats.losses}`),
-                                                React.createElement('span', null, `Skóre: ${stats.goalsFor}:${stats.goalsAgainst}`),
                                                 React.createElement('span', { className: 'font-bold mt-1' }, `${stats.points} bodov`)
                                             )
                                         )
@@ -720,7 +607,6 @@ const SpiderApp = ({ userProfileData }) => {
     );
 };
 
-// Spracovanie udalosti pre dáta používateľa
 const handleDataUpdateAndRender = (event) => {
     const userProfileData = event.detail;
     const rootElement = document.getElementById('root');
@@ -744,10 +630,8 @@ const handleDataUpdateAndRender = (event) => {
     }
 };
 
-// Poslucháč udalosti
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
-// Kontrola existujúcich dát
 if (window.globalUserProfileData) {
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 }
