@@ -656,7 +656,7 @@ const SpiderApp = ({ userProfileData }) => {
                             style: {
                                 position: 'absolute',
                                 top: '8px',
-                                left: '8px',
+                                left: '10px',
                                 fontSize: '28px',
                                 fontWeight: 'bold',
                                 lineHeight: 1,
@@ -693,7 +693,7 @@ const SpiderApp = ({ userProfileData }) => {
                             style: {
                                 position: 'absolute',
                                 bottom: '8px',
-                                right: '8px',
+                                right: '10px',
                                 fontSize: '28px',
                                 fontWeight: 'bold',
                                 lineHeight: 1,
