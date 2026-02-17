@@ -5481,6 +5481,19 @@ const AddMatchesApp = ({ userProfileData }) => {
                             React.createElement('i', { className: 'fa-solid fa-rotate-left mr-1' }),
                             'Reset'
                         ),
+
+                        React.createElement(
+                            'button',
+                            {
+                                onClick: () => {
+                                    window.currentViewMode = 'spider';
+                                    window.dispatchEvent(new CustomEvent('viewModeChanged', { detail: 'spider' }));
+                                },
+                                className: 'px-3 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors whitespace-nowrap ml-1'
+                            },
+                            React.createElement('i', { className: 'fa-solid fa-sitemap mr-1' }),
+                            'Pavúk'
+                        ),
         
                         React.createElement(
                             'div',
