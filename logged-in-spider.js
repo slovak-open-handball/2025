@@ -258,7 +258,7 @@ const SpiderApp = ({ userProfileData }) => {
         React.createElement(
             'div',
             { 
-                className: 'fixed top-0 left-0 right-0 z-40 flex flex-col items-center pt-4 pointer-events-none',
+                className: 'fixed top-12 left-0 right-0 z-40 flex flex-col items-center pt-4 pointer-events-none',
                 style: { pointerEvents: 'none' }
             },
             React.createElement(
