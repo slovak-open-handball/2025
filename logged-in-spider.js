@@ -203,7 +203,8 @@ const SpiderApp = ({ userProfileData }) => {
             'div',
             { 
                 className: 'border-2 border-gray-300 rounded-lg p-3 min-w-[220px] bg-white shadow-sm',
-                'data-match-id': match.id
+                'data-match-id': match.id,
+                style: { zIndex: 10, position: 'relative' }
             },
             // Nadpis (ak existuje)
             title && React.createElement(
