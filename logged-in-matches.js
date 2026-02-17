@@ -5494,7 +5494,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 className: 'px-3 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors whitespace-nowrap ml-2',
                                 title: 'Prejsť do zobrazenia pavúka (semifinále, finále, o 3. miesto)'
                             },
-                            React.createElement('i', { className: 'fa-solid fa-sitemap mr-1' }),
                             'Pavúk'
                         ),
         
