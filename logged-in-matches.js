@@ -5911,45 +5911,29 @@ const AddMatchesApp = ({ userProfileData }) => {
                             )
                     ),
                     
-        // PRAVÝ STĹPEC - Športové haly (OPRAVENÉ - box haly sa roztiahne doprava)
-        React.createElement(
-            'div',
-            { className: `${filteredUnassignedMatches.length > 0 ? 'lg:w-2/3' : 'lg:w-full'} flex flex-col` }, 
-            // Kontrola, či je aktívny filter a nie sú žiadne haly
-            (selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter || selectedHallFilter || selectedDayFilter) && filteredSportHalls.length === 0
-                ? // Zobraziť správu o žiadnych zápasoch
+                    // PRAVÝ STĹPEC - Športové haly (OPRAVENÉ - box haly sa roztiahne doprava)
                     React.createElement(
                         'div',
-                        { className: 'flex flex-col items-center justify-center py-12 text-gray-500 bg-gray-50 rounded-lg' },
-                        React.createElement('i', { className: 'fa-solid fa-filter-circle-xmark text-5xl mb-4 opacity-30' }),
-                        React.createElement('p', { className: 'text-lg font-medium' }, 'Pre zvolené filtre'),
-                        React.createElement('p', { className: 'text-lg' }, 'neexistujú žiadne zápasy.')
-                    )
-                : // Inak zobraziť normálny nadpis a obsah
-                    React.createElement(
-                        React.Fragment,
-                        null,
+                        { className: `${filteredUnassignedMatches.length > 0 ? 'lg:w-2/3' : 'lg:w-full'} flex flex-col` }, 
                         React.createElement(
                             'h3',
                             { className: 'text-xl font-semibold mb-4 text-gray-700 pb-2 flex-shrink-0' },
                             React.createElement('i', { className: 'fa-solid fa-futbol mr-2 text-red-500' }),
                             'Športové haly',
-                            filteredSportHalls.length > 0 && React.createElement(
-                                'span',
-                                { className: 'ml-2 text-sm font-normal text-gray-500' },
+                            React.createElement('span', { className: 'ml-2 text-sm font-normal text-gray-500' },
                                 `(${filteredSportHalls.length} ${filteredSportHalls.length === 1 ? 'hala' : filteredSportHalls.length < 5 ? 'haly' : 'hál'})`
                             )
                         ),
-                                  
+                        
                         // Indikátor načítavania
                         loading && React.createElement(
                             'div',
                             { className: 'flex-1 flex justify-center items-center py-12' },
                             React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500' })
                         ),
-                                  
-                        // Žiadne haly (bez filtra)
-                        !loading && sportHalls.length === 0 && !(selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter || selectedHallFilter || selectedDayFilter) && React.createElement(
+                        
+                        // Žiadne haly
+                        !loading && sportHalls.length === 0 && React.createElement(
                             'div',
                             { className: 'flex-1 flex items-center justify-center text-center py-12 text-gray-500 bg-gray-50 rounded-lg' },
                             React.createElement(
@@ -5960,9 +5944,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 React.createElement('p', { className: 'text-sm mt-2' }, 'Pridajte prvú športovú halu v mape.')
                             )
                         ),
-                                  
+                        
                         // Grid zoznam športových hál s kartami pre jednotlivé dni - OPRAVENÉ
-                        !loading && sportHalls.length > 0 && filteredSportHalls.length > 0 && React.createElement(
+                        !loading && sportHalls.length > 0 && React.createElement(
                             'div',
                             { 
                                 className: 'space-y-4',
