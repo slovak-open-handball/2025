@@ -666,8 +666,8 @@ const SpiderApp = ({ userProfileData }) => {
                         {
                             style: {
                                 position: 'absolute',
-                                top: '8px',
-                                left: '10px',
+                                top: '6px',
+                                left: '12px',
                                 fontSize: '28px',
                                 fontWeight: 'bold',
                                 lineHeight: 1,
