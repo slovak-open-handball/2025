@@ -271,9 +271,9 @@ const SpiderApp = ({ userProfileData }) => {
                 React.createElement(
                     'div',
                     { 
-                        className: `transition-opacity duration-300 ease-in-out opacity-0 group-hover:opacity-100`,
+                        className: `transition-opacity duration-300 ease-in-out opacity-0 group-hover:opacity-100 group-focus-within:opacity-100`,
                         style: { 
-                            pointerEvents: 'none'
+                            pointerEvents: 'auto'
                         }
                     },
                     React.createElement(
