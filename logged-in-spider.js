@@ -266,7 +266,7 @@ const SpiderApp = ({ userProfileData }) => {
             window.showGlobalNotification('Vyberte kategóriu', 'error');
             return;
         }
-
+    
         setLoading(true);
         
         try {
@@ -278,10 +278,10 @@ const SpiderApp = ({ userProfileData }) => {
                 return;
             }
             
-            // Roztriedime zápasy podľa typu
-            const semiFinals = [];
-            const final = null;
-            const thirdPlace = null;
+            // Roztriedime zápasy podľa typu - POUŽIJEME let NAMIESTO const
+            let semiFinals = [];
+            let final = null;
+            let thirdPlace = null;
             
             filteredMatches.forEach(match => {
                 const matchType = identifyMatchType(match, filteredMatches);
@@ -290,9 +290,9 @@ const SpiderApp = ({ userProfileData }) => {
                 if (matchType === 'semi_final') {
                     semiFinals.push(match);
                 } else if (matchType === 'final') {
-                    final = match;
+                    final = match;  // Teraz je to povolené, lebo final je let
                 } else if (matchType === 'third_place') {
-                    thirdPlace = match;
+                    thirdPlace = match;  // Teraz je to povolené, lebo thirdPlace je let
                 }
             });
             
@@ -308,7 +308,7 @@ const SpiderApp = ({ userProfileData }) => {
                 
                 // Posledný zápas je finále
                 if (sortedByDate.length > 0) {
-                    final = sortedByDate[0];
+                    final = sortedByDate[0];  // Teraz je to povolené
                 }
             }
             
