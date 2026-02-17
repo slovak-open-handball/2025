@@ -5049,7 +5049,24 @@ const AddMatchesApp = ({ userProfileData }) => {
                 'div',
                 { 
                     className: 'group',
-                    style: { pointerEvents: 'auto' } // Samotné ovládacie prvky sú klikateľné
+                    style: { pointerEvents: 'auto' }, // Samotné ovládacie prvky sú klikateľné
+                    onMouseLeave: (e) => {
+                        // Pridáme oneskorenie pred skrytím, aby sa používateľ mohol presunúť do dropdownu
+                        const target = e.currentTarget;
+                        setTimeout(() => {
+                            // Skontrolujeme, či myš nie je v dropdown elemente
+                            const isHoveringDropdown = document.querySelector('select:focus') !== null;
+                            if (!isHoveringDropdown && !target.matches(':hover')) {
+                                // Ak myš nie je v dropdown ani v kontajneri, skryjeme panel
+                                // CSS trieda group-hover sa postará o skrytie, ale musíme 
+                                // dočasne odstrániť triedu group
+                                target.classList.remove('group');
+                                setTimeout(() => {
+                                    target.classList.add('group');
+                                }, 10);
+                            }
+                        }, 200); // 200ms oneskorenie
+                    }
                 },
                 // Tenký pásik pre hover
                 React.createElement(
@@ -5175,7 +5192,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                             React.createElement('i', { className: 'fa-solid fa-rotate-left mr-1' }),
                             'Reset'
                         ),
-
+        
                         React.createElement(
                             'div',
                             { className: 'flex items-center gap-1 ml-2' },
