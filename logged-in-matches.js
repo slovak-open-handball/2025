@@ -5086,14 +5086,19 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         setSelectedCategoryFilter(e.target.value);
                                         setSelectedGroupFilter(''); // Reset skupiny pri zmene kategórie
                                     },
-                                    className: 'px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[140px]'
+                                    className: 'px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[180px]'
                                 },
                                 React.createElement('option', { value: '' }, 'Všetky kategórie'),
                                 [...categories]
                                     .sort((a, b) => a.name.localeCompare(b.name))
-                                    .map(cat => 
-                                        React.createElement('option', { key: cat.id, value: cat.id }, cat.name)
-                                    )
+                                    .map(cat => {
+                                        // Spočítame zápasy pre túto kategóriu
+                                        const matchesInCategory = matches.filter(m => m.categoryId === cat.id).length;
+                                        return React.createElement('option', { 
+                                            key: cat.id, 
+                                            value: cat.id 
+                                        }, `${cat.name} (${matchesInCategory} ${matchesInCategory === 1 ? 'zápas' : matchesInCategory < 5 ? 'zápasy' : 'zápasov'})`);
+                                    })
                             )
                         ),
                         
