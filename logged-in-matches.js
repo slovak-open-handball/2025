@@ -2814,6 +2814,13 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     const [selectedTeamIdFilter, setSelectedTeamIdFilter] = useState('');
 
+    // Načítanie filtrov pri inicializácii
+    const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
+    const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
+    const [selectedHallFilter, setSelectedHallFilter] = useState('');
+    const [selectedDayFilter, setSelectedDayFilter] = useState('');
+
+    // Tieto premenné definujeme AŽ za všetkými useState
     const isFilterActive = selectedCategoryFilter || selectedGroupFilter || selectedHallFilter || selectedDayFilter || selectedTeamIdFilter;
 
     // Pre hasVisibleHalls budeme potrebovať funkciu, ktorá to vypočíta
