@@ -5053,19 +5053,47 @@ const AddMatchesApp = ({ userProfileData }) => {
                     onMouseLeave: (e) => {
                         // Pridáme oneskorenie pred skrytím, aby sa používateľ mohol presunúť do dropdownu
                         const target = e.currentTarget;
+                        
                         setTimeout(() => {
-                            // Skontrolujeme, či myš nie je v dropdown elemente
-                            const isHoveringDropdown = document.querySelector('select:focus') !== null;
-                            if (!isHoveringDropdown && !target.matches(':hover')) {
-                                // Ak myš nie je v dropdown ani v kontajneri, skryjeme panel
-                                // CSS trieda group-hover sa postará o skrytie, ale musíme 
-                                // dočasne odstrániť triedu group
+                            // Skontrolujeme, či je nejaký selectbox rozbalený
+                            // Selectbox je rozbalený, ak má veľkosť > 1 (pre multiple) alebo 
+                            // ak je vo focus a jeho options sú viditeľné
+                            const selects = target.querySelectorAll('select');
+                            let isAnySelectOpen = false;
+                            
+                            selects.forEach(select => {
+                                // Kontrola, či je select rozbalený - toto nie je priamo možné zistiť,
+                                // ale môžeme skontrolovať, či je select vo focus a či má options
+                                if (document.activeElement === select) {
+                                    // Select má focus, pravdepodobne je rozbalený
+                                    isAnySelectOpen = true;
+                                }
+                                
+                                // Ďalšia kontrola - ak select nemá veľkosť 1, môže byť rozbalený
+                                // (pre multiple selecty)
+                                if (select.size > 1) {
+                                    isAnySelectOpen = true;
+                                }
+                            });
+                            
+                            // Tiež skontrolujeme, či nie je otvorený nejaký dropdown mimo nášho kontajnera
+                            // (napr. select vo fullscreen móde)
+                            const activeElement = document.activeElement;
+                            if (activeElement && activeElement.tagName === 'SELECT' && 
+                                !target.contains(activeElement)) {
+                                // Select je mimo nášho kontajnera, ale môže byť otvorený
+                                isAnySelectOpen = true;
+                            }
+                            
+                            if (!isAnySelectOpen && !target.matches(':hover')) {
+                                // Ak nie je žiadny select otvorený a myš nie je v kontajneri,
+                                // skryjeme panel
                                 target.classList.remove('group');
                                 setTimeout(() => {
                                     target.classList.add('group');
                                 }, 10);
                             }
-                        }, 200); // 200ms oneskorenie
+                        }, 300); // Predĺžime oneskorenie na 300ms
                     }
                 },
                 // Tenký pásik pre hover
