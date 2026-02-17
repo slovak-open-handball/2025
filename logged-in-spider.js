@@ -502,6 +502,9 @@ const SpiderApp = ({ userProfileData }) => {
         return [...categories].sort((a, b) => a.name.localeCompare(b.name));
     }, [categories]);
 
+    // Farba odblokovaného tlačidla (pre zablokovaný stav)
+    const enabledButtonColor = 'rgb(34 197 94)'; // bg-green-500
+
     return React.createElement(
         React.Fragment,
         null,
@@ -700,13 +703,23 @@ const SpiderApp = ({ userProfileData }) => {
             )
         ),
                 
-        // Zelené kruhové tlačidlo "+" v pravom dolnom rohu
+        // Zelené kruhové tlačidlo "+" v pravom dolnom rohu - UPRAVENÉ PODĽA POŽIADAVIEK
         React.createElement(
             'button',
             {
-                onClick: () => setIsModalOpen(true),
-                className: 'fixed bottom-6 right-6 w-14 h-14 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg flex items-center justify-center text-3xl font-bold transition-all hover:scale-110 z-50',
-                title: 'Generovať pavúka'
+                onClick: () => {
+                    if (selectedCategory) {
+                        setIsModalOpen(true);
+                    }
+                },
+                disabled: !selectedCategory,
+                className: `fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-3xl font-bold transition-all z-50 ${
+                    selectedCategory 
+                        ? 'bg-green-500 hover:bg-green-600 text-white hover:scale-110 cursor-pointer' 
+                        : 'bg-white text-green-500 border-2 border-green-500 cursor-not-allowed opacity-70'
+                }`,
+                title: selectedCategory ? 'Generovať pavúka' : 'Najprv vyberte kategóriu',
+                style: selectedCategory ? {} : { pointerEvents: 'auto' } // Zabezpečíme, že disabled tlačidlo stále zachytáva udalosti pre tooltip
             },
             '+'
         ),
