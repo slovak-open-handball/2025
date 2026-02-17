@@ -38,9 +38,7 @@ const SpiderApp = ({ userProfileData }) => {
     const [matches, setMatches] = useState([]);
     const [teams, setTeams] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState('');
-    const [selectedGroup, setSelectedGroup] = useState('');
     const [groupsByCategory, setGroupsByCategory] = useState({});
-    const [availableGroups, setAvailableGroups] = useState([]);
     const [spiderData, setSpiderData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [displayMode, setDisplayMode] = useState('name');
@@ -138,19 +136,6 @@ const SpiderApp = ({ userProfileData }) => {
             if (unsubscribeTeams) unsubscribeTeams();
         };
     }, []);
-
-    // Aktualizácia dostupných skupín pri zmene kategórie
-    useEffect(() => {
-        if (selectedCategory && groupsByCategory[selectedCategory]) {
-            const sortedGroups = [...groupsByCategory[selectedCategory]]
-                .sort((a, b) => a.name.localeCompare(b.name));
-            setAvailableGroups(sortedGroups);
-        } else {
-            setAvailableGroups([]);
-        }
-        setSelectedGroup('');
-        setSpiderData(null);
-    }, [selectedCategory, groupsByCategory]);
 
     // Funkcia na parsovanie identifikátora tímu
     const parseTeamIdentifier = (identifier) => {
@@ -287,12 +272,8 @@ const SpiderApp = ({ userProfileData }) => {
         try {
             let filteredMatches = matches.filter(m => m.categoryId === selectedCategory);
             
-            if (selectedGroup) {
-                filteredMatches = filteredMatches.filter(m => m.groupName === selectedGroup);
-            }
-            
             if (filteredMatches.length === 0) {
-                window.showGlobalNotification('Žiadne zápasy pre vybranú kategóriu/skupinu', 'warning');
+                window.showGlobalNotification('Žiadne zápasy pre vybranú kategóriu', 'warning');
                 setLoading(false);
                 return;
             }
@@ -506,25 +487,6 @@ const SpiderApp = ({ userProfileData }) => {
                         ),
                         
                         React.createElement(
-                            'div',
-                            { className: 'flex items-center gap-1' },
-                            React.createElement('label', { className: 'text-sm font-medium text-gray-700 whitespace-nowrap' }, 'Skupina:'),
-                            React.createElement(
-                                'select',
-                                {
-                                    value: selectedGroup,
-                                    onChange: (e) => setSelectedGroup(e.target.value),
-                                    disabled: !selectedCategory,
-                                    className: `px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[140px] ${!selectedCategory ? 'bg-gray-100 cursor-not-allowed' : ''}`
-                                },
-                                React.createElement('option', { value: '' }, 'Všetky skupiny'),
-                                availableGroups.map(group => 
-                                    React.createElement('option', { key: group.name, value: group.name }, group.name)
-                                )
-                            )
-                        ),
-                        
-                        React.createElement(
                             'button',
                             {
                                 onClick: generateSpider,
@@ -591,7 +553,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     window.location.href = url.toString();
                                 },
                                 className: 'px-4 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors whitespace-nowrap ml-2',
-                                title: 'Prejsť do zobrazenia zápasov'
+                                title: 'Prejsť do zobrazenia zápasov)'
                             },
                             'Zápasy'
                         )
@@ -685,7 +647,7 @@ const SpiderApp = ({ userProfileData }) => {
                             'div',
                             { className: 'text-center py-8 text-gray-500 bg-gray-50 rounded-lg' },
                             React.createElement('i', { className: 'fa-solid fa-info-circle text-3xl mb-2 opacity-50' }),
-                            React.createElement('p', null, 'Pre vybranú kategóriu/skupinu sa nenašli žiadne zápasy play-off.')
+                            React.createElement('p', null, 'Pre vybranú kategóriu sa nenašli žiadne zápasy play-off.')
                         )
                     )
                 )
