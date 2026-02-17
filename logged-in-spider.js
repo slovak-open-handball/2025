@@ -629,139 +629,140 @@ const SpiderApp = ({ userProfileData }) => {
             },
             // Hlavný kruhový kontajner
             React.createElement(
-                'div',
-                {
-                    className: 'relative w-full h-full rounded-full overflow-hidden',
-                },
-                // Prvá polovica - Zelená (Generovať) - s textom "+" v ľavom hornom rohu
-                React.createElement(
-                    'button',
-                    { 
-                        className: `absolute inset-0 transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0 ${
-                            generationInProgress || !selectedCategory 
-                                ? 'bg-white cursor-not-allowed' 
-                                : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
-                        }`,
-                        style: { 
-                            clipPath: 'polygon(0 0, 100% 0, 0 100%)',
-                        },
-                        onClick: generateSpider,
-                        disabled: generationInProgress || !selectedCategory,
-                        title: !selectedCategory ? 'Najprv vyberte kategóriu' : 'Generovať pavúka'
+                    'div',
+                    {
+                        className: 'relative w-full h-full rounded-full overflow-hidden',
                     },
+                    // Prvá polovica - Zelená (Generovať) - s textom "+" v ľavom hornom rohu
                     React.createElement(
-                        'div',
-                        {
-                            style: {
-                                position: 'absolute',
-                                inset: 0,
-                                boxShadow: !selectedCategory && !generationInProgress ? 'inset 0 0 0 2px rgb(34 197 94)' : 'none',
-                                borderRadius: '50%',
-                                pointerEvents: 'none'
+                        'button',
+                        { 
+                            className: `absolute inset-0 transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0 ${
+                                generationInProgress || !selectedCategory 
+                                    ? 'bg-white cursor-not-allowed' 
+                                    : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
+                            }`,
+                            style: { 
+                                clipPath: 'polygon(0 0, 100% 0, 0 100%)',
+                            },
+                            onClick: generateSpider,
+                            disabled: generationInProgress || !selectedCategory,
+                            title: !selectedCategory ? 'Najprv vyberte kategóriu' : 'Generovať pavúka'
+                        },
+                        React.createElement(
+                            'div',
+                            {
+                                style: {
+                                    position: 'absolute',
+                                    inset: 0,
+                                    boxShadow: !selectedCategory && !generationInProgress ? 'inset 0 0 0 2px rgb(34 197 94)' : 'none',
+                                    borderRadius: '50%',
+                                    pointerEvents: 'none'
+                                }
                             }
-                        }
+                        ),
+                        React.createElement(
+                            'span',
+                            {
+                                style: {
+                                    position: 'absolute',
+                                    top: '8px',
+                                    left: '10px',
+                                    fontSize: '28px',
+                                    fontWeight: 'bold',
+                                    lineHeight: 1,
+                                    color: !selectedCategory || generationInProgress ? 'rgb(34 197 94)' : 'white',
+                                    zIndex: !selectedCategory && !generationInProgress ? 22 : 'auto'
+                                }
+                            },
+                            '+'
+                        )
                     ),
-                    // Pridanie dvoch šikmých čiar pre zablokovaný stav
-                    !selectedCategory && !generationInProgress && React.createElement(
-                        React.Fragment,
-                        null,
-                        // Zelená čiara
-                        React.createElement('div', {
-                            style: {
-                                position: 'absolute',
-                                top: '-2px',
-                                right: '-2px',
-                                width: '100%',
-                                height: '100%',
-                                background: 'linear-gradient(135deg, transparent calc(50% - 1px), rgb(34 197 94) calc(50% - 1px), rgb(34 197 94) calc(50% + 1px), transparent calc(50% + 1px))',
-                                pointerEvents: 'none',
-                                transform: 'rotate(45deg)',
-                                transformOrigin: 'center',
-                                zIndex: 20
-                            }
-                        }),
-                        // Červená čiara
-                        React.createElement('div', {
-                            style: {
-                                position: 'absolute',
-                                top: '-2px',
-                                right: '-2px',
-                                width: '100%',
-                                height: '100%',
-                                background: 'linear-gradient(135deg, transparent calc(50% - 1px), rgb(239 68 68) calc(50% - 1px), rgb(239 68 68) calc(50% + 1px), transparent calc(50% + 1px))',
-                                pointerEvents: 'none',
-                                transform: 'rotate(45deg) translateX(2px)',
-                                transformOrigin: 'center',
-                                zIndex: 21
-                            }
-                        })
-                    ),
+                    // Druhá polovica - Červená (Zmazať) - s textom "-" v pravom dolnom rohu
                     React.createElement(
-                        'span',
-                        {
-                            style: {
-                                position: 'absolute',
-                                top: '8px',
-                                left: '10px',
-                                fontSize: '28px',
-                                fontWeight: 'bold',
-                                lineHeight: 1,
-                                color: !selectedCategory || generationInProgress ? 'rgb(34 197 94)' : 'white',
-                                zIndex: !selectedCategory && !generationInProgress ? 22 : 'auto'
-                            }
+                        'button',
+                        { 
+                            className: `absolute inset-0 transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0 ${
+                                generationInProgress || !selectedCategory 
+                                    ? 'bg-white cursor-not-allowed' 
+                                    : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'
+                            }`,
+                            style: { 
+                                clipPath: 'polygon(100% 0, 100% 100%, 0 100%)',
+                            },
+                            onClick: () => {
+                                if (selectedCategory && !generationInProgress) {
+                                    setIsDeleteMatchesModalOpen(true);
+                                }
+                            },
+                            disabled: generationInProgress || !selectedCategory,
+                            title: !selectedCategory ? 'Najprv vyberte kategóriu' : 'Zmazať pavúka'
                         },
-                        '+'
-                    )
-                ),
-                // Druhá polovica - Červená (Zmazať) - s textom "-" v pravom dolnom rohu
-                React.createElement(
-                    'button',
-                    { 
-                        className: `absolute inset-0 transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0 ${
-                            generationInProgress || !selectedCategory 
-                                ? 'bg-white cursor-not-allowed' 
-                                : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'
-                        }`,
-                        style: { 
-                            clipPath: 'polygon(100% 0, 100% 100%, 0 100%)',
-                        },
-                        onClick: () => {
-                            if (selectedCategory && !generationInProgress) {
-                                setIsDeleteMatchesModalOpen(true);
+                        React.createElement(
+                            'div',
+                            {
+                                style: {
+                                    position: 'absolute',
+                                    inset: 0,
+                                    boxShadow: !selectedCategory && !generationInProgress ? 'inset 0 0 0 2px rgb(239 68 68)' : 'none',
+                                    borderRadius: '50%',
+                                    pointerEvents: 'none'
+                                }
                             }
-                        },
-                        disabled: generationInProgress || !selectedCategory,
-                        title: !selectedCategory ? 'Najprv vyberte kategóriu' : 'Zmazať pavúka'
-                    },
-                    React.createElement(
-                        'div',
-                        {
-                            style: {
-                                position: 'absolute',
-                                inset: 0,
-                                boxShadow: !selectedCategory && !generationInProgress ? 'inset 0 0 0 2px rgb(239 68 68)' : 'none',
-                                borderRadius: '50%',
-                                pointerEvents: 'none'
-                            }
-                        }
-                    ),
-                    React.createElement(
-                        'span',
-                        {
-                            style: {
-                                position: 'absolute',
-                                bottom: '10px',
-                                right: '12px',
-                                fontSize: '28px',
-                                fontWeight: 'bold',
-                                lineHeight: 1,
-                                color: !selectedCategory || generationInProgress ? 'rgb(239 68 68)' : 'white'
-                            }
-                        },
-                        '-'
+                        ),
+                        React.createElement(
+                            'span',
+                            {
+                                style: {
+                                    position: 'absolute',
+                                    bottom: '10px',
+                                    right: '12px',
+                                    fontSize: '28px',
+                                    fontWeight: 'bold',
+                                    lineHeight: 1,
+                                    color: !selectedCategory || generationInProgress ? 'rgb(239 68 68)' : 'white'
+                                }
+                            },
+                            '-'
+                        ),
+                        // Pridanie dvoch šikmých čiar pre zablokovaný stav
+                        !selectedCategory && !generationInProgress && React.createElement(
+                            React.Fragment,
+                            null,
+                            // Zelená čiara
+                            React.createElement('div', {
+                                style: {
+                                    position: 'absolute',
+                                    top: '0px',
+                                    right: '0px',
+                                    width: '100%',
+                                    height: '100%',
+                                    background: 'linear-gradient(135deg, transparent calc(50% - 3px), rgb(34 197 94) calc(50% - 2px), rgb(34 197 94) calc(50% + 2px), transparent calc(50% + 2px))',
+                                    pointerEvents: 'none',
+                                    transform: 'rotate(180deg)',
+                                    transformOrigin: 'center',
+                                    zIndex: 50
+                                }
+                            }),
+                            // Červená čiara
+                            React.createElement('div', {
+                                style: {
+                                    position: 'absolute',
+                                    top: '2px',
+                                    right: '-2px',
+                                    width: '100%',
+                                    height: '100%',
+                                    background: 'linear-gradient(135deg, transparent calc(50% - 2px), rgb(239 68 68) calc(50% - 2px), rgb(239 68 68) calc(50% + 2px), transparent calc(50% + 2px))',
+                                    pointerEvents: 'none',
+                                    transform: 'rotate(180deg)',
+                                    transformOrigin: 'center',
+                                    zIndex: 49
+                                }
+                            })
+                        ),
                     )
                 )
-            )
+            );
         ),
 
         // Modálne okno pre potvrdenie mazania
