@@ -584,11 +584,16 @@ const SpiderApp = ({ userProfileData }) => {
                         React.createElement(
                             'button',
                             {
-                                onClick: switchToMatches,
-                                className: 'px-4 py-1.5 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors whitespace-nowrap ml-2'
+                                onClick: () => {
+                                    // Nastavíme view=spider do URL a znovu načítame stránku
+                                    const url = new URL(window.location.href);
+                                    url.searchParams.set('view', 'spider');
+                                    window.location.href = url.toString();
+                                },
+                                className: 'px-3 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors whitespace-nowrap ml-2',
+                                title: 'Prejsť do zobrazenia pavúka (semifinále, finále, o 3. miesto)'
                             },
-                            React.createElement('i', { className: 'fa-solid fa-calendar-alt mr-1' }),
-                            'Zápasy'
+                            'Z8pasy'
                         )
                     )
                 )
