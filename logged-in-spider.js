@@ -633,63 +633,51 @@ const SpiderApp = ({ userProfileData }) => {
                 {
                     className: 'relative w-full h-full rounded-full overflow-hidden',
                 },
-                // Prvá polovica - Zelená (Generovať)
+                // Prvá polovica - Zelená (Generovať) - s textom "+" v ľavom hornom rohu
                 React.createElement(
                     'button',
                     { 
                         className: `absolute inset-0 transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0 ${
                             generationInProgress || !selectedCategory 
                                 ? 'bg-white cursor-not-allowed' 
-                                : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
+                                : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
                         }`,
                         style: { 
                             clipPath: 'polygon(0 0, 100% 0, 0 100%)',
-                            border: !selectedCategory && !generationInProgress ? '2px solid rgb(34 197 94)' : 'none',
-                            color: !selectedCategory && !generationInProgress ? 'rgb(34 197 94)' : 'white'
+                            border: !selectedCategory && !generationInProgress ? '2px solid rgb(34 197 94)' : 'none'
                         },
                         onClick: generateSpider,
                         disabled: generationInProgress || !selectedCategory,
                         title: !selectedCategory ? 'Najprv vyberte kategóriu' : 'Generovať pavúka'
                     },
                     React.createElement(
-                        'div',
+                        'span',
                         {
                             style: {
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                width: '100%',
-                                height: '100%',
-                                position: 'relative'
+                                position: 'absolute',
+                                top: '8px',
+                                left: '8px',
+                                fontSize: '28px',
+                                fontWeight: 'bold',
+                                lineHeight: 1,
+                                color: !selectedCategory || generationInProgress ? 'rgb(34 197 94)' : 'white'
                             }
                         },
-                        React.createElement(
-                            'i', 
-                            { 
-                                className: 'fa-solid fa-plus text-2xl',
-                                style: {
-                                    position: 'absolute',
-                                    top: '35%',
-                                    left: '35%',
-                                    transform: 'translate(-50%, -50%)'
-                                }
-                            }
-                        )
+                        '+'
                     )
                 ),
-                // Druhá polovica - Červená (Zmazať)
+                // Druhá polovica - Červená (Zmazať) - s textom "-" v pravom dolnom rohu
                 React.createElement(
                     'button',
                     { 
                         className: `absolute inset-0 transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0 ${
                             generationInProgress || !selectedCategory 
                                 ? 'bg-white cursor-not-allowed' 
-                                : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
+                                : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'
                         }`,
                         style: { 
                             clipPath: 'polygon(100% 0, 100% 100%, 0 100%)',
-                            border: !selectedCategory && !generationInProgress ? '2px solid rgb(239 68 68)' : 'none',
-                            color: !selectedCategory && !generationInProgress ? 'rgb(239 68 68)' : 'white'
+                            border: !selectedCategory && !generationInProgress ? '2px solid rgb(239 68 68)' : 'none'
                         },
                         onClick: () => {
                             if (selectedCategory && !generationInProgress) {
@@ -700,29 +688,19 @@ const SpiderApp = ({ userProfileData }) => {
                         title: !selectedCategory ? 'Najprv vyberte kategóriu' : 'Zmazať pavúka'
                     },
                     React.createElement(
-                        'div',
+                        'span',
                         {
                             style: {
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                width: '100%',
-                                height: '100%',
-                                position: 'relative'
+                                position: 'absolute',
+                                bottom: '8px',
+                                right: '8px',
+                                fontSize: '28px',
+                                fontWeight: 'bold',
+                                lineHeight: 1,
+                                color: !selectedCategory || generationInProgress ? 'rgb(239 68 68)' : 'white'
                             }
                         },
-                        React.createElement(
-                            'i', 
-                            { 
-                                className: 'fa-solid fa-minus text-2xl',
-                                style: {
-                                    position: 'absolute',
-                                    bottom: '35%',
-                                    right: '35%',
-                                    transform: 'translate(50%, 50%)'
-                                }
-                            }
-                        )
+                        '-'
                     )
                 )
             )
