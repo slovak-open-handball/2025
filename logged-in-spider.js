@@ -1,4 +1,4 @@
-// logged-in-spider.js (upravený - bez prerušovaných čiar)
+// logged-in-spider.js (upravený - finále nad semifinále, pridaný zápas o 3. miesto)
 import { doc, getDoc, getDocs, setDoc, onSnapshot, updateDoc, addDoc, deleteDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { useState, useEffect } = React;
@@ -179,13 +179,15 @@ const SpiderApp = ({ userProfileData }) => {
 
         // Vytvoríme len prázdnu štruktúru pavúka - ŽIADNE priraďovanie tímov
         const spiderStructure = {
+            // Finále (teraz je prvé - hore)
+            final: { id: 'final', homeTeam: '---', awayTeam: '---', homeScore: '', awayScore: '', date: null },
             // Semifinále
             semiFinals: [
                 { id: 'sf1', homeTeam: '---', awayTeam: '---', homeScore: '', awayScore: '', date: null },
                 { id: 'sf2', homeTeam: '---', awayTeam: '---', homeScore: '', awayScore: '', date: null }
             ],
-            // Finále
-            final: { id: 'final', homeTeam: '---', awayTeam: '---', homeScore: '', awayScore: '', date: null }
+            // Zápas o 3. miesto
+            thirdPlace: { id: 'third', homeTeam: '---', awayTeam: '---', homeScore: '', awayScore: '', date: null }
         };
 
         setSelectedCategory(categoryId);
@@ -346,7 +348,17 @@ const SpiderApp = ({ userProfileData }) => {
                                 className: 'flex flex-col items-center w-full gap-8'
                             },
                             
-                            // Semifinále - vedľa seba
+                            // FINÁLE - teraz je hore
+                            React.createElement(
+                                'div',
+                                { className: 'mb-4' },
+                                React.createElement(MatchCell, { 
+                                    match: spiderData.final, 
+                                    title: 'Finále'
+                                })
+                            ),
+                            
+                            // Semifinále - vedľa seba (v strede)
                             React.createElement(
                                 'div',
                                 { className: 'flex justify-center gap-16 w-full' },
@@ -364,13 +376,13 @@ const SpiderApp = ({ userProfileData }) => {
                                 })
                             ),
                             
-                            // Finále
+                            // Zápas o 3. miesto - dole
                             React.createElement(
                                 'div',
-                                { className: 'mt-8' },
+                                { className: 'mt-4' },
                                 React.createElement(MatchCell, { 
-                                    match: spiderData.final, 
-                                    title: 'Finále'
+                                    match: spiderData.thirdPlace, 
+                                    title: 'O 3. miesto'
                                 })
                             )
                         ),
