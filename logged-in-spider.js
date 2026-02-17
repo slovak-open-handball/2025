@@ -272,7 +272,8 @@ const SpiderApp = ({ userProfileData }) => {
                         awayTeam: '---', 
                         homeScore: '', 
                         awayScore: '', 
-                        date: null 
+                        date: null,
+                        exists: false
                     },
                     semiFinals: [
                         spiderMatches.find(m => m.matchType === 'semifinále 1') || { 
@@ -281,7 +282,8 @@ const SpiderApp = ({ userProfileData }) => {
                             awayTeam: '---', 
                             homeScore: '', 
                             awayScore: '', 
-                            date: null 
+                            date: null,
+                            exists: false
                         },
                         spiderMatches.find(m => m.matchType === 'semifinále 2') || { 
                             id: 'sf2', 
@@ -289,7 +291,8 @@ const SpiderApp = ({ userProfileData }) => {
                             awayTeam: '---', 
                             homeScore: '', 
                             awayScore: '', 
-                            date: null 
+                            date: null,
+                            exists: false
                         }
                     ],
                     thirdPlace: spiderMatches.find(m => m.matchType === 'o 3. miesto') || { 
@@ -298,9 +301,47 @@ const SpiderApp = ({ userProfileData }) => {
                         awayTeam: '---', 
                         homeScore: '', 
                         awayScore: '', 
-                        date: null 
+                        date: null,
+                        exists: false
                     }
                 };
+                
+                // Označíme existujúce zápasy
+                spiderMatches.forEach(match => {
+                    if (match.matchType === 'finále') {
+                        spiderStructure.final.exists = true;
+                        spiderStructure.final.id = match.id;
+                        spiderStructure.final.homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
+                        spiderStructure.final.awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
+                        spiderStructure.final.homeScore = match.homeScore;
+                        spiderStructure.final.awayScore = match.awayScore;
+                        spiderStructure.final.date = match.date;
+                    } else if (match.matchType === 'semifinále 1') {
+                        spiderStructure.semiFinals[0].exists = true;
+                        spiderStructure.semiFinals[0].id = match.id;
+                        spiderStructure.semiFinals[0].homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
+                        spiderStructure.semiFinals[0].awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
+                        spiderStructure.semiFinals[0].homeScore = match.homeScore;
+                        spiderStructure.semiFinals[0].awayScore = match.awayScore;
+                        spiderStructure.semiFinals[0].date = match.date;
+                    } else if (match.matchType === 'semifinále 2') {
+                        spiderStructure.semiFinals[1].exists = true;
+                        spiderStructure.semiFinals[1].id = match.id;
+                        spiderStructure.semiFinals[1].homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
+                        spiderStructure.semiFinals[1].awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
+                        spiderStructure.semiFinals[1].homeScore = match.homeScore;
+                        spiderStructure.semiFinals[1].awayScore = match.awayScore;
+                        spiderStructure.semiFinals[1].date = match.date;
+                    } else if (match.matchType === 'o 3. miesto') {
+                        spiderStructure.thirdPlace.exists = true;
+                        spiderStructure.thirdPlace.id = match.id;
+                        spiderStructure.thirdPlace.homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
+                        spiderStructure.thirdPlace.awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
+                        spiderStructure.thirdPlace.homeScore = match.homeScore;
+                        spiderStructure.thirdPlace.awayScore = match.awayScore;
+                        spiderStructure.thirdPlace.date = match.date;
+                    }
+                });
                 
                 setSpiderData(spiderStructure);
             } else {
@@ -427,7 +468,8 @@ const SpiderApp = ({ userProfileData }) => {
                 const docRef = await addDoc(matchesRef, match);
                 savedMatches.push({
                     id: docRef.id,
-                    ...match
+                    ...match,
+                    exists: true
                 });
             }
     
@@ -439,7 +481,8 @@ const SpiderApp = ({ userProfileData }) => {
                     awayTeam: `${categoryWithoutDiacritics} WSF02`,
                     homeScore: '', 
                     awayScore: '', 
-                    date: null 
+                    date: null,
+                    exists: true
                 },
                 semiFinals: [
                     { 
@@ -448,7 +491,8 @@ const SpiderApp = ({ userProfileData }) => {
                         awayTeam: '---', 
                         homeScore: '', 
                         awayScore: '', 
-                        date: null 
+                        date: null,
+                        exists: true
                     },
                     { 
                         id: savedMatches.find(m => m.matchType === 'semifinále 2')?.id || 'sf2',
@@ -456,7 +500,8 @@ const SpiderApp = ({ userProfileData }) => {
                         awayTeam: '---', 
                         homeScore: '', 
                         awayScore: '', 
-                        date: null 
+                        date: null,
+                        exists: true
                     }
                 ],
                 thirdPlace: { 
@@ -465,7 +510,8 @@ const SpiderApp = ({ userProfileData }) => {
                     awayTeam: `${categoryWithoutDiacritics} LSF02`,
                     homeScore: '', 
                     awayScore: '', 
-                    date: null 
+                    date: null,
+                    exists: true
                 }
             };
     
@@ -581,6 +627,41 @@ const SpiderApp = ({ userProfileData }) => {
 
     // Komponent pre zobrazenie jedného zápasu v pavúkovom zobrazení
     const MatchCell = ({ match, title = '' }) => {
+        // Kontrola, či zápas existuje v databáze
+        if (!match.exists) {
+            // Chýbajúci zápas - čiarkovaný obdĺžnik so spojeným textom
+            return React.createElement(
+                'div',
+                { 
+                    className: 'border-2 border-dashed border-gray-400 rounded-lg p-3 min-w-[220px] bg-gray-50',
+                    style: { 
+                        zIndex: 10, 
+                        position: 'relative',
+                        minHeight: '120px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }
+                },
+                // Nadpis (ak existuje) - pre chýbajúci zápas zobrazíme len nadpis a text
+                React.createElement(
+                    'div',
+                    { className: 'text-center w-full' },
+                    title && React.createElement(
+                        'div',
+                        { className: 'text-sm font-semibold text-gray-500 mb-2 pb-1 border-b border-dashed border-gray-300' },
+                        title
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'text-gray-400 italic py-4' },
+                        'Chýbajúci zápas'
+                    )
+                )
+            );
+        }
+
+        // Existujúci zápas - normálne zobrazenie
         const matchDate = match.date ? new Date(match.date) : null;
         const formattedDate = matchDate ? formatDateWithDay(matchDate) : '';
         
