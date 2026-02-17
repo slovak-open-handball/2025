@@ -46,8 +46,10 @@ window.showGlobalNotification = function(message, type = 'info', duration = 3000
         margin-bottom: 10px;
         backdrop-filter: blur(5px);
         border: 1px solid rgba(255,255,255,0.2);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
     `;
     
+    notification.textContent = message;
     container.appendChild(notification);
     
     // Automatické odstránenie po čase
@@ -92,17 +94,6 @@ if (!document.getElementById('notification-styles')) {
     `;
     document.head.appendChild(style);
 }
-
-// Pomocná funkcia pre skloňovanie pri vytváraní
-const getGenerationMessage = (count) => {
-    if (count === 1) {
-        return `Pavúk bol vygenerovaný a uložený ${count} zápas do databázy`;
-    } else if (count >= 2 && count <= 4) {
-        return `Pavúk bol vygenerovaný a uložené ${count} zápasy do databázy`;
-    } else {
-        return `Pavúk bol vygenerovaný a uložených ${count} zápasov do databázy`;
-    }
-};
 
 // Pomocná funkcia pre skloňovanie pri mazaní
 const getDeletionMessage = (count) => {
