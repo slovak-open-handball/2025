@@ -31,8 +31,8 @@ const SpiderApp = ({ userProfileData }) => {
     const [spiderData, setSpiderData] = useState(null);
     const [allMatches, setAllMatches] = useState([]); // Všetky zápasy z databázy (aj bežné, aj pavúkové)
     const [isSelectOpen, setIsSelectOpen] = useState(false);
-    const [generationInProgress, setGenerationInProgress] = useState(false); // NOVÉ: pre generovanie
-    const [isDeleteMatchesModalOpen, setIsDeleteMatchesModalOpen] = useState(false); // NOVÉ: pre mazanie
+    const [generationInProgress, setGenerationInProgress] = useState(false);
+    const [isDeleteMatchesModalOpen, setIsDeleteMatchesModalOpen] = useState(false);
 
     // Definícia isFilterActive - filter je aktívny, ak je vybratá nejaká kategória
     const isFilterActive = selectedCategory !== '';
@@ -637,9 +637,15 @@ const SpiderApp = ({ userProfileData }) => {
                 React.createElement(
                     'button',
                     { 
-                        className: `absolute inset-0 ${generationInProgress || !selectedCategory ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'} text-white transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0`,
+                        className: `absolute inset-0 transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0 ${
+                            generationInProgress || !selectedCategory 
+                                ? 'bg-white cursor-not-allowed' 
+                                : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
+                        }`,
                         style: { 
                             clipPath: 'polygon(0 0, 100% 0, 0 100%)',
+                            border: !selectedCategory && !generationInProgress ? '2px solid rgb(34 197 94)' : 'none',
+                            color: !selectedCategory && !generationInProgress ? 'rgb(34 197 94)' : 'white'
                         },
                         onClick: generateSpider,
                         disabled: generationInProgress || !selectedCategory,
@@ -675,9 +681,15 @@ const SpiderApp = ({ userProfileData }) => {
                 React.createElement(
                     'button',
                     { 
-                        className: `absolute inset-0 ${generationInProgress || !selectedCategory ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'} text-white transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0`,
+                        className: `absolute inset-0 transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0 ${
+                            generationInProgress || !selectedCategory 
+                                ? 'bg-white cursor-not-allowed' 
+                                : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
+                        }`,
                         style: { 
                             clipPath: 'polygon(100% 0, 100% 100%, 0 100%)',
+                            border: !selectedCategory && !generationInProgress ? '2px solid rgb(239 68 68)' : 'none',
+                            color: !selectedCategory && !generationInProgress ? 'rgb(239 68 68)' : 'white'
                         },
                         onClick: () => {
                             if (selectedCategory && !generationInProgress) {
