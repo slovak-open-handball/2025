@@ -6514,7 +6514,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             React.createElement(
                                                                                 'span',
                                                                                 { 
-                                                                                    className: `${selectedTeamIdFilter && (match.homeTeamIdentifier === selectedTeamIdFilter || match.awayTeamIdentifier === selectedTeamIdFilter) ? 'font-bold' : 'font-medium'} text-gray-800 truncate block w-full`, 
+                                                                                    className: `${selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium'} text-gray-800 truncate block w-full`, 
                                                                                     title: displayMode === 'both' ? homeDisplay.name : homeDisplay 
                                                                                 },
                                                                                 displayMode === 'both' ? homeDisplay.name : homeDisplay
@@ -6538,7 +6538,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             React.createElement(
                                                                                 'span',
                                                                                 { 
-                                                                                    className: `${selectedTeamIdFilter && (match.awayTeamIdentifier === selectedTeamIdFilter || match.homeTeamIdentifier === selectedTeamIdFilter) ? 'font-bold' : 'font-medium'} text-gray-800 truncate block w-full`, 
+                                                                                    className: `${selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium'} text-gray-800 truncate block w-full`,
                                                                                     title: displayMode === 'both' ? awayDisplay.name : awayDisplay 
                                                                                 },   
                                                                                 displayMode === 'both' ? awayDisplay.name : awayDisplay
