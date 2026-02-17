@@ -280,6 +280,12 @@ const SpiderApp = ({ userProfileData }) => {
                             transition: 'opacity 300ms ease-in-out'
                         },
                         onMouseLeave: (e) => {
+                            // Zrušíme existujúci timeout ak existuje
+                            const existingTimeout = e.currentTarget.dataset.hideTimeout;
+                            if (existingTimeout) {
+                                clearTimeout(parseInt(existingTimeout));
+                            }
+                            
                             // Nastavíme timeout na skrytie po 750ms
                             const timeoutId = setTimeout(() => {
                                 // Skontrolujeme, či myš nie je stále nad elementom
@@ -290,6 +296,7 @@ const SpiderApp = ({ userProfileData }) => {
                                 if (!hoveredElement || !panel.contains(hoveredElement)) {
                                     panel.style.opacity = '0';
                                 }
+                                delete panel.dataset.hideTimeout;
                             }, 750);
                             
                             // Uložíme timeout ID do dataset pre prípadné zrušenie
@@ -326,11 +333,18 @@ const SpiderApp = ({ userProfileData }) => {
                                         // Spustíme timeout na skrytie panelu po 750ms
                                         const panel = e.currentTarget.closest('[style*="pointer-events: auto"]');
                                         if (panel) {
+                                            // Zrušíme existujúci timeout ak existuje
+                                            const existingTimeout = panel.dataset.hideTimeout;
+                                            if (existingTimeout) {
+                                                clearTimeout(parseInt(existingTimeout));
+                                            }
+                                            
                                             const timeoutId = setTimeout(() => {
                                                 const hoveredElement = document.querySelector(':hover');
                                                 if (!hoveredElement || !panel.contains(hoveredElement)) {
                                                     panel.style.opacity = '0';
                                                 }
+                                                delete panel.dataset.hideTimeout;
                                             }, 750);
                                             
                                             // Uložíme timeout ID pre prípadné zrušenie pri mouseEnter
