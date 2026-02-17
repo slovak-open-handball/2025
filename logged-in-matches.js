@@ -5966,7 +5966,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 })();
                             
                             // Ak je filter aktívny a nie sú žiadne haly na zobrazenie, zobrazíme špeciálny text
-                            if (isFilterActive && !hasVisibleHals) {
+                            if (isFilterActive && !hasVisibleHalls) {
                                 return React.createElement(
                                     'div',
                                     { className: 'text-center py-8 text-gray-500 bg-gray-50 rounded-lg mb-4' },
