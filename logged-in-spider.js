@@ -348,22 +348,22 @@ const SpiderApp = ({ userProfileData }) => {
                                 className: 'flex flex-col items-center w-full relative py-8'
                             },
                             
-                            // JEDNA DLHÁ ZVISLÁ ČIARA - prechádza celým pavúkom
+                            // ZVISLÁ ČIARA - upravená, aby začínala pod finále a končila nad 3. miestom
                             React.createElement(
                                 'div',
                                 { 
                                     className: 'absolute w-0.5 bg-gray-400',
                                     style: { 
                                         left: '50%',
-                                        top: '0',
-                                        bottom: '0',
+                                        top: '100px', // Začína pod finálovým boxom
+                                        bottom: '100px', // Končí nad boxom o 3. miesto
                                         transform: 'translateX(-50%)',
                                         zIndex: 1
                                     }
                                 }
                             ),
                             
-                            // FINÁLE - hore (s rovnakým odsadením zhora)
+                            // FINÁLE - hore
                             React.createElement(
                                 'div',
                                 { className: 'relative z-10 mt-8' },
@@ -373,7 +373,7 @@ const SpiderApp = ({ userProfileData }) => {
                                 })
                             ),
                             
-                            // Semifinále - vedľa seba (v strede) s vodorovnou čiarou medzi nimi
+                            // Semifinále - vedľa seba (v strede)
                             React.createElement(
                                 'div',
                                 { 
@@ -406,7 +406,7 @@ const SpiderApp = ({ userProfileData }) => {
                                 })
                             ),
                             
-                            // Zápas o 3. miesto - dole (s rovnakým odsadením dole)
+                            // Zápas o 3. miesto - dole
                             React.createElement(
                                 'div',
                                 { className: 'relative z-10 mt-8 mb-8' },
