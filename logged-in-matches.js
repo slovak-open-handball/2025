@@ -2816,7 +2816,7 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     const getAllUniqueTeamIds = () => {
         const teamIds = new Set();
-    
+        
         matches.forEach(match => {
             teamIds.add(match.homeTeamIdentifier);
             teamIds.add(match.awayTeamIdentifier);
@@ -2839,7 +2839,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 return false;
             }
             
-            // Filter podľa ID tímu
+            // Filter podľa ID tímu - TOTO BY MALO VŽDY FUNGOVAŤ
             if (selectedTeamIdFilter) {
                 // Zápas vyhovuje, ak sa vybrané ID zhoduje s domácim ALEBO hosťovským tímom
                 if (match.homeTeamIdentifier !== selectedTeamIdFilter && match.awayTeamIdentifier !== selectedTeamIdFilter) {
@@ -3322,46 +3322,6 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
     const [selectedHallFilter, setSelectedHallFilter] = useState('');
     const [selectedDayFilter, setSelectedDayFilter] = useState('');
-
-    // Nahraďte existujúcu funkciu getFilteredMatches touto:
-//    const getFilteredMatches = (matchesToFilter, ignoreHallFilter = false, ignoreDayFilter = false) => {
-//        return matchesToFilter.filter(match => {
-//            // Filter podľa kategórie
-//            if (selectedCategoryFilter && match.categoryId !== selectedCategoryFilter) {
-//                return false;
-//            }
-//            
-//            // Filter podľa skupiny
-//            if (selectedGroupFilter && match.groupName !== selectedGroupFilter) {
-//                return false;
-//            }
-//            
-//            // Filter podľa haly - aplikujeme len ak nie je ignoreHallFilter = true
-//            if (!ignoreHallFilter && selectedHallFilter && match.hallId !== selectedHallFilter) {
-//                return false;
-//            }
-//            
-//            // Filter podľa dňa - aplikujeme len ak nie je ignoreDayFilter = true
-//            if (!ignoreDayFilter && selectedDayFilter) {
-//                // Ak zápas nemá naplánovaný čas, nevyhovuje (lebo nemá dátum)
-//                if (!match.scheduledTime) {
-//                    return false;
-//                }
-//                
-//                try {
-//                    const matchDate = match.scheduledTime.toDate();
-//                    const matchDateStr = getLocalDateStr(matchDate);
-//                    if (matchDateStr !== selectedDayFilter) {
-//                        return false;
-//                    }
-//                } catch (e) {
-//                    return false;
-//                }
-//            }
-//            
-//            return true;
-//        });
-//    };
 
     // Aktualizujte funkciu updateURLWithFilters
     const updateURLWithFilters = (filters) => {
