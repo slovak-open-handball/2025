@@ -234,7 +234,48 @@ const SpiderApp = ({ userProfileData }) => {
         return identifier;
     };
 
-    // Funkcia na vytvorenie pavúkovej tabuľky
+    // Funkcia na identifikáciu typu zápasu v pavúkovom systéme
+    const identifyMatchType = (match, allMatches) => {
+        // Predpokladáme, že semifinále sú zápasy, ktoré:
+        // 1. Sú v rovnakej kategórii/skupine
+        // 2. Ich víťazi postupujú do finále
+        // 3. Porazení idú do zápasu o 3. miesto
+        
+        // Hľadáme finálový zápas (najvyššie kolo)
+        const finalMatch = allMatches.find(m => 
+            m.categoryId === match.categoryId &&
+            m.groupName === match.groupName &&
+            (m.matchType === 'final' || 
+             (m.homeTeamIdentifier?.includes('winner') || m.awayTeamIdentifier?.includes('winner')))
+        );
+        
+        // Hľadáme zápas o 3. miesto
+        const thirdPlaceMatch = allMatches.find(m => 
+            m.categoryId === match.categoryId &&
+            m.groupName === match.groupName &&
+            (m.matchType === 'third_place' ||
+             (m.homeTeamIdentifier?.includes('loser') || m.awayTeamIdentifier?.includes('loser')))
+        );
+        
+        // Ak je to finálový zápas
+        if (finalMatch && (finalMatch.id === match.id || 
+            match.homeTeamIdentifier?.includes('winner') || 
+            match.awayTeamIdentifier?.includes('winner'))) {
+            return 'final';
+        }
+        
+        // Ak je to zápas o 3. miesto
+        if (thirdPlaceMatch && (thirdPlaceMatch.id === match.id ||
+            match.homeTeamIdentifier?.includes('loser') || 
+            match.awayTeamIdentifier?.includes('loser'))) {
+            return 'third_place';
+        }
+        
+        // Inak je to semifinále
+        return 'semi_final';
+    };
+
+    // Funkcia na vytvorenie štruktúry pavúka
     const generateSpider = () => {
         if (!selectedCategory) {
             window.showGlobalNotification('Vyberte kategóriu', 'error');
@@ -256,66 +297,45 @@ const SpiderApp = ({ userProfileData }) => {
                 return;
             }
             
-            const teamIdentifiers = new Set();
-            filteredMatches.forEach(match => {
-                teamIdentifiers.add(match.homeTeamIdentifier);
-                teamIdentifiers.add(match.awayTeamIdentifier);
-            });
-            
-            const teamsList = Array.from(teamIdentifiers).sort();
-            
-            const matrix = {};
-            const teamNames = {};
-            const teamPureIds = {};
-            
-            teamsList.forEach(teamId => {
-                matrix[teamId] = {};
-                teamsList.forEach(opponentId => {
-                    if (teamId !== opponentId) {
-                        matrix[teamId][opponentId] = null;
-                    }
-                });
-                teamNames[teamId] = getTeamNameByIdentifier(teamId);
-                teamPureIds[teamId] = extractPureId(teamId);
-            });
+            // Roztriedime zápasy podľa typu
+            const semiFinals = [];
+            const final = null;
+            const thirdPlace = null;
             
             filteredMatches.forEach(match => {
-                const home = match.homeTeamIdentifier;
-                const away = match.awayTeamIdentifier;
+                const matchType = identifyMatchType(match, filteredMatches);
                 
-                if (matrix[home] && matrix[home][away] !== undefined) {
-                    matrix[home][away] = { exists: true };
+                // Zápasy, ktoré nie sú finále ani o 3. miesto, považujeme za semifinále
+                if (matchType === 'semi_final') {
+                    semiFinals.push(match);
+                } else if (matchType === 'final') {
+                    final = match;
+                } else if (matchType === 'third_place') {
+                    thirdPlace = match;
                 }
             });
             
-            const statistics = {};
-            teamsList.forEach(teamId => {
-                statistics[teamId] = {
-                    played: 0,
-                    wins: 0,
-                    draws: 0,
-                    losses: 0,
-                    goalsFor: 0,
-                    goalsAgainst: 0,
-                    points: 0
-                };
-            });
-            
-            filteredMatches.forEach(match => {
-                const home = match.homeTeamIdentifier;
-                const away = match.awayTeamIdentifier;
+            // Ak nemáme identifikované finále podľa špeciálnych indikátorov,
+            // skúsime ho identifikovať podľa logiky
+            if (!final && filteredMatches.length >= 3) {
+                // Finále je pravdepodobne posledný zápas v poradí
+                const sortedByDate = [...filteredMatches].sort((a, b) => {
+                    const dateA = a.date ? new Date(a.date) : new Date(0);
+                    const dateB = b.date ? new Date(b.date) : new Date(0);
+                    return dateB - dateA;
+                });
                 
-                if (statistics[home]) statistics[home].played++;
-                if (statistics[away]) statistics[away].played++;
-            });
+                // Posledný zápas je finále
+                if (sortedByDate.length > 0) {
+                    final = sortedByDate[0];
+                }
+            }
             
             setSpiderData({
-                teams: teamsList,
-                matrix: matrix,
-                statistics: statistics,
-                teamNames: teamNames,
-                teamPureIds: teamPureIds,
-                matches: filteredMatches
+                semiFinals: semiFinals,
+                final: final,
+                thirdPlace: thirdPlace,
+                allMatches: filteredMatches
             });
             
         } catch (error) {
@@ -324,6 +344,109 @@ const SpiderApp = ({ userProfileData }) => {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Komponent pre zobrazenie jedného zápasu v pavúkovom zobrazení
+    const MatchCard = ({ match, title, isFinal = false, isThirdPlace = false }) => {
+        if (!match) return null;
+        
+        const homeTeam = getTeamDisplayText(match.homeTeamIdentifier);
+        const awayTeam = getTeamDisplayText(match.awayTeamIdentifier);
+        
+        const homeTeamName = typeof homeTeam === 'object' ? homeTeam.name : homeTeam;
+        const awayTeamName = typeof awayTeam === 'object' ? awayTeam.name : awayTeam;
+        
+        const homeTeamId = typeof homeTeam === 'object' ? homeTeam.id : match.homeTeamIdentifier;
+        const awayTeamId = typeof awayTeam === 'object' ? awayTeam.id : match.awayTeamIdentifier;
+        
+        const matchDate = match.date ? new Date(match.date) : null;
+        const formattedDate = matchDate ? formatDateWithDay(matchDate) : 'Dátum neurčený';
+        
+        // Zistenie výsledku
+        const hasResult = match.homeScore !== undefined && match.awayScore !== undefined;
+        const winner = hasResult && match.homeScore > match.awayScore ? 'home' :
+                      hasResult && match.awayScore > match.homeScore ? 'away' : null;
+        
+        return React.createElement(
+            'div',
+            { 
+                className: `bg-white rounded-lg shadow-md p-4 border-2 ${
+                    isFinal ? 'border-yellow-400' : 
+                    isThirdPlace ? 'border-bronze-400' : 
+                    'border-blue-300'
+                } hover:shadow-lg transition-shadow`
+            },
+            React.createElement(
+                'div',
+                { className: 'text-sm font-semibold mb-2 text-center pb-1 border-b' },
+                title
+            ),
+            React.createElement(
+                'div',
+                { className: 'flex flex-col gap-2' },
+                // Domáci tím
+                React.createElement(
+                    'div',
+                    { 
+                        className: `flex justify-between items-center p-2 rounded ${
+                            winner === 'home' ? 'bg-green-100 font-bold' : ''
+                        }`
+                    },
+                    React.createElement(
+                        'div',
+                        { className: 'flex-1' },
+                        displayMode === 'both' 
+                            ? React.createElement(
+                                'div',
+                                { className: 'flex flex-col' },
+                                React.createElement('span', null, homeTeamName),
+                                React.createElement('span', { className: 'text-xs text-gray-500 font-mono' }, extractPureId(homeTeamId))
+                            )
+                            : (displayMode === 'name' ? homeTeamName : extractPureId(homeTeamId))
+                    ),
+                    hasResult && React.createElement(
+                        'span',
+                        { className: 'font-mono font-bold' },
+                        match.homeScore
+                    )
+                ),
+                
+                // Hosťovský tím
+                React.createElement(
+                    'div',
+                    { 
+                        className: `flex justify-between items-center p-2 rounded ${
+                            winner === 'away' ? 'bg-green-100 font-bold' : ''
+                        }`
+                    },
+                    React.createElement(
+                        'div',
+                        { className: 'flex-1' },
+                        displayMode === 'both' 
+                            ? React.createElement(
+                                'div',
+                                { className: 'flex flex-col' },
+                                React.createElement('span', null, awayTeamName),
+                                React.createElement('span', { className: 'text-xs text-gray-500 font-mono' }, extractPureId(awayTeamId))
+                            )
+                            : (displayMode === 'name' ? awayTeamName : extractPureId(awayTeamId))
+                    ),
+                    hasResult && React.createElement(
+                        'span',
+                        { className: 'font-mono font-bold' },
+                        match.awayScore
+                    )
+                ),
+                
+                // Dátum
+                React.createElement(
+                    'div',
+                    { className: 'text-xs text-gray-500 mt-2 text-center' },
+                    React.createElement('i', { className: 'fa-regular fa-calendar mr-1' }),
+                    formattedDate
+                )
+            )
+        );
     };
 
     const handleDisplayModeChange = (mode) => {
@@ -465,7 +588,7 @@ const SpiderApp = ({ userProfileData }) => {
                                 className: 'px-4 py-1.5 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors whitespace-nowrap ml-2'
                             },
                             React.createElement('i', { className: 'fa-solid fa-calendar-alt mr-1' }),
-                            'Prejsť na zápasy'
+                            'Zápasy'
                         )
                     )
                 )
@@ -477,128 +600,87 @@ const SpiderApp = ({ userProfileData }) => {
             { className: 'flex-grow flex justify-center items-start w-full pt-24' },
             React.createElement(
                 'div',
-                { className: 'bg-white p-8', style: { width: '100%', maxWidth: '100%' } },
+                { className: 'bg-white p-8', style: { width: '100%', maxWidth: '1200px' } },
                 
                 !spiderData ? (
                     React.createElement(
                         'div',
                         { className: 'text-center py-16 text-gray-500' },
                         React.createElement('i', { className: 'fa-solid fa-sitemap text-6xl mb-4 opacity-30' }),
-                        React.createElement('h2', { className: 'text-2xl font-semibold mb-2' }, 'Pavúková tabuľka'),
+                        React.createElement('h2', { className: 'text-2xl font-semibold mb-2' }, 'Pavúk play-off'),
                         React.createElement('p', { className: 'text-lg' }, 'Vyberte kategóriu a kliknite na "Generovať pavúka"')
                     )
                 ) : (
                     React.createElement(
                         'div',
-                        { className: 'overflow-x-auto' },
-                        React.createElement(
-                            'table',
-                            { className: 'min-w-full border-collapse border border-gray-300 text-sm' },
+                        { className: 'flex flex-col gap-8' },
+                        
+                        // Semifinále
+                        spiderData.semiFinals.length > 0 && React.createElement(
+                            'div',
+                            null,
                             React.createElement(
-                                'thead',
-                                null,
-                                React.createElement(
-                                    'tr',
-                                    { className: 'bg-gray-100' },
-                                    React.createElement(
-                                        'th',
-                                        { className: 'border border-gray-300 p-2 font-semibold text-left sticky left-0 bg-gray-100 z-10' },
-                                        'Tím'
-                                    ),
-                                    spiderData.teams.map(teamId => {
-                                        const display = getTeamDisplayText(teamId);
-                                        const teamName = typeof display === 'object' ? display.name : display;
-                                        const pureId = spiderData.teamPureIds[teamId];
-                                        
-                                        return React.createElement(
-                                            'th',
-                                            { 
-                                                key: teamId,
-                                                className: 'border border-gray-300 p-2 font-semibold text-center min-w-[100px]'
-                                            },
-                                            displayMode === 'both' 
-                                                ? React.createElement(
-                                                    'div',
-                                                    { className: 'flex flex-col items-center' },
-                                                    React.createElement('span', null, teamName),
-                                                    React.createElement('span', { className: 'text-xs text-gray-500 font-mono' }, pureId)
-                                                )
-                                                : (displayMode === 'name' ? teamName : pureId)
-                                        );
-                                    }),
-                                    React.createElement(
-                                        'th',
-                                        { className: 'border border-gray-300 p-2 font-semibold text-center min-w-[120px]' },
-                                        'Štatistiky'
-                                    )
-                                )
+                                'h3',
+                                { className: 'text-xl font-semibold mb-4 text-blue-800 border-b-2 border-blue-200 pb-2' },
+                                'Semifinále'
                             ),
                             React.createElement(
-                                'tbody',
-                                null,
-                                spiderData.teams.map((teamId, rowIndex) => {
-                                    const display = getTeamDisplayText(teamId);
-                                    const teamName = typeof display === 'object' ? display.name : display;
-                                    const pureId = spiderData.teamPureIds[teamId];
-                                    const stats = spiderData.statistics[teamId];
-                                    
-                                    return React.createElement(
-                                        'tr',
-                                        { 
-                                            key: teamId,
-                                            className: rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                                        },
-                                        React.createElement(
-                                            'td',
-                                            { className: 'border border-gray-300 p-2 font-medium sticky left-0 z-10',
-                                              style: { backgroundColor: rowIndex % 2 === 0 ? 'white' : '#f9fafb' } },
-                                            displayMode === 'both'
-                                                ? React.createElement(
-                                                    'div',
-                                                    { className: 'flex flex-col' },
-                                                    React.createElement('span', null, teamName),
-                                                    React.createElement('span', { className: 'text-xs text-gray-500 font-mono' }, pureId)
-                                                )
-                                                : (displayMode === 'name' ? teamName : pureId)
-                                        ),
-                                        
-                                        spiderData.teams.map(opponentId => {
-                                            if (teamId === opponentId) {
-                                                return React.createElement(
-                                                    'td',
-                                                    { key: opponentId, className: 'border border-gray-300 p-2 bg-gray-200' }
-                                                );
-                                            }
-                                            
-                                            const match = spiderData.matrix[teamId]?.[opponentId];
-                                            const hasMatch = match?.exists;
-                                            
-                                            return React.createElement(
-                                                'td',
-                                                { 
-                                                    key: opponentId,
-                                                    className: `border border-gray-300 p-2 text-center ${
-                                                        hasMatch ? 'cursor-pointer hover:bg-blue-50' : 'text-gray-400'
-                                                    }`
-                                                },
-                                                hasMatch ? '✓' : '—'
-                                            );
-                                        }),
-                                        
-                                        React.createElement(
-                                            'td',
-                                            { className: 'border border-gray-300 p-2 text-center' },
-                                            React.createElement(
-                                                'div',
-                                                { className: 'flex flex-col items-center text-xs' },
-                                                React.createElement('span', null, `Z: ${stats.played}`),
-                                                React.createElement('span', null, `V: ${stats.wins} R: ${stats.draws} P: ${stats.losses}`),
-                                                React.createElement('span', { className: 'font-bold mt-1' }, `${stats.points} bodov`)
-                                            )
-                                        )
-                                    );
-                                })
+                                'div',
+                                { className: 'grid grid-cols-1 md:grid-cols-2 gap-6' },
+                                spiderData.semiFinals.map((match, index) => 
+                                    React.createElement(
+                                        'div',
+                                        { key: match.id || index },
+                                        React.createElement(MatchCard, { 
+                                            match: match, 
+                                            title: `Semifinále ${index + 1}`,
+                                            isFinal: false,
+                                            isThirdPlace: false
+                                        })
+                                    )
+                                )
                             )
+                        ),
+                        
+                        // Finále a zápas o 3. miesto v jednom riadku
+                        (spiderData.final || spiderData.thirdPlace) && React.createElement(
+                            'div',
+                            null,
+                            React.createElement(
+                                'h3',
+                                { className: 'text-xl font-semibold mb-4 text-purple-800 border-b-2 border-purple-200 pb-2' },
+                                'Finálové zápasy'
+                            ),
+                            React.createElement(
+                                'div',
+                                { className: 'grid grid-cols-1 md:grid-cols-2 gap-6' },
+                                spiderData.final && React.createElement(
+                                    MatchCard, 
+                                    { 
+                                        match: spiderData.final, 
+                                        title: 'Finále',
+                                        isFinal: true,
+                                        isThirdPlace: false
+                                    }
+                                ),
+                                spiderData.thirdPlace && React.createElement(
+                                    MatchCard, 
+                                    { 
+                                        match: spiderData.thirdPlace, 
+                                        title: 'O 3. miesto',
+                                        isFinal: false,
+                                        isThirdPlace: true
+                                    }
+                                )
+                            )
+                        ),
+                        
+                        // Ak nemáme žiadne zápasy v štruktúre pavúka
+                        spiderData.semiFinals.length === 0 && !spiderData.final && !spiderData.thirdPlace && React.createElement(
+                            'div',
+                            { className: 'text-center py-8 text-gray-500 bg-gray-50 rounded-lg' },
+                            React.createElement('i', { className: 'fa-solid fa-info-circle text-3xl mb-2 opacity-50' }),
+                            React.createElement('p', null, 'Pre vybranú kategóriu/skupinu sa nenašli žiadne zápasy play-off.')
                         )
                     )
                 )
