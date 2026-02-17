@@ -6532,7 +6532,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         React.createElement(
                                                                             'div',
                                                                             { 
-                                                                                className: `px-2 py-1 flex items-center ${displayMode === 'both' && !selectedTeamIdFilter ? 'border-r border-gray-300' : ''}`,
+                                                                                className: `px-2 py-1 flex items-center ${displayMode === 'both' ? 'border-r border-gray-300' : ''}`,
                                                                                 style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
                                                                             },
                                                                             React.createElement(
@@ -6546,7 +6546,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         ),
                                                                         
                                                                         // ID domáceho tímu (ak je režim both)
-                                                                        displayMode === 'both' && !selectedTeamIdFilter ? React.createElement(
+                                                                        displayMode === 'both' ? React.createElement(
                                                                             'div',
                                                                             { 
                                                                                 className: 'px-2 py-1 flex items-center border-r border-gray-300',
@@ -6560,7 +6560,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         ) : React.createElement('div', { className: 'px-2 py-1 overflow-hidden' }),
                                                                         
                                                                         // ID hosťovského tímu (ak je režim both)
-                                                                        displayMode === 'both' && !selectedTeamIdFilter ? React.createElement(
+                                                                        displayMode === 'both' ? React.createElement(
                                                                             'div',
                                                                             { 
                                                                                 className: 'px-2 py-1 flex items-center',
