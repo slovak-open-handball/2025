@@ -6089,7 +6089,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                 width: 'fit-content'
                                                                                             }
                                                                                         },
-                                                                                        // Časový údaj medzery - ODSTRÁNENÉ border-r
+                                                                                        // Časový údaj medzery
                                                                                         React.createElement(
                                                                                             'div',
                                                                                             { className: 'flex items-center justify-center gap-1 px-2 py-1 text-gray-500' },
@@ -6097,7 +6097,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                             React.createElement('span', { className: 'font-medium' }, `${breakBeforeStartTime} - ${breakBeforeEndTime}`)
                                                                                         ),
                                                                                         
-                                                                                        // Dĺžka medzery - ODSTRÁNENÉ border-r
+                                                                                        // Dĺžka medzery
                                                                                         React.createElement(
                                                                                             'div',
                                                                                             { 
@@ -6107,10 +6107,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                             `${gapMinutes} minút`
                                                                                         ),
                                                                                         
-                                                                                        // Prázdne miesto pre VS ikonu - ODSTRÁNENÉ border-r
+                                                                                        // Prázdne miesto pre VS ikonu
                                                                                         React.createElement('div', { className: 'px-2 py-1' }),
                                                                                         
-                                                                                        // Text "voľný čas" - ODSTRÁNENÉ border-r
+                                                                                        // Text "voľný čas"
                                                                                         React.createElement(
                                                                                             'div',
                                                                                             { 
@@ -6347,19 +6347,19 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             },
                                                                             title: `Kliknite pre úpravu zápasu`
                                                                         },
-                                                                        // Časový údaj - ODSTRÁNENÉ border-r
+                                                                        // Časový údaj
                                                                         React.createElement(
                                                                             'div',
-                                                                            { className: 'flex items-center justify-center gap-1 px-2 py-1' },
+                                                                            { className: 'flex items-center justify-center gap-1 px-2 py-1 border-r border-gray-300' },
                                                                             React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs flex-shrink-0' }),
                                                                             React.createElement('span', { className: 'font-medium text-blue-700 truncate' }, `${matchTime} - ${endTime}`)
                                                                         ),
                                                                         
-                                                                        // Domáci tím - ODSTRÁNENÉ border-r
+                                                                        // Domáci tím
                                                                         React.createElement(
                                                                             'div',
                                                                             { 
-                                                                                className: 'px-2 py-1 flex items-center',
+                                                                                className: 'px-2 py-1 flex items-center border-r border-gray-300',
                                                                                 style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
                                                                             },
                                                                             React.createElement(
@@ -6369,18 +6369,18 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             )
                                                                         ),
                                                                         
-                                                                        // VS ikona - ODSTRÁNENÉ border-r
+                                                                        // VS ikona
                                                                         React.createElement(
                                                                             'div',
-                                                                            { className: 'text-gray-400 px-2 py-1 flex items-center justify-center' },
+                                                                            { className: 'text-gray-400 px-2 py-1 flex items-center justify-center border-r border-gray-300' },
                                                                             React.createElement('i', { className: 'fa-solid fa-vs text-xs' })
                                                                         ),
                                                                         
-                                                                        // Hosťovský tím - ODSTRÁNENÉ border-r
+                                                                        // Hosťovský tím
                                                                         React.createElement(
                                                                             'div',
                                                                             { 
-                                                                                className: 'px-2 py-1 flex items-center',
+                                                                                className: 'px-2 py-1 flex items-center border-r border-gray-300',
                                                                                 style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
                                                                             },
                                                                             React.createElement(
@@ -6390,11 +6390,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             )
                                                                         ),
                                                                         
-                                                                        // ID domáceho tímu (ak je režim both) - ODSTRÁNENÉ border-r
+                                                                        // ID domáceho tímu (ak je režim both)
                                                                         displayMode === 'both' ? React.createElement(
                                                                             'div',
                                                                             { 
-                                                                                className: 'px-2 py-1 flex items-center',
+                                                                                className: 'px-2 py-1 flex items-center border-r border-gray-300',
                                                                                 style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
                                                                             },
                                                                             React.createElement(
@@ -6404,7 +6404,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             )
                                                                         ) : React.createElement('div', { className: 'px-2 py-1' }),
                                                                         
-                                                                        // ID hosťovského tímu (ak je režim both) - ODSTRÁNENÉ border-r
+                                                                        // ID hosťovského tímu (ak je režim both)
                                                                         displayMode === 'both' ? React.createElement(
                                                                             'div',
                                                                             { 
@@ -6492,7 +6492,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     width: 'fit-content'
                                                                                 }
                                                                             },
-                                                                            // Časový údaj medzery - ODSTRÁNENÉ border-r
+                                                                            // Časový údaj medzery
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { className: 'flex items-center justify-center gap-1 px-2 py-1 text-gray-500' },
@@ -6500,7 +6500,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 React.createElement('span', { className: 'font-medium' }, `${breakStartTime} - ${breakEndTime}`)
                                                                             ),
                                                                             
-                                                                            // Dĺžka medzery - ODSTRÁNENÉ border-r
+                                                                            // Dĺžka medzery
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
@@ -6510,10 +6510,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 `${breakBetweenMatches} minút`
                                                                             ),
                                                                             
-                                                                            // Prázdne miesto pre VS ikonu - ODSTRÁNENÉ border-r
+                                                                            // Prázdne miesto pre VS ikonu
                                                                             React.createElement('div', { className: 'px-2 py-1' }),
                                                                             
-                                                                            // Text "voľný čas" - ODSTRÁNENÉ border-r
+                                                                            // Text "voľný čas"
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
