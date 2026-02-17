@@ -320,8 +320,8 @@ const SpiderApp = ({ userProfileData }) => {
                                     value: selectedCategory,
                                     onChange: (e) => {
                                         setSelectedCategory(e.target.value);
-                                        // Odstránime focus z selectboxu po výbere
-                                        e.target.blur();
+                                        // Len nastavíme kategóriu, nič iné sa nevykonáva
+                                        // e.target.blur(); // Toto bolo odstránené, lebo po výbere sa focus odstraňoval
                                     },
                                     className: 'px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[180px]'
                                 },
