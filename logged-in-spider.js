@@ -644,7 +644,8 @@ const SpiderApp = ({ userProfileData }) => {
                         }`,
                         style: { 
                             clipPath: 'polygon(0 0, 100% 0, 0 100%)',
-                            border: !selectedCategory && !generationInProgress ? '2px solid rgb(34 197 94)' : 'none'
+                            outline: !selectedCategory && !generationInProgress ? '2px solid rgb(34 197 94)' : 'none',
+                            outlineOffset: '-2px'
                         },
                         onClick: generateSpider,
                         disabled: generationInProgress || !selectedCategory,
@@ -655,8 +656,8 @@ const SpiderApp = ({ userProfileData }) => {
                         {
                             style: {
                                 position: 'absolute',
-                                top: '10px',
-                                left: '12px',
+                                top: '8px',
+                                left: '10px',
                                 fontSize: '28px',
                                 fontWeight: 'bold',
                                 lineHeight: 1,
@@ -677,7 +678,8 @@ const SpiderApp = ({ userProfileData }) => {
                         }`,
                         style: { 
                             clipPath: 'polygon(100% 0, 100% 100%, 0 100%)',
-                            border: !selectedCategory && !generationInProgress ? '2px solid rgb(239 68 68)' : 'none'
+                            outline: !selectedCategory && !generationInProgress ? '2px solid rgb(239 68 68)' : 'none',
+                            outlineOffset: '-2px'
                         },
                         onClick: () => {
                             if (selectedCategory && !generationInProgress) {
