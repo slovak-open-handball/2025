@@ -2812,6 +2812,68 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     const [blockedBreaks, setBlockedBreaks] = useState({});
 
+    const [selectedTeamIdFilter, setSelectedTeamIdFilter] = useState('');
+
+    const getAllUniqueTeamIds = () => {
+        const teamIds = new Set();
+    
+        matches.forEach(match => {
+            teamIds.add(match.homeTeamIdentifier);
+            teamIds.add(match.awayTeamIdentifier);
+        });
+        
+        // Konvertujeme na pole a zoradíme podľa abecedy
+        return Array.from(teamIds).sort((a, b) => a.localeCompare(b));
+    };
+
+    // Aktualizujte funkciu getFilteredMatches
+    const getFilteredMatches = (matchesToFilter, ignoreHallFilter = false, ignoreDayFilter = false) => {
+        return matchesToFilter.filter(match => {
+            // Filter podľa kategórie
+            if (selectedCategoryFilter && match.categoryId !== selectedCategoryFilter) {
+                return false;
+            }
+            
+            // Filter podľa skupiny
+            if (selectedGroupFilter && match.groupName !== selectedGroupFilter) {
+                return false;
+            }
+            
+            // Filter podľa ID tímu
+            if (selectedTeamIdFilter) {
+                // Zápas vyhovuje, ak sa vybrané ID zhoduje s domácim ALEBO hosťovským tímom
+                if (match.homeTeamIdentifier !== selectedTeamIdFilter && match.awayTeamIdentifier !== selectedTeamIdFilter) {
+                    return false;
+                }
+            }
+            
+            // Filter podľa haly - aplikujeme len ak nie je ignoreHallFilter = true
+            if (!ignoreHallFilter && selectedHallFilter && match.hallId !== selectedHallFilter) {
+                return false;
+            }
+            
+            // Filter podľa dňa - aplikujeme len ak nie je ignoreDayFilter = true
+            if (!ignoreDayFilter && selectedDayFilter) {
+                // Ak zápas nemá naplánovaný čas, nevyhovuje (lebo nemá dátum)
+                if (!match.scheduledTime) {
+                    return false;
+                }
+                
+                try {
+                    const matchDate = match.scheduledTime.toDate();
+                    const matchDateStr = getLocalDateStr(matchDate);
+                    if (matchDateStr !== selectedDayFilter) {
+                        return false;
+                    }
+                } catch (e) {
+                    return false;
+                }
+            }
+            
+            return true;
+        });
+    };
+
     const toggleBlockBreak = (hallId, dateStr, breakStartTime, breakEndTime, breakDuration) => {
         const breakKey = `${hallId}_${dateStr}_${breakStartTime}`;
     
@@ -3234,10 +3296,11 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     const loadFiltersFromURL = () => {
         const params = new URLSearchParams(window.location.search);
-    
+
         // Načítame názvy z URL
         const categoryName = params.get('category') || '';
         const groupName = params.get('group') || '';
+        const teamId = params.get('teamId') || ''; // NOVÉ: načítanie ID tímu
         const hallName = params.get('hall') || '';
         const day = params.get('day') || ''; // Toto je string YYYY-MM-DD
 
@@ -3248,6 +3311,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         return {
             category: categoryId,
             group: groupName,
+            teamId: teamId, // NOVÉ
             hall: hallId,
             day: day // Vrátime string, nie Date objekt
         };
@@ -3299,7 +3363,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         });
     };
 
-    // Funkcia na aktualizáciu URL s aktuálnymi filtrami
+    // Aktualizujte funkciu updateURLWithFilters
     const updateURLWithFilters = (filters) => {
         const params = new URLSearchParams();
     
@@ -3314,6 +3378,11 @@ const AddMatchesApp = ({ userProfileData }) => {
         // Skupinu ukladáme priamo (už je to názov)
         if (filters.group) {
             params.set('group', filters.group);
+        }
+        
+        // ID tímu ukladáme priamo
+        if (filters.teamId) {
+            params.set('teamId', filters.teamId);
         }
     
         // Nájdeme názov haly podľa ID
@@ -3503,6 +3572,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             const filters = loadFiltersFromURL();
             setSelectedCategoryFilter(filters.category);
             setSelectedGroupFilter(filters.group);
+            setSelectedTeamIdFilter(filters.teamId);
             setSelectedHallFilter(filters.hall);
             setSelectedDayFilter(filters.day);
         }
@@ -3548,6 +3618,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             updateURLWithFilters({
                 category: selectedCategoryFilter,
                 group: selectedGroupFilter,
+                teamId: selectedTeamIdFilter,
                 hall: selectedHallFilter,
                 day: selectedDayFilter
             });
@@ -5181,6 +5252,35 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 availableGroupsForFilter.map(group => 
                                     React.createElement('option', { key: group.name, value: group.name }, group.name)
                                 )
+                            )
+                        ),
+
+                        // Filter ID tímu (nový)
+                        React.createElement(
+                            'div',
+                            { className: 'flex items-center gap-1' },
+                            React.createElement('label', { className: 'text-sm font-medium text-gray-700 whitespace-nowrap' }, 'ID tímu:'),
+                            React.createElement(
+                                'select',
+                                {
+                                    value: selectedTeamIdFilter,
+                                    onChange: (e) => {
+                                        setSelectedTeamIdFilter(e.target.value);
+                                        e.target.blur();
+                                    },
+                                    className: 'px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[200px]'
+                                },
+                                React.createElement('option', { value: '' }, 'Všetky tímy'),
+                                getAllUniqueTeamIds().map(teamId => {
+                                    // Získame názov tímu pre lepšiu identifikáciu (ak je k dispozícii)
+                                    const teamName = getTeamNameByIdentifier(teamId);
+                                    const displayText = teamName !== teamId ? `${teamName} (${teamId})` : teamId;
+            
+                                    return React.createElement('option', { 
+                                        key: teamId, 
+                                        value: teamId 
+                                    }, displayText);
+                                })
                             )
                         ),
                         
