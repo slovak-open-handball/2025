@@ -1852,11 +1852,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                         React.createElement('option', { value: '' }, '-- Vyberte deň --'),
                         availableDates.map((date, index) => {
                             const dateStr = getLocalDateStr(date);
-                            const displayDate = date.toLocaleDateString('sk-SK', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric'
-                            });
+                            const displayDate = formatDateWithDay(date);
                             return React.createElement('option', { key: index, value: dateStr }, displayDate);
                         })
                     ),
@@ -2095,11 +2091,7 @@ const AssignMatchModal = ({ isOpen, onClose, match, sportHalls, categories, onAs
                             React.createElement('span', { className: 'font-medium' }, 'Dátum: '),
                             (() => {
                                 const date = getLocalDateFromStr(selectedDate);
-                                return date ? date.toLocaleDateString('sk-SK', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric'
-                                }) : 'neplatný dátum';
+                                return date ? formatDateWithDay(date) : 'neplatný dátum';
                             })()
                         ),
                         React.createElement('p', null, 
@@ -2207,7 +2199,11 @@ const HallDayStartTimeModal = ({ isOpen, onClose, onConfirm, hallName, date, cur
                     { className: 'text-gray-700 mb-4' },
                     React.createElement('span', { className: 'font-semibold' }, hallName),
                     ' - ',
-                    React.createElement('span', { className: 'font-semibold' }, date)
+                    React.createElement('span', { className: 'font-semibold' }, (() => {
+                        const [year, month, day] = date.split('-').map(Number);
+                        const dateObj = new Date(year, month - 1, day);
+                        return formatDateWithDay(dateObj);
+                    })())
                 ),
                 React.createElement(
                     'div',
@@ -5439,9 +5435,17 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     className: 'px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[140px]'
                                 },
                                 React.createElement('option', { value: '' }, 'Všetky dni'),
-                                availableDays.map(day => 
-                                    React.createElement('option', { key: day.value, value: day.value }, day.label)
-                                )
+                                availableDays.map(day => {
+                                    // Vytvoríme Date objekt z hodnoty dňa pre získanie názvu dňa
+                                    const [year, month, dayNum] = day.value.split('-').map(Number);
+                                    const dateObj = new Date(year, month - 1, dayNum);
+                                    const dayName = getDayName(dateObj);
+            
+                                    return React.createElement('option', { 
+                                        key: day.value, 
+                                        value: day.value 
+                                    }, `${dayName} ${day.label}`);
+                                })
                             )
                         ),
                         
@@ -6304,11 +6308,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                             React.createElement(
                                                                 'span',
                                                                 { className: 'text-sm font-semibold text-gray-800' },
-                                                                date.toLocaleDateString('sk-SK', {
-                                                                    day: '2-digit',
-                                                                    month: '2-digit',
-                                                                    year: 'numeric'
-                                                                })
+                                                                formatDateWithDay(date)
                                                             ),
                                                             // Zobrazenie uloženého času ak existuje
                                                             (() => {
