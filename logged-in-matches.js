@@ -6492,7 +6492,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             { 
                                                                                 className: 'grid items-center text-xs',
                                                                                 style: { 
-                                                                                    gridTemplateColumns: '130px 280px 10px 280px 160px 160px',
+                                                                                    gridTemplateColumns: displayMode === 'both' 
+                                                                                        ? '130px 280px 10px 280px 160px 160px'
+                                                                                        : '130px 280px 10px 280px 0px 0px',
                                                                                     width: 'fit-content'
                                                                                 }
                                                                             },
