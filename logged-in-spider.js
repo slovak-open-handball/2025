@@ -1,4 +1,4 @@
-// logged-in-spider.js (upravený - finále nad semifinále, pridaný zápas o 3. miesto)
+// logged-in-spider.js (upravený - vodorovná čiara medzi semifinále)
 import { doc, getDoc, getDocs, setDoc, onSnapshot, updateDoc, addDoc, deleteDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { useState, useEffect } = React;
@@ -358,16 +358,30 @@ const SpiderApp = ({ userProfileData }) => {
                                 })
                             ),
                             
-                            // Semifinále - vedľa seba (v strede)
+                            // Semifinále - vedľa seba (v strede) s vodorovnou čiarou medzi nimi
                             React.createElement(
                                 'div',
-                                { className: 'flex justify-center gap-16 w-full' },
+                                { 
+                                    className: 'flex justify-center items-center gap-16 w-full relative'
+                                },
                                 
                                 // Semifinále 1
                                 React.createElement(MatchCell, { 
                                     match: spiderData.semiFinals[0], 
                                     title: 'Semifinále 1'
                                 }),
+                                
+                                // Vodorovná čiara medzi semifinále
+                                React.createElement(
+                                    'div',
+                                    { 
+                                        className: 'absolute left-1/2 transform -translate-x-1/2 w-12 h-0.5 bg-gray-400',
+                                        style: { 
+                                            top: '50%',
+                                            marginTop: '-1px'
+                                        }
+                                    }
+                                ),
                                 
                                 // Semifinále 2
                                 React.createElement(MatchCell, { 
