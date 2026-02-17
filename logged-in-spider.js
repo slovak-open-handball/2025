@@ -386,17 +386,39 @@ const SpiderApp = ({ userProfileData }) => {
                                     title: 'Semifinále 1'
                                 }),
                                 
-                                // Vodorovná čiara medzi semifinále
+                                // VODOROVNÁ ČIARA - teraz spája pravú stranu SF1 s ľavou stranou SF2
                                 React.createElement(
-                                    'div',
-                                    { 
-                                        className: 'absolute left-1/2 transform -translate-x-1/2 w-12 h-0.5 bg-gray-400',
-                                        style: { 
-                                            top: '50%',
-                                            marginTop: '-1px',
-                                            zIndex: 5
+                                    React.Fragment,
+                                    null,
+                                    // Čiara z pravej strany SF1 do stredu
+                                    React.createElement(
+                                        'div',
+                                        { 
+                                            className: 'absolute h-0.5 bg-gray-400',
+                                            style: { 
+                                                left: '50%',
+                                                width: 'calc(50% - 110px)', // Polovica cesty k stredu
+                                                top: '50%',
+                                                marginTop: '-1px',
+                                                transform: 'translateX(-100%)',
+                                                zIndex: 5
+                                            }
                                         }
-                                    }
+                                    ),
+                                    // Čiara zo stredu k ľavej strane SF2
+                                    React.createElement(
+                                        'div',
+                                        { 
+                                            className: 'absolute h-0.5 bg-gray-400',
+                                            style: { 
+                                                left: '50%',
+                                                width: 'calc(50% - 110px)', // Polovica cesty k stredu
+                                                top: '50%',
+                                                marginTop: '-1px',
+                                                zIndex: 5
+                                            }
+                                        }
+                                    )
                                 ),
                                 
                                 // Semifinále 2
