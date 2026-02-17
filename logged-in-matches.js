@@ -3350,12 +3350,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         };
     };
 
-    // Načítanie filtrov pri inicializácii
-    const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
-    const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
-    const [selectedHallFilter, setSelectedHallFilter] = useState('');
-    const [selectedDayFilter, setSelectedDayFilter] = useState('');
-
     // Aktualizujte funkciu updateURLWithFilters
     const updateURLWithFilters = (filters) => {
         const params = new URLSearchParams();
