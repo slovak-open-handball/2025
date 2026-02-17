@@ -254,57 +254,72 @@ const SpiderApp = ({ userProfileData }) => {
             categories: categories
         }),
 
-        // Hlavička s ovládacími prvkami
+        // Hlavička s ovládacími prvkami - opravená pre hover
         React.createElement(
             'div',
             { 
-                className: `flex flex-col gap-2 transition-opacity duration-300 ease-in-out ${
-                    (isFilterActive) 
-                        ? 'opacity-100' 
-                        : 'opacity-0 group-hover:opacity-100 group-[.dropdown-open]:opacity-100'
-                    }`,
+                className: 'fixed top-0 left-0 right-0 z-40 flex flex-col items-center pt-4 pointer-events-none',
                 style: { pointerEvents: 'none' }
             },
             React.createElement(
                 'div',
                 { 
-                    className: 'group',
+                    className: 'group relative',
                     style: { pointerEvents: 'auto' }
                 },
+                // Malý indikátor pre hover (viditeľný len keď nie je aktívny filter)
+                !isFilterActive && React.createElement(
+                    'div',
+                    { 
+                        className: 'absolute -top-1 left-1/2 transform -translate-x-1/2 w-16 h-1 bg-gray-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity',
+                        style: { pointerEvents: 'none' }
+                    }
+                ),
+                // Hlavný panel s ovládacími prvkami
                 React.createElement(
                     'div',
-                    { className: 'flex flex-wrap items-center justify-center gap-2 bg-white/95 backdrop-blur-sm p-3 rounded-xl shadow-lg border border-gray-200' },
-                    
+                    { 
+                        className: `transition-opacity duration-300 ease-in-out ${
+                            isFilterActive 
+                                ? 'opacity-100' 
+                                : 'opacity-0 group-hover:opacity-100'
+                        }`,
+                    },
                     React.createElement(
                         'div',
-                        { className: 'flex items-center gap-1' },
-                        React.createElement('label', { className: 'text-sm font-medium text-gray-700 whitespace-nowrap' }, 'Kategória:'),
+                        { className: 'flex flex-wrap items-center justify-center gap-2 bg-white/95 backdrop-blur-sm p-3 rounded-xl shadow-lg border border-gray-200' },
+                        
                         React.createElement(
-                            'select',
-                            {
-                                value: selectedCategory,
-                                onChange: (e) => setSelectedCategory(e.target.value),
-                                className: 'px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[180px]'
-                            },
-                            React.createElement('option', { value: '' }, '-- Vyberte kategóriu --'),
-                            sortedCategories.map(cat => 
-                                React.createElement('option', { key: cat.id, value: cat.id }, cat.name)
+                            'div',
+                            { className: 'flex items-center gap-1' },
+                            React.createElement('label', { className: 'text-sm font-medium text-gray-700 whitespace-nowrap' }, 'Kategória:'),
+                            React.createElement(
+                                'select',
+                                {
+                                    value: selectedCategory,
+                                    onChange: (e) => setSelectedCategory(e.target.value),
+                                    className: 'px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[180px]'
+                                },
+                                React.createElement('option', { value: '' }, '-- Vyberte kategóriu --'),
+                                sortedCategories.map(cat => 
+                                    React.createElement('option', { key: cat.id, value: cat.id }, cat.name)
+                                )
                             )
-                        )
-                    ),
-                    
-                    React.createElement(
-                        'button',
-                        {
-                            onClick: () => {
-                                const url = new URL(window.location.href);
-                                url.searchParams.set('view', 'matches');
-                                window.location.href = url.toString();
+                        ),
+                        
+                        React.createElement(
+                            'button',
+                            {
+                                onClick: () => {
+                                    const url = new URL(window.location.href);
+                                    url.searchParams.set('view', 'matches');
+                                    window.location.href = url.toString();
+                                },
+                                className: 'px-4 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors whitespace-nowrap',
+                                title: 'Prejsť do zobrazenia zápasov'
                             },
-                            className: 'px-4 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors whitespace-nowrap',
-                            title: 'Prejsť do zobrazenia zápasov'
-                        },
-                        'Zápasy'
+                            'Zápasy'
+                        )
                     )
                 )
             )
