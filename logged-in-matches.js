@@ -5481,6 +5481,22 @@ const AddMatchesApp = ({ userProfileData }) => {
                             React.createElement('i', { className: 'fa-solid fa-rotate-left mr-1' }),
                             'Reset'
                         ),
+
+                        React.createElement(
+                            'button',
+                            {
+                                onClick: () => {
+                                    // Nastavíme view=spider do URL a znovu načítame stránku
+                                    const url = new URL(window.location.href);
+                                    url.searchParams.set('view', 'spider');
+                                    window.location.href = url.toString();
+                                },
+                                className: 'px-3 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors whitespace-nowrap ml-2',
+                                title: 'Prejsť do zobrazenia pavúka (semifinále, finále, o 3. miesto)'
+                            },
+                            React.createElement('i', { className: 'fa-solid fa-sitemap mr-1' }),
+                            'Pavúk'
+                        ),
         
                         React.createElement(
                             'div',
