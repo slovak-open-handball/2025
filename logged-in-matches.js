@@ -6129,7 +6129,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                 className: 'px-2 py-1',
                                                                                                 style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
                                                                                             }
-                                                                                        ) : React.createElement('div', { className: 'px-2 py-1' }),
+                                                                                        ) : React.createElement('div', { className: 'px-2 py-1 overflow-hidden' }),
                                                                                         
                                                                                         displayMode === 'both' ? React.createElement(
                                                                                             'div',
@@ -6137,7 +6137,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                 className: 'px-2 py-1',
                                                                                                 style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
                                                                                             }
-                                                                                        ) : React.createElement('div', { className: 'px-2 py-1' })
+                                                                                        ) : React.createElement('div', { className: 'px-2 py-1 overflow-hidden' }),
                                                                                     ),
                                                                                     
                                                                                     // Tlačidlá pre správu medzery
@@ -6406,7 +6406,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 { className: 'text-gray-500 font-mono text-[10px] truncate block w-full', title: homeDisplay.id },
                                                                                 `(${homeDisplay.id})`
                                                                             )
-                                                                        ) : React.createElement('div', { className: 'px-2 py-1' }),
+                                                                        ) : React.createElement('div', { className: 'px-2 py-1 overflow-hidden' }),
                                                                         
                                                                         // ID hosťovského tímu (ak je režim both)
                                                                         displayMode === 'both' ? React.createElement(
@@ -6420,7 +6420,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 { className: 'text-gray-500 font-mono text-[10px] truncate block w-full', title: awayDisplay.id },
                                                                                 `(${awayDisplay.id})`
                                                                             )
-                                                                        ) : React.createElement('div', { className: 'px-2 py-1' })
+                                                                        ) : React.createElement('div', { className: 'px-2 py-1 overflow-hidden' }),
                                                                     ),
                                                                         
                                                                         userProfileData?.role === 'admin' && React.createElement(
@@ -6534,7 +6534,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     className: 'px-2 py-1',
                                                                                     style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
                                                                                 }
-                                                                            ) : React.createElement('div', { className: 'px-2 py-1' }),
+                                                                            ) : React.createElement('div', { className: 'px-2 py-1 overflow-hidden' }),
                                                                             
                                                                             displayMode === 'both' ? React.createElement(
                                                                                 'div',
@@ -6542,7 +6542,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     className: 'px-2 py-1',
                                                                                     style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
                                                                                 }
-                                                                            ) : React.createElement('div', { className: 'px-2 py-1' })
+                                                                            ) : React.createElement('div', { className: 'px-2 py-1 overflow-hidden' }),
                                                                         ),
                                                                                                                                                         
                                                                             // Tlačidlá pre správu medzery (pre medzeru MEDZI ZÁPASMI)
