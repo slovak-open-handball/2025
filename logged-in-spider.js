@@ -322,6 +322,20 @@ const SpiderApp = ({ userProfileData }) => {
                                         setSelectedCategory(e.target.value);
                                         // Odstránime focus z selectboxu po výbere
                                         e.target.blur();
+                                        
+                                        // Spustíme timeout na skrytie panelu po 750ms
+                                        const panel = e.currentTarget.closest('[style*="pointer-events: auto"]');
+                                        if (panel) {
+                                            const timeoutId = setTimeout(() => {
+                                                const hoveredElement = document.querySelector(':hover');
+                                                if (!hoveredElement || !panel.contains(hoveredElement)) {
+                                                    panel.style.opacity = '0';
+                                                }
+                                            }, 750);
+                                            
+                                            // Uložíme timeout ID pre prípadné zrušenie pri mouseEnter
+                                            panel.dataset.hideTimeout = timeoutId;
+                                        }
                                     },
                                     className: 'px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[180px]'
                                 },
