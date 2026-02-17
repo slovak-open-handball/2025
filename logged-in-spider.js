@@ -23,14 +23,6 @@ const formatDateWithDay = (date) => {
     return `${dayName} ${formattedDate}`;
 };
 
-// Mapovanie typov zápasov pre Firebase
-const matchTypeMap = {
-    'final': 'finále',
-    'sf1': 'semifinále 1',
-    'sf2': 'semifinále 2',
-    'third': 'o 3. miesto'
-};
-
 // Komponent pre modálne okno
 const CategoryModal = ({ isOpen, onClose, onGenerate, categories }) => {
     const [selectedCategory, setSelectedCategory] = useState('');
@@ -144,12 +136,12 @@ const SpiderApp = ({ userProfileData }) => {
     const [loading, setLoading] = useState(true);
     const [spiderData, setSpiderData] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [spiderMatches, setSpiderMatches] = useState([]); // Všetky pavúkové zápasy z databázy
+    const [allMatches, setAllMatches] = useState([]); // Všetky zápasy z databázy (aj bežné, aj pavúkové)
 
     // Definícia isFilterActive - filter je aktívny, ak je vybratá nejaká kategória
     const isFilterActive = selectedCategory !== '';
 
-    // Načítanie kategórií a pavúkových zápasov
+    // Načítanie kategórií a všetkých zápasov
     useEffect(() => {
         if (!window.db) {
             console.error("Firestore databáza nie je inicializovaná");
@@ -182,9 +174,9 @@ const SpiderApp = ({ userProfileData }) => {
             }
         };
 
-        // Načítanie pavúkových zápasov z Firebase
-        const loadSpiderMatches = () => {
-            const matchesRef = collection(window.db, 'spiderMatches');
+        // Načítanie VŠETKÝCH zápasov z Firebase (kolekcia 'matches')
+        const loadAllMatches = () => {
+            const matchesRef = collection(window.db, 'matches');
             
             const unsubscribe = onSnapshot(matchesRef, (snapshot) => {
                 const loadedMatches = [];
@@ -194,17 +186,17 @@ const SpiderApp = ({ userProfileData }) => {
                         ...doc.data()
                     });
                 });
-                setSpiderMatches(loadedMatches);
-                console.log('Načítané pavúkové zápasy:', loadedMatches);
+                setAllMatches(loadedMatches);
+                console.log('Načítané všetky zápasy:', loadedMatches.length);
             }, (error) => {
-                console.error('Chyba pri načítaní pavúkových zápasov:', error);
+                console.error('Chyba pri načítaní zápasov:', error);
             });
 
             return unsubscribe;
         };
 
         loadCategorySettings();
-        const unsubscribe = loadSpiderMatches();
+        const unsubscribe = loadAllMatches();
 
         return () => {
             if (unsubscribe) unsubscribe();
@@ -213,41 +205,47 @@ const SpiderApp = ({ userProfileData }) => {
 
     // Načítanie pavúka pre vybranú kategóriu
     useEffect(() => {
-        if (selectedCategory && spiderMatches.length > 0) {
-            // Filtrujeme zápasy pre vybranú kategóriu
-            const categoryMatches = spiderMatches.filter(m => m.categoryId === selectedCategory);
+        if (selectedCategory && allMatches.length > 0) {
+            // Filtrujeme LEN pavúkové zápasy pre vybranú kategóriu (podľa matchType)
+            const spiderMatches = allMatches.filter(m => 
+                m.categoryId === selectedCategory && 
+                m.matchType && // Iba zápasy, ktoré majú matchType (pavúkové)
+                ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto'].includes(m.matchType)
+            );
             
-            if (categoryMatches.length > 0) {
+            console.log('Nájdené pavúkové zápasy pre kategóriu:', spiderMatches);
+            
+            if (spiderMatches.length >= 4) { // Očakávame 4 zápasy
                 // Vytvoríme štruktúru z existujúcich zápasov
                 const spiderStructure = {
-                    final: categoryMatches.find(m => m.matchType === 'finále') || { 
+                    final: spiderMatches.find(m => m.matchType === 'finále') || { 
                         id: 'final', homeTeam: '---', awayTeam: '---', homeScore: '', awayScore: '', date: null 
                     },
                     semiFinals: [
-                        categoryMatches.find(m => m.matchType === 'semifinále 1') || { 
+                        spiderMatches.find(m => m.matchType === 'semifinále 1') || { 
                             id: 'sf1', homeTeam: '---', awayTeam: '---', homeScore: '', awayScore: '', date: null 
                         },
-                        categoryMatches.find(m => m.matchType === 'semifinále 2') || { 
+                        spiderMatches.find(m => m.matchType === 'semifinále 2') || { 
                             id: 'sf2', homeTeam: '---', awayTeam: '---', homeScore: '', awayScore: '', date: null 
                         }
                     ],
-                    thirdPlace: categoryMatches.find(m => m.matchType === 'o 3. miesto') || { 
+                    thirdPlace: spiderMatches.find(m => m.matchType === 'o 3. miesto') || { 
                         id: 'third', homeTeam: '---', awayTeam: '---', homeScore: '', awayScore: '', date: null 
                     }
                 };
                 
                 setSpiderData(spiderStructure);
             } else {
-                // Žiadne zápasy pre túto kategóriu
+                // Žiadne pavúkové zápasy pre túto kategóriu
                 setSpiderData(null);
             }
         } else if (selectedCategory) {
             // Žiadne zápasy vôbec
             setSpiderData(null);
         }
-    }, [selectedCategory, spiderMatches]);
+    }, [selectedCategory, allMatches]);
 
-    // Funkcia na vytvorenie štruktúry pavúka a uloženie do databázy
+    // Funkcia na vytvorenie štruktúry pavúka a uloženie do databázy (do kolekcie 'matches')
     const generateSpider = async (categoryId) => {
         if (!categoryId) {
             window.showGlobalNotification('Vyberte kategóriu', 'error');
@@ -266,31 +264,37 @@ const SpiderApp = ({ userProfileData }) => {
 
         try {
             // Najprv vymažeme existujúce pavúkové zápasy pre túto kategóriu (ak existujú)
-            const existingMatches = spiderMatches.filter(m => m.categoryId === categoryId);
+            const existingSpiderMatches = allMatches.filter(m => 
+                m.categoryId === categoryId && 
+                m.matchType && // Iba zápasy, ktoré majú matchType
+                ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto'].includes(m.matchType)
+            );
             
-            for (const match of existingMatches) {
-                await deleteDoc(doc(window.db, 'spiderMatches', match.id));
+            for (const match of existingSpiderMatches) {
+                await deleteDoc(doc(window.db, 'matches', match.id));
             }
 
-            // Vytvoríme zápasy pre databázu
+            // Vytvoríme zápasy pre databázu (do kolekcie 'matches')
             const matchesToSave = [
                 // Finále
                 {
-                    id: 'final',
                     homeTeam: '---',
                     awayTeam: '---',
                     homeScore: '',
                     awayScore: '',
                     date: null,
                     categoryId: categoryId,
-                    matchType: 'finále',
+                    matchType: 'finále', // DÔLEŽITÉ: typ zápasu
+                    // Povinné polia pre bežné zápasy
+                    time: '--:--',
+                    hallId: null,
+                    status: 'pending',
                     createdAt: Timestamp.now(),
                     createdBy: userProfileData?.email || 'unknown',
                     createdByUid: userProfileData?.uid || null
                 },
                 // Semifinále 1
                 {
-                    id: 'sf1',
                     homeTeam: '---',
                     awayTeam: '---',
                     homeScore: '',
@@ -298,13 +302,15 @@ const SpiderApp = ({ userProfileData }) => {
                     date: null,
                     categoryId: categoryId,
                     matchType: 'semifinále 1',
+                    time: '--:--',
+                    hallId: null,
+                    status: 'pending',
                     createdAt: Timestamp.now(),
                     createdBy: userProfileData?.email || 'unknown',
                     createdByUid: userProfileData?.uid || null
                 },
                 // Semifinále 2
                 {
-                    id: 'sf2',
                     homeTeam: '---',
                     awayTeam: '---',
                     homeScore: '',
@@ -312,13 +318,15 @@ const SpiderApp = ({ userProfileData }) => {
                     date: null,
                     categoryId: categoryId,
                     matchType: 'semifinále 2',
+                    time: '--:--',
+                    hallId: null,
+                    status: 'pending',
                     createdAt: Timestamp.now(),
                     createdBy: userProfileData?.email || 'unknown',
                     createdByUid: userProfileData?.uid || null
                 },
                 // O 3. miesto
                 {
-                    id: 'third',
                     homeTeam: '---',
                     awayTeam: '---',
                     homeScore: '',
@@ -326,14 +334,17 @@ const SpiderApp = ({ userProfileData }) => {
                     date: null,
                     categoryId: categoryId,
                     matchType: 'o 3. miesto',
+                    time: '--:--',
+                    hallId: null,
+                    status: 'pending',
                     createdAt: Timestamp.now(),
                     createdBy: userProfileData?.email || 'unknown',
                     createdByUid: userProfileData?.uid || null
                 }
             ];
 
-            // Uložíme zápasy do Firebase
-            const matchesRef = collection(window.db, 'spiderMatches');
+            // Uložíme zápasy do Firebase (do kolekcie 'matches')
+            const matchesRef = collection(window.db, 'matches');
             
             for (const match of matchesToSave) {
                 await addDoc(matchesRef, match);
@@ -529,11 +540,16 @@ const SpiderApp = ({ userProfileData }) => {
                                 React.createElement('option', { value: '' }, '-- Vyberte kategóriu --'),
                                 sortedCategories.map(cat => {
                                     // Spočítame počet pavúkových zápasov pre túto kategóriu
-                                    const matchCount = spiderMatches.filter(m => m.categoryId === cat.id).length;
+                                    const spiderMatches = allMatches.filter(m => 
+                                        m.categoryId === cat.id && 
+                                        m.matchType && 
+                                        ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto'].includes(m.matchType)
+                                    ).length;
+                                    
                                     return React.createElement('option', { 
                                         key: cat.id, 
                                         value: cat.id 
-                                    }, `${cat.name} (${matchCount > 0 ? matchCount/4 : 0} pavúkov)`);
+                                    }, `${cat.name} (${spiderMatches > 0 ? spiderMatches/4 : 0} pavúkov)`);
                                 })
                             )
                         ),
