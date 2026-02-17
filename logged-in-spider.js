@@ -209,7 +209,7 @@ const SpiderApp = ({ userProfileData }) => {
             // Filtrujeme LEN pavúkové zápasy pre vybranú kategóriu (podľa matchType)
             const spiderMatches = allMatches.filter(m => 
                 m.categoryId === selectedCategory && 
-                m.matchType && // Iba zápasy, ktoré majú matchType (pavúkové)
+                m.matchType && // Iba zápasy, ktoré majú matchType
                 ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto'].includes(m.matchType)
             );
             
@@ -219,18 +219,38 @@ const SpiderApp = ({ userProfileData }) => {
                 // Vytvoríme štruktúru z existujúcich zápasov
                 const spiderStructure = {
                     final: spiderMatches.find(m => m.matchType === 'finále') || { 
-                        id: 'final', homeTeam: '---', awayTeam: '---', homeScore: '', awayScore: '', date: null 
+                        id: 'final', 
+                        homeTeam: '---', 
+                        awayTeam: '---', 
+                        homeScore: '', 
+                        awayScore: '', 
+                        date: null 
                     },
                     semiFinals: [
                         spiderMatches.find(m => m.matchType === 'semifinále 1') || { 
-                            id: 'sf1', homeTeam: '---', awayTeam: '---', homeScore: '', awayScore: '', date: null 
+                            id: 'sf1', 
+                            homeTeam: '---', 
+                            awayTeam: '---', 
+                            homeScore: '', 
+                            awayScore: '', 
+                            date: null 
                         },
                         spiderMatches.find(m => m.matchType === 'semifinále 2') || { 
-                            id: 'sf2', homeTeam: '---', awayTeam: '---', homeScore: '', awayScore: '', date: null 
+                            id: 'sf2', 
+                            homeTeam: '---', 
+                            awayTeam: '---', 
+                            homeScore: '', 
+                            awayScore: '', 
+                            date: null 
                         }
                     ],
                     thirdPlace: spiderMatches.find(m => m.matchType === 'o 3. miesto') || { 
-                        id: 'third', homeTeam: '---', awayTeam: '---', homeScore: '', awayScore: '', date: null 
+                        id: 'third', 
+                        homeTeam: '---', 
+                        awayTeam: '---', 
+                        homeScore: '', 
+                        awayScore: '', 
+                        date: null 
                     }
                 };
                 
@@ -274,29 +294,34 @@ const SpiderApp = ({ userProfileData }) => {
                 await deleteDoc(doc(window.db, 'matches', match.id));
             }
     
-            // Získanie názvu kategórie pre vytvorenie zobrazenia
+            // Získanie názvu kategórie
             const category = categories.find(c => c.id === categoryId);
             const categoryName = category ? category.name : `Kategória ${categoryId}`;
             
-            // Odstránenie diakritiky z názvu kategórie pre zobrazenie
+            // Odstránenie diakritiky z názvu kategórie pre identifikátory
             const categoryWithoutDiacritics = categoryName
                 .normalize('NFD')
                 .replace(/[\u0300-\u036f]/g, ''); // odstráni diakritiku, ale zachová medzery
             
-            // Vytvoríme zápasy pre databázu (do kolekcie 'matches')
+            // --- NOVÉ: Vytvorenie správnych identifikátorov tímov podľa formátu z matches.js ---
+            // Formát: "Kategória SkupinaČíslo" (napr. "U10 A1")
+            // Pre pavúka potrebujeme:
+            // - Semifinále: tímy sú "---" (nezapojené)
+            // - Finále: "Kategória WSF01" a "Kategória WSF02" (víťazi semifinále)
+            // - O 3. miesto: "Kategória LSF01" a "Kategória LSF02" (porazení semifinále)
+            
+            // Vytvoríme zápasy pre databázu (do kolekcie 'matches') - PRESNE PODĽA VZORU Z MATCHES.JS
             const matchesToSave = [
                 // Semifinále 1 - použijeme priamo '---' pre neobsadené miesta
                 {
-                    homeTeam: '---',
-                    awayTeam: '---',
-                    homeScore: '',
-                    awayScore: '',
-                    date: null,
-                    categoryId: categoryId,
-                    matchType: 'semifinále 1',
-                    // Povinné polia pre bežné zápasy
+                    homeTeamIdentifier: '---',  // ← ZMENENÉ: používame homeTeamIdentifier namiesto homeTeam
+                    awayTeamIdentifier: '---',  // ← ZMENENÉ: používame awayTeamIdentifier namiesto awayTeam
                     time: '--:--',
                     hallId: null,
+                    categoryId: categoryId,
+                    categoryName: categoryName,  // ← PRIDANÉ: názov kategórie pre zobrazenie
+                    groupName: null,              // ← PRIDANÉ: pavúkové zápasy nemajú skupinu
+                    matchType: 'semifinále 1',
                     status: 'pending',
                     createdAt: Timestamp.now(),
                     createdBy: userProfileData?.email || 'unknown',
@@ -304,47 +329,44 @@ const SpiderApp = ({ userProfileData }) => {
                 },
                 // Semifinále 2
                 {
-                    homeTeam: '---',
-                    awayTeam: '---',
-                    homeScore: '',
-                    awayScore: '',
-                    date: null,
+                    homeTeamIdentifier: '---',
+                    awayTeamIdentifier: '---',
+                    time: '--:--',
+                    hallId: null,
                     categoryId: categoryId,
+                    categoryName: categoryName,
+                    groupName: null,
                     matchType: 'semifinále 2',
-                    time: '--:--',
-                    hallId: null,
                     status: 'pending',
                     createdAt: Timestamp.now(),
                     createdBy: userProfileData?.email || 'unknown',
                     createdByUid: userProfileData?.uid || null
                 },
-                // Finále - použijeme priamo text, ktorý sa má zobraziť
+                // Finále - použijeme identifikátory v tvare "Kategória WSF01"
                 {
-                    homeTeam: `${categoryWithoutDiacritics} WSF01`, // Toto sa zobrazí priamo ako text
-                    awayTeam: `${categoryWithoutDiacritics} WSF02`, // Toto sa zobrazí priamo ako text
-                    homeScore: '',
-                    awayScore: '',
-                    date: null,
+                    homeTeamIdentifier: `${categoryWithoutDiacritics} WSF01`,  // ← ZMENENÉ: správny formát identifikátora
+                    awayTeamIdentifier: `${categoryWithoutDiacritics} WSF02`, // ← ZMENENÉ: správny formát identifikátora
+                    time: '--:--',
+                    hallId: null,
                     categoryId: categoryId,
+                    categoryName: categoryName,
+                    groupName: null,
                     matchType: 'finále',
-                    time: '--:--',
-                    hallId: null,
                     status: 'pending',
                     createdAt: Timestamp.now(),
                     createdBy: userProfileData?.email || 'unknown',
                     createdByUid: userProfileData?.uid || null
                 },
-                // O 3. miesto - použijeme priamo text, ktorý sa má zobraziť
+                // O 3. miesto - použijeme identifikátory v tvare "Kategória LSF01"
                 {
-                    homeTeam: `${categoryWithoutDiacritics} LSF01`,
-                    awayTeam: `${categoryWithoutDiacritics} LSF02`,
-                    homeScore: '',
-                    awayScore: '',
-                    date: null,
-                    categoryId: categoryId,
-                    matchType: 'o 3. miesto',
+                    homeTeamIdentifier: `${categoryWithoutDiacritics} LSF01`,  // ← ZMENENÉ: správny formát identifikátora
+                    awayTeamIdentifier: `${categoryWithoutDiacritics} LSF02`, // ← ZMENENÉ: správny formát identifikátora
                     time: '--:--',
                     hallId: null,
+                    categoryId: categoryId,
+                    categoryName: categoryName,
+                    groupName: null,
+                    matchType: 'o 3. miesto',
                     status: 'pending',
                     createdAt: Timestamp.now(),
                     createdBy: userProfileData?.email || 'unknown',
@@ -355,14 +377,19 @@ const SpiderApp = ({ userProfileData }) => {
             // Uložíme zápasy do Firebase (do kolekcie 'matches')
             const matchesRef = collection(window.db, 'matches');
             
+            const savedMatches = [];
             for (const match of matchesToSave) {
-                await addDoc(matchesRef, match);
+                const docRef = await addDoc(matchesRef, match);
+                savedMatches.push({
+                    id: docRef.id,
+                    ...match
+                });
             }
     
-            // Vytvoríme lokálnu štruktúru pre zobrazenie
+            // Vytvoríme lokálnu štruktúru pre zobrazenie (pre zachovanie kompatibility s existujúcim kódom)
             const spiderStructure = {
                 final: { 
-                    id: 'final', 
+                    id: savedMatches.find(m => m.matchType === 'finále')?.id || 'final',
                     homeTeam: `${categoryWithoutDiacritics} WSF01`,
                     awayTeam: `${categoryWithoutDiacritics} WSF02`,
                     homeScore: '', 
@@ -370,11 +397,25 @@ const SpiderApp = ({ userProfileData }) => {
                     date: null 
                 },
                 semiFinals: [
-                    { id: 'sf1', homeTeam: '---', awayTeam: '---', homeScore: '', awayScore: '', date: null },
-                    { id: 'sf2', homeTeam: '---', awayTeam: '---', homeScore: '', awayScore: '', date: null }
+                    { 
+                        id: savedMatches.find(m => m.matchType === 'semifinále 1')?.id || 'sf1',
+                        homeTeam: '---', 
+                        awayTeam: '---', 
+                        homeScore: '', 
+                        awayScore: '', 
+                        date: null 
+                    },
+                    { 
+                        id: savedMatches.find(m => m.matchType === 'semifinále 2')?.id || 'sf2',
+                        homeTeam: '---', 
+                        awayTeam: '---', 
+                        homeScore: '', 
+                        awayScore: '', 
+                        date: null 
+                    }
                 ],
                 thirdPlace: { 
-                    id: 'third', 
+                    id: savedMatches.find(m => m.matchType === 'o 3. miesto')?.id || 'third',
                     homeTeam: `${categoryWithoutDiacritics} LSF01`,
                     awayTeam: `${categoryWithoutDiacritics} LSF02`,
                     homeScore: '', 
@@ -386,7 +427,7 @@ const SpiderApp = ({ userProfileData }) => {
             setSelectedCategory(categoryId);
             setSpiderData(spiderStructure);
             
-            window.showGlobalNotification('Pavúk bol úspešne vygenerovaný a uložený do databázy', 'success');
+            window.showGlobalNotification(`Pavúk bol úspešne vygenerovaný a uložených ${savedMatches.length} zápasov do databázy`, 'success');
     
         } catch (error) {
             console.error('Chyba pri generovaní pavúka:', error);
@@ -398,6 +439,12 @@ const SpiderApp = ({ userProfileData }) => {
     const MatchCell = ({ match, title = '' }) => {
         const matchDate = match.date ? new Date(match.date) : null;
         const formattedDate = matchDate ? formatDateWithDay(matchDate) : '';
+        
+        // Použijeme homeTeamIdentifier a awayTeamIdentifier ak existujú, inak homeTeam/awayTeam
+        const homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
+        const awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
+        const homeScore = match.homeScore !== undefined ? match.homeScore : '';
+        const awayScore = match.awayScore !== undefined ? match.awayScore : '';
         
         return React.createElement(
             'div',
@@ -416,15 +463,15 @@ const SpiderApp = ({ userProfileData }) => {
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center py-2 border-b border-gray-100' },
-                React.createElement('span', { className: 'text-sm font-medium' }, match.homeTeam),
-                match.homeScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, match.homeScore)
+                React.createElement('span', { className: 'text-sm font-medium' }, homeTeam),
+                homeScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, homeScore)
             ),
             // Hosťovský tím
             React.createElement(
                 'div',
                 { className: 'flex justify-between items-center py-2' },
-                React.createElement('span', { className: 'text-sm font-medium' }, match.awayTeam),
-                match.awayScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, match.awayScore)
+                React.createElement('span', { className: 'text-sm font-medium' }, awayTeam),
+                awayScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, awayScore)
             ),
             // Dátum (ak existuje)
             formattedDate && React.createElement(
