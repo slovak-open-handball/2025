@@ -64,11 +64,6 @@ const CategoryModal = ({ isOpen, onClose, onGenerate, categories }) => {
                 'div',
                 { className: 'flex justify-between items-center mb-4' },
                 React.createElement(
-                    'h3',
-                    { className: 'text-xl font-semibold text-gray-800' },
-                    'Generovať pavúka'
-                ),
-                React.createElement(
                     'button',
                     {
                         onClick: onClose,
