@@ -6372,7 +6372,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         // VS ikona
                                                                         React.createElement(
                                                                             'div',
-                                                                            { className: 'text-gray-400 px-2 py-1 flex items-center justify-center border-r border-gray-300' },
+                                                                            { className: 'text-gray-400 px-2 py-1 flex items-center justify-center' },
                                                                             React.createElement('i', { className: 'fa-solid fa-vs text-xs' })
                                                                         ),
                                                                         
