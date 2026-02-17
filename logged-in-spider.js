@@ -278,13 +278,11 @@ const SpiderApp = ({ userProfileData }) => {
             const category = categories.find(c => c.id === categoryId);
             const categoryName = category ? category.name : `Kategória ${categoryId}`;
             
-            // Odstránenie diakritiky a medzier z názvu kategórie pre ID
-            const categoryPrefix = categoryName
+            // Odstránenie diakritiky z názvu kategórie, ale zachovanie medzier
+            const categoryWithoutDiacritics = categoryName
                 .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '') // odstráni diakritiku
-                .replace(/\s+/g, '') // odstráni medzery
-                .toUpperCase();
-    
+                .replace(/[\u0300-\u036f]/g, ''); // odstráni diakritiku, ale zachová medzery
+            
             // Vytvoríme zápasy pre databázu (do kolekcie 'matches')
             const matchesToSave = [
                 // Semifinále 1
@@ -320,10 +318,10 @@ const SpiderApp = ({ userProfileData }) => {
                     createdBy: userProfileData?.email || 'unknown',
                     createdByUid: userProfileData?.uid || null
                 },
-                // Finále - s špecifickými ID pre tímy
+                // Finále - s špecifickými ID pre tímy (s medzerou za názvom kategórie)
                 {
-                    homeTeam: `${categoryPrefix}WSF01`, // Víťaz semifinále 1
-                    awayTeam: `${categoryPrefix}WSF02`, // Víťaz semifinále 2
+                    homeTeam: `${categoryWithoutDiacritics} WSF01`, // Víťaz semifinále 1 (s medzerou)
+                    awayTeam: `${categoryWithoutDiacritics} WSF02`, // Víťaz semifinále 2 (s medzerou)
                     homeScore: '',
                     awayScore: '',
                     date: null,
@@ -336,10 +334,10 @@ const SpiderApp = ({ userProfileData }) => {
                     createdBy: userProfileData?.email || 'unknown',
                     createdByUid: userProfileData?.uid || null
                 },
-                // O 3. miesto - s špecifickými ID pre tímy
+                // O 3. miesto - s špecifickými ID pre tímy (s medzerou za názvom kategórie)
                 {
-                    homeTeam: `${categoryPrefix}LSF01`, // Porazený zo semifinále 1
-                    awayTeam: `${categoryPrefix}LSF02`, // Porazený zo semifinále 2
+                    homeTeam: `${categoryWithoutDiacritics} LSF01`, // Porazený zo semifinále 1 (s medzerou)
+                    awayTeam: `${categoryWithoutDiacritics} LSF02`, // Porazený zo semifinále 2 (s medzerou)
                     homeScore: '',
                     awayScore: '',
                     date: null,
@@ -365,8 +363,8 @@ const SpiderApp = ({ userProfileData }) => {
             const spiderStructure = {
                 final: { 
                     id: 'final', 
-                    homeTeam: `${categoryPrefix}WSF01`, 
-                    awayTeam: `${categoryPrefix}WSF02`, 
+                    homeTeam: `${categoryWithoutDiacritics} WSF01`,
+                    awayTeam: `${categoryWithoutDiacritics} WSF02`,
                     homeScore: '', 
                     awayScore: '', 
                     date: null 
@@ -377,8 +375,8 @@ const SpiderApp = ({ userProfileData }) => {
                 ],
                 thirdPlace: { 
                     id: 'third', 
-                    homeTeam: `${categoryPrefix}LSF01`, 
-                    awayTeam: `${categoryPrefix}LSF02`, 
+                    homeTeam: `${categoryWithoutDiacritics} LSF01`,
+                    awayTeam: `${categoryWithoutDiacritics} LSF02`,
                     homeScore: '', 
                     awayScore: '', 
                     date: null 
