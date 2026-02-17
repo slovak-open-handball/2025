@@ -267,14 +267,6 @@ const SpiderApp = ({ userProfileData }) => {
                     className: 'group relative',
                     style: { pointerEvents: 'auto' }
                 },
-                // Malý indikátor pre hover (viditeľný len keď nie je aktívny filter)
-                !isFilterActive && React.createElement(
-                    'div',
-                    { 
-                        className: 'absolute -top-1 left-1/2 transform -translate-x-1/2 w-16 h-1 bg-gray-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity',
-                        style: { pointerEvents: 'none' }
-                    }
-                ),
                 // Hlavný panel s ovládacími prvkami
                 React.createElement(
                     'div',
