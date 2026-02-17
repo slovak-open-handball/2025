@@ -283,20 +283,6 @@ const SpiderApp = ({ userProfileData }) => {
                     React.createElement(
                         'button',
                         {
-                            onClick: () => generateSpider(selectedCategory),
-                            disabled: !selectedCategory || loading,
-                            className: `px-4 py-1.5 text-sm rounded-lg transition-colors whitespace-nowrap ${
-                                !selectedCategory || loading
-                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                    : 'bg-purple-600 hover:bg-purple-700 text-white'
-                            }`
-                        },
-                        'Generovať pavúka'
-                    ),
-                    
-                    React.createElement(
-                        'button',
-                        {
                             onClick: () => {
                                 const url = new URL(window.location.href);
                                 url.searchParams.set('view', 'matches');
