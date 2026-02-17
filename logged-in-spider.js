@@ -251,17 +251,17 @@ const SpiderApp = ({ userProfileData }) => {
             window.showGlobalNotification('Vyberte kategóriu', 'error');
             return;
         }
-
+    
         if (!window.db) {
             window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
             return;
         }
-
+    
         if (userProfileData?.role !== 'admin') {
             window.showGlobalNotification('Na generovanie pavúka potrebujete administrátorské práva', 'error');
             return;
         }
-
+    
         try {
             // Najprv vymažeme existujúce pavúkové zápasy pre túto kategóriu (ak existujú)
             const existingSpiderMatches = allMatches.filter(m => 
@@ -273,26 +273,20 @@ const SpiderApp = ({ userProfileData }) => {
             for (const match of existingSpiderMatches) {
                 await deleteDoc(doc(window.db, 'matches', match.id));
             }
-
+    
+            // Získanie názvu kategórie pre vytvorenie ID tímov
+            const category = categories.find(c => c.id === categoryId);
+            const categoryName = category ? category.name : `Kategória ${categoryId}`;
+            
+            // Odstránenie diakritiky a medzier z názvu kategórie pre ID
+            const categoryPrefix = categoryName
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '') // odstráni diakritiku
+                .replace(/\s+/g, '') // odstráni medzery
+                .toUpperCase();
+    
             // Vytvoríme zápasy pre databázu (do kolekcie 'matches')
             const matchesToSave = [
-                // Finále
-                {
-                    homeTeam: '---',
-                    awayTeam: '---',
-                    homeScore: '',
-                    awayScore: '',
-                    date: null,
-                    categoryId: categoryId,
-                    matchType: 'finále', // DÔLEŽITÉ: typ zápasu
-                    // Povinné polia pre bežné zápasy
-                    time: '--:--',
-                    hallId: null,
-                    status: 'pending',
-                    createdAt: Timestamp.now(),
-                    createdBy: userProfileData?.email || 'unknown',
-                    createdByUid: userProfileData?.uid || null
-                },
                 // Semifinále 1
                 {
                     homeTeam: '---',
@@ -302,6 +296,7 @@ const SpiderApp = ({ userProfileData }) => {
                     date: null,
                     categoryId: categoryId,
                     matchType: 'semifinále 1',
+                    // Povinné polia pre bežné zápasy
                     time: '--:--',
                     hallId: null,
                     status: 'pending',
@@ -325,10 +320,26 @@ const SpiderApp = ({ userProfileData }) => {
                     createdBy: userProfileData?.email || 'unknown',
                     createdByUid: userProfileData?.uid || null
                 },
-                // O 3. miesto
+                // Finále - s špecifickými ID pre tímy
                 {
-                    homeTeam: '---',
-                    awayTeam: '---',
+                    homeTeam: `${categoryPrefix}WSF01`, // Víťaz semifinále 1
+                    awayTeam: `${categoryPrefix}WSF02`, // Víťaz semifinále 2
+                    homeScore: '',
+                    awayScore: '',
+                    date: null,
+                    categoryId: categoryId,
+                    matchType: 'finále',
+                    time: '--:--',
+                    hallId: null,
+                    status: 'pending',
+                    createdAt: Timestamp.now(),
+                    createdBy: userProfileData?.email || 'unknown',
+                    createdByUid: userProfileData?.uid || null
+                },
+                // O 3. miesto - s špecifickými ID pre tímy
+                {
+                    homeTeam: `${categoryPrefix}LSF01`, // Porazený zo semifinále 1
+                    awayTeam: `${categoryPrefix}LSF02`, // Porazený zo semifinále 2
                     homeScore: '',
                     awayScore: '',
                     date: null,
@@ -342,29 +353,43 @@ const SpiderApp = ({ userProfileData }) => {
                     createdByUid: userProfileData?.uid || null
                 }
             ];
-
+    
             // Uložíme zápasy do Firebase (do kolekcie 'matches')
             const matchesRef = collection(window.db, 'matches');
             
             for (const match of matchesToSave) {
                 await addDoc(matchesRef, match);
             }
-
+    
             // Vytvoríme lokálnu štruktúru pre zobrazenie
             const spiderStructure = {
-                final: { id: 'final', homeTeam: '---', awayTeam: '---', homeScore: '', awayScore: '', date: null },
+                final: { 
+                    id: 'final', 
+                    homeTeam: `${categoryPrefix}WSF01`, 
+                    awayTeam: `${categoryPrefix}WSF02`, 
+                    homeScore: '', 
+                    awayScore: '', 
+                    date: null 
+                },
                 semiFinals: [
                     { id: 'sf1', homeTeam: '---', awayTeam: '---', homeScore: '', awayScore: '', date: null },
                     { id: 'sf2', homeTeam: '---', awayTeam: '---', homeScore: '', awayScore: '', date: null }
                 ],
-                thirdPlace: { id: 'third', homeTeam: '---', awayTeam: '---', homeScore: '', awayScore: '', date: null }
+                thirdPlace: { 
+                    id: 'third', 
+                    homeTeam: `${categoryPrefix}LSF01`, 
+                    awayTeam: `${categoryPrefix}LSF02`, 
+                    homeScore: '', 
+                    awayScore: '', 
+                    date: null 
+                }
             };
-
+    
             setSelectedCategory(categoryId);
             setSpiderData(spiderStructure);
             
             window.showGlobalNotification('Pavúk bol úspešne vygenerovaný a uložený do databázy', 'success');
-
+    
         } catch (error) {
             console.error('Chyba pri generovaní pavúka:', error);
             window.showGlobalNotification('Chyba pri generovaní pavúka: ' + error.message, 'error');
