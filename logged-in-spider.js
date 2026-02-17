@@ -126,10 +126,28 @@ const formatDateWithDay = (date) => {
     return `${dayName} ${formattedDate}`;
 };
 
+// Pomocná funkcia na aktualizáciu URL s parametrom kategórie
+const updateUrlWithCategory = (categoryId) => {
+    const url = new URL(window.location.href);
+    if (categoryId) {
+        url.searchParams.set('category', categoryId);
+    } else {
+        url.searchParams.delete('category');
+    }
+    // Prepíšeme históriu bez reloadu stránky
+    window.history.replaceState({}, '', url);
+};
+
+// Pomocná funkcia na získanie kategórie z URL
+const getCategoryFromUrl = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('category') || '';
+};
+
 // Komponent pre pavúkovú tabuľku
 const SpiderApp = ({ userProfileData }) => {
     const [categories, setCategories] = useState([]);
-    const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState(() => getCategoryFromUrl()); // Inicializácia z URL
     const [loading, setLoading] = useState(true);
     const [spiderData, setSpiderData] = useState(null);
     const [allMatches, setAllMatches] = useState([]); // Všetky zápasy z databázy (aj bežné, aj pavúkové)
@@ -498,6 +516,28 @@ const SpiderApp = ({ userProfileData }) => {
         return !(hoveredElement !== null && panel && (hoveredElement === panel || panel.contains(hoveredElement)));
     };
 
+    // Handler pre zmenu kategórie - aktualizuje URL a stav
+    const handleCategoryChange = (e) => {
+        const newCategory = e.target.value;
+        setSelectedCategory(newCategory);
+        updateUrlWithCategory(newCategory);
+        e.target.blur();
+        
+        const panel = e.currentTarget.closest('[style*="pointer-events: auto"]');
+        if (panel) {
+            if (window.spiderPanelTimeout) {
+                clearTimeout(window.spiderPanelTimeout);
+            }
+
+            window.spiderPanelTimeout = setTimeout(() => {
+                if (shouldHidePanel()) {
+                    panel.style.opacity = '0';
+                }
+                window.spiderPanelTimeout = null;
+            }, 750);
+        }
+    };
+
     // Komponent pre zobrazenie jedného zápasu v pavúkovom zobrazení
     const MatchCell = ({ match, title = '' }) => {
         const matchDate = match.date ? new Date(match.date) : null;
@@ -610,24 +650,7 @@ const SpiderApp = ({ userProfileData }) => {
                                 'select',
                                 {
                                     value: selectedCategory,
-                                    onChange: (e) => {
-                                        setSelectedCategory(e.target.value);
-                                        e.target.blur();
-                                        
-                                        const panel = e.currentTarget.closest('[style*="pointer-events: auto"]');
-                                        if (panel) {
-                                            if (window.spiderPanelTimeout) {
-                                                clearTimeout(window.spiderPanelTimeout);
-                                            }
-        
-                                            window.spiderPanelTimeout = setTimeout(() => {
-                                                if (shouldHidePanel()) {
-                                                    panel.style.opacity = '0';
-                                                }
-                                                window.spiderPanelTimeout = null;
-                                            }, 750);
-                                        }
-                                    },
+                                    onChange: handleCategoryChange, // Použijeme nový handler
                                     onMouseEnter: (e) => {
                                         if (window.spiderPanelTimeout) {
                                             clearTimeout(window.spiderPanelTimeout);
