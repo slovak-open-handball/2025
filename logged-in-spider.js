@@ -277,14 +277,17 @@ const SpiderApp = ({ userProfileData }) => {
                         className: `transition-opacity duration-300 ease-in-out opacity-0 group-hover:opacity-100 group-focus-within:opacity-100`,
                         style: { 
                             pointerEvents: 'auto',
-                            transition: 'opacity 300ms ease-in-out, visibility 300ms ease-in-out'
+                            transition: 'opacity 300ms ease-in-out'
                         },
                         onMouseLeave: (e) => {
                             // Nastavíme timeout na skrytie po 750ms
                             const timeoutId = setTimeout(() => {
-                                // Skontrolujeme, či myš nie je stále nad elementom alebo jeho deťmi
+                                // Skontrolujeme, či myš nie je stále nad elementom
                                 const panel = e.currentTarget;
-                                if (!panel.matches(':hover') && !panel.contains(document.querySelector(':hover'))) {
+                                const hoveredElement = document.querySelector(':hover');
+                                
+                                // Ak nie je žiadny hoverovaný element ALEBO panel neobsahuje hoverovaný element
+                                if (!hoveredElement || !panel.contains(hoveredElement)) {
                                     panel.style.opacity = '0';
                                 }
                             }, 750);
@@ -346,7 +349,7 @@ const SpiderApp = ({ userProfileData }) => {
                 )
             )
         ),
-        
+                
         // Zelené kruhové tlačidlo "+" v pravom dolnom rohu
         React.createElement(
             'button',
