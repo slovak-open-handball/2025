@@ -30,7 +30,9 @@ const SpiderApp = ({ userProfileData }) => {
     const [loading, setLoading] = useState(true);
     const [spiderData, setSpiderData] = useState(null);
     const [allMatches, setAllMatches] = useState([]); // Všetky zápasy z databázy (aj bežné, aj pavúkové)
-    const [isSelectOpen, setIsSelectOpen] = useState(false); // NOVÝ STAV - sleduje, či je selectbox rozbalený
+    const [isSelectOpen, setIsSelectOpen] = useState(false);
+    const [generationInProgress, setGenerationInProgress] = useState(false); // NOVÉ: pre generovanie
+    const [isDeleteMatchesModalOpen, setIsDeleteMatchesModalOpen] = useState(false); // NOVÉ: pre mazanie
 
     // Definícia isFilterActive - filter je aktívny, ak je vybratá nejaká kategória
     const isFilterActive = selectedCategory !== '';
@@ -178,6 +180,8 @@ const SpiderApp = ({ userProfileData }) => {
             return;
         }
     
+        setGenerationInProgress(true);
+        
         try {
             // Najprv vymažeme existujúce pavúkové zápasy pre túto kategóriu (ak existujú)
             const existingSpiderMatches = allMatches.filter(m => 
@@ -199,24 +203,17 @@ const SpiderApp = ({ userProfileData }) => {
                 .normalize('NFD')
                 .replace(/[\u0300-\u036f]/g, ''); // odstráni diakritiku, ale zachová medzery
             
-            // --- NOVÉ: Vytvorenie správnych identifikátorov tímov podľa formátu z matches.js ---
-            // Formát: "Kategória SkupinaČíslo" (napr. "U10 A1")
-            // Pre pavúka potrebujeme:
-            // - Semifinále: tímy sú "---" (nezapojené)
-            // - Finále: "Kategória WSF01" a "Kategória WSF02" (víťazi semifinále)
-            // - O 3. miesto: "Kategória LSF01" a "Kategória LSF02" (porazení semifinále)
-            
-            // Vytvoríme zápasy pre databázu (do kolekcie 'matches') - PRESNE PODĽA VZORU Z MATCHES.JS
+            // Vytvoríme zápasy pre databázu (do kolekcie 'matches')
             const matchesToSave = [
-                // Semifinále 1 - použijeme priamo '---' pre neobsadené miesta
+                // Semifinále 1
                 {
-                    homeTeamIdentifier: '---',  // ← ZMENENÉ: používame homeTeamIdentifier namiesto homeTeam
-                    awayTeamIdentifier: '---',  // ← ZMENENÉ: používame awayTeamIdentifier namiesto awayTeam
+                    homeTeamIdentifier: '---',
+                    awayTeamIdentifier: '---',
                     time: '--:--',
                     hallId: null,
                     categoryId: categoryId,
-                    categoryName: categoryName,  // ← PRIDANÉ: názov kategórie pre zobrazenie
-                    groupName: null,              // ← PRIDANÉ: pavúkové zápasy nemajú skupinu
+                    categoryName: categoryName,
+                    groupName: null,
                     matchType: 'semifinále 1',
                     status: 'pending',
                     createdAt: Timestamp.now(),
@@ -238,10 +235,10 @@ const SpiderApp = ({ userProfileData }) => {
                     createdBy: userProfileData?.email || 'unknown',
                     createdByUid: userProfileData?.uid || null
                 },
-                // Finále - použijeme identifikátory v tvare "Kategória WSF01"
+                // Finále
                 {
-                    homeTeamIdentifier: `${categoryWithoutDiacritics} WSF01`,  // ← ZMENENÉ: správny formát identifikátora
-                    awayTeamIdentifier: `${categoryWithoutDiacritics} WSF02`, // ← ZMENENÉ: správny formát identifikátora
+                    homeTeamIdentifier: `${categoryWithoutDiacritics} WSF01`,
+                    awayTeamIdentifier: `${categoryWithoutDiacritics} WSF02`,
                     time: '--:--',
                     hallId: null,
                     categoryId: categoryId,
@@ -253,10 +250,10 @@ const SpiderApp = ({ userProfileData }) => {
                     createdBy: userProfileData?.email || 'unknown',
                     createdByUid: userProfileData?.uid || null
                 },
-                // O 3. miesto - použijeme identifikátory v tvare "Kategória LSF01"
+                // O 3. miesto
                 {
-                    homeTeamIdentifier: `${categoryWithoutDiacritics} LSF01`,  // ← ZMENENÉ: správny formát identifikátora
-                    awayTeamIdentifier: `${categoryWithoutDiacritics} LSF02`, // ← ZMENENÉ: správny formát identifikátora
+                    homeTeamIdentifier: `${categoryWithoutDiacritics} LSF01`,
+                    awayTeamIdentifier: `${categoryWithoutDiacritics} LSF02`,
                     time: '--:--',
                     hallId: null,
                     categoryId: categoryId,
@@ -270,7 +267,7 @@ const SpiderApp = ({ userProfileData }) => {
                 }
             ];
     
-            // Uložíme zápasy do Firebase (do kolekcie 'matches')
+            // Uložíme zápasy do Firebase
             const matchesRef = collection(window.db, 'matches');
             
             const savedMatches = [];
@@ -282,7 +279,7 @@ const SpiderApp = ({ userProfileData }) => {
                 });
             }
     
-            // Vytvoríme lokálnu štruktúru pre zobrazenie (pre zachovanie kompatibility s existujúcim kódom)
+            // Vytvoríme lokálnu štruktúru pre zobrazenie
             const spiderStructure = {
                 final: { 
                     id: savedMatches.find(m => m.matchType === 'finále')?.id || 'final',
@@ -327,6 +324,60 @@ const SpiderApp = ({ userProfileData }) => {
         } catch (error) {
             console.error('Chyba pri generovaní pavúka:', error);
             window.showGlobalNotification('Chyba pri generovaní pavúka: ' + error.message, 'error');
+        } finally {
+            setGenerationInProgress(false);
+        }
+    };
+
+    // Funkcia na vymazanie pavúkových zápasov pre vybranú kategóriu
+    const deleteSpiderMatches = async () => {
+        const categoryId = selectedCategory;
+        
+        if (!categoryId) {
+            window.showGlobalNotification('Vyberte kategóriu', 'error');
+            return;
+        }
+    
+        if (!window.db) {
+            window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
+            return;
+        }
+    
+        if (userProfileData?.role !== 'admin') {
+            window.showGlobalNotification('Na mazanie pavúka potrebujete administrátorské práva', 'error');
+            return;
+        }
+    
+        setGenerationInProgress(true);
+        
+        try {
+            // Nájdeme existujúce pavúkové zápasy pre túto kategóriu
+            const existingSpiderMatches = allMatches.filter(m => 
+                m.categoryId === categoryId && 
+                m.matchType && 
+                ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto'].includes(m.matchType)
+            );
+            
+            if (existingSpiderMatches.length === 0) {
+                window.showGlobalNotification('Pre túto kategóriu neexistujú žiadne pavúkové zápasy', 'info');
+                return;
+            }
+            
+            // Vymažeme všetky nájdené zápasy
+            for (const match of existingSpiderMatches) {
+                await deleteDoc(doc(window.db, 'matches', match.id));
+            }
+    
+            setSpiderData(null);
+            
+            window.showGlobalNotification(`Úspešne zmazaných ${existingSpiderMatches.length} pavúkových zápasov`, 'success');
+    
+        } catch (error) {
+            console.error('Chyba pri mazaní pavúka:', error);
+            window.showGlobalNotification('Chyba pri mazaní pavúka: ' + error.message, 'error');
+        } finally {
+            setGenerationInProgress(false);
+            setIsDeleteMatchesModalOpen(false);
         }
     };
 
@@ -429,22 +480,18 @@ const SpiderApp = ({ userProfileData }) => {
                                 }
                                 
                                 window.spiderPanelTimeout = setTimeout(() => {
-                                    // Použijeme funkciu shouldHidePanel pre kontrolu
                                     if (shouldHidePanel()) {
                                         panel.style.opacity = '0';
                                     }
-                                    
                                     window.spiderPanelTimeout = null;
                                 }, 750);
                             }
                         },
                         onMouseEnter: (e) => {
-                            // Zrušíme timeout ak existuje
                             if (window.spiderPanelTimeout) {
                                 clearTimeout(window.spiderPanelTimeout);
                                 window.spiderPanelTimeout = null;
                             }
-                            // Nastavíme opacity na 1
                             e.currentTarget.style.opacity = '1';
                         }
                     },
@@ -464,54 +511,42 @@ const SpiderApp = ({ userProfileData }) => {
                                         setSelectedCategory(e.target.value);
                                         e.target.blur();
                                         
-                                        // Po výbere hodnoty spustíme timeout na skrytie
                                         const panel = e.currentTarget.closest('[style*="pointer-events: auto"]');
                                         if (panel) {
-                                            // Zrušíme existujúci timeout
                                             if (window.spiderPanelTimeout) {
                                                 clearTimeout(window.spiderPanelTimeout);
                                             }
         
-                                            // Nastavíme nový timeout
                                             window.spiderPanelTimeout = setTimeout(() => {
-                                                // Použijeme funkciu shouldHidePanel pre kontrolu
                                                 if (shouldHidePanel()) {
                                                     panel.style.opacity = '0';
                                                 }
-                                                
                                                 window.spiderPanelTimeout = null;
                                             }, 750);
                                         }
                                     },
                                     onMouseEnter: (e) => {
-                                        // Keď myš vojde do selectu, zrušíme timeout
                                         if (window.spiderPanelTimeout) {
                                             clearTimeout(window.spiderPanelTimeout);
                                             window.spiderPanelTimeout = null;
                                         }
                                         
-                                        // Zabezpečíme, že panel je viditeľný
                                         const panel = e.currentTarget.closest('[style*="pointer-events: auto"]');
                                         if (panel) {
                                             panel.style.opacity = '1';
                                         }
                                     },
                                     onMouseLeave: (e) => {
-                                        // Keď myš opustí tlačidlo, spustíme timeout na skrytie panelu
                                         const panel = e.currentTarget.closest('[style*="pointer-events: auto"]');
                                         if (panel) {
-                                            // Zrušíme existujúci timeout
                                             if (window.spiderPanelTimeout) {
                                                 clearTimeout(window.spiderPanelTimeout);
                                             }
                                             
-                                            // Nastavíme nový timeout
                                             window.spiderPanelTimeout = setTimeout(() => {
-                                                // Použijeme funkciu shouldHidePanel pre kontrolu
                                                 if (shouldHidePanel()) {
                                                     panel.style.opacity = '0';
                                                 }
-                                                
                                                 window.spiderPanelTimeout = null;
                                             }, 750);
                                         }
@@ -523,7 +558,6 @@ const SpiderApp = ({ userProfileData }) => {
                                 },
                                 React.createElement('option', { value: '' }, '-- Vyberte kategóriu --'),
                                 sortedCategories.map(cat => {
-                                    // Spočítame počet pavúkových zápasov pre túto kategóriu
                                     const spiderMatches = allMatches.filter(m => 
                                         m.categoryId === cat.id && 
                                         m.matchType && 
@@ -547,13 +581,11 @@ const SpiderApp = ({ userProfileData }) => {
                                     window.location.href = url.toString();
                                 },
                                 onMouseEnter: (e) => {
-                                    // Keď myš vojde do tlačidla, zrušíme timeout
                                     if (window.spiderPanelTimeout) {
                                         clearTimeout(window.spiderPanelTimeout);
                                         window.spiderPanelTimeout = null;
                                     }
                                     
-                                    // Zabezpečíme, že panel je viditeľný
                                     const panel = e.currentTarget.closest('[style*="pointer-events: auto"]');
                                     if (panel) {
                                         panel.style.opacity = '1';
@@ -567,11 +599,9 @@ const SpiderApp = ({ userProfileData }) => {
                                         }
         
                                         window.spiderPanelTimeout = setTimeout(() => {
-                                            // Použijeme funkciu shouldHidePanel pre kontrolu
                                             if (shouldHidePanel()) {
                                                 panel.style.opacity = '0';
                                             }
-                                            
                                             window.spiderPanelTimeout = null;
                                         }, 750);
                                     }
@@ -586,21 +616,168 @@ const SpiderApp = ({ userProfileData }) => {
             )
         ),
                 
-        // Zelené kruhové tlačidlo "+" v pravom dolnom rohu - UPRAVENÉ - priamo generuje pavúka
+        // NOVÉ: Rozdelené kruhové tlačidlo v pravom dolnom rohu - TEXT V POLOVICIACH
         React.createElement(
-            'button',
-            {
-                onClick: generateSpider,
-                disabled: !selectedCategory,
-                className: `fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-3xl font-bold transition-all z-50 ${
-                    selectedCategory 
-                        ? 'bg-green-500 hover:bg-green-600 text-white hover:scale-110 cursor-pointer' 
-                        : 'bg-white text-green-500 border-2 border-green-500 cursor-not-allowed opacity-70'
-                }`,
-                title: selectedCategory ? 'Generovať pavúka pre vybranú kategóriu' : 'Najprv vyberte kategóriu',
-                style: selectedCategory ? {} : { pointerEvents: 'auto' }
+            'div',
+            { 
+                className: 'fixed bottom-8 right-8 z-50',
+                style: { 
+                    filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.2))',
+                    width: '64px',
+                    height: '64px'
+                }
             },
-            '+'
+            // Hlavný kruhový kontajner
+            React.createElement(
+                'div',
+                {
+                    className: 'relative w-full h-full rounded-full overflow-hidden',
+                },
+                // Prvá polovica - Zelená (Generovať)
+                React.createElement(
+                    'button',
+                    { 
+                        className: `absolute inset-0 ${generationInProgress || !selectedCategory ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'} text-white transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0`,
+                        style: { 
+                            clipPath: 'polygon(0 0, 100% 0, 0 100%)',
+                        },
+                        onClick: generateSpider,
+                        disabled: generationInProgress || !selectedCategory,
+                        title: !selectedCategory ? 'Najprv vyberte kategóriu' : 'Generovať pavúka'
+                    },
+                    React.createElement(
+                        'div',
+                        {
+                            style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '100%',
+                                height: '100%',
+                                position: 'relative'
+                            }
+                        },
+                        React.createElement(
+                            'i', 
+                            { 
+                                className: 'fa-solid fa-plus text-2xl',
+                                style: {
+                                    position: 'absolute',
+                                    top: '35%',
+                                    left: '35%',
+                                    transform: 'translate(-50%, -50%)'
+                                }
+                            }
+                        )
+                    )
+                ),
+                // Druhá polovica - Červená (Zmazať)
+                React.createElement(
+                    'button',
+                    { 
+                        className: `absolute inset-0 ${generationInProgress || !selectedCategory ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'} text-white transition-all duration-200 outline-none ring-0 focus:outline-none focus:ring-0`,
+                        style: { 
+                            clipPath: 'polygon(100% 0, 100% 100%, 0 100%)',
+                        },
+                        onClick: () => {
+                            if (selectedCategory && !generationInProgress) {
+                                setIsDeleteMatchesModalOpen(true);
+                            }
+                        },
+                        disabled: generationInProgress || !selectedCategory,
+                        title: !selectedCategory ? 'Najprv vyberte kategóriu' : 'Zmazať pavúka'
+                    },
+                    React.createElement(
+                        'div',
+                        {
+                            style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '100%',
+                                height: '100%',
+                                position: 'relative'
+                            }
+                        },
+                        React.createElement(
+                            'i', 
+                            { 
+                                className: 'fa-solid fa-minus text-2xl',
+                                style: {
+                                    position: 'absolute',
+                                    bottom: '35%',
+                                    right: '35%',
+                                    transform: 'translate(50%, 50%)'
+                                }
+                            }
+                        )
+                    )
+                )
+            )
+        ),
+
+        // Modálne okno pre potvrdenie mazania
+        isDeleteMatchesModalOpen && React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center',
+                onClick: () => setIsDeleteMatchesModalOpen(false),
+                style: { backdropFilter: 'blur(4px)' }
+            },
+            React.createElement(
+                'div',
+                {
+                    className: 'bg-white rounded-xl p-6 w-full max-w-md shadow-2xl',
+                    onClick: (e) => e.stopPropagation()
+                },
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-between items-center mb-4' },
+                    React.createElement(
+                        'h3',
+                        { className: 'text-xl font-semibold text-gray-800' },
+                        'Potvrdenie zmazania'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => setIsDeleteMatchesModalOpen(false),
+                            className: 'text-gray-400 hover:text-gray-600 transition-colors'
+                        },
+                        React.createElement('i', { className: 'fa-solid fa-times text-2xl' })
+                    )
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-600 mb-6' },
+                    `Naozaj chcete zmazať všetky pavúkové zápasy pre kategóriu "${categories.find(c => c.id === selectedCategory)?.name || selectedCategory}"?`
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-2' },
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => setIsDeleteMatchesModalOpen(false),
+                            className: 'px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: deleteSpiderMatches,
+                            disabled: generationInProgress,
+                            className: `px-4 py-2 text-sm rounded-lg transition-colors ${
+                                generationInProgress
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-red-600 hover:bg-red-700 text-white'
+                            }`
+                        },
+                        generationInProgress ? 'Mažem...' : 'Zmazať'
+                    )
+                )
+            )
         ),
 
         // Obsah - pavúková tabuľka
@@ -617,7 +794,7 @@ const SpiderApp = ({ userProfileData }) => {
                         { className: 'text-center py-16 text-gray-500' },
                         React.createElement('i', { className: 'fa-solid fa-sitemap text-6xl mb-4 opacity-30' }),
                         React.createElement('h2', { className: 'text-2xl font-semibold mb-2' }, 'Pavúk play-off'),
-                        React.createElement('p', { className: 'text-lg' }, 'Vyberte kategóriu a kliknite na zelené tlačidlo "+" pre generovanie pavúka')
+                        React.createElement('p', { className: 'text-lg' }, 'Vyberte kategóriu a kliknite na zelenú polovicu tlačidla "+" pre generovanie pavúka')
                     )
                 ) : (
                     React.createElement(
