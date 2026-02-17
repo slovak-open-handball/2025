@@ -5056,8 +5056,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                         
                         setTimeout(() => {
                             // Skontrolujeme, či je nejaký selectbox rozbalený (dropdown otvorený)
-                            // Toto je komplikované, pretože neexistuje priamy spôsob, ako zistiť,
-                            // či je dropdown otvorený
                             const selects = target.querySelectorAll('select');
                             let isAnyDropdownOpen = false;
                             
@@ -5066,30 +5064,15 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 if (select.size > 1) {
                                     isAnyDropdownOpen = true;
                                 } else {
-                                    // Pre jednoduché selecty nemôžeme spoľahlivo zistiť, či je dropdown otvorený
-                                    // Ale vieme, že keď používateľ klikne na select a otvorí dropdown,
-                                    // select ostáva vo focus, ale nie každý focus znamená otvorený dropdown
-                                    // Preto použijeme iný prístup - ak je select vo focus, ale myš nie je nad ním,
-                                    // pravdepodobne to nie je otvorený dropdown
+                                    // Pre jednoduché selecty - ak je select vo focus a myš je nad ním,
+                                    // pravdepodobne je otvorený dropdown
                                     if (select.matches(':focus')) {
-                                        // Skúsime zistiť, či je myš nad selectom
-                                        const isMouseOverSelect = select.matches(':hover');
-                                        if (isMouseOverSelect) {
-                                            // Ak je myš nad selectom a je vo focus, pravdepodobne je otvorený dropdown
-                                            isAnyDropdownOpen = true;
-                                        }
-                                        // Ak myš nie je nad selectom, je to len focus z klávesnice - neriešime
+                                        // Ak je select vo focus, predpokladáme, že je otvorený dropdown
+                                        // Toto je najspoľahlivejšie riešenie pre väčšinu prehliadačov
+                                        isAnyDropdownOpen = true;
                                     }
                                 }
                             });
-                            
-                            // Tiež skontrolujeme, či nie je otvorený nejaký dropdown mimo nášho kontajnera
-                            const activeElement = document.activeElement;
-                            if (activeElement && activeElement.tagName === 'SELECT' && 
-                                !target.contains(activeElement)) {
-                                // Pre select mimo kontajnera nemôžeme zistiť, či je otvorený
-                                // Predpokladáme, že nie je
-                            }
                             
                             // Ak je nejaký dropdown otvorený, pridáme triedu, ktorá zabráni skrytiu
                             if (isAnyDropdownOpen) {
@@ -5112,13 +5095,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                     onClick: (e) => {
                         const target = e.currentTarget;
                         if (e.target.tagName === 'SELECT') {
-                            // Pri kliknutí na select predpokladáme, že sa otvára dropdown
-                            // Počkáme chvíľu a skontrolujeme, či select ostáva vo focus
-                            setTimeout(() => {
-                                if (e.target.matches(':focus') && e.target.matches(':hover')) {
-                                    target.classList.add('dropdown-open');
-                                }
-                            }, 100);
+                            // Pri kliknutí na select vždy pridáme triedu dropdown-open
+                            target.classList.add('dropdown-open');
                         }
                     },
                     
@@ -5127,9 +5105,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                         const target = e.currentTarget;
                         if (e.target.tagName === 'SELECT') {
                             // Po výbere možnosti sa dropdown zatvorí, odstránime triedu
-                            setTimeout(() => {
-                                target.classList.remove('dropdown-open');
-                            }, 100);
+                            target.classList.remove('dropdown-open');
                         }
                     }
                 },
