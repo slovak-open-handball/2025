@@ -6513,7 +6513,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             },
                                                                             React.createElement(
                                                                                 'span',
-                                                                                { className: 'font-medium text-gray-800 truncate block w-full', title: displayMode === 'both' ? homeDisplay.name : homeDisplay },
+                                                                                { 
+                                                                                    className: `${selectedTeamIdFilter && (match.homeTeamIdentifier === selectedTeamIdFilter || match.awayTeamIdentifier === selectedTeamIdFilter) ? 'font-bold' : 'font-medium'} text-gray-800 truncate block w-full`, 
+                                                                                    title: displayMode === 'both' ? homeDisplay.name : homeDisplay 
+                                                                                },
                                                                                 displayMode === 'both' ? homeDisplay.name : homeDisplay
                                                                             )
                                                                         ),
@@ -6529,18 +6532,21 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         React.createElement(
                                                                             'div',
                                                                             { 
-                                                                                className: `px-2 py-1 flex items-center ${displayMode === 'both' ? 'border-r border-gray-300' : ''}`,
+                                                                                className: `px-2 py-1 flex items-center ${displayMode === 'both' && !selectedTeamIdFilter ? 'border-r border-gray-300' : ''}`,
                                                                                 style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
                                                                             },
                                                                             React.createElement(
                                                                                 'span',
-                                                                                { className: 'font-medium text-gray-800 truncate block w-full', title: displayMode === 'both' ? awayDisplay.name : awayDisplay },
+                                                                                { 
+                                                                                    className: `${selectedTeamIdFilter && (match.awayTeamIdentifier === selectedTeamIdFilter || match.homeTeamIdentifier === selectedTeamIdFilter) ? 'font-bold' : 'font-medium'} text-gray-800 truncate block w-full`, 
+                                                                                    title: displayMode === 'both' ? awayDisplay.name : awayDisplay 
+                                                                                },   
                                                                                 displayMode === 'both' ? awayDisplay.name : awayDisplay
                                                                             )
                                                                         ),
                                                                         
                                                                         // ID domáceho tímu (ak je režim both)
-                                                                        displayMode === 'both' ? React.createElement(
+                                                                        displayMode === 'both' && !selectedTeamIdFilter ? React.createElement(
                                                                             'div',
                                                                             { 
                                                                                 className: 'px-2 py-1 flex items-center border-r border-gray-300',
@@ -6554,7 +6560,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         ) : React.createElement('div', { className: 'px-2 py-1 overflow-hidden' }),
                                                                         
                                                                         // ID hosťovského tímu (ak je režim both)
-                                                                        displayMode === 'both' ? React.createElement(
+                                                                        displayMode === 'both' && !selectedTeamIdFilter ? React.createElement(
                                                                             'div',
                                                                             { 
                                                                                 className: 'px-2 py-1 flex items-center',
