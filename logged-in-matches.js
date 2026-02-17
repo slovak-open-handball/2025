@@ -5085,7 +5085,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     }, 10);
                                 }
                             }
-                        }, 300);
+                        }, 500);
                     },
                     
                     // Sledujeme kliknutia na selecty
