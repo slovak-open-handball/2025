@@ -91,6 +91,74 @@ const SpiderApp = ({ userProfileData }) => {
         };
     }, []);
 
+// logged-in-spider.js
+import { doc, getDoc, getDocs, setDoc, onSnapshot, updateDoc, addDoc, deleteDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const { useState, useEffect } = React;
+
+// Stav pre aktuálny režim zobrazenia (globálny)
+window.currentViewMode = window.currentViewMode || 'matches';
+
+// Funkcia na získanie názvu dňa v týždni v slovenčine
+const getDayName = (date) => {
+    const days = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
+    return days[date.getDay()];
+};
+
+// Funkcia na formátovanie dátumu s dňom v týždni
+const formatDateWithDay = (date) => {
+    const dayName = getDayName(date);
+    const formattedDate = date.toLocaleDateString('sk-SK', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+    return `${dayName} ${formattedDate}`;
+};
+
+// Komponent pre pavúkovú tabuľku
+const SpiderApp = ({ userProfileData }) => {
+    const [categories, setCategories] = useState([]);
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [spiderData, setSpiderData] = useState(null);
+
+    // Načítanie kategórií
+    useEffect(() => {
+        if (!window.db) {
+            console.error("Firestore databáza nie je inicializovaná");
+            setLoading(false);
+            return;
+        }
+
+        const loadCategorySettings = async () => {
+            try {
+                const catRef = doc(window.db, 'settings', 'categories');
+                const catSnap = await getDoc(catRef);
+                
+                if (catSnap.exists()) {
+                    const data = catSnap.data() || {};
+                    const categoriesList = [];
+                    
+                    Object.entries(data).forEach(([id, obj]) => {
+                        categoriesList.push({
+                            id: id,
+                            name: obj.name || `Kategória ${id}`,
+                        });
+                    });
+                    
+                    setCategories(categoriesList);
+                }
+                setLoading(false);
+            } catch (error) {
+                console.error("Chyba pri načítaní kategórií:", error);
+                setLoading(false);
+            }
+        };
+
+        loadCategorySettings();
+    }, []);
+
     // Funkcia na vytvorenie štruktúry pavúka
     const generateSpider = () => {
         if (!selectedCategory) {
@@ -98,7 +166,7 @@ const SpiderApp = ({ userProfileData }) => {
             return;
         }
 
-        // Vytvoríme štruktúru pavúka len pre semifinále a finále
+        // Vytvoríme len prázdnu štruktúru pavúka - ŽIADNE priraďovanie tímov
         const spiderStructure = {
             // Semifinále
             semiFinals: [
@@ -109,71 +177,9 @@ const SpiderApp = ({ userProfileData }) => {
             final: { id: 'final', homeTeam: '---', awayTeam: '---', homeScore: '', awayScore: '', date: null }
         };
 
-        // Filtrujeme zápasy pre vybranú kategóriu
-        const categoryMatches = matches.filter(m => m.categoryId === selectedCategory);
+        // NEPRIRADUJEME žiadne tímy z databázy
+        // Len zobrazíme prázdnu štruktúru
         
-        if (categoryMatches.length > 0) {
-            // Rozdelíme zápasy podľa typu (ak majú určený typ)
-            const semiFinalMatches = categoryMatches.filter(m => 
-                m.matchType === 'semi_final' || 
-                m.matchType?.toLowerCase().includes('semifinále')
-            );
-            
-            const finalMatches = categoryMatches.filter(m => 
-                m.matchType === 'final' || 
-                m.matchType?.toLowerCase().includes('finále')
-            );
-
-            // Ak nemáme určené typy, použijeme posledné 3 zápasy (2 semifinále + 1 finále)
-            if (semiFinalMatches.length === 0 && finalMatches.length === 0) {
-                const sortedMatches = [...categoryMatches].sort((a, b) => {
-                    const dateA = a.date ? new Date(a.date) : new Date(0);
-                    const dateB = b.date ? new Date(b.date) : new Date(0);
-                    return dateB - dateA; // Zoradené od najnovších
-                });
-
-                // Posledné 3 zápasy považujeme za play-off
-                const playoffMatches = sortedMatches.slice(0, 3);
-                
-                playoffMatches.forEach((match, index) => {
-                    if (index < 2) {
-                        // Prvé dva sú semifinále
-                        spiderStructure.semiFinals[index] = {
-                            ...match,
-                            homeTeam: match.homeTeamIdentifier || '---',
-                            awayTeam: match.awayTeamIdentifier || '---'
-                        };
-                    } else if (index === 2) {
-                        // Tretí je finále
-                        spiderStructure.final = {
-                            ...match,
-                            homeTeam: match.homeTeamIdentifier || '---',
-                            awayTeam: match.awayTeamIdentifier || '---'
-                        };
-                    }
-                });
-            } else {
-                // Použijeme zápasy podľa ich typu
-                semiFinalMatches.forEach((match, index) => {
-                    if (index < 2) {
-                        spiderStructure.semiFinals[index] = {
-                            ...match,
-                            homeTeam: match.homeTeamIdentifier || '---',
-                            awayTeam: match.awayTeamIdentifier || '---'
-                        };
-                    }
-                });
-
-                if (finalMatches.length > 0) {
-                    spiderStructure.final = {
-                        ...finalMatches[0],
-                        homeTeam: finalMatches[0].homeTeamIdentifier || '---',
-                        awayTeam: finalMatches[0].awayTeamIdentifier || '---'
-                    };
-                }
-            }
-        }
-
         setSpiderData(spiderStructure);
     };
 
