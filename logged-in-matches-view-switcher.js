@@ -1,48 +1,60 @@
-// logged-in-matches-view-switcher.js - Jednoduchý prepínač medzi režimami
-
-// Globálny stav pre aktuálny režim
-window.currentViewMode = window.currentViewMode || 'matches';
-
-// Funkcia na prepínanie režimov
-window.switchViewMode = (mode) => {
-    if (mode === window.currentViewMode) return;
-    
-    window.currentViewMode = mode;
-    
-    // Uložíme do localStorage pre zachovanie pri obnovení stránky
-    localStorage.setItem('preferredViewMode', mode);
-    
-    // Znovu načítame stránku pre prepnutie režimu
-    window.location.reload();
-};
-
-// Pri načítaní stránky skontrolujeme localStorage
-document.addEventListener('DOMContentLoaded', () => {
-    const savedMode = localStorage.getItem('preferredViewMode');
-    if (savedMode && (savedMode === 'matches' || savedMode === 'spider')) {
-        window.currentViewMode = savedMode;
+// view-switcher.js
+(function() {
+    // Zistiť preferovaný režim z URL alebo localStorage
+    function getInitialViewMode() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlView = urlParams.get('view');
+        
+        if (urlView === 'matches' || urlView === 'spider') {
+            localStorage.setItem('preferredViewMode', urlView);
+            return urlView;
+        }
+        
+        const savedMode = localStorage.getItem('preferredViewMode');
+        return savedMode === 'spider' ? 'spider' : 'matches';
     }
-});
 
-// Funkcia na dynamické načítanie správneho scriptu
-window.loadViewModeScript = () => {
-    // Odstránime starý script ak existuje
-    const oldScript = document.querySelector('script[data-view-mode]');
-    if (oldScript) {
-        oldScript.remove();
+    window.currentViewMode = getInitialViewMode();
+
+    // Funkcia na načítanie správneho scriptu
+    function loadViewScript() {
+        const scriptId = 'view-mode-script';
+        const oldScript = document.getElementById(scriptId);
+        if (oldScript) {
+            oldScript.remove();
+        }
+
+        const script = document.createElement('script');
+        script.id = scriptId;
+        script.type = 'module';
+        
+        if (window.currentViewMode === 'matches') {
+            script.src = 'logged-in-matches.js';
+        } else {
+            script.src = 'logged-in-spider.js';
+        }
+        
+        document.body.appendChild(script);
+        console.log('Načítaný režim:', window.currentViewMode);
     }
-    
-    // Vytvoríme nový script
-    const script = document.createElement('script');
-    script.type = 'module';
-    script.setAttribute('data-view-mode', window.currentViewMode);
-    
-    if (window.currentViewMode === 'matches') {
-        script.src = 'logged-in-matches.js';
+
+    // Počkáme na DOM a potom načítame script
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadViewScript);
     } else {
-        script.src = 'logged-in-spider.js';
+        loadViewScript();
     }
-    
-    document.body.appendChild(script);
-    console.log(`Načítaný režim: ${window.currentViewMode}`);
-};
+
+    // Globálna funkcia na prepínanie
+    window.switchViewMode = function(mode) {
+        if (mode === window.currentViewMode) return;
+        
+        window.currentViewMode = mode;
+        localStorage.setItem('preferredViewMode', mode);
+        
+        // Pridať parameter do URL
+        const url = new URL(window.location.href);
+        url.searchParams.set('view', mode);
+        window.location.href = url.toString();
+    };
+})();
