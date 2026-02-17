@@ -3585,7 +3585,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         }, 300); // 300ms oneskorenie
     
         return () => clearTimeout(timeoutId);
-    }, [selectedCategoryFilter, selectedGroupFilter, selectedHallFilter, selectedDayFilter]);
+    }, [selectedCategoryFilter, selectedGroupFilter, selectedHallFilter, selectedDayFilter, selectedTeamIdFilter]);
 
     // Načítanie režimu zobrazenia pri zmene URL (ak používateľ zmení URL manuálne)
     useEffect(() => {
