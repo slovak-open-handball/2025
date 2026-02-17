@@ -93,6 +93,28 @@ if (!document.getElementById('notification-styles')) {
     document.head.appendChild(style);
 }
 
+// Pomocná funkcia pre skloňovanie pri vytváraní
+const getGenerationMessage = (count) => {
+    if (count === 1) {
+        return `Pavúk bol vygenerovaný a uložený ${count} zápas do databázy`;
+    } else if (count >= 2 && count <= 4) {
+        return `Pavúk bol vygenerovaný a uložené ${count} zápasy do databázy`;
+    } else {
+        return `Pavúk bol vygenerovaný a uložených ${count} zápasov do databázy`;
+    }
+};
+
+// Pomocná funkcia pre skloňovanie pri mazaní
+const getDeletionMessage = (count) => {
+    if (count === 1) {
+        return `Zmazaný ${count} pavúkový zápas`;
+    } else if (count >= 2 && count <= 4) {
+        return `Zmazané ${count} pavúkové zápasy`;
+    } else {
+        return `Zmazaných ${count} pavúkových zápasov`;
+    }
+};
+
 // Stav pre aktuálny režim zobrazenia (globálny)
 window.currentViewMode = window.currentViewMode || 'matches';
 
