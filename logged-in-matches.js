@@ -5050,81 +5050,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 { 
                     className: 'group',
                     style: { pointerEvents: 'auto' }, // Samotné ovládacie prvky sú klikateľné
-                    onMouseLeave: (e) => {
-                        // Pridáme oneskorenie pred skrytím, aby sa používateľ mohol presunúť do dropdownu
-                        const target = e.currentTarget;
-                        
-                        setTimeout(() => {
-                            // Skontrolujeme, či je nejaký selectbox rozbalený
-                            // Selectbox je rozbalený, ak má veľkosť > 1 (pre multiple) alebo 
-                            // ak je vo focus
-                            const selects = target.querySelectorAll('select');
-                            let isAnySelectOpen = false;
-                            
-                            selects.forEach(select => {
-                                // Kontrola, či je select rozbalený - ak má focus, pravdepodobne je rozbalený
-                                if (document.activeElement === select) {
-                                    isAnySelectOpen = true;
-                                }
-                                
-                                // Ďalšia kontrola - ak select nemá veľkosť 1, môže byť rozbalený
-                                if (select.size > 1) {
-                                    isAnySelectOpen = true;
-                                }
-                            });
-                            
-                            // Tiež skontrolujeme, či nie je otvorený nejaký dropdown mimo nášho kontajnera
-                            const activeElement = document.activeElement;
-                            if (activeElement && activeElement.tagName === 'SELECT' && 
-                                !target.contains(activeElement)) {
-                                isAnySelectOpen = true;
-                            }
-                            
-                            // Ak je nejaký select otvorený, pridáme triedu, ktorá zabráni skrytiu
-                            if (isAnySelectOpen) {
-                                target.classList.add('dropdown-open');
-                            } else {
-                                target.classList.remove('dropdown-open');
-                                
-                                // Ak nie je žiadny select otvorený a myš nie je v kontajneri, skryjeme panel
-                                if (!target.matches(':hover')) {
-                                    target.classList.remove('group');
-                                    setTimeout(() => {
-                                        target.classList.add('group');
-                                    }, 10);
-                                }
-                            }
-                        }, 300);
-                    },
-                    
-                    // Pridáme aj onFocus handler pre prípad, že používateľ klikne do selectu
-                    onFocus: (e) => {
-                        const target = e.currentTarget;
-                        // Ak je focus na selecte, pridáme triedu dropdown-open
-                        if (e.target.tagName === 'SELECT') {
-                            target.classList.add('dropdown-open');
-                        }
-                    },
-                    
-                    // Sledujeme blur udalosti
-                    onBlur: (e) => {
-                        const target = e.currentTarget;
-                        // Počkáme chvíľu a skontrolujeme, či ešte nie je nejaký select otvorený
-                        setTimeout(() => {
-                            const selects = target.querySelectorAll('select');
-                            let isAnySelectOpen = false;
-                            
-                            selects.forEach(select => {
-                                if (document.activeElement === select) {
-                                    isAnySelectOpen = true;
-                                }
-                            });
-                            
-                            if (!isAnySelectOpen) {
-                                target.classList.remove('dropdown-open');
-                            }
-                        }, 100);
-                    }
+                    // Odstránime všetky zložité kontroly a necháme len jednoduché CSS správanie
                 },
                 // Tenký pásik pre hover
                 React.createElement(
@@ -5132,11 +5058,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                     { className: 'w-full h-2 bg-transparent' }
                 ),
                 
-                // Panel filtrov - zobrazí sa pri hover, alebo trvalo keď je otvorený dropdown
+                // Panel filtrov - zobrazí sa len pri hover
                 React.createElement(
                     'div',
                     { 
-                        className: 'flex flex-col gap-2 opacity-0 group-hover:opacity-100 group-[.dropdown-open]:opacity-100 transition-opacity duration-300 ease-in-out',
+                        className: 'flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out',
                         style: { 
                             transform: 'translateY(0)',
                             pointerEvents: 'auto'
