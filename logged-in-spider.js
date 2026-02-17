@@ -250,7 +250,7 @@ const SpiderApp = ({ userProfileData }) => {
                     createdBy: userProfileData?.email || 'unknown',
                     createdByUid: userProfileData?.uid || null
                 },
-                // O 3. miesto
+                // o 3. miesto
                 {
                     homeTeamIdentifier: `${categoryWithoutDiacritics} LSF01`,
                     awayTeamIdentifier: `${categoryWithoutDiacritics} LSF02`,
@@ -644,13 +644,23 @@ const SpiderApp = ({ userProfileData }) => {
                         }`,
                         style: { 
                             clipPath: 'polygon(0 0, 100% 0, 0 100%)',
-                            outline: !selectedCategory && !generationInProgress ? '2px solid rgb(34 197 94)' : 'none',
-                            outlineOffset: '-2px'
                         },
                         onClick: generateSpider,
                         disabled: generationInProgress || !selectedCategory,
                         title: !selectedCategory ? 'Najprv vyberte kategóriu' : 'Generovať pavúka'
                     },
+                    React.createElement(
+                        'div',
+                        {
+                            style: {
+                                position: 'absolute',
+                                inset: 0,
+                                boxShadow: !selectedCategory && !generationInProgress ? 'inset 0 0 0 2px rgb(34 197 94)' : 'none',
+                                borderRadius: '50%',
+                                pointerEvents: 'none'
+                            }
+                        }
+                    ),
                     React.createElement(
                         'span',
                         {
@@ -678,8 +688,6 @@ const SpiderApp = ({ userProfileData }) => {
                         }`,
                         style: { 
                             clipPath: 'polygon(100% 0, 100% 100%, 0 100%)',
-                            outline: !selectedCategory && !generationInProgress ? '2px solid rgb(239 68 68)' : 'none',
-                            outlineOffset: '-2px'
                         },
                         onClick: () => {
                             if (selectedCategory && !generationInProgress) {
@@ -689,6 +697,18 @@ const SpiderApp = ({ userProfileData }) => {
                         disabled: generationInProgress || !selectedCategory,
                         title: !selectedCategory ? 'Najprv vyberte kategóriu' : 'Zmazať pavúka'
                     },
+                    React.createElement(
+                        'div',
+                        {
+                            style: {
+                                position: 'absolute',
+                                inset: 0,
+                                boxShadow: !selectedCategory && !generationInProgress ? 'inset 0 0 0 2px rgb(239 68 68)' : 'none',
+                                borderRadius: '50%',
+                                pointerEvents: 'none'
+                            }
+                        }
+                    ),
                     React.createElement(
                         'span',
                         {
