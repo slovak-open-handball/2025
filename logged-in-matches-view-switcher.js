@@ -1,5 +1,3 @@
-/*
-
 // logged-in-matches-view-switcher.js
 (function() {
     // ===== ČASŤ 1: view-switcher.js =====
@@ -98,4 +96,3 @@
         setTimeout(updateActiveViewButton, 100);
     }
 })();
-*/
