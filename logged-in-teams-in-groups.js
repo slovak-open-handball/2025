@@ -1137,7 +1137,7 @@ const createTeamAssignmentNotification = async (action, team) => {
       }, [
         teamName,
         selectedCategory,
-        selectedGroupType, // Pridaná závislosť na type skupiny
+        selectedGroupType,
         isOpen,
         teamToEdit,
         allTeams,
@@ -1592,12 +1592,12 @@ const createTeamAssignmentNotification = async (action, team) => {
                 ) : null
               ) : null,
               
-              // ŽLTÁ INFORMÁCIA PRE NADSTAVBOVÉ SKUPINY (ak skupina existuje)
-              (selectedGroupType === 'nadstavbová skupina' && teamName.trim().length > 0 && !groupEndingMismatch) ? React.createElement(
+              // ŽLTÁ INFORMÁCIA PRE NADSTAVBOVÉ SKUPINY (ak je vybratá skupina)
+              (selectedGroupType === 'nadstavbová skupina' && selectedGroup && teamName.trim().length > 0 && !groupEndingMismatch) ? React.createElement(
                 'p',
                 { className: 'text-sm text-yellow-700 bg-yellow-50 p-2 rounded-lg border border-yellow-300 font-medium' },
                 React.createElement('i', { className: 'fa-solid fa-circle-info mr-2' }),
-                `Tím bude zaradený do nadstavbovej skupiny ${teamName.trim().slice(-1).toUpperCase()}.`
+                `Tím bude zaradený do nadstavbovej skupiny ${selectedGroup}.`
               ) : null,
               
               // Chyba poradia (s rozlíšením podľa typu skupiny)
