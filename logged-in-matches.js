@@ -3296,24 +3296,45 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     const loadFiltersFromURL = () => {
         const params = new URLSearchParams(window.location.search);
-
+    
         // Načítame názvy z URL
         const categoryName = params.get('category') || '';
         const groupName = params.get('group') || '';
         const teamId = params.get('teamId') || ''; // NOVÉ: načítanie ID tímu
         const hallName = params.get('hall') || '';
         const day = params.get('day') || ''; // Toto je string YYYY-MM-DD
-
-        // Nájdeme ID podľa názvu
-        const categoryId = categories.find(c => c.name === categoryName)?.id || '';
-        const hallId = sportHalls.find(h => h.name === hallName)?.id || '';
+    
+        console.log('Načítavam filtre z URL:', { categoryName, groupName, teamId, hallName, day });
+    
+        // Nájdeme ID podľa názvu - s kontrolou, či existujú dáta
+        let categoryId = '';
+        if (categoryName && categories.length > 0) {
+            const category = categories.find(c => c.name === categoryName);
+            if (category) {
+                categoryId = category.id;
+                console.log('Nájdená kategória:', categoryId);
+            } else {
+                console.warn('Kategória s názvom', categoryName, 'nebola nájdená');
+            }
+        }
+        
+        let hallId = '';
+        if (hallName && sportHalls.length > 0) {
+            const hall = sportHalls.find(h => h.name === hallName);
+            if (hall) {
+                hallId = hall.id;
+                console.log('Nájdená hala:', hallId);
+            } else {
+                console.warn('Hala s názvom', hallName, 'nebola nájdená');
+            }
+        }
     
         return {
             category: categoryId,
             group: groupName,
-            teamId: teamId, // NOVÉ
+            teamId: teamId,
             hall: hallId,
-            day: day // Vrátime string, nie Date objekt
+            day: day
         };
     };
 
@@ -3477,6 +3498,8 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [selectedMatchForAssign, setSelectedMatchForAssign] = useState(null);
 
+    const [filtersInitialized, setFiltersInitialized] = useState(false);
+
     // Funkcia na zmenu režimu zobrazenia a aktualizáciu URL
     const handleDisplayModeChange = (mode) => {
         setDisplayMode(mode);
@@ -3573,7 +3596,73 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
     }, [tournamentStartDate, tournamentEndDate]);
 
+    // Aktualizujte useEffect pre načítanie filtrov z URL
     useEffect(() => {
+        // Počkáme, kým sú načítané všetky potrebné dáta
+        if (categories.length > 0 && 
+            sportHalls.length > 0 && 
+            Object.keys(groupsByCategory).length > 0 && 
+            matches.length > 0 && 
+            !filtersInitialized) {
+            
+            console.log('Inicializujem filtre z URL...');
+            const filters = loadFiltersFromURL();
+            
+            // Skontrolujeme, či máme platné hodnoty
+            let shouldSetFilters = false;
+            
+            if (filters.category) {
+                console.log('Nastavujem filter kategórie:', filters.category);
+                setSelectedCategoryFilter(filters.category);
+                shouldSetFilters = true;
+            }
+            
+            if (filters.group) {
+                console.log('Nastavujem filter skupiny:', filters.group);
+                setSelectedGroupFilter(filters.group);
+                shouldSetFilters = true;
+            }
+            
+            if (filters.teamId) {
+                console.log('Nastavujem filter ID tímu:', filters.teamId);
+                setSelectedTeamIdFilter(filters.teamId);
+                shouldSetFilters = true;
+            }
+            
+            if (filters.hall) {
+                console.log('Nastavujem filter haly:', filters.hall);
+                setSelectedHallFilter(filters.hall);
+                shouldSetFilters = true;
+            }
+            
+            if (filters.day) {
+                console.log('Nastavujem filter dňa:', filters.day);
+                setSelectedDayFilter(filters.day);
+                shouldSetFilters = true;
+            }
+            
+            // Označíme, že filtre boli inicializované
+            setFiltersInitialized(true);
+            
+            // Ak boli nastavené nejaké filtre, aktualizujeme URL (pre prípad, že by sa zmenila)
+            if (shouldSetFilters) {
+                setTimeout(() => {
+                    updateURLWithFilters({
+                        category: filters.category,
+                        group: filters.group,
+                        teamId: filters.teamId,
+                        hall: filters.hall,
+                        day: filters.day
+                    });
+                }, 100);
+            }
+        }
+    }, [categories, sportHalls, groupsByCategory, matches, filtersInitialized]);
+
+    useEffect(() => {
+        // Ak ešte neboli filtre inicializované, nerobíme nič
+        if (!filtersInitialized) return;
+    
         const timeoutId = setTimeout(() => {
             updateURLWithFilters({
                 category: selectedCategoryFilter,
@@ -3585,7 +3674,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         }, 300); // 300ms oneskorenie
     
         return () => clearTimeout(timeoutId);
-    }, [selectedCategoryFilter, selectedGroupFilter, selectedHallFilter, selectedDayFilter, selectedTeamIdFilter]);
+    }, [selectedCategoryFilter, selectedGroupFilter, selectedHallFilter, selectedDayFilter, selectedTeamIdFilter, filtersInitialized]);
 
     // Načítanie režimu zobrazenia pri zmene URL (ak používateľ zmení URL manuálne)
     useEffect(() => {
