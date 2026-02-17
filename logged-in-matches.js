@@ -5872,7 +5872,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 const hasAnyMatch = matches.some(match => match.hallId === hall.id);
                                 
                                 // Zistíme, či je aktívny nejaký filter (kategória alebo skupina)
-                                const isFilterActive = selectedCategoryFilter || selectedGroupFilter;
+                                const isFilterActive = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
                                 
                                 // Generovanie zoznamu dní medzi začiatkom a koncom turnaja
                                 const tournamentDays = [];
@@ -5895,12 +5895,15 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         const matchesDayFilter = !selectedDayFilter || selectedDayFilter === dateStr;
                                         
                                         if (matchesDayFilter) {
-                                            // Získame zápasy pre túto halu a tento deň po aplikovaní filtrov
+                                            // Získame zápasy pre túto halu a tento deň po aplikovaní všetkých filtrov
                                             const hallMatchesForDay = getMatchesForHallAndDay(hall.id, currentDate);
                                             const matchesCount = hallMatchesForDay.length;
                                             
+                                            // Rozhodnutie, či zobraziť tento deň:
+                                            // - Ak je filter aktívny, zobrazíme LEN dni, ktoré majú zápasy
+                                            // - Ak nie je filter, zobrazíme VŠETKY dni (aj prázdne)
                                             if (isFilterActive) {
-                                                // Ak je filter aktívny, zobrazíme LEN dni, ktoré majú zápasy
+                                                // Filter je aktívny - zobrazíme len dni so zápasmi
                                                 if (matchesCount > 0) {
                                                     dayCards.push({
                                                         date: new Date(currentDate),
@@ -5911,7 +5914,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     });
                                                 }
                                             } else {
-                                                // Ak nie je filter, zobrazíme VŠETKY dni (aj prázdne)
+                                                // Filter nie je aktívny - zobrazíme všetky dni
                                                 dayCards.push({
                                                     date: new Date(currentDate),
                                                     dateStr: dateStr,
