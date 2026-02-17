@@ -48,10 +48,6 @@ window.showGlobalNotification = function(message, type = 'info', duration = 3000
         border: 1px solid rgba(255,255,255,0.2);
     `;
     
-    // Pridanie ikony podľa typu
-    const icon = type === 'success' ? '✓' : type === 'error' ? '✗' : type === 'warning' ? '⚠' : 'ℹ';
-    notification.innerHTML = `${icon} ${message}`;
-    
     container.appendChild(notification);
     
     // Automatické odstránenie po čase
