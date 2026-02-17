@@ -3,6 +3,100 @@ import { doc, getDoc, getDocs, setDoc, onSnapshot, updateDoc, addDoc, deleteDoc,
 
 const { useState, useEffect } = React;
 
+// GLOBÁLNY SYSTÉM NOTIFIKÁCIÍ
+if (!window.notificationContainer) {
+    // Vytvorenie kontajnera pre notifikácie
+    const container = document.createElement('div');
+    container.id = 'global-notification-container';
+    container.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        pointer-events: none;
+    `;
+    document.body.appendChild(container);
+    window.notificationContainer = container;
+}
+
+// Funkcia na zobrazenie globálnej notifikácie
+window.showGlobalNotification = function(message, type = 'info', duration = 3000) {
+    const container = window.notificationContainer;
+    if (!container) return;
+    
+    // Vytvorenie notifikácie
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        background-color: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : type === 'warning' ? '#ff9800' : '#2196F3'};
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        font-size: 14px;
+        font-weight: 500;
+        min-width: 300px;
+        text-align: center;
+        pointer-events: auto;
+        animation: slideIn 0.3s ease;
+        margin-bottom: 10px;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255,255,255,0.2);
+    `;
+    
+    // Pridanie ikony podľa typu
+    const icon = type === 'success' ? '✓' : type === 'error' ? '✗' : type === 'warning' ? '⚠' : 'ℹ';
+    notification.innerHTML = `${icon} ${message}`;
+    
+    container.appendChild(notification);
+    
+    // Automatické odstránenie po čase
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 300);
+    }, duration);
+    
+    return notification;
+};
+
+// Pridanie CSS animácií
+if (!document.getElementById('notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'notification-styles';
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
 // Stav pre aktuálny režim zobrazenia (globálny)
 window.currentViewMode = window.currentViewMode || 'matches';
 
