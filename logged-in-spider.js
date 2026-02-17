@@ -661,6 +661,41 @@ const SpiderApp = ({ userProfileData }) => {
                             }
                         }
                     ),
+                    // Pridanie dvoch šikmých čiar pre zablokovaný stav
+                    !selectedCategory && !generationInProgress && React.createElement(
+                        React.Fragment,
+                        null,
+                        // Zelená čiara
+                        React.createElement('div', {
+                            style: {
+                                position: 'absolute',
+                                top: '-2px',
+                                right: '-2px',
+                                width: '100%',
+                                height: '100%',
+                                background: 'linear-gradient(135deg, transparent calc(50% - 1px), rgb(34 197 94) calc(50% - 1px), rgb(34 197 94) calc(50% + 1px), transparent calc(50% + 1px))',
+                                pointerEvents: 'none',
+                                transform: 'rotate(45deg)',
+                                transformOrigin: 'center',
+                                zIndex: 20
+                            }
+                        }),
+                        // Červená čiara
+                        React.createElement('div', {
+                            style: {
+                                position: 'absolute',
+                                top: '-2px',
+                                right: '-2px',
+                                width: '100%',
+                                height: '100%',
+                                background: 'linear-gradient(135deg, transparent calc(50% - 1px), rgb(239 68 68) calc(50% - 1px), rgb(239 68 68) calc(50% + 1px), transparent calc(50% + 1px))',
+                                pointerEvents: 'none',
+                                transform: 'rotate(45deg) translateX(2px)',
+                                transformOrigin: 'center',
+                                zIndex: 21
+                            }
+                        })
+                    ),
                     React.createElement(
                         'span',
                         {
@@ -671,7 +706,8 @@ const SpiderApp = ({ userProfileData }) => {
                                 fontSize: '28px',
                                 fontWeight: 'bold',
                                 lineHeight: 1,
-                                color: !selectedCategory || generationInProgress ? 'rgb(34 197 94)' : 'white'
+                                color: !selectedCategory || generationInProgress ? 'rgb(34 197 94)' : 'white',
+                                zIndex: !selectedCategory && !generationInProgress ? 22 : 'auto'
                             }
                         },
                         '+'
