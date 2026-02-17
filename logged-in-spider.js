@@ -23,119 +23,12 @@ const formatDateWithDay = (date) => {
     return `${dayName} ${formattedDate}`;
 };
 
-// Komponent pre modálne okno
-const CategoryModal = ({ isOpen, onClose, onGenerate, categories }) => {
-    const [selectedCategory, setSelectedCategory] = useState('');
-
-    if (!isOpen) return null;
-
-    const sortedCategories = [...categories].sort((a, b) => a.name.localeCompare(b.name));
-
-    const handleGenerate = () => {
-        if (!selectedCategory) {
-            window.showGlobalNotification('Vyberte kategóriu', 'error');
-            return;
-        }
-        onGenerate(selectedCategory);
-        onClose();
-        setSelectedCategory('');
-    };
-
-    // Zabránenie zatvoreniu pri kliknutí dovnútra modalu
-    const handleModalClick = (e) => {
-        e.stopPropagation();
-    };
-
-    return React.createElement(
-        'div',
-        {
-            className: 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center',
-            onClick: onClose,
-            style: { backdropFilter: 'blur(4px)' }
-        },
-        React.createElement(
-            'div',
-            {
-                className: 'bg-white rounded-xl p-6 w-full max-w-md shadow-2xl',
-                onClick: handleModalClick
-            },
-            // Hlavička
-            React.createElement(
-                'div',
-                { className: 'flex justify-between items-center mb-4' },
-                React.createElement(
-                    'button',
-                    {
-                        onClick: onClose,
-                        className: 'text-gray-400 hover:text-gray-600 transition-colors'
-                    },
-                    React.createElement('i', { className: 'fa-solid fa-times text-2xl' })
-                )
-            ),
-            
-            // Výber kategórie
-            React.createElement(
-                'div',
-                { className: 'mb-6' },
-                React.createElement(
-                    'label',
-                    { className: 'block text-sm font-medium text-gray-700 mb-2' },
-                    'Kategória:'
-                ),
-                React.createElement(
-                    'select',
-                    {
-                        value: selectedCategory,
-                        onChange: (e) => {
-                            setSelectedCategory(e.target.value);
-                            e.target.blur();
-                        },
-                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-black'
-                    },
-                    React.createElement('option', { value: '' }, '-- Vyberte kategóriu --'),
-                    sortedCategories.map(cat => 
-                        React.createElement('option', { key: cat.id, value: cat.id }, cat.name)
-                    )
-                )
-            ),
-            
-            // Tlačidlá
-            React.createElement(
-                'div',
-                { className: 'flex justify-end gap-2' },
-                React.createElement(
-                    'button',
-                    {
-                        onClick: onClose,
-                        className: 'px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors'
-                    },
-                    'Zrušiť'
-                ),
-                React.createElement(
-                    'button',
-                    {
-                        onClick: handleGenerate,
-                        disabled: !selectedCategory,
-                        className: `px-4 py-2 text-sm rounded-lg transition-colors ${
-                            !selectedCategory
-                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                : 'bg-green-600 hover:bg-green-700 text-white'
-                        }`
-                    },
-                    'Generovať'
-                )
-            )
-        )
-    );
-};
-
 // Komponent pre pavúkovú tabuľku
 const SpiderApp = ({ userProfileData }) => {
     const [categories, setCategories] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState('');
     const [loading, setLoading] = useState(true);
     const [spiderData, setSpiderData] = useState(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const [allMatches, setAllMatches] = useState([]); // Všetky zápasy z databázy (aj bežné, aj pavúkové)
     const [isSelectOpen, setIsSelectOpen] = useState(false); // NOVÝ STAV - sleduje, či je selectbox rozbalený
 
@@ -267,7 +160,9 @@ const SpiderApp = ({ userProfileData }) => {
     }, [selectedCategory, allMatches]);
 
     // Funkcia na vytvorenie štruktúry pavúka a uloženie do databázy (do kolekcie 'matches')
-    const generateSpider = async (categoryId) => {
+    const generateSpider = async () => {
+        const categoryId = selectedCategory;
+        
         if (!categoryId) {
             window.showGlobalNotification('Vyberte kategóriu', 'error');
             return;
@@ -425,7 +320,6 @@ const SpiderApp = ({ userProfileData }) => {
                 }
             };
     
-            setSelectedCategory(categoryId);
             setSpiderData(spiderStructure);
             
             window.showGlobalNotification(`Pavúk bol úspešne vygenerovaný a uložených ${savedMatches.length} zápasov do databázy`, 'success');
@@ -502,20 +396,9 @@ const SpiderApp = ({ userProfileData }) => {
         return [...categories].sort((a, b) => a.name.localeCompare(b.name));
     }, [categories]);
 
-    // Farba odblokovaného tlačidla (pre zablokovaný stav)
-    const enabledButtonColor = 'rgb(34 197 94)'; // bg-green-500
-
     return React.createElement(
         React.Fragment,
         null,
-        // Modálne okno pre výber kategórie
-        React.createElement(CategoryModal, {
-            isOpen: isModalOpen,
-            onClose: () => setIsModalOpen(false),
-            onGenerate: generateSpider,
-            categories: categories
-        }),
-
         // Hlavička s ovládacími prvkami - opravená pre hover
         React.createElement(
             'div',
@@ -633,9 +516,9 @@ const SpiderApp = ({ userProfileData }) => {
                                             }, 750);
                                         }
                                     },
-                                    onFocus: () => setIsSelectOpen(true), // NOVÉ - select je rozbalený
-                                    onBlur: () => setIsSelectOpen(false), // NOVÉ - select je zatvorený
-                                    onMouseDown: () => setIsSelectOpen(true), // NOVÉ - pre prípad, že by focus nefungoval
+                                    onFocus: () => setIsSelectOpen(true),
+                                    onBlur: () => setIsSelectOpen(false),
+                                    onMouseDown: () => setIsSelectOpen(true),
                                     className: 'px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[180px]'
                                 },
                                 React.createElement('option', { value: '' }, '-- Vyberte kategóriu --'),
@@ -703,23 +586,19 @@ const SpiderApp = ({ userProfileData }) => {
             )
         ),
                 
-        // Zelené kruhové tlačidlo "+" v pravom dolnom rohu - UPRAVENÉ PODĽA POŽIADAVIEK
+        // Zelené kruhové tlačidlo "+" v pravom dolnom rohu - UPRAVENÉ - priamo generuje pavúka
         React.createElement(
             'button',
             {
-                onClick: () => {
-                    if (selectedCategory) {
-                        setIsModalOpen(true);
-                    }
-                },
+                onClick: generateSpider,
                 disabled: !selectedCategory,
                 className: `fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-3xl font-bold transition-all z-50 ${
                     selectedCategory 
                         ? 'bg-green-500 hover:bg-green-600 text-white hover:scale-110 cursor-pointer' 
                         : 'bg-white text-green-500 border-2 border-green-500 cursor-not-allowed opacity-70'
                 }`,
-                title: selectedCategory ? 'Generovať pavúka' : 'Najprv vyberte kategóriu',
-                style: selectedCategory ? {} : { pointerEvents: 'auto' } // Zabezpečíme, že disabled tlačidlo stále zachytáva udalosti pre tooltip
+                title: selectedCategory ? 'Generovať pavúka pre vybranú kategóriu' : 'Najprv vyberte kategóriu',
+                style: selectedCategory ? {} : { pointerEvents: 'auto' }
             },
             '+'
         ),
@@ -738,7 +617,7 @@ const SpiderApp = ({ userProfileData }) => {
                         { className: 'text-center py-16 text-gray-500' },
                         React.createElement('i', { className: 'fa-solid fa-sitemap text-6xl mb-4 opacity-30' }),
                         React.createElement('h2', { className: 'text-2xl font-semibold mb-2' }, 'Pavúk play-off'),
-                        React.createElement('p', { className: 'text-lg' }, 'Kliknite na zelené tlačidlo "+" pre generovanie pavúka')
+                        React.createElement('p', { className: 'text-lg' }, 'Vyberte kategóriu a kliknite na zelené tlačidlo "+" pre generovanie pavúka')
                     )
                 ) : (
                     React.createElement(
