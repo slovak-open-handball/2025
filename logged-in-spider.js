@@ -1,4 +1,4 @@
-// logged-in-spider.js (upravený - zvislé čiary)
+// logged-in-spider.js (upravený - jedna dlhá zvislá čiara)
 import { doc, getDoc, getDocs, setDoc, onSnapshot, updateDoc, addDoc, deleteDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { useState, useEffect } = React;
@@ -348,6 +348,21 @@ const SpiderApp = ({ userProfileData }) => {
                                 className: 'flex flex-col items-center w-full relative'
                             },
                             
+                            // JEDNA DLHÁ ZVISLÁ ČIARA - prechádza celým pavúkom
+                            React.createElement(
+                                'div',
+                                { 
+                                    className: 'absolute w-0.5 bg-gray-400',
+                                    style: { 
+                                        left: '50%',
+                                        top: '10%',
+                                        bottom: '10%',
+                                        transform: 'translateX(-50%)',
+                                        zIndex: 1
+                                    }
+                                }
+                            ),
+                            
                             // FINÁLE - hore
                             React.createElement(
                                 'div',
@@ -358,19 +373,11 @@ const SpiderApp = ({ userProfileData }) => {
                                 })
                             ),
                             
-                            // Zvislá čiara medzi finále a semifinále
-                            React.createElement(
-                                'div',
-                                { 
-                                    className: 'w-0.5 h-12 bg-gray-400 my-2'
-                                }
-                            ),
-                            
                             // Semifinále - vedľa seba (v strede) s vodorovnou čiarou medzi nimi
                             React.createElement(
                                 'div',
                                 { 
-                                    className: 'flex justify-center items-center gap-16 w-full relative'
+                                    className: 'flex justify-center items-center gap-16 w-full relative z-10'
                                 },
                                 
                                 // Semifinále 1
@@ -386,7 +393,8 @@ const SpiderApp = ({ userProfileData }) => {
                                         className: 'absolute left-1/2 transform -translate-x-1/2 w-12 h-0.5 bg-gray-400',
                                         style: { 
                                             top: '50%',
-                                            marginTop: '-1px'
+                                            marginTop: '-1px',
+                                            zIndex: 5
                                         }
                                     }
                                 ),
@@ -398,18 +406,10 @@ const SpiderApp = ({ userProfileData }) => {
                                 })
                             ),
                             
-                            // Zvislá čiara medzi semifinále a zápasom o 3. miesto
-                            React.createElement(
-                                'div',
-                                { 
-                                    className: 'w-0.5 h-12 bg-gray-400 my-2'
-                                }
-                            ),
-                            
                             // Zápas o 3. miesto - dole
                             React.createElement(
                                 'div',
-                                { className: 'relative z-10' },
+                                { className: 'relative z-10 mt-8' },
                                 React.createElement(MatchCell, { 
                                     match: spiderData.thirdPlace, 
                                     title: 'O 3. miesto'
