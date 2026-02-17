@@ -762,7 +762,7 @@ const SpiderApp = ({ userProfileData }) => {
                         ),
                     )
                 )
-            );
+            )
         ),
 
         // Modálne okno pre potvrdenie mazania
