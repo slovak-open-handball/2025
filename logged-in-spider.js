@@ -1,4 +1,4 @@
-// logged-in-spider.js
+// logged-in-spider.js (upravený - bez prerušovaných čiar)
 import { doc, getDoc, getDocs, setDoc, onSnapshot, updateDoc, addDoc, deleteDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { useState, useEffect } = React;
@@ -193,16 +193,14 @@ const SpiderApp = ({ userProfileData }) => {
     };
 
     // Komponent pre zobrazenie jedného zápasu v pavúkovom zobrazení
-    const MatchCell = ({ match, title = '', position = 'left' }) => {
+    const MatchCell = ({ match, title = '' }) => {
         const matchDate = match.date ? new Date(match.date) : null;
         const formattedDate = matchDate ? formatDateWithDay(matchDate) : '';
         
         return React.createElement(
             'div',
             { 
-                className: `border-2 border-gray-300 rounded-lg p-3 min-w-[220px] bg-white shadow-sm relative ${
-                    position === 'left' ? 'match-left' : position === 'right' ? 'match-right' : 'match-center'
-                }`,
+                className: 'border-2 border-gray-300 rounded-lg p-3 min-w-[220px] bg-white shadow-sm',
                 'data-match-id': match.id
             },
             // Nadpis (ak existuje)
@@ -313,62 +311,13 @@ const SpiderApp = ({ userProfileData }) => {
             '+'
         ),
 
-        // Obsah - pavúková tabuľka so spojovacími čiarami
+        // Obsah - pavúková tabuľka
         React.createElement(
             'div',
             { className: 'flex-grow flex justify-center items-start w-full pt-24 pb-20' },
             React.createElement(
                 'div',
-                { className: 'bg-white p-8 relative', style: { width: '100%', maxWidth: '1200px' } },
-                
-                // SVG pre spojovacie čiary
-                spiderData && React.createElement(
-                    'svg',
-                    {
-                        className: 'absolute inset-0 w-full h-full pointer-events-none',
-                        style: { zIndex: 5 }
-                    },
-                    // Čiara z ľavého semifinále do finále
-                    React.createElement('line', {
-                        x1: '35%',
-                        y1: '35%',
-                        x2: '48%',
-                        y2: '50%',
-                        stroke: '#9CA3AF',
-                        strokeWidth: '2',
-                        strokeDasharray: '5,5'
-                    }),
-                    // Čiara z pravého semifinále do finále
-                    React.createElement('line', {
-                        x1: '65%',
-                        y1: '35%',
-                        x2: '52%',
-                        y2: '50%',
-                        stroke: '#9CA3AF',
-                        strokeWidth: '2',
-                        strokeDasharray: '5,5'
-                    }),
-                    // Vertikálna čiara pre ľavú stranu
-                    React.createElement('line', {
-                        x1: '35%',
-                        y1: '35%',
-                        x2: '35%',
-                        y2: '45%',
-                        stroke: '#9CA3AF',
-                        strokeWidth: '2',
-                        strokeDasharray: '5,5'
-                    }),
-                    // Vertikálna čiara pre pravú stranu
-                    React.createElement('line', {
-                        x1: '65%',
-                        y1: '35%',
-                        x2: '65%',
-                        y2: '45%',
-                        stroke: '#9CA3AF',
-                        strokeWidth: '2',
-                        strokeDasharray: '5,5'
-                    })
-                ),
+                { className: 'bg-white p-8', style: { width: '100%', maxWidth: '1200px' } },
                 
                 !spiderData ? (
                     React.createElement(
@@ -381,7 +330,7 @@ const SpiderApp = ({ userProfileData }) => {
                 ) : (
                     React.createElement(
                         'div',
-                        { className: 'flex flex-col items-center relative' },
+                        { className: 'flex flex-col items-center' },
                         
                         // Nadpis
                         React.createElement(
@@ -390,177 +339,47 @@ const SpiderApp = ({ userProfileData }) => {
                             `Play-off - ${categories.find(c => c.id === selectedCategory)?.name || selectedCategory}`
                         ),
                         
-                        // Pavúková štruktúra s CSS Grid
+                        // Pavúková štruktúra
                         React.createElement(
                             'div',
                             { 
-                                className: 'grid relative',
-                                style: {
-                                    display: 'grid',
-                                    gridTemplateColumns: '1fr auto 1fr',
-                                    gap: '3rem',
-                                    alignItems: 'center',
-                                    minHeight: '400px'
-                                }
+                                className: 'flex flex-col items-center w-full gap-8'
                             },
                             
-                            // Ľavý stĺpec - Semifinále 1
+                            // Semifinále - vedľa seba
                             React.createElement(
                                 'div',
-                                { 
-                                    className: 'relative',
-                                    style: { 
-                                        gridColumn: '1',
-                                        justifySelf: 'end'
-                                    }
-                                },
+                                { className: 'flex justify-center gap-16 w-full' },
+                                
+                                // Semifinále 1
                                 React.createElement(MatchCell, { 
                                     match: spiderData.semiFinals[0], 
-                                    title: 'Semifinále 1',
-                                    position: 'left'
-                                })
-                            ),
-                            
-                            // Stredný stĺpec - Spojovacie body
-                            React.createElement(
-                                'div',
-                                { 
-                                    className: 'relative flex flex-col items-center justify-center h-full',
-                                    style: { gridColumn: '2' }
-                                },
-                                // Horný spojovací bod
-                                React.createElement('div', { 
-                                    className: 'w-3 h-3 bg-gray-400 rounded-full mb-2',
-                                    style: { marginBottom: '2rem' }
+                                    title: 'Semifinále 1'
                                 }),
-                                // Dolný spojovací bod (finále)
-                                React.createElement('div', { 
-                                    className: 'w-4 h-4 bg-purple-600 rounded-full' 
-                                })
-                            ),
-                            
-                            // Pravý stĺpec - Semifinále 2
-                            React.createElement(
-                                'div',
-                                { 
-                                    className: 'relative',
-                                    style: { 
-                                        gridColumn: '3',
-                                        justifySelf: 'start'
-                                    }
-                                },
+                                
+                                // Semifinále 2
                                 React.createElement(MatchCell, { 
                                     match: spiderData.semiFinals[1], 
-                                    title: 'Semifinále 2',
-                                    position: 'right'
+                                    title: 'Semifinále 2'
                                 })
                             ),
                             
-                            // Finále - celý riadok
+                            // Finále
                             React.createElement(
                                 'div',
-                                { 
-                                    className: 'col-span-3 flex justify-center mt-8 relative',
-                                    style: { gridColumn: '1 / -1' }
-                                },
+                                { className: 'mt-8' },
                                 React.createElement(MatchCell, { 
                                     match: spiderData.final, 
-                                    title: 'Finále',
-                                    position: 'center'
+                                    title: 'Finále'
                                 })
                             )
-                        ),
-                        
-                        // CSS pre spojovacie čiary
-                        React.createElement(
-                            'style',
-                            null,
-                            `
-                            .spider-connector {
-                                position: absolute;
-                                background: transparent;
-                                border: 2px solid #9CA3AF;
-                                border-style: dashed;
-                            }
-                            
-                            .match-left::after {
-                                content: '';
-                                position: absolute;
-                                top: 50%;
-                                right: -2rem;
-                                width: 2rem;
-                                height: 2px;
-                                background: repeating-linear-gradient(90deg, #9CA3AF 0px, #9CA3AF 5px, transparent 5px, transparent 10px);
-                                transform: translateY(-50%);
-                            }
-                            
-                            .match-right::after {
-                                content: '';
-                                position: absolute;
-                                top: 50%;
-                                left: -2rem;
-                                width: 2rem;
-                                height: 2px;
-                                background: repeating-linear-gradient(90deg, transparent 0px, transparent 5px, #9CA3AF 5px, #9CA3AF 10px);
-                                transform: translateY(-50%);
-                            }
-                            
-                            .match-left::before {
-                                content: '';
-                                position: absolute;
-                                top: 50%;
-                                right: -2rem;
-                                width: 0;
-                                height: 100px;
-                                border-right: 2px dashed #9CA3AF;
-                                transform: translateY(-25%);
-                            }
-                            
-                            .match-right::before {
-                                content: '';
-                                position: absolute;
-                                top: 50%;
-                                left: -2rem;
-                                width: 0;
-                                height: 100px;
-                                border-left: 2px dashed #9CA3AF;
-                                transform: translateY(-25%);
-                            }
-                            
-                            .final-connector-left {
-                                position: relative;
-                            }
-                            
-                            .final-connector-left::before {
-                                content: '';
-                                position: absolute;
-                                top: 50%;
-                                left: -4rem;
-                                width: 4rem;
-                                height: 2px;
-                                background: repeating-linear-gradient(90deg, transparent 0px, transparent 5px, #9CA3AF 5px, #9CA3AF 10px);
-                                transform: translateY(-50%);
-                            }
-                            
-                            .final-connector-right::after {
-                                content: '';
-                                position: absolute;
-                                top: 50%;
-                                right: -4rem;
-                                width: 4rem;
-                                height: 2px;
-                                background: repeating-linear-gradient(90deg, #9CA3AF 0px, #9CA3AF 5px, transparent 5px, transparent 10px);
-                                transform: translateY(-50%);
-                            }
-                            `
                         ),
                         
                         // Legenda
                         React.createElement(
                             'div',
                             { className: 'mt-12 text-sm text-gray-500 border-t pt-4 w-full text-center' },
-                            React.createElement('p', null, '--- označuje nezapojený tím alebo voľný žreb'),
-                            React.createElement('p', { className: 'mt-2 text-xs' }, 'Prerušované čiary znázorňujú postup víťazov do finále')
+                            React.createElement('p', null, '--- označuje nezapojený tím alebo voľný žreb')
                         )
                     )
                 )
