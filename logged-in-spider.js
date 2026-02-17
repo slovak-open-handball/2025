@@ -291,7 +291,11 @@ const SpiderApp = ({ userProfileData }) => {
                                 'select',
                                 {
                                     value: selectedCategory,
-                                    onChange: (e) => setSelectedCategory(e.target.value),
+                                    onChange: (e) => {
+                                        setSelectedCategory(e.target.value);
+                                        // Odstránime focus z selectboxu po výbere
+                                        e.target.blur();
+                                    },
                                     className: 'px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black min-w-[180px]'
                                 },
                                 React.createElement('option', { value: '' }, '-- Vyberte kategóriu --'),
@@ -318,7 +322,7 @@ const SpiderApp = ({ userProfileData }) => {
                 )
             )
         ),
-
+        
         // Zelené kruhové tlačidlo "+" v pravom dolnom rohu
         React.createElement(
             'button',
