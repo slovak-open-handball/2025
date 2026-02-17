@@ -126,28 +126,46 @@ const formatDateWithDay = (date) => {
     return `${dayName} ${formattedDate}`;
 };
 
-// Pomocná funkcia na aktualizáciu URL s parametrom kategórie
-const updateUrlWithCategory = (categoryId) => {
-    const url = new URL(window.location.href);
-    if (categoryId) {
-        url.searchParams.set('category', categoryId);
+// Pomocná funkcia na aktualizáciu URL s hash parametrom (názov kategórie)
+const updateUrlWithCategoryName = (categoryName) => {
+    if (categoryName) {
+        // Odstránime diakritiku a nahradíme medzery pomlčkami pre URL
+        const urlFriendlyName = categoryName
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '') // odstráni diakritiku
+            .replace(/\s+/g, '-') // nahradí medzery pomlčkami
+            .toLowerCase();
+        
+        window.location.hash = urlFriendlyName;
     } else {
-        url.searchParams.delete('category');
+        window.location.hash = '';
     }
-    // Prepíšeme históriu bez reloadu stránky
-    window.history.replaceState({}, '', url);
 };
 
-// Pomocná funkcia na získanie kategórie z URL
-const getCategoryFromUrl = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('category') || '';
+// Pomocná funkcia na získanie názvu kategórie z URL hash
+const getCategoryNameFromUrl = () => {
+    const hash = window.location.hash.substring(1); // odstráni #
+    if (!hash) return '';
+    
+    // Konvertujeme späť z URL-friendly formátu (pomlčky na medzery)
+    return hash.replace(/-/g, ' ');
+};
+
+// Funkcia na nájdenie ID kategórie podľa názvu
+const findCategoryIdByName = (categories, categoryName) => {
+    if (!categoryName || !categories.length) return '';
+    
+    const category = categories.find(c => 
+        c.name.toLowerCase() === categoryName.toLowerCase()
+    );
+    
+    return category ? category.id : '';
 };
 
 // Komponent pre pavúkovú tabuľku
 const SpiderApp = ({ userProfileData }) => {
     const [categories, setCategories] = useState([]);
-    const [selectedCategory, setSelectedCategory] = useState(() => getCategoryFromUrl()); // Inicializácia z URL
+    const [selectedCategory, setSelectedCategory] = useState('');
     const [loading, setLoading] = useState(true);
     const [spiderData, setSpiderData] = useState(null);
     const [allMatches, setAllMatches] = useState([]); // Všetky zápasy z databázy (aj bežné, aj pavúkové)
@@ -219,6 +237,19 @@ const SpiderApp = ({ userProfileData }) => {
             if (unsubscribe) unsubscribe();
         };
     }, []);
+
+    // Načítanie kategórie z URL hash po načítaní kategórií
+    useEffect(() => {
+        if (categories.length > 0) {
+            const categoryNameFromUrl = getCategoryNameFromUrl();
+            if (categoryNameFromUrl) {
+                const categoryId = findCategoryIdByName(categories, categoryNameFromUrl);
+                if (categoryId) {
+                    setSelectedCategory(categoryId);
+                }
+            }
+        }
+    }, [categories]);
 
     // Načítanie pavúka pre vybranú kategóriu
     useEffect(() => {
@@ -516,11 +547,21 @@ const SpiderApp = ({ userProfileData }) => {
         return !(hoveredElement !== null && panel && (hoveredElement === panel || panel.contains(hoveredElement)));
     };
 
-    // Handler pre zmenu kategórie - aktualizuje URL a stav
+    // Handler pre zmenu kategórie - aktualizuje URL hash a stav
     const handleCategoryChange = (e) => {
-        const newCategory = e.target.value;
-        setSelectedCategory(newCategory);
-        updateUrlWithCategory(newCategory);
+        const newCategoryId = e.target.value;
+        setSelectedCategory(newCategoryId);
+        
+        // Aktualizujeme URL hash podľa názvu kategórie
+        if (newCategoryId) {
+            const category = categories.find(c => c.id === newCategoryId);
+            if (category) {
+                updateUrlWithCategoryName(category.name);
+            }
+        } else {
+            updateUrlWithCategoryName('');
+        }
+        
         e.target.blur();
         
         const panel = e.currentTarget.closest('[style*="pointer-events: auto"]');
