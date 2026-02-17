@@ -134,6 +134,9 @@ const SpiderApp = ({ userProfileData }) => {
     const [spiderData, setSpiderData] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
+    // Definícia isFilterActive - filter je aktívny, ak je vybratá nejaká kategória
+    const isFilterActive = selectedCategory !== '';
+
     // Načítanie kategórií
     useEffect(() => {
         if (!window.db) {
