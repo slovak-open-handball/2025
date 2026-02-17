@@ -6027,7 +6027,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 const isEmpty = dayCard.isEmpty;
                     
                                                 // --- NOVÉ: Zistíme, či je aktívny filter pre túto kartu dňa ---
-                                                const isFilterActiveForDay = selectedCategoryFilter || selectedGroupFilter;
+                                                const isFilterActiveForDay = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
                     
                                                 // Vo vnútri dayCards.map, pred hallMatches.map
                                                 // Zistíme všetky skupiny pre túto halu a deň
