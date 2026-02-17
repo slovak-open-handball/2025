@@ -5305,6 +5305,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     setSelectedGroupFilter('');
                                     setSelectedHallFilter('');
                                     setSelectedDayFilter('');
+                                    setSelectedTeamIdFilter('');
                                 },
                                 className: 'px-3 py-1.5 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors whitespace-nowrap'
                             },
