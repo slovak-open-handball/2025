@@ -5050,7 +5050,98 @@ const AddMatchesApp = ({ userProfileData }) => {
                 { 
                     className: 'group',
                     style: { pointerEvents: 'auto' }, // Samotné ovládacie prvky sú klikateľné
-                    // Odstránime všetky zložité kontroly a necháme len jednoduché CSS správanie
+                    onMouseLeave: (e) => {
+                        // Pridáme oneskorenie pred skrytím, aby sa používateľ mohol presunúť do dropdownu
+                        const target = e.currentTarget;
+                        
+                        setTimeout(() => {
+                            // Skontrolujeme, či je nejaký selectbox rozbalený
+                            // Selectbox je rozbalený, ak má veľkosť > 1 (pre multiple) alebo 
+                            // ak je otvorený jeho dropdown
+                            const selects = target.querySelectorAll('select');
+                            let isAnyDropdownOpen = false;
+                            
+                            selects.forEach(select => {
+                                // Kontrola, či je select rozbalený - toto je komplikované,
+                                // ale môžeme skúsiť zistiť, či má select otvorený dropdown
+                                // Väčšina prehliadačov pridáva pseudo-class :focus keď je select otvorený
+                                // a zároveň má otvorený dropdown
+                                if (select.matches(':focus')) {
+                                    // Skúsime zistiť, či je naozaj otvorený dropdown
+                                    // Môžeme to urobiť kontrolou, či má select veľkosť > 1
+                                    if (select.size > 1) {
+                                        isAnyDropdownOpen = true;
+                                    } else {
+                                        // Pre jednoduché selecty nevieme presne zistiť, či je dropdown otvorený
+                                        // Ale vieme, že keď je select vo focus a používateľ neklikol mimo,
+                                        // dropdown je pravdepodobne stále otvorený
+                                        // Preto použijeme oneskorenie a skontrolujeme, či select stále drží focus
+                                        // Toto je nedokonalé, ale funguje v praxi
+                                        isAnyDropdownOpen = true;
+                                    }
+                                }
+                            });
+                            
+                            // Tiež skontrolujeme, či nie je otvorený nejaký dropdown mimo nášho kontajnera
+                            const activeElement = document.activeElement;
+                            if (activeElement && activeElement.tagName === 'SELECT' && 
+                                !target.contains(activeElement)) {
+                                isAnyDropdownOpen = true;
+                            }
+                            
+                            // Ak je nejaký dropdown otvorený, pridáme triedu, ktorá zabráni skrytiu
+                            if (isAnyDropdownOpen) {
+                                target.classList.add('dropdown-open');
+                            } else {
+                                target.classList.remove('dropdown-open');
+                                
+                                // Ak nie je žiadny dropdown otvorený a myš nie je v kontajneri, skryjeme panel
+                                if (!target.matches(':hover')) {
+                                    target.classList.remove('group');
+                                    setTimeout(() => {
+                                        target.classList.add('group');
+                                    }, 10);
+                                }
+                            }
+                        }, 300);
+                    },
+                    
+                    // Pridáme aj onFocus handler pre prípad, že používateľ klikne do selectu
+                    onFocus: (e) => {
+                        const target = e.currentTarget;
+                        // Ak je focus na selecte, pridáme triedu dropdown-open
+                        if (e.target.tagName === 'SELECT') {
+                            target.classList.add('dropdown-open');
+                        }
+                    },
+                    
+                    // Sledujeme blur udalosti
+                    onBlur: (e) => {
+                        const target = e.currentTarget;
+                        // Počkáme chvíľu a skontrolujeme, či ešte nie je nejaký select otvorený
+                        setTimeout(() => {
+                            const selects = target.querySelectorAll('select');
+                            let isAnyDropdownOpen = false;
+                            
+                            selects.forEach(select => {
+                                if (select.matches(':focus')) {
+                                    isAnyDropdownOpen = true;
+                                }
+                            });
+                            
+                            if (!isAnyDropdownOpen) {
+                                target.classList.remove('dropdown-open');
+                            }
+                        }, 100);
+                    },
+                    
+                    // Pridáme onClick handler pre lepšiu detekciu
+                    onClick: (e) => {
+                        const target = e.currentTarget;
+                        if (e.target.tagName === 'SELECT') {
+                            target.classList.add('dropdown-open');
+                        }
+                    }
                 },
                 // Tenký pásik pre hover
                 React.createElement(
@@ -5058,11 +5149,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                     { className: 'w-full h-2 bg-transparent' }
                 ),
                 
-                // Panel filtrov - zobrazí sa len pri hover
+                // Panel filtrov - zobrazí sa pri hover, alebo trvalo keď je otvorený dropdown
                 React.createElement(
                     'div',
                     { 
-                        className: 'flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out',
+                        className: 'flex flex-col gap-2 opacity-0 group-hover:opacity-100 group-[.dropdown-open]:opacity-100 transition-opacity duration-300 ease-in-out',
                         style: { 
                             transform: 'translateY(0)',
                             pointerEvents: 'auto'
