@@ -1,4 +1,4 @@
-// logged-in-spider.js (upravený - vodorovná čiara medzi semifinále)
+// logged-in-spider.js (upravený - zvislé čiary)
 import { doc, getDoc, getDocs, setDoc, onSnapshot, updateDoc, addDoc, deleteDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { useState, useEffect } = React;
@@ -332,7 +332,7 @@ const SpiderApp = ({ userProfileData }) => {
                 ) : (
                     React.createElement(
                         'div',
-                        { className: 'flex flex-col items-center' },
+                        { className: 'flex flex-col items-center relative' },
                         
                         // Nadpis
                         React.createElement(
@@ -345,17 +345,25 @@ const SpiderApp = ({ userProfileData }) => {
                         React.createElement(
                             'div',
                             { 
-                                className: 'flex flex-col items-center w-full gap-8'
+                                className: 'flex flex-col items-center w-full relative'
                             },
                             
-                            // FINÁLE - teraz je hore
+                            // FINÁLE - hore
                             React.createElement(
                                 'div',
-                                { className: 'mb-4' },
+                                { className: 'relative z-10' },
                                 React.createElement(MatchCell, { 
                                     match: spiderData.final, 
                                     title: 'Finále'
                                 })
+                            ),
+                            
+                            // Zvislá čiara medzi finále a semifinále
+                            React.createElement(
+                                'div',
+                                { 
+                                    className: 'w-0.5 h-12 bg-gray-400 my-2'
+                                }
                             ),
                             
                             // Semifinále - vedľa seba (v strede) s vodorovnou čiarou medzi nimi
@@ -390,10 +398,18 @@ const SpiderApp = ({ userProfileData }) => {
                                 })
                             ),
                             
+                            // Zvislá čiara medzi semifinále a zápasom o 3. miesto
+                            React.createElement(
+                                'div',
+                                { 
+                                    className: 'w-0.5 h-12 bg-gray-400 my-2'
+                                }
+                            ),
+                            
                             // Zápas o 3. miesto - dole
                             React.createElement(
                                 'div',
-                                { className: 'mt-4' },
+                                { className: 'relative z-10' },
                                 React.createElement(MatchCell, { 
                                     match: spiderData.thirdPlace, 
                                     title: 'O 3. miesto'
