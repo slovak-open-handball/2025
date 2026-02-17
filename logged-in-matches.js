@@ -6660,7 +6660,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             },
                                                                             React.createElement(
                                                                                 'span',
-                                                                                { className: 'text-gray-500 font-mono text-[10px] truncate block w-full', title: awayDisplay.id },
+                                                                                { 
+                                                                                    className: `${selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium'} text-gray-500 font-mono text-[10px] truncate block w-full`,
+                                                                                    title: awayDisplay.id 
+                                                                                },
                                                                                 `(${awayDisplay.id})`
                                                                             )
                                                                         ) : React.createElement('div', { className: 'px-2 py-1 overflow-hidden' }),
