@@ -2449,7 +2449,7 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                     React.createElement(
                         'div',
                         null,
-                        React.createElement('span', { className: 'text-gray-700 font-medium' }, 'Zápas zo základnej skupiny sa prenáša'),
+                        React.createElement('span', { className: 'text-gray-700 font-medium' }, 'Vzájomný zápas sa prenáša'),
                         React.createElement('p', { className: 'text-xs text-gray-500 mt-1' },
                             'Nebudú sa generovať zápasy medzi tímami, ktoré majú rovnaký posledný znak v názve (t.j. pochádzajú z rovnakej základnej skupiny)'
                         )
