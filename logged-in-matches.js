@@ -3925,15 +3925,15 @@ const AddMatchesApp = ({ userProfileData }) => {
     // Nahraďte existujúcu funkciu getMatchesForHallAndDay touto:
     const getMatchesForHallAndDay = (hallId, date) => {
         if (!matches || matches.length === 0) return [];
-    
+
         // Formátujeme dátum pre porovnanie
         const dateStr = getLocalDateStr(date);
-    
+
         // Najprv získame všetky zápasy pre túto halu a deň
         const hallDayMatches = matches.filter(match => {
             if (!match.hallId || !match.scheduledTime) return false;
             if (match.hallId !== hallId) return false;
-            
+        
             try {
                 const matchDate = match.scheduledTime.toDate();
                 const matchDateStr = getLocalDateStr(matchDate);
@@ -3942,17 +3942,25 @@ const AddMatchesApp = ({ userProfileData }) => {
                 return false;
             }
         });
-        
+    
         // Potom na ne aplikujeme filtre (okrem filtra haly, ten už je aplikovaný)
         return hallDayMatches.filter(match => {
             // Filter podľa kategórie
             if (selectedCategoryFilter && match.categoryId !== selectedCategoryFilter) {
                 return false;
             }
-            
+        
             // Filter podľa skupiny
             if (selectedGroupFilter && match.groupName !== selectedGroupFilter) {
                 return false;
+            }
+            
+            // Filter podľa ID tímu - PRIDANÉ!
+            if (selectedTeamIdFilter) {
+                // Zápas vyhovuje, ak sa vybrané ID zhoduje s domácim ALEBO hosťovským tímom
+                if (match.homeTeamIdentifier !== selectedTeamIdFilter && match.awayTeamIdentifier !== selectedTeamIdFilter) {
+                    return false;
+                }
             }
             
             return true;
