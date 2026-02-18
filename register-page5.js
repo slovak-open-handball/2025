@@ -224,23 +224,20 @@ function TeamAccommodationAndArrival({
         ? tournamentStartDate.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' })
         : '';
 
-    // NOVINKA: Formátovanie arrivalDateTime pre zobrazenie v informačnom texte
-    const formattedArrivalDateTime = () => {
-        if (!arrivalDateTime) return 'dátum a čas príchodu';
-        
-        const date = arrivalDateTime.toLocaleDateString('sk-SK', {
+    const formattedArrivalDate = arrivalDateTime instanceof Date && !isNaN(arrivalDateTime.getTime())
+        ? arrivalDateTime.toLocaleDateString('sk-SK', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric'
-        });
-        
-        const time = arrivalDateTime.toLocaleTimeString('sk-SK', {
+          })
+        : 'dátum príchodu';
+
+    const formattedArrivalTime = arrivalDateTime instanceof Date && !isNaN(arrivalDateTime.getTime())
+        ? arrivalDateTime.toLocaleTimeString('sk-SK', {
             hour: '2-digit',
             minute: '2-digit'
-        });
-        
-        return `${date} o ${time} hod.`;
-    };
+          })
+        : 'čas príchodu';
 
     return React.createElement(
         React.Fragment,
@@ -308,7 +305,7 @@ function TeamAccommodationAndArrival({
                 'p',
                 { className: 'text-sm text-gray-600 mb-4' },
                 // NOVINKA: Upravený text s dynamickým dátumom a časom príchodu z databázy
-                `Ak budete prichádzať verejnou dopravou a je potrebné pre vás zabezpečiť dopravu na miesto ubytovania, napíšte nám čas príchodu vlaku/autobusu dňa ${formattedArrivalDateTime()}. V prípade príchodu po 10:00 hod. bude zabezpečený zvoz len na miesto otvorenia turnaja.`
+                `Ak budete prichádzať verejnou dopravou a je potrebné pre vás zabezpečiť dopravu na miesto ubytovania, napíšte nám čas príchodu vlaku/autobusu dňa ${formattedArrivalDate}. V prípade príchodu po ${formattedArrivalTime} hod. bude zabezpečený zvoz len na miesto otvorenia turnaja.`            
             ),
             React.createElement(
                 'div',
