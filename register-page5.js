@@ -349,8 +349,13 @@ function TeamAccommodationAndArrival({
                         // Zohľadňujeme počet členov tímu, ktorý sa práve registruje
                         const isAccommodationFullForThisTeam = remaining < currentTeamPeople;
                         
-                        // Zablokovanie ak je typ ubytovania plný pre tento tím
-                        const isDisabled = isAccommodationFullForThisTeam || loading;
+                        // DÔLEŽITÉ: Kontrola, či je typ ubytovania plný z databázy
+                        const isDatabaseFull = existingCount >= acc.capacity;
+                        
+                        // Zablokovanie ak:
+                        // 1. Databáza je už plná, ALEBO
+                        // 2. Celková kapacita nestačí pre tento tím
+                        const isDisabled = (isDatabaseFull || isAccommodationFullForThisTeam) || loading;
                         
                         return React.createElement(
                             'label',
@@ -376,9 +381,11 @@ function TeamAccommodationAndArrival({
                                 { 
                                     className: `ml-3 ${isDisabled ? 'text-gray-400' : 'text-gray-800'}` 
                                 },
-                                isAccommodationFullForThisTeam 
-                                    ? `${acc.type} (voľných len ${remaining} z ${currentTeamPeople} potrebných)`
-                                    : `${acc.type}`
+                                isDatabaseFull 
+                                    ? `${acc.type} (naplnená kapacita)`
+                                    : (isAccommodationFullForThisTeam 
+                                        ? `${acc.type} (voľných len ${remaining} z ${currentTeamPeople} potrebných)`
+                                        : `${acc.type}`)
                             )
                         );
                     })
