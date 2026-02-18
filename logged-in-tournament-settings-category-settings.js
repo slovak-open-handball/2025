@@ -485,6 +485,34 @@ export function CategorySettings({
         };
     }, [db, userProfileData, showNotification]);
 
+    // NOVÝ: Timer pre automatickú kontrolu začiatku registrácie
+    React.useEffect(() => {
+        if (!registrationStartDate) return; // Ak nie je nastavený dátum, nerobíme nič
+
+        const checkRegistrationStart = () => {
+            const now = new Date();
+            const frozen = now >= registrationStartDate;
+            
+            // Aktualizujeme stav len ak sa zmenil
+            setIsRegistrationFrozen(prev => {
+                if (prev !== frozen) {
+                    console.log(`[CategorySettings] Stav registrácie sa zmenil: ${prev} -> ${frozen}`);
+                    return frozen;
+                }
+                return prev;
+            });
+        };
+
+        // Okamžitá kontrola pri spustení
+        checkRegistrationStart();
+
+        // Nastavíme interval na kontrolu každú sekundu
+        const intervalId = setInterval(checkRegistrationStart, 1000);
+
+        // Vyčistenie intervalu pri odmontovaní
+        return () => clearInterval(intervalId);
+    }, [registrationStartDate]); // Znovu spustíme len ak sa zmení registrationStartDate
+
     // Handlery pre jednotlivé inputy
     const handleMaxTeamsChange = (catId, value) => {
         const numValue = value === '' ? '' : Math.max(1, parseInt(value) || 1);
