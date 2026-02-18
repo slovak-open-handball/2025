@@ -1166,7 +1166,90 @@ export function CategorySettings({
                                 )
                             ),
 
-                            // NOVÉ: Zistenie, či je kategória zablokovaná pre úpravy - TERAZ SA AUTOMATICKY AKTUALIZUJE
+                            // DÁTUMY NARODENÍ - umiestnené hneď pod nadpis
+                            React.createElement(
+                                'div',
+                                { className: 'mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200' },
+                                React.createElement('h4', { className: 'font-semibold text-gray-700 mb-3' },
+                                    'Dátumy narodenia'
+                                ),
+                                React.createElement(
+                                    'div',
+                                    { className: 'grid grid-cols-1 md:grid-cols-2 gap-4' },
+                                    
+                                    // Dátum od
+                                    React.createElement(
+                                        'div',
+                                        { className: 'space-y-2' },
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex items-center justify-between' },
+                                            React.createElement('label', { className: 'text-sm font-medium text-gray-700' },
+                                                'Dátum narodenia od:'
+                                            ),
+                                            React.createElement('input', {
+                                                type: 'checkbox',
+                                                checked: editedDateFromActive[selectedCategory.id] ?? selectedCategory.dateFromActive,
+                                                onChange: e => handleDateFromActiveToggle(selectedCategory.id),
+                                                className: 'w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500'
+                                            })
+                                        ),
+                                        React.createElement('input', {
+                                            type: 'date',
+                                            value: editedDateFrom[selectedCategory.id] ?? selectedCategory.dateFrom,
+                                            onChange: e => handleDateFromChange(selectedCategory.id, e.target.value),
+                                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                                        })
+                                    ),
+                                    
+                                    // Dátum do
+                                    React.createElement(
+                                        'div',
+                                        { className: 'space-y-2' },
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex items-center justify-between' },
+                                            React.createElement('label', { className: 'text-sm font-medium text-gray-700' },
+                                                'Dátum narodenia do:'
+                                            ),
+                                            React.createElement('input', {
+                                                type: 'checkbox',
+                                                checked: editedDateToActive[selectedCategory.id] ?? selectedCategory.dateToActive,
+                                                onChange: e => handleDateToActiveToggle(selectedCategory.id),
+                                                className: 'w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500'
+                                            })
+                                        ),
+                                        React.createElement('input', {
+                                            type: 'date',
+                                            value: editedDateTo[selectedCategory.id] ?? selectedCategory.dateTo,
+                                            onChange: e => handleDateToChange(selectedCategory.id, e.target.value),
+                                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                                        })
+                                    )
+                                ),
+                                
+                                // Zobrazenie aktuálneho stavu dátumov
+                                React.createElement(
+                                    'div',
+                                    { className: 'mt-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm' },
+                                    React.createElement('div', { className: 'text-gray-600' },
+                                        'Stav: ',
+                                        renderDateStatus(
+                                            editedDateFrom[selectedCategory.id] ?? selectedCategory.dateFrom,
+                                            editedDateFromActive[selectedCategory.id] ?? selectedCategory.dateFromActive
+                                        )
+                                    ),
+                                    React.createElement('div', { className: 'text-gray-600' },
+                                        'Stav: ',
+                                        renderDateStatus(
+                                            editedDateTo[selectedCategory.id] ?? selectedCategory.dateTo,
+                                            editedDateToActive[selectedCategory.id] ?? selectedCategory.dateToActive
+                                        )
+                                    )
+                                )
+                            ),
+
+                            // OSTATNÉ NASTAVENIA - začínajúce maximálnym počtom tímov
                             (() => {
                                 const hasMatches = hasExistingMatchesForCategory(selectedCategory.id);
                                 
@@ -1287,90 +1370,6 @@ export function CategorySettings({
                                             { className: 'text-xs text-orange-600 mt-1 flex items-center gap-1' },
                                             React.createElement('i', { className: 'fa-solid fa-lock' }),
                                             'Toto nastavenie nie je možné meniť, pretože pre túto kategóriu už existujú zápasy.'
-                                        )
-                                    ),
-
-                                    // DÁTUMY NARODENÍ - NIE SÚ ZABLOKOVANÉ (môžu sa meniť)
-                                    React.createElement(
-                                        'div',
-                                        { className: 'space-y-1' },
-                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
-                                            'Dátum narodenia od:'
-                                        ),
-                                        React.createElement('input', {
-                                            type: 'date',
-                                            value: editedDateFrom[selectedCategory.id] ?? selectedCategory.dateFrom,
-                                            onChange: e => handleDateFromChange(selectedCategory.id, e.target.value),
-                                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                                        })
-                                    ),
-
-                                    // Aktívnosť pre dátum od
-                                    React.createElement(
-                                        'div',
-                                        { className: 'space-y-1' },
-                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
-                                            'Aktívnosť pre dátum od:'
-                                        ),
-                                        React.createElement('input', {
-                                            type: 'checkbox',
-                                            checked: editedDateFromActive[selectedCategory.id] ?? selectedCategory.dateFromActive,
-                                            onChange: e => handleDateFromActiveToggle(selectedCategory.id),
-                                            className: 'w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500'
-                                        })
-                                    ),
-
-                                    React.createElement(
-                                        'div',
-                                        { className: 'space-y-1' },
-                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
-                                            'Dátum narodenia do:'
-                                        ),
-                                        React.createElement('input', {
-                                            type: 'date',
-                                            value: editedDateTo[selectedCategory.id] ?? selectedCategory.dateTo,
-                                            onChange: e => handleDateToChange(selectedCategory.id, e.target.value),
-                                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                                        })
-                                    ),
-
-                                    // Aktívnosť pre dátum do
-                                    React.createElement(
-                                        'div',
-                                        { className: 'space-y-1' },
-                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
-                                            'Aktívnosť pre dátum do:'
-                                        ),
-                                        React.createElement('input', {
-                                            type: 'checkbox',
-                                            checked: editedDateToActive[selectedCategory.id] ?? selectedCategory.dateToActive,
-                                            onChange: e => handleDateToActiveToggle(selectedCategory.id),
-                                            className: 'w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500'
-                                        })
-                                    ),
-
-                                    // Zobrazenie aktuálneho stavu dátumov
-                                    React.createElement(
-                                        'div',
-                                        { className: 'p-4 bg-gray-50 rounded-lg border border-gray-200' },
-                                        React.createElement('h4', { className: 'font-semibold text-gray-700 mb-2' },
-                                            'Aktuálne nastavené dátumy:'
-                                        ),
-                                        React.createElement('div', { className: 'grid grid-cols-1 gap-2 text-sm' },
-                                            React.createElement('div', { className: 'text-gray-600' },
-                                                'Dátum od: ',
-                                                renderDateStatus(
-                                                    editedDateFrom[selectedCategory.id] ?? selectedCategory.dateFrom,
-                                                    editedDateFromActive[selectedCategory.id] ?? selectedCategory.dateFromActive
-                                                )
-                                            ),
-                                            React.createElement('div', { className: 'text-gray-600' },
-                                                'Dátum do: ',
-                                                renderDateStatus(
-                                                    editedDateTo[selectedCategory.id] ?? selectedCategory.dateTo,
-                                                    editedDateToActive[selectedCategory.id] ?? selectedCategory.dateToActive
-                                                )
-                                            )
                                         )
                                     ),
 
