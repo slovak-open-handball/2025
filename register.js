@@ -1,3 +1,4 @@
+// register.js
 const RECAPTCHA_SITE_KEY = "6LekXLgrAAAAAB6HYeGZG-tu_N42DER2fh1aVBjF";
 const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwTVpPBsLAmMn7qlA9UzRbJZ-2WkVI8MBgDhB9FGt_qsyrmBptSUCmiwelZppj7bR_pPw/exec";
 
