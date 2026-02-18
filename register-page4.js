@@ -72,7 +72,7 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                     };
                 });
                 setCategoryLimits(limits);
-                console.log("[Page4Form] Načítané limity kategórií:", limits);
+//                console.log("[Page4Form] Načítané limity kategórií:", limits);
             } else {
                 console.warn("Dokument /settings/categories neexistuje.");
                 setCategoryLimits({});
