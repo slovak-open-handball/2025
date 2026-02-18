@@ -85,8 +85,7 @@ function EmailConfirmationModal({ show, onClose, onConfirm, userEmail, loading }
     );
 }
 
-export function Page7Form({ db, formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, notificationType, selectedCountryDialCode, globalNote }) { // Pridaný db prop
-
+export function Page7Form({ db, formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, notificationType, selectedCountryDialCode, globalNote }) { 
     const [isConsentChecked, setIsConsentChecked] = React.useState(false); // Nový stav pre checkbox GDPR
     const [isReglementChecked, setIsReglementChecked] = React.useState(false); // Nový stav pre reglement
     const [isRulesChecked, setIsRulesChecked] = React.useState(false); // Nový stav pre pravidlá
