@@ -38,6 +38,9 @@ export function CategorySettings({
     
     // EDITOVANÉ HODNOTY PRE JEDNOTLIVÉ KATEGÓRIE
     const [editedMaxTeams, setEditedMaxTeams] = React.useState({});
+    // NOVÉ: Maximálny počet hráčov a členov realizačného tímu pre každú kategóriu
+    const [editedMaxPlayers, setEditedMaxPlayers] = React.useState({});
+    const [editedMaxImplementationTeam, setEditedMaxImplementationTeam] = React.useState({});
     const [editedPeriods, setEditedPeriods] = React.useState({});
     const [editedPeriodDuration, setEditedPeriodDuration] = React.useState({});
     const [editedBreakDuration, setEditedBreakDuration] = React.useState({});
@@ -45,11 +48,11 @@ export function CategorySettings({
     const [editedDrawColor, setEditedDrawColor] = React.useState({});
     const [editedTransportColor, setEditedTransportColor] = React.useState({});
     
-    // NOVÉ: State pre timeout
+    // State pre timeout
     const [editedTimeoutCount, setEditedTimeoutCount] = React.useState({});
     const [editedTimeoutDuration, setEditedTimeoutDuration] = React.useState({});
     
-    // NOVÉ: State pre vylúčenie
+    // State pre vylúčenie
     const [editedExclusionTime, setEditedExclusionTime] = React.useState({});
     
     // DÁTUMY NARODENÍ PRE KATEGÓRIE
@@ -62,10 +65,10 @@ export function CategorySettings({
     const [previousValues, setPreviousValues] = React.useState({});
     const [isInitialLoad, setIsInitialLoad] = React.useState(true);
 
-    // NOVÝ: State pre existujúce zápasy - TERAZ S onSnapshot
+    // State pre existujúce zápasy
     const [existingMatches, setExistingMatches] = React.useState({});
     
-    // NOVÝ: State pre dátum začiatku registrácie
+    // State pre dátum začiatku registrácie
     const [registrationStartDate, setRegistrationStartDate] = React.useState(null);
     const [isRegistrationFrozen, setIsRegistrationFrozen] = React.useState(false);
 
@@ -116,14 +119,13 @@ export function CategorySettings({
         }
     };
 
-    // NOVÁ FUNKCIA: Sledovanie existujúcich zápasov v reálnom čase
+    // Sledovanie existujúcich zápasov v reálnom čase
     const subscribeToMatches = () => {
         if (!db) return null;
 
         try {
             const matchesRef = collection(db, 'matches');
             
-            // Používame onSnapshot pre automatické aktualizácie
             const unsubscribe = onSnapshot(matchesRef, (snapshot) => {
                 const matchesByCategory = {};
                 
@@ -157,7 +159,7 @@ export function CategorySettings({
         }
     };
 
-    // NOVÁ FUNKCIA: Sledovanie registračných nastavení
+    // Sledovanie registračných nastavení
     const subscribeToRegistrationSettings = () => {
         if (!db) return null;
 
@@ -170,7 +172,6 @@ export function CategorySettings({
                     const regStart = data.registrationStartDate ? data.registrationStartDate.toDate() : null;
                     setRegistrationStartDate(regStart);
                     
-                    // Kontrola, či už začala registrácia
                     const now = new Date();
                     const frozen = regStart && now >= regStart;
                     setIsRegistrationFrozen(frozen);
@@ -196,10 +197,7 @@ export function CategorySettings({
     React.useEffect(() => {
         if (!db || !userProfileData || userProfileData.role !== 'admin') return;
 
-        // Spustíme sledovanie zápasov
         const unsubscribeMatches = subscribeToMatches();
-        
-        // Spustíme sledovanie registračných nastavení
         const unsubscribeRegistration = subscribeToRegistrationSettings();
 
         const catRef = doc(db, 'settings', 'categories');
@@ -211,6 +209,9 @@ export function CategorySettings({
                     id,
                     name: obj.name || `Kategória ${id}`,
                     maxTeams: obj.maxTeams ?? 12,
+                    // NOVÉ: Načítanie maximálneho počtu hráčov a členov realizačného tímu
+                    maxPlayers: obj.maxPlayers ?? 12,
+                    maxImplementationTeam: obj.maxImplementationTeam ?? 3,
                     periods: obj.periods ?? 2,
                     periodDuration: obj.periodDuration ?? 20,
                     breakDuration: obj.breakDuration ?? 2,
@@ -222,10 +223,10 @@ export function CategorySettings({
                     dateTo: obj.dateTo ?? '',
                     dateFromActive: obj.dateFromActive ?? false,
                     dateToActive: obj.dateToActive ?? false,
-                    // NOVÉ: Načítanie hodnôt timeout
+                    // Hodnoty timeout
                     timeoutCount: obj.timeoutCount ?? 2,
                     timeoutDuration: obj.timeoutDuration ?? 1,
-                    // NOVÉ: Načítanie času pre vylúčenie
+                    // Čas pre vylúčenie
                     exclusionTime: obj.exclusionTime ?? 2
                 })).sort((a, b) => a.name.localeCompare(b.name));
 
@@ -236,6 +237,9 @@ export function CategorySettings({
                 list.forEach(cat => {
                     originalValues[cat.id] = {
                         maxTeams: cat.maxTeams,
+                        // NOVÉ: Uloženie pôvodných hodnôt
+                        maxPlayers: cat.maxPlayers,
+                        maxImplementationTeam: cat.maxImplementationTeam,
                         periods: cat.periods,
                         periodDuration: cat.periodDuration,
                         breakDuration: cat.breakDuration,
@@ -255,6 +259,8 @@ export function CategorySettings({
                 
                 // Inicializácia editovaných hodnôt
                 const initialMaxTeams = {};
+                const initialMaxPlayers = {};
+                const initialMaxImplementationTeam = {};
                 const initialPeriods = {};
                 const initialPeriodDuration = {};
                 const initialBreakDuration = {};
@@ -272,6 +278,8 @@ export function CategorySettings({
                 
                 list.forEach(cat => {
                     initialMaxTeams[cat.id] = cat.maxTeams;
+                    initialMaxPlayers[cat.id] = cat.maxPlayers;
+                    initialMaxImplementationTeam[cat.id] = cat.maxImplementationTeam;
                     initialPeriods[cat.id] = cat.periods;
                     initialPeriodDuration[cat.id] = cat.periodDuration;
                     initialBreakDuration[cat.id] = cat.breakDuration;
@@ -292,6 +300,28 @@ export function CategorySettings({
                     const newState = { ...initialMaxTeams };
                     Object.keys(prev).forEach(key => {
                         if (prev[key] !== initialMaxTeams[key]) {
+                            newState[key] = prev[key];
+                        }
+                    });
+                    return newState;
+                });
+
+                // NOVÉ: Inicializácia pre maxPlayers
+                setEditedMaxPlayers(prev => {
+                    const newState = { ...initialMaxPlayers };
+                    Object.keys(prev).forEach(key => {
+                        if (prev[key] !== initialMaxPlayers[key]) {
+                            newState[key] = prev[key];
+                        }
+                    });
+                    return newState;
+                });
+
+                // NOVÉ: Inicializácia pre maxImplementationTeam
+                setEditedMaxImplementationTeam(prev => {
+                    const newState = { ...initialMaxImplementationTeam };
+                    Object.keys(prev).forEach(key => {
+                        if (prev[key] !== initialMaxImplementationTeam[key]) {
                             newState[key] = prev[key];
                         }
                     });
@@ -399,7 +429,7 @@ export function CategorySettings({
                     return newState;
                 });
 
-                // NOVÉ: Inicializácia timeout state
+                // Inicializácia timeout state
                 setEditedTimeoutCount(prev => {
                     const newState = { ...initialTimeoutCount };
                     Object.keys(prev).forEach(key => {
@@ -420,7 +450,7 @@ export function CategorySettings({
                     return newState;
                 });
 
-                // NOVÉ: Inicializácia exclusion state
+                // Inicializácia exclusion state
                 setEditedExclusionTime(prev => {
                     const newState = { ...initialExclusionTime };
                     Object.keys(prev).forEach(key => {
@@ -451,6 +481,8 @@ export function CategorySettings({
             } else {
                 setCategories([]);
                 setEditedMaxTeams({});
+                setEditedMaxPlayers({});
+                setEditedMaxImplementationTeam({});
                 setEditedPeriods({});
                 setEditedPeriodDuration({});
                 setEditedBreakDuration({});
@@ -485,15 +517,14 @@ export function CategorySettings({
         };
     }, [db, userProfileData, showNotification]);
 
-    // NOVÝ: Timer pre automatickú kontrolu začiatku registrácie
+    // Timer pre automatickú kontrolu začiatku registrácie
     React.useEffect(() => {
-        if (!registrationStartDate) return; // Ak nie je nastavený dátum, nerobíme nič
+        if (!registrationStartDate) return;
 
         const checkRegistrationStart = () => {
             const now = new Date();
             const frozen = now >= registrationStartDate;
             
-            // Aktualizujeme stav len ak sa zmenil
             setIsRegistrationFrozen(prev => {
                 if (prev !== frozen) {
                     console.log(`[CategorySettings] Stav registrácie sa zmenil: ${prev} -> ${frozen}`);
@@ -503,20 +534,29 @@ export function CategorySettings({
             });
         };
 
-        // Okamžitá kontrola pri spustení
         checkRegistrationStart();
 
-        // Nastavíme interval na kontrolu každú sekundu
         const intervalId = setInterval(checkRegistrationStart, 1000);
 
-        // Vyčistenie intervalu pri odmontovaní
         return () => clearInterval(intervalId);
-    }, [registrationStartDate]); // Znovu spustíme len ak sa zmení registrationStartDate
+    }, [registrationStartDate]);
 
     // Handlery pre jednotlivé inputy
     const handleMaxTeamsChange = (catId, value) => {
         const numValue = value === '' ? '' : Math.max(1, parseInt(value) || 1);
         setEditedMaxTeams(prev => ({ ...prev, [catId]: numValue }));
+    };
+
+    // NOVÝ: Handler pre maxPlayers
+    const handleMaxPlayersChange = (catId, value) => {
+        const numValue = value === '' ? '' : Math.max(1, parseInt(value) || 1);
+        setEditedMaxPlayers(prev => ({ ...prev, [catId]: numValue }));
+    };
+
+    // NOVÝ: Handler pre maxImplementationTeam
+    const handleMaxImplementationTeamChange = (catId, value) => {
+        const numValue = value === '' ? '' : Math.max(0, parseInt(value) || 0);
+        setEditedMaxImplementationTeam(prev => ({ ...prev, [catId]: numValue }));
     };
 
     const handlePeriodsChange = (catId, value) => {
@@ -553,7 +593,7 @@ export function CategorySettings({
         setEditedTransportColor(prev => ({ ...prev, [catId]: value }));
     };
 
-    // Handlery pre dátumy - TERAZ S KONTROLOU ZMRZNUTIA
+    // Handlery pre dátumy - S KONTROLOU ZMRZNUTIA
     const handleDateFromChange = (catId, value) => {
         if (!isRegistrationFrozen) {
             setEditedDateFrom(prev => ({ ...prev, [catId]: value }));
@@ -584,7 +624,7 @@ export function CategorySettings({
         }
     };
 
-    // NOVÝ: Handler pre počet timeoutov
+    // Handler pre počet timeoutov
     const handleTimeoutCountChange = (catId, value) => {
         const numValue = value === '' ? '' : Math.max(0, parseInt(value) || 0);
         setEditedTimeoutCount(prev => ({ ...prev, [catId]: numValue }));
@@ -595,13 +635,13 @@ export function CategorySettings({
         }
     };
 
-    // NOVÝ: Handler pre čas timeoutu
+    // Handler pre čas timeoutu
     const handleTimeoutDurationChange = (catId, value) => {
         const numValue = value === '' ? '' : Math.max(0, parseInt(value) || 0);
         setEditedTimeoutDuration(prev => ({ ...prev, [catId]: numValue }));
     };
 
-    // NOVÝ: Handler pre čas vylúčenia
+    // Handler pre čas vylúčenia
     const handleExclusionTimeChange = (catId, value) => {
         const numValue = value === '' ? '' : Math.max(0, parseInt(value) || 0);
         setEditedExclusionTime(prev => ({ ...prev, [catId]: numValue }));
@@ -629,6 +669,9 @@ export function CategorySettings({
     const hasChanges = React.useMemo(() => {
         return categories.some(cat => 
             editedMaxTeams[cat.id] !== cat.maxTeams ||
+            // NOVÉ: Kontrola zmien pre maxPlayers a maxImplementationTeam
+            editedMaxPlayers[cat.id] !== cat.maxPlayers ||
+            editedMaxImplementationTeam[cat.id] !== cat.maxImplementationTeam ||
             editedPeriods[cat.id] !== cat.periods ||
             editedPeriodDuration[cat.id] !== cat.periodDuration ||
             editedBreakDuration[cat.id] !== cat.breakDuration ||
@@ -642,15 +685,16 @@ export function CategorySettings({
                 editedDateFromActive[cat.id] !== cat.dateFromActive ||
                 editedDateToActive[cat.id] !== cat.dateToActive
             )) ||
-            // NOVÉ: Kontrola timeout a exclusion zmien
+            // Kontrola timeout a exclusion zmien
             editedTimeoutCount[cat.id] !== cat.timeoutCount ||
             editedTimeoutDuration[cat.id] !== cat.timeoutDuration ||
             editedExclusionTime[cat.id] !== cat.exclusionTime
         );
-    }, [categories, editedMaxTeams, editedPeriods, editedPeriodDuration, 
-        editedBreakDuration, editedMatchBreak, editedDrawColor, editedTransportColor,
-        editedDateFrom, editedDateTo, editedDateFromActive, editedDateToActive,
-        editedTimeoutCount, editedTimeoutDuration, editedExclusionTime, isRegistrationFrozen]);
+    }, [categories, editedMaxTeams, editedMaxPlayers, editedMaxImplementationTeam, 
+        editedPeriods, editedPeriodDuration, editedBreakDuration, editedMatchBreak, 
+        editedDrawColor, editedTransportColor, editedDateFrom, editedDateTo, 
+        editedDateFromActive, editedDateToActive, editedTimeoutCount, 
+        editedTimeoutDuration, editedExclusionTime, isRegistrationFrozen]);
 
     // Hlásime zmeny nadradenému komponentu
     React.useEffect(() => {
@@ -663,6 +707,9 @@ export function CategorySettings({
     const categoriesWithChangesCount = React.useMemo(() => {
         return categories.filter(cat => 
             editedMaxTeams[cat.id] !== cat.maxTeams ||
+            // NOVÉ: Kontrola zmien pre maxPlayers a maxImplementationTeam
+            editedMaxPlayers[cat.id] !== cat.maxPlayers ||
+            editedMaxImplementationTeam[cat.id] !== cat.maxImplementationTeam ||
             editedPeriods[cat.id] !== cat.periods ||
             editedPeriodDuration[cat.id] !== cat.periodDuration ||
             editedBreakDuration[cat.id] !== cat.breakDuration ||
@@ -680,17 +727,19 @@ export function CategorySettings({
             editedTimeoutDuration[cat.id] !== cat.timeoutDuration ||
             editedExclusionTime[cat.id] !== cat.exclusionTime
         ).length;
-    }, [categories, editedMaxTeams, editedPeriods, editedPeriodDuration, 
-        editedBreakDuration, editedMatchBreak, editedDrawColor, editedTransportColor,
-        editedDateFrom, editedDateTo, editedDateFromActive, editedDateToActive,
-        editedTimeoutCount, editedTimeoutDuration, editedExclusionTime, isRegistrationFrozen]);
+    }, [categories, editedMaxTeams, editedMaxPlayers, editedMaxImplementationTeam,
+        editedPeriods, editedPeriodDuration, editedBreakDuration, editedMatchBreak, 
+        editedDrawColor, editedTransportColor, editedDateFrom, editedDateTo, 
+        editedDateFromActive, editedDateToActive, editedTimeoutCount, 
+        editedTimeoutDuration, editedExclusionTime, isRegistrationFrozen]);
 
     // RESET VŠETKÝCH NEULOŽENÝCH ZMIEN
     const resetAllChanges = React.useCallback(() => {
         console.log("resetAllChanges - spúšťam reset kategórií");
     
-        // Použijeme ORIGINAL VALUES z ref, NIE aktuálne categories
         const initialMaxTeams = {};
+        const initialMaxPlayers = {};
+        const initialMaxImplementationTeam = {};
         const initialPeriods = {};
         const initialPeriodDuration = {};
         const initialBreakDuration = {};
@@ -709,6 +758,9 @@ export function CategorySettings({
         Object.keys(originalCategoriesRef.current).forEach(catId => {
             const original = originalCategoriesRef.current[catId];
             initialMaxTeams[catId] = original.maxTeams;
+            // NOVÉ: Reset na pôvodné hodnoty
+            initialMaxPlayers[catId] = original.maxPlayers;
+            initialMaxImplementationTeam[catId] = original.maxImplementationTeam;
             initialPeriods[catId] = original.periods;
             initialPeriodDuration[catId] = original.periodDuration;
             initialBreakDuration[catId] = original.breakDuration;
@@ -725,6 +777,8 @@ export function CategorySettings({
         });
         
         setEditedMaxTeams(initialMaxTeams);
+        setEditedMaxPlayers(initialMaxPlayers);
+        setEditedMaxImplementationTeam(initialMaxImplementationTeam);
         setEditedPeriods(initialPeriods);
         setEditedPeriodDuration(initialPeriodDuration);
         setEditedBreakDuration(initialBreakDuration);
@@ -762,8 +816,6 @@ export function CategorySettings({
         if (!isInitialLoad && categories.length > 0 && initialCategoryId) {
             const categoryIdFromUrl = getCategoryIdFromUrlName(initialCategoryId, categories);
             if (categoryIdFromUrl && categoryIdFromUrl !== selectedCategoryId) {
-                // Pri zmene URL v RÁMCI CategorySettings (prepínanie kategórií)
-                // NIKDY NEZOBRAZUJEME UPOZORNENIE
                 setSelectedCategoryId(categoryIdFromUrl);
             }
         }
@@ -775,6 +827,13 @@ export function CategorySettings({
         
         if (newValues.maxTeams !== oldValues.maxTeams) {
             changes.push(`Max. počet tímov z '${oldValues.maxTeams}' na '${newValues.maxTeams}'`);
+        }
+        // NOVÉ: Pridanie zmien pre maxPlayers a maxImplementationTeam
+        if (newValues.maxPlayers !== oldValues.maxPlayers) {
+            changes.push(`Max. počet hráčov v tíme z '${oldValues.maxPlayers}' na '${newValues.maxPlayers}'`);
+        }
+        if (newValues.maxImplementationTeam !== oldValues.maxImplementationTeam) {
+            changes.push(`Max. počet členov RT z '${oldValues.maxImplementationTeam}' na '${newValues.maxImplementationTeam}'`);
         }
         if (newValues.periods !== oldValues.periods) {
             changes.push(`Počet periód z '${oldValues.periods}' na '${newValues.periods}'`);
@@ -813,14 +872,14 @@ export function CategorySettings({
             changes.push(`Aktívnosť pre dátum do z '${oldValues.dateToActive ? 'Áno' : 'Nie'}' na '${newValues.dateToActive ? 'Áno' : 'Nie'}'`);
         }
         
-        // NOVÉ: Zmeny pre timeout
+        // Zmeny pre timeout
         if (newValues.timeoutCount !== oldValues.timeoutCount) {
             changes.push(`Počet timeoutov z '${oldValues.timeoutCount}' na '${newValues.timeoutCount}'`);
         }
         if (newValues.timeoutDuration !== oldValues.timeoutDuration) {
             changes.push(`Trvanie timeoutu z '${oldValues.timeoutDuration} min' na '${newValues.timeoutDuration} min'`);
         }
-        // NOVÉ: Zmeny pre vylúčenie
+        // Zmeny pre vylúčenie
         if (newValues.exclusionTime !== oldValues.exclusionTime) {
             changes.push(`Čas vylúčenia z '${oldValues.exclusionTime} min' na '${newValues.exclusionTime} min'`);
         }
@@ -849,6 +908,15 @@ export function CategorySettings({
 
                 if (editedMaxTeams[cat.id] !== cat.maxTeams && editedMaxTeams[cat.id] >= 1) {
                     updatedData.maxTeams = Number(editedMaxTeams[cat.id]);
+                    hasUpdates = true;
+                }
+                // NOVÉ: Ukladanie maxPlayers a maxImplementationTeam
+                if (editedMaxPlayers[cat.id] !== cat.maxPlayers && editedMaxPlayers[cat.id] >= 1) {
+                    updatedData.maxPlayers = Number(editedMaxPlayers[cat.id]);
+                    hasUpdates = true;
+                }
+                if (editedMaxImplementationTeam[cat.id] !== cat.maxImplementationTeam && editedMaxImplementationTeam[cat.id] >= 0) {
+                    updatedData.maxImplementationTeam = Number(editedMaxImplementationTeam[cat.id]);
                     hasUpdates = true;
                 }
                 if (editedPeriods[cat.id] !== cat.periods && editedPeriods[cat.id] >= 1) {
@@ -896,7 +964,7 @@ export function CategorySettings({
                     }
                 }
                 
-                // NOVÉ: Ukladanie timeout nastavení
+                // Ukladanie timeout nastavení
                 if (editedTimeoutCount[cat.id] !== cat.timeoutCount && editedTimeoutCount[cat.id] >= 0) {
                     updatedData.timeoutCount = Number(editedTimeoutCount[cat.id]);
                     hasUpdates = true;
@@ -905,7 +973,7 @@ export function CategorySettings({
                     updatedData.timeoutDuration = Number(editedTimeoutDuration[cat.id]);
                     hasUpdates = true;
                 }
-                // NOVÉ: Ukladanie exclusion nastavení
+                // Ukladanie exclusion nastavení
                 if (editedExclusionTime[cat.id] !== cat.exclusionTime && editedExclusionTime[cat.id] >= 0) {
                     updatedData.exclusionTime = Number(editedExclusionTime[cat.id]);
                     hasUpdates = true;
@@ -920,6 +988,9 @@ export function CategorySettings({
                     const oldValues = previousValues[cat.id] || cat;
                     const newValues = {
                         maxTeams: editedMaxTeams[cat.id] ?? cat.maxTeams,
+                        // NOVÉ: Pridanie nových hodnôt do newValues
+                        maxPlayers: editedMaxPlayers[cat.id] ?? cat.maxPlayers,
+                        maxImplementationTeam: editedMaxImplementationTeam[cat.id] ?? cat.maxImplementationTeam,
                         periods: editedPeriods[cat.id] ?? cat.periods,
                         periodDuration: editedPeriodDuration[cat.id] ?? cat.periodDuration,
                         breakDuration: editedBreakDuration[cat.id] ?? cat.breakDuration,
@@ -998,31 +1069,37 @@ export function CategorySettings({
                 
                 // Aktualizujeme originalCategoriesRef s novými hodnotami
                 const updatedOriginalValues = { ...originalCategoriesRef.current };
-                    categories.forEach(cat => {
-                        updatedOriginalValues[cat.id] = {
-                            maxTeams: editedMaxTeams[cat.id] ?? cat.maxTeams,
-                            periods: editedPeriods[cat.id] ?? cat.periods,
-                            periodDuration: editedPeriodDuration[cat.id] ?? cat.periodDuration,
-                            breakDuration: editedBreakDuration[cat.id] ?? cat.breakDuration,
-                            matchBreak: editedMatchBreak[cat.id] ?? cat.matchBreak,
-                            drawColor: editedDrawColor[cat.id] ?? cat.drawColor,
-                            transportColor: editedTransportColor[cat.id] ?? cat.transportColor,
-                            dateFrom: isRegistrationFrozen ? cat.dateFrom : (editedDateFrom[cat.id] ?? cat.dateFrom),
-                            dateTo: isRegistrationFrozen ? cat.dateTo : (editedDateTo[cat.id] ?? cat.dateTo),
-                            dateFromActive: isRegistrationFrozen ? cat.dateFromActive : (editedDateFromActive[cat.id] ?? cat.dateFromActive),
-                            dateToActive: isRegistrationFrozen ? cat.dateToActive : (editedDateToActive[cat.id] ?? cat.dateToActive),
-                            timeoutCount: editedTimeoutCount[cat.id] ?? cat.timeoutCount,
-                            timeoutDuration: editedTimeoutDuration[cat.id] ?? cat.timeoutDuration,
-                            exclusionTime: editedExclusionTime[cat.id] ?? cat.exclusionTime
-                        };
-                    });
-                    originalCategoriesRef.current = updatedOriginalValues;
+                categories.forEach(cat => {
+                    updatedOriginalValues[cat.id] = {
+                        maxTeams: editedMaxTeams[cat.id] ?? cat.maxTeams,
+                        // NOVÉ: Aktualizácia pôvodných hodnôt
+                        maxPlayers: editedMaxPlayers[cat.id] ?? cat.maxPlayers,
+                        maxImplementationTeam: editedMaxImplementationTeam[cat.id] ?? cat.maxImplementationTeam,
+                        periods: editedPeriods[cat.id] ?? cat.periods,
+                        periodDuration: editedPeriodDuration[cat.id] ?? cat.periodDuration,
+                        breakDuration: editedBreakDuration[cat.id] ?? cat.breakDuration,
+                        matchBreak: editedMatchBreak[cat.id] ?? cat.matchBreak,
+                        drawColor: editedDrawColor[cat.id] ?? cat.drawColor,
+                        transportColor: editedTransportColor[cat.id] ?? cat.transportColor,
+                        dateFrom: isRegistrationFrozen ? cat.dateFrom : (editedDateFrom[cat.id] ?? cat.dateFrom),
+                        dateTo: isRegistrationFrozen ? cat.dateTo : (editedDateTo[cat.id] ?? cat.dateTo),
+                        dateFromActive: isRegistrationFrozen ? cat.dateFromActive : (editedDateFromActive[cat.id] ?? cat.dateFromActive),
+                        dateToActive: isRegistrationFrozen ? cat.dateToActive : (editedDateToActive[cat.id] ?? cat.dateToActive),
+                        timeoutCount: editedTimeoutCount[cat.id] ?? cat.timeoutCount,
+                        timeoutDuration: editedTimeoutDuration[cat.id] ?? cat.timeoutDuration,
+                        exclusionTime: editedExclusionTime[cat.id] ?? cat.exclusionTime
+                    };
+                });
+                originalCategoriesRef.current = updatedOriginalValues;
                 
                 const updatedPreviousValues = {};
                 categories.forEach(cat => {
                     updatedPreviousValues[cat.id] = {
                         ...cat,
                         maxTeams: editedMaxTeams[cat.id] ?? cat.maxTeams,
+                        // NOVÉ: Aktualizácia previousValues
+                        maxPlayers: editedMaxPlayers[cat.id] ?? cat.maxPlayers,
+                        maxImplementationTeam: editedMaxImplementationTeam[cat.id] ?? cat.maxImplementationTeam,
                         periods: editedPeriods[cat.id] ?? cat.periods,
                         periodDuration: editedPeriodDuration[cat.id] ?? cat.periodDuration,
                         breakDuration: editedBreakDuration[cat.id] ?? cat.breakDuration,
@@ -1044,6 +1121,9 @@ export function CategorySettings({
             setCategories(prev => prev.map(cat => ({
                 ...cat,
                 maxTeams: editedMaxTeams[cat.id] ?? cat.maxTeams,
+                // NOVÉ: Aktualizácia categories po uložení
+                maxPlayers: editedMaxPlayers[cat.id] ?? cat.maxPlayers,
+                maxImplementationTeam: editedMaxImplementationTeam[cat.id] ?? cat.maxImplementationTeam,
                 periods: editedPeriods[cat.id] ?? cat.periods,
                 periodDuration: editedPeriodDuration[cat.id] ?? cat.periodDuration,
                 breakDuration: editedBreakDuration[cat.id] ?? cat.breakDuration,
@@ -1070,6 +1150,9 @@ export function CategorySettings({
         const category = categories.find(c => c.id === catId);
         if (category) {
             setEditedMaxTeams(prev => ({ ...prev, [catId]: category.maxTeams }));
+            // NOVÉ: Reset pre maxPlayers a maxImplementationTeam
+            setEditedMaxPlayers(prev => ({ ...prev, [catId]: category.maxPlayers }));
+            setEditedMaxImplementationTeam(prev => ({ ...prev, [catId]: category.maxImplementationTeam }));
             setEditedPeriods(prev => ({ ...prev, [catId]: category.periods }));
             setEditedPeriodDuration(prev => ({ ...prev, [catId]: category.periodDuration }));
             setEditedBreakDuration(prev => ({ ...prev, [catId]: category.breakDuration }));
@@ -1114,7 +1197,7 @@ export function CategorySettings({
         );
     };
 
-    // NOVÁ FUNKCIA: Kontrola, či má kategória existujúce zápasy
+    // Kontrola, či má kategória existujúce zápasy
     const hasExistingMatchesForCategory = (catId) => {
         return existingMatches[catId] && existingMatches[catId].length > 0;
     };
@@ -1158,6 +1241,9 @@ export function CategorySettings({
                             categories.map(cat => {
                                 const hasCategoryChanges = 
                                     editedMaxTeams[cat.id] !== cat.maxTeams ||
+                                    // NOVÉ: Kontrola zmien pre maxPlayers a maxImplementationTeam
+                                    editedMaxPlayers[cat.id] !== cat.maxPlayers ||
+                                    editedMaxImplementationTeam[cat.id] !== cat.maxImplementationTeam ||
                                     editedPeriods[cat.id] !== cat.periods ||
                                     editedPeriodDuration[cat.id] !== cat.periodDuration ||
                                     editedBreakDuration[cat.id] !== cat.breakDuration ||
@@ -1175,7 +1261,6 @@ export function CategorySettings({
                                     editedTimeoutDuration[cat.id] !== cat.timeoutDuration ||
                                     editedExclusionTime[cat.id] !== cat.exclusionTime;
                                 
-                                // NOVÉ: Kontrola existujúcich zápasov pre túto kategóriu
                                 const hasMatches = hasExistingMatchesForCategory(cat.id);
                                 
                                 return React.createElement(
@@ -1198,7 +1283,6 @@ export function CategorySettings({
                                         'span',
                                         { className: 'absolute -top-2 -right-2 w-4 h-4 bg-yellow-500 rounded-full animate-pulse' }
                                     ),
-                                    // NOVÉ: Indikátor existujúcich zápasov (iba ak nemá zmeny)
                                     !hasCategoryChanges && hasMatches && React.createElement(
                                         'span',
                                         { 
@@ -1239,7 +1323,6 @@ export function CategorySettings({
                                         className: 'text-xl font-semibold text-gray-800'
                                     }, selectedCategory.name),
                                     
-                                    // NOVÉ: Varovanie o existujúcich zápasoch - TERAZ SA AUTOMATICKY AKTUALIZUJE
                                     hasExistingMatchesForCategory(selectedCategory.id) && React.createElement(
                                         'span',
                                         { 
@@ -1250,7 +1333,6 @@ export function CategorySettings({
                                         `Existuje ${existingMatches[selectedCategory.id].length} ${existingMatches[selectedCategory.id].length === 1 ? 'zápas' : existingMatches[selectedCategory.id].length < 5 ? 'zápasy' : 'zápasov'}`
                                     ),
                                     
-                                    // NOVÉ: Varovanie o zmrazení registrácie
                                     isRegistrationFrozen && React.createElement(
                                         'span',
                                         { 
@@ -1376,7 +1458,7 @@ export function CategorySettings({
                                 )
                             ),
 
-                            // OSTATNÉ NASTAVENIA - začínajúce maximálnym počtom tímov
+                            // OSTATNÉ NASTAVENIA
                             (() => {
                                 const hasMatches = hasExistingMatchesForCategory(selectedCategory.id);
                                 
@@ -1384,7 +1466,7 @@ export function CategorySettings({
                                     'div',
                                     { className: 'space-y-4' },
                                     
-                                    // Maximálny počet tímov - NIE JE ZABLOKOVANÝ (môže sa meniť)
+                                    // Maximálny počet tímov
                                     React.createElement(
                                         'div',
                                         { className: 'space-y-1' },
@@ -1396,6 +1478,38 @@ export function CategorySettings({
                                             min: 1,
                                             value: editedMaxTeams[selectedCategory.id] ?? selectedCategory.maxTeams,
                                             onChange: e => handleMaxTeamsChange(selectedCategory.id, e.target.value),
+                                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                                        })
+                                    ),
+
+                                    // NOVÉ: Maximálny počet hráčov v tíme
+                                    React.createElement(
+                                        'div',
+                                        { className: 'space-y-1' },
+                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                            'Maximálny počet hráčov v tíme:'
+                                        ),
+                                        React.createElement('input', {
+                                            type: 'number',
+                                            min: 1,
+                                            value: editedMaxPlayers[selectedCategory.id] ?? selectedCategory.maxPlayers,
+                                            onChange: e => handleMaxPlayersChange(selectedCategory.id, e.target.value),
+                                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                                        })
+                                    ),
+
+                                    // NOVÉ: Maximálny počet členov realizačného tímu
+                                    React.createElement(
+                                        'div',
+                                        { className: 'space-y-1' },
+                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                            'Maximálny počet členov realizačného tímu:'
+                                        ),
+                                        React.createElement('input', {
+                                            type: 'number',
+                                            min: 0,
+                                            value: editedMaxImplementationTeam[selectedCategory.id] ?? selectedCategory.maxImplementationTeam,
+                                            onChange: e => handleMaxImplementationTeamChange(selectedCategory.id, e.target.value),
                                             className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
                                         })
                                     ),
@@ -1500,7 +1614,7 @@ export function CategorySettings({
                                         )
                                     ),
 
-                                    // NOVÉ: Nastavenia pre timeout - ZABLOKOVANÉ ak existujú zápasy
+                                    // Nastavenia pre timeout - ZABLOKOVANÉ ak existujú zápasy
                                     React.createElement(
                                         'div',
                                         { className: 'space-y-1' },
@@ -1525,7 +1639,7 @@ export function CategorySettings({
                                         )
                                     ),
 
-                                    // NOVÉ: PODMIENENÉ ZOBRAZENIE - Trvanie timeoutu - ZABLOKOVANÉ ak existujú zápasy
+                                    // PODMIENENÉ ZOBRAZENIE - Trvanie timeoutu - ZABLOKOVANÉ ak existujú zápasy
                                     (editedTimeoutCount[selectedCategory.id] ?? selectedCategory.timeoutCount) > 0 && React.createElement(
                                         'div',
                                         { className: 'space-y-1' },
@@ -1550,7 +1664,7 @@ export function CategorySettings({
                                         )
                                     ),
 
-                                    // NOVÉ: Čas vylúčenia - ZABLOKOVANÝ ak existujú zápasy
+                                    // Čas vylúčenia - ZABLOKOVANÝ ak existujú zápasy
                                     React.createElement(
                                         'div',
                                         { className: 'space-y-1' },
