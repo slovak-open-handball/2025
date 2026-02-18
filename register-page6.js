@@ -1,3 +1,4 @@
+// register-page6.js
 import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Komponent pre prepínač (toggle switch)
