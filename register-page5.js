@@ -340,10 +340,10 @@ function TeamAccommodationAndArrival({
                         const remaining = acc.capacity - totalOccupied;
                         
                         // DÔLEŽITÉ: Zablokovanie ak sa tím nezmestí
-                        const isDisabled = remaining < currentTeamPeople || loading;
+                        const isDisabled = remaining < currentTeamPeople;
                         
-                        // Výnimka: aktuálne vybraný typ nie je zablokovaný
-                        const finalDisabled = isDisabled && selectedAccommodation !== acc.type;
+                        // Výnimka: aktuálne vybraný typ nie je zablokovaný (aby bolo možné ho zmeniť)
+                        const finalDisabled = (isDisabled && selectedAccommodation !== acc.type) || loading;
                         
                         return React.createElement(
                             'label',
