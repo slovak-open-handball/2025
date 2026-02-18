@@ -237,6 +237,8 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
 
     // Nový stav pre validáciu e-mailu v reálnom čase
     const [isEmailValid, setIsEmailValid] = useState(true);
+    // Nový stav pre chybovú hlášku pri zmene emailu bez hesla
+    const [emailChangeError, setEmailChangeError] = useState(false);
     // Ref pre sledovanie, či ide o počiatočné načítanie formulára
     const isInitialLoad = useRef(true);
 
@@ -344,6 +346,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
             });
 
             setIsEmailValid(true);
+            setEmailChangeError(false);
 
             // Nastavíme originálne dáta, ktoré použijeme pre placeholder text
             originalData.current = {
@@ -364,6 +367,17 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
         setValidationStatus(status);
     }, [newPassword]);
 
+    // Efekt pre kontrolu chyby pri zmene emailu bez hesla
+    useEffect(() => {
+        const emailChanged = isEmailChanged();
+        const passwordEmpty = currentPassword === '';
+        
+        if (emailChanged && passwordEmpty && isEmailValid && !onlyAllowPasswordChange) {
+            setEmailChangeError(true);
+        } else {
+            setEmailChangeError(false);
+        }
+    }, [email, currentPassword, isEmailValid, onlyAllowPasswordChange]);
 
     // Kontrola, či sa zmenil aspoň jeden údaj vo formulári
     const isFormChanged = () => {
@@ -425,8 +439,8 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
 
     // Kontrola, či je tlačidlo Uložiť povolené
     const isSaveButtonEnabled = () => {
-        const emailChange = isEmailChanged();
-        const passwordChange = isPasswordChanged();
+        const emailChanged = isEmailChanged();
+        const passwordChanged = isPasswordChanged();
 
         // Ak je povolená len zmena hesla
         if (onlyAllowPasswordChange) {
@@ -443,12 +457,12 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
         }
 
         // Ak sa mení e-mail, musí byť zadané aktuálne heslo s minimálne 10 znakmi
-        if (emailChange) {
+        if (emailChanged) {
             return isFormChanged() && isEmailValid && validatePassword(currentPassword).minLength;
         }
 
         // Ak sa mení iba heslo, nové heslá sa musia zhodovať, byť validné a musí byť zadané aktuálne heslo
-        if (passwordChange) {
+        if (passwordChanged) {
             const newPasswordStatus = validatePassword(newPassword);
             return isFormChanged() &&
                    newPasswordStatus.minLength &&
@@ -656,21 +670,9 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
         boxShadow: isButtonEnabled ? '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' : 'none',
     };
     
-
-
-
-
-    
     const ModalContent = React.createElement(
       'div',
       { className: 'p-6 h-full overflow-y-auto' },
-      // Zobrazenie chybovej správy, ak je e-mail neplatný (pôvodne zakomentované)
-      // !isEmailValid && React.createElement(
-      //     'div',
-      //     { className: 'bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-lg', role: 'alert' },
-      //     React.createElement('p', { className: 'font-bold' }, 'Chybný formát e-mailu!'),
-      //     React.createElement('p', null, 'Prosím, zadajte platnú e-mailovú adresu.')
-      // ),
       // Formulár
       React.createElement(
         'form',
@@ -799,7 +801,7 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
             { className: 'mb-4' },
             React.createElement(
               'label',
-              { className: `block text-sm font-bold mb-2 text-gray-700`, htmlFor: 'email' },
+              { className: `block text-sm font-bold mb-2 ${emailChangeError ? 'text-red-600' : 'text-gray-700'}`, htmlFor: 'email' },
               React.createElement(
                 'span',
                 null,
@@ -822,13 +824,18 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
                 setIsEmailValid(validateEmail(e.target.value));
               },
               placeholder: originalData.current.email,
-              className: `focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight ${!isEmailValid ? 'border-red-500' : ''}`,
-              // Opravená logika pre borderColor - neprepisujeme Tailwind triedu
+              className: `focus:outline-none shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight ${!isEmailValid || emailChangeError ? 'border-red-500' : ''}`,
               style: {
-                borderColor: isEmailValid ? roleColor : 'red', // Ak je nevalidný, border je červený
+                borderColor: !isEmailValid || emailChangeError ? 'red' : roleColor,
                 boxShadow: 'none',
-              },
-            })
+              }
+            }),
+            // Chybová hláška pre prípad zmeny emailu bez hesla
+            emailChangeError && React.createElement(
+              'p',
+              { className: 'text-red-500 text-xs italic mt-1' },
+              'Na zmenu e-mailovej adresy zadajte aktuálne heslo.'
+            )
           ),
           React.createElement('hr', { className: 'my-6' }),
         ),
@@ -937,10 +944,6 @@ export const ChangeProfileModal = ({ show, onClose, userProfileData, roleColor, 
       })
     );
 
-
-
-
-    
     // Zmenená logika tu: ReactDOM.createPortal sa volá len vtedy, ak je `show` true
     if (!show) {
         return null;
