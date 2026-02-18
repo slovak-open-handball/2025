@@ -2,48 +2,50 @@ import { getFirestore, doc, onSnapshot, updateDoc, collection, query, where, get
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 const { useState, useEffect, useRef, useMemo } = window.React || {};
 
+// TOTO JE CELÝ NOVÝ KÓD PRE HOOK useRegistrationLimits
+// Nahraďte ním pôvodný hook useRegistrationLimits v prvom kóde.
 function useRegistrationLimits() {
     const db = getFirestore();
-    const [limits, setLimits] = useState({
-        numberOfPlayers: 0,
-        numberOfImplementationTeam: 0
-    });
+    // Zmena: State už nie sú dve čísla, ale objekt, kde kľúč = názov kategórie
+    const [limitsByCategory, setLimitsByCategory] = useState({});
 
     useEffect(() => {
         if (!db) return;
 
-        const settingsDocRef = doc(db, 'settings', 'registration');
+        const categoriesDocRef = doc(db, 'settings', 'categories');
 
-        const unsubscribe = onSnapshot(settingsDocRef, (docSnap) => {
+        const unsubscribe = onSnapshot(categoriesDocRef, (docSnap) => {
+            const newLimitsByCategory = {};
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                const newLimits = {
-                    numberOfPlayers: Number(data.numberOfPlayers) || 0,
-                    numberOfImplementationTeam: Number(data.numberOfImplementationTeam) || 0
-                };
-
-                console.log("[useRegistrationLimits] Načítané limity priamo z Firestore:", newLimits);
-
-                setLimits(prev => {
-                    if (newLimits.numberOfPlayers !== prev.numberOfPlayers ||
-                        newLimits.numberOfImplementationTeam !== prev.numberOfImplementationTeam) {
-                        console.log("[useRegistrationLimits] Limity aktualizované z Firestore:", newLimits);
+                // Prechádzame všetky kategórie v dokumente
+                Object.entries(data).forEach(([categoryId, categoryData]) => {
+                    // Kategória môže byť uložená pod ID, ale my potrebujeme jej názov ako kľúč
+                    const categoryName = categoryData.name;
+                    if (categoryName) {
+                        newLimitsByCategory[categoryName] = {
+                            // Používame rovnaké názvy polí ako v CategorySettings
+                            numberOfPlayers: Number(categoryData.maxPlayers) ?? 12, // Predvolená hodnota 12
+                            numberOfImplementationTeam: Number(categoryData.maxImplementationTeam) ?? 3 // Predvolená hodnota 3
+                        };
                     }
-                    return newLimits;
                 });
+                console.log("[useRegistrationLimits] Načítané limity podľa kategórií z Firestore:", newLimitsByCategory);
             } else {
-                console.log("[useRegistrationLimits] Dokument settings/registration neexistuje → limity zostávajú 0");
-                setLimits({ numberOfPlayers: 0, numberOfImplementationTeam: 0 });
+                console.log("[useRegistrationLimits] Dokument settings/categories neexistuje.");
             }
+            // Aktualizujeme stav. Ak dokument neexistuje, nastavíme prázdny objekt.
+            setLimitsByCategory(newLimitsByCategory);
         }, (error) => {
-            console.error("[useRegistrationLimits] Chyba pri onSnapshot settings/registration:", error);
-            // fallback – necháme 0, ale môžeme pridať notifikáciu ak chceš
+            console.error("[useRegistrationLimits] Chyba pri onSnapshot settings/categories:", error);
+            setLimitsByCategory({}); // Fallback na prázdny objekt
         });
 
         return () => unsubscribe();
-    }, [db]);  // závislosť na db, aby sa re-subscribovalo ak sa db zmení (zriedkavé)
+    }, [db]); // Závislosť na db
 
-    return limits;
+    // Vraciame objekt, nie dve čísla
+    return limitsByCategory;
 }
 
 const getChangesForNotification = (original, updated, formatDateFn) => {
@@ -1795,7 +1797,7 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
 function RostersApp() {
   const auth = getAuth();
   const db = getFirestore();  
-  const { numberOfPlayers: maxPlayersPerTeam, numberOfImplementationTeam: maxImplementationMembers } = useRegistrationLimits();
+  const limitsByCategory = useRegistrationLimits();
   const [user, setUser] = useState(null);
   const [userProfileData, setUserProfileData] = useState(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
@@ -1825,17 +1827,26 @@ function RostersApp() {
   const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
   useEffect(() => {
-    const limitsInfo = {
-        maxPlayersPerTeam,
-        maxImplementationMembers,
-        hasWindowRegistrationLimits: !!window.registrationLimits,
-        registrationLimitsContent: window.registrationLimits 
-            ? { ...window.registrationLimits } 
-            : "nedefinované"
-    };
-
-    console.log("[RostersApp] Aktuálne stavy limitov:", limitsInfo);
-}, [maxPlayersPerTeam, maxImplementationMembers]);
+      // Získame všetky kategórie a ich limity z objektu limitsByCategory
+      const categoriesLimits = {};
+  
+      Object.entries(limitsByCategory).forEach(([categoryName, limits]) => {
+        categoriesLimits[categoryName] = {
+          maxPlayersPerTeam: limits.numberOfPlayers,
+          maxImplementationMembers: limits.numberOfImplementationTeam
+        };
+      });
+    
+      const limitsInfo = {
+          categoriesLimits, // Teraz zobrazuje limity pre všetky kategórie
+          hasWindowRegistrationLimits: !!window.registrationLimits,
+          registrationLimitsContent: window.registrationLimits 
+              ? { ...window.registrationLimits } 
+              : "nedefinované"
+      };
+  
+      console.log("[RostersApp] Aktuálne stavy limitov podľa kategórií:", limitsInfo);
+  }, [limitsByCategory]); // Závislosť na limitsByCategory namiesto nedefinovaných premenných
     
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged(currentUser => {
@@ -2500,7 +2511,7 @@ const handleOpenAddMemberTypeModal = (team) => {
     setIsMemberEditMode(false);
     setMemberToEdit(null);
     setShowAddMemberTypeModal(true);
-};
+  };
 
 const handleOpenEditMemberDetailsModal = (team, member) => {
     setTeamOfMemberToEdit(team);
@@ -2531,6 +2542,10 @@ const handleSaveNewMember = async (newMemberDetails) => {
     const memberName = `${newMemberDetails.firstName || ''} ${newMemberDetails.lastName || ''}`.trim() || 'bez mena';
     const teamName = teamToAddMemberTo.teamName || 'bez názvu';
     const category = teamToAddMemberTo.categoryName || '?';
+
+    const limitsForThisTeam = getLimitsForTeam(teamToAddMemberTo);
+    const maxPlayersPerTeam = limitsForThisTeam.numberOfPlayers;
+    const maxImplementationMembers = limitsForThisTeam.numberOfImplementationTeam;
 
     let memberTypeLabel = '';
     switch (memberTypeToAdd) {
@@ -3268,8 +3283,8 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
           onSelectMemberType: handleSelectMemberType,
           userProfileData: userProfileData,
           isDataEditDeadlinePassed: isDataEditDeadlinePassed,
-          maxPlayersPerTeam: maxPlayersPerTeam,
-          maxImplementationMembers: maxImplementationMembers,
+          maxPlayersPerTeam: getLimitsForTeam(teamToAddMemberTo).numberOfPlayers,
+          maxImplementationMembers: getLimitsForTeam(teamToAddMemberTo).numberOfImplementationTeam,
           currentTeam: teamToAddMemberTo,
         }
       ),
@@ -3292,8 +3307,8 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
               isDataEditDeadlinePassed: isDataEditDeadlinePassed,
               teamCategoryName: isMemberEditMode ? teamOfMemberToEdit?.categoryName : teamToAddMemberTo?.categoryName,
               currentTeam: isMemberEditMode ? teamOfMemberToEdit : teamToAddMemberTo,
-              maxPlayersPerTeam: maxPlayersPerTeam,
-              maxImplementationMembers: maxImplementationMembers,
+              maxPlayersPerTeam: getLimitsForTeam(isMemberEditMode ? teamOfMemberToEdit : teamToAddMemberTo).numberOfPlayers,
+              maxImplementationMembers: getLimitsForTeam(isMemberEditMode ? teamOfMemberToEdit : teamToAddMemberTo).numberOfImplementationTeam,
           }
       ),
     
