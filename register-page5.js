@@ -141,7 +141,8 @@ function TeamAccommodationAndArrival({
     accommodationTypes,
     accommodationCounts,
     tournamentStartDate, // Už nebude NOVINKA: priamo prijímame Date objekt (bude z Page5Form)
-    generateTimeOptions
+    generateTimeOptions,
+    arrivalDateTime // NOVINKA: Dátum a čas príchodu z databázy
 }) {
     const [selectedAccommodation, setSelectedAccommodation] = React.useState(team.accommodation?.type || '');
     const [arrivalType, setArrivalType] = React.useState(team.arrival?.type || '');
@@ -223,6 +224,24 @@ function TeamAccommodationAndArrival({
         ? tournamentStartDate.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' })
         : '';
 
+    // NOVINKA: Formátovanie arrivalDateTime pre zobrazenie v informačnom texte
+    const formattedArrivalDateTime = () => {
+        if (!arrivalDateTime) return 'dátum a čas príchodu';
+        
+        const date = arrivalDateTime.toLocaleDateString('sk-SK', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+        
+        const time = arrivalDateTime.toLocaleTimeString('sk-SK', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        return `${date} o ${time} hod.`;
+    };
+
     return React.createElement(
         React.Fragment,
         null,
@@ -288,7 +307,8 @@ function TeamAccommodationAndArrival({
             React.createElement(
                 'p',
                 { className: 'text-sm text-gray-600 mb-4' },
-                `Ak budete prichádzať verejnou dopravou a je potrebné pre vás zabezpečiť dopravu na miesto ubytovania, napíšte nám čas príchodu vlaku/autobusu dňa ${formattedTournamentStartDate}. V prípade príchodu po 10:00 hod. bude zabezpečený zvoz len na miesto otvorenia turnaja.`
+                // NOVINKA: Upravený text s dynamickým dátumom a časom príchodu z databázy
+                `Ak budete prichádzať verejnou dopravou a je potrebné pre vás zabezpečiť dopravu na miesto ubytovania, napíšte nám čas príchodu vlaku/autobusu dňa ${formattedArrivalDateTime()}. V prípade príchodu po 10:00 hod. bude zabezpečený zvoz len na miesto otvorenia turnaja.`
             ),
             React.createElement(
                 'div',
@@ -634,6 +654,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     // Nové lokálne stavy pre dátumy z databázy
     const [localTournamentStartDate, setLocalTournamentStartDate] = React.useState(null);
     const [localTournamentEndDate, setLocalTournamentEndDate] = React.useState(null);
+    const [arrivalDateTime, setArrivalDateTime] = React.useState(null);
 
     const closeNotification = () => {
         setNotificationMessage('');
@@ -793,10 +814,16 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         } else {
                             setLocalTournamentEndDate(null);
                         }
+                        if (data.arrivalDate instanceof Timestamp) {
+                            setArrivalDateTime(data.arrivalDate.toDate());
+                        } else {
+                            setArrivalDateTime(null);
+                        }
                     } else {
                         console.warn("Dokument 'settings/registration' neexistuje. Dátumy turnaja neboli načítané.");
                         setLocalTournamentStartDate(null);
                         setLocalTournamentEndDate(null);
+                        setArrivalDateTime(null);
                     }
                 }, (error) => {
                     console.error("Chyba pri načítaní nastavení registrácie (dátumy turnaja):", error);
@@ -1366,6 +1393,7 @@ if (querySnapshot.empty) {
                         accommodationCounts: accommodationCounts,
                         tournamentStartDate: localTournamentStartDate,
                         generateTimeOptions: generateTimeOptions,
+                        arrivalDateTime: arrivalDateTime
                       }),
 
                       React.createElement(TeamPackageSettings, {
