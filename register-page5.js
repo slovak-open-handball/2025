@@ -202,9 +202,10 @@ function TeamAccommodationAndArrival({
         // Pre konkrétne typy ubytovania skontrolujeme kapacitu
         const selectedAccType = accommodationTypes.find(acc => acc.type === newValue);
         if (selectedAccType) {
+            // KROK 1: Skontrolujeme kapacitu z databázy (existujúce registrácie)
             const existingCount = existingAccommodationCounts[selectedAccType.type] || 0;
             
-            // Výpočet aktuálnej obsadenosti bez tohto tímu
+            // KROK 2: Skontrolujeme kapacitu z aktuálnej registrácie (bez tohto tímu)
             let currentCountWithoutThisTeam = currentRegistrationAccommodationCounts[selectedAccType.type] || 0;
             
             // Ak už má tento tím vybraný iný typ ubytovania, odpočítame ho
@@ -212,9 +213,11 @@ function TeamAccommodationAndArrival({
                 currentCountWithoutThisTeam -= currentTeamPeople;
             }
             
+            // KROK 3: Celková obsadenosť
             const totalOccupied = existingCount + currentCountWithoutThisTeam;
             const remaining = selectedAccType.capacity - totalOccupied;
             
+            // KROK 4: Kontrola, či sa tím zmestí
             if (remaining < currentTeamPeople) {
                 alert(`Tento typ ubytovania už nemá dostatočnú kapacitu pre ${currentTeamPeople} osôb. Zostáva ${remaining} miest.`);
                 return;
@@ -325,10 +328,10 @@ function TeamAccommodationAndArrival({
                     
                     // Ostatné typy ubytovania s kontrolou kapacity
                     accommodationTypes.sort((a, b) => a.type.localeCompare(b.type)).map((acc) => {
-                        // Výpočet dostupnej kapacity
+                        // KROK 1: Najskôr kapacita z databázy (existujúce registrácie)
                         const existingCount = existingAccommodationCounts[acc.type] || 0;
                         
-                        // Aktuálna obsadenosť BEZ tohto tímu
+                        // KROK 2: Kapacita z aktuálnej registrácie (bez tohto tímu)
                         let currentCountWithoutThisTeam = currentRegistrationAccommodationCounts[acc.type] || 0;
                         
                         // Ak už má tento tím vybraný iný typ ubytovania, odpočítame ho
@@ -336,10 +339,11 @@ function TeamAccommodationAndArrival({
                             currentCountWithoutThisTeam -= currentTeamPeople;
                         }
                         
+                        // KROK 3: Celková obsadenosť
                         const totalOccupied = existingCount + currentCountWithoutThisTeam;
                         const remaining = acc.capacity - totalOccupied;
                         
-                        // DÔLEŽITÉ: Zablokovanie ak sa tím nezmestí
+                        // KROK 4: Zablokovanie ak sa tím nezmestí
                         const isDisabled = remaining < currentTeamPeople;
                         
                         // Výnimka: aktuálne vybraný typ nie je zablokovaný (aby bolo možné ho zmeniť)
@@ -362,7 +366,7 @@ function TeamAccommodationAndArrival({
                                 checked: selectedAccommodation === acc.type,
                                 onChange: handleAccommodationChange,
                                 className: 'form-radio h-5 w-5 text-blue-600',
-                                disabled: finalDisabled, // TOTO je kľúčové pre zablokovanie
+                                disabled: finalDisabled,
                             }),
                             React.createElement(
                                 'span', 
@@ -522,7 +526,6 @@ function TeamAccommodationAndArrival({
         )
     );
 }
-
 // Komponent pre nastavenia balíčka tímu
 function TeamPackageSettings({
     team,
