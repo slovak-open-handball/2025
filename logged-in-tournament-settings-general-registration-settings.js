@@ -31,6 +31,7 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
   const [dataEditDeadline, setDataEditDeadline] = React.useState(''); 
   const [rosterEditDeadline, setRosterEditDeadline] = React.useState(''); 
+  const [arrivalDate, setArrivalDate] = React.useState(''); // Nový state pre dátum príchodu
 
   const isFrozenForEditing = React.useMemo(() => {
     const now = new Date();
@@ -55,6 +56,7 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
                 setRosterEditDeadline(data.rosterEditDeadline ? formatToDatetimeLocal(data.rosterEditDeadline.toDate()) : ''); 
                 setTournamentStartDate(data.tournamentStart ? formatToDatetimeLocal(data.tournamentStart.toDate()) : '');
                 setTournamentEndDate(data.tournamentEnd ? formatToDatetimeLocal(data.tournamentEnd.toDate()) : '');
+                setArrivalDate(data.arrivalDate ? formatToDatetimeLocal(data.arrivalDate.toDate()) : ''); // Načítanie dátumu príchodu
 
             } else {
                 setRegistrationStartDate('');
@@ -63,6 +65,7 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
                 setRosterEditDeadline(''); 
                 setTournamentStartDate('');
                 setTournamentEndDate('');
+                setArrivalDate(''); // Reset dátumu príchodu
             }
           }, error => {
             showNotification(`Chyba pri načítaní nastavení: ${error.message}`, 'error'); 
@@ -96,6 +99,7 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
       const rosterEditDead = rosterEditDeadline ? new Date(rosterEditDeadline) : null; 
       const tourStart = tournamentStartDate ? new Date(tournamentStartDate) : null;
       const tourEnd = tournamentEndDate ? new Date(tournamentEndDate) : null;
+      const arrival = arrivalDate ? new Date(arrivalDate) : null; // Nový dátum príchodu
 
       if (regStart && regEnd && regStart >= regEnd) {
         showNotification("Dátum začiatku registrácie musí byť pred dátumom konca registrácie.", 'error'); 
@@ -134,6 +138,9 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
       if ((oldData.rosterEditDeadline ? oldData.rosterEditDeadline.toMillis() : null) !== (rosterEditDead ? Timestamp.fromDate(rosterEditDead).toMillis() : null)) {
           changes.push(`Uzávierka úprav súpisiek z '${formatDateForDisplay(oldData.rosterEditDeadline)}' na '${formatDateForDisplay(rosterEditDead)}'`);
       }
+      if ((oldData.arrivalDate ? oldData.arrivalDate.toMillis() : null) !== (arrival ? Timestamp.fromDate(arrival).toMillis() : null)) {
+          changes.push(`Dátum príchodu na turnaj z '${formatDateForDisplay(oldData.arrivalDate)}' na '${formatDateForDisplay(arrival)}'`);
+      }
 
       // Staré dátumy turnaja z databázy
       const oldTournamentStart = oldData.tournamentStart ? oldData.tournamentStart.toDate() : null;
@@ -164,6 +171,7 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
         rosterEditDeadline: rosterEditDead ? Timestamp.fromDate(rosterEditDead) : null, 
         tournamentStart: tourStart ? Timestamp.fromDate(tourStart) : null,
         tournamentEnd: tourEnd ? Timestamp.fromDate(tourEnd) : null,
+        arrivalDate: arrival ? Timestamp.fromDate(arrival) : null, // Uloženie dátumu príchodu
       });
       
       showNotification("Nastavenia registrácie úspešne aktualizované!", 'success'); 
@@ -241,6 +249,18 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
           onChange: (e) => setRosterEditDeadline(e.target.value),
         })
       ),
+    React.createElement(
+      'div',
+      null,
+      React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'arrival-date' }, 'Dátum a čas príchodu na turnaj'),
+      React.createElement('input', {
+        type: 'datetime-local',
+        id: 'arrival-date',
+        className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
+        value: arrivalDate,
+        onChange: (e) => setArrivalDate(e.target.value),
+      })
+    ),
     React.createElement(
       'div',
       null,
