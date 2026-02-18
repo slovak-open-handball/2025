@@ -339,23 +339,17 @@ function TeamAccommodationAndArrival({
                             currentCountWithoutThisTeam -= currentTeamPeople;
                         }
                         
-                        // KROK 3: Celková obsadenosť
-                        const totalOccupied = existingCount + currentCountWithoutThisTeam;
+                        // KROK 3: Celková obsadenosť pred pridaním tohto tímu
+                        const totalOccupiedBeforeThisTeam = existingCount + currentCountWithoutThisTeam;
                         
-                        // KROK 4: Výpočet zostávajúcich miest
-                        const remaining = acc.capacity - totalOccupied;
+                        // KROK 4: Výpočet, či sa tento tím zmestí
+                        const willThisTeamFit = (totalOccupiedBeforeThisTeam + currentTeamPeople) <= acc.capacity;
                         
-                        // DÔLEŽITÉ: Kontrola, či je typ ubytovania plný pre tento konkrétny tím
-                        // Zohľadňujeme počet členov tímu, ktorý sa práve registruje
-                        const isAccommodationFullForThisTeam = remaining < currentTeamPeople;
+                        // KROK 5: Zostávajúce miesta po pridaní tohto tímu
+                        const remainingAfterThisTeam = acc.capacity - (totalOccupiedBeforeThisTeam + currentTeamPeople);
                         
-                        // DÔLEŽITÉ: Kontrola, či je typ ubytovania plný z databázy
-                        const isDatabaseFull = existingCount >= acc.capacity;
-                        
-                        // Zablokovanie ak:
-                        // 1. Databáza je už plná, ALEBO
-                        // 2. Celková kapacita nestačí pre tento tím
-                        const isDisabled = (isDatabaseFull || isAccommodationFullForThisTeam) || loading;
+                        // Zablokovanie ak sa tím nezmestí
+                        const isDisabled = !willThisTeamFit || loading;
                         
                         return React.createElement(
                             'label',
@@ -374,18 +368,18 @@ function TeamAccommodationAndArrival({
                                 checked: selectedAccommodation === acc.type,
                                 onChange: handleAccommodationChange,
                                 className: 'form-radio h-5 w-5 text-blue-600',
-                                disabled: isDisabled, // TOTO je kľúčové pre zablokovanie
+                                disabled: isDisabled,
                             }),
                             React.createElement(
                                 'span', 
                                 { 
                                     className: `ml-3 ${isDisabled ? 'text-gray-400' : 'text-gray-800'}` 
                                 },
-                                isDatabaseFull 
-                                    ? `${acc.type} (naplnená kapacita)`
-                                    : (isAccommodationFullForThisTeam 
-                                        ? `${acc.type} (voľných len ${remaining} z ${currentTeamPeople} potrebných)`
-                                        : `${acc.type}`)
+                                !willThisTeamFit 
+                                    ? (totalOccupiedBeforeThisTeam >= acc.capacity 
+                                        ? `${acc.type} (naplnená kapacita)`
+                                        : `${acc.type} (voľných len ${acc.capacity - totalOccupiedBeforeThisTeam} z ${currentTeamPeople} potrebných)`)
+                                    : `${acc.type}`
                             )
                         );
                     })
