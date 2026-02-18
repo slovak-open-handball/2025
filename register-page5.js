@@ -132,18 +132,19 @@ function TeamJerseyColors({
   );
 }
 
-// Komponent pre nastavenia ubytovania a príchodu tímu
+// register-page5.js - upravený TeamAccommodationAndArrival komponent
 function TeamAccommodationAndArrival({
     team,
     categoryName,
     teamIndex,
-    onGranularTeamsDataChange, // Prop pre aktualizáciu dát v rodičovi
+    onGranularTeamsDataChange,
     loading,
     accommodationTypes,
-    accommodationCounts,
-    tournamentStartDate, // Už nebude NOVINKA: priamo prijímame Date objekt (bude z Page5Form)
+    existingAccommodationCounts,        // Počty z existujúcich registrácií
+    currentRegistrationAccommodationCounts, // Počty z aktuálnej registrácie
+    tournamentStartDate,
     generateTimeOptions,
-    arrivalDateTime // NOVINKA: Dátum a čas príchodu z databázy
+    arrivalDateTime
 }) {
     const [selectedAccommodation, setSelectedAccommodation] = React.useState(team.accommodation?.type || '');
     const [arrivalType, setArrivalType] = React.useState(team.arrival?.type || '');
@@ -173,17 +174,14 @@ function TeamAccommodationAndArrival({
     const handleArrivalChange = (e) => {
         const newValue = e.target.value;
         setArrivalType(newValue);
-        // Získame existujúce dáta o príchode, aby sme zachovali drivers, ak sa zmení len typ dopravy
         const currentTeamArrivalData = team.arrival || {};
 
         if (newValue !== 'verejná doprava - vlak' && newValue !== 'verejná doprava - autobus') {
             setArrivalHours('');
             setArrivalMinutes('');
-            // Ak je typ dopravy 'vlastná doprava' alebo 'bez dopravy', drivers by mali byť null alebo prázdny objekt {male:0, female:0}
             const driversToPass = newValue === 'vlastná doprava' ? { male: 0, female: 0 } : null;
             onGranularTeamsDataChange(categoryName, teamIndex, 'arrival', { type: newValue, time: null, drivers: driversToPass });
         } else {
-            // Ak je verejná doprava, drivers sú null
             const timeString = (arrivalHours && arrivalMinutes) ? `${arrivalHours}:${arrivalMinutes}` : '';
             onGranularTeamsDataChange(categoryName, teamIndex, 'arrival', { type: newValue, time: timeString, drivers: null });
         }
@@ -206,21 +204,19 @@ function TeamAccommodationAndArrival({
         if (currentHours && currentMinutes) {
             timeString = `${currentHours}:${currentMinutes}`;
         } else if (currentHours && currentMinutes === '') {
-            timeString = currentHours; // Ak sú hodiny, ale minúty nie
+            timeString = currentHours;
         } else if (currentHours === '' && currentMinutes) {
-            timeString = currentMinutes; // Ak sú minúty, ale hodiny nie
+            timeString = currentMinutes;
         }
-        // Pri zmene času zachovať existujúce drivers a typ dopravy
         const currentTeamArrivalData = team.arrival || {};
         onGranularTeamsDataChange(categoryName, teamIndex, 'arrival', {
             ...currentTeamArrivalData,
-            type: arrivalType, // Zabezpečiť, že sa nemení typ dopravy
+            type: arrivalType,
             time: timeString || null,
-            drivers: currentTeamArrivalData.drivers // Zachovať drivers
+            drivers: currentTeamArrivalData.drivers
         });
     };
 
-    // Formátovanie tournamentStartDate pre zobrazenie
     const formattedTournamentStartDate = tournamentStartDate instanceof Date && !isNaN(tournamentStartDate.getTime())
         ? tournamentStartDate.toLocaleDateString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric' })
         : '';
@@ -268,9 +264,13 @@ function TeamAccommodationAndArrival({
                         React.createElement('span', { className: 'ml-3 text-gray-800' }, `bez ubytovania`)
                     ),
                     accommodationTypes.sort((a, b) => a.type.localeCompare(b.type)).map((acc) => {
-                        const currentCount = accommodationCounts[acc.type] || 0;
-                        const remaining = acc.capacity - currentCount;
-                        // Zmena: zablokovanie ak je zostávajúci počet menší alebo rovný nule
+                        // Výpočet celkovej obsadenosti: existujúce + aktuálne
+                        const existingCount = existingAccommodationCounts[acc.type] || 0;
+                        const currentCount = currentRegistrationAccommodationCounts[acc.type] || 0;
+                        const totalOccupied = existingCount + currentCount;
+                        const remaining = acc.capacity - totalOccupied;
+                        
+                        // Zablokovanie ak je zostávajúci počet menší alebo rovný nule
                         const isDisabled = remaining <= 0 || loading;
                         const labelClasses = `flex items-center p-3 rounded-lg ${isDisabled ? 'bg-gray-100 cursor-not-allowed text-gray-400' : 'hover:bg-blue-50 cursor-pointer'} transition-colors duration-200`;
 
@@ -305,7 +305,6 @@ function TeamAccommodationAndArrival({
             React.createElement(
                 'p',
                 { className: 'text-sm text-gray-600 mb-4' },
-                // NOVINKA: Upravený text s dynamickým dátumom a časom príchodu z databázy
                 `Ak budete prichádzať verejnou dopravou a je potrebné pre vás zabezpečiť dopravu na miesto ubytovania, napíšte nám čas príchodu vlaku/autobusu dňa ${formattedArrivalDate}. V prípade príchodu po ${formattedArrivalTime} hod. bude zabezpečený zvoz len na miesto otvorenia turnaja.`            
             ),
             React.createElement(
@@ -641,9 +640,8 @@ function CustomTeamSelect({ value, onChange, options, disabled, placeholder }) {
     );
 }
 
-
 // Hlavný komponent Page5Form
-export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, setTeamsDataFromPage4, teamsDataFromPage4, isRecaptchaReady, onGranularTeamsDataChange }) { // Odstránené tournamentStartDate, tournamentEndDate z props
+export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, setTeamsDataFromPage4, teamsDataFromPage4, isRecaptchaReady, onGranularTeamsDataChange }) {
     const db = getFirestore();
 
     const [notificationMessage, setNotificationMessage] = React.useState('');
@@ -660,20 +658,18 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     };
 
     const [accommodationTypes, setAccommodationTypes] = React.useState([]);
-    // Zmena: Ubytovacie počty sú teraz lokálny stav
-    const [accommodationCounts, setAccommodationCounts] = React.useState({});
+    // Zmena: Ubytovacie počty sú teraz lokálny stav pre existujúce registrácie
+    const [existingAccommodationCounts, setExistingAccommodationCounts] = React.useState({});
     const [packages, setPackages] = React.useState([]);
 
     // Lokálny stav pre záznamy šoférov - teraz inicializovaný z teamsDataFromPage4 v useEffect
     const [driverEntries, setDriverEntries] = React.useState([]);
 
     // Pomocná funkcia na generovanie unikátneho ID pre dočasné záznamy šoférov.
-    // Toto ID bude slúžiť ako React key a nemalo by sa meniť po inicializácii záznamu.
     const generateUniqueTempId = () => `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     // Ref pre sledovanie, či už boli šoféri inicializovaní z parent dát
     const isInitialDriversLoad = React.useRef(true);
-
 
     // Funkcia na re-agregáciu dát šoférov pre konkrétny tím a aktualizáciu rodičovského stavu
     const updateTeamDriversInParent = React.useCallback((currentEntries, categoryName, teamIndex) => {
@@ -698,9 +694,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         });
     }, [onGranularTeamsDataChange, teamsDataFromPage4]);
 
-
     // useEffect na inicializáciu driverEntries z teamsDataFromPage4
-    // Spúšťa sa iba raz pri mountnutí komponentu.
     React.useEffect(() => {
         if (isInitialDriversLoad.current) {
             const driversFromParentData = [];
@@ -736,7 +730,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
     }, []); // Prázdne pole závislostí zabezpečuje, že sa useEffect spustí len raz
 
-
     const getDaysBetween = (start, end) => {
         const dates = [];
         let currentDate = new Date(start);
@@ -757,6 +750,58 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         return [];
     }, [localTournamentStartDate, localTournamentEndDate]);
 
+    // NOVÁ POMOCNÁ FUNKCIA: Výpočet počtu ľudí v aktuálnej registrácii pre každý typ ubytovania
+    const calculateCurrentRegistrationAccommodationCounts = React.useCallback(() => {
+        const counts = {};
+
+        for (const categoryName in teamsDataFromPage4) {
+            const teamsInCurrentCategory = teamsDataFromPage4[categoryName];
+            if (!teamsInCurrentCategory || !Array.isArray(teamsInCurrentCategory)) continue;
+
+            for (const team of teamsInCurrentCategory) {
+                if (!team) continue;
+
+                if (team.accommodation?.type && team.accommodation.type !== 'bez ubytovania') {
+                    // Spočítame všetkých ľudí v tomto tíme
+                    let totalPeopleInTeam = 0;
+                    
+                    // Hráči
+                    if (team.playerDetails && Array.isArray(team.playerDetails)) {
+                        totalPeopleInTeam += team.playerDetails.length;
+                    }
+                    // Členovia realizačného tímu (muži a ženy)
+                    if (team.menTeamMemberDetails && Array.isArray(team.menTeamMemberDetails)) {
+                        totalPeopleInTeam += team.menTeamMemberDetails.length;
+                    }
+                    if (team.womenTeamMemberDetails && Array.isArray(team.womenTeamMemberDetails)) {
+                        totalPeopleInTeam += team.womenTeamMemberDetails.length;
+                    }
+                    // Šoféri (muži a ženy)
+                    if (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) {
+                        totalPeopleInTeam += team.driverDetailsMale.length;
+                    }
+                    if (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) {
+                        totalPeopleInTeam += team.driverDetailsFemale.length;
+                    }
+
+                    // Pridáme počet osôb do celkového súčtu pre aktuálnu registráciu
+                    if (counts[team.accommodation.type]) {
+                        counts[team.accommodation.type] += totalPeopleInTeam;
+                    } else {
+                        counts[team.accommodation.type] = totalPeopleInTeam;
+                    }
+                }
+            }
+        }
+
+        return counts;
+    }, [teamsDataFromPage4]);
+
+    // Vypočítame aktuálne obsadenie pre túto registráciu
+    const currentRegistrationAccommodationCounts = React.useMemo(() => 
+        calculateCurrentRegistrationAccommodationCounts(), 
+        [calculateCurrentRegistrationAccommodationCounts]
+    );
 
     React.useEffect(() => {
         let unsubscribeAccommodation;
@@ -781,10 +826,9 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     }
                 }, (error) => {
                     console.error("Chyba pri načítaní nastavení ubytovania:", error);
-                    setNotificationMessage("Chyba pri načítaní nastavení ubytovania.", 'error');
+                    setNotificationMessage("Chyba pri načítaní nastavení ubytovania.");
                     setNotificationType('error');
                 });
-
 
                 const packagesCollectionRef = collection(window.db, 'settings', 'packages', 'list');
                 unsubscribePackages = onSnapshot(packagesCollectionRef, (snapshot) => {
@@ -793,7 +837,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     setPackages(fetchedPackages);
                 }, (error) => {
                     console.error("Chyba pri načítaní balíčkov:", error);
-                    setNotificationMessage("Chyba pri načítaní balíčkov.", 'error');
+                    setNotificationMessage("Chyba pri načítaní balíčkov.");
                     setNotificationType('error');
                 });
 
@@ -825,18 +869,17 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     }
                 }, (error) => {
                     console.error("Chyba pri načítaní nastavení registrácie (dátumy turnaja):", error);
-                    setNotificationMessage("Chyba pri načítaní dátumov turnaja.", 'error');
+                    setNotificationMessage("Chyba pri načítaní dátumov turnaja.");
                     setNotificationType('error');
                 });
 
-                // Poslucháč pre `/users/` kolekciu
+                // Poslucháč pre `/users/` kolekciu - počítame EXISTUJÚCE registrácie
                 const usersCollectionRef = collection(window.db, 'users');
                 unsubscribeUsers = onSnapshot(usersCollectionRef, async (querySnapshot) => {
                     if (querySnapshot.empty) {
                         console.log("Kolekcia '/users/' neobsahuje žiadne dokumenty.");
-                        setAccommodationCounts({}); // Vynulujeme počty, ak nie sú žiadni používatelia
+                        setExistingAccommodationCounts({});
                     } else {
-                        // Objekt, do ktorého budeme ukladať celkový počet OSÔB pre každý typ ubytovania
                         const accommodationSummary = {};
 
                         querySnapshot.forEach((userDoc) => {
@@ -847,37 +890,27 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                                 if (!Array.isArray(teamsArray)) return;
 
                                 teamsArray.filter(team => team).forEach(team => {
-                                    // Zistíme, aký typ ubytovania si tento tím vybral
                                     const accommodationType = team.accommodation?.type;
                                     
-                                    // Ak je typ ubytovania platný a nie je to 'bez ubytovania'
                                     if (accommodationType && accommodationType !== 'bez ubytovania') {
-                                        
-                                        // Spočítame všetkých ľudí v tomto tíme, ktorí budú ubytovaní
                                         let totalPeopleInTeam = 0;
 
-                                        // Hráči
                                         if (team.playerDetails && Array.isArray(team.playerDetails)) {
                                             totalPeopleInTeam += team.playerDetails.length;
                                         }
-                                        // Členovia realizačného tímu (muži)
                                         if (team.menTeamMemberDetails && Array.isArray(team.menTeamMemberDetails)) {
                                             totalPeopleInTeam += team.menTeamMemberDetails.length;
                                         }
-                                        // Členovia realizačného tímu (ženy)
                                         if (team.womenTeamMemberDetails && Array.isArray(team.womenTeamMemberDetails)) {
                                             totalPeopleInTeam += team.womenTeamMemberDetails.length;
                                         }
-                                        // Šoféri (muži)
                                         if (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) {
                                             totalPeopleInTeam += team.driverDetailsMale.length;
                                         }
-                                        // Šoféri (ženy)
                                         if (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) {
                                             totalPeopleInTeam += team.driverDetailsFemale.length;
                                         }
 
-                                        // Pridáme počet osôb z tohto tímu do celkového súčtu pre daný typ ubytovania
                                         if (accommodationSummary[accommodationType]) {
                                             accommodationSummary[accommodationType] += totalPeopleInTeam;
                                         } else {
@@ -888,25 +921,17 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             });
                         });
 
-                        // Aktualizujeme stav accommodationCounts s novými hodnotami (počty osôb, nie tímov)
-                        setAccommodationCounts(accommodationSummary);
-
-                        // Pre kontrolu v konzole (voliteľné)
-                        // console.log("=== AKTUALIZOVANÁ OBSADENOSŤ UBYTOVANIA (počet osôb) ===");
-                        // Object.entries(accommodationSummary).forEach(([type, count]) => {
-                        //     console.log(`Typ: "${type}" → ${count} osôb`);
-                        // });
-                        // console.log("======================================================");
+                        setExistingAccommodationCounts(accommodationSummary);
                     }
                 }, (error) => {
-                    console.error("Chyba pri načítaní a výpise dát z '/users/':", error);
-                    setNotificationMessage("Chyba pri načítaní a výpise dát z '/users/'.", 'error');
+                    console.error("Chyba pri načítaní dát z '/users/':", error);
+                    setNotificationMessage("Chyba pri načítaní dát z databázy.");
                     setNotificationType('error');
                 });
 
             } catch (e) {
-                console.error("Chyba pri nastavovaní poslucháča pre ubytovanie/balíčky/registrácie:", e);
-                setNotificationMessage("Chyba pri načítaní údajov.", 'error');
+                console.error("Chyba pri nastavovaní poslucháčov:", e);
+                setNotificationMessage("Chyba pri načítaní údajov.");
                 setNotificationType('error');
             }
         };
@@ -927,12 +952,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 unsubscribeUsers();
             }
         };
-    }, [db, setAccommodationCounts]); // ZMENA: Pridaná závislosť na setAccommodationCounts
-
-
-    // ZMENA: Odstránený useEffect, ktorý počúval na accommodationCounts,
-    // pretože teraz sa počty počítajú priamo z dát používateľov.
-
+    }, [db]);
 
     // Táto funkcia teraz volá onGranularTeamsDataChange
     const handleTeamDataChange = (categoryName, teamIndex, field, value) => {
@@ -942,7 +962,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const teamsWithOwnTransport = React.useMemo(() => {
         const teams = [];
         for (const categoryName in teamsDataFromPage4) {
-            // Filter out any undefined or null categories at this level
             if (!teamsDataFromPage4[categoryName] || typeof teamsDataFromPage4[categoryName] !== 'object') continue;
 
             (teamsDataFromPage4[categoryName] || []).filter(t => t).forEach((team, teamIndex) => {
@@ -982,14 +1001,13 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         });
     
         return allOptions.filter(option => {
-            const optionValue = option.props.value; // Získanie hodnoty z React elementu
+            const optionValue = option.props.value;
             if (optionValue === '') {
                 return true;
             }
             return !usedGendersForCurrentTeam.has(optionValue) || optionValue === currentEntry.gender;
         });
     }, [driverEntries]);
-
 
     const getAvailableTeamOptions = React.useCallback((currentEntry = null) => {
         const usedTeamGenderCombinations = new Set();
@@ -1004,8 +1022,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             const maleCombo = `${team.id}-male`;
             const femaleCombo = `${team.id}-female`;
 
-            // Ak je aktuálny záznam šoféra už priradený k tomuto tímu, vždy zobraz tento tím.
-            // Inak zobraz tím, ak je pre neho voľné aspoň jedno pohlavie (muž/žena).
             if (currentEntry?.id && currentEntry.categoryName === team.categoryName && currentEntry.teamIndex === team.teamIndex) {
                  options.push(team);
             } else if (!usedTeamGenderCombinations.has(maleCombo) || !usedTeamGenderCombinations.has(femaleCombo)) {
@@ -1020,7 +1036,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     const handleAddDriverEntry = () => {
         setDriverEntries(prev => {
             const newEntry = {
-                id: generateUniqueTempId(), // Používame generátor dočasného unikátneho ID pre React key
+                id: generateUniqueTempId(),
                 count: '',
                 gender: '',
                 categoryName: '',
@@ -1042,12 +1058,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     removedEntryCategoryName = entry.categoryName;
                     removedEntryTeamIndex = entry.teamIndex;
                     removedEntryTeamInfo = teamsDataFromPage4[entry.categoryName]?.[entry.teamIndex];
-                    return false; // Remove this entry
+                    return false;
                 }
-                return true; // Keep other entries
+                return true;
             });
 
-            // Ak bola položka odstránená a patrila k tímu s vlastnou dopravou, aktualizujeme drivers v parent stave
             if (removedEntryTeamInfo && removedEntryCategoryName && removedEntryTeamIndex !== null && removedEntryTeamInfo.arrival?.type === 'vlastná doprava') {
                 updateTeamDriversInParent(updatedEntries, removedEntryCategoryName, removedEntryTeamIndex);
             }
@@ -1057,13 +1072,11 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
 
     const handleDriverEntryChange = (id, field, value) => {
         setDriverEntries(currentDrivers => {
-            // Vytvoríme novú kópiu poľa, aby sme neupravovali priamo pôvodný stav
             const newDrivers = currentDrivers.map(entry => ({ ...entry }));
 
             let updatedEntry = null;
             let updatedEntryIndex = -1; 
 
-            // Nájdeme a aktualizujeme konkrétny záznam v skopírovanom poli
             for (let i = 0; i < newDrivers.length; i++) {
                 if (newDrivers[i].id === id) {
                     updatedEntry = newDrivers[i]; 
@@ -1077,17 +1090,15 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 return currentDrivers; 
             }
 
-            // NOVINKA: Jednoduchšie resetovanie pohlavia, ak sa zmení tím
             if (field === 'teamId') {
                 const [catName, teamIdxStr] = value.split('-');
                 updatedEntry.categoryName = catName || '';
                 updatedEntry.teamIndex = teamIdxStr ? parseInt(teamIdxStr, 10) : null;
-                updatedEntry.gender = ''; // Resetovať pohlavie pri zmene tímu
+                updatedEntry.gender = '';
             } else {
                 updatedEntry[field] = value;
             }
 
-            // Agregácia dát pre rodičovský stav (teamsDataFromPage4)
             const affectedTeams = new Set();
             const originalEntryFromCurrentDrivers = currentDrivers.find(entry => entry.id === id);
             if (originalEntryFromCurrentDrivers && originalEntryFromCurrentDrivers.categoryName && originalEntryFromCurrentDrivers.teamIndex !== null) {
@@ -1109,11 +1120,9 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         });
     };
 
-
     const isAddDriverButtonVisible = React.useMemo(() => {
         if (loading) return false;
 
-        // Skontroluj, či existuje nekompletný záznam šoféra. Ak áno, nedovoľ pridať ďalší.
         const hasIncompleteEntry = driverEntries.some(entry =>
             entry.count === '' ||
             parseInt(entry.count, 10) <= 0 ||
@@ -1126,7 +1135,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             return false;
         }
 
-        // Skontroluj, či sú ešte nejaké dostupné kombinácie tím-pohlavie, ktoré je možné pridať
         const usedCombinations = new Set();
         driverEntries.forEach(entry => {
             if (entry.categoryName && entry.teamIndex !== null && entry.gender) {
@@ -1134,29 +1142,24 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             }
         });
 
-        // Loop through all teams with own transport and check if there's any available male or female slot
         for (const team of teamsWithOwnTransport) {
             const maleCombo = `${team.id}-male`;
             const femaleCombo = `${team.id}-female`;
 
-            // If either male or female combo for this team is not yet used, a new driver can be added
             if (!usedCombinations.has(maleCombo) || !usedCombinations.has(femaleCombo)) {
-                 return true; // Ak nájdeme aspoň jednu voľnú kombináciu, povoliť tlačidlo
+                 return true;
             }
         }
-        return false; // Žiadne ďalšie kombinácie nie je možné pridať
+        return false;
     }, [driverEntries, teamsWithOwnTransport, loading]);
 
-
-const isFormValidPage5 = React.useMemo(() => {
+    // UPRAVENÁ VALIDÁCIA: Počíta s existujúcimi + aktuálnymi registráciami
+    const isFormValidPage5 = React.useMemo(() => {
         if (!teamsDataFromPage4 || Object.keys(teamsDataFromPage4).length === 0) {
             return false;
         }
 
         let hasTeamWithOwnTransport = false;
-
-        // Prejdeme všetky tímy v aktuálnej registrácii a spočítame, koľko ľudí si vyberá jednotlivé typy ubytovania
-        const currentRegistrationAccommodationCounts = {};
 
         // Overenie, či sú všetky tímy a ich dáta platné
         for (const categoryName in teamsDataFromPage4) {
@@ -1166,38 +1169,25 @@ const isFormValidPage5 = React.useMemo(() => {
             for (const team of teamsInCurrentCategory) {
                 if (!team) continue;
 
-                // Validácia ubytovania - TERAJŠIA REGISTRÁCIA
+                // Validácia ubytovania
                 if (accommodationTypes.length > 0) {
                     if (!team.accommodation?.type || team.accommodation.type.trim() === '') {
-                        return false; // Typ ubytovania musí byť vybraný
+                        return false;
                     }
 
                     // Pre tímy, ktoré si vybrali konkrétny typ ubytovania (nie "bez ubytovania")
                     if (team.accommodation.type !== 'bez ubytovania') {
-                        // Spočítame všetkých ľudí v tomto tíme
-                        let totalPeopleInTeam = 0;
+                        const selectedAccType = accommodationTypes.find(acc => acc.type === team.accommodation.type);
                         
-                        if (team.playerDetails && Array.isArray(team.playerDetails)) {
-                            totalPeopleInTeam += team.playerDetails.length;
-                        }
-                        if (team.menTeamMemberDetails && Array.isArray(team.menTeamMemberDetails)) {
-                            totalPeopleInTeam += team.menTeamMemberDetails.length;
-                        }
-                        if (team.womenTeamMemberDetails && Array.isArray(team.womenTeamMemberDetails)) {
-                            totalPeopleInTeam += team.womenTeamMemberDetails.length;
-                        }
-                        if (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) {
-                            totalPeopleInTeam += team.driverDetailsMale.length;
-                        }
-                        if (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) {
-                            totalPeopleInTeam += team.driverDetailsFemale.length;
-                        }
-
-                        // Pridáme počet osôb do dočasného súčtu pre aktuálnu registráciu
-                        if (currentRegistrationAccommodationCounts[team.accommodation.type]) {
-                            currentRegistrationAccommodationCounts[team.accommodation.type] += totalPeopleInTeam;
-                        } else {
-                            currentRegistrationAccommodationCounts[team.accommodation.type] = totalPeopleInTeam;
+                        if (selectedAccType) {
+                            // Celková obsadenosť = EXISTUJÚCE registrácie + AKTUÁLNA registrácia
+                            const existingOccupied = existingAccommodationCounts[selectedAccType.type] || 0;
+                            const currentOccupied = currentRegistrationAccommodationCounts[selectedAccType.type] || 0;
+                            const totalOccupied = existingOccupied + currentOccupied;
+                            
+                            if (totalOccupied > selectedAccType.capacity) {
+                                return false;
+                            }
                         }
                     }
                 }
@@ -1219,32 +1209,7 @@ const isFormValidPage5 = React.useMemo(() => {
             }
         }
 
-        // TERAZ overíme kapacitu pre každý typ ubytovania, ktorý si tím vybral
-        for (const categoryName in teamsDataFromPage4) {
-            const teamsInCurrentCategory = teamsDataFromPage4[categoryName];
-            if (!teamsInCurrentCategory || !Array.isArray(teamsInCurrentCategory)) continue;
-
-            for (const team of teamsInCurrentCategory) {
-                if (!team) continue;
-
-                if (team.accommodation?.type && team.accommodation.type !== 'bez ubytovania') {
-                    const selectedAccType = accommodationTypes.find(acc => acc.type === team.accommodation.type);
-                    
-                    if (selectedAccType) {
-                        // Celková obsadenosť = už existujúci používatelia + aktuálna registrácia
-                        const existingOccupied = accommodationCounts[selectedAccType.type] || 0;
-                        const currentOccupied = currentRegistrationAccommodationCounts[selectedAccType.type] || 0;
-                        const totalOccupied = existingOccupied + currentOccupied;
-                        
-                        if (totalOccupied > selectedAccType.capacity) {
-                            return false; // Kapacita by bola prekročená
-                        }
-                    }
-                }
-            }
-        }
-
-        // Validácia duplicitných záznamov šoférov...
+        // Validácia duplicitných záznamov šoférov
         const usedDriverEntryCombinations = new Set();
         for (const entry of driverEntries) {
             const count = parseInt(entry.count, 10);
@@ -1260,8 +1225,7 @@ const isFormValidPage5 = React.useMemo(() => {
         }
         
         return true;
-    }, [teamsDataFromPage4, accommodationTypes, accommodationCounts, packages, driverEntries, teamsWithOwnTransport]);
-
+    }, [teamsDataFromPage4, accommodationTypes, existingAccommodationCounts, currentRegistrationAccommodationCounts, packages, driverEntries, teamsWithOwnTransport]);
 
     const nextButtonClasses = `
     font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200
@@ -1279,7 +1243,6 @@ const isFormValidPage5 = React.useMemo(() => {
             : 'bg-blue-500 hover:bg-blue-700 text-white'
         }`.trim();
 
-
     const handlePage5Submit = async (e) => {
         e.preventDefault();
 
@@ -1289,25 +1252,21 @@ const isFormValidPage5 = React.useMemo(() => {
         if (!isFormValidPage5) {
             let errorMessage = "Prosím, vyplňte všetky povinné polia pre každý tím (ubytovanie, balíček, príchod).";
             
-            // Ak existujú nejaké záznamy šoférov (driverEntries), upozorníme na ich neúplnosť/neplatnosť
             if (driverEntries.length > 0) {
                  errorMessage += " Skontrolujte tiež, či sú všetky pridané záznamy šoférov vyplnené, majú kladný počet a nie sú duplicitné pre daný tím a pohlavie.";
             }
 
-            setNotificationMessage(errorMessage, 'error');
+            setNotificationMessage(errorMessage);
             setNotificationType('error');
             setLoading(false);
             return;
         }
 
         try {
-            // Pred submitom sa už `teamsDataFromPage4` aktualizovalo cez `onGranularTeamsDataChange`
-            // takže stačí poslať aktuálny stav `teamsDataFromPage4`
             await handleSubmit(teamsDataFromPage4); 
-
         } catch (error) {
             console.error("Chyba pri spracovaní dát Page5:", error);
-            setNotificationMessage(`Chyba pri spracovaní údajov: ${error.message}`, 'error');
+            setNotificationMessage(`Chyba pri spracovaní údajov: ${error.message}`);
             setNotificationType('error');
         } finally {
             if (setLoading) setLoading(false);
@@ -1322,7 +1281,6 @@ const isFormValidPage5 = React.useMemo(() => {
         }
         return options;
     };
-
 
     return React.createElement(
         React.Fragment,
@@ -1357,7 +1315,6 @@ const isFormValidPage5 = React.useMemo(() => {
                       { key: `${categoryName}-${teamIndex}`, className: 'bg-blue-50 p-4 rounded-lg mb-4 space-y-2' },
                       React.createElement('p', { className: 'font-semibold text-blue-800 mb-4' }, `Tím: ${team.teamName}`),
 
-                      // ← NOVÉ: Farby dresov – vložené pred ubytovaním
                       React.createElement(TeamJerseyColors, {
                         team: team,
                         categoryName: categoryName,
@@ -1373,7 +1330,10 @@ const isFormValidPage5 = React.useMemo(() => {
                         onGranularTeamsDataChange: onGranularTeamsDataChange,
                         loading: loading,
                         accommodationTypes: accommodationTypes,
-                        accommodationCounts: accommodationCounts,
+                        // UPRAVENÉ: Odovzdávame EXISTUJÚCE počty, nie celkové
+                        existingAccommodationCounts: existingAccommodationCounts,
+                        // UPRAVENÉ: Odovzdávame AJ aktuálne počty pre dynamickú kontrolu kapacity
+                        currentRegistrationAccommodationCounts: currentRegistrationAccommodationCounts,
                         tournamentStartDate: localTournamentStartDate,
                         generateTimeOptions: generateTimeOptions,
                         arrivalDateTime: arrivalDateTime
@@ -1431,10 +1391,10 @@ const isFormValidPage5 = React.useMemo(() => {
                                             value: entry.count,
                                             onChange: (e) => handleDriverEntryChange(entry.id, 'count', e.target.value),
                                             placeholder: 'Zadajte počet',
-                                            min: 0, // Zmena na min: 0
+                                            min: 0,
                                             required: true,
                                             disabled: loading,
-                                            id: `count-${entry.id}` // Unikátne ID pre input
+                                            id: `count-${entry.id}`
                                         })
                                     ),
                                     React.createElement('div', { className: 'w-1/2' },
@@ -1445,8 +1405,8 @@ const isFormValidPage5 = React.useMemo(() => {
                                             onChange: (e) => handleDriverEntryChange(entry.id, 'gender', e.target.value),
                                             required: true,
                                             disabled: loading,
-                                            id: `gender-${entry.id}` // Unikátne ID pre select
-                                        }, getAvailableGenderOptions(entry)) // getAvailableGenderOptions teraz vracia React elementy
+                                            id: `gender-${entry.id}`
+                                        }, getAvailableGenderOptions(entry))
                                     )
                                 )
                             ),
@@ -1462,7 +1422,6 @@ const isFormValidPage5 = React.useMemo(() => {
                             )
                         )
                     )),
-                    // Podmienečné zobrazenie tlačidla "+"
                     (isAddDriverButtonVisible && !loading) && React.createElement(
                         'button',
                         {
