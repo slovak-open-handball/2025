@@ -85,70 +85,78 @@ function EmailConfirmationModal({ show, onClose, onConfirm, userEmail, loading }
     );
 }
 
-export function Page7Form({ db, formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, notificationType, selectedCountryDialCode, globalNote }) { 
-    const [isConsentChecked, setIsConsentChecked] = React.useState(false); // Nový stav pre checkbox GDPR
-    const [isReglementChecked, setIsReglementChecked] = React.useState(false); // Nový stav pre reglement
-    const [isRulesChecked, setIsRulesChecked] = React.useState(false); // Nový stav pre pravidlá
-    const [isArrivalChecked, setIsArrivalChecked] = React.useState(false); // Nový stav pre príchod
-    const [showEmailConfirmationModal, setShowEmailConfirmationModal] = React.useState(false); // Stav pre zobrazenie potvrdzovacieho modálu
-    const [arrivalDateTime, setArrivalDateTime] = React.useState(null); // Stav pre dátum a čas príchodu z databázy
-    const [loadingArrivalDate, setLoadingArrivalDate] = React.useState(true); // Nový stav pre sledovanie načítania
+export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, notificationType, selectedCountryDialCode, globalNote }) { 
+    const [isConsentChecked, setIsConsentChecked] = React.useState(false);
+    const [isReglementChecked, setIsReglementChecked] = React.useState(false);
+    const [isRulesChecked, setIsRulesChecked] = React.useState(false);
+    const [isArrivalChecked, setIsArrivalChecked] = React.useState(false);
+    const [showEmailConfirmationModal, setShowEmailConfirmationModal] = React.useState(false);
+    const [arrivalDateTime, setArrivalDateTime] = React.useState(null);
+    const [loadingArrivalDate, setLoadingArrivalDate] = React.useState(true);
 
-    // Načítanie dátumu a času príchodu z databázy
+    // Načítanie dátumu a času príchodu z databázy - používame window.db
     React.useEffect(() => {
-        if (!db) {
-            console.log("db nie je k dispozícii");
-            return;
-        }
+        // Počkáme, kým je window.db dostupné
+        const checkDbAndLoad = () => {
+            if (!window.db) {
+                console.log("window.db nie je k dispozícii, čakám...");
+                setTimeout(checkDbAndLoad, 100);
+                return;
+            }
 
-        console.log("Spúšťam načítanie arrivalDate z Firebase...");
-        const settingsDocRef = doc(db, 'settings', 'registration');
-        
-        const unsubscribe = onSnapshot(settingsDocRef, (docSnapshot) => {
-            if (docSnapshot.exists()) {
-                const data = docSnapshot.data();
-                
-                // DEBUG: Výpis načítaných dát
-                console.log("Načítavam arrivalDate z Firebase:", data.arrivalDate);
-                
-                if (data.arrivalDate) {
-                    // Skontrolujeme, či je to Firebase Timestamp
-                    if (data.arrivalDate.toDate) {
-                        const date = data.arrivalDate.toDate();
-                        console.log("Konvertovaný dátum (Timestamp):", date);
-                        setArrivalDateTime(date);
-                    } else if (data.arrivalDate instanceof Date) {
-                        // Ak je to už Date objekt
-                        console.log("Dátum je už Date objekt:", data.arrivalDate);
-                        setArrivalDateTime(data.arrivalDate);
-                    } else {
-                        // Skúsime vytvoriť Date objekt z reťazca
-                        const date = new Date(data.arrivalDate);
-                        if (!isNaN(date.getTime())) {
-                            console.log("Konvertovaný dátum (string):", date);
+            console.log("window.db je k dispozícii, spúšťam načítanie arrivalDate...");
+            const settingsDocRef = doc(window.db, 'settings', 'registration');
+            
+            const unsubscribe = onSnapshot(settingsDocRef, (docSnapshot) => {
+                if (docSnapshot.exists()) {
+                    const data = docSnapshot.data();
+                    
+                    console.log("Načítavam arrivalDate z Firebase:", data.arrivalDate);
+                    
+                    if (data.arrivalDate) {
+                        if (data.arrivalDate.toDate) {
+                            const date = data.arrivalDate.toDate();
+                            console.log("Konvertovaný dátum (Timestamp):", date);
                             setArrivalDateTime(date);
+                        } else if (data.arrivalDate instanceof Date) {
+                            console.log("Dátum je už Date objekt:", data.arrivalDate);
+                            setArrivalDateTime(data.arrivalDate);
                         } else {
-                            console.error("Neplatný formát dátumu:", data.arrivalDate);
-                            setArrivalDateTime(null);
+                            const date = new Date(data.arrivalDate);
+                            if (!isNaN(date.getTime())) {
+                                console.log("Konvertovaný dátum (string):", date);
+                                setArrivalDateTime(date);
+                            } else {
+                                console.error("Neplatný formát dátumu:", data.arrivalDate);
+                                setArrivalDateTime(null);
+                            }
                         }
+                    } else {
+                        console.log("arrivalDate nie je v dokumente nastavený");
+                        setArrivalDateTime(null);
                     }
                 } else {
-                    console.log("arrivalDate nie je v dokumente nastavený");
+                    console.log("Dokument settings/registration neexistuje");
                     setArrivalDateTime(null);
                 }
-            } else {
-                console.log("Dokument settings/registration neexistuje");
+                setLoadingArrivalDate(false);
+            }, (error) => {
+                console.error("Chyba pri načítaní dátumu príchodu:", error);
                 setArrivalDateTime(null);
+                setLoadingArrivalDate(false);
+            });
+
+            return unsubscribe;
+        };
+
+        const unsubscribePromise = checkDbAndLoad();
+        
+        return () => {
+            if (unsubscribePromise && typeof unsubscribePromise === 'function') {
+                unsubscribePromise();
             }
-            setLoadingArrivalDate(false);
-        }, (error) => {
-            console.error("Chyba pri načítaní dátumu príchodu:", error);
-            setArrivalDateTime(null);
-            setLoadingArrivalDate(false);
-        });
-    
-        return () => unsubscribe();
-    }, [db]); // Pridaná závislosť na db
+        };
+    }, []);
 
     // Funkcia na formátovanie dátumu narodenia
     const formatDate = (dateString) => {
