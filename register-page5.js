@@ -145,7 +145,8 @@ function TeamAccommodationAndArrival({
     tournamentStartDate,
     generateTimeOptions,
     arrivalDateTime,
-    allTeamsInCategory // Nový prop: všetky tímy v kategórii pre výpočet aktuálnych počtov
+    allTeamsInAllCategories, // Nový prop: všetky tímy vo všetkých kategóriách
+    currentCategoryTeams // Pôvodný prop pre prípadnú kompatibilitu
 }) {
     const [selectedAccommodation, setSelectedAccommodation] = React.useState(team.accommodation?.type || '');
     const [arrivalType, setArrivalType] = React.useState(team.arrival?.type || '');
@@ -183,7 +184,7 @@ function TeamAccommodationAndArrival({
 
     const currentTeamPeople = calculateCurrentTeamPeople();
 
-    // Výpočet aktuálnych obsadeností pre všetky typy ubytovania
+    // Výpočet aktuálnych obsadeností pre všetky typy ubytovania naprieč všetkými kategóriami
     const calculateCurrentOccupancies = React.useCallback(() => {
         const occupancies = {};
         
@@ -192,29 +193,31 @@ function TeamAccommodationAndArrival({
             occupancies[acc.type] = 0;
         });
         
-        // Prejdeme všetky tímy v kategórii a spočítame obsadenosť
-        if (allTeamsInCategory && Array.isArray(allTeamsInCategory)) {
-            allTeamsInCategory.forEach((t, index) => {
-                // Ak je to aktuálny tím, preskočíme ho (budeme ho počítať až pri zmene)
-                if (index === teamIndex) return;
-                
-                const accType = t.accommodation?.type;
-                if (accType && accType !== 'bez ubytovania') {
-                    // Spočítame počet ľudí v tomto tíme
-                    let teamPeople = 0;
-                    if (t.playerDetails) teamPeople += t.playerDetails.length;
-                    if (t.menTeamMemberDetails) teamPeople += t.menTeamMemberDetails.length;
-                    if (t.womenTeamMemberDetails) teamPeople += t.womenTeamMemberDetails.length;
-                    if (t.driverDetailsMale) teamPeople += t.driverDetailsMale.length;
-                    if (t.driverDetailsFemale) teamPeople += t.driverDetailsFemale.length;
-                    
-                    occupancies[accType] = (occupancies[accType] || 0) + teamPeople;
+        // Prejdeme všetky kategórie a všetky tímy a spočítame obsadenosť
+        if (allTeamsInAllCategories && typeof allTeamsInAllCategories === 'object') {
+            // Prejdeme všetky kategórie
+            Object.values(allTeamsInAllCategories).forEach(categoryTeams => {
+                if (Array.isArray(categoryTeams)) {
+                    categoryTeams.forEach(t => {
+                        const accType = t.accommodation?.type;
+                        if (accType && accType !== 'bez ubytovania') {
+                            // Spočítame počet ľudí v tomto tíme
+                            let teamPeople = 0;
+                            if (t.playerDetails) teamPeople += t.playerDetails.length;
+                            if (t.menTeamMemberDetails) teamPeople += t.menTeamMemberDetails.length;
+                            if (t.womenTeamMemberDetails) teamPeople += t.womenTeamMemberDetails.length;
+                            if (t.driverDetailsMale) teamPeople += t.driverDetailsMale.length;
+                            if (t.driverDetailsFemale) teamPeople += t.driverDetailsFemale.length;
+                            
+                            occupancies[accType] = (occupancies[accType] || 0) + teamPeople;
+                        }
+                    });
                 }
             });
         }
         
         return occupancies;
-    }, [allTeamsInCategory, teamIndex, accommodationTypes]);
+    }, [allTeamsInAllCategories, accommodationTypes]);
 
     // Vypočítame aktuálne obsadenosti
     const currentOccupancies = calculateCurrentOccupancies();
@@ -243,11 +246,24 @@ function TeamAccommodationAndArrival({
             // KROK 1: Existujúce registrácie z databázy
             const existingCount = existingAccommodationCounts[selectedAccType.type] || 0;
             
-            // KROK 2: Aktuálne obsadenosť z ostatných tímov (bez tohto tímu)
-            const currentCountWithoutThisTeam = currentOccupancies[selectedAccType.type] || 0;
+            // KROK 2: Aktuálne obsadenosť zo všetkých tímov vo všetkých kategóriách
+            // Odpočítame aktuálny tím, ak už má vybrané ubytovanie
+            let currentCountAllTeams = currentOccupancies[selectedAccType.type] || 0;
+            
+            // Ak už má aktuálny tím vybrané ubytovanie, odpočítame ho (lebo ho meníme)
+            if (team.accommodation?.type && team.accommodation.type !== 'bez ubytovania') {
+                if (team.accommodation.type === selectedAccType.type) {
+                    // Ak je to rovnaký typ, neodpočítavame (lebo ho ešte stále chceme)
+                    // Toto je nová hodnota, takže ponecháme currentCountAllTeams ako je
+                } else {
+                    // Ak je to iný typ, tak v currentOccupancies je započítaný, takže ho musíme odpočítať
+                    // Ale to už je ošetrené v calculateCurrentOccupancies, ktorá počíta všetky tímy
+                    // Takže tu už nemusíme nič odpočítavať
+                }
+            }
             
             // KROK 3: Celková obsadenosť PRED pridaním tohto tímu
-            const totalOccupiedBeforeThisTeam = existingCount + currentCountWithoutThisTeam;
+            const totalOccupiedBeforeThisTeam = existingCount + currentCountAllTeams;
             const remaining = selectedAccType.capacity - totalOccupiedBeforeThisTeam;
             
             // KROK 4: Kontrola, či sa tím zmestí
@@ -330,10 +346,19 @@ function TeamAccommodationAndArrival({
     const getAvailabilityForType = (accType) => {
         const existingCount = existingAccommodationCounts[accType] || 0;
         
-        // Použijeme currentOccupancies namiesto currentRegistrationAccommodationCounts
-        const currentCountWithoutThisTeam = currentOccupancies[accType] || 0;
+        // Použijeme currentOccupiances pre všetky tímy
+        let currentCountAllTeams = currentOccupancies[accType] || 0;
         
-        const totalOccupiedBeforeThisTeam = existingCount + currentCountWithoutThisTeam;
+        // Ak už má aktuálny tím vybrané ubytovanie a je to iný typ, odpočítame ho
+        if (team.accommodation?.type && team.accommodation.type !== 'bez ubytovania') {
+            if (team.accommodation.type !== accType) {
+                // Tím má vybraný iný typ, takže v currentOccupancies nie je započítaný v tomto type
+                // Takže nič neodpočítavame
+            }
+            // Ak má rovnaký typ, je započítaný v currentOccupancies a to je správne
+        }
+        
+        const totalOccupiedBeforeThisTeam = existingCount + currentCountAllTeams;
         const willThisTeamFit = (totalOccupiedBeforeThisTeam + currentTeamPeople) <= (accommodationTypes.find(a => a.type === accType)?.capacity || 0);
         const remaining = (accommodationTypes.find(a => a.type === accType)?.capacity || 0) - totalOccupiedBeforeThisTeam;
         
@@ -395,7 +420,7 @@ function TeamAccommodationAndArrival({
                         // Zistenie dôvodu pre zobrazenie
                         let reasonText = '';
                         if (isDatabaseFull) {
-                            reasonText = ' (naplnená kapacita)';
+                            reasonText = ' (naplnená kapacita - databáza)';
                         } else if (isCurrentlyFull) {
                             reasonText = ` (voľných len ${availability.remaining} z ${currentTeamPeople} potrebných)`;
                         }
@@ -432,7 +457,7 @@ function TeamAccommodationAndArrival({
             )
         ),
 
-        // Časť s dopravou
+        // Časť s dopravou (zostáva rovnaká)
         React.createElement(
             'div',
             { className: 'border-t border-gray-200 pt-4 mt-4' },
