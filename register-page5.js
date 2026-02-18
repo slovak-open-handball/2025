@@ -1,3 +1,4 @@
+// register-page5.js
 import { getFirestore, doc, onSnapshot, collection, query, getDoc, updateDoc, setDoc, Timestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Komponent pre zobrazenie notifikácií
