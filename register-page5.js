@@ -157,22 +157,19 @@ function TeamAccommodationAndArrival({
         return initialTime ? initialTime.split(':')[1] : '';
     });
 
-    // DOPLNKOVÁ KONTROLA: Počet ľudí v aktuálnom tíme
+    // Výpočet počtu ľudí v aktuálnom tíme
     const calculateCurrentTeamPeople = React.useCallback(() => {
         let total = 0;
         
-        // Hráči
         if (team.playerDetails && Array.isArray(team.playerDetails)) {
             total += team.playerDetails.length;
         }
-        // Členovia realizačného tímu
         if (team.menTeamMemberDetails && Array.isArray(team.menTeamMemberDetails)) {
             total += team.menTeamMemberDetails.length;
         }
         if (team.womenTeamMemberDetails && Array.isArray(team.womenTeamMemberDetails)) {
             total += team.womenTeamMemberDetails.length;
         }
-        // Šoféri
         if (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) {
             total += team.driverDetailsMale.length;
         }
@@ -196,7 +193,6 @@ function TeamAccommodationAndArrival({
     const handleAccommodationChange = (e) => {
         const newValue = e.target.value;
         
-        // OPRAVA: Ak je nová hodnota "bez ubytovania", vždy povoliť
         if (newValue === 'bez ubytovania') {
             setSelectedAccommodation(newValue);
             onGranularTeamsDataChange(categoryName, teamIndex, 'accommodation', { type: newValue });
@@ -208,8 +204,7 @@ function TeamAccommodationAndArrival({
         if (selectedAccType) {
             const existingCount = existingAccommodationCounts[selectedAccType.type] || 0;
             
-            // DÔLEŽITÉ: Pri kontrole kapacity musíme odpočítať aktuálny výber tímu
-            // aby sme správne vypočítali, či sa tím zmestí
+            // Výpočet aktuálnej obsadenosti bez tohto tímu
             let currentCountWithoutThisTeam = currentRegistrationAccommodationCounts[selectedAccType.type] || 0;
             
             // Ak už má tento tím vybraný iný typ ubytovania, odpočítame ho
@@ -221,7 +216,6 @@ function TeamAccommodationAndArrival({
             const remaining = selectedAccType.capacity - totalOccupied;
             
             if (remaining < currentTeamPeople) {
-                // Zobraziť notifikáciu, že sa tím nezmestí
                 alert(`Tento typ ubytovania už nemá dostatočnú kapacitu pre ${currentTeamPeople} osôb. Zostáva ${remaining} miest.`);
                 return;
             }
@@ -309,9 +303,14 @@ function TeamAccommodationAndArrival({
                 React.createElement(
                     'div',
                     { className: 'space-y-2' },
+                    // Možnosť "bez ubytovania" - vždy dostupná
                     React.createElement(
                         'label',
-                        { className: `flex items-center p-3 rounded-lg cursor-pointer ${loading ? 'bg-gray-100' : 'hover:bg-blue-50'} transition-colors duration-200` },
+                        { 
+                            className: `flex items-center p-3 rounded-lg cursor-pointer transition-colors duration-200 ${
+                                loading ? 'bg-gray-100' : 'hover:bg-blue-50'
+                            }`,
+                        },
                         React.createElement('input', {
                             type: 'radio',
                             name: `accommodationType-${categoryName}-${teamIndex}`,
@@ -321,13 +320,15 @@ function TeamAccommodationAndArrival({
                             className: 'form-radio h-5 w-5 text-blue-600',
                             disabled: loading,
                         }),
-                        React.createElement('span', { className: 'ml-3 text-gray-800' }, `bez ubytovania`)
+                        React.createElement('span', { className: 'ml-3 text-gray-800' }, 'bez ubytovania')
                     ),
+                    
+                    // Ostatné typy ubytovania s kontrolou kapacity
                     accommodationTypes.sort((a, b) => a.type.localeCompare(b.type)).map((acc) => {
-                        // Výpočet celkovej obsadenosti: existujúce + aktuálne (bez tohto tímu)
+                        // Výpočet dostupnej kapacity
                         const existingCount = existingAccommodationCounts[acc.type] || 0;
                         
-                        // OPRAVA: Pri výpočte aktuálnej obsadenosti odpočítame tento tím
+                        // Aktuálna obsadenosť BEZ tohto tímu
                         let currentCountWithoutThisTeam = currentRegistrationAccommodationCounts[acc.type] || 0;
                         
                         // Ak už má tento tím vybraný iný typ ubytovania, odpočítame ho
@@ -338,21 +339,21 @@ function TeamAccommodationAndArrival({
                         const totalOccupied = existingCount + currentCountWithoutThisTeam;
                         const remaining = acc.capacity - totalOccupied;
                         
-                        // OPRAVA: Zablokovanie ak sa tím nezmestí
+                        // DÔLEŽITÉ: Zablokovanie ak sa tím nezmestí
                         const isDisabled = remaining < currentTeamPeople || loading;
                         
-                        // Pre aktuálne vybraný typ ubytovania vždy povoliť (aby bolo možné ho zmeniť)
-                        const isCurrentSelection = selectedAccommodation === acc.type;
+                        // Výnimka: aktuálne vybraný typ nie je zablokovaný
+                        const finalDisabled = isDisabled && selectedAccommodation !== acc.type;
                         
-                        const finalDisabled = isDisabled && !isCurrentSelection;
-                        
-                        const labelClasses = `flex items-center p-3 rounded-lg ${finalDisabled ? 'bg-gray-100 cursor-not-allowed text-gray-400' : 'hover:bg-blue-50 cursor-pointer'} transition-colors duration-200`;
-
                         return React.createElement(
                             'label',
                             {
                                 key: acc.type,
-                                className: labelClasses,
+                                className: `flex items-center p-3 rounded-lg transition-colors duration-200 ${
+                                    finalDisabled 
+                                        ? 'bg-gray-100 cursor-not-allowed text-gray-400' 
+                                        : 'hover:bg-blue-50 cursor-pointer'
+                                }`,
                             },
                             React.createElement('input', {
                                 type: 'radio',
@@ -361,9 +362,13 @@ function TeamAccommodationAndArrival({
                                 checked: selectedAccommodation === acc.type,
                                 onChange: handleAccommodationChange,
                                 className: 'form-radio h-5 w-5 text-blue-600',
-                                disabled: finalDisabled,
+                                disabled: finalDisabled, // TOTO je kľúčové pre zablokovanie
                             }),
-                            React.createElement('span', { className: 'ml-3 text-gray-800' },
+                            React.createElement(
+                                'span', 
+                                { 
+                                    className: `ml-3 ${finalDisabled ? 'text-gray-400' : 'text-gray-800'}` 
+                                },
                                 `${acc.type}${remaining < currentTeamPeople ? ` (voľných len ${remaining} z ${currentTeamPeople} potrebných)` : ''}`
                             )
                         );
@@ -372,6 +377,7 @@ function TeamAccommodationAndArrival({
             )
         ),
 
+        // ... zvyšok komponentu (časť s dopravou) zostáva rovnaký ...
         React.createElement(
             'div',
             { className: 'border-t border-gray-200 pt-4 mt-4' },
