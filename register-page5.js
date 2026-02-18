@@ -341,29 +341,22 @@ function TeamAccommodationAndArrival({
                         
                         // KROK 3: Celková obsadenosť
                         const totalOccupied = existingCount + currentCountWithoutThisTeam;
+                        
+                        // DÔLEŽITÉ: Kontrola, či je typ ubytovania plný
+                        const isAccommodationFull = totalOccupied >= acc.capacity;
+                        
+                        // Výpočet zostávajúcich miest
                         const remaining = acc.capacity - totalOccupied;
                         
-                        // KROK 4: Zablokovanie - PRIORITA 1: Kapacita z databázy je plná
-                        // Ak je kapacita z databázy už plná (existingCount >= capacity), zablokujeme
-                        const isDatabaseFull = existingCount >= acc.capacity;
-                        
-                        // KROK 5: Zablokovanie - PRIORITA 2: Celková kapacita (databáza + aktuálna registrácia) nestačí pre tento tím
-                        const isTotalFull = remaining < currentTeamPeople;
-                        
-                        // Kombinovaná podmienka - blokujeme ak:
-                        // 1. Databáza je už plná, ALEBO
-                        // 2. Celková kapacita nestačí pre tento tím
-                        // A zároveň to nie je aktuálne vybraný typ
-                        const shouldDisable = (isDatabaseFull || isTotalFull) && selectedAccommodation !== acc.type;
-                        
-                        const finalDisabled = shouldDisable || loading;
+                        // Zablokovanie ak je typ ubytovania plný
+                        const isDisabled = isAccommodationFull || loading;
                         
                         return React.createElement(
                             'label',
                             {
                                 key: acc.type,
                                 className: `flex items-center p-3 rounded-lg transition-colors duration-200 ${
-                                    finalDisabled 
+                                    isDisabled 
                                         ? 'bg-gray-100 cursor-not-allowed text-gray-400' 
                                         : 'hover:bg-blue-50 cursor-pointer'
                                 }`,
@@ -375,14 +368,16 @@ function TeamAccommodationAndArrival({
                                 checked: selectedAccommodation === acc.type,
                                 onChange: handleAccommodationChange,
                                 className: 'form-radio h-5 w-5 text-blue-600',
-                                disabled: finalDisabled,
+                                disabled: isDisabled, // TOTO je kľúčové pre zablokovanie
                             }),
                             React.createElement(
                                 'span', 
                                 { 
-                                    className: `ml-3 ${finalDisabled ? 'text-gray-400' : 'text-gray-800'}` 
+                                    className: `ml-3 ${isDisabled ? 'text-gray-400' : 'text-gray-800'}` 
                                 },
-                                `${acc.type}${isDatabaseFull ? ' (naplnená kapacita)' : (isTotalFull ? ` (voľných len ${remaining} z ${currentTeamPeople} potrebných)` : '')}`
+                                isAccommodationFull 
+                                    ? `${acc.type} (naplnená kapacita)`
+                                    : `${acc.type}`
                             )
                         );
                     })
@@ -390,6 +385,7 @@ function TeamAccommodationAndArrival({
             )
         ),
 
+        // ... zvyšok komponentu (časť s dopravou) ...
         React.createElement(
             'div',
             { className: 'border-t border-gray-200 pt-4 mt-4' },
@@ -534,7 +530,6 @@ function TeamAccommodationAndArrival({
         )
     );
 }
-
 // Komponent pre nastavenia balíčka tímu
 function TeamPackageSettings({
     team,
