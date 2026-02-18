@@ -101,14 +101,20 @@ export function Page7Form({ db, formData, handlePrev, handleSubmit, loading, tea
         const unsubscribe = onSnapshot(settingsDocRef, (docSnapshot) => {
             if (docSnapshot.exists()) {
                 const data = docSnapshot.data();
+                
+                // DEBUG: Výpis načítaných dát
+                console.log("Načítavam arrivalDate z Firebase:", data.arrivalDate);
+                
                 if (data.arrivalDate) {
-                    setArrivalDateTime(data.arrivalDate.toDate());
+                    const date = data.arrivalDate.toDate();
+                    console.log("Konvertovaný dátum:", date);
+                    setArrivalDateTime(date);
                 }
             }
         }, (error) => {
             console.error("Chyba pri načítaní dátumu príchodu:", error);
         });
-
+    
         return () => unsubscribe();
     }, [db]);
 
