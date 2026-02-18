@@ -342,14 +342,15 @@ function TeamAccommodationAndArrival({
                         // KROK 3: Celková obsadenosť
                         const totalOccupied = existingCount + currentCountWithoutThisTeam;
                         
-                        // DÔLEŽITÉ: Kontrola, či je typ ubytovania plný
-                        const isAccommodationFull = totalOccupied >= acc.capacity;
-                        
-                        // Výpočet zostávajúcich miest
+                        // KROK 4: Výpočet zostávajúcich miest
                         const remaining = acc.capacity - totalOccupied;
                         
-                        // Zablokovanie ak je typ ubytovania plný
-                        const isDisabled = isAccommodationFull || loading;
+                        // DÔLEŽITÉ: Kontrola, či je typ ubytovania plný pre tento konkrétny tím
+                        // Zohľadňujeme počet členov tímu, ktorý sa práve registruje
+                        const isAccommodationFullForThisTeam = remaining < currentTeamPeople;
+                        
+                        // Zablokovanie ak je typ ubytovania plný pre tento tím
+                        const isDisabled = isAccommodationFullForThisTeam || loading;
                         
                         return React.createElement(
                             'label',
@@ -375,8 +376,8 @@ function TeamAccommodationAndArrival({
                                 { 
                                     className: `ml-3 ${isDisabled ? 'text-gray-400' : 'text-gray-800'}` 
                                 },
-                                isAccommodationFull 
-                                    ? `${acc.type} (naplnená kapacita)`
+                                isAccommodationFullForThisTeam 
+                                    ? `${acc.type} (voľných len ${remaining} z ${currentTeamPeople} potrebných)`
                                     : `${acc.type}`
                             )
                         );
@@ -530,6 +531,7 @@ function TeamAccommodationAndArrival({
         )
     );
 }
+
 // Komponent pre nastavenia balíčka tímu
 function TeamPackageSettings({
     team,
