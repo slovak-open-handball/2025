@@ -202,10 +202,10 @@ function TeamAccommodationAndArrival({
         // Pre konkrétne typy ubytovania skontrolujeme kapacitu
         const selectedAccType = accommodationTypes.find(acc => acc.type === newValue);
         if (selectedAccType) {
-            // KROK 1: Existujúce registrácie z databázy
+            // KROK 1: Najskôr existujúce registrácie z databázy
             const existingCount = existingAccommodationCounts[selectedAccType.type] || 0;
             
-            // KROK 2: Aktuálne prebiehajúca registrácia (bez tohto tímu)
+            // KROK 2: Potom aktuálne prebiehajúca registrácia (bez tohto tímu)
             let currentCountWithoutThisTeam = currentRegistrationAccommodationCounts[selectedAccType.type] || 0;
             
             // Ak už má tento tím vybraný iný typ ubytovania, odpočítame ho
@@ -213,9 +213,9 @@ function TeamAccommodationAndArrival({
                 currentCountWithoutThisTeam -= currentTeamPeople;
             }
             
-            // KROK 3: Celková obsadenosť
-            const totalOccupied = existingCount + currentCountWithoutThisTeam;
-            const remaining = selectedAccType.capacity - totalOccupied;
+            // KROK 3: Celková obsadenosť PRED pridaním tohto tímu
+            const totalOccupiedBeforeThisTeam = existingCount + currentCountWithoutThisTeam;
+            const remaining = selectedAccType.capacity - totalOccupiedBeforeThisTeam;
             
             // KROK 4: Kontrola, či sa tím zmestí
             if (remaining < currentTeamPeople) {
@@ -328,10 +328,10 @@ function TeamAccommodationAndArrival({
                     
                     // Ostatné typy ubytovania s kontrolou kapacity
                     accommodationTypes.sort((a, b) => a.type.localeCompare(b.type)).map((acc) => {
-                        // KROK 1: Existujúce registrácie z databázy
+                        // KROK 1: Najskôr existujúce registrácie z databázy
                         const existingCount = existingAccommodationCounts[acc.type] || 0;
                         
-                        // KROK 2: Aktuálne prebiehajúca registrácia (bez tohto tímu)
+                        // KROK 2: Potom aktuálne prebiehajúca registrácia (bez tohto tímu)
                         let currentCountWithoutThisTeam = currentRegistrationAccommodationCounts[acc.type] || 0;
                         
                         // Ak už má tento tím vybraný iný typ ubytovania, odpočítame ho
@@ -339,7 +339,7 @@ function TeamAccommodationAndArrival({
                             currentCountWithoutThisTeam -= currentTeamPeople;
                         }
                         
-                        // KROK 3: Celková obsadenosť pred pridaním tohto tímu
+                        // KROK 3: Celková obsadenosť PRED pridaním tohto tímu
                         const totalOccupiedBeforeThisTeam = existingCount + currentCountWithoutThisTeam;
                         
                         // KROK 4: Výpočet, či sa tento tím zmestí
@@ -348,8 +348,13 @@ function TeamAccommodationAndArrival({
                         // KROK 5: Zostávajúce miesta po pridaní tohto tímu
                         const remainingAfterThisTeam = acc.capacity - (totalOccupiedBeforeThisTeam + currentTeamPeople);
                         
-                        // Zablokovanie ak sa tím nezmestí
-                        const isDisabled = !willThisTeamFit || loading;
+                        // DÔLEŽITÉ: Najskôr skontrolujeme, či je databáza plná
+                        const isDatabaseFull = existingCount >= acc.capacity;
+                        
+                        // Zablokovanie ak:
+                        // 1. Databáza je už plná (priorita 1)
+                        // 2. Celková kapacita nestačí pre tento tím (priorita 2)
+                        const isDisabled = isDatabaseFull || !willThisTeamFit || loading;
                         
                         return React.createElement(
                             'label',
@@ -375,11 +380,11 @@ function TeamAccommodationAndArrival({
                                 { 
                                     className: `ml-3 ${isDisabled ? 'text-gray-400' : 'text-gray-800'}` 
                                 },
-                                !willThisTeamFit 
-                                    ? (totalOccupiedBeforeThisTeam >= acc.capacity 
-                                        ? `${acc.type} (naplnená kapacita)`
-                                        : `${acc.type} (voľných len ${acc.capacity - totalOccupiedBeforeThisTeam} z ${currentTeamPeople} potrebných)`)
-                                    : `${acc.type}`
+                                isDatabaseFull 
+                                    ? `${acc.type} (naplnená kapacita - databáza)`
+                                    : (!willThisTeamFit 
+                                        ? `${acc.type} (voľných len ${acc.capacity - totalOccupiedBeforeThisTeam} z ${currentTeamPeople} potrebných)`
+                                        : `${acc.type}`)
                             )
                         );
                     })
