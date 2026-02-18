@@ -2236,6 +2236,15 @@ useEffect(() => {
     return members;
   };
 
+  const getLimitsForTeam = (team) => {
+    if (!team || !team.categoryName) {
+        // Ak nemáme tím alebo kategóriu, vrátime predvolené hodnoty
+        return { numberOfPlayers: 0, numberOfImplementationTeam: 0 };
+    }
+    const limits = limitsByCategory[team.categoryName];
+    return limits || { numberOfPlayers: 0, numberOfImplementationTeam: 0 };
+  };
+
   const teamCategories = Object.entries(teamsData).sort((a, b) => a[0].localeCompare(b[0]));
 
   const getTeamPluralization = (count) => {
