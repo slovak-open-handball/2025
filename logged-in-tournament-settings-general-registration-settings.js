@@ -31,8 +31,6 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
   const [registrationEndDate, setRegistrationEndDate] = React.useState('');
   const [dataEditDeadline, setDataEditDeadline] = React.useState(''); 
   const [rosterEditDeadline, setRosterEditDeadline] = React.useState(''); 
-  const [numberOfPlayers, setNumberOfPlayers] = React.useState(0);
-  const [numberOfImplementationTeam, setNumberOfImplementationTeam] = React.useState(0);
 
   const isFrozenForEditing = React.useMemo(() => {
     const now = new Date();
@@ -55,8 +53,6 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
                 setRegistrationEndDate(data.registrationEndDate ? formatToDatetimeLocal(data.registrationEndDate.toDate()) : '');
                 setDataEditDeadline(data.dataEditDeadline ? formatToDatetimeLocal(data.dataEditDeadline.toDate()) : ''); 
                 setRosterEditDeadline(data.rosterEditDeadline ? formatToDatetimeLocal(data.rosterEditDeadline.toDate()) : ''); 
-                setNumberOfPlayers(data.numberOfPlayers || 0);
-                setNumberOfImplementationTeam(data.numberOfImplementationTeam || 0);
                 setTournamentStartDate(data.tournamentStart ? formatToDatetimeLocal(data.tournamentStart.toDate()) : '');
                 setTournamentEndDate(data.tournamentEnd ? formatToDatetimeLocal(data.tournamentEnd.toDate()) : '');
 
@@ -65,8 +61,6 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
                 setRegistrationEndDate('');
                 setDataEditDeadline(''); 
                 setRosterEditDeadline(''); 
-                setNumberOfPlayers(0);
-                setNumberOfImplementationTeam(0);
                 setTournamentStartDate('');
                 setTournamentEndDate('');
             }
@@ -120,16 +114,6 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
         return;
       }
 
-
-      if (numberOfPlayers < 0) {
-        showNotification("Počet hráčov nemôže byť záporný.", 'error');
-        return;
-      }
-      if (numberOfImplementationTeam < 0) {
-        showNotification("Počet členov realizačného tímu nemôže byť záporný.", 'error');
-        return;
-      }
-
       const settingsDocRef = doc(db, 'settings', 'registration');
       const oldSettingsDoc = await getDoc(settingsDocRef); 
       const oldData = oldSettingsDoc.exists() ? oldSettingsDoc.data() : {};
@@ -173,21 +157,11 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
         tournamentDurationChanged = true;
       }
 
-
-      if (oldData.numberOfPlayers !== numberOfPlayers) {
-          changes.push(`Maximálny počet hráčov v tíme z '${oldData.numberOfPlayers || 0}' na '${numberOfPlayers}'`);
-      }
-      if (oldData.numberOfImplementationTeam !== numberOfImplementationTeam) {
-          changes.push(`Maximálny počet členov realizačného tímu z '${oldData.numberOfImplementationTeam || 0}' na '${numberOfImplementationTeam}'`);
-      }
-
       await setDoc(settingsDocRef, {
         registrationStartDate: regStart ? Timestamp.fromDate(regStart) : null,
         registrationEndDate: regEnd ? Timestamp.fromDate(regEnd) : null,
         dataEditDeadline: dataEditDead ? Timestamp.fromDate(dataEditDead) : null, 
         rosterEditDeadline: rosterEditDead ? Timestamp.fromDate(rosterEditDead) : null, 
-        numberOfPlayers: numberOfPlayers,
-        numberOfImplementationTeam: numberOfImplementationTeam,
         tournamentStart: tourStart ? Timestamp.fromDate(tourStart) : null,
         tournamentEnd: tourEnd ? Timestamp.fromDate(tourEnd) : null,
       });
@@ -291,34 +265,6 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
           onChange: (e) => setTournamentEndDate(e.target.value),
         })
       ),
-    React.createElement(
-      'div',
-      null,
-      React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'number-of-players' }, 'Maximálny počet hráčov v tíme'),
-      React.createElement('input', {
-        type: 'number',
-        id: 'number-of-players',
-        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${isFrozenForEditing ? 'bg-gray-200 cursor-not-allowed' : ''}`, 
-        value: numberOfPlayers,
-        onChange: (e) => setNumberOfPlayers(parseInt(e.target.value) || 0), 
-        min: 0, 
-        disabled: isFrozenForEditing, 
-      })
-    ),
-    React.createElement(
-      'div',
-      null,
-      React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'number-of-implementation-team' }, 'Maximálny počet členov realizačného tímu'),
-      React.createElement('input', {
-        type: 'number',
-        id: 'number-of-implementation-team',
-        className: `shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${isFrozenForEditing ? 'bg-gray-200 cursor-not-allowed' : ''}`, 
-        value: numberOfImplementationTeam,
-        onChange: (e) => setNumberOfImplementationTeam(parseInt(e.target.value) || 0), 
-        min: 0, 
-        disabled: isFrozenForEditing, 
-      })
-    ),
     React.createElement(
       'button',
       {
