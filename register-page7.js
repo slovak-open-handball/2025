@@ -99,32 +99,25 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
         // Počkáme, kým je window.db dostupné
         const checkDbAndLoad = () => {
             if (!window.db) {
-                console.log("window.db nie je k dispozícii, čakám...");
                 setTimeout(checkDbAndLoad, 100);
                 return;
             }
 
-            console.log("window.db je k dispozícii, spúšťam načítanie arrivalDate...");
             const settingsDocRef = doc(window.db, 'settings', 'registration');
             
             const unsubscribe = onSnapshot(settingsDocRef, (docSnapshot) => {
                 if (docSnapshot.exists()) {
                     const data = docSnapshot.data();
-                    
-                    console.log("Načítavam arrivalDate z Firebase:", data.arrivalDate);
-                    
+                                        
                     if (data.arrivalDate) {
                         if (data.arrivalDate.toDate) {
                             const date = data.arrivalDate.toDate();
-                            console.log("Konvertovaný dátum (Timestamp):", date);
                             setArrivalDateTime(date);
                         } else if (data.arrivalDate instanceof Date) {
-                            console.log("Dátum je už Date objekt:", data.arrivalDate);
                             setArrivalDateTime(data.arrivalDate);
                         } else {
                             const date = new Date(data.arrivalDate);
                             if (!isNaN(date.getTime())) {
-                                console.log("Konvertovaný dátum (string):", date);
                                 setArrivalDateTime(date);
                             } else {
                                 console.error("Neplatný formát dátumu:", data.arrivalDate);
@@ -132,11 +125,9 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                             }
                         }
                     } else {
-                        console.log("arrivalDate nie je v dokumente nastavený");
                         setArrivalDateTime(null);
                     }
                 } else {
-                    console.log("Dokument settings/registration neexistuje");
                     setArrivalDateTime(null);
                 }
                 setLoadingArrivalDate(false);
@@ -218,13 +209,11 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
         }
         
         if (!arrivalDateTime) {
-            console.log("arrivalDateTime je null/undefined:", arrivalDateTime);
             return 'dátum a čas príchodu';
         }
         
         // Skontrolujeme, či je arrivalDateTime platný Date objekt
         if (!(arrivalDateTime instanceof Date) || isNaN(arrivalDateTime.getTime())) {
-            console.log("arrivalDateTime nie je platný Date:", arrivalDateTime);
             return 'dátum a čas príchodu';
         }
         
