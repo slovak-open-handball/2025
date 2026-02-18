@@ -173,8 +173,16 @@ export function Page7Form({ db, formData, handlePrev, handleSubmit, loading, tea
 
     // Funkcia na formátovanie dátumu príchodu pre zobrazenie
     const formatArrivalDateTime = () => {
-        if (!arrivalDateTime) return '';
-//        if (!arrivalDateTime) return 'dátum a čas príchodu';
+        if (!arrivalDateTime) {
+            console.log("arrivalDateTime je null/undefined:", arrivalDateTime);
+            return 'dátum a čas príchodu';
+        }
+        
+        // Skontrolujeme, či je arrivalDateTime platný Date objekt
+        if (!(arrivalDateTime instanceof Date) || isNaN(arrivalDateTime.getTime())) {
+            console.log("arrivalDateTime nie je platný Date:", arrivalDateTime);
+            return 'dátum a čas príchodu';
+        }
         
         const date = arrivalDateTime.toLocaleDateString('sk-SK', {
             day: '2-digit',
