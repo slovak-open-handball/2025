@@ -568,8 +568,7 @@ function AddCategoriesApp() {
       if (notificationData.type === 'create') {
         const { newCategoryName } = notificationData.data;
 
-        changesToAdd.push(`Pre kategóriu '''${newCategoryName}'`);
-        changesToAdd.push(`Vytvorenie názvu kategórie: '''${newCategoryName}'`);
+        changesToAdd.push(`Vytvorenie kategórie: '''${newCategoryName}'`);
 
       } else if (notificationData.type === 'edit') {
         const {
@@ -578,7 +577,6 @@ function AddCategoriesApp() {
         } = notificationData.data;
 
         if (originalCategoryName !== newCategoryName) {
-          changesToAdd.push(`Pre kategóriu '''${newCategoryName}'`);
           changesToAdd.push(`Zmena názvu kategórie: z '${originalCategoryName}' na '${newCategoryName}'`);
         }
       } else if (notificationData.type === 'delete') {
