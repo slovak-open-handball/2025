@@ -231,7 +231,7 @@ export function Page7Form({ db, formData, handlePrev, handleSubmit, loading, tea
             minute: '2-digit'
         });
         
-        return `${date} o ${time} hod.`;
+        return `${date} do ${time} hod.`;
     };
 
     // Funkcia na formátovanie dát tímu pre zobrazenie
