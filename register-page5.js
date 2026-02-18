@@ -832,124 +832,77 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                 // Poslucháč pre `/users/` kolekciu
                 const usersCollectionRef = collection(window.db, 'users');
                 unsubscribeUsers = onSnapshot(usersCollectionRef, async (querySnapshot) => {
-// ... vnútri onSnapshot(usersCollectionRef, async (querySnapshot) => {
+                    if (querySnapshot.empty) {
+                        console.log("Kolekcia '/users/' neobsahuje žiadne dokumenty.");
+                        setAccommodationCounts({}); // Vynulujeme počty, ak nie sú žiadni používatelia
+                    } else {
+                        // Objekt, do ktorého budeme ukladať celkový počet OSÔB pre každý typ ubytovania
+                        const accommodationSummary = {};
 
-// console.log("-----------------------------------------");
-// console.log("Aktualizácia dát z '/users/':");
+                        querySnapshot.forEach((userDoc) => {
+                            const userData = userDoc.data();
+                            const teams = userData.teams || {};
 
-if (querySnapshot.empty) {
-    console.log("Kolekcia '/users/' neobsahuje žiadne dokumenty.");
-} else {
-    const teamsDataForTable = [];
-    const categoryTeamCount = {};       // počet tímov podľa kategórie
-    const categoryPersonCount = {};     // počet OSÔB podľa kategórie
+                            Object.entries(teams).forEach(([categoryName, teamsArray]) => {
+                                if (!Array.isArray(teamsArray)) return;
 
-    querySnapshot.forEach((userDoc) => {
-        const userData = userDoc.data();
-        const userEmail = userData.email || userDoc.id;
-        const teams = userData.teams || {};
+                                teamsArray.filter(team => team).forEach(team => {
+                                    // Zistíme, aký typ ubytovania si tento tím vybral
+                                    const accommodationType = team.accommodation?.type;
+                                    
+                                    // Ak je typ ubytovania platný a nie je to 'bez ubytovania'
+                                    if (accommodationType && accommodationType !== 'bez ubytovania') {
+                                        
+                                        // Spočítame všetkých ľudí v tomto tíme, ktorí budú ubytovaní
+                                        let totalPeopleInTeam = 0;
 
-//        console.log(`Používateľ: ${userEmail} (${userDoc.id})`);
+                                        // Hráči
+                                        if (team.playerDetails && Array.isArray(team.playerDetails)) {
+                                            totalPeopleInTeam += team.playerDetails.length;
+                                        }
+                                        // Členovia realizačného tímu (muži)
+                                        if (team.menTeamMemberDetails && Array.isArray(team.menTeamMemberDetails)) {
+                                            totalPeopleInTeam += team.menTeamMemberDetails.length;
+                                        }
+                                        // Členovia realizačného tímu (ženy)
+                                        if (team.womenTeamMemberDetails && Array.isArray(team.womenTeamMemberDetails)) {
+                                            totalPeopleInTeam += team.womenTeamMemberDetails.length;
+                                        }
+                                        // Šoféri (muži)
+                                        if (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) {
+                                            totalPeopleInTeam += team.driverDetailsMale.length;
+                                        }
+                                        // Šoféri (ženy)
+                                        if (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) {
+                                            totalPeopleInTeam += team.driverDetailsFemale.length;
+                                        }
 
-        Object.entries(teams).forEach(([categoryName, teamsArray]) => {
-            if (!Array.isArray(teamsArray)) return;
+                                        // Pridáme počet osôb z tohto tímu do celkového súčtu pre daný typ ubytovania
+                                        if (accommodationSummary[accommodationType]) {
+                                            accommodationSummary[accommodationType] += totalPeopleInTeam;
+                                        } else {
+                                            accommodationSummary[accommodationType] = totalPeopleInTeam;
+                                        }
+                                    }
+                                });
+                            });
+                        });
 
-            const teamCountInCategory = teamsArray.filter(t => t).length;
+                        // Aktualizujeme stav accommodationCounts s novými hodnotami (počty osôb, nie tímov)
+                        setAccommodationCounts(accommodationSummary);
 
-            if (teamCountInCategory > 0) {
-                // Počet tímov
-                if (!categoryTeamCount[categoryName]) {
-                    categoryTeamCount[categoryName] = 0;
-                }
-                categoryTeamCount[categoryName] += teamCountInCategory;
-
-                // Počet OSÔB – spočítame dĺžky všetkých relevantných polí
-                let personsInCategory = 0;
-
-                teamsArray.filter(t => t).forEach(team => {
-                    let personCountInTeam = 0;
-
-                    // === HLAVNÉ POĽA – spočítavame len tieto 5 polí ===
-                    if (team.playerDetails && Array.isArray(team.playerDetails)) {
-                        personCountInTeam += team.playerDetails.length;
+                        // Pre kontrolu v konzole (voliteľné)
+                        // console.log("=== AKTUALIZOVANÁ OBSADENOSŤ UBYTOVANIA (počet osôb) ===");
+                        // Object.entries(accommodationSummary).forEach(([type, count]) => {
+                        //     console.log(`Typ: "${type}" → ${count} osôb`);
+                        // });
+                        // console.log("======================================================");
                     }
-                    if (team.menTeamMemberDetails && Array.isArray(team.menTeamMemberDetails)) {
-                        personCountInTeam += team.menTeamMemberDetails.length;
-                    }
-                    if (team.womenTeamMemberDetails && Array.isArray(team.womenTeamMemberDetails)) {
-                        personCountInTeam += team.womenTeamMemberDetails.length;
-                    }
-                    if (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) {
-                        personCountInTeam += team.driverDetailsMale.length;
-                    }
-                    if (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) {
-                        personCountInTeam += team.driverDetailsFemale.length;
-                    }
-
-                    personsInCategory += personCountInTeam;
-
-                    // Pre prehľadnú tabuľku v konzole (voliteľné)
-                    teamsDataForTable.push({
-                        teamName: team.teamName || '',
-                        accommodationType: team.accommodation?.type || '',
-                        playerDetails: team.playerDetails?.length || 0,
-                        menTeamMemberDetails: team.menTeamMemberDetails?.length || 0,
-                        womenTeamMemberDetails: team.womenTeamMemberDetails?.length || 0,
-                        driverDetailsMale: team.driverDetailsMale?.length || 0,
-                        driverDetailsFemale: team.driverDetailsFemale?.length || 0,
-                        totalPersons: personCountInTeam
-                    });
-                });
-
-                // Celkový počet osôb v kategórii
-                if (!categoryPersonCount[categoryName]) {
-                    categoryPersonCount[categoryName] = 0;
-                }
-                categoryPersonCount[categoryName] += personsInCategory;
-            }
-        });
-    });
-
-    // Výpis do konzoly – počet tímov
-//    console.log("=== Celkový počet tímov podľa kategórií ===");
-    Object.entries(categoryTeamCount).forEach(([category, count]) => {
-//        console.log(`Kategória "${category}": ${count} tímov`);
-    });
-//    console.log(`Celkový počet všetkých tímov: ${Object.values(categoryTeamCount).reduce((sum, c) => sum + c, 0)}`);
-
-    // Výpis do konzoly – počet OSÔB (zo súčtu 5 polí)
-//    console.log("=== Celkový počet osôb podľa kategórií (súčet playerDetails + menTeamMemberDetails + womenTeamMemberDetails + driverDetailsMale + driverDetailsFemale) ===");
-    Object.entries(categoryPersonCount).forEach(([category, count]) => {
-//        console.log(`Kategória "${category}": ${count} osôb`);
-    });
-//    console.log(`Celkový počet všetkých osôb: ${Object.values(categoryPersonCount).reduce((sum, c) => sum + c, 0)}`);
-
-    // Detailná tabuľka pre každého používateľa a tím (voliteľné, ale veľmi užitočné na ladenie)
-//    console.log("=== Detailný prehľad tímov a počtu osôb ===");
-//    console.table(teamsDataForTable);
-
-//    console.log("======================================");
-
-    // Ak stále používaš accommodationCounts, aktualizuje sa tu
-    const accommodationSummary = {};
-    teamsDataForTable.forEach(team => {
-        const accType = team.accommodationType || 'Nezadané';
-        if (!accommodationSummary[accType]) {
-            accommodationSummary[accType] = 0;
-        }
-        accommodationSummary[accType] += team.totalPersons || 0;
-    });
-    setAccommodationCounts(accommodationSummary);
-}
-
-// ... zvyšok callbacku (console.log("-----------------------------------------"); atď.)
-                    
                 }, (error) => {
                     console.error("Chyba pri načítaní a výpise dát z '/users/':", error);
                     setNotificationMessage("Chyba pri načítaní a výpise dát z '/users/'.", 'error');
                     setNotificationType('error');
                 });
-
 
             } catch (e) {
                 console.error("Chyba pri nastavovaní poslucháča pre ubytovanie/balíčky/registrácie:", e);
