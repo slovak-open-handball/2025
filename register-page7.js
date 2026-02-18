@@ -92,12 +92,18 @@ export function Page7Form({ db, formData, handlePrev, handleSubmit, loading, tea
     const [isArrivalChecked, setIsArrivalChecked] = React.useState(false); // Nový stav pre príchod
     const [showEmailConfirmationModal, setShowEmailConfirmationModal] = React.useState(false); // Stav pre zobrazenie potvrdzovacieho modálu
     const [arrivalDateTime, setArrivalDateTime] = React.useState(null); // Stav pre dátum a čas príchodu z databázy
+    const [loadingArrivalDate, setLoadingArrivalDate] = React.useState(true); // Nový stav pre sledovanie načítania
 
     // Načítanie dátumu a času príchodu z databázy
     React.useEffect(() => {
-        if (!db) return;
+        if (!db) {
+            console.log("db nie je k dispozícii");
+            return;
+        }
 
+        console.log("Spúšťam načítanie arrivalDate z Firebase...");
         const settingsDocRef = doc(db, 'settings', 'registration');
+        
         const unsubscribe = onSnapshot(settingsDocRef, (docSnapshot) => {
             if (docSnapshot.exists()) {
                 const data = docSnapshot.data();
@@ -106,17 +112,43 @@ export function Page7Form({ db, formData, handlePrev, handleSubmit, loading, tea
                 console.log("Načítavam arrivalDate z Firebase:", data.arrivalDate);
                 
                 if (data.arrivalDate) {
-                    const date = data.arrivalDate.toDate();
-                    console.log("Konvertovaný dátum:", date);
-                    setArrivalDateTime(date);
+                    // Skontrolujeme, či je to Firebase Timestamp
+                    if (data.arrivalDate.toDate) {
+                        const date = data.arrivalDate.toDate();
+                        console.log("Konvertovaný dátum (Timestamp):", date);
+                        setArrivalDateTime(date);
+                    } else if (data.arrivalDate instanceof Date) {
+                        // Ak je to už Date objekt
+                        console.log("Dátum je už Date objekt:", data.arrivalDate);
+                        setArrivalDateTime(data.arrivalDate);
+                    } else {
+                        // Skúsime vytvoriť Date objekt z reťazca
+                        const date = new Date(data.arrivalDate);
+                        if (!isNaN(date.getTime())) {
+                            console.log("Konvertovaný dátum (string):", date);
+                            setArrivalDateTime(date);
+                        } else {
+                            console.error("Neplatný formát dátumu:", data.arrivalDate);
+                            setArrivalDateTime(null);
+                        }
+                    }
+                } else {
+                    console.log("arrivalDate nie je v dokumente nastavený");
+                    setArrivalDateTime(null);
                 }
+            } else {
+                console.log("Dokument settings/registration neexistuje");
+                setArrivalDateTime(null);
             }
+            setLoadingArrivalDate(false);
         }, (error) => {
             console.error("Chyba pri načítaní dátumu príchodu:", error);
+            setArrivalDateTime(null);
+            setLoadingArrivalDate(false);
         });
     
         return () => unsubscribe();
-    }, [db]);
+    }, [db]); // Pridaná závislosť na db
 
     // Funkcia na formátovanie dátumu narodenia
     const formatDate = (dateString) => {
@@ -173,6 +205,10 @@ export function Page7Form({ db, formData, handlePrev, handleSubmit, loading, tea
 
     // Funkcia na formátovanie dátumu príchodu pre zobrazenie
     const formatArrivalDateTime = () => {
+        if (loadingArrivalDate) {
+            return 'načítavam dátum...';
+        }
+        
         if (!arrivalDateTime) {
             console.log("arrivalDateTime je null/undefined:", arrivalDateTime);
             return 'dátum a čas príchodu';
@@ -195,7 +231,7 @@ export function Page7Form({ db, formData, handlePrev, handleSubmit, loading, tea
             minute: '2-digit'
         });
         
-        return `${date} do ${time} hod.`;
+        return `${date} o ${time} hod.`;
     };
 
     // Funkcia na formátovanie dát tímu pre zobrazenie
@@ -615,7 +651,10 @@ export function Page7Form({ db, formData, handlePrev, handleSubmit, loading, tea
                         onChange: (e) => setIsArrivalChecked(e.target.checked),
                         disabled: loading,
                     }),
-                    React.createElement('label', { htmlFor: 'arrival-checkbox', className: 'ml-2 block text-gray-900' },
+                    React.createElement('label', { 
+                        htmlFor: 'arrival-checkbox', 
+                        className: 'ml-2 block text-gray-900' 
+                    },
                         `Súhlasím s príchodom na turnaj dňa ${formatArrivalDateTime()}.`
                     )
                 )
