@@ -543,20 +543,25 @@ export function CategorySettings({
 
     // Handlery pre jednotlivé inputy
     const handleMaxTeamsChange = (catId, value) => {
+        // Maximálny počet tímov NIE JE blokovaný (ako v pôvodnom kóde)
         const numValue = value === '' ? '' : Math.max(1, parseInt(value) || 1);
         setEditedMaxTeams(prev => ({ ...prev, [catId]: numValue }));
     };
 
     // NOVÝ: Handler pre maxPlayers
     const handleMaxPlayersChange = (catId, value) => {
-        const numValue = value === '' ? '' : Math.max(1, parseInt(value) || 1);
-        setEditedMaxPlayers(prev => ({ ...prev, [catId]: numValue }));
+        if (!isRegistrationFrozen) {
+            const numValue = value === '' ? '' : Math.max(1, parseInt(value) || 1);
+            setEditedMaxPlayers(prev => ({ ...prev, [catId]: numValue }));
+        }
     };
 
     // NOVÝ: Handler pre maxImplementationTeam
     const handleMaxImplementationTeamChange = (catId, value) => {
-        const numValue = value === '' ? '' : Math.max(0, parseInt(value) || 0);
-        setEditedMaxImplementationTeam(prev => ({ ...prev, [catId]: numValue }));
+        if (!isRegistrationFrozen) {
+            const numValue = value === '' ? '' : Math.max(0, parseInt(value) || 0);
+            setEditedMaxImplementationTeam(prev => ({ ...prev, [catId]: numValue }));
+        }
     };
 
     const handlePeriodsChange = (catId, value) => {
@@ -1486,7 +1491,7 @@ export function CategorySettings({
                                     React.createElement(
                                         'div',
                                         { className: 'space-y-1' },
-                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                        React.createElement('label', { className: `block text-sm font-medium ${isRegistrationFrozen ? 'text-gray-500' : 'text-gray-700'}` },
                                             'Maximálny počet hráčov v tíme:'
                                         ),
                                         React.createElement('input', {
@@ -1494,15 +1499,24 @@ export function CategorySettings({
                                             min: 1,
                                             value: editedMaxPlayers[selectedCategory.id] ?? selectedCategory.maxPlayers,
                                             onChange: e => handleMaxPlayersChange(selectedCategory.id, e.target.value),
-                                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                                        })
+                                            disabled: isRegistrationFrozen,
+                                            className: `w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${
+                                                isRegistrationFrozen ? 'bg-gray-200 cursor-not-allowed opacity-75' : ''
+                                            }`
+                                        }),
+                                        isRegistrationFrozen && React.createElement(
+                                            'p',
+                                            { className: 'text-xs text-purple-600 mt-1 flex items-center gap-1' },
+                                            React.createElement('i', { className: 'fa-solid fa-lock' }),
+                                            'Toto nastavenie nie je možné meniť, pretože registrácia už začala.'
+                                        )
                                     ),
 
                                     // NOVÉ: Maximálny počet členov realizačného tímu
                                     React.createElement(
                                         'div',
                                         { className: 'space-y-1' },
-                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                        React.createElement('label', { className: `block text-sm font-medium ${isRegistrationFrozen ? 'text-gray-500' : 'text-gray-700'}` },
                                             'Maximálny počet členov realizačného tímu:'
                                         ),
                                         React.createElement('input', {
@@ -1510,8 +1524,17 @@ export function CategorySettings({
                                             min: 0,
                                             value: editedMaxImplementationTeam[selectedCategory.id] ?? selectedCategory.maxImplementationTeam,
                                             onChange: e => handleMaxImplementationTeamChange(selectedCategory.id, e.target.value),
-                                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                                        })
+                                            disabled: isRegistrationFrozen,
+                                            className: `w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${
+                                                isRegistrationFrozen ? 'bg-gray-200 cursor-not-allowed opacity-75' : ''
+                                            }`
+                                        }),
+                                        isRegistrationFrozen && React.createElement(
+                                            'p',
+                                            { className: 'text-xs text-purple-600 mt-1 flex items-center gap-1' },
+                                            React.createElement('i', { className: 'fa-solid fa-lock' }),
+                                            'Toto nastavenie nie je možné meniť, pretože registrácia už začala.'
+                                        )
                                     ),
 
                                     // Počet periód - ZABLOKOVANÝ ak existujú zápasy
