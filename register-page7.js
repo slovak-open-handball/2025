@@ -1,6 +1,8 @@
 // register-page7.js
 // Obsahuje komponent pre poslednú stránku registračného formulára - zhrnutie zadaných údajov.
 
+import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
 // Nový komponent pre modálne okno potvrdenia e-mailu
 function EmailConfirmationModal({ show, onClose, onConfirm, userEmail, loading }) {
     if (!show) return null;
@@ -83,10 +85,33 @@ function EmailConfirmationModal({ show, onClose, onConfirm, userEmail, loading }
     );
 }
 
-export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, notificationType, selectedCountryDialCode, globalNote }) { // Pridaný globalNote prop
+export function Page7Form({ db, formData, handlePrev, handleSubmit, loading, teamsDataFromPage4, NotificationModal, notificationMessage, closeNotification, notificationType, selectedCountryDialCode, globalNote }) { // Pridaný db prop
 
-    const [isConsentChecked, setIsConsentChecked] = React.useState(false); // Nový stav pre checkbox
+    const [isConsentChecked, setIsConsentChecked] = React.useState(false); // Nový stav pre checkbox GDPR
+    const [isReglementChecked, setIsReglementChecked] = React.useState(false); // Nový stav pre reglement
+    const [isRulesChecked, setIsRulesChecked] = React.useState(false); // Nový stav pre pravidlá
+    const [isArrivalChecked, setIsArrivalChecked] = React.useState(false); // Nový stav pre príchod
     const [showEmailConfirmationModal, setShowEmailConfirmationModal] = React.useState(false); // Stav pre zobrazenie potvrdzovacieho modálu
+    const [arrivalDateTime, setArrivalDateTime] = React.useState(null); // Stav pre dátum a čas príchodu z databázy
+
+    // Načítanie dátumu a času príchodu z databázy
+    React.useEffect(() => {
+        if (!db) return;
+
+        const settingsDocRef = doc(db, 'settings', 'registration');
+        const unsubscribe = onSnapshot(settingsDocRef, (docSnapshot) => {
+            if (docSnapshot.exists()) {
+                const data = docSnapshot.data();
+                if (data.arrivalDate) {
+                    setArrivalDateTime(data.arrivalDate.toDate());
+                }
+            }
+        }, (error) => {
+            console.error("Chyba pri načítaní dátumu príchodu:", error);
+        });
+
+        return () => unsubscribe();
+    }, [db]);
 
     // Funkcia na formátovanie dátumu narodenia
     const formatDate = (dateString) => {
@@ -139,6 +164,24 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
         }
 
         return fullAddress;
+    };
+
+    // Funkcia na formátovanie dátumu príchodu pre zobrazenie
+    const formatArrivalDateTime = () => {
+        if (!arrivalDateTime) return 'dátum a čas príchodu';
+        
+        const date = arrivalDateTime.toLocaleDateString('sk-SK', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+        
+        const time = arrivalDateTime.toLocaleTimeString('sk-SK', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        return `${date} o ${time} hod.`;
     };
 
     // Funkcia na formátovanie dát tímu pre zobrazenie
@@ -417,6 +460,9 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
         handleCloseConfirmation(); // Zatvorí modál po odoslaní
     };
 
+    // Kontrola, či sú všetky checkboxy zaškrtnuté
+    const areAllCheckboxesChecked = isConsentChecked && isReglementChecked && isRulesChecked && isArrivalChecked;
+
     return React.createElement(
         React.Fragment,
         null,
@@ -486,20 +532,78 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                 React.createElement('p', { className: 'whitespace-pre-wrap' }, globalNote)
             ),
 
-            // NOVINKA: Checkbox pre súhlas so spracovaním osobných údajov
+            // NOVINKA: Sekcia so súhlasmi
             React.createElement(
                 'div',
-                { className: 'mt-6 flex items-center' },
-                React.createElement('input', {
-                    type: 'checkbox',
-                    id: 'consent-checkbox',
-                    className: 'form-checkbox h-5 w-5 text-blue-600 rounded-md focus:ring-blue-500',
-                    checked: isConsentChecked,
-                    onChange: (e) => setIsConsentChecked(e.target.checked),
-                    disabled: loading,
-                }),
-                React.createElement('label', { htmlFor: 'consent-checkbox', className: 'ml-2 block text-gray-900' },
-                    'Súhlasím so spracovaním osobných údajov pre účely organizácie turnaja.'
+                { className: 'p-4 border border-gray-200 rounded-lg bg-gray-50' },
+                React.createElement('h3', { className: 'text-xl font-semibold mb-3 text-gray-800' }, 'Súhlasy'),
+                
+                // Checkbox pre GDPR
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center mb-3' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        id: 'consent-checkbox',
+                        className: 'form-checkbox h-5 w-5 text-blue-600 rounded-md focus:ring-blue-500',
+                        checked: isConsentChecked,
+                        onChange: (e) => setIsConsentChecked(e.target.checked),
+                        disabled: loading,
+                    }),
+                    React.createElement('label', { htmlFor: 'consent-checkbox', className: 'ml-2 block text-gray-900' },
+                        'Súhlasím so spracovaním osobných údajov pre účely organizácie turnaja.'
+                    )
+                ),
+
+                // Checkbox pre reglement
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center mb-3' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        id: 'reglement-checkbox',
+                        className: 'form-checkbox h-5 w-5 text-blue-600 rounded-md focus:ring-blue-500',
+                        checked: isReglementChecked,
+                        onChange: (e) => setIsReglementChecked(e.target.checked),
+                        disabled: loading,
+                    }),
+                    React.createElement('label', { htmlFor: 'reglement-checkbox', className: 'ml-2 block text-gray-900' },
+                        'Súhlasím s reglementom turnaja.'
+                    )
+                ),
+
+                // Checkbox pre pravidlá
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center mb-3' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        id: 'rules-checkbox',
+                        className: 'form-checkbox h-5 w-5 text-blue-600 rounded-md focus:ring-blue-500',
+                        checked: isRulesChecked,
+                        onChange: (e) => setIsRulesChecked(e.target.checked),
+                        disabled: loading,
+                    }),
+                    React.createElement('label', { htmlFor: 'rules-checkbox', className: 'ml-2 block text-gray-900' },
+                        'Súhlasím s pravidlami turnaja.'
+                    )
+                ),
+
+                // Checkbox pre príchod s dynamickým dátumom a časom
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        id: 'arrival-checkbox',
+                        className: 'form-checkbox h-5 w-5 text-blue-600 rounded-md focus:ring-blue-500',
+                        checked: isArrivalChecked,
+                        onChange: (e) => setIsArrivalChecked(e.target.checked),
+                        disabled: loading,
+                    }),
+                    React.createElement('label', { htmlFor: 'arrival-checkbox', className: 'ml-2 block text-gray-900' },
+                        `Súhlasím s príchodom na turnaj dňa ${formatArrivalDateTime()}.`
+                    )
                 )
             ),
 
@@ -523,12 +627,12 @@ export function Page7Form({ formData, handlePrev, handleSubmit, loading, teamsDa
                         onClick: handleShowConfirmation, // Teraz voláme funkciu na zobrazenie potvrdzovacieho modálu
                         // Dynamické triedy pre tlačidlo "Registrovať"
                         className: `font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200 ${
-                            loading || !isConsentChecked // Zablokované, ak loading alebo checkbox nie je zaškrtnutý
+                            loading || !areAllCheckboxesChecked // Zablokované, ak loading alebo niektorý checkbox nie je zaškrtnutý
                                 ? 'bg-white text-blue-500 border border-blue-500 cursor-not-allowed' // Zablokovaný stav
                                 : 'bg-green-500 hover:bg-green-700 text-white' // Aktívny stav
                         }`,
-                        disabled: loading || !isConsentChecked, // Zablokované, ak loading alebo checkbox nie je zaškrtnutý
-                        style: { cursor: (loading || !isConsentChecked) ? 'not-allowed' : 'pointer' } // Ikona myši
+                        disabled: loading || !areAllCheckboxesChecked, // Zablokované, ak loading alebo niektorý checkbox nie je zaškrtnutý
+                        style: { cursor: (loading || !areAllCheckboxesChecked) ? 'not-allowed' : 'pointer' } // Ikona myši
                     },
                     loading ? React.createElement(
                         'div',
