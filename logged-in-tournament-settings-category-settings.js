@@ -35,6 +35,8 @@ export function CategorySettings({
 }) {
     const [categories, setCategories] = React.useState([]);
     const [selectedCategoryId, setSelectedCategoryId] = React.useState(null);
+    
+    // EDITOVANÉ HODNOTY PRE JEDNOTLIVÉ KATEGÓRIE
     const [editedMaxTeams, setEditedMaxTeams] = React.useState({});
     const [editedPeriods, setEditedPeriods] = React.useState({});
     const [editedPeriodDuration, setEditedPeriodDuration] = React.useState({});
@@ -49,6 +51,12 @@ export function CategorySettings({
     
     // NOVÉ: State pre vylúčenie
     const [editedExclusionTime, setEditedExclusionTime] = React.useState({});
+    
+    // DÁTUMY NARODENÍ PRE KATEGÓRIE
+    const [editedDateFrom, setEditedDateFrom] = React.useState({});
+    const [editedDateTo, setEditedDateTo] = React.useState({});
+    const [editedDateFromActive, setEditedDateFromActive] = React.useState({});
+    const [editedDateToActive, setEditedDateToActive] = React.useState({});
     
     const [saving, setSaving] = React.useState(false);
     const [previousValues, setPreviousValues] = React.useState({});
@@ -90,6 +98,18 @@ export function CategorySettings({
             onSelectCategory(slugify(category.name), catId);
         }
         setSelectedCategoryId(catId);
+    };
+
+    // Formátovanie dátumu pre zobrazenie v notifikáciách
+    const formatDateForNotification = (dateString) => {
+        if (!dateString) return '';
+        try {
+            const [year, month, day] = dateString.split('-');
+            return `${day}. ${month}. ${year}`;
+        } catch (e) {
+            console.error("Chyba pri formátovaní dátumu:", dateString, e);
+            return dateString;
+        }
     };
 
     // NOVÁ FUNKCIA: Sledovanie existujúcich zápasov v reálnom čase
@@ -155,6 +175,11 @@ export function CategorySettings({
                     matchBreak: obj.matchBreak ?? 5,
                     drawColor: obj.drawColor ?? '#3B82F6',
                     transportColor: obj.transportColor ?? '#10B981',
+                    // DÁTUMY NARODENÍ
+                    dateFrom: obj.dateFrom ?? '',
+                    dateTo: obj.dateTo ?? '',
+                    dateFromActive: obj.dateFromActive ?? false,
+                    dateToActive: obj.dateToActive ?? false,
                     // NOVÉ: Načítanie hodnôt timeout
                     timeoutCount: obj.timeoutCount ?? 2,
                     timeoutDuration: obj.timeoutDuration ?? 1,
@@ -175,6 +200,10 @@ export function CategorySettings({
                         matchBreak: cat.matchBreak,
                         drawColor: cat.drawColor,
                         transportColor: cat.transportColor,
+                        dateFrom: cat.dateFrom,
+                        dateTo: cat.dateTo,
+                        dateFromActive: cat.dateFromActive,
+                        dateToActive: cat.dateToActive,
                         timeoutCount: cat.timeoutCount,
                         timeoutDuration: cat.timeoutDuration,
                         exclusionTime: cat.exclusionTime
@@ -190,6 +219,10 @@ export function CategorySettings({
                 const initialMatchBreak = {};
                 const initialDrawColor = {};
                 const initialTransportColor = {};
+                const initialDateFrom = {};
+                const initialDateTo = {};
+                const initialDateFromActive = {};
+                const initialDateToActive = {};
                 const initialTimeoutCount = {};
                 const initialTimeoutDuration = {};
                 const initialExclusionTime = {};
@@ -203,6 +236,10 @@ export function CategorySettings({
                     initialMatchBreak[cat.id] = cat.matchBreak;
                     initialDrawColor[cat.id] = cat.drawColor;
                     initialTransportColor[cat.id] = cat.transportColor;
+                    initialDateFrom[cat.id] = cat.dateFrom;
+                    initialDateTo[cat.id] = cat.dateTo;
+                    initialDateFromActive[cat.id] = cat.dateFromActive;
+                    initialDateToActive[cat.id] = cat.dateToActive;
                     initialTimeoutCount[cat.id] = cat.timeoutCount;
                     initialTimeoutDuration[cat.id] = cat.timeoutDuration;
                     initialExclusionTime[cat.id] = cat.exclusionTime;
@@ -279,6 +316,47 @@ export function CategorySettings({
                     return newState;
                 });
 
+                // Inicializácia dátumových hodnôt
+                setEditedDateFrom(prev => {
+                    const newState = { ...initialDateFrom };
+                    Object.keys(prev).forEach(key => {
+                        if (prev[key] !== initialDateFrom[key]) {
+                            newState[key] = prev[key];
+                        }
+                    });
+                    return newState;
+                });
+
+                setEditedDateTo(prev => {
+                    const newState = { ...initialDateTo };
+                    Object.keys(prev).forEach(key => {
+                        if (prev[key] !== initialDateTo[key]) {
+                            newState[key] = prev[key];
+                        }
+                    });
+                    return newState;
+                });
+
+                setEditedDateFromActive(prev => {
+                    const newState = { ...initialDateFromActive };
+                    Object.keys(prev).forEach(key => {
+                        if (prev[key] !== initialDateFromActive[key]) {
+                            newState[key] = prev[key];
+                        }
+                    });
+                    return newState;
+                });
+
+                setEditedDateToActive(prev => {
+                    const newState = { ...initialDateToActive };
+                    Object.keys(prev).forEach(key => {
+                        if (prev[key] !== initialDateToActive[key]) {
+                            newState[key] = prev[key];
+                        }
+                    });
+                    return newState;
+                });
+
                 // NOVÉ: Inicializácia timeout state
                 setEditedTimeoutCount(prev => {
                     const newState = { ...initialTimeoutCount };
@@ -337,6 +415,10 @@ export function CategorySettings({
                 setEditedMatchBreak({});
                 setEditedDrawColor({});
                 setEditedTransportColor({});
+                setEditedDateFrom({});
+                setEditedDateTo({});
+                setEditedDateFromActive({});
+                setEditedDateToActive({});
                 setEditedTimeoutCount({});
                 setEditedTimeoutDuration({});
                 setEditedExclusionTime({});
@@ -398,6 +480,30 @@ export function CategorySettings({
         setEditedTransportColor(prev => ({ ...prev, [catId]: value }));
     };
 
+    // Handlery pre dátumy
+    const handleDateFromChange = (catId, value) => {
+        setEditedDateFrom(prev => ({ ...prev, [catId]: value }));
+    };
+
+    const handleDateToChange = (catId, value) => {
+        setEditedDateTo(prev => ({ ...prev, [catId]: value }));
+    };
+
+    const handleDateFromActiveToggle = (catId) => {
+        setEditedDateFromActive(prev => ({ 
+            ...prev, 
+            [catId]: !prev[catId] 
+        }));
+        // Ak sa aktivuje a nie je nastavený dátum, necháme ho prázdny
+    };
+
+    const handleDateToActiveToggle = (catId) => {
+        setEditedDateToActive(prev => ({ 
+            ...prev, 
+            [catId]: !prev[catId] 
+        }));
+    };
+
     // NOVÝ: Handler pre počet timeoutov
     const handleTimeoutCountChange = (catId, value) => {
         const numValue = value === '' ? '' : Math.max(0, parseInt(value) || 0);
@@ -449,6 +555,10 @@ export function CategorySettings({
             editedMatchBreak[cat.id] !== cat.matchBreak ||
             editedDrawColor[cat.id] !== cat.drawColor ||
             editedTransportColor[cat.id] !== cat.transportColor ||
+            editedDateFrom[cat.id] !== cat.dateFrom ||
+            editedDateTo[cat.id] !== cat.dateTo ||
+            editedDateFromActive[cat.id] !== cat.dateFromActive ||
+            editedDateToActive[cat.id] !== cat.dateToActive ||
             // NOVÉ: Kontrola timeout a exclusion zmien
             editedTimeoutCount[cat.id] !== cat.timeoutCount ||
             editedTimeoutDuration[cat.id] !== cat.timeoutDuration ||
@@ -456,6 +566,7 @@ export function CategorySettings({
         );
     }, [categories, editedMaxTeams, editedPeriods, editedPeriodDuration, 
         editedBreakDuration, editedMatchBreak, editedDrawColor, editedTransportColor,
+        editedDateFrom, editedDateTo, editedDateFromActive, editedDateToActive,
         editedTimeoutCount, editedTimeoutDuration, editedExclusionTime]);
 
     // Hlásime zmeny nadradenému komponentu
@@ -475,12 +586,17 @@ export function CategorySettings({
             editedMatchBreak[cat.id] !== cat.matchBreak ||
             editedDrawColor[cat.id] !== cat.drawColor ||
             editedTransportColor[cat.id] !== cat.transportColor ||
+            editedDateFrom[cat.id] !== cat.dateFrom ||
+            editedDateTo[cat.id] !== cat.dateTo ||
+            editedDateFromActive[cat.id] !== cat.dateFromActive ||
+            editedDateToActive[cat.id] !== cat.dateToActive ||
             editedTimeoutCount[cat.id] !== cat.timeoutCount ||
             editedTimeoutDuration[cat.id] !== cat.timeoutDuration ||
             editedExclusionTime[cat.id] !== cat.exclusionTime
         ).length;
     }, [categories, editedMaxTeams, editedPeriods, editedPeriodDuration, 
         editedBreakDuration, editedMatchBreak, editedDrawColor, editedTransportColor,
+        editedDateFrom, editedDateTo, editedDateFromActive, editedDateToActive,
         editedTimeoutCount, editedTimeoutDuration, editedExclusionTime]);
 
     // RESET VŠETKÝCH NEULOŽENÝCH ZMIEN
@@ -495,6 +611,10 @@ export function CategorySettings({
         const initialMatchBreak = {};
         const initialDrawColor = {};
         const initialTransportColor = {};
+        const initialDateFrom = {};
+        const initialDateTo = {};
+        const initialDateFromActive = {};
+        const initialDateToActive = {};
         const initialTimeoutCount = {};
         const initialTimeoutDuration = {};
         const initialExclusionTime = {};
@@ -509,6 +629,10 @@ export function CategorySettings({
             initialMatchBreak[catId] = original.matchBreak;
             initialDrawColor[catId] = original.drawColor;
             initialTransportColor[catId] = original.transportColor;
+            initialDateFrom[catId] = original.dateFrom;
+            initialDateTo[catId] = original.dateTo;
+            initialDateFromActive[catId] = original.dateFromActive;
+            initialDateToActive[catId] = original.dateToActive;
             initialTimeoutCount[catId] = original.timeoutCount ?? 2;
             initialTimeoutDuration[catId] = original.timeoutDuration ?? 1;
             initialExclusionTime[catId] = original.exclusionTime ?? 2;
@@ -521,6 +645,10 @@ export function CategorySettings({
         setEditedMatchBreak(initialMatchBreak);
         setEditedDrawColor(initialDrawColor);
         setEditedTransportColor(initialTransportColor);
+        setEditedDateFrom(initialDateFrom);
+        setEditedDateTo(initialDateTo);
+        setEditedDateFromActive(initialDateFromActive);
+        setEditedDateToActive(initialDateToActive);
         setEditedTimeoutCount(initialTimeoutCount);
         setEditedTimeoutDuration(initialTimeoutDuration);
         setEditedExclusionTime(initialExclusionTime);
@@ -580,6 +708,25 @@ export function CategorySettings({
         if (newValues.transportColor !== oldValues.transportColor) {
             changes.push(`Farba pre dopravu z '${oldValues.transportColor}' na '${newValues.transportColor}'`);
         }
+        
+        // Dátumy narodení
+        if (newValues.dateFrom !== oldValues.dateFrom) {
+            const oldDate = formatDateForNotification(oldValues.dateFrom);
+            const newDate = formatDateForNotification(newValues.dateFrom);
+            changes.push(`Dátum od z '${oldDate}' na '${newDate}'`);
+        }
+        if (newValues.dateTo !== oldValues.dateTo) {
+            const oldDate = formatDateForNotification(oldValues.dateTo);
+            const newDate = formatDateForNotification(newValues.dateTo);
+            changes.push(`Dátum do z '${oldDate}' na '${newDate}'`);
+        }
+        if (newValues.dateFromActive !== oldValues.dateFromActive) {
+            changes.push(`Aktívnosť pre dátum od z '${oldValues.dateFromActive ? 'Áno' : 'Nie'}' na '${newValues.dateFromActive ? 'Áno' : 'Nie'}'`);
+        }
+        if (newValues.dateToActive !== oldValues.dateToActive) {
+            changes.push(`Aktívnosť pre dátum do z '${oldValues.dateToActive ? 'Áno' : 'Nie'}' na '${newValues.dateToActive ? 'Áno' : 'Nie'}'`);
+        }
+        
         // NOVÉ: Zmeny pre timeout
         if (newValues.timeoutCount !== oldValues.timeoutCount) {
             changes.push(`Počet timeoutov z '${oldValues.timeoutCount}' na '${newValues.timeoutCount}'`);
@@ -642,6 +789,25 @@ export function CategorySettings({
                     updatedData.transportColor = editedTransportColor[cat.id];
                     hasUpdates = true;
                 }
+                
+                // Dátumy narodení
+                if (editedDateFrom[cat.id] !== cat.dateFrom) {
+                    updatedData.dateFrom = editedDateFrom[cat.id] || '';
+                    hasUpdates = true;
+                }
+                if (editedDateTo[cat.id] !== cat.dateTo) {
+                    updatedData.dateTo = editedDateTo[cat.id] || '';
+                    hasUpdates = true;
+                }
+                if (editedDateFromActive[cat.id] !== cat.dateFromActive) {
+                    updatedData.dateFromActive = editedDateFromActive[cat.id];
+                    hasUpdates = true;
+                }
+                if (editedDateToActive[cat.id] !== cat.dateToActive) {
+                    updatedData.dateToActive = editedDateToActive[cat.id];
+                    hasUpdates = true;
+                }
+                
                 // NOVÉ: Ukladanie timeout nastavení
                 if (editedTimeoutCount[cat.id] !== cat.timeoutCount && editedTimeoutCount[cat.id] >= 0) {
                     updatedData.timeoutCount = Number(editedTimeoutCount[cat.id]);
@@ -672,6 +838,10 @@ export function CategorySettings({
                         matchBreak: editedMatchBreak[cat.id] ?? cat.matchBreak,
                         drawColor: editedDrawColor[cat.id] ?? cat.drawColor,
                         transportColor: editedTransportColor[cat.id] ?? cat.transportColor,
+                        dateFrom: editedDateFrom[cat.id] ?? cat.dateFrom,
+                        dateTo: editedDateTo[cat.id] ?? cat.dateTo,
+                        dateFromActive: editedDateFromActive[cat.id] ?? cat.dateFromActive,
+                        dateToActive: editedDateToActive[cat.id] ?? cat.dateToActive,
                         timeoutCount: editedTimeoutCount[cat.id] ?? cat.timeoutCount,
                         timeoutDuration: editedTimeoutDuration[cat.id] ?? cat.timeoutDuration,
                         exclusionTime: editedExclusionTime[cat.id] ?? cat.exclusionTime
@@ -749,6 +919,10 @@ export function CategorySettings({
                             matchBreak: editedMatchBreak[cat.id] ?? cat.matchBreak,
                             drawColor: editedDrawColor[cat.id] ?? cat.drawColor,
                             transportColor: editedTransportColor[cat.id] ?? cat.transportColor,
+                            dateFrom: editedDateFrom[cat.id] ?? cat.dateFrom,
+                            dateTo: editedDateTo[cat.id] ?? cat.dateTo,
+                            dateFromActive: editedDateFromActive[cat.id] ?? cat.dateFromActive,
+                            dateToActive: editedDateToActive[cat.id] ?? cat.dateToActive,
                             timeoutCount: editedTimeoutCount[cat.id] ?? cat.timeoutCount,
                             timeoutDuration: editedTimeoutDuration[cat.id] ?? cat.timeoutDuration,
                             exclusionTime: editedExclusionTime[cat.id] ?? cat.exclusionTime
@@ -767,6 +941,10 @@ export function CategorySettings({
                         matchBreak: editedMatchBreak[cat.id] ?? cat.matchBreak,
                         drawColor: editedDrawColor[cat.id] ?? cat.drawColor,
                         transportColor: editedTransportColor[cat.id] ?? cat.transportColor,
+                        dateFrom: editedDateFrom[cat.id] ?? cat.dateFrom,
+                        dateTo: editedDateTo[cat.id] ?? cat.dateTo,
+                        dateFromActive: editedDateFromActive[cat.id] ?? cat.dateFromActive,
+                        dateToActive: editedDateToActive[cat.id] ?? cat.dateToActive,
                         timeoutCount: editedTimeoutCount[cat.id] ?? cat.timeoutCount,
                         timeoutDuration: editedTimeoutDuration[cat.id] ?? cat.timeoutDuration,
                         exclusionTime: editedExclusionTime[cat.id] ?? cat.exclusionTime
@@ -784,6 +962,10 @@ export function CategorySettings({
                 matchBreak: editedMatchBreak[cat.id] ?? cat.matchBreak,
                 drawColor: editedDrawColor[cat.id] ?? cat.drawColor,
                 transportColor: editedTransportColor[cat.id] ?? cat.transportColor,
+                dateFrom: editedDateFrom[cat.id] ?? cat.dateFrom,
+                dateTo: editedDateTo[cat.id] ?? cat.dateTo,
+                dateFromActive: editedDateFromActive[cat.id] ?? cat.dateFromActive,
+                dateToActive: editedDateToActive[cat.id] ?? cat.dateToActive,
                 timeoutCount: editedTimeoutCount[cat.id] ?? cat.timeoutCount,
                 timeoutDuration: editedTimeoutDuration[cat.id] ?? cat.timeoutDuration,
                 exclusionTime: editedExclusionTime[cat.id] ?? cat.exclusionTime
@@ -806,6 +988,10 @@ export function CategorySettings({
             setEditedMatchBreak(prev => ({ ...prev, [catId]: category.matchBreak }));
             setEditedDrawColor(prev => ({ ...prev, [catId]: category.drawColor }));
             setEditedTransportColor(prev => ({ ...prev, [catId]: category.transportColor }));
+            setEditedDateFrom(prev => ({ ...prev, [catId]: category.dateFrom }));
+            setEditedDateTo(prev => ({ ...prev, [catId]: category.dateTo }));
+            setEditedDateFromActive(prev => ({ ...prev, [catId]: category.dateFromActive }));
+            setEditedDateToActive(prev => ({ ...prev, [catId]: category.dateToActive }));
             setEditedTimeoutCount(prev => ({ ...prev, [catId]: category.timeoutCount }));
             setEditedTimeoutDuration(prev => ({ ...prev, [catId]: category.timeoutDuration }));
             setEditedExclusionTime(prev => ({ ...prev, [catId]: category.exclusionTime }));
@@ -815,6 +1001,28 @@ export function CategorySettings({
     // Získanie vybranej kategórie
     const selectedCategory = categories.find(cat => cat.id === selectedCategoryId);
     
+    // Formátovanie dátumu pre zobrazenie v UI
+    const formatDateDisplay = (dateString) => {
+        if (!dateString) return '';
+        try {
+            const [year, month, day] = dateString.split('-');
+            return `${day}. ${month}. ${year}`;
+        } catch (e) {
+            return dateString;
+        }
+    };
+
+    // Komponent pre zobrazenie stavu dátumu
+    const renderDateStatus = (dateString, isActive) => {
+        const statusColor = isActive ? 'bg-green-500' : 'bg-red-500';
+        return React.createElement(
+            'div',
+            { className: 'flex items-center space-x-2' },
+            React.createElement('span', { className: `inline-block h-3 w-3 rounded-full ${statusColor}` }),
+            React.createElement('span', null, formatDateDisplay(dateString))
+        );
+    };
+
     // NOVÁ FUNKCIA: Kontrola, či má kategória existujúce zápasy
     const hasExistingMatchesForCategory = (catId) => {
         return existingMatches[catId] && existingMatches[catId].length > 0;
@@ -865,6 +1073,10 @@ export function CategorySettings({
                                     editedMatchBreak[cat.id] !== cat.matchBreak ||
                                     editedDrawColor[cat.id] !== cat.drawColor ||
                                     editedTransportColor[cat.id] !== cat.transportColor ||
+                                    editedDateFrom[cat.id] !== cat.dateFrom ||
+                                    editedDateTo[cat.id] !== cat.dateTo ||
+                                    editedDateFromActive[cat.id] !== cat.dateFromActive ||
+                                    editedDateToActive[cat.id] !== cat.dateToActive ||
                                     editedTimeoutCount[cat.id] !== cat.timeoutCount ||
                                     editedTimeoutDuration[cat.id] !== cat.timeoutDuration ||
                                     editedExclusionTime[cat.id] !== cat.exclusionTime;
@@ -1075,6 +1287,90 @@ export function CategorySettings({
                                             { className: 'text-xs text-orange-600 mt-1 flex items-center gap-1' },
                                             React.createElement('i', { className: 'fa-solid fa-lock' }),
                                             'Toto nastavenie nie je možné meniť, pretože pre túto kategóriu už existujú zápasy.'
+                                        )
+                                    ),
+
+                                    // DÁTUMY NARODENÍ - NIE SÚ ZABLOKOVANÉ (môžu sa meniť)
+                                    React.createElement(
+                                        'div',
+                                        { className: 'space-y-1' },
+                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                            'Dátum narodenia od:'
+                                        ),
+                                        React.createElement('input', {
+                                            type: 'date',
+                                            value: editedDateFrom[selectedCategory.id] ?? selectedCategory.dateFrom,
+                                            onChange: e => handleDateFromChange(selectedCategory.id, e.target.value),
+                                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                                        })
+                                    ),
+
+                                    // Aktívnosť pre dátum od
+                                    React.createElement(
+                                        'div',
+                                        { className: 'space-y-1' },
+                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                            'Aktívnosť pre dátum od:'
+                                        ),
+                                        React.createElement('input', {
+                                            type: 'checkbox',
+                                            checked: editedDateFromActive[selectedCategory.id] ?? selectedCategory.dateFromActive,
+                                            onChange: e => handleDateFromActiveToggle(selectedCategory.id),
+                                            className: 'w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500'
+                                        })
+                                    ),
+
+                                    React.createElement(
+                                        'div',
+                                        { className: 'space-y-1' },
+                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                            'Dátum narodenia do:'
+                                        ),
+                                        React.createElement('input', {
+                                            type: 'date',
+                                            value: editedDateTo[selectedCategory.id] ?? selectedCategory.dateTo,
+                                            onChange: e => handleDateToChange(selectedCategory.id, e.target.value),
+                                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                                        })
+                                    ),
+
+                                    // Aktívnosť pre dátum do
+                                    React.createElement(
+                                        'div',
+                                        { className: 'space-y-1' },
+                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                            'Aktívnosť pre dátum do:'
+                                        ),
+                                        React.createElement('input', {
+                                            type: 'checkbox',
+                                            checked: editedDateToActive[selectedCategory.id] ?? selectedCategory.dateToActive,
+                                            onChange: e => handleDateToActiveToggle(selectedCategory.id),
+                                            className: 'w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500'
+                                        })
+                                    ),
+
+                                    // Zobrazenie aktuálneho stavu dátumov
+                                    React.createElement(
+                                        'div',
+                                        { className: 'p-4 bg-gray-50 rounded-lg border border-gray-200' },
+                                        React.createElement('h4', { className: 'font-semibold text-gray-700 mb-2' },
+                                            'Aktuálne nastavené dátumy:'
+                                        ),
+                                        React.createElement('div', { className: 'grid grid-cols-1 gap-2 text-sm' },
+                                            React.createElement('div', { className: 'text-gray-600' },
+                                                'Dátum od: ',
+                                                renderDateStatus(
+                                                    editedDateFrom[selectedCategory.id] ?? selectedCategory.dateFrom,
+                                                    editedDateFromActive[selectedCategory.id] ?? selectedCategory.dateFromActive
+                                                )
+                                            ),
+                                            React.createElement('div', { className: 'text-gray-600' },
+                                                'Dátum do: ',
+                                                renderDateStatus(
+                                                    editedDateTo[selectedCategory.id] ?? selectedCategory.dateTo,
+                                                    editedDateToActive[selectedCategory.id] ?? selectedCategory.dateToActive
+                                                )
+                                            )
                                         )
                                     ),
 
