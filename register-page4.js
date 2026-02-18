@@ -8,6 +8,9 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
     // Stav pre dynamicky načítané veľkosti tričiek z Firestore
     const [tshirtSizes, setTshirtSizes] = React.useState([]);
 
+    // Stav pre dynamicky načítané limity (max. hráčov a členov RT) pre každú kategóriu
+    const [categoryLimits, setCategoryLimits] = React.useState({});
+
     // Effect pre načítanie veľkostí tričiek z Firestore
     React.useEffect(() => {
         let unsubscribe;
@@ -49,10 +52,43 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
         };
     }, []); // Prázdne pole závislostí zabezpečí, že sa effect spustí iba raz pri mountnutí komponentu
 
+    // NOVÝ EFFECT: Načítanie limitov pre kategórie (maxPlayers, maxImplementationTeam) z Firestore
+    React.useEffect(() => {
+        if (!window.db) {
+            console.log("Firestore DB nie je k dispozícii pre načítanie limitov kategórií.");
+            return;
+        }
+
+        const categoriesDocRef = doc(window.db, 'settings', 'categories');
+        const unsubscribe = onSnapshot(categoriesDocRef, (docSnapshot) => {
+            if (docSnapshot.exists()) {
+                const data = docSnapshot.data() || {};
+                const limits = {};
+                // Prejdeme všetky kategórie v dokumente
+                Object.entries(data).forEach(([categoryId, categoryData]) => {
+                    limits[categoryData.name] = { // Kľúčom je názov kategórie, aby sa dal jednoducho použiť vo formulári
+                        maxPlayers: categoryData.maxPlayers ?? 12, // Predvolená hodnota 12, ak nie je nastavená
+                        maxTeamMembers: categoryData.maxImplementationTeam ?? 3 // Predvolená hodnota 3, ak nie je nastavená
+                    };
+                });
+                setCategoryLimits(limits);
+                console.log("[Page4Form] Načítané limity kategórií:", limits);
+            } else {
+                console.warn("Dokument /settings/categories neexistuje.");
+                setCategoryLimits({});
+            }
+        }, (error) => {
+            console.error("Chyba pri načítaní limitov kategórií:", error);
+        });
+
+        return () => unsubscribe();
+    }, []); // Spustí sa raz pri načítaní komponentu
 
     // Spracovanie zmeny detailov tímu (napr. názov, počet hráčov, počet žien/mužov v realizačnom tíme)
     const handleTeamDetailChange = (categoryName, teamIndex, field, value) => {
         let newValue;
+        // Získame limity pre aktuálnu kategóriu
+        const currentCategoryLimit = categoryLimits[categoryName] || { maxPlayers: 12, maxTeamMembers: 3 };
 
         if (value === '') {
             newValue = ''; // Ak je hodnota prázdna, nastavíme ju na prázdny reťazec
@@ -66,7 +102,8 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                 if (field === 'players') {
                     newValue = parsed;
                     if (newValue < 1 && newValue !== '') newValue = 1; // Minimálne 1 hráč
-                    if (newValue > numberOfPlayersLimit) newValue = numberOfPlayersLimit; // Maximálny počet hráčov z databázy
+                    // Použijeme dynamický limit z categoryLimits namiesto numberOfPlayersLimit
+                    if (newValue > currentCategoryLimit.maxPlayers) newValue = currentCategoryLimit.maxPlayers; 
                 } else if (field === 'womenTeamMembers' || field === 'menTeamMembers') {
                     newValue = parsed;
                     if (newValue < 0 && newValue !== '') newValue = 0; // Minimálne 0 členov
@@ -221,6 +258,9 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                 continue;
             }
 
+            // Získame limity pre aktuálnu kategóriu
+            const currentCategoryLimit = categoryLimits[categoryName] || { maxPlayers: 12, maxTeamMembers: 3 };
+
             // Zabezpečíme, že teamsDataFromPage4[categoryName] je pole, alebo použijeme prázdne pole
             const teamsInCategory = Array.isArray(teamsDataFromPage4[categoryName])
                 ? teamsDataFromPage4[categoryName]
@@ -233,9 +273,9 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                     return false;
                 }
                 
-                // Validácia počtu hráčov
+                // Validácia počtu hráčov - POUŽIJEME DYNAMICKÝ LIMIT Z categoryLimits
                 const playersValue = parseInt(team.players, 10);
-                if (isNaN(playersValue) || playersValue < 1 || playersValue > numberOfPlayersLimit) {
+                if (isNaN(playersValue) || playersValue < 1 || playersValue > currentCategoryLimit.maxPlayers) {
                     return false;
                 }
 
@@ -245,8 +285,8 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
 
                 if (womenTeamMembersValue < 0 || menTeamMembersValue < 0) return false;
 
-                // Súčet žien a mužov musí byť v rámci limitu
-                if ((womenTeamMembersValue + menTeamMembersValue) > numberOfTeamMembersLimit) {
+                // Súčet žien a mužov musí byť v rámci limitu - POUŽIJEME DYNAMICKÝ LIMIT
+                if ((womenTeamMembersValue + menTeamMembersValue) > currentCategoryLimit.maxTeamMembers) {
                     return false;
                 }
 
@@ -280,7 +320,7 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
             }
         }
         return allTshirtsMatch && allTeamMembersFilled; // Vrátime výsledok validácie
-    }, [teamsDataFromPage4, numberOfPlayersLimit, numberOfTeamMembersLimit]);
+    }, [teamsDataFromPage4, categoryLimits]); // Zmenená závislosť z numberOfPlayersLimit a numberOfTeamMembersLimit na categoryLimits
 
     // CSS triedy pre tlačidlo "Ďalej" (zmenené z "Registrovať")
     const nextButtonClasses = `
@@ -362,8 +402,10 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                 // Mapovanie cez kategórie a tímy
                 Object.keys(teamsDataFromPage4)
                     .filter(categoryName => categoryName !== 'globalNote') // NOVINKA: Filtrujeme kategóriu 'globalNote'
-                    .map(categoryName => (
-                    React.createElement(
+                    .map(categoryName => {
+                    // Získame limity pre aktuálnu kategóriu pre zobrazenie v UI
+                    const currentCategoryLimit = categoryLimits[categoryName] || { maxPlayers: 12, maxTeamMembers: 3 };
+                    return React.createElement(
                         'div',
                         { key: categoryName, className: 'border-t border-gray-200 pt-4 mt-4' },
                         React.createElement('h3', { className: 'text-xl font-bold mb-4 text-gray-700' }, `Kategória: ${categoryName}`),
@@ -386,12 +428,11 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                                 (parseInt(team.womenTeamMembers, 10) > 0) || 
                                 (parseInt(team.menTeamMembers, 10) > 0);
 
-                            // Doplnková kontrola pre zablokovanie, ak súčet realizačných tímov prekročí limit
-                            // OPRAVA: Konvertujeme hodnoty na čísla (alebo 0, ak sú prázdne/NaN) pred sčítaním
+                            // Doplnková kontrola pre zablokovanie, ak súčet realizačných tímov prekročí limit - POUŽIJEME DYNAMICKÝ LIMIT
                             const currentWomenTeamMembers = parseInt(team.womenTeamMembers, 10) || 0;
                             const currentMenTeamMembers = parseInt(team.menTeamMembers, 10) || 0;
                             const isTeamMembersTotalOverLimit = 
-                                (currentWomenTeamMembers + currentMenTeamMembers) > numberOfTeamMembersLimit;
+                                (currentWomenTeamMembers + currentMenTeamMembers) > currentCategoryLimit.maxTeamMembers;
 
                             const isTshirtSectionDisabled = loading || !isTshirtInputEnabled || isTeamMembersTotalOverLimit;
 
@@ -410,11 +451,11 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                                         style: { cursor: 'default' },
                                     }, team.teamName)
                                 ),
-                                // Počet hráčov
+                                // Počet hráčov - ZOBRAZÍME DYNAMICKÝ LIMIT
                                 React.createElement(
                                     'div',
                                     null,
-                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1', htmlFor: `players-${categoryName}-${teamIndex}` }, `Počet hráčov (max: ${numberOfPlayersLimit})`),
+                                    React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-1', htmlFor: `players-${categoryName}-${teamIndex}` }, `Počet hráčov (max: ${currentCategoryLimit.maxPlayers})`),
                                     React.createElement('input', {
                                         type: 'number',
                                         id: `players-${categoryName}-${teamIndex}`,
@@ -441,7 +482,7 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                                         disabled: loading,
                                     })
                                 ),
-                                // Počet mužov realizačného tímu
+                                // Počet mužov realizačného tímu - ZOBRAZÍME DYNAMICKÝ LIMIT
                                 React.createElement(
                                     'div',
                                     null,
@@ -456,8 +497,8 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                                         min: 0, 
                                         disabled: loading,
                                     }),
-                                    // Nový text pod inputboxom pre počet mužov
-                                    React.createElement('p', { className: 'text-sm text-gray-600 mt-1' }, `Maximálny počet členov realizačného tímu je ${numberOfTeamMembersLimit}.`)
+                                    // Nový text pod inputboxom pre počet mužov - ZOBRAZÍME DYNAMICKÝ LIMIT
+                                    React.createElement('p', { className: 'text-sm text-gray-600 mt-1' }, `Maximálny počet členov realizačného tímu je ${currentCategoryLimit.maxTeamMembers}.`)
                                 ),
                                 
                                 // Sekcia pre účastnícke tričká
@@ -551,8 +592,8 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                                 )
                             );
                         })
-                    )
-                ))
+                    );
+                })
             ),
 
             // Ovládacie tlačidlá formulára (Späť a Ďalej)
