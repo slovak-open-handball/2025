@@ -183,9 +183,9 @@ const getChangesForNotification = (original, updated, formatDateFn) => {
                     const newQ = updMap.get(size) || 0;
                     if (oldQ !== newQ) {
                         if (oldQ === 0) {
-                            changes.push(`Pridané tričká (${size}): ${newQ} ks`);
+                            changes.push(`Pridané tričká '''(${size}): ${newQ} ks'`);
                         } else if (newQ === 0) {
-                            changes.push(`Odstránené tričká (${size}): ${oldQ} ks`);
+                            changes.push(`Odstránené tričká '''(${size}): ${oldQ} ks'`);
                         } else {
                             changes.push(`Zmena počtu tričiek (${size}): z '${oldQ} ks' na '${newQ} ks'`);
                         }
@@ -2496,7 +2496,7 @@ const handleAddTeam = async (newTeamDataFromModal) => {
 
         // ─── NOTIFIKÁCIA pri PRIDANÍ NOVÉHO TÍMU ────────────────────────────────
         if (userEmail) {
-            const changes = [`Nový tím bol pridaný: ${teamName} (${category})`];
+            const changes = [`Nový tím bol pridaný: '''${teamName} (${category})'`];
 
             const notificationsRef = collection(db, 'notifications');
             await addDoc(notificationsRef, {
@@ -2615,18 +2615,18 @@ const handleSaveNewMember = async (newMemberDetails) => {
         // ─── NOTIFIKÁCIA pri PRIDANÍ NOVÉHO ČLENA ────────────────────────────────
         if (userEmail) {
             const changes = [
-                `Pridaný nový ${memberTypeLabel}: ${memberName}`,
-                `Tím: ${teamName} (${category})`
+                `Pridaný nový '''${memberTypeLabel}: ${memberName}'`,
+                `Tím: '''${teamName} (${category})'`
             ];
 
             if (newMemberDetails.dateOfBirth) {
-                changes.push(`Dátum narodenia: ${formatDateToDMMYYYY(newMemberDetails.dateOfBirth)}`);
+                changes.push(`Dátum narodenia: '''${formatDateToDMMYYYY(newMemberDetails.dateOfBirth)}'`);
             }
             if (newMemberDetails.jerseyNumber && memberTypeToAdd === 'player') {
-                changes.push(`Číslo dresu: ${newMemberDetails.jerseyNumber}`);
+                changes.push(`Číslo dresu: '''${newMemberDetails.jerseyNumber}'`);
             }
             if (newMemberDetails.registrationNumber && memberTypeToAdd === 'player') {
-                changes.push(`Registračné číslo: ${newMemberDetails.registrationNumber}`);
+                changes.push(`Registračné číslo: '''${newMemberDetails.registrationNumber}'`);
             }
 
             const notificationsRef = collection(db, 'notifications');
