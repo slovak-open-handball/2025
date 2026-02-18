@@ -85,51 +85,15 @@ const getTableButtonClasses = (originalBgColorClass, disabledState) => {
   }
 };
 
-
-// NOVÝ KOMPONENT: ToggleButton
-function ToggleButton({ isActive, onToggle, disabled }) {
-  const bgColor = isActive ? 'bg-green-500' : 'bg-red-500';
-  // Upravené triedy pre toggle button, aby sa používali základné Tailwind farby
-  const toggleClasses = `relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${bgColor} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`;
-  const spanClasses = `pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${isActive ? 'translate-x-5' : 'translate-x-0'}`;
-
-  return React.createElement(
-    'button',
-    {
-      type: 'button',
-      className: toggleClasses,
-      role: 'switch',
-      'aria-checked': isActive,
-      onClick: onToggle,
-      disabled: disabled,
-    },
-    React.createElement('span', { className: 'sr-only' }, isActive ? 'Zapnuté' : 'Vypnuté'), // Screen reader text
-    React.createElement('span', {
-      'aria-hidden': 'true',
-      className: spanClasses,
-    })
-  );
-}
-
-
-// AddCategoryModal Component
+// AddCategoryModal Component - ODSTRÁNENÉ DÁTUMY
 function AddCategoryModal({ show, onClose, onAddCategory, loading }) {
   const [newCategoryName, setNewCategoryName] = React.useState('');
-  const [dateFrom, setDateFrom] = React.useState('');
-  const [dateTo, setDateTo] = React.useState('');
-  const [dateFromActive, setDateFromActive] = React.useState(false); 
-  const [dateToActive, setDateToActive] = React.useState(false);   
 
   React.useEffect(() => {
     if (show) {
       setNewCategoryName('');
-      setDateFrom('');
-      setDateTo('');
-      setDateFromActive(false); 
-      setDateToActive(false);   
     }
   }, [show]); 
-
 
   if (!show) return null;
 
@@ -139,21 +103,10 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) {
         showLocalNotification("Prosím vyplňte názov kategórie.", 'error');
         return;
     }
-    if (dateFromActive && dateFrom === '') {
-        showLocalNotification("Prosím vyplňte 'Dátum od', pretože je aktívny.", 'error');
-        return;
-    }
-    if (dateToActive && dateTo === '') {
-        showLocalNotification("Prosím vyplňte 'Dátum do', pretože je aktívny.", 'error');
-        return;
-    }
-    if (dateFromActive && dateToActive && dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) {
-        showLocalNotification("Dátum 'Od' nemôže byť po dátume 'Do'.", 'error');
-        return;
-    }
 
     console.log("AddCategoryModal handleSubmit: Client-side validation passed. Calling onAddCategory.");
-    const success = await onAddCategory(newCategoryName, dateFrom, dateTo, dateFromActive, dateToActive);
+    // Zavoláme bez dátumov
+    const success = await onAddCategory(newCategoryName);
 
     if (success) {
       onClose(); 
@@ -163,11 +116,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) {
     }
   };
 
-  const isDisabled = loading || newCategoryName.trim() === '' || 
-                     (dateFromActive && dateFrom === '') || 
-                     (dateToActive && dateTo === '') || 
-                     (dateFromActive && dateToActive && dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo));
-
+  const isDisabled = loading || newCategoryName.trim() === '';
 
   return React.createElement(
     'div',
@@ -188,44 +137,7 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) {
           onChange: (e) => setNewCategoryName(e.target.value),
           required: true,
           disabled: loading,
-        }),
-
-        React.createElement('div', { className: 'flex items-center justify-between mt-4 mb-2' },
-          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold', htmlFor: 'date-from' }, 'Dátum narodenia od'),
-          React.createElement(ToggleButton, {
-            isActive: dateFromActive,
-            onToggle: () => setDateFromActive(!dateFromActive),
-            disabled: loading,
-          })
-        ),
-        React.createElement('input', {
-            type: 'date',
-            id: 'date-from',
-            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-            value: dateFrom,
-            onChange: (e) => setDateFrom(e.target.value),
-            required: dateFromActive,
-            disabled: loading,
-        }),
-
-        React.createElement('div', { className: 'flex items-center justify-between mt-4 mb-2' },
-          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold', htmlFor: 'date-to' }, 'Dátum narodenia do'),
-          React.createElement(ToggleButton, {
-            isActive: dateToActive,
-            onToggle: () => setDateToActive(!dateToActive),
-            disabled: loading,
-          })
-        ),
-        React.createElement('input', {
-            type: 'date',
-            id: 'date-to',
-            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-            value: dateTo,
-            onChange: (e) => setDateTo(e.target.value),
-            required: dateToActive,
-            disabled: loading,
-        }),
-
+        })
       ),
       React.createElement(
         'div',
@@ -253,21 +165,13 @@ function AddCategoryModal({ show, onClose, onAddCategory, loading }) {
   );
 }
 
-// EditCategoryModal Component
+// EditCategoryModal Component - ODSTRÁNENÉ DÁTUMY
 function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, existingCategories }) {
   const [editedCategoryName, setEditedCategoryName] = React.useState(category ? category.name : '');
-  const [editedDateFrom, setEditedDateFrom] = React.useState(category ? category.dateFrom : '');
-  const [editedDateTo, setEditedDateTo] = React.useState(category ? category.dateTo : '');
-  const [editedDateFromActive, setEditedDateFromActive] = React.useState(category ? (category.dateFromActive !== undefined ? category.dateFromActive : false) : false); 
-  const [editedDateToActive, setEditedDateToActive] = React.useState(category ? (category.dateToActive !== undefined ? category.dateToActive : false) : false);     
 
   React.useEffect(() => {
     if (category) {
       setEditedCategoryName(category.name);
-      setEditedDateFrom(category.dateFrom || '');
-      setEditedDateTo(category.dateTo || '');
-      setEditedDateFromActive(category.dateFromActive !== undefined ? category.dateFromActive : false); 
-      setEditedDateToActive(category.dateToActive !== undefined ? category.dateToActive : false);     
     }
   }, [category]);
 
@@ -286,11 +190,9 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
 
     return existingCategories.some(cat => 
         cat.id !== currentCategoryId && 
-        cat.name.toLowerCase() === trimmedName &&
-        cat.dateFrom === editedDateFrom &&
-        cat.dateTo === editedDateTo
+        cat.name.toLowerCase() === trimmedName
     );
-  }, [editedCategoryName, editedDateFrom, editedDateTo, existingCategories, category]);
+  }, [editedCategoryName, existingCategories, category]);
 
   if (!show || !category) return null;
 
@@ -299,26 +201,10 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
         showLocalNotification("Prosím vyplňte názov kategórie.", 'error');
         return;
     }
-    if (editedDateFromActive && editedDateFrom === '') {
-        showLocalNotification("Prosím vyplňte 'Dátum od', pretože je aktívny.", 'error');
-        return;
-    }
-    if (editedDateToActive && editedDateTo === '') {
-        showLocalNotification("Prosím vyplňte 'Dátum do', pretože je aktívny.", 'error');
-        return;
-    }
-    if (editedDateFromActive && editedDateToActive && editedDateFrom && editedDateTo && new Date(editedDateFrom) > new Date(editedDateTo)) {
-        showLocalNotification("Dátum 'Od' nemôže byť po dátume 'Do'.", 'error');
-        return;
-    }
-    onSaveCategory(category.id, editedCategoryName, editedDateFrom, editedDateTo, editedDateFromActive, editedDateToActive);
+    onSaveCategory(category.id, editedCategoryName);
   };
 
-  const isDisabled = loading || editedCategoryName.trim() === '' || 
-                     (editedDateFromActive && editedDateFrom === '') || 
-                     (editedDateToActive && editedDateTo === '') || 
-                     categoryExists || 
-                     (editedDateFromActive && editedDateToActive && editedDateFrom && editedDateTo && new Date(editedDateFrom) > new Date(editedDateTo));
+  const isDisabled = loading || editedCategoryName.trim() === '' || categoryExists;
 
   return React.createElement(
     'div',
@@ -339,42 +225,6 @@ function EditCategoryModal({ show, onClose, onSaveCategory, loading, category, e
           onChange: (e) => setEditedCategoryName(e.target.value),
           required: true,
           disabled: loading,
-        }),
-
-        React.createElement('div', { className: 'flex items-center justify-between mt-4 mb-2' },
-          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold', htmlFor: 'edit-date-from' }, 'Dátum narodenia od'),
-          React.createElement(ToggleButton, {
-            isActive: editedDateFromActive,
-            onToggle: () => setEditedDateFromActive(!editedDateFromActive),
-            disabled: loading,
-          })
-        ),
-        React.createElement('input', {
-            type: 'date',
-            id: 'edit-date-from',
-            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-            value: editedDateFrom,
-            onChange: (e) => setEditedDateFrom(e.target.value),
-            required: editedDateFromActive,
-            disabled: loading,
-        }),
-
-        React.createElement('div', { className: 'flex items-center justify-between mt-4 mb-2' },
-          React.createElement('label', { className: 'block text-gray-700 text-sm font-bold', htmlFor: 'edit-date-to' }, 'Dátum narodenia do'),
-          React.createElement(ToggleButton, {
-            isActive: editedDateToActive,
-            onToggle: () => setEditedDateToActive(!editedDateToActive),
-            disabled: loading,
-          })
-        ),
-        React.createElement('input', {
-            type: 'date',
-            id: 'edit-date-to',
-            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500',
-            value: editedDateTo,
-            onChange: (e) => setEditedDateTo(e.target.value),
-            required: editedDateToActive,
-            disabled: loading,
         }),
         categoryExists && React.createElement(
             'p',
@@ -619,9 +469,7 @@ function AddCategoriesApp() {
       return false; 
     }
     const startDate = new Date(registrationStartDate.seconds * 1000); 
-//    console.log(`areAllButtonsDisabledByDate: Aktuálny čas: ${currentTime.toLocaleString()}, Dátum zablokovania: ${startDate.toLocaleString()}`);
     const isDisabled = currentTime >= startDate;
-//    console.log(`areAllButtonsDisabledByDate: Výsledok porovnania (isDisabled): ${isDisabled}.`);
     return isDisabled;
   }, [registrationStartDate, currentTime]); 
 
@@ -643,30 +491,19 @@ function AddCategoriesApp() {
           console.log("AddCategoriesApp: onSnapshot pre dokument 'categories' spustený.");
           if (docSnapshot.exists()) { 
             const data = docSnapshot.data();
+            // Načítavame už len názov kategórie
             let fetchedCategories = Object.entries(data).map(([id, categoryValue]) => { 
                 let name = '';
-                let dateFrom = '';
-                let dateTo = '';
-                let dateFromActive = false; 
-                let dateToActive = false;   
 
                 if (typeof categoryValue === 'object' && categoryValue !== null && categoryValue.name) {
                     name = categoryValue.name;
-                    dateFrom = categoryValue.dateFrom || '';
-                    dateTo = categoryValue.dateTo || '';
-                    dateFromActive = categoryValue.dateFromActive !== undefined ? categoryValue.dateFromActive : false; 
-                    dateToActive = categoryValue.dateToActive !== undefined ? categoryValue.dateToActive : false;     
                 } else if (typeof categoryValue === 'string') {
                     name = categoryValue;
-                    dateFrom = '';
-                    dateTo = '';
                 } else {
                     console.warn(`Neočakávaný formát dát kategórie pre ID ${id}:`, categoryValue);
                     name = `Neznáma kategória (${id})`; 
-                    dateFrom = '';
-                    dateTo = '';
                 }
-                return { id, name, dateFrom, dateTo, dateFromActive, dateToActive };
+                return { id, name };
             });
 
             fetchedCategories.sort((a, b) => {
@@ -728,68 +565,21 @@ function AddCategoriesApp() {
       const currentTimestamp = new Date().toISOString(); 
       const changesToAdd = []; 
 
-      const formatNotificationDate = (dateString) => {
-        if (!dateString) return '';
-        try {
-          const [year, month, day] = dateString.split('-');
-          return `${day}. ${month}. ${year}`;
-        } catch (e) {
-          console.error("Chyba pri formátovaní dátumu pre notifikáciu:", dateString, e);
-          return dateString; 
-        }
-      };
-
       if (notificationData.type === 'create') {
-        const { newCategoryName, dateFrom, dateTo, dateFromActive, dateToActive } = notificationData.data;
-        const formattedDateFrom = formatNotificationDate(dateFrom);
-        const formattedDateTo = formatNotificationDate(dateTo);
+        const { newCategoryName } = notificationData.data;
 
         changesToAdd.push(`Pre kategóriu '''${newCategoryName}'`);
         changesToAdd.push(`Vytvorenie názvu kategórie: '''${newCategoryName}'`);
 
-        if (dateFrom || dateFromActive) { 
-            changesToAdd.push(`Dátum od: '''${formattedDateFrom}'`);
-            changesToAdd.push(`Aktívnosť pre dátum od ${formattedDateFrom || 'N/A'}: '''${dateFromActive ? 'Áno' : 'Nie'}'`);
-        }
-
-        if (dateTo || dateToActive) { 
-            changesToAdd.push(`Dátum do: '''${formattedDateTo}'`);
-            changesToAdd.push(`Aktívnosť pre dátum do ${formattedDateTo || 'N/A'}: '''${dateToActive ? 'Áno' : 'Nie'}'`); 
-        }
-
       } else if (notificationData.type === 'edit') {
         const {
-          originalCategoryName, originalDateFrom, originalDateTo, originalDateFromActive, originalDateToActive,
-          newCategoryName, newDateFrom, newDateTo, newDateFromActive, newDateToActive
+          originalCategoryName,
+          newCategoryName
         } = notificationData.data;
 
         if (originalCategoryName !== newCategoryName) {
           changesToAdd.push(`Pre kategóriu '''${newCategoryName}'`);
           changesToAdd.push(`Zmena názvu kategórie: z '${originalCategoryName}' na '${newCategoryName}'`);
-        }
-
-        const formattedOriginalDateFrom = formatNotificationDate(originalDateFrom);
-        const formattedNewDateFrom = formatNotificationDate(newDateFrom);
-        if (formattedOriginalDateFrom !== formattedNewDateFrom || originalDateFromActive !== newDateFromActive) {
-          changesToAdd.push(`Pre kategóriu '''${newCategoryName}'`); 
-          if (formattedOriginalDateFrom !== formattedNewDateFrom) {
-            changesToAdd.push(`Zmena dátumu od: z '${formattedOriginalDateFrom}' na '${formattedNewDateFrom}'`);
-          }
-          if (originalDateFromActive !== newDateFromActive) {
-            changesToAdd.push(`Zmena aktívnosti pre dátum od ${formattedNewDateFrom}: z '${originalDateFromActive ? 'Áno' : 'Nie'}' na '${newDateFromActive ? 'Áno' : 'Nie'}'`);
-          }
-        }
-
-        const formattedOriginalDateTo = formatNotificationDate(originalDateTo);
-        const formattedNewDateTo = formatNotificationDate(newDateTo);
-        if (formattedOriginalDateTo !== formattedNewDateTo || originalDateToActive !== newDateToActive) {
-          changesToAdd.push(`Pre kategóriu '''${newCategoryName}'`); 
-          if (formattedOriginalDateTo !== formattedNewDateTo) {
-            changesToAdd.push(`Zmena dátumu do: z '${formattedOriginalDateTo}' na '${formattedNewDateTo}'`);
-          }
-          if (originalDateToActive !== newDateToActive) {
-            changesToAdd.push(`Zmena aktívnosti pre dátum do ${formattedNewDateTo}: z '${originalDateToActive ? 'Áno' : 'Nie'}' na '${newDateToActive ? 'Áno' : 'Nie'}'`);
-          }
         }
       } else if (notificationData.type === 'delete') {
         changesToAdd.push(
@@ -817,7 +607,7 @@ function AddCategoriesApp() {
   };
 
 
-  const handleAddCategorySubmit = async (categoryName, dateFrom, dateTo, dateFromActive, dateToActive) => {
+  const handleAddCategorySubmit = async (categoryName) => {
     console.log("handleAddCategorySubmit: Starting category submission for name:", categoryName);
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
       if (typeof showLocalNotification === 'function') {
@@ -833,22 +623,6 @@ function AddCategoriesApp() {
       }
       console.log("handleAddCategorySubmit: Category name is empty. Returning false.");
       return false; 
-    }
-
-    if (dateFromActive && dateFrom === '') {
-        showLocalNotification("Prosím vyplňte 'Dátum od', pretože je aktívny.", 'error');
-        console.log("handleAddCategorySubmit: DateFrom active but empty. Returning false.");
-        return false; 
-    }
-    if (dateToActive && dateTo === '') {
-        showLocalNotification("Prosím vyplňte 'Dátum do', pretože je aktívny.", 'error');
-        console.log("handleAddCategorySubmit: DateTo active but empty. Returning false.");
-        return false; 
-    }
-    if (dateFromActive && dateToActive && dateFrom && dateTo && new Date(dateFrom) > new Date(dateTo)) {
-        showLocalNotification("Dátum 'Od' nemôže byť po dátume 'Do'.", 'error');
-        console.log("handleAddCategorySubmit: DateFrom after DateTo. Returning false.");
-        return false; 
     }
 
     setLoading(true);
@@ -876,11 +650,7 @@ function AddCategoriesApp() {
 
       await setDoc(categoriesDocRef, {
         [newFieldId]: {
-            name: trimmedCategoryName,
-            dateFrom: dateFromActive ? dateFrom : '', 
-            dateTo: dateToActive ? dateTo : '',       
-            dateFromActive: dateFromActive,           
-            dateToActive: dateToActive                
+            name: trimmedCategoryName
         }
       }, { merge: true });
 
@@ -889,7 +659,7 @@ function AddCategoriesApp() {
       }
 
       const userEmail = user.email;
-      await sendAdminNotification({ type: 'create', data: { newCategoryName: trimmedCategoryName, dateFrom: dateFrom, dateTo: dateTo, dateFromActive: dateFromActive, dateToActive: dateToActive, userEmail: userEmail } });
+      await sendAdminNotification({ type: 'create', data: { newCategoryName: trimmedCategoryName, userEmail: userEmail } });
 
       return true; 
 
@@ -905,7 +675,7 @@ function AddCategoriesApp() {
     }
   };
 
-  const handleEditCategorySubmit = async (categoryId, newName, newDateFrom, newDateTo, newDateFromActive, newDateToActive) => { 
+  const handleEditCategorySubmit = async (categoryId, newName) => { 
     if (!db || !user || !userProfileData || userProfileData.role !== 'admin') {
       if (typeof showLocalNotification === 'function') {
         showLocalNotification("Nemáte oprávnenie na úpravu kategórie.", 'error');
@@ -918,18 +688,6 @@ function AddCategoriesApp() {
         showLocalNotification("Názov kategórie nemôže byť prázdny.", 'error');
       }
       return;
-    }
-    if (newDateFromActive && newDateFrom === '') {
-        showLocalNotification("Prosím vyplňte 'Dátum od', pretože je aktívny.", 'error');
-        return;
-    }
-    if (newDateToActive && newDateTo === '') {
-        showLocalNotification("Prosím vyplňte 'Dátum do', pretože je aktívny.", 'error');
-        return;
-    }
-    if (newDateFromActive && newDateToActive && new Date(newDateFrom) > new Date(newDateTo)) {
-        showLocalNotification("Dátum 'Od' nemôže byť po dátume 'Do'.", 'error');
-        return;
     }
 
     setLoading(true);
@@ -954,18 +712,10 @@ function AddCategoriesApp() {
 
       const originalCategoryData = currentCategoriesData[categoryId];
       const originalCategoryName = originalCategoryData.name;
-      const originalDateFrom = originalCategoryData.dateFrom;
-      const originalDateTo = originalCategoryData.dateTo;
-      const originalDateFromActive = originalCategoryData.dateFromActive !== undefined ? originalCategoryData.dateFromActive : false; 
-      const originalDateToActive = originalCategoryData.dateToActive !== undefined ? originalCategoryData.dateToActive : false;     
 
       await setDoc(categoriesDocRef, {
         [categoryId]: {
-            name: trimmedNewName,
-            dateFrom: newDateFromActive ? newDateFrom : '', 
-            dateTo: newDateToActive ? newDateTo : '',       
-            dateFromActive: newDateFromActive,              
-            dateToActive: newDateToActive                   
+            name: trimmedNewName
         }
       }, { merge: true });
 
@@ -980,15 +730,7 @@ function AddCategoriesApp() {
           type: 'edit', 
           data: { 
               originalCategoryName: originalCategoryName, 
-              originalDateFrom: originalDateFrom,
-              originalDateTo: originalDateTo,
-              originalDateFromActive: originalDateFromActive,
-              originalDateToActive: originalDateToActive,
               newCategoryName: trimmedNewName, 
-              newDateFrom: newDateFrom,
-              newDateTo: newDateTo,
-              newDateFromActive: newDateFromActive,
-              newDateToActive: newDateToActive,
               userEmail: userEmail 
           } 
       }); 
@@ -1045,27 +787,6 @@ function AddCategoriesApp() {
     }
   };
 
-  const formatDateDisplay = (dateString) => {
-    if (!dateString) return '';
-    try {
-      const [year, month, day] = dateString.split('-');
-      return `${day}. ${month}. ${year}`;
-    } catch (e) {
-      console.error("Chyba pri formátovaní dátumu pre zobrazenie:", dateString, e);
-      return dateString;
-    }
-  };
-
-  const renderDateStatus = (dateString, isActive) => {
-    const statusColor = isActive ? 'bg-green-500' : 'bg-red-500';
-    return React.createElement(
-      'div',
-      { className: 'flex items-center space-x-2' },
-      React.createElement('span', { className: `inline-block h-3 w-3 rounded-full ${statusColor}` }),
-      React.createElement('span', null, formatDateDisplay(dateString))
-    );
-  };
-
   if (!isAuthReady || !userProfileData) {
     return null;
   }
@@ -1119,9 +840,7 @@ function AddCategoriesApp() {
                             'tr',
                             { className: 'w-full bg-gray-200 text-gray-600 uppercase text-sm leading-normal' },
                             React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Názov kategórie'),
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Dátum od'),
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-left' }, 'Dátum do'),
-                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center' }, '')
+                            React.createElement('th', { scope: 'col', className: 'py-3 px-6 text-center' }, 'Akcie')
                         )
                     ),
                     React.createElement(
@@ -1132,8 +851,6 @@ function AddCategoriesApp() {
                                 'tr',
                                 { key: cat.id, className: 'border-b border-gray-200 hover:bg-gray-100' },
                                 React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, cat.name),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, renderDateStatus(cat.dateFrom, cat.dateFromActive)),
-                                React.createElement('td', { className: 'py-3 px-6 text-left whitespace-nowrap' }, renderDateStatus(cat.dateTo, cat.dateToActive)),
                                 React.createElement(
                                     'td',
                                     { className: 'py-3 px-6 text-center' },
