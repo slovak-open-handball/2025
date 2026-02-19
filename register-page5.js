@@ -190,26 +190,25 @@ function TeamAccommodationAndArrival({
         setArrivalMinutes(initialTime ? initialTime.split(':')[1] : '');
     }, [team.accommodation, team.arrival]);
 
-    // NOVÝ EFEKT: Kontrola kapacity pre aktuálne vybraný typ ubytovania
+    // EFEKT PRE SLEDOVANIE KAPACITY
     React.useEffect(() => {
         // Ak nie je vybraný žiadny typ ubytovania alebo je to "bez ubytovania", nič nerobíme
         if (!selectedAccommodation || selectedAccommodation === 'bez ubytovania') {
             return;
         }
-    
+
         // Nájdeme vybraný typ ubytovania
         const selectedAccType = accommodationTypes.find(acc => acc.type === selectedAccommodation);
         if (!selectedAccType) return;
-    
+
         // KROK 1: Existujúce registrácie z databázy
         const existingCount = existingAccommodationCounts[selectedAccType.type] || 0;
         
-        // KROK 2: Aktuálne prebiehajúca registrácia - použijeme currentRegistrationAccommodationCounts priamo
-        // a odpočítame tento tím len ak je aktuálne vybraný
+        // KROK 2: Aktuálne prebiehajúca registrácia (bez tohto tímu)
         let currentCountWithoutThisTeam = currentRegistrationAccommodationCounts[selectedAccType.type] || 0;
         
-        // DÔLEŽITÉ: Odpočítame tento tím z aktuálnej registrácie LEN AK je aktuálne vybraný
-        // a jeho typ sa zhoduje s kontrolovaným typom
+        // DÔLEŽITÉ: Odpočítame tento tím z aktuálnej registrácie
+        // Pretože currentRegistrationAccommodationCounts už obsahuje tento tím
         if (team.accommodation?.type === selectedAccommodation) {
             currentCountWithoutThisTeam = Math.max(0, currentCountWithoutThisTeam - currentTeamPeople);
         }
@@ -225,10 +224,10 @@ function TeamAccommodationAndArrival({
             // Zrušíme výber v lokálnom stave
             setSelectedAccommodation('');
             
-            // Zrušíme výber v rodičovskom stave - toto by malo aktualizovať teamsDataFromPage4
+            // Zrušíme výber v rodičovskom stave
             onGranularTeamsDataChange(categoryName, teamIndex, 'accommodation', { type: '' });
             
-            // Zobrazíme notifikáciu s oneskorením, aby sa stihol spracovať event
+            // Zobrazíme notifikáciu s oneskorením
             setTimeout(() => {
                 if (typeof window.showNotification === 'function') {
                     window.showNotification(`Typ ubytovania "${selectedAccommodation}" už nie je k dispozícii. Kapacita je naplnená.`, 'warning');
@@ -246,7 +245,6 @@ function TeamAccommodationAndArrival({
         categoryName, 
         teamIndex, 
         onGranularTeamsDataChange
-        // ODSTRÁNENÉ: team.accommodation?.type - to spôsobovalo rekurziu
     ]);
 
     const handleAccommodationChange = (e) => {
@@ -269,7 +267,7 @@ function TeamAccommodationAndArrival({
             
             // Ak už má tento tím vybraný iný typ ubytovania, odpočítame ho
             if (team.accommodation?.type && team.accommodation.type !== 'bez ubytovania' && team.accommodation.type !== newValue) {
-                currentCountWithoutThisTeam -= currentTeamPeople;
+                currentCountWithoutThisTeam = Math.max(0, currentCountWithoutThisTeam - currentTeamPeople);
             }
             
             // KROK 3: Celková obsadenosť
@@ -395,7 +393,7 @@ function TeamAccommodationAndArrival({
                         
                         // Ak už má tento tím vybraný iný typ ubytovania, odpočítame ho
                         if (team.accommodation?.type && team.accommodation.type !== 'bez ubytovania' && team.accommodation.type !== acc.type) {
-                            currentCountWithoutThisTeam -= currentTeamPeople;
+                            currentCountWithoutThisTeam = Math.max(0, currentCountWithoutThisTeam - currentTeamPeople);
                         }
                         
                         // KROK 3: Celková obsadenosť
