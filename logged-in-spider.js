@@ -1920,7 +1920,19 @@ const SpiderApp = ({ userProfileData }) => {
                                                 })
                                             ),
                                             // Zvislá čiara od stredu bunky do spodného okraja
-                                            React.createElement('div', { className: 'spider-line-vertical spider-line-vertical-bottom' })
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    left: '50%',
+                                                    top: '50%',
+                                                    bottom: 0,
+                                                    transform: 'translateX(-50%)',
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
                                         )
                                     ),
                                                                         
@@ -2098,7 +2110,19 @@ const SpiderApp = ({ userProfileData }) => {
                                                 })
                                             ),
                                             // V hornej prostrednej bunke zvislá čiara od stredu po spodný okraj
-                                            React.createElement('div', { className: 'spider-line-vertical spider-line-vertical-bottom' })
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    left: '50%',
+                                                    top: '50%',
+                                                    bottom: 0,
+                                                    transform: 'translateX(-50%)',
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
                                         ),
                                         React.createElement(
                                             'td',
