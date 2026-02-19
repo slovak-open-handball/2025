@@ -18,6 +18,9 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
   const [showRefreshmentColumn, setShowRefreshmentColumn] = React.useState(false);
   const [hasParticipantCard, setHasParticipantCard] = React.useState(false);
 
+  // Konštanta pre typ "bez ubytovania"
+  const NO_ACCOMMODATION_TYPE = "bez ubytovania";
+
   const getDaysBetween = (start, end) => {
     const dates = [];
     const [startYear, startMonth, startDay] = start.split('-').map(Number);
@@ -426,6 +429,18 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     }
   };
 
+  // Vytvorenie zoznamu všetkých možností ubytovania vrátane "bez ubytovania"
+  const allAccommodationOptions = React.useMemo(() => {
+    const options = [...accommodations];
+    // Pridáme "bez ubytovania" ako špeciálny typ
+    options.push({ 
+      type: NO_ACCOMMODATION_TYPE, 
+      capacity: 'neobmedzená',
+      isSpecialType: true // Pre prípadné špeciálne spracovanie
+    });
+    return options;
+  }, [accommodations]);
+
   return React.createElement(
     React.Fragment,
     null,
@@ -558,26 +573,35 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         ),
 
         React.createElement('h4', { className: 'text-lg font-semibold mb-2' }, 'Dostupné pre typy ubytovania:'),
-        accommodations.length > 0 ? (
+        React.createElement(
+          'div',
+          { className: 'grid grid-cols-2 md:grid-cols-3 gap-3 mb-4 p-3 border border-gray-200 rounded-lg bg-gray-50' },
+          // Najprv zobrazíme bežné typy ubytovania
+          accommodations.map(acc => (
+            React.createElement(
+              'label',
+              { key: acc.type, className: 'flex items-center space-x-2 cursor-pointer' },
+              React.createElement('input', {
+                type: 'checkbox',
+                className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
+                checked: selectedAccommodations.includes(acc.type),
+                onChange: (e) => handleAccommodationChange(acc.type, e.target.checked)
+              }),
+              React.createElement('span', { className: 'text-gray-700' }, `${acc.type} (kapacita: ${acc.capacity})`)
+            )
+          )),
+          // Pridáme špeciálny typ "bez ubytovania" (vždy dostupný)
           React.createElement(
-            'div',
-            { className: 'grid grid-cols-2 md:grid-cols-3 gap-3 mb-4 p-3 border border-gray-200 rounded-lg bg-gray-50' },
-            accommodations.map(acc => (
-              React.createElement(
-                'label',
-                { key: acc.type, className: 'flex items-center space-x-2 cursor-pointer' },
-                React.createElement('input', {
-                  type: 'checkbox',
-                  className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
-                  checked: selectedAccommodations.includes(acc.type),
-                  onChange: (e) => handleAccommodationChange(acc.type, e.target.checked)
-                }),
-                React.createElement('span', { className: 'text-gray-700' }, `${acc.type} (kapacita: ${acc.capacity})`)
-              )
-            ))
+            'label',
+            { key: NO_ACCOMMODATION_TYPE, className: 'flex items-center space-x-2 cursor-pointer border-t-2 border-gray-300 pt-3 mt-2 col-span-2 md:col-span-3' },
+            React.createElement('input', {
+              type: 'checkbox',
+              className: 'form-checkbox h-5 w-5 text-green-600 rounded border-gray-300 focus:ring-green-500',
+              checked: selectedAccommodations.includes(NO_ACCOMMODATION_TYPE),
+              onChange: (e) => handleAccommodationChange(NO_ACCOMMODATION_TYPE, e.target.checked)
+            }),
+            React.createElement('span', { className: 'text-gray-700 font-semibold' }, `${NO_ACCOMMODATION_TYPE} (vždy dostupné)`)
           )
-        ) : (
-          React.createElement('p', { className: 'text-gray-500 text-center mb-4' }, 'Najprv vytvorte typy ubytovania v sekcii "Nastavenia ubytovania".')
         ),
 
         React.createElement('h4', { className: 'text-lg font-semibold mb-2' }, 'Stravovanie na deň:'),
