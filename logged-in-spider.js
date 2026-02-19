@@ -2208,7 +2208,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     left: '33.33333%',
                                                     height: '100%',
                                                     top: 0,
-                                                    transform: 'translateX(-50%)'
+                                                    transform: 'translateX(-50%) translateX(-1px)'
                                                 }
                                             }),
                                             
@@ -2219,7 +2219,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     left: '66.66667%',
                                                     height: '100%',
                                                     top: 0,
-                                                    transform: 'translateX(-50%)'
+                                                    transform: 'translateX(-50%) translateX(1px)'
                                                 }
                                             }),
                                             
