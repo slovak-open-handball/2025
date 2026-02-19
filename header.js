@@ -492,10 +492,25 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                 const seenBy = newNotification.seenBy || [];                
                 if (!seenBy.includes(userId) && !shownNotificationIds.has(notificationId)) {                    
                     shownNotificationIds.add(notificationId);                    
-                    let changesMessage = '';                    
+                    
+                    let changesMessage = '';
+                    
+                    // === OPRAVA: Spracovanie všetkých zmien v poli changes ===
                     if (newNotification.changes) {
                         if (Array.isArray(newNotification.changes) && newNotification.changes.length > 0) {
-                            changesMessage = newNotification.changes[0];
+                            // Spojíme všetky zmeny do jedného reťazca oddeleného odrážkami
+                            changesMessage = newNotification.changes.map(change => {
+                                // Ak je zmena objekt, skúsime z neho dostať text
+                                if (typeof change === 'object' && change !== null) {
+                                    // Môžeš prispôsobiť podľa štruktúry tvojich objektov
+                                    return change.text || change.message || JSON.stringify(change);
+                                }
+                                return change;
+                            }).join(' • '); // Odrážky alebo ' • ' ako oddeľovač
+                            
+                            // Alternatívne môžeš použiť <br> ak chceš nové riadky:
+                            // changesMessage = newNotification.changes.join('<br>');
+                            
                         } else if (typeof newNotification.changes === 'string') {
                             changesMessage = newNotification.changes;
                         }
@@ -505,11 +520,14 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                         changesMessage = newNotification.content;
                     } else {
                         changesMessage = 'Nová notifikácia';
-                    }                    
+                    }
+                    
                     if (newNotification.userEmail) {
                         changesMessage = `Používateľ ${newNotification.userEmail}: ${changesMessage}`;
                     }                    
+                    
                     showDatabaseNotification(changesMessage, newNotification.type || 'info');                    
+                    
                     const notificationDocRef = doc(window.db, "notifications", notificationId);
                     try {
                         await updateDoc(notificationDocRef, {
@@ -522,7 +540,7 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
             }
         });
     }, (error) => {
-            console.error("", error);
+        console.error("", error);
     });
 };
 
