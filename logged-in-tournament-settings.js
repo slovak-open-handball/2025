@@ -125,6 +125,20 @@ const sendAdminNotification = async (db, auth, notificationData) => {
           changes.push(`Cena: ${originalPackage.price}€ -> ${newPackage.price}€`);
         }
 
+        // Kontrola zmien v ubytovaní
+        const originalAccommodations = originalPackage.accommodationTypes || [];
+        const newAccommodations = newPackage.accommodationTypes || [];
+        
+        const addedAccommodations = newAccommodations.filter(acc => !originalAccommodations.includes(acc));
+        const removedAccommodations = originalAccommodations.filter(acc => !newAccommodations.includes(acc));
+        
+        if (addedAccommodations.length > 0) {
+          changes.push(`Pridané typy ubytovania: ${addedAccommodations.join(', ')}`);
+        }
+        if (removedAccommodations.length > 0) {
+          changes.push(`Odobrané typy ubytovania: ${removedAccommodations.join(', ')}`);
+        }
+
         const mealTypes = ['breakfast', 'lunch', 'dinner', 'refreshment'];
         
         const originalMealDates = Object.keys(originalPackage.meals || {}).filter(key => !isNaN(new Date(key)));
@@ -160,7 +174,7 @@ const sendAdminNotification = async (db, auth, notificationData) => {
             }
         }
         
-        changesContent = changes;
+        changesContent = changes; // Toto je teraz pole, nie string
       } else if (notificationData.type === 'deletePackage') {
         changesContent = `Zmazanie balíčka: '''${notificationData.data.deletedName} (cena: ${notificationData.data.deletedPrice}€)'`;
       }
