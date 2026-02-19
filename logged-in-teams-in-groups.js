@@ -200,7 +200,6 @@ const AddTeamsGroupApp = (props) => {
         if (categoryName && teamName.startsWith(categoryName + ' ')) {
             teamNameWithoutCategory = teamName.substring(categoryName.length + 1).trim();
         } else {
-            // Ak názov nezačína názvom kategórie, skúsime ho aj tak použiť
             teamNameWithoutCategory = teamName;
         }
     
@@ -229,62 +228,49 @@ const AddTeamsGroupApp = (props) => {
             return false;
         }
     
-        // ZÍSKAME VŠETKY SKUPINY V DANEJ KATEGÓRII (nielen základné)
-        const allGroupsInCategory = allGroupsByCategoryId[Object.keys(categoryIdToNameMap).find(
-            id => categoryIdToNameMap[id] === categoryName
-        )] || [];
+        // Nájdeme ID kategórie podľa názvu
+        const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryName);
         
-        console.log(`Všetky skupiny v kategórii ${categoryName}:`, allGroupsInCategory.map(g => g.name));
-    
-        // Prehľadáme všetky skupiny v tejto kategórii
-        for (const group of allGroupsInCategory) {
-            console.log(`Kontrolujem skupinu: ${group.name} (typ: ${group.type})`);
-            
-            // Tímy v tejto skupine (všetky, bez ohľadu na typ)
-            const teamsInGroup = allTeams.filter(t => 
-                t.category === categoryName && 
-                t.groupName === group.name
-                // Odstránili sme filter !t.isSuperstructureTeam - hľadáme vo všetkých tímoch
-            );
-    
-            console.log(`Tímov v skupine ${group.name}: ${teamsInGroup.length}`);
-    
-            // Skontrolujeme, či existuje tím s číslom teamNumber
-            const teamExists = teamsInGroup.some(t => {
-                // Odstránime prefix kategórie z názvu tímu
-                let basicTeamName = t.teamName;
-                if (categoryName && basicTeamName.startsWith(categoryName + ' ')) {
-                    basicTeamName = basicTeamName.substring(categoryName.length + 1).trim();
-                }
-    
-                console.log(`Porovnávam s tímom: ${basicTeamName}`);
-    
-                // Extrahujeme číslo a písmeno z názvu tímu
-                const basicMatch = basicTeamName.match(/(\d+)([A-ZÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ])$/);
-                if (!basicMatch) {
-                    console.log(`Tím nemá správny formát: ${basicTeamName}`);
-                    return false;
-                }
-    
-                const basicNumber = basicMatch[1];
-                const basicLetter = basicMatch[2];
-    
-                console.log(`Tím: číslo=${basicNumber}, písmeno=${basicLetter}`);
-    
-                // Skontrolujeme, či číslo a písmeno zodpovedajú
-                const matches = basicNumber === teamNumber && basicLetter === teamLetter;
-                console.log(`Zhoda: ${matches}`);
-                return matches;
-            });
-    
-            if (teamExists) {
-                console.log(`✓ Tím ${teamName} má zástupcu v skupine ${group.name} (${teamNumber}${teamLetter})`);
-                return true;
-            }
+        if (!categoryId) {
+            console.log(`Nenašlo sa ID pre kategóriu ${categoryName}`);
+            return false;
         }
+    
+        // Získame všetky skupiny v tejto kategórii
+        const groupsInCategory = allGroupsByCategoryId[categoryId] || [];
+        console.log(`Skupiny v kategórii ${categoryName}:`, groupsInCategory.map(g => g.name));
+    
+        // Nájdeme skupinu, ktorá končí na teamLetter (napr. "Skupina D")
+        const targetGroup = groupsInCategory.find(g => g.name.slice(-1) === teamLetter);
         
-        console.log(`✗ Tím ${teamName} NEMÁ zástupcu v žiadnej skupine v kategórii ${categoryName}`);
-        return false;
+        if (!targetGroup) {
+            console.log(`Nenašla sa skupina končiaca na ${teamLetter} v kategórii ${categoryName}`);
+            return false;
+        }
+    
+        console.log(`Cieľová skupina: ${targetGroup.name}`);
+    
+        // Nájdeme všetky tímy v tejto skupine
+        const teamsInTargetGroup = allTeams.filter(t => 
+            t.category === categoryName && 
+            t.groupName === targetGroup.name
+        );
+    
+        console.log(`Tímy v skupine ${targetGroup.name}:`, teamsInTargetGroup.map(t => ({
+            name: t.teamName,
+            order: t.order
+        })));
+    
+        // Skontrolujeme, či existuje tím s order = teamNumber
+        const teamExists = teamsInTargetGroup.some(t => t.order === parseInt(teamNumber, 10));
+    
+        if (teamExists) {
+            console.log(`✓ Tím ${teamName} má zástupcu v skupine ${targetGroup.name} na pozícii ${teamNumber}`);
+            return true;
+        } else {
+            console.log(`✗ Tím ${teamName} NEMÁ zástupcu v skupine ${targetGroup.name} na pozícii ${teamNumber}`);
+            return false;
+        }
     };
   
     const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
