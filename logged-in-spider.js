@@ -1920,7 +1920,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                 })
                                             ),
                                             // Zvislá čiara od stredu bunky do spodného okraja
-                                            React.createElement('div', { className: 'spider-line-vertical spider-line-vertical-bottom' })
+                                            React.createElement('div', { className: 'spider-line-vertical-bottom' })
                                         )
                                     ),
                                                                         
@@ -2016,7 +2016,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                 })
                                             ),
                                             // Zvislá čiara od stredu bunky do horného okraja
-                                            React.createElement('div', { className: 'spider-line-vertical spider-line-vertical-top' })
+                                            React.createElement('div', { className: 'spider-line-vertical-top' })
                                         )
                                     )
                                 ),
@@ -2098,7 +2098,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                 })
                                             ),
                                             // V hornej prostrednej bunke zvislá čiara od stredu po spodný okraj
-                                            React.createElement('div', { className: 'spider-line-vertical spider-line-vertical-bottom' })
+                                            React.createElement('div', { className: 'spider-line-vertical-bottom' })
                                         ),
                                         React.createElement(
                                             'td',
@@ -2342,7 +2342,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                 })
                                             ),
                                             // V spodnej prostrednej bunke zvislá čiara od stredu po horný okraj
-                                            React.createElement('div', { className: 'spider-line-vertical spider-line-vertical-top' })
+                                            React.createElement('div', { className: 'spider-line-vertical-top' })
                                         ),
                                         React.createElement(
                                             'td',
