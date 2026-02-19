@@ -2536,8 +2536,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     width: '40%',
                                                     border: '0px solid #d1d5db',
                                                     position: 'relative'
-                                                }
-                                            },
+                                                }        },
                                             React.createElement(
                                                 'div',
                                                 { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
@@ -2553,13 +2552,13 @@ const SpiderApp = ({ userProfileData }) => {
                                             // Zvislá čiara presne doprostred na celú výšku bunky
                                             React.createElement('div', { className: 'spider-line-vertical' }),
                                             
-                                            // Vodorovná čiara od stredu bunky po jej 3/4 šírky (od 75% do 100%)
+                                            // Vodorovná čiara od stredu bunky po jej 3/4 šírky (od 50% do 75%)
                                             React.createElement('div', { 
                                                 style: {
                                                     position: 'absolute',
                                                     height: '2px',
                                                     backgroundColor: '#9ca3af',
-                                                    left: '75%',
+                                                    left: '50%',
                                                     width: '25%',
                                                     top: '50%',
                                                     transform: 'translateY(-50%)',
@@ -2624,13 +2623,13 @@ const SpiderApp = ({ userProfileData }) => {
                                             // Zvislá čiara presne doprostred na celú výšku bunky
                                             React.createElement('div', { className: 'spider-line-vertical' }),
                                             
-                                            // Vodorovná čiara od stredu bunky po jej 1/4 šírky (od 0% do 25%)
+                                            // Vodorovná čiara od 1/4 šírky po stred bunky (od 25% do 50%)
                                             React.createElement('div', { 
                                                 style: {
                                                     position: 'absolute',
                                                     height: '2px',
                                                     backgroundColor: '#9ca3af',
-                                                    left: 0,
+                                                    left: '25%',
                                                     width: '25%',
                                                     top: '50%',
                                                     transform: 'translateY(-50%)',
@@ -3120,13 +3119,13 @@ const SpiderApp = ({ userProfileData }) => {
                                             // Zvislá čiara presne doprostred na celú výšku bunky
                                             React.createElement('div', { className: 'spider-line-vertical' }),
                                             
-                                            // Vodorovná čiara od stredu bunky po jej 3/4 šírky (od 75% do 100%)
+                                            // Vodorovná čiara od stredu bunky po jej 3/4 šírky (od 50% do 75%)
                                             React.createElement('div', { 
                                                 style: {
                                                     position: 'absolute',
                                                     height: '2px',
                                                     backgroundColor: '#9ca3af',
-                                                    left: '75%',
+                                                    left: '50%',
                                                     width: '25%',
                                                     top: '50%',
                                                     transform: 'translateY(-50%)',
@@ -3191,13 +3190,13 @@ const SpiderApp = ({ userProfileData }) => {
                                             // Zvislá čiara presne doprostred na celú výšku bunky
                                             React.createElement('div', { className: 'spider-line-vertical' }),
                                             
-                                            // Vodorovná čiara od stredu bunky po jej 1/4 šírky (od 0% do 25%)
+                                            // Vodorovná čiara od 1/4 šírky po stred bunky (od 25% do 50%)
                                             React.createElement('div', { 
                                                 style: {
                                                     position: 'absolute',
                                                     height: '2px',
                                                     backgroundColor: '#9ca3af',
-                                                    left: 0,
+                                                    left: '25%',
                                                     width: '25%',
                                                     top: '50%',
                                                     transform: 'translateY(-50%)',
