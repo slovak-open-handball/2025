@@ -228,7 +228,7 @@ export function GeneralRegistrationSettings({ db, userProfileData, tournamentSta
     React.createElement(
       'div',
       null,
-      React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'data-edit-deadline' }, 'Dátum a čas uzávierky úprav používateľských dát'),
+      React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'data-edit-deadline' }, 'Dátum a čas uzávierky úprav používateľských údajov'),
       React.createElement('input', {
         type: 'datetime-local',
         id: 'data-edit-deadline',
