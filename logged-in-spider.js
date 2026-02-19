@@ -2142,131 +2142,131 @@ const SpiderApp = ({ userProfileData }) => {
                                         )
                                     ),
                                     
-// DRUHÝ RIADOK - VŠETKY TRI STĹPCE ZLÚČENÉ a rozdelené na dva rovnaké
-React.createElement(
-    'tr',
-    { style: { height: '200px' } },
-    React.createElement(
-        'td',
-        { 
-            colSpan: 3,
-            className: 'spider-cell',
-            style: {
-                textAlign: 'center',
-                verticalAlign: 'middle',
-                padding: '10px',
-                border: '0px solid #d1d5db',
-                position: 'relative'
-            }
-        },
-        React.createElement(
-            'div',
-            { 
-                style: { 
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    width: '100%',
-                    gap: '20%',
-                    position: 'relative',
-                    zIndex: 10
-                }
-            },
-            React.createElement(MatchCell, { 
-                match: spiderData.semiFinals[0], 
-                title: 'Semifinále 1',
-                matchType: 'semifinále 1',
-                userProfileData: userProfileData,
-                generationInProgress: generationInProgress,
-                onGenerate: generateSingleMatch
-            }),
-            React.createElement(MatchCell, { 
-                match: spiderData.semiFinals[1], 
-                title: 'Semifinále 2',
-                matchType: 'semifinále 2',
-                userProfileData: userProfileData,
-                generationInProgress: generationInProgress,
-                onGenerate: generateSingleMatch
-            })
-        ),
-        
-        // Zvislá čiara v strede na celú výšku bunky
-        React.createElement('div', { 
-            className: 'spider-line-vertical',
-            style: { 
-                left: '50%',
-                height: '100%',
-                top: 0,
-                transform: 'translateX(-50%)'
-            }
-        }),
-        
-        // Zvislá čiara na 1/3 od ľavého okraja (33.333%)
-        React.createElement('div', { 
-            className: 'spider-line-vertical',
-            style: { 
-                left: '33.33333%',
-                height: '100%',
-                top: 0,
-                transform: 'translateX(-50%)'
-            }
-        }),
-        
-        // Zvislá čiara na 1/3 od pravého okraja (66.66667% od ľavého okraja)
-        React.createElement('div', { 
-            className: 'spider-line-vertical',
-            style: { 
-                left: '66.66667%',
-                height: '100%',
-                top: 0,
-                transform: 'translateX(-50%)'
-            }
-        }),
-        
-        // Vodorovná čiara v strede od 33.33% do 66.67%
-        React.createElement('div', { 
-            style: {
-                position: 'absolute',
-                height: '2px',
-                backgroundColor: '#9ca3af',
-                left: '33.33333%',
-                width: '33.33334%',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                zIndex: 5,
-                pointerEvents: 'none'
-            }
-        }),
-        
-        // Zvislé čiary od 1/3 do 2/3 (iba v hornej a dolnej polovici)
-        React.createElement('div', { 
-            style: {
-                position: 'absolute',
-                width: '2px',
-                backgroundColor: '#9ca3af',
-                left: '33.33333%',
-                top: '25%',
-                height: '50%',
-                transform: 'translateX(-50%)',
-                zIndex: 5,
-                pointerEvents: 'none'
-            }
-        }),
-        React.createElement('div', { 
-            style: {
-                position: 'absolute',
-                width: '2px',
-                backgroundColor: '#9ca3af',
-                left: '66.66667%',
-                top: '25%',
-                height: '50%',
-                transform: 'translateX(-50%)',
-                zIndex: 5,
-                pointerEvents: 'none'
-            }
-        })
-    )
-),
+                                    // DRUHÝ RIADOK - VŠETKY TRI STĹPCE ZLÚČENÉ a rozdelené na dva rovnaké
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '200px' } },
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                colSpan: 3,
+                                                className: 'spider-cell',
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '10px',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { 
+                                                    style: { 
+                                                        display: 'flex',
+                                                        justifyContent: 'center',
+                                                        alignItems: 'center',
+                                                        width: '100%',
+                                                        gap: '20%',
+                                                        position: 'relative',
+                                                        zIndex: 10
+                                                    }
+                                                },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.semiFinals[0], 
+                                                    title: 'Semifinále 1',
+                                                    matchType: 'semifinále 1',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch
+                                                }),
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.semiFinals[1], 
+                                                    title: 'Semifinále 2',
+                                                    matchType: 'semifinále 2',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch
+                                                })
+                                            ),
+                                            
+                                            // Zvislá čiara v strede na celú výšku bunky
+                                            React.createElement('div', { 
+                                                className: 'spider-line-vertical',
+                                                style: { 
+                                                    left: '50%',
+                                                    height: '100%',
+                                                    top: 0,
+                                                    transform: 'translateX(-50%)'
+                                                }
+                                            }),
+                                            
+                                            // Zvislá čiara na 1/3 od ľavého okraja (33.333%)
+                                            React.createElement('div', { 
+                                                className: 'spider-line-vertical',
+                                                style: { 
+                                                    left: '33.33333%',
+                                                    height: '100%',
+                                                    top: 0,
+                                                    transform: 'translateX(-50%)'
+                                                }
+                                            }),
+                                            
+                                            // Zvislá čiara na 1/3 od pravého okraja (66.66667% od ľavého okraja)
+                                            React.createElement('div', { 
+                                                className: 'spider-line-vertical',
+                                                style: { 
+                                                    left: '66.66667%',
+                                                    height: '100%',
+                                                    top: 0,
+                                                    transform: 'translateX(-50%)'
+                                                }
+                                            }),
+                                            
+                                            // Vodorovná čiara v strede od 33.33% do 66.67%
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    height: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    left: '33.33333%',
+                                                    width: '33.33334%',
+                                                    top: '50%',
+                                                    transform: 'translateY(-50%)',
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            }),
+                                            
+                                            // Zvislé čiary od 1/3 do 2/3 (iba v hornej a dolnej polovici)
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    left: '33.33333%',
+                                                    top: '25%',
+                                                    height: '50%',
+                                                    transform: 'translateX(-50%)',
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            }),
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    left: '66.66667%',
+                                                    top: '25%',
+                                                    height: '50%',
+                                                    transform: 'translateX(-50%)',
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
+                                        )
+                                    ),
                                     
                                     // TRETÍ RIADOK - QF2, O 3. miesto, QF4
                                     React.createElement(
