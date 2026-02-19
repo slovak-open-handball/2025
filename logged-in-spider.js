@@ -2037,7 +2037,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
                                                     width: '33.33%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -2065,7 +2065,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
                                                     width: '33.33%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -2093,7 +2093,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
                                                     width: '33.33%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -2127,7 +2127,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -2253,7 +2253,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
                                                     width: '33.33%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -2281,7 +2281,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
                                                     width: '33.33%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -2309,7 +2309,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
                                                     width: '33.33%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
