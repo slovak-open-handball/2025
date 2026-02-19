@@ -741,7 +741,7 @@ const SpiderApp = ({ userProfileData }) => {
     };
 
     // Komponent pre zobrazenie jedného zápasu v pavúkovom zobrazení
-    const MatchCell = ({ match, title = '', matchType }) => {
+    const MatchCell = ({ match, title = '', matchType, userProfileData, generationInProgress, onGenerate }) => {
         const [isHovered, setIsHovered] = useState(false);
     
         // Kontrola, či zápas existuje v databáze
