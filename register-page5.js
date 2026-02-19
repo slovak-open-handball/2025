@@ -768,7 +768,6 @@ function CustomTeamSelect({ value, onChange, options, disabled, placeholder }) {
 }
 
 // Hlavný komponent Page5Form
-// Hlavný komponent Page5Form
 export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoading, setRegistrationSuccess, handleChange, setTeamsDataFromPage4, teamsDataFromPage4, isRecaptchaReady, onGranularTeamsDataChange }) {
     const db = getFirestore();
 
@@ -956,6 +955,31 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         [calculateCurrentRegistrationAccommodationCounts]
     );
 
+    // Táto funkcia teraz volá onGranularTeamsDataChange
+    const handleTeamDataChange = (categoryName, teamIndex, field, value) => {
+        onGranularTeamsDataChange(categoryName, teamIndex, field, value);
+    };
+
+    // PRESUNUTÉ: teamsWithOwnTransport musí byť definovaný PRED useEffect, ktorý ho používa
+    const teamsWithOwnTransport = React.useMemo(() => {
+        const teams = [];
+        for (const categoryName in teamsDataFromPage4) {
+            if (!teamsDataFromPage4[categoryName] || typeof teamsDataFromPage4[categoryName] !== 'object') continue;
+
+            (teamsDataFromPage4[categoryName] || []).filter(t => t).forEach((team, teamIndex) => {
+                if (team.arrival?.type === 'vlastná doprava') {
+                    teams.push({
+                        categoryName: categoryName,
+                        teamIndex: teamIndex,
+                        teamName: team.teamName,
+                        id: `${categoryName}-${teamIndex}`
+                    });
+                }
+            });
+        }
+        return teams;
+    }, [teamsDataFromPage4]);
+
     // NOVÝ EFEKT: Okamžitá validácia pri zmene kapacít
     React.useEffect(() => {
         const validateForm = () => {
@@ -1062,7 +1086,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         currentRegistrationAccommodationCounts, 
         packages, 
         driverEntries, 
-        teamsWithOwnTransport, 
+        teamsWithOwnTransport, // TOTO UŽ JE DEFINOVANÉ
         calculateCurrentTeamPeople
     ]);
 
