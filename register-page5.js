@@ -798,6 +798,28 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
     // Ref pre sledovanie, či už boli šoféri inicializovaní z parent dát
     const isInitialDriversLoad = React.useRef(true);
 
+    const calculateCurrentTeamPeople = React.useCallback((team) => {
+        let total = 0;
+    
+        if (team.playerDetails && Array.isArray(team.playerDetails)) {
+            total += team.playerDetails.length;
+        }
+        if (team.menTeamMemberDetails && Array.isArray(team.menTeamMemberDetails)) {
+            total += team.menTeamMemberDetails.length;
+        }
+        if (team.womenTeamMemberDetails && Array.isArray(team.womenTeamMemberDetails)) {
+            total += team.womenTeamMemberDetails.length;
+        }
+        if (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) {
+            total += team.driverDetailsMale.length;
+        }
+        if (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) {
+            total += team.driverDetailsFemale.length;
+        }
+        
+        return total;
+    }, []);
+    
     // Funkcia na re-agregáciu dát šoférov pre konkrétny tím a aktualizáciu rodičovského stavu
     const updateTeamDriversInParent = React.useCallback((currentEntries, categoryName, teamIndex) => {
         const currentTeamDrivers = { male: 0, female: 0 };
@@ -1307,14 +1329,27 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         const selectedAccType = accommodationTypes.find(acc => acc.type === team.accommodation.type);
                         
                         if (selectedAccType) {
-                            // Celková obsadenosť = EXISTUJÚCE registrácie + AKTUÁLNA registrácia
-                            const existingOccupied = existingAccommodationCounts[selectedAccType.type] || 0;
-                            const currentOccupied = currentRegistrationAccommodationCounts[selectedAccType.type] || 0;
-                            const totalOccupied = existingOccupied + currentOccupied;
+                            // KROK 1: Existujúce registrácie z databázy
+                            const existingCount = existingAccommodationCounts[selectedAccType.type] || 0;
                             
-                            // Ak je typ plný (vrátane tohto tímu), validácia zlyhá
-                            if (totalOccupied > selectedAccType.capacity) {
-                                console.log(`Typ ubytovania ${selectedAccType.type} je plný (${totalOccupied}/${selectedAccType.capacity})`);
+                            // KROK 2: Aktuálne prebiehajúca registrácia (bez tohto tímu)
+                            let currentCountWithoutThisTeam = currentRegistrationAccommodationCounts[selectedAccType.type] || 0;
+                            
+                            // Ak už má tento tím vybraný iný typ ubytovania, odpočítame ho
+                            if (team.accommodation?.type && team.accommodation.type !== 'bez ubytovania' && team.accommodation.type !== selectedAccType.type) {
+                                currentCountWithoutThisTeam = Math.max(0, currentCountWithoutThisTeam - calculateCurrentTeamPeople());
+                            }
+                            
+                            // KROK 3: Celková obsadenosť
+                            const totalOccupied = existingCount + currentCountWithoutThisTeam;
+                            
+                            // KROK 4: Kontrola, či sa tím zmestí (vrátane tohto tímu)
+                            const remaining = selectedAccType.capacity - totalOccupied;
+                            const teamPeople = calculateCurrentTeamPeople();
+                            
+                            // Ak už nie je dosť miesta pre tento tím, validácia zlyhá
+                            if (remaining < teamPeople) {
+                                console.log(`Typ ubytovania ${selectedAccType.type} je plný. Zostáva ${remaining} miest, potrebujeme ${teamPeople}.`);
                                 return false;
                             }
                         }
