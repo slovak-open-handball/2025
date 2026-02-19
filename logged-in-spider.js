@@ -2030,621 +2030,621 @@ const SpiderApp = ({ userProfileData }) => {
                                     )
                                 ),
                                 
-                                // ===== ÚROVEŇ 3 (s osemfinále) =====
-                                spiderLevel === 3 && React.createElement(
-                                    React.Fragment,
-                                    null,
-                                    
-                                    // RIADOK 1 - Osemfinále 1, prázdno, prázdno, prázdno, Osemfinále 5
-                                    React.createElement(
-                                        'tr',
-                                        { style: { height: '200px' } },
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            },
-                                            React.createElement(
-                                                'div',
-                                                { style: { display: 'inline-block' } },
-                                                React.createElement(MatchCell, { 
-                                                    match: spiderData.eightFinals[0], 
-                                                    title: 'Osemfinále 1',
-                                                    matchType: 'osemfinále 1',
-                                                    userProfileData: userProfileData,
-                                                    generationInProgress: generationInProgress,
-                                                    onGenerate: generateSingleMatch
-                                                })
-                                            )
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            }
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            }
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            }
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            },
-                                            React.createElement(
-                                                'div',
-                                                { style: { display: 'inline-block' } },
-                                                React.createElement(MatchCell, { 
-                                                    match: spiderData.eightFinals[4], 
-                                                    title: 'Osemfinále 5',
-                                                    matchType: 'osemfinále 5',
-                                                    userProfileData: userProfileData,
-                                                    generationInProgress: generationInProgress,
-                                                    onGenerate: generateSingleMatch
-                                                })
-                                            )
-                                        )
-                                    ),
-                                    
-                                    // RIADOK 2 - Štvrťfinále 1 (colspan=2), prázdno, Štvrťfinále 3 (colspan=2)
-                                    React.createElement(
-                                        'tr',
-                                        { style: { height: '200px' } },
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                colSpan: 2,
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '40%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            },
-                                            React.createElement(
-                                                'div',
-                                                { style: { display: 'inline-block' } },
-                                                React.createElement(MatchCell, { 
-                                                    match: spiderData.quarterFinals[0], 
-                                                    title: 'Štvrťfinále 1',
-                                                    matchType: 'štvrťfinále 1',
-                                                    userProfileData: userProfileData,
-                                                    generationInProgress: generationInProgress,
-                                                    onGenerate: generateSingleMatch
-                                                })
-                                            )
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            }
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                colSpan: 2,
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '40%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            },
-                                            React.createElement(
-                                                'div',
-                                                { style: { display: 'inline-block' } },
-                                                React.createElement(MatchCell, { 
-                                                    match: spiderData.quarterFinals[2], 
-                                                    title: 'Štvrťfinále 3',
-                                                    matchType: 'štvrťfinále 3',
-                                                    userProfileData: userProfileData,
-                                                    generationInProgress: generationInProgress,
-                                                    onGenerate: generateSingleMatch
-                                                })
-                                            )
-                                        )
-                                    ),
-                                    
-                                    // RIADOK 3 - Osemfinále 2, prázdno, Finále, prázdno, Osemfinále 6
-                                    React.createElement(
-                                        'tr',
-                                        { style: { height: '200px' } },
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            },
-                                            React.createElement(
-                                                'div',
-                                                { style: { display: 'inline-block' } },
-                                                React.createElement(MatchCell, { 
-                                                    match: spiderData.eightFinals[1], 
-                                                    title: 'Osemfinále 2',
-                                                    matchType: 'osemfinále 2',
-                                                    userProfileData: userProfileData,
-                                                    generationInProgress: generationInProgress,
-                                                    onGenerate: generateSingleMatch
-                                                })
-                                            )
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            }
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            },
-                                            React.createElement(
-                                                'div',
-                                                { style: { display: 'inline-block' } },
-                                                React.createElement(MatchCell, { 
-                                                    match: spiderData.final, 
-                                                    title: 'Finále',
-                                                    matchType: 'finále',
-                                                    userProfileData: userProfileData,
-                                                    generationInProgress: generationInProgress,
-                                                    onGenerate: generateSingleMatch
-                                                })
-                                            )
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            }
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            },
-                                            React.createElement(
-                                                'div',
-                                                { style: { display: 'inline-block' } },
-                                                React.createElement(MatchCell, { 
-                                                    match: spiderData.eightFinals[5], 
-                                                    title: 'Osemfinále 6',
-                                                    matchType: 'osemfinále 6',
-                                                    userProfileData: userProfileData,
-                                                    generationInProgress: generationInProgress,
-                                                    onGenerate: generateSingleMatch
-                                                })
-                                            )
-                                        )
-                                    ),
-                                    
-                                    // RIADOK 4 - prázdno, prázdno, prázdno, prázdno, prázdno (prázdny riadok medzi Finále a semifinále)
-                                    React.createElement(
-                                        'tr',
-                                        { style: { height: '50px' } },
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            }
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            }
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            }
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            }
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            }
-                                        )
-                                    ),
-                                    
-                                    // RIADOK 5 - Osemfinále 3, prázdno, Semifinále 1, Semifinále 2, Osemfinále 7
-                                    React.createElement(
-                                        'tr',
-                                        { style: { height: '200px' } },
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            },
-                                            React.createElement(
-                                                'div',
-                                                { style: { display: 'inline-block' } },
-                                                React.createElement(MatchCell, { 
-                                                    match: spiderData.eightFinals[2], 
-                                                    title: 'Osemfinále 3',
-                                                    matchType: 'osemfinále 3',
-                                                    userProfileData: userProfileData,
-                                                    generationInProgress: generationInProgress,
-                                                    onGenerate: generateSingleMatch
-                                                })
-                                            )
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            }
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            },
-                                            React.createElement(
-                                                'div',
-                                                { style: { display: 'inline-block' } },
-                                                React.createElement(MatchCell, { 
-                                                    match: spiderData.semiFinals[0], 
-                                                    title: 'Semifinále 1',
-                                                    matchType: 'semifinále 1',
-                                                    userProfileData: userProfileData,
-                                                    generationInProgress: generationInProgress,
-                                                    onGenerate: generateSingleMatch
-                                                })
-                                            )
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            },
-                                            React.createElement(
-                                                'div',
-                                                { style: { display: 'inline-block' } },
-                                                React.createElement(MatchCell, { 
-                                                    match: spiderData.semiFinals[1], 
-                                                    title: 'Semifinále 2',
-                                                    matchType: 'semifinále 2',
-                                                    userProfileData: userProfileData,
-                                                    generationInProgress: generationInProgress,
-                                                    onGenerate: generateSingleMatch
-                                                })
-                                            )
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            },
-                                            React.createElement(
-                                                'div',
-                                                { style: { display: 'inline-block' } },
-                                                React.createElement(MatchCell, { 
-                                                    match: spiderData.eightFinals[6], 
-                                                    title: 'Osemfinále 7',
-                                                    matchType: 'osemfinále 7',
-                                                    userProfileData: userProfileData,
-                                                    generationInProgress: generationInProgress,
-                                                    onGenerate: generateSingleMatch
-                                                })
-                                            )
-                                        )
-                                    ),
-                                    
-                                    // RIADOK 6 - Štvrťfinále 2 (colspan=2), O 3. miesto, Štvrťfinále 4 (colspan=2)
-                                    React.createElement(
-                                        'tr',
-                                        { style: { height: '200px' } },
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                colSpan: 2,
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '40%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            },
-                                            React.createElement(
-                                                'div',
-                                                { style: { display: 'inline-block' } },
-                                                React.createElement(MatchCell, { 
-                                                    match: spiderData.quarterFinals[1], 
-                                                    title: 'Štvrťfinále 2',
-                                                    matchType: 'štvrťfinále 2',
-                                                    userProfileData: userProfileData,
-                                                    generationInProgress: generationInProgress,
-                                                    onGenerate: generateSingleMatch
-                                                })
-                                            )
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            },
-                                            React.createElement(
-                                                'div',
-                                                { style: { display: 'inline-block' } },
-                                                React.createElement(MatchCell, { 
-                                                    match: spiderData.thirdPlace, 
-                                                    title: 'O 3. miesto',
-                                                    matchType: 'o 3. miesto',
-                                                    userProfileData: userProfileData,
-                                                    generationInProgress: generationInProgress,
-                                                    onGenerate: generateSingleMatch
-                                                })
-                                            )
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                colSpan: 2,
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '40%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            },
-                                            React.createElement(
-                                                'div',
-                                                { style: { display: 'inline-block' } },
-                                                React.createElement(MatchCell, { 
-                                                    match: spiderData.quarterFinals[3], 
-                                                    title: 'Štvrťfinále 4',
-                                                    matchType: 'štvrťfinále 4',
-                                                    userProfileData: userProfileData,
-                                                    generationInProgress: generationInProgress,
-                                                    onGenerate: generateSingleMatch
-                                                })
-                                            )
-                                        )
-                                    ),
-                                    
-                                    // RIADOK 7 - Osemfinále 4, prázdno, prázdno, prázdno, Osemfinále 8
-                                    React.createElement(
-                                        'tr',
-                                        { style: { height: '200px' } },
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            },
-                                            React.createElement(
-                                                'div',
-                                                { style: { display: 'inline-block' } },
-                                                React.createElement(MatchCell, { 
-                                                    match: spiderData.eightFinals[3], 
-                                                    title: 'Osemfinále 4',
-                                                    matchType: 'osemfinále 4',
-                                                    userProfileData: userProfileData,
-                                                    generationInProgress: generationInProgress,
-                                                    onGenerate: generateSingleMatch
-                                                })
-                                            )
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            }
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            }
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            }
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            },
-                                            React.createElement(
-                                                'div',
-                                                { style: { display: 'inline-block' } },
-                                                React.createElement(MatchCell, { 
-                                                    match: spiderData.eightFinals[7], 
-                                                    title: 'Osemfinále 8',
-                                                    matchType: 'osemfinále 8',
-                                                    userProfileData: userProfileData,
-                                                    generationInProgress: generationInProgress,
-                                                    onGenerate: generateSingleMatch
-                                                })
-                                            )
-                                        )
-                                    )
-                                )
+// ===== ÚROVEŇ 3 (s osemfinále) =====
+spiderLevel === 3 && React.createElement(
+    React.Fragment,
+    null,
+    
+    // RIADOK 1 - Osemfinále 1, prázdno, prázdno, prázdno, Osemfinále 5
+    React.createElement(
+        'tr',
+        { style: { height: '200px' } },
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            },
+            React.createElement(
+                'div',
+                { style: { display: 'inline-block' } },
+                React.createElement(MatchCell, { 
+                    match: spiderData.eightFinals[0], 
+                    title: 'Osemfinále 1',
+                    matchType: 'osemfinále 1',
+                    userProfileData: userProfileData,
+                    generationInProgress: generationInProgress,
+                    onGenerate: generateSingleMatch
+                })
+            )
+        ),
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            }
+        ),
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            }
+        ),
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            }
+        ),
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            },
+            React.createElement(
+                'div',
+                { style: { display: 'inline-block' } },
+                React.createElement(MatchCell, { 
+                    match: spiderData.eightFinals[4], 
+                    title: 'Osemfinále 5',
+                    matchType: 'osemfinále 5',
+                    userProfileData: userProfileData,
+                    generationInProgress: generationInProgress,
+                    onGenerate: generateSingleMatch
+                })
+            )
+        )
+    ),
+    
+    // RIADOK 2 - Štvrťfinále 1 (colspan=2), Finále, Štvrťfinále 3 (colspan=2)
+    React.createElement(
+        'tr',
+        { style: { height: '200px' } },
+        React.createElement(
+            'td',
+            { 
+                colSpan: 2,
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '40%',
+                    border: '1px solid #d1d5db'
+                }
+            },
+            React.createElement(
+                'div',
+                { style: { display: 'inline-block' } },
+                React.createElement(MatchCell, { 
+                    match: spiderData.quarterFinals[0], 
+                    title: 'Štvrťfinále 1',
+                    matchType: 'štvrťfinále 1',
+                    userProfileData: userProfileData,
+                    generationInProgress: generationInProgress,
+                    onGenerate: generateSingleMatch
+                })
+            )
+        ),
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            },
+            React.createElement(
+                'div',
+                { style: { display: 'inline-block' } },
+                React.createElement(MatchCell, { 
+                    match: spiderData.final, 
+                    title: 'Finále',
+                    matchType: 'finále',
+                    userProfileData: userProfileData,
+                    generationInProgress: generationInProgress,
+                    onGenerate: generateSingleMatch
+                })
+            )
+        ),
+        React.createElement(
+            'td',
+            { 
+                colSpan: 2,
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '40%',
+                    border: '1px solid #d1d5db'
+                }
+            },
+            React.createElement(
+                'div',
+                { style: { display: 'inline-block' } },
+                React.createElement(MatchCell, { 
+                    match: spiderData.quarterFinals[2], 
+                    title: 'Štvrťfinále 3',
+                    matchType: 'štvrťfinále 3',
+                    userProfileData: userProfileData,
+                    generationInProgress: generationInProgress,
+                    onGenerate: generateSingleMatch
+                })
+            )
+        )
+    ),
+    
+    // RIADOK 3 - Osemfinále 2, prázdno, prázdno, prázdno, Osemfinále 6
+    React.createElement(
+        'tr',
+        { style: { height: '200px' } },
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            },
+            React.createElement(
+                'div',
+                { style: { display: 'inline-block' } },
+                React.createElement(MatchCell, { 
+                    match: spiderData.eightFinals[1], 
+                    title: 'Osemfinále 2',
+                    matchType: 'osemfinále 2',
+                    userProfileData: userProfileData,
+                    generationInProgress: generationInProgress,
+                    onGenerate: generateSingleMatch
+                })
+            )
+        ),
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            }
+        ),
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            }
+        ),
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            }
+        ),
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            },
+            React.createElement(
+                'div',
+                { style: { display: 'inline-block' } },
+                React.createElement(MatchCell, { 
+                    match: spiderData.eightFinals[5], 
+                    title: 'Osemfinále 6',
+                    matchType: 'osemfinále 6',
+                    userProfileData: userProfileData,
+                    generationInProgress: generationInProgress,
+                    onGenerate: generateSingleMatch
+                })
+            )
+        )
+    ),
+    
+    // RIADOK 4 - prázdno, Semifinále 1, prázdno, Semifinále 2, prázdno
+    React.createElement(
+        'tr',
+        { style: { height: '200px' } },
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            }
+        ),
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            },
+            React.createElement(
+                'div',
+                { style: { display: 'inline-block' } },
+                React.createElement(MatchCell, { 
+                    match: spiderData.semiFinals[0], 
+                    title: 'Semifinále 1',
+                    matchType: 'semifinále 1',
+                    userProfileData: userProfileData,
+                    generationInProgress: generationInProgress,
+                    onGenerate: generateSingleMatch
+                })
+            )
+        ),
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            }
+        ),
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            },
+            React.createElement(
+                'div',
+                { style: { display: 'inline-block' } },
+                React.createElement(MatchCell, { 
+                    match: spiderData.semiFinals[1], 
+                    title: 'Semifinále 2',
+                    matchType: 'semifinále 2',
+                    userProfileData: userProfileData,
+                    generationInProgress: generationInProgress,
+                    onGenerate: generateSingleMatch
+                })
+            )
+        ),
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            }
+        )
+    ),
+    
+    // RIADOK 5 - Osemfinále 3, prázdno, prázdno, prázdno, Osemfinále 7
+    React.createElement(
+        'tr',
+        { style: { height: '200px' } },
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            },
+            React.createElement(
+                'div',
+                { style: { display: 'inline-block' } },
+                React.createElement(MatchCell, { 
+                    match: spiderData.eightFinals[2], 
+                    title: 'Osemfinále 3',
+                    matchType: 'osemfinále 3',
+                    userProfileData: userProfileData,
+                    generationInProgress: generationInProgress,
+                    onGenerate: generateSingleMatch
+                })
+            )
+        ),
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            }
+        ),
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            }
+        ),
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            }
+        ),
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            },
+            React.createElement(
+                'div',
+                { style: { display: 'inline-block' } },
+                React.createElement(MatchCell, { 
+                    match: spiderData.eightFinals[6], 
+                    title: 'Osemfinále 7',
+                    matchType: 'osemfinále 7',
+                    userProfileData: userProfileData,
+                    generationInProgress: generationInProgress,
+                    onGenerate: generateSingleMatch
+                })
+            )
+        )
+    ),
+    
+    // RIADOK 6 - Štvrťfinále 2 (colspan=2), O 3. miesto, Štvrťfinále 4 (colspan=2)
+    React.createElement(
+        'tr',
+        { style: { height: '200px' } },
+        React.createElement(
+            'td',
+            { 
+                colSpan: 2,
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '40%',
+                    border: '1px solid #d1d5db'
+                }
+            },
+            React.createElement(
+                'div',
+                { style: { display: 'inline-block' } },
+                React.createElement(MatchCell, { 
+                    match: spiderData.quarterFinals[1], 
+                    title: 'Štvrťfinále 2',
+                    matchType: 'štvrťfinále 2',
+                    userProfileData: userProfileData,
+                    generationInProgress: generationInProgress,
+                    onGenerate: generateSingleMatch
+                })
+            )
+        ),
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            },
+            React.createElement(
+                'div',
+                { style: { display: 'inline-block' } },
+                React.createElement(MatchCell, { 
+                    match: spiderData.thirdPlace, 
+                    title: 'O 3. miesto',
+                    matchType: 'o 3. miesto',
+                    userProfileData: userProfileData,
+                    generationInProgress: generationInProgress,
+                    onGenerate: generateSingleMatch
+                })
+            )
+        ),
+        React.createElement(
+            'td',
+            { 
+                colSpan: 2,
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '40%',
+                    border: '1px solid #d1d5db'
+                }
+            },
+            React.createElement(
+                'div',
+                { style: { display: 'inline-block' } },
+                React.createElement(MatchCell, { 
+                    match: spiderData.quarterFinals[3], 
+                    title: 'Štvrťfinále 4',
+                    matchType: 'štvrťfinále 4',
+                    userProfileData: userProfileData,
+                    generationInProgress: generationInProgress,
+                    onGenerate: generateSingleMatch
+                })
+            )
+        )
+    ),
+    
+    // RIADOK 7 - Osemfinále 4, prázdno, prázdno, prázdno, Osemfinále 8
+    React.createElement(
+        'tr',
+        { style: { height: '200px' } },
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            },
+            React.createElement(
+                'div',
+                { style: { display: 'inline-block' } },
+                React.createElement(MatchCell, { 
+                    match: spiderData.eightFinals[3], 
+                    title: 'Osemfinále 4',
+                    matchType: 'osemfinále 4',
+                    userProfileData: userProfileData,
+                    generationInProgress: generationInProgress,
+                    onGenerate: generateSingleMatch
+                })
+            )
+        ),
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            }
+        ),
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            }
+        ),
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            }
+        ),
+        React.createElement(
+            'td',
+            { 
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    padding: '10px',
+                    width: '20%',
+                    border: '1px solid #d1d5db'
+                }
+            },
+            React.createElement(
+                'div',
+                { style: { display: 'inline-block' } },
+                React.createElement(MatchCell, { 
+                    match: spiderData.eightFinals[7], 
+                    title: 'Osemfinále 8',
+                    matchType: 'osemfinále 8',
+                    userProfileData: userProfileData,
+                    generationInProgress: generationInProgress,
+                    onGenerate: generateSingleMatch
+                })
+            )
+        )
+    )
+)
                             )
                         )
                     )
