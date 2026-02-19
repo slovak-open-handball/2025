@@ -144,7 +144,8 @@ function TeamAccommodationAndArrival({
     currentRegistrationAccommodationCounts, // Počty z aktuálnej registrácie
     tournamentStartDate,
     generateTimeOptions,
-    arrivalDateTime
+    arrivalDateTime,
+    teamsDataFromPage4 // NOVÝ PROP - potrebujeme prístup k celým dátam pre prepočet
 }) {
     const [selectedAccommodation, setSelectedAccommodation] = React.useState(team.accommodation?.type || '');
     const [arrivalType, setArrivalType] = React.useState(team.arrival?.type || '');
@@ -158,29 +159,54 @@ function TeamAccommodationAndArrival({
     });
 
     // Výpočet počtu ľudí v aktuálnom tíme
-    const calculateCurrentTeamPeople = React.useCallback(() => {
+    const calculateCurrentTeamPeople = React.useCallback((teamData) => {
         let total = 0;
         
-        if (team.playerDetails && Array.isArray(team.playerDetails)) {
-            total += team.playerDetails.length;
+        if (teamData.playerDetails && Array.isArray(teamData.playerDetails)) {
+            total += teamData.playerDetails.length;
         }
-        if (team.menTeamMemberDetails && Array.isArray(team.menTeamMemberDetails)) {
-            total += team.menTeamMemberDetails.length;
+        if (teamData.menTeamMemberDetails && Array.isArray(teamData.menTeamMemberDetails)) {
+            total += teamData.menTeamMemberDetails.length;
         }
-        if (team.womenTeamMemberDetails && Array.isArray(team.womenTeamMemberDetails)) {
-            total += team.womenTeamMemberDetails.length;
+        if (teamData.womenTeamMemberDetails && Array.isArray(teamData.womenTeamMemberDetails)) {
+            total += teamData.womenTeamMemberDetails.length;
         }
-        if (team.driverDetailsMale && Array.isArray(team.driverDetailsMale)) {
-            total += team.driverDetailsMale.length;
+        if (teamData.driverDetailsMale && Array.isArray(teamData.driverDetailsMale)) {
+            total += teamData.driverDetailsMale.length;
         }
-        if (team.driverDetailsFemale && Array.isArray(team.driverDetailsFemale)) {
-            total += team.driverDetailsFemale.length;
+        if (teamData.driverDetailsFemale && Array.isArray(teamData.driverDetailsFemale)) {
+            total += teamData.driverDetailsFemale.length;
         }
         
         return total;
-    }, [team]);
+    }, []);
 
-    const currentTeamPeople = calculateCurrentTeamPeople();
+    const currentTeamPeople = React.useMemo(() => 
+        calculateCurrentTeamPeople(team), 
+        [team, calculateCurrentTeamPeople]
+    );
+
+    // Funkcia na výpočet aktuálneho počtu ľudí v prebiehajúcej registrácii pre daný typ ubytovania
+    // BEZ započítania aktuálneho tímu (aby sme vedeli zistiť, koľko miesta zostáva)
+    const getCurrentRegistrationCountWithoutThisTeam = React.useCallback((accommodationType) => {
+        let count = 0;
+        
+        for (const catName in teamsDataFromPage4) {
+            const teamsInCategory = teamsDataFromPage4[catName];
+            if (!Array.isArray(teamsInCategory)) continue;
+            
+            teamsInCategory.forEach((t, idx) => {
+                // Preskočíme aktuálny tím
+                if (catName === categoryName && idx === teamIndex) return;
+                
+                if (t.accommodation?.type === accommodationType) {
+                    count += calculateCurrentTeamPeople(t);
+                }
+            });
+        }
+        
+        return count;
+    }, [teamsDataFromPage4, categoryName, teamIndex, calculateCurrentTeamPeople]);
 
     React.useEffect(() => {
         setSelectedAccommodation(team.accommodation?.type || '');
@@ -206,20 +232,15 @@ function TeamAccommodationAndArrival({
             const existingCount = existingAccommodationCounts[selectedAccType.type] || 0;
             
             // KROK 2: Aktuálne prebiehajúca registrácia (bez tohto tímu)
-            let currentCountWithoutThisTeam = currentRegistrationAccommodationCounts[selectedAccType.type] || 0;
+            const currentCountWithoutThisTeam = getCurrentRegistrationCountWithoutThisTeam(selectedAccType.type);
             
-            // Ak už má tento tím vybraný iný typ ubytovania, odpočítame ho
-            if (team.accommodation?.type && team.accommodation.type !== 'bez ubytovania' && team.accommodation.type !== newValue) {
-                currentCountWithoutThisTeam = Math.max(0, currentCountWithoutThisTeam - currentTeamPeople);
-            }
-            
-            // KROK 3: Celková obsadenosť
-            const totalOccupied = existingCount + currentCountWithoutThisTeam;
-            const remaining = selectedAccType.capacity - totalOccupied;
+            // KROK 3: Celková obsadenosť bez tohto tímu
+            const totalOccupiedWithoutThisTeam = existingCount + currentCountWithoutThisTeam;
+            const remainingWithoutThisTeam = selectedAccType.capacity - totalOccupiedWithoutThisTeam;
             
             // KROK 4: Kontrola, či sa tím zmestí
-            if (remaining < currentTeamPeople) {
-                alert(`Tento typ ubytovania už nemá dostatočnú kapacitu pre ${currentTeamPeople} osôb. Zostáva ${remaining} miest.`);
+            if (remainingWithoutThisTeam < currentTeamPeople) {
+                alert(`Tento typ ubytovania už nemá dostatočnú kapacitu pre ${currentTeamPeople} osôb. Zostáva ${Math.max(0, remainingWithoutThisTeam)} miest.`);
                 return;
             }
         }
@@ -332,31 +353,30 @@ function TeamAccommodationAndArrival({
                         const existingCount = existingAccommodationCounts[acc.type] || 0;
                         
                         // KROK 2: Aktuálne prebiehajúca registrácia (bez tohto tímu)
-                        let currentCountWithoutThisTeam = currentRegistrationAccommodationCounts[acc.type] || 0;
+                        const currentCountWithoutThisTeam = getCurrentRegistrationCountWithoutThisTeam(acc.type);
                         
-                        // Ak už má tento tím vybraný iný typ ubytovania, odpočítame ho
-                        if (team.accommodation?.type && team.accommodation.type !== 'bez ubytovania' && team.accommodation.type !== acc.type) {
-                            currentCountWithoutThisTeam = Math.max(0, currentCountWithoutThisTeam - currentTeamPeople);
-                        }
+                        // KROK 3: Celková obsadenosť bez tohto tímu
+                        const totalOccupiedWithoutThisTeam = existingCount + currentCountWithoutThisTeam;
+                        const remainingWithoutThisTeam = acc.capacity - totalOccupiedWithoutThisTeam;
                         
-                        // KROK 3: Celková obsadenosť
-                        const totalOccupied = existingCount + currentCountWithoutThisTeam;
-                        const remaining = acc.capacity - totalOccupied;
+                        // KROK 4: Zistiť, či je typ plný pre tento tím
+                        // Typ je nedostupný, ak sa tím nezmestí (remainingWithoutThisTeam < currentTeamPeople)
+                        // A zároveň tento tím ešte nemá vybraný tento typ
+                        const isFull = remainingWithoutThisTeam < currentTeamPeople;
                         
-                        // KROK 4: Zistiť, či je typ plný (vrátane tohto tímu, ak je vybraný)
-                        // Toto je dôležité pre zobrazenie textu "naplnená kapacita"
-                        let totalOccupiedWithThisTeam = totalOccupied;
-                        if (team.accommodation?.type === acc.type) {
-                            totalOccupiedWithThisTeam += currentTeamPeople;
-                        }
-                        const isFull = totalOccupiedWithThisTeam >= acc.capacity;
-                        
-                        // KROK 5: Zablokovanie - typ je nedostupný ak:
-                        // 1. Je plný a nie je aktuálne vybraný, ALEBO
-                        // 2. Je plný a je aktuálne vybraný, ale používateľ sa ho pokúša zmeniť (toto riešime v handleAccommodationChange)
+                        // Typ je dostupný len ak:
+                        // 1. Je aktuálne vybraný (lebo ho už máme vybraný, tak ho musíme nechať vybraný)
+                        // 2. ALEBO nie je plný
                         const shouldDisable = isFull && selectedAccommodation !== acc.type;
                         
                         const finalDisabled = shouldDisable || loading;
+                        
+                        // Vypočítame obsadenosť pre zobrazenie (s týmto tímom, ak je vybraný)
+                        let displayOccupied = totalOccupiedWithoutThisTeam;
+                        if (selectedAccommodation === acc.type) {
+                            displayOccupied += currentTeamPeople;
+                        }
+                        const displayRemaining = acc.capacity - displayOccupied;
                         
                         return React.createElement(
                             'label',
@@ -382,7 +402,7 @@ function TeamAccommodationAndArrival({
                                 { 
                                     className: `ml-3 ${finalDisabled ? 'text-gray-400' : 'text-gray-800'}` 
                                 },
-                                `${acc.type}${isFull ? ' (naplnená kapacita)' : ''}`
+                                `${acc.type} (voľných ${displayRemaining} z ${acc.capacity} miest)${selectedAccommodation === acc.type ? ' - VYBRANÉ' : ''}`
                             )
                         );
                     })
@@ -1525,7 +1545,8 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         currentRegistrationAccommodationCounts: currentRegistrationAccommodationCounts,
                         tournamentStartDate: localTournamentStartDate,
                         generateTimeOptions: generateTimeOptions,
-                        arrivalDateTime: arrivalDateTime
+                        arrivalDateTime: arrivalDateTime,
+                        teamsDataFromPage4: teamsDataFromPage4
                       }),
 
                       React.createElement(TeamPackageSettings, {
