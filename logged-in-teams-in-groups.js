@@ -914,7 +914,7 @@ const createTeamAssignmentNotification = async (action, team) => {
         );
       };
 
-            const teamExistsInBasicGroup = (teamName, categoryName, groupName) => {
+      const teamExistsInBasicGroup = (teamName, categoryName, groupName) => {
         if (!teamName || !categoryName || !groupName) return true; // Ak chýbajú údaje, považujeme za existujúci (nebude červený)
     
         // Získame posledné písmeno názvu skupiny (napr. "A" zo "Skupina A")
