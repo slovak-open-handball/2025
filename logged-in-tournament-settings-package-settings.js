@@ -1,12 +1,13 @@
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, Timestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-
 export function PackageSettings({ db, userProfileData, tournamentStartDate, tournamentEndDate, showNotification, sendAdminNotification }) {
   const [packages, setPackages] = React.useState([]);
+  const [accommodations, setAccommodations] = React.useState([]); // Nový state pre typy ubytovania
   const [showPackageModal, setShowPackageModal] = React.useState(false);
   const [currentPackageEdit, setCurrentPackageEdit] = React.useState(null);
   const [newPackageName, setNewPackageName] = React.useState('');
   const [newPackagePrice, setNewPackagePrice] = React.useState(0);
+  const [selectedAccommodations, setSelectedAccommodations] = React.useState([]); // Vybrané typy ubytovania pre balíček
   const [packageModalMode, setPackageModalMode] = React.useState('add');
   const [showConfirmDeletePackageModal, setShowConfirmDeletePackageModal] = React.useState(false);
   const [packageToDelete, setPackageToDelete] = React.useState(null);
@@ -16,7 +17,6 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
 
   const [showRefreshmentColumn, setShowRefreshmentColumn] = React.useState(false);
   const [hasParticipantCard, setHasParticipantCard] = React.useState(false);
-
 
   const getDaysBetween = (start, end) => {
     const dates = [];
@@ -45,7 +45,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     return [];
   }, [tournamentStartDate, tournamentEndDate]);
 
-
+  // Načítanie balíčkov
   React.useEffect(() => {
     let unsubscribePackages;
     const fetchPackages = async () => {
@@ -81,6 +81,46 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     };
 
     fetchPackages();
+  }, [db, userProfileData, showNotification]);
+
+  // Načítanie typov ubytovania
+  React.useEffect(() => {
+    let unsubscribeAccommodation;
+    const fetchAccommodations = async () => {
+      if (!db || !userProfileData || userProfileData.role !== 'admin') {
+        return;
+      }
+
+      try {
+        const accommodationDocRef = doc(db, 'settings', 'accommodation');
+        unsubscribeAccommodation = onSnapshot(accommodationDocRef, docSnapshot => {
+          if (docSnapshot.exists()) {
+            const data = docSnapshot.data();
+            // Zoradenie ubytovní abecedne podľa názvu (type)
+            const sortedAccommodations = (data.types || []).sort((a, b) => a.type.localeCompare(b.type));
+            setAccommodations(sortedAccommodations);
+          } else {
+            setAccommodations([]);
+          }
+        }, error => {
+          if (typeof showNotification === 'function') {
+            showNotification(`Chyba pri načítaní typov ubytovania: ${error.message}`, 'error');
+          }
+        });
+
+        return () => {
+          if (unsubscribeAccommodation) {
+            unsubscribeAccommodation();
+          }
+        };
+      } catch (e) {
+        if (typeof showNotification === 'function') {
+          showNotification(`Chyba pri nastavovaní poslucháča pre ubytovanie: ${e.message}`, 'error');
+        }
+      }
+    };
+
+    fetchAccommodations();
   }, [db, userProfileData, showNotification]);
 
   React.useEffect(() => {
@@ -145,11 +185,11 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     updatePackagesBasedOnTournamentDates();
   }, [tournamentStartDate, tournamentEndDate, db, userProfileData]);
 
-
   const handleOpenAddPackageModal = () => {
     setPackageModalMode('add');
     setNewPackageName('');
     setNewPackagePrice(0);
+    setSelectedAccommodations([]); // Reset vybraných ubytovaní
     setPackageMeals({}); // Reset meals for new package
     setPackageRefreshments([]);
     setCurrentPackageEdit(null);
@@ -162,6 +202,8 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     setPackageModalMode('edit');
     setNewPackageName(pkg.name);
     setNewPackagePrice(pkg.price);
+    setSelectedAccommodations(pkg.accommodationTypes || []); // Načítanie priradených ubytovaní
+    
     // Pri úprave balíčka inicializujeme meals pre všetky dni turnaja
     const initialMeals = {};
     tournamentDays.forEach(day => {
@@ -187,6 +229,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     setShowPackageModal(false);
     setNewPackageName('');
     setNewPackagePrice(0);
+    setSelectedAccommodations([]);
     setPackageMeals({});
     setPackageRefreshments([]);
     setCurrentPackageEdit(null);
@@ -213,10 +256,17 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     }));
   };
 
+  const handleAccommodationChange = (accommodationType, isChecked) => {
+    if (isChecked) {
+      setSelectedAccommodations(prev => [...prev, accommodationType]);
+    } else {
+      setSelectedAccommodations(prev => prev.filter(type => type !== accommodationType));
+    }
+  };
+
   const handleAddRefreshment = (date) => { };
   const handleRemoveRefreshment = (date, itemIndex) => { };
   const handleRefreshmentItemChange = (date, itemIndex, field, value) => { };
-
 
   const handleSavePackage = async () => {
     if (typeof showNotification !== 'function') {
@@ -242,7 +292,6 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
       return;
     }
 
-
     const packagesCollectionRef = collection(db, 'settings', 'packages', 'list');
 
     try {
@@ -253,7 +302,6 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         delete mealsToSave.participantCard; // Odstrániť, ak nie je začiarknutá
       }
 
-
       if (packageModalMode === 'add') {
         if (packages.some(pkg => pkg.name === trimmedName)) {
           showNotification(`Balíček "${trimmedName}" už existuje.`, 'error');
@@ -262,13 +310,14 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         await addDoc(packagesCollectionRef, {
           name: trimmedName,
           price: newPackagePrice,
+          accommodationTypes: selectedAccommodations, // Uloženie vybraných typov ubytovania
           meals: mealsToSave,
           refreshments: [],
           createdAt: Timestamp.fromDate(new Date())
         });
         showNotification(`Balíček "${trimmedName}" úspešne pridaný!`, 'success');
         if (typeof sendAdminNotification === 'function') {
-            await sendAdminNotification({ type: 'createPackage', data: { name: trimmedName, price: newPackagePrice } });
+            await sendAdminNotification({ type: 'createPackage', data: { name: trimmedName, price: newPackagePrice, accommodationTypes: selectedAccommodations } });
         }
       } else if (packageModalMode === 'edit') {
         if (trimmedName !== currentPackageEdit.name && packages.some(pkg => pkg.name === trimmedName)) {
@@ -281,19 +330,21 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         originalPkgData.meals = originalPkgData.meals || {}; 
         originalPkgData.name = originalPkgData.name || ''; 
         originalPkgData.price = originalPkgData.price || 0; 
+        originalPkgData.accommodationTypes = originalPkgData.accommodationTypes || [];
 
         const newPkgData = { 
             id: originalPkgData.id, 
             name: trimmedName,
             price: newPackagePrice,
+            accommodationTypes: selectedAccommodations,
             meals: mealsToSave,
             refreshments: [], 
         };
 
-
         await updateDoc(packageDocRef, {
           name: trimmedName,
           price: newPackagePrice,
+          accommodationTypes: selectedAccommodations,
           meals: mealsToSave,
           refreshments: [],
           updatedAt: Timestamp.fromDate(new Date())
@@ -346,15 +397,13 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
       await deleteDoc(packageDocRef);
       showNotification(`Balíček "${packageToDelete.name}" úspešne zmazaný!`, 'success');
       if (typeof sendAdminNotification === 'function') {
-        await sendAdminNotification({ type: 'deletePackage', data: { deletedName: packageToDelete.name, deletedPrice: packageToDelete.price } });
+        await sendAdminNotification({ type: 'deletePackage', data: { deletedName: packageToDelete.name, deletedPrice: packageToDelete.price, deletedAccommodationTypes: packageToDelete.accommodationTypes } });
       }
-      // Opravené volanie: voláme správnu funkciu pre zatvorenie modalu balíčkov
       handleCloseConfirmDeletePackageModal();
     } catch (e) {
       showNotification(`Chyba pri mazaní balíčka: ${e.message}`, 'error');
     }
   };
-
 
   return React.createElement(
     React.Fragment,
@@ -371,7 +420,16 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                     React.createElement(
                         'div',
                         { key: pkg.id, className: 'flex justify-between items-center bg-gray-50 p-3 rounded-md shadow-sm mb-2 flex-wrap' },
-                        React.createElement('span', { className: 'text-gray-800 font-medium w-full md:w-auto' }, `${pkg.name} - ${pkg.price} €`),
+                        React.createElement('div', { className: 'w-full md:w-auto' },
+                            React.createElement('span', { className: 'text-gray-800 font-medium' }, `${pkg.name} - ${pkg.price} €`),
+                            // Zobrazenie priradených typov ubytovania
+                            pkg.accommodationTypes && pkg.accommodationTypes.length > 0 && (
+                                React.createElement('div', { className: 'text-sm text-gray-600 mt-1' },
+                                    React.createElement('span', { className: 'font-semibold' }, 'Ubytovanie: '),
+                                    pkg.accommodationTypes.join(', ')
+                                )
+                            )
+                        ),
                         React.createElement(
                             'div',
                             { className: 'text-sm text-gray-600 w-full mt-2 md:mt-0' },
@@ -444,7 +502,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
       { className: 'modal' },
       React.createElement(
         'div',
-        { className: 'modal-content' },
+        { className: 'modal-content max-w-4xl' }, // Zväčšený modal pre viac obsahu
         React.createElement('h3', { className: 'text-xl font-bold mb-4' }, packageModalMode === 'add' ? 'Pridať nový balíček' : `Upraviť balíček: ${currentPackageEdit?.name}`),
         
         React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'newPackageName' }, 'Názov balíčka'),
@@ -478,6 +536,30 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                 }
             ),
             React.createElement('span', { className: 'text-gray-700 font-semibold text-lg' }, '€')
+        ),
+
+        // Výber typov ubytovania pre balíček
+        React.createElement('h4', { className: 'text-lg font-semibold mb-2' }, 'Dostupné pre typy ubytovania:'),
+        accommodations.length > 0 ? (
+          React.createElement(
+            'div',
+            { className: 'grid grid-cols-2 md:grid-cols-3 gap-3 mb-4 p-3 border border-gray-200 rounded-lg bg-gray-50' },
+            accommodations.map(acc => (
+              React.createElement(
+                'label',
+                { key: acc.type, className: 'flex items-center space-x-2 cursor-pointer' },
+                React.createElement('input', {
+                  type: 'checkbox',
+                  className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
+                  checked: selectedAccommodations.includes(acc.type),
+                  onChange: (e) => handleAccommodationChange(acc.type, e.target.checked)
+                }),
+                React.createElement('span', { className: 'text-gray-700' }, `${acc.type} (kapacita: ${acc.capacity})`)
+              )
+            ))
+          )
+        ) : (
+          React.createElement('p', { className: 'text-gray-500 text-center mb-4' }, 'Najprv vytvorte typy ubytovania v sekcii "Nastavenia ubytovania".')
         ),
 
         React.createElement('h4', { className: 'text-lg font-semibold mb-2' }, 'Stravovanie na deň:'),
@@ -549,8 +631,8 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                                         })
                                     )
                                 )
-                            )
-                        ))
+                            ))
+                        )
                     )
                 ),
                 React.createElement(
