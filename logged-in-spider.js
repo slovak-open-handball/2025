@@ -620,6 +620,24 @@ const SpiderApp = ({ userProfileData }) => {
                         createdByUid: userProfileData?.uid || null
                     }
                 ];
+
+                // Nájdeme existujúce semifinálové zápasy a aktualizujeme ich identifikátory
+                const semifinal1 = existingSpiderMatches.find(m => m.matchType === 'semifinále 1');
+                const semifinal2 = existingSpiderMatches.find(m => m.matchType === 'semifinále 2');
+
+                if (semifinal1) {
+                    await updateDoc(doc(window.db, 'matches', semifinal1.id), {
+                        homeTeamIdentifier: `${categoryWithoutDiacritics} WQF01`,
+                        awayTeamIdentifier: `${categoryWithoutDiacritics} WQF02`
+                    });
+                }
+
+                if (semifinal2) {
+                    await updateDoc(doc(window.db, 'matches', semifinal2.id), {
+                        homeTeamIdentifier: `${categoryWithoutDiacritics} WQF03`,
+                        awayTeamIdentifier: `${categoryWithoutDiacritics} WQF04`
+                    });
+                }
                 
                 setSpiderLevel(2);
             }
