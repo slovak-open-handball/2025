@@ -319,16 +319,24 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         
         // --- UPRAVENÁ NOTIFIKÁCIA PRE PRIDANIE ---
         if (typeof sendAdminNotification === 'function') {
-          const accommodationText = selectedAccommodations.length > 0
-            ? ` (priradené ubytovania: ${selectedAccommodations.join(', ')})`
-            : ' (bez priradeného ubytovania)';
+          const changes = [];
+          
+          // Názov
+          changes.push(`Zmena pre názov: z '' na '${trimmedName}'`);
+          
+          // Cena
+          changes.push(`Zmena pre cena: z '0' na '${newPackagePrice}'`);
+          
+          // Ubytovania
+          const accommodationStr = selectedAccommodations.length > 0 
+            ? selectedAccommodations.join(', ') 
+            : 'žiadne';
+          changes.push(`Zmena pre ubytovania: z '' na '${accommodationStr}'`);
           
           await sendAdminNotification({
             type: 'createPackage',
             data: {
-              changes: [
-                `Pridaný nový balíček: ${trimmedName} - cena: ${newPackagePrice} €${accommodationText}`
-              ]
+              changes: changes
             }
           });
         }
@@ -363,24 +371,24 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
 
           // 1. Zmena názvu
           if (originalPkgData.name !== trimmedName) {
-            changesList.push(`Zmena názvu z "${originalPkgData.name}" na "${trimmedName}"`);
+            changesList.push(`Zmena pre názov: z '${originalPkgData.name}' na '${trimmedName}'`);
           }
 
           // 2. Zmena ceny
           if (originalPkgData.price !== newPackagePrice) {
-            changesList.push(`Zmena ceny z ${originalPkgData.price} € na ${newPackagePrice} €`);
+            changesList.push(`Zmena pre cena: z '${originalPkgData.price}' na '${newPackagePrice}'`);
           }
 
           // 3. Zmena priradených ubytovaní
           const oldAccommodations = originalPkgData.accommodationTypes || [];
-          const addedAccommodations = selectedAccommodations.filter(a => !oldAccommodations.includes(a));
-          const removedAccommodations = oldAccommodations.filter(a => !selectedAccommodations.includes(a));
-
-          if (addedAccommodations.length > 0) {
-            changesList.push(`Pridané ubytovania: ${addedAccommodations.join(', ')}`);
-          }
-          if (removedAccommodations.length > 0) {
-            changesList.push(`Odobrané ubytovania: ${removedAccommodations.join(', ')}`);
+          const newAccommodations = selectedAccommodations || [];
+          
+          // Porovnáme, či sa zoznam ubytovaní zmenil
+          const oldStr = oldAccommodations.sort().join(', ') || 'žiadne';
+          const newStr = newAccommodations.sort().join(', ') || 'žiadne';
+          
+          if (oldStr !== newStr) {
+            changesList.push(`Zmena pre ubytovania: z '${oldStr}' na '${newStr}'`);
           }
 
           // Ak nebola žiadna zmena, pošleme aspoň informáciu o aktualizácii
@@ -436,16 +444,24 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
 
       // --- UPRAVENÁ NOTIFIKÁCIA PRE MAZANIE ---
       if (typeof sendAdminNotification === 'function') {
-        const accommodationText = packageToDelete.accommodationTypes && packageToDelete.accommodationTypes.length > 0
-          ? ` (mal priradené ubytovania: ${packageToDelete.accommodationTypes.join(', ')})`
-          : ' (bol bez priradeného ubytovania)';
+        const changes = [];
+        
+        // Názov
+        changes.push(`Zmena pre názov: z '${packageToDelete.name}' na ''`);
+        
+        // Cena
+        changes.push(`Zmena pre cena: z '${packageToDelete.price}' na '0'`);
+        
+        // Ubytovania
+        const accommodationStr = packageToDelete.accommodationTypes && packageToDelete.accommodationTypes.length > 0
+          ? packageToDelete.accommodationTypes.join(', ')
+          : 'žiadne';
+        changes.push(`Zmena pre ubytovania: z '${accommodationStr}' na ''`);
 
         await sendAdminNotification({
           type: 'deletePackage',
           data: {
-            changes: [
-              `Zmazaný balíček: ${packageToDelete.name} - cena: ${packageToDelete.price} €${accommodationText}`
-            ]
+            changes: changes
           }
         });
       }
