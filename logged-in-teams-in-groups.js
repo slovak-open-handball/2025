@@ -2207,7 +2207,7 @@ const createTeamAssignmentNotification = async (action, team) => {
                     // NOVÁ KONTROLA: Je tím v nadstavbovej skupine a chýba v základnej?
                     const isSuperstructureTeam = team.isSuperstructureTeam;
                     const isInSuperstructureGroup = team.groupName && 
-                        allGroupsByCategoryId[selectedCategoryId]?.some(g => 
+                        allGroupsByCategoryId[targetCategoryId]?.some(g => 
                             g.name === team.groupName && g.type === 'nadstavbová skupina'
                         );
                     
@@ -2297,7 +2297,7 @@ const createTeamAssignmentNotification = async (action, team) => {
                 // NOVÁ KONTROLA pre extra tímy
                 const isSuperstructureTeam = team.isSuperstructureTeam;
                 const isInSuperstructureGroup = team.groupName && 
-                    allGroupsByCategoryId[selectedCategoryId]?.some(g => 
+                    allGroupsByCategoryId[targetCategoryId]?.some(g => 
                         g.name === team.groupName && g.type === 'nadstavbová skupina'
                     );
                 
