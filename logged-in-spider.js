@@ -1679,11 +1679,54 @@ const SpiderApp = ({ userProfileData }) => {
                         React.createElement('i', { className: 'fa-solid fa-times text-2xl' })
                     )
                 ),
-                React.createElement(
-                    'p',
-                    { className: 'text-gray-600 mb-6' },
-                    `Naozaj chcete zmazať všetky pavúkové zápasy pre kategóriu "${categories.find(c => c.id === selectedCategory)?.name || selectedCategory}"?`
-                ),
+                
+                // Zistenie aktuálnej úrovne pre zobrazenie konkrétnej správy
+                (() => {
+                    const existingSpiderMatches = allMatches.filter(m => 
+                        m.categoryId === selectedCategory && 
+                        m.matchType && 
+                        ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto', 
+                         'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4',
+                         'osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
+                         'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8'].includes(m.matchType)
+                    );
+                    
+                    const hasEightfinals = existingSpiderMatches.some(m => 
+                        ['osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
+                         'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8'].includes(m.matchType)
+                    );
+                    const hasQuarterfinals = existingSpiderMatches.some(m => 
+                        ['štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4'].includes(m.matchType)
+                    );
+                    
+                    let deleteMessage = '';
+                    let deleteCount = 0;
+                    
+                    if (hasEightfinals) {
+                        deleteCount = existingSpiderMatches.filter(m => 
+                            ['osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
+                             'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8'].includes(m.matchType)
+                        ).length;
+                        deleteMessage = `Naozaj chcete zmazať všetky osemfinálové zápasy (${deleteCount}) pre kategóriu "${categories.find(c => c.id === selectedCategory)?.name || selectedCategory}"?`;
+                    } else if (hasQuarterfinals) {
+                        deleteCount = existingSpiderMatches.filter(m => 
+                            ['štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4'].includes(m.matchType)
+                        ).length;
+                        deleteMessage = `Naozaj chcete zmazať všetky štvrťfinálové zápasy (${deleteCount}) pre kategóriu "${categories.find(c => c.id === selectedCategory)?.name || selectedCategory}"?`;
+                    } else {
+                        deleteCount = existingSpiderMatches.filter(m => 
+                            ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto'].includes(m.matchType)
+                        ).length;
+                        deleteMessage = `Naozaj chcete zmazať celý pavúk (${deleteCount} zápasov: finále, semifinále a o 3. miesto) pre kategóriu "${categories.find(c => c.id === selectedCategory)?.name || selectedCategory}"?`;
+                    }
+                    
+                    return React.createElement(
+                        'p',
+                        { className: 'text-gray-600 mb-6' },
+                        deleteMessage
+                    );
+                })(),
+                
                 React.createElement(
                     'div',
                     { className: 'flex justify-end gap-2' },
