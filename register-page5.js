@@ -1280,28 +1280,28 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         return false;
     }, [driverEntries, teamsWithOwnTransport, loading]);
 
-    // UPRAVENÁ VALIDÁCIA: Počíta s existujúcimi + aktuálnymi registráciami
+    // UPRAVENÁ VALIDÁCIA: Počíta s existujúcimi + aktuálnymi registráciami a kontroluje, či vybraný typ nie je plný
     const isFormValidPage5 = React.useMemo(() => {
         if (!teamsDataFromPage4 || Object.keys(teamsDataFromPage4).length === 0) {
             return false;
         }
-
+    
         let hasTeamWithOwnTransport = false;
-
+    
         // Overenie, či sú všetky tímy a ich dáta platné
         for (const categoryName in teamsDataFromPage4) {
             const teamsInCurrentCategory = teamsDataFromPage4[categoryName];
             if (!teamsInCurrentCategory || !Array.isArray(teamsInCurrentCategory)) continue;
-
+    
             for (const team of teamsInCurrentCategory) {
                 if (!team) continue;
-
+    
                 // Validácia ubytovania
                 if (accommodationTypes.length > 0) {
                     if (!team.accommodation?.type || team.accommodation.type.trim() === '') {
                         return false;
                     }
-
+    
                     // Pre tímy, ktoré si vybrali konkrétny typ ubytovania (nie "bez ubytovania")
                     if (team.accommodation.type !== 'bez ubytovania') {
                         const selectedAccType = accommodationTypes.find(acc => acc.type === team.accommodation.type);
@@ -1312,7 +1312,9 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             const currentOccupied = currentRegistrationAccommodationCounts[selectedAccType.type] || 0;
                             const totalOccupied = existingOccupied + currentOccupied;
                             
+                            // Ak je typ plný (vrátane tohto tímu), validácia zlyhá
                             if (totalOccupied > selectedAccType.capacity) {
+                                console.log(`Typ ubytovania ${selectedAccType.type} je plný (${totalOccupied}/${selectedAccType.capacity})`);
                                 return false;
                             }
                         }
@@ -1329,13 +1331,13 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                     (!team.arrival?.time || team.arrival.time.trim() === '' || team.arrival.time.length !== 5)) {
                     return false;
                 }
-
+    
                 if (team.arrival?.type === 'vlastná doprava') {
                     hasTeamWithOwnTransport = true;
                 }
             }
         }
-
+    
         // Validácia duplicitných záznamov šoférov
         const usedDriverEntryCombinations = new Set();
         for (const entry of driverEntries) {
@@ -1343,7 +1345,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
             if (isNaN(count) || count <= 0 || entry.gender === '' || entry.categoryName === '' || entry.teamIndex === null) {
                 return false;
             }
-
+    
             const comboKey = `${entry.categoryName}-${entry.teamIndex}-${entry.gender}`;
             if (usedDriverEntryCombinations.has(comboKey)) {
                 return false;
