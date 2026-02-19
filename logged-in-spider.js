@@ -636,7 +636,6 @@ const SpiderApp = ({ userProfileData }) => {
             window.showGlobalNotification('Chyba pri generovaní zápasu: ' + error.message, 'error');
         } finally {
             setGenerationInProgress(false);
-            setHoveredMissingMatch(null);
         }
     };
 
@@ -770,7 +769,6 @@ const SpiderApp = ({ userProfileData }) => {
                     },
                     onMouseLeave: () => {
                         setIsHovered(false);
-                        setHoveredMissingMatch(null);
                     },
                     onClick: () => {
                         if (userProfileData?.role === 'admin' && !generationInProgress) {
