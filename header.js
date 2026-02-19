@@ -134,6 +134,9 @@ const formatNotificationMessage = (text) => {
 };
 
 const showDatabaseNotification = (message, type = 'info') => {
+    if (Array.isArray(message)) {
+        message = message.join('<br>');
+    }
     let notificationContainer = document.getElementById('notification-container');
     if (!notificationContainer) {
         notificationContainer = document.createElement('div');
