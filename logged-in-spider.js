@@ -766,7 +766,6 @@ const SpiderApp = ({ userProfileData }) => {
                     onMouseEnter: () => {
                         if (userProfileData?.role === 'admin' && !generationInProgress) {
                             setIsHovered(true);
-                            setHoveredMissingMatch(matchType);
                         }
                     },
                     onMouseLeave: () => {
@@ -775,7 +774,7 @@ const SpiderApp = ({ userProfileData }) => {
                     },
                     onClick: () => {
                         if (userProfileData?.role === 'admin' && !generationInProgress) {
-                            generateSingleMatch(matchType);
+                            onGenerate(matchType);
                         }
                     }
                 },
