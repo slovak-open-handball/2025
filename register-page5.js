@@ -190,61 +190,6 @@ function TeamAccommodationAndArrival({
         setArrivalMinutes(initialTime ? initialTime.split(':')[1] : '');
     }, [team.accommodation, team.arrival]);
 
-    // EFEKT PRE SLEDOVANIE KAPACITY - spúšťa sa pri každej zmene kapacít
-    React.useEffect(() => {
-        // Ak nie je vybraný žiadny typ ubytovania, nič nerobíme
-        if (!selectedAccommodation || selectedAccommodation === 'bez ubytovania') {
-            return;
-        }
-
-        // Nájdeme vybraný typ ubytovania
-        const selectedAccType = accommodationTypes.find(acc => acc.type === selectedAccommodation);
-        if (!selectedAccType) return;
-
-        // KROK 1: Existujúce registrácie z databázy
-        const existingCount = existingAccommodationCounts[selectedAccType.type] || 0;
-        
-        // KROK 2: Aktuálne prebiehajúca registrácia (bez tohto tímu)
-        let currentCountWithoutThisTeam = currentRegistrationAccommodationCounts[selectedAccType.type] || 0;
-        
-        // DÔLEŽITÉ: Odpočítame tento tím z aktuálnej registrácie LEN AK JE VYBRANÝ
-        if (team.accommodation?.type === selectedAccommodation) {
-            currentCountWithoutThisTeam = Math.max(0, currentCountWithoutThisTeam - currentTeamPeople);
-        }
-        
-        // KROK 3: Celková obsadenosť
-        const totalOccupied = existingCount + currentCountWithoutThisTeam;
-        const remaining = selectedAccType.capacity - totalOccupied;
-        
-        // KROK 4: Ak už nie je dostatok miesta, zrušíme výber
-        if (remaining < currentTeamPeople) {
-            console.log(`Kapacita pre ${selectedAccommodation} je naplnená. Zostáva ${remaining} miest, potrebujeme ${currentTeamPeople}. Rušíme výber.`);
-            
-            // Zrušíme výber v lokálnom stave
-            setSelectedAccommodation('');
-            
-            // Zrušíme výber v rodičovskom stave
-            onGranularTeamsDataChange(categoryName, teamIndex, 'accommodation', { type: '' });
-            
-            // Zobrazíme notifikáciu
-            if (typeof window.showNotification === 'function') {
-                window.showNotification(`Typ ubytovania "${selectedAccommodation}" už nie je k dispozícii. Kapacita je naplnená.`, 'warning');
-            } else {
-                alert(`Typ ubytovania "${selectedAccommodation}" už nie je k dispozícii. Kapacita je naplnená.`);
-            }
-        }
-    }, [
-        selectedAccommodation,
-        existingAccommodationCounts,
-        currentRegistrationAccommodationCounts,
-        accommodationTypes,
-        currentTeamPeople,
-        team.accommodation?.type,
-        categoryName,
-        teamIndex,
-        onGranularTeamsDataChange
-    ]);
-
     const handleAccommodationChange = (e) => {
         const newValue = e.target.value;
         
@@ -398,17 +343,18 @@ function TeamAccommodationAndArrival({
                         const totalOccupied = existingCount + currentCountWithoutThisTeam;
                         const remaining = acc.capacity - totalOccupied;
                         
-                        // KROK 4: Zablokovanie - PRIORITA 1: Kapacita z databázy je plná
-                        const isDatabaseFull = existingCount >= acc.capacity;
+                        // KROK 4: Zistiť, či je typ plný (vrátane tohto tímu, ak je vybraný)
+                        // Toto je dôležité pre zobrazenie textu "naplnená kapacita"
+                        let totalOccupiedWithThisTeam = totalOccupied;
+                        if (team.accommodation?.type === acc.type) {
+                            totalOccupiedWithThisTeam += currentTeamPeople;
+                        }
+                        const isFull = totalOccupiedWithThisTeam >= acc.capacity;
                         
-                        // KROK 5: Zablokovanie - PRIORITA 2: Celková kapacita (databáza + aktuálna registrácia) nestačí pre tento tím
-                        const isTotalFull = remaining < currentTeamPeople;
-                        
-                        // Kombinovaná podmienka - blokujeme ak:
-                        // 1. Databáza je už plná, ALEBO
-                        // 2. Celková kapacita nestačí pre tento tím
-                        // A zároveň to nie je aktuálne vybraný typ
-                        const shouldDisable = (isDatabaseFull || isTotalFull) && selectedAccommodation !== acc.type;
+                        // KROK 5: Zablokovanie - typ je nedostupný ak:
+                        // 1. Je plný a nie je aktuálne vybraný, ALEBO
+                        // 2. Je plný a je aktuálne vybraný, ale používateľ sa ho pokúša zmeniť (toto riešime v handleAccommodationChange)
+                        const shouldDisable = isFull && selectedAccommodation !== acc.type;
                         
                         const finalDisabled = shouldDisable || loading;
                         
@@ -436,7 +382,7 @@ function TeamAccommodationAndArrival({
                                 { 
                                     className: `ml-3 ${finalDisabled ? 'text-gray-400' : 'text-gray-800'}` 
                                 },
-                                `${acc.type}${isDatabaseFull ? ' (naplnená kapacita)' : (isTotalFull ? ` (voľných len ${remaining} z ${currentTeamPeople} potrebných)` : '')}`
+                                `${acc.type}${isFull ? ' (naplnená kapacita)' : ''}`
                             )
                         );
                     })
