@@ -253,7 +253,7 @@ const SpiderApp = ({ userProfileData }) => {
 
     // Načítanie pavúka pre vybranú kategóriu
     useEffect(() => {
-        if (selectedCategory && allMatches.length > 0) {
+        if (selectedCategory) {
             // Filtrujeme LEN pavúkové zápasy pre vybranú kategóriu (podľa matchType)
             const spiderMatches = allMatches.filter(m => 
                 m.categoryId === selectedCategory && 
@@ -263,11 +263,20 @@ const SpiderApp = ({ userProfileData }) => {
             
             console.log('Nájdené pavúkové zápasy pre kategóriu:', spiderMatches);
             
-            if (spiderMatches.length >= 4) { // Očakávame 4 zápasy
-                // Vytvoríme štruktúru z existujúcich zápasov
-                const spiderStructure = {
-                    final: spiderMatches.find(m => m.matchType === 'finále') || { 
-                        id: 'final', 
+            // Vytvoríme štruktúru z existujúcich zápasov (vždy, aj keď nie sú žiadne)
+            const spiderStructure = {
+                final: spiderMatches.find(m => m.matchType === 'finále') || { 
+                    id: 'final', 
+                    homeTeam: '---', 
+                    awayTeam: '---', 
+                    homeScore: '', 
+                    awayScore: '', 
+                    date: null,
+                    exists: false
+                },
+                semiFinals: [
+                    spiderMatches.find(m => m.matchType === 'semifinále 1') || { 
+                        id: 'sf1', 
                         homeTeam: '---', 
                         awayTeam: '---', 
                         homeScore: '', 
@@ -275,28 +284,8 @@ const SpiderApp = ({ userProfileData }) => {
                         date: null,
                         exists: false
                     },
-                    semiFinals: [
-                        spiderMatches.find(m => m.matchType === 'semifinále 1') || { 
-                            id: 'sf1', 
-                            homeTeam: '---', 
-                            awayTeam: '---', 
-                            homeScore: '', 
-                            awayScore: '', 
-                            date: null,
-                            exists: false
-                        },
-                        spiderMatches.find(m => m.matchType === 'semifinále 2') || { 
-                            id: 'sf2', 
-                            homeTeam: '---', 
-                            awayTeam: '---', 
-                            homeScore: '', 
-                            awayScore: '', 
-                            date: null,
-                            exists: false
-                        }
-                    ],
-                    thirdPlace: spiderMatches.find(m => m.matchType === 'o 3. miesto') || { 
-                        id: 'third', 
+                    spiderMatches.find(m => m.matchType === 'semifinále 2') || { 
+                        id: 'sf2', 
                         homeTeam: '---', 
                         awayTeam: '---', 
                         homeScore: '', 
@@ -304,52 +293,58 @@ const SpiderApp = ({ userProfileData }) => {
                         date: null,
                         exists: false
                     }
-                };
-                
-                // Označíme existujúce zápasy
-                spiderMatches.forEach(match => {
-                    if (match.matchType === 'finále') {
-                        spiderStructure.final.exists = true;
-                        spiderStructure.final.id = match.id;
-                        spiderStructure.final.homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
-                        spiderStructure.final.awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
-                        spiderStructure.final.homeScore = match.homeScore;
-                        spiderStructure.final.awayScore = match.awayScore;
-                        spiderStructure.final.date = match.date;
-                    } else if (match.matchType === 'semifinále 1') {
-                        spiderStructure.semiFinals[0].exists = true;
-                        spiderStructure.semiFinals[0].id = match.id;
-                        spiderStructure.semiFinals[0].homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
-                        spiderStructure.semiFinals[0].awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
-                        spiderStructure.semiFinals[0].homeScore = match.homeScore;
-                        spiderStructure.semiFinals[0].awayScore = match.awayScore;
-                        spiderStructure.semiFinals[0].date = match.date;
-                    } else if (match.matchType === 'semifinále 2') {
-                        spiderStructure.semiFinals[1].exists = true;
-                        spiderStructure.semiFinals[1].id = match.id;
-                        spiderStructure.semiFinals[1].homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
-                        spiderStructure.semiFinals[1].awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
-                        spiderStructure.semiFinals[1].homeScore = match.homeScore;
-                        spiderStructure.semiFinals[1].awayScore = match.awayScore;
-                        spiderStructure.semiFinals[1].date = match.date;
-                    } else if (match.matchType === 'o 3. miesto') {
-                        spiderStructure.thirdPlace.exists = true;
-                        spiderStructure.thirdPlace.id = match.id;
-                        spiderStructure.thirdPlace.homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
-                        spiderStructure.thirdPlace.awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
-                        spiderStructure.thirdPlace.homeScore = match.homeScore;
-                        spiderStructure.thirdPlace.awayScore = match.awayScore;
-                        spiderStructure.thirdPlace.date = match.date;
-                    }
-                });
-                
-                setSpiderData(spiderStructure);
-            } else {
-                // Žiadne pavúkové zápasy pre túto kategóriu
-                setSpiderData(null);
-            }
-        } else if (selectedCategory) {
-            // Žiadne zápasy vôbec
+                ],
+                thirdPlace: spiderMatches.find(m => m.matchType === 'o 3. miesto') || { 
+                    id: 'third', 
+                    homeTeam: '---', 
+                    awayTeam: '---', 
+                    homeScore: '', 
+                    awayScore: '', 
+                    date: null,
+                    exists: false
+                }
+            };
+            
+            // Označíme existujúce zápasy a naplníme ich dátami
+            spiderMatches.forEach(match => {
+                if (match.matchType === 'finále') {
+                    spiderStructure.final.exists = true;
+                    spiderStructure.final.id = match.id;
+                    spiderStructure.final.homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
+                    spiderStructure.final.awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
+                    spiderStructure.final.homeScore = match.homeScore;
+                    spiderStructure.final.awayScore = match.awayScore;
+                    spiderStructure.final.date = match.date;
+                } else if (match.matchType === 'semifinále 1') {
+                    spiderStructure.semiFinals[0].exists = true;
+                    spiderStructure.semiFinals[0].id = match.id;
+                    spiderStructure.semiFinals[0].homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
+                    spiderStructure.semiFinals[0].awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
+                    spiderStructure.semiFinals[0].homeScore = match.homeScore;
+                    spiderStructure.semiFinals[0].awayScore = match.awayScore;
+                    spiderStructure.semiFinals[0].date = match.date;
+                } else if (match.matchType === 'semifinále 2') {
+                    spiderStructure.semiFinals[1].exists = true;
+                    spiderStructure.semiFinals[1].id = match.id;
+                    spiderStructure.semiFinals[1].homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
+                    spiderStructure.semiFinals[1].awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
+                    spiderStructure.semiFinals[1].homeScore = match.homeScore;
+                    spiderStructure.semiFinals[1].awayScore = match.awayScore;
+                    spiderStructure.semiFinals[1].date = match.date;
+                } else if (match.matchType === 'o 3. miesto') {
+                    spiderStructure.thirdPlace.exists = true;
+                    spiderStructure.thirdPlace.id = match.id;
+                    spiderStructure.thirdPlace.homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
+                    spiderStructure.thirdPlace.awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
+                    spiderStructure.thirdPlace.homeScore = match.homeScore;
+                    spiderStructure.thirdPlace.awayScore = match.awayScore;
+                    spiderStructure.thirdPlace.date = match.date;
+                }
+            });
+            
+            setSpiderData(spiderStructure);
+        } else {
+            // Žiadna vybratá kategória
             setSpiderData(null);
         }
     }, [selectedCategory, allMatches]);
@@ -566,7 +561,19 @@ const SpiderApp = ({ userProfileData }) => {
                 await deleteDoc(doc(window.db, 'matches', match.id));
             }
     
-            setSpiderData(null);
+            // Po vymazaní aktualizujeme spiderData - nastavíme exists na false pre všetky zápasy
+            if (spiderData) {
+                const updatedSpiderData = {
+                    ...spiderData,
+                    final: { ...spiderData.final, exists: false },
+                    semiFinals: [
+                        { ...spiderData.semiFinals[0], exists: false },
+                        { ...spiderData.semiFinals[1], exists: false }
+                    ],
+                    thirdPlace: { ...spiderData.thirdPlace, exists: false }
+                };
+                setSpiderData(updatedSpiderData);
+            }
             
             window.showGlobalNotification(getDeletionMessage(existingSpiderMatches.length), 'success');
     
@@ -629,33 +636,39 @@ const SpiderApp = ({ userProfileData }) => {
     const MatchCell = ({ match, title = '' }) => {
         // Kontrola, či zápas existuje v databáze
         if (!match.exists) {
-            // Chýbajúci zápas - čiarkovaný obdĺžnik so spojeným textom
+            // Chýbajúci zápas - sivý čiarkovaný box s veľkým otáznikom
             return React.createElement(
                 'div',
                 { 
-                    className: 'border-2 border-dashed border-gray-400 rounded-lg p-3 min-w-[220px] bg-gray-50',
+                    className: 'border-2 border-dashed border-gray-400 rounded-lg p-3 min-w-[220px] bg-gray-100',
                     style: { 
                         zIndex: 10, 
                         position: 'relative',
-                        minHeight: '120px',
+                        minHeight: '140px',
                         display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
+                        flexDirection: 'column'
                     }
                 },
-                // Nadpis (ak existuje) - pre chýbajúci zápas zobrazíme len nadpis a text
+                // Nadpis (ak existuje)
+                title && React.createElement(
+                    'div',
+                    { className: 'text-sm font-semibold text-gray-500 mb-2 pb-1 border-b border-dashed border-gray-300 text-center' },
+                    title
+                ),
+                // Veľký otáznik uprostred
                 React.createElement(
                     'div',
-                    { className: 'text-center w-full' },
-                    title && React.createElement(
-                        'div',
-                        { className: 'text-sm font-semibold text-gray-500 mb-2 pb-1 border-b border-dashed border-gray-300' },
-                        title
-                    ),
+                    { 
+                        className: 'flex-grow flex items-center justify-center',
+                        style: { minHeight: title ? '80px' : '120px' }
+                    },
                     React.createElement(
-                        'div',
-                        { className: 'text-gray-400 italic py-4' },
-                        'Chýbajúci zápas'
+                        'span',
+                        { 
+                            className: 'text-gray-400',
+                            style: { fontSize: '72px', fontWeight: '300', lineHeight: 1 }
+                        },
+                        '?'
                     )
                 )
             );
@@ -1084,13 +1097,21 @@ const SpiderApp = ({ userProfileData }) => {
                 'div',
                 { className: 'bg-white p-8', style: { width: '100%', maxWidth: '1200px' } },
                 
-                !spiderData ? (
+                !selectedCategory ? (
                     React.createElement(
                         'div',
                         { className: 'text-center py-16 text-gray-500' },
                         React.createElement('i', { className: 'fa-solid fa-sitemap text-6xl mb-4 opacity-30' }),
                         React.createElement('h2', { className: 'text-2xl font-semibold mb-2' }, 'Pavúk play-off'),
-                        React.createElement('p', { className: 'text-lg' }, 'Vyberte kategóriu a kliknite na zelenú polovicu tlačidla "+" pre generovanie pavúka')
+                        React.createElement('p', { className: 'text-lg' }, 'Vyberte kategóriu pre zobrazenie pavúka')
+                    )
+                ) : !spiderData ? (
+                    React.createElement(
+                        'div',
+                        { className: 'text-center py-16 text-gray-500' },
+                        React.createElement('i', { className: 'fa-solid fa-sitemap text-6xl mb-4 opacity-30' }),
+                        React.createElement('h2', { className: 'text-2xl font-semibold mb-2' }, 'Pavúk play-off'),
+                        React.createElement('p', { className: 'text-lg' }, 'Načítavam dáta...')
                     )
                 ) : (
                     React.createElement(
