@@ -1624,36 +1624,35 @@ const SpiderApp = ({ userProfileData }) => {
                                         )
                                     ),
                                     
-                                    // DRUHÝ RIADOK - Semifinále v dvoch stĺpcoch
+                                    // DRUHÝ RIADOK - Zlúčený a potom rozdelený na dva stĺpce pre semifinále
                                     React.createElement(
                                         'tr',
                                         { style: { height: '200px' } },
-                                        // Prázdna bunka vľavo (pre zachovanie 3-stĺpcovej štruktúry)
+                                        // Prvý stĺpec - zlúčený priestor (zaberá 2/3 šírky)
                                         React.createElement(
                                             'td',
                                             { 
-                                                style: { 
-                                                    width: '33.33%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            }
-                                        ),
-                                        // Semifinále 1 - v strede (prvý zo stredných stĺpcov)
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                colSpan: 1,
+                                                colSpan: 2,
                                                 style: {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
-                                                    width: '33.33%',
+                                                    width: '66.66%',
                                                     border: '1px solid #d1d5db'
                                                 }
                                             },
                                             React.createElement(
                                                 'div',
-                                                { style: { display: 'inline-block' } },
+                                                { 
+                                                    style: { 
+                                                        display: 'flex',
+                                                        justifyContent: 'space-around',
+                                                        alignItems: 'center',
+                                                        width: '100%',
+                                                        gap: '20px'
+                                                    }
+                                                },
+                                                // Semifinále 1
                                                 React.createElement(MatchCell, { 
                                                     match: spiderData.semiFinals[0], 
                                                     title: 'Semifinále 1',
@@ -1661,25 +1660,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch
-                                                })
-                                            )
-                                        ),
-                                        // Semifinále 2 - v strede (druhý zo stredných stĺpcov)
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                colSpan: 1,
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '33.33%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            },
-                                            React.createElement(
-                                                'div',
-                                                { style: { display: 'inline-block' } },
+                                                }),
+                                                // Semifinále 2
                                                 React.createElement(MatchCell, { 
                                                     match: spiderData.semiFinals[1], 
                                                     title: 'Semifinále 2',
@@ -1689,6 +1671,16 @@ const SpiderApp = ({ userProfileData }) => {
                                                     onGenerate: generateSingleMatch
                                                 })
                                             )
+                                        ),
+                                        // Tretí stĺpec - prázdny (zaberá 1/3 šírky)
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: { 
+                                                    width: '33.33%',
+                                                    border: '1px solid #d1d5db'
+                                                }
+                                            }
                                         )
                                     ),
                                     
