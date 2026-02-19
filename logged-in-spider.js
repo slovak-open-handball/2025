@@ -802,7 +802,10 @@ const SpiderApp = ({ userProfileData }) => {
                             },
                             React.createElement(
                                 'span',
-                                { className: 'text-white text-3xl font-bold' },
+                                { 
+                                    className: 'text-white text-3xl font-bold',
+                                    style: { marginTop: '-4px' } 
+                                },
                                 '+'
                             )
                         )
