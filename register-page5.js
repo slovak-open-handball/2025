@@ -1337,7 +1337,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             
                             // Ak už má tento tím vybraný iný typ ubytovania, odpočítame ho
                             if (team.accommodation?.type && team.accommodation.type !== 'bez ubytovania' && team.accommodation.type !== selectedAccType.type) {
-                                currentCountWithoutThisTeam = Math.max(0, currentCountWithoutThisTeam - calculateCurrentTeamPeople());
+                                currentCountWithoutThisTeam = Math.max(0, currentCountWithoutThisTeam - calculateCurrentTeamPeople(team));
                             }
                             
                             // KROK 3: Celková obsadenosť
@@ -1345,7 +1345,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                             
                             // KROK 4: Kontrola, či sa tím zmestí (vrátane tohto tímu)
                             const remaining = selectedAccType.capacity - totalOccupied;
-                            const teamPeople = calculateCurrentTeamPeople();
+                            const teamPeople = calculateCurrentTeamPeople(team);
                             
                             // Ak už nie je dosť miesta pre tento tím, validácia zlyhá
                             if (remaining < teamPeople) {
@@ -1389,7 +1389,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         }
         
         return true;
-    }, [teamsDataFromPage4, accommodationTypes, existingAccommodationCounts, currentRegistrationAccommodationCounts, packages, driverEntries, teamsWithOwnTransport]);
+    }, [teamsDataFromPage4, accommodationTypes, existingAccommodationCounts, currentRegistrationAccommodationCounts, packages, driverEntries, teamsWithOwnTransport, calculateCurrentTeamPeople]);
 
     const nextButtonClasses = `
     font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-200
