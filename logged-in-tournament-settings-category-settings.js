@@ -1150,33 +1150,6 @@ export function CategorySettings({
         }
     };
 
-    // Reset handler pre jednotlivú kategóriu
-    const handleResetCategory = (catId) => {
-        const category = categories.find(c => c.id === catId);
-        if (category) {
-            setEditedMaxTeams(prev => ({ ...prev, [catId]: category.maxTeams }));
-            // NOVÉ: Reset pre maxPlayers a maxImplementationTeam
-            setEditedMaxPlayers(prev => ({ ...prev, [catId]: category.maxPlayers }));
-            setEditedMaxImplementationTeam(prev => ({ ...prev, [catId]: category.maxImplementationTeam }));
-            setEditedPeriods(prev => ({ ...prev, [catId]: category.periods }));
-            setEditedPeriodDuration(prev => ({ ...prev, [catId]: category.periodDuration }));
-            setEditedBreakDuration(prev => ({ ...prev, [catId]: category.breakDuration }));
-            setEditedMatchBreak(prev => ({ ...prev, [catId]: category.matchBreak }));
-            setEditedDrawColor(prev => ({ ...prev, [catId]: category.drawColor }));
-            setEditedTransportColor(prev => ({ ...prev, [catId]: category.transportColor }));
-            // Dátumy resetujeme len ak nie je zmrazené
-            if (!isRegistrationFrozen) {
-                setEditedDateFrom(prev => ({ ...prev, [catId]: category.dateFrom }));
-                setEditedDateTo(prev => ({ ...prev, [catId]: category.dateTo }));
-                setEditedDateFromActive(prev => ({ ...prev, [catId]: category.dateFromActive }));
-                setEditedDateToActive(prev => ({ ...prev, [catId]: category.dateToActive }));
-            }
-            setEditedTimeoutCount(prev => ({ ...prev, [catId]: category.timeoutCount }));
-            setEditedTimeoutDuration(prev => ({ ...prev, [catId]: category.timeoutDuration }));
-            setEditedExclusionTime(prev => ({ ...prev, [catId]: category.exclusionTime }));
-        }
-    };
-
     // Získanie vybranej kategórie
     const selectedCategory = categories.find(cat => cat.id === selectedCategoryId);
     
@@ -1347,14 +1320,6 @@ export function CategorySettings({
                                         React.createElement('i', { className: 'fa-solid fa-calendar-lock' }),
                                         'Registrácia začala'
                                     )
-                                ),
-                                React.createElement(
-                                    'button',
-                                    {
-                                        onClick: () => handleResetCategory(selectedCategory.id),
-                                        className: 'px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors'
-                                    },
-                                    'Reset'
                                 )
                             ),
 
