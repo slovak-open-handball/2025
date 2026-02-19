@@ -2236,7 +2236,11 @@ const createTeamAssignmentNotification = async (action, team) => {
                             'li',
                             {
                                 key: team.id || `team-${pos}-${team.teamName}-${teamIdx}`,
-                                className: `flex justify-between items-center px-4 py-3 rounded-lg border shadow-sm ${team.isSuperstructureTeam ? 'bg-yellow-50' : 'bg-white'} ${hasDuplicate ? 'border-red-300' : ''}`
+                                className: `flex justify-between items-center px-4 py-3 rounded-lg border shadow-sm ${
+                                team.isSuperstructureTeam 
+                                    ? (existsInBasic === false ? 'bg-orange-50' : 'bg-yellow-50') 
+                                    : 'bg-white'
+                                } ${hasDuplicate ? 'border-red-300' : ''}`
                             },
                             React.createElement(
                                 'span',
@@ -2326,7 +2330,11 @@ const createTeamAssignmentNotification = async (action, team) => {
                         'li',
                         {
                             key: team.id || `extra-${team.order}-${team.teamName}`,
-                            className: 'flex justify-between items-center px-4 py-3 rounded-lg border shadow-sm bg-orange-50/70 border-orange-300'
+                            className: `flex justify-between items-center px-4 py-3 rounded-lg border shadow-sm ${
+                            team.isSuperstructureTeam && existsInBasic === false
+                                ? 'bg-orange-50 border-orange-300' 
+                                : 'bg-orange-50/70 border-orange-300'
+                            }`
                         },
                         React.createElement(
                             'span',
