@@ -576,7 +576,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         React.createElement(
           'div',
           { className: 'grid grid-cols-2 md:grid-cols-3 gap-3 mb-4 p-3 border border-gray-200 rounded-lg bg-gray-50' },
-          // Najprv zobrazíme bežné typy ubytovania
+          // Zobrazíme bežné typy ubytovania
           accommodations.map(acc => (
             React.createElement(
               'label',
@@ -590,17 +590,17 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
               React.createElement('span', { className: 'text-gray-700' }, `${acc.type} (kapacita: ${acc.capacity})`)
             )
           )),
-          // Pridáme špeciálny typ "bez ubytovania" (vždy dostupný)
+          // Pridáme typ "bez ubytovania" medzi ostatné typy
           React.createElement(
             'label',
-            { key: NO_ACCOMMODATION_TYPE, className: 'flex items-center space-x-2 cursor-pointer border-t-2 border-gray-300 pt-3 mt-2 col-span-2 md:col-span-3' },
+            { key: NO_ACCOMMODATION_TYPE, className: 'flex items-center space-x-2 cursor-pointer' },
             React.createElement('input', {
               type: 'checkbox',
-              className: 'form-checkbox h-5 w-5 text-green-600 rounded border-gray-300 focus:ring-green-500',
+              className: 'form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500',
               checked: selectedAccommodations.includes(NO_ACCOMMODATION_TYPE),
               onChange: (e) => handleAccommodationChange(NO_ACCOMMODATION_TYPE, e.target.checked)
             }),
-            React.createElement('span', { className: 'text-gray-700 font-semibold' }, `${NO_ACCOMMODATION_TYPE} (vždy dostupné)`)
+            React.createElement('span', { className: 'text-gray-700' }, `${NO_ACCOMMODATION_TYPE}`)
           )
         ),
 
