@@ -132,7 +132,7 @@ function TeamJerseyColors({
   );
 }
 
-// register-page5.js - opravený TeamAccommodationAndArrival komponent
+// register-page5.js - opravený TeamAccommodationAndArrival komponent s podrobným logovaním
 function TeamAccommodationAndArrival({
     team,
     categoryName,
@@ -181,15 +181,18 @@ function TeamAccommodationAndArrival({
         return total;
     }, []);
 
-    const currentTeamPeople = React.useMemo(() => 
-        calculateCurrentTeamPeople(team), 
-        [team, calculateCurrentTeamPeople]
-    );
+    const currentTeamPeople = React.useMemo(() => {
+        const count = calculateCurrentTeamPeople(team);
+        console.log(`[${categoryName} - Tím ${teamIndex + 1}] Počet ľudí v tíme:`, count);
+        return count;
+    }, [team, calculateCurrentTeamPeople, categoryName, teamIndex]);
 
     // Funkcia na výpočet aktuálneho počtu ľudí v prebiehajúcej registrácii pre daný typ ubytovania
     // BEZ započítania aktuálneho tímu (aby sme vedeli zistiť, koľko miesta zostáva)
     const getCurrentRegistrationCountWithoutThisTeam = React.useCallback((accommodationType) => {
         let count = 0;
+        
+        console.log(`[${categoryName} - Tím ${teamIndex + 1}] Počítam aktuálnu registráciu pre typ:`, accommodationType);
         
         for (const catName in teamsDataFromPage4) {
             const teamsInCategory = teamsDataFromPage4[catName];
@@ -197,34 +200,53 @@ function TeamAccommodationAndArrival({
             
             teamsInCategory.forEach((t, idx) => {
                 // Preskočíme aktuálny tím
-                if (catName === categoryName && idx === teamIndex) return;
+                if (catName === categoryName && idx === teamIndex) {
+                    console.log(`  - Preskakujem aktuálny tím: ${catName} - ${idx}`);
+                    return;
+                }
                 
                 if (t.accommodation?.type === accommodationType) {
-                    count += calculateCurrentTeamPeople(t);
+                    const teamPeople = calculateCurrentTeamPeople(t);
+                    console.log(`  - Tím ${catName} - ${idx} má vybraný ${accommodationType}, počet ľudí: ${teamPeople}`);
+                    count += teamPeople;
                 }
             });
         }
         
+        console.log(`[${categoryName} - Tím ${teamIndex + 1}] Celkový počet v aktuálnej registrácii pre ${accommodationType} (bez tohto tímu):`, count);
         return count;
     }, [teamsDataFromPage4, categoryName, teamIndex, calculateCurrentTeamPeople]);
 
     // Funkcia na výpočet dostupných miest pre daný typ ubytovania pre aktuálny tím
     const getAvailableSpotsForTeam = React.useCallback((accommodationType) => {
         const accType = accommodationTypes.find(acc => acc.type === accommodationType);
-        if (!accType) return 0;
+        if (!accType) {
+            console.log(`[${categoryName} - Tím ${teamIndex + 1}] Typ ${accommodationType} neexistuje v accommodationTypes`);
+            return 0;
+        }
+        
+        console.log(`\n=== VÝPOČET PRE TYP: ${accommodationType} ===`);
+        console.log(`Kapacita typu: ${accType.capacity}`);
         
         // Existujúce registrácie z databázy
         const existingCount = existingAccommodationCounts[accommodationType] || 0;
+        console.log(`Existujúce registrácie z databázy: ${existingCount}`);
         
         // Aktuálne prebiehajúca registrácia (bez tohto tímu)
         const currentCountWithoutThisTeam = getCurrentRegistrationCountWithoutThisTeam(accommodationType);
         
         // Celková obsadenosť bez tohto tímu
         const totalOccupiedWithoutThisTeam = existingCount + currentCountWithoutThisTeam;
+        console.log(`Celková obsadenosť bez tohto tímu: ${totalOccupiedWithoutThisTeam}`);
         
         // Voľné miesta
-        return accType.capacity - totalOccupiedWithoutThisTeam;
-    }, [accommodationTypes, existingAccommodationCounts, getCurrentRegistrationCountWithoutThisTeam]);
+        const availableSpots = accType.capacity - totalOccupiedWithoutThisTeam;
+        console.log(`Voľné miesta (bez tohto tímu): ${availableSpots}`);
+        console.log(`Tento tím potrebuje: ${currentTeamPeople} miest`);
+        console.log(`=== KONIEC VÝPOČTU PRE ${accommodationType} ===\n`);
+        
+        return availableSpots;
+    }, [accommodationTypes, existingAccommodationCounts, getCurrentRegistrationCountWithoutThisTeam, currentTeamPeople, categoryName, teamIndex]);
 
     React.useEffect(() => {
         setSelectedAccommodation(team.accommodation?.type || '');
@@ -232,12 +254,16 @@ function TeamAccommodationAndArrival({
         const initialTime = typeof team.arrival?.time === 'string' ? team.arrival.time : '';
         setArrivalHours(initialTime ? initialTime.split(':')[0] : '');
         setArrivalMinutes(initialTime ? initialTime.split(':')[1] : '');
-    }, [team.accommodation, team.arrival]);
+        
+        console.log(`[${categoryName} - Tím ${teamIndex + 1}] Inicializácia - vybrané ubytovanie:`, team.accommodation?.type);
+    }, [team.accommodation, team.arrival, categoryName, teamIndex]);
 
     const handleAccommodationChange = (e) => {
         const newValue = e.target.value;
+        console.log(`[${categoryName} - Tím ${teamIndex + 1}] Pokus o zmenu ubytovania na:`, newValue);
         
         if (newValue === 'bez ubytovania') {
+            console.log(`[${categoryName} - Tím ${teamIndex + 1}] Vybraté "bez ubytovania" - žiadna kontrola kapacity`);
             setSelectedAccommodation(newValue);
             onGranularTeamsDataChange(categoryName, teamIndex, 'accommodation', { type: newValue });
             return;
@@ -248,10 +274,17 @@ function TeamAccommodationAndArrival({
         if (selectedAccType) {
             const availableSpots = getAvailableSpotsForTeam(selectedAccType.type);
             
+            console.log(`[${categoryName} - Tím ${teamIndex + 1}] Kontrola kapacity pre ${newValue}:`);
+            console.log(`  - Voľných miest: ${availableSpots}`);
+            console.log(`  - Potrebných miest: ${currentTeamPeople}`);
+            
             // Kontrola, či sa tím zmestí
             if (availableSpots < currentTeamPeople) {
+                console.log(`[${categoryName} - Tím ${teamIndex + 1}] ❌ NEDOSTATOČNÁ KAPACITA - blokujem výber`);
                 alert(`Tento typ ubytovania už nemá dostatočnú kapacitu pre ${currentTeamPeople} osôb. Zostáva ${Math.max(0, availableSpots)} miest.`);
                 return;
+            } else {
+                console.log(`[${categoryName} - Tím ${teamIndex + 1}] ✅ Kapacita dostatočná - povoľujem výber`);
             }
         }
 
@@ -324,6 +357,16 @@ function TeamAccommodationAndArrival({
           })
         : 'čas príchodu';
 
+    // Logujeme všetky dostupné typy pri každom rendere
+    React.useEffect(() => {
+        console.log(`\n=== DOSTUPNÉ TYPY UBYTOVANIA PRE ${categoryName} - TÍM ${teamIndex + 1} ===`);
+        accommodationTypes.forEach(acc => {
+            const availableSpots = getAvailableSpotsForTeam(acc.type);
+            console.log(`${acc.type}: kapacita ${acc.capacity}, voľných ${availableSpots}, potreba ${currentTeamPeople} -> ${availableSpots >= currentTeamPeople ? 'DOSTUPNÝ' : 'NEDOSTUPNÝ'}`);
+        });
+        console.log('=====================================\n');
+    }, [accommodationTypes, existingAccommodationCounts, teamsDataFromPage4, currentTeamPeople]);
+
     return React.createElement(
         React.Fragment,
         null,
@@ -393,6 +436,16 @@ function TeamAccommodationAndArrival({
                         const isSelectedButNowFull = selectedAccommodation === acc.type && isInsufficientCapacity;
                         
                         const finalDisabled = shouldDisable || loading;
+                        
+                        // Log pre každý typ pri rendere
+                        console.log(`[${categoryName} - Tím ${teamIndex + 1}] Typ ${acc.type}:`);
+                        console.log(`  - availableSpotsWithoutTeam: ${availableSpotsWithoutTeam}`);
+                        console.log(`  - currentTeamPeople: ${currentTeamPeople}`);
+                        console.log(`  - isInsufficientCapacity: ${isInsufficientCapacity}`);
+                        console.log(`  - selectedAccommodation: ${selectedAccommodation}`);
+                        console.log(`  - shouldDisable: ${shouldDisable}`);
+                        console.log(`  - finalDisabled: ${finalDisabled}`);
+                        console.log(`  - displayRemaining: ${displayRemaining}`);
                         
                         return React.createElement(
                             'label',
