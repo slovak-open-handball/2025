@@ -1387,8 +1387,8 @@ const SpiderApp = ({ userProfileData }) => {
                         React.createElement(
                             'div',
                             { 
-                                className: 'flex flex-col items-center w-full relative py-8',
-                                style: { minHeight: '800px' }
+                                className: 'flex flex-col items-center w-full relative',
+                                style: { minHeight: '600px' }
                             },
                             
                             // Hlavná zvislá čiara
@@ -1398,8 +1398,8 @@ const SpiderApp = ({ userProfileData }) => {
                                     className: 'absolute w-0.5 bg-gray-400',
                                     style: { 
                                         left: '50%',
-                                        top: spiderLevel === 2 ? '250px' : '100px',
-                                        bottom: spiderLevel === 2 ? '250px' : '100px',
+                                        top: spiderLevel === 2 ? '120px' : '40px',
+                                        bottom: spiderLevel === 2 ? '120px' : '40px',
                                         transform: 'translateX(-50%)',
                                         zIndex: 1
                                     }
@@ -1413,7 +1413,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     className: 'flex justify-between items-center w-full relative z-10',
                                     style: { 
                                         position: 'absolute',
-                                        top: '50px',
+                                        top: '20px',
                                         left: 0,
                                         right: 0,
                                         paddingLeft: '50px',
@@ -1463,7 +1463,7 @@ const SpiderApp = ({ userProfileData }) => {
                                 )
                             ),
                             
-                            // STREDNÝ RIADOK - Semifinále
+                            // STREDNÝ RIADOK - Semifinále (posunutý bližšie k hornému riadku)
                             React.createElement(
                                 'div',
                                 { 
@@ -1541,7 +1541,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     className: 'flex justify-between items-center w-full relative z-10',
                                     style: { 
                                         position: 'absolute',
-                                        bottom: '50px',
+                                        bottom: '20px',
                                         left: 0,
                                         right: 0,
                                         paddingLeft: '50px',
@@ -1602,9 +1602,9 @@ const SpiderApp = ({ userProfileData }) => {
                                         className: 'absolute',
                                         style: { 
                                             left: 'calc(25% - 10px)',
-                                            top: '140px',
+                                            top: '100px',
                                             width: '2px',
-                                            height: 'calc(50% - 190px)',
+                                            height: 'calc(50% - 120px)',
                                             backgroundColor: '#9CA3AF',
                                             zIndex: 5
                                         }
@@ -1617,9 +1617,9 @@ const SpiderApp = ({ userProfileData }) => {
                                         className: 'absolute',
                                         style: { 
                                             right: 'calc(25% - 10px)',
-                                            top: '140px',
+                                            top: '100px',
                                             width: '2px',
-                                            height: 'calc(50% - 190px)',
+                                            height: 'calc(50% - 120px)',
                                             backgroundColor: '#9CA3AF',
                                             zIndex: 5
                                         }
@@ -1632,9 +1632,9 @@ const SpiderApp = ({ userProfileData }) => {
                                         className: 'absolute',
                                         style: { 
                                             left: 'calc(25% - 10px)',
-                                            bottom: '140px',
+                                            bottom: '100px',
                                             width: '2px',
-                                            height: 'calc(50% - 190px)',
+                                            height: 'calc(50% - 120px)',
                                             backgroundColor: '#9CA3AF',
                                             zIndex: 5
                                         }
@@ -1647,9 +1647,9 @@ const SpiderApp = ({ userProfileData }) => {
                                         className: 'absolute',
                                         style: { 
                                             right: 'calc(25% - 10px)',
-                                            bottom: '140px',
+                                            bottom: '100px',
                                             width: '2px',
-                                            height: 'calc(50% - 190px)',
+                                            height: 'calc(50% - 120px)',
                                             backgroundColor: '#9CA3AF',
                                             zIndex: 5
                                         }
