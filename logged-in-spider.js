@@ -1921,8 +1921,7 @@ const SpiderApp = ({ userProfileData }) => {
                                             React.createElement('div', { className: 'spider-line-vertical spider-line-vertical-bottom' })
                                         )
                                     ),
-                                    
-                                    // DRUHÝ RIADOK - Semifinále (SF1 vľavo, SF2 vpravo) - s vodorovnými čiarami
+                                                                        
                                     React.createElement(
                                         'tr',
                                         { style: { height: '200px' } },
@@ -1936,6 +1935,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     padding: '10px',
                                                     width: '50%',
                                                     border: '0px solid #d1d5db',
+                                                    borderRight: '2px solid #9ca3af', // Zvislé orámovanie medzi bunkami
                                                     position: 'relative'
                                                 }
                                             },
