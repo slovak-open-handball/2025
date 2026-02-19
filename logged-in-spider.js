@@ -1865,7 +1865,7 @@ const SpiderApp = ({ userProfileData }) => {
                             { 
                                 className: 'text-2xl font-bold mb-12 text-gray-800',
                             },
-                            `Play-off ${spiderLevel === 3 ? '(s osemfinále)' : (spiderLevel === 2 ? '(so štvrťfinále)' : '')} - ${categories.find(c => c.id === selectedCategory)?.name || selectedCategory}`
+                            `Play-off ${spiderLevel === 3 ? '(osemfinále)' : (spiderLevel === 2 ? '(štvrťfinále)' : '')} - ${categories.find(c => c.id === selectedCategory)?.name || selectedCategory}`
                         ),
                         
                         // Tabuľka pre pavúka - s orámovaním každej bunky
