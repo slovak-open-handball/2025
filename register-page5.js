@@ -378,7 +378,7 @@ function TeamAccommodationAndArrival({
                             displayRemaining = availableSpotsWithoutTeam;
                             displayOccupied = acc.capacity - displayRemaining;
                         }
-                        
+    
                         // Typ je nedostupný ak:
                         // 1. Pre tento tím nie je dostatok miest (availableSpotsWithoutTeam < currentTeamPeople)
                         // 2. A zároveň tento tím ešte nemá vybraný tento typ
@@ -390,9 +390,17 @@ function TeamAccommodationAndArrival({
                         // Ak je typ aktuálne vybraný a je nedostatočná kapacita, znamená to, že 
                         // niekto iný práve obsadil posledné miesta - vtedy musíme zobraziť varovanie
                         const isSelectedButNowFull = selectedAccommodation === acc.type && isInsufficientCapacity;
-                        
+    
                         const finalDisabled = shouldDisable || loading;
                         
+                        // Určenie dodatočného textu podľa stavu kapacity
+                        let capacityStatusText = '';
+                        if (availableSpotsWithoutTeam <= 0) {
+                            capacityStatusText = '(kapacita naplnená)';
+                        } else if (availableSpotsWithoutTeam < currentTeamPeople && availableSpotsWithoutTeam > 0) {
+                            capacityStatusText = '(nedostatočná kapacita)';
+                        }
+    
                         return React.createElement(
                             'label',
                             {
@@ -417,7 +425,7 @@ function TeamAccommodationAndArrival({
                                 { 
                                     className: `ml-3 ${finalDisabled ? 'text-gray-400' : 'text-gray-800'}` 
                                 },
-                                acc.type
+                                `${acc.type} ${capacityStatusText}`
                             ),
                             isSelectedButNowFull && React.createElement(
                                 'span',
