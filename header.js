@@ -495,21 +495,13 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                     
                     let changesMessage = '';
                     
-                    // === OPRAVA: Spracovanie všetkých zmien v poli changes ===
+                    // === JEDNODUCHŠIE SPRACOVANIE ===
                     if (newNotification.changes) {
-                        if (Array.isArray(newNotification.changes) && newNotification.changes.length > 0) {
-                            // Spojíme všetky zmeny do jedného reťazca oddeleného odrážkami
-                            changesMessage = newNotification.changes.map(change => {
-                                // Ak je zmena objekt, skúsime z neho dostať text
-                                if (typeof change === 'object' && change !== null) {
-                                    // Môžeš prispôsobiť podľa štruktúry tvojich objektov
-                                    return change.text || change.message || JSON.stringify(change);
-                                }
-                                return change;
-                            }).join('<br>');
-                            
-                        } else if (typeof newNotification.changes === 'string') {
+                        if (Array.isArray(newNotification.changes)) {
+                            // Ak je to pole, vezmeme ho ako celok - formatNotificationMessage si poradí
                             changesMessage = newNotification.changes;
+                        } else {
+                            changesMessage = String(newNotification.changes);
                         }
                     } else if (newNotification.message) {
                         changesMessage = newNotification.message;
@@ -520,7 +512,14 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                     }
                     
                     if (newNotification.userEmail) {
-                        changesMessage = `Používateľ ${newNotification.userEmail}: ${changesMessage}`;
+                        // Ak je changesMessage pole, pridáme email ku každému prvku?
+                        if (Array.isArray(changesMessage)) {
+                            changesMessage = changesMessage.map(msg => 
+                                `Používateľ ${newNotification.userEmail}: ${msg}`
+                            );
+                        } else {
+                            changesMessage = `Používateľ ${newNotification.userEmail}: ${changesMessage}`;
+                        }
                     }                    
                     
                     showDatabaseNotification(changesMessage, newNotification.type || 'info');                    
