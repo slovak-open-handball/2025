@@ -1608,7 +1608,10 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                     const querySnapshot = await getDocs(packagesCollectionRef);
                     const fetchedPackages = querySnapshot.docs.map(doc => ({
                         id: doc.id,
-                        ...doc.data()
+                        name: doc.data().name,
+                        accommodationTypes: doc.data().accommodationTypes || [], 
+                        price: doc.data().price || 0,
+                        meals: doc.data().meals || {}
                     }));
                     setPackages(fetchedPackages);
                 } catch (error) {
@@ -2398,9 +2401,37 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 disabled: !isSavable
                             },
                             React.createElement('option', { value: '', disabled: true }, 'Vyberte balík'),
-                            selectedPackageName && !packages.some(pkg => pkg.name === selectedPackageName) &&
-                                React.createElement('option', { key: selectedPackageName, value: selectedPackageName, disabled: true, hidden: true }, selectedPackageName),
-                            packages.map(pkg => React.createElement('option', { key: pkg.id, value: pkg.name }, pkg.name))
+                            // Filtrujeme balíky podľa vybraného typu ubytovania
+                            (() => {
+                                // Získame všetky dostupné balíky
+                                const allPackages = packages || [];
+                                
+                                // Filtrujeme balíky, ktoré sú dostupné pre aktuálne vybraný typ ubytovania
+                                const filteredPackages = allPackages.filter(pkg => {
+                                    // Ak balík nemá definované accommodationTypes, berieme ho ako dostupný pre všetky typy (pre spätnú kompatibilitu)
+                                    if (!pkg.accommodationTypes || pkg.accommodationTypes.length === 0) {
+                                        return true;
+                                    }
+                                    
+                                    // Ak je vybraný typ "bez ubytovania", kontrolujeme či je v zozname
+                                    if (selectedAccommodationType === 'bez ubytovania') {
+                                        return pkg.accommodationTypes.includes('bez ubytovania');
+                                    }
+                                    
+                                    // Inak kontrolujeme, či je vybraný typ v zozname dostupných typov pre balík
+                                    return pkg.accommodationTypes.includes(selectedAccommodationType);
+                                });
+                                
+                                // Zoradíme podľa názvu a vrátime option elementy
+                                return filteredPackages
+                                    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                                    .map(pkg => 
+                                        React.createElement('option', { 
+                                            key: pkg.id || pkg.name, 
+                                            value: pkg.name 
+                                        }, pkg.name)
+                                    );
+                            })()
                         )
                     )
                 );
