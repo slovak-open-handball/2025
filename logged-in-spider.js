@@ -1,4 +1,4 @@
-// logged-in-spider.js (upravený - symetrické rozloženie)
+// logged-in-spider.js (upravený - symetrické rozloženie s kvartfinále)
 import { doc, getDoc, getDocs, setDoc, onSnapshot, updateDoc, addDoc, deleteDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { useState, useEffect } = React;
@@ -174,6 +174,7 @@ const SpiderApp = ({ userProfileData }) => {
     const [isDeleteMatchesModalOpen, setIsDeleteMatchesModalOpen] = useState(false);
     const [hasSpiderMatches, setHasSpiderMatches] = useState(false);
     const [hoveredMissingMatch, setHoveredMissingMatch] = useState(null);
+    const [spiderLevel, setSpiderLevel] = useState(1); // 1 = semifinále+, 2 = štvrťfinále+
 
     // Definícia isFilterActive - filter je aktívny, ak je vybratá nejaká kategória
     const isFilterActive = selectedCategory !== '';
@@ -260,16 +261,24 @@ const SpiderApp = ({ userProfileData }) => {
             const spiderMatches = allMatches.filter(m => 
                 m.categoryId === selectedCategory && 
                 m.matchType && // Iba zápasy, ktoré majú matchType
-                ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto'].includes(m.matchType)
+                ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto', 'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4'].includes(m.matchType)
             );
             
             console.log('Nájdené pavúkové zápasy pre kategóriu:', spiderMatches);
             
-            // Zistíme, či existujú nejaké pavúkové zápasy
-            const hasAnyMatches = spiderMatches.length > 0;
-            setHasSpiderMatches(hasAnyMatches);
+            // Zistíme, či existujú nejaké pavúkové zápasy a aká je úroveň
+            const hasSemifinalMatches = spiderMatches.some(m => ['semifinále 1', 'semifinále 2'].includes(m.matchType));
+            const hasQuarterfinalMatches = spiderMatches.some(m => ['štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4'].includes(m.matchType));
             
-            if (hasAnyMatches) {
+            setHasSpiderMatches(spiderMatches.length > 0);
+            
+            if (hasQuarterfinalMatches) {
+                setSpiderLevel(2);
+            } else if (hasSemifinalMatches) {
+                setSpiderLevel(1);
+            }
+            
+            if (spiderMatches.length > 0) {
                 // Vytvoríme štruktúru z existujúcich zápasov
                 const spiderStructure = {
                     final: spiderMatches.find(m => m.matchType === 'finále') || { 
@@ -293,6 +302,44 @@ const SpiderApp = ({ userProfileData }) => {
                         },
                         spiderMatches.find(m => m.matchType === 'semifinále 2') || { 
                             id: 'sf2', 
+                            homeTeam: '---', 
+                            awayTeam: '---', 
+                            homeScore: '', 
+                            awayScore: '', 
+                            date: null,
+                            exists: false
+                        }
+                    ],
+                    quarterFinals: [
+                        spiderMatches.find(m => m.matchType === 'štvrťfinále 1') || { 
+                            id: 'qf1', 
+                            homeTeam: '---', 
+                            awayTeam: '---', 
+                            homeScore: '', 
+                            awayScore: '', 
+                            date: null,
+                            exists: false
+                        },
+                        spiderMatches.find(m => m.matchType === 'štvrťfinále 2') || { 
+                            id: 'qf2', 
+                            homeTeam: '---', 
+                            awayTeam: '---', 
+                            homeScore: '', 
+                            awayScore: '', 
+                            date: null,
+                            exists: false
+                        },
+                        spiderMatches.find(m => m.matchType === 'štvrťfinále 3') || { 
+                            id: 'qf3', 
+                            homeTeam: '---', 
+                            awayTeam: '---', 
+                            homeScore: '', 
+                            awayScore: '', 
+                            date: null,
+                            exists: false
+                        },
+                        spiderMatches.find(m => m.matchType === 'štvrťfinále 4') || { 
+                            id: 'qf4', 
                             homeTeam: '---', 
                             awayTeam: '---', 
                             homeScore: '', 
@@ -346,6 +393,38 @@ const SpiderApp = ({ userProfileData }) => {
                         spiderStructure.thirdPlace.homeScore = match.homeScore;
                         spiderStructure.thirdPlace.awayScore = match.awayScore;
                         spiderStructure.thirdPlace.date = match.date;
+                    } else if (match.matchType === 'štvrťfinále 1') {
+                        spiderStructure.quarterFinals[0].exists = true;
+                        spiderStructure.quarterFinals[0].id = match.id;
+                        spiderStructure.quarterFinals[0].homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
+                        spiderStructure.quarterFinals[0].awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
+                        spiderStructure.quarterFinals[0].homeScore = match.homeScore;
+                        spiderStructure.quarterFinals[0].awayScore = match.awayScore;
+                        spiderStructure.quarterFinals[0].date = match.date;
+                    } else if (match.matchType === 'štvrťfinále 2') {
+                        spiderStructure.quarterFinals[1].exists = true;
+                        spiderStructure.quarterFinals[1].id = match.id;
+                        spiderStructure.quarterFinals[1].homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
+                        spiderStructure.quarterFinals[1].awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
+                        spiderStructure.quarterFinals[1].homeScore = match.homeScore;
+                        spiderStructure.quarterFinals[1].awayScore = match.awayScore;
+                        spiderStructure.quarterFinals[1].date = match.date;
+                    } else if (match.matchType === 'štvrťfinále 3') {
+                        spiderStructure.quarterFinals[2].exists = true;
+                        spiderStructure.quarterFinals[2].id = match.id;
+                        spiderStructure.quarterFinals[2].homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
+                        spiderStructure.quarterFinals[2].awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
+                        spiderStructure.quarterFinals[2].homeScore = match.homeScore;
+                        spiderStructure.quarterFinals[2].awayScore = match.awayScore;
+                        spiderStructure.quarterFinals[2].date = match.date;
+                    } else if (match.matchType === 'štvrťfinále 4') {
+                        spiderStructure.quarterFinals[3].exists = true;
+                        spiderStructure.quarterFinals[3].id = match.id;
+                        spiderStructure.quarterFinals[3].homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
+                        spiderStructure.quarterFinals[3].awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
+                        spiderStructure.quarterFinals[3].homeScore = match.homeScore;
+                        spiderStructure.quarterFinals[3].awayScore = match.awayScore;
+                        spiderStructure.quarterFinals[3].date = match.date;
                     }
                 });
                 
@@ -383,17 +462,23 @@ const SpiderApp = ({ userProfileData }) => {
         setGenerationInProgress(true);
         
         try {
-            // Najprv vymažeme existujúce pavúkové zápasy pre túto kategóriu (ak existujú)
+            // Zistíme, či už existujú pavúkové zápasy pre túto kategóriu
             const existingSpiderMatches = allMatches.filter(m => 
                 m.categoryId === categoryId && 
-                m.matchType && // Iba zápasy, ktoré majú matchType
-                ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto'].includes(m.matchType)
+                m.matchType && 
+                ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto', 'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4'].includes(m.matchType)
             );
             
-            for (const match of existingSpiderMatches) {
-                await deleteDoc(doc(window.db, 'matches', match.id));
+            const hasSemifinals = existingSpiderMatches.some(m => ['semifinále 1', 'semifinále 2'].includes(m.matchType));
+            const hasQuarterfinals = existingSpiderMatches.some(m => ['štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4'].includes(m.matchType));
+            
+            // Ak už existujú štvrťfinále, nebudeme generovať nič (alebo môžeme pridať osemfinále v budúcnosti)
+            if (hasQuarterfinals) {
+                window.showGlobalNotification('Pavúk už má štvrťfinále. Ďalšia úroveň (osemfinále) zatiaľ nie je implementovaná.', 'warning');
+                setGenerationInProgress(false);
+                return;
             }
-    
+            
             // Získanie názvu kategórie
             const category = categories.find(c => c.id === categoryId);
             const categoryName = category ? category.name : `Kategória ${categoryId}`;
@@ -403,69 +488,141 @@ const SpiderApp = ({ userProfileData }) => {
                 .normalize('NFD')
                 .replace(/[\u0300-\u036f]/g, ''); // odstráni diakritiku, ale zachová medzery
             
-            // Vytvoríme zápasy pre databázu (do kolekcie 'matches')
-            const matchesToSave = [
-                // Semifinále 1
-                {
-                    homeTeamIdentifier: '---',
-                    awayTeamIdentifier: '---',
-                    time: '--:--',
-                    hallId: null,
-                    categoryId: categoryId,
-                    categoryName: categoryName,
-                    groupName: null,
-                    matchType: 'semifinále 1',
-                    status: 'pending',
-                    createdAt: Timestamp.now(),
-                    createdBy: userProfileData?.email || 'unknown',
-                    createdByUid: userProfileData?.uid || null
-                },
-                // Semifinále 2
-                {
-                    homeTeamIdentifier: '---',
-                    awayTeamIdentifier: '---',
-                    time: '--:--',
-                    hallId: null,
-                    categoryId: categoryId,
-                    categoryName: categoryName,
-                    groupName: null,
-                    matchType: 'semifinále 2',
-                    status: 'pending',
-                    createdAt: Timestamp.now(),
-                    createdBy: userProfileData?.email || 'unknown',
-                    createdByUid: userProfileData?.uid || null
-                },
-                // Finále
-                {
-                    homeTeamIdentifier: `${categoryWithoutDiacritics} WSF01`,
-                    awayTeamIdentifier: `${categoryWithoutDiacritics} WSF02`,
-                    time: '--:--',
-                    hallId: null,
-                    categoryId: categoryId,
-                    categoryName: categoryName,
-                    groupName: null,
-                    matchType: 'finále',
-                    status: 'pending',
-                    createdAt: Timestamp.now(),
-                    createdBy: userProfileData?.email || 'unknown',
-                    createdByUid: userProfileData?.uid || null
-                },
-                // o 3. miesto
-                {
-                    homeTeamIdentifier: `${categoryWithoutDiacritics} LSF01`,
-                    awayTeamIdentifier: `${categoryWithoutDiacritics} LSF02`,
-                    time: '--:--',
-                    hallId: null,
-                    categoryId: categoryId,
-                    categoryName: categoryName,
-                    groupName: null,
-                    matchType: 'o 3. miesto',
-                    status: 'pending',
-                    createdAt: Timestamp.now(),
-                    createdBy: userProfileData?.email || 'unknown',
-                    createdByUid: userProfileData?.uid || null
-                }
-            ];
+            let matchesToSave = [];
+            
+            if (!hasSemifinals) {
+                // Prvé generovanie - semifinále, finále, o 3. miesto
+                matchesToSave = [
+                    // Semifinále 1
+                    {
+                        homeTeamIdentifier: '---',
+                        awayTeamIdentifier: '---',
+                        time: '--:--',
+                        hallId: null,
+                        categoryId: categoryId,
+                        categoryName: categoryName,
+                        groupName: null,
+                        matchType: 'semifinále 1',
+                        status: 'pending',
+                        createdAt: Timestamp.now(),
+                        createdBy: userProfileData?.email || 'unknown',
+                        createdByUid: userProfileData?.uid || null
+                    },
+                    // Semifinále 2
+                    {
+                        homeTeamIdentifier: '---',
+                        awayTeamIdentifier: '---',
+                        time: '--:--',
+                        hallId: null,
+                        categoryId: categoryId,
+                        categoryName: categoryName,
+                        groupName: null,
+                        matchType: 'semifinále 2',
+                        status: 'pending',
+                        createdAt: Timestamp.now(),
+                        createdBy: userProfileData?.email || 'unknown',
+                        createdByUid: userProfileData?.uid || null
+                    },
+                    // Finále
+                    {
+                        homeTeamIdentifier: `${categoryWithoutDiacritics} WSF01`,
+                        awayTeamIdentifier: `${categoryWithoutDiacritics} WSF02`,
+                        time: '--:--',
+                        hallId: null,
+                        categoryId: categoryId,
+                        categoryName: categoryName,
+                        groupName: null,
+                        matchType: 'finále',
+                        status: 'pending',
+                        createdAt: Timestamp.now(),
+                        createdBy: userProfileData?.email || 'unknown',
+                        createdByUid: userProfileData?.uid || null
+                    },
+                    // o 3. miesto
+                    {
+                        homeTeamIdentifier: `${categoryWithoutDiacritics} LSF01`,
+                        awayTeamIdentifier: `${categoryWithoutDiacritics} LSF02`,
+                        time: '--:--',
+                        hallId: null,
+                        categoryId: categoryId,
+                        categoryName: categoryName,
+                        groupName: null,
+                        matchType: 'o 3. miesto',
+                        status: 'pending',
+                        createdAt: Timestamp.now(),
+                        createdBy: userProfileData?.email || 'unknown',
+                        createdByUid: userProfileData?.uid || null
+                    }
+                ];
+                
+                setSpiderLevel(1);
+            } else {
+                // Druhé generovanie - štvrťfinále (4 zápasy)
+                matchesToSave = [
+                    // Štvrťfinále 1
+                    {
+                        homeTeamIdentifier: '---',
+                        awayTeamIdentifier: '---',
+                        time: '--:--',
+                        hallId: null,
+                        categoryId: categoryId,
+                        categoryName: categoryName,
+                        groupName: null,
+                        matchType: 'štvrťfinále 1',
+                        status: 'pending',
+                        createdAt: Timestamp.now(),
+                        createdBy: userProfileData?.email || 'unknown',
+                        createdByUid: userProfileData?.uid || null
+                    },
+                    // Štvrťfinále 2
+                    {
+                        homeTeamIdentifier: '---',
+                        awayTeamIdentifier: '---',
+                        time: '--:--',
+                        hallId: null,
+                        categoryId: categoryId,
+                        categoryName: categoryName,
+                        groupName: null,
+                        matchType: 'štvrťfinále 2',
+                        status: 'pending',
+                        createdAt: Timestamp.now(),
+                        createdBy: userProfileData?.email || 'unknown',
+                        createdByUid: userProfileData?.uid || null
+                    },
+                    // Štvrťfinále 3
+                    {
+                        homeTeamIdentifier: '---',
+                        awayTeamIdentifier: '---',
+                        time: '--:--',
+                        hallId: null,
+                        categoryId: categoryId,
+                        categoryName: categoryName,
+                        groupName: null,
+                        matchType: 'štvrťfinále 3',
+                        status: 'pending',
+                        createdAt: Timestamp.now(),
+                        createdBy: userProfileData?.email || 'unknown',
+                        createdByUid: userProfileData?.uid || null
+                    },
+                    // Štvrťfinále 4
+                    {
+                        homeTeamIdentifier: '---',
+                        awayTeamIdentifier: '---',
+                        time: '--:--',
+                        hallId: null,
+                        categoryId: categoryId,
+                        categoryName: categoryName,
+                        groupName: null,
+                        matchType: 'štvrťfinále 4',
+                        status: 'pending',
+                        createdAt: Timestamp.now(),
+                        createdBy: userProfileData?.email || 'unknown',
+                        createdByUid: userProfileData?.uid || null
+                    }
+                ];
+                
+                setSpiderLevel(2);
+            }
     
             // Uložíme zápasy do Firebase
             const matchesRef = collection(window.db, 'matches');
@@ -480,57 +637,20 @@ const SpiderApp = ({ userProfileData }) => {
                 });
             }
     
-            // Vytvoríme lokálnu štruktúru pre zobrazenie
-            const spiderStructure = {
-                final: { 
-                    id: savedMatches.find(m => m.matchType === 'finále')?.id || 'final',
-                    homeTeam: `${categoryWithoutDiacritics} WSF01`,
-                    awayTeam: `${categoryWithoutDiacritics} WSF02`,
-                    homeScore: '', 
-                    awayScore: '', 
-                    date: null,
-                    exists: true
-                },
-                semiFinals: [
-                    { 
-                        id: savedMatches.find(m => m.matchType === 'semifinále 1')?.id || 'sf1',
-                        homeTeam: '---', 
-                        awayTeam: '---', 
-                        homeScore: '', 
-                        awayScore: '', 
-                        date: null,
-                        exists: true
-                    },
-                    { 
-                        id: savedMatches.find(m => m.matchType === 'semifinále 2')?.id || 'sf2',
-                        homeTeam: '---', 
-                        awayTeam: '---', 
-                        homeScore: '', 
-                        awayScore: '', 
-                        date: null,
-                        exists: true
-                    }
-                ],
-                thirdPlace: { 
-                    id: savedMatches.find(m => m.matchType === 'o 3. miesto')?.id || 'third',
-                    homeTeam: `${categoryWithoutDiacritics} LSF01`,
-                    awayTeam: `${categoryWithoutDiacritics} LSF02`,
-                    homeScore: '', 
-                    awayScore: '', 
-                    date: null,
-                    exists: true
-                }
-            };
-    
-            setSpiderData(spiderStructure);
-            setHasSpiderMatches(true);
+            // Počkáme chvíľu, aby sa dáta stihli načítať
+            setTimeout(() => {
+                setGenerationInProgress(false);
+            }, 1000);
             
-            window.showGlobalNotification(`Pavúk bol vygenerovaný a uložených ${savedMatches.length} zápasov do databázy`, 'success');
+            const message = hasSemifinals 
+                ? `Štvrťfinále bolo vygenerované (${savedMatches.length} zápasov)` 
+                : `Pavúk bol vygenerovaný a uložených ${savedMatches.length} zápasov do databázy`;
+            
+            window.showGlobalNotification(message, 'success');
     
         } catch (error) {
             console.error('Chyba pri generovaní pavúka:', error);
             window.showGlobalNotification('Chyba pri generovaní pavúka: ' + error.message, 'error');
-        } finally {
             setGenerationInProgress(false);
         }
     };
@@ -606,29 +726,6 @@ const SpiderApp = ({ userProfileData }) => {
             const matchesRef = collection(window.db, 'matches');
             const docRef = await addDoc(matchesRef, matchData);
             
-            // Aktualizujeme lokálnu štruktúru
-            const newMatch = {
-                id: docRef.id,
-                ...matchData,
-                exists: true
-            };
-            
-            // Aktualizujeme spiderData
-            const updatedSpiderData = { ...spiderData };
-            
-            if (matchType === 'finále') {
-                updatedSpiderData.final = newMatch;
-            } else if (matchType === 'semifinále 1') {
-                updatedSpiderData.semiFinals[0] = newMatch;
-            } else if (matchType === 'semifinále 2') {
-                updatedSpiderData.semiFinals[1] = newMatch;
-            } else if (matchType === 'o 3. miesto') {
-                updatedSpiderData.thirdPlace = newMatch;
-            }
-            
-            setSpiderData(updatedSpiderData);
-            setHasSpiderMatches(true);
-            
             window.showGlobalNotification(`Zápas ${matchType} bol vygenerovaný`, 'success');
     
         } catch (error) {
@@ -665,7 +762,7 @@ const SpiderApp = ({ userProfileData }) => {
             const existingSpiderMatches = allMatches.filter(m => 
                 m.categoryId === categoryId && 
                 m.matchType && 
-                ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto'].includes(m.matchType)
+                ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto', 'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4'].includes(m.matchType)
             );
             
             if (existingSpiderMatches.length === 0) {
@@ -681,6 +778,7 @@ const SpiderApp = ({ userProfileData }) => {
             // Po vymazaní nastavíme, že už nie sú žiadne pavúkové zápasy
             setSpiderData(null);
             setHasSpiderMatches(false);
+            setSpiderLevel(1);
             
             window.showGlobalNotification(getDeletionMessage(existingSpiderMatches.length), 'success');
     
@@ -934,7 +1032,7 @@ const SpiderApp = ({ userProfileData }) => {
                                 'select',
                                 {
                                     value: selectedCategory,
-                                    onChange: handleCategoryChange, // Použijeme nový handler
+                                    onChange: handleCategoryChange,
                                     onMouseEnter: (e) => {
                                         if (window.spiderPanelTimeout) {
                                             clearTimeout(window.spiderPanelTimeout);
@@ -971,13 +1069,15 @@ const SpiderApp = ({ userProfileData }) => {
                                     const spiderMatches = allMatches.filter(m => 
                                         m.categoryId === cat.id && 
                                         m.matchType && 
-                                        ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto'].includes(m.matchType)
+                                        ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto', 'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4'].includes(m.matchType)
                                     ).length;
+                                    
+                                    const level = spiderMatches >= 8 ? 2 : (spiderMatches >= 4 ? 1 : 0);
                                     
                                     return React.createElement('option', { 
                                         key: cat.id, 
                                         value: cat.id 
-                                    }, `${cat.name} (${spiderMatches > 0 ? spiderMatches/4 : 0} pavúkov)`);
+                                    }, `${cat.name} (úroveň ${level})`);
                                 })
                             )
                         ),
@@ -1057,7 +1157,8 @@ const SpiderApp = ({ userProfileData }) => {
                         },
                         onClick: generateSpider,
                         disabled: generationInProgress || !selectedCategory,
-                        title: !selectedCategory ? 'Najprv vyberte kategóriu' : 'Generovať pavúka'
+                        title: !selectedCategory ? 'Najprv vyberte kategóriu' : 
+                               (spiderLevel === 1 ? 'Generovať štvrťfinále' : 'Generovať pavúka')
                     },
                     React.createElement(
                         'div',
@@ -1244,7 +1345,7 @@ const SpiderApp = ({ userProfileData }) => {
             { className: 'flex-grow flex justify-center items-start w-full pt-24 pb-20' },
             React.createElement(
                 'div',
-                { className: 'bg-white p-8', style: { width: '100%', maxWidth: '1200px' } },
+                { className: 'bg-white p-8', style: { width: '100%', maxWidth: spiderLevel === 2 ? '1400px' : '1200px' } },
                 
                 !selectedCategory ? (
                     React.createElement(
@@ -1279,35 +1380,119 @@ const SpiderApp = ({ userProfileData }) => {
                         React.createElement(
                             'h2',
                             { className: 'text-2xl font-bold mb-12 text-gray-800' },
-                            `Play-off - ${categories.find(c => c.id === selectedCategory)?.name || selectedCategory}`
+                            `Play-off ${spiderLevel === 2 ? '(so štvrťfinále)' : ''} - ${categories.find(c => c.id === selectedCategory)?.name || selectedCategory}`
                         ),
                         
                         // Pavúková štruktúra
                         React.createElement(
                             'div',
                             { 
-                                className: 'flex flex-col items-center w-full relative py-8'
+                                className: 'flex flex-col items-center w-full relative py-8',
+                                style: { minHeight: '600px' }
                             },
                             
-                            // ZVISLÁ ČIARA
+                            // Hlavná zvislá čiara
                             React.createElement(
                                 'div',
                                 { 
                                     className: 'absolute w-0.5 bg-gray-400',
                                     style: { 
                                         left: '50%',
-                                        top: '100px',
-                                        bottom: '100px',
+                                        top: spiderLevel === 2 ? '150px' : '100px',
+                                        bottom: spiderLevel === 2 ? '150px' : '100px',
                                         transform: 'translateX(-50%)',
                                         zIndex: 1
                                     }
                                 }
                             ),
                             
-                            // FINÁLE - hore
+                            // ŠTVRŤFINÁLE - hore (ak existujú)
+                            spiderLevel === 2 && React.createElement(
+                                React.Fragment,
+                                null,
+                                React.createElement(
+                                    'div',
+                                    { 
+                                        className: 'flex justify-between w-full absolute',
+                                        style: { 
+                                            top: '20px',
+                                            left: 0,
+                                            right: 0,
+                                            paddingLeft: '20px',
+                                            paddingRight: '20px'
+                                        }
+                                    },
+                                    // Ľavý box štvrťfinále (QF1 a QF2)
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex flex-col gap-8' },
+                                        React.createElement(MatchCell, { 
+                                            match: spiderData.quarterFinals[0], 
+                                            title: 'Štvrťfinále 1',
+                                            matchType: 'štvrťfinále 1',
+                                            userProfileData: userProfileData,
+                                            generationInProgress: generationInProgress,
+                                            onGenerate: generateSingleMatch
+                                        }),
+                                        React.createElement(MatchCell, { 
+                                            match: spiderData.quarterFinals[1], 
+                                            title: 'Štvrťfinále 2',
+                                            matchType: 'štvrťfinále 2',
+                                            userProfileData: userProfileData,
+                                            generationInProgress: generationInProgress,
+                                            onGenerate: generateSingleMatch
+                                        })
+                                    ),
+                                    // Pravý box štvrťfinále (QF3 a QF4)
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex flex-col gap-8' },
+                                        React.createElement(MatchCell, { 
+                                            match: spiderData.quarterFinals[2], 
+                                            title: 'Štvrťfinále 3',
+                                            matchType: 'štvrťfinále 3',
+                                            userProfileData: userProfileData,
+                                            generationInProgress: generationInProgress,
+                                            onGenerate: generateSingleMatch
+                                        }),
+                                        React.createElement(MatchCell, { 
+                                            match: spiderData.quarterFinals[3], 
+                                            title: 'Štvrťfinále 4',
+                                            matchType: 'štvrťfinále 4',
+                                            userProfileData: userProfileData,
+                                            generationInProgress: generationInProgress,
+                                            onGenerate: generateSingleMatch
+                                        })
+                                    )
+                                ),
+                                // Čiary pre štvrťfinále
+                                React.createElement(
+                                    'div',
+                                    { 
+                                        className: 'absolute',
+                                        style: { 
+                                            top: '140px',
+                                            left: '50%',
+                                            transform: 'translateX(-50%)',
+                                            width: '2px',
+                                            height: '40px',
+                                            backgroundColor: '#9CA3AF',
+                                            zIndex: 5
+                                        }
+                                    }
+                                )
+                            ),
+                            
+                            // FINÁLE - stred hore
                             React.createElement(
                                 'div',
-                                { className: 'relative z-10 mt-8' },
+                                { 
+                                    className: 'relative z-10',
+                                    style: { 
+                                        marginTop: spiderLevel === 2 ? '300px' : '40px',
+                                        marginBottom: '40px'
+                                    }
+                                },
                                 React.createElement(MatchCell, { 
                                     match: spiderData.final, 
                                     title: 'Finále',
@@ -1322,7 +1507,8 @@ const SpiderApp = ({ userProfileData }) => {
                             React.createElement(
                                 'div',
                                 { 
-                                    className: 'flex justify-center items-center gap-16 w-full relative z-10 mt-8'
+                                    className: 'flex justify-center items-center gap-16 w-full relative z-10',
+                                    style: { marginBottom: '40px' }
                                 },
                                 
                                 // Semifinále 1
@@ -1335,7 +1521,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     onGenerate: generateSingleMatch
                                 }),
                                                                 
-                                // VODOROVNÁ ČIARA
+                                // VODOROVNÁ ČIARA pre semifinále
                                 React.createElement(
                                     React.Fragment,
                                     null,
@@ -1383,7 +1569,7 @@ const SpiderApp = ({ userProfileData }) => {
                             // Zápas o 3. miesto - dole
                             React.createElement(
                                 'div',
-                                { className: 'relative z-10 mt-8 mb-8' },
+                                { className: 'relative z-10' },
                                 React.createElement(MatchCell, { 
                                     match: spiderData.thirdPlace, 
                                     title: 'O 3. miesto',
