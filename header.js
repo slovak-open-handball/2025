@@ -84,60 +84,33 @@ const formatPhoneNumber = (phoneNumber) => {
 };
 
 const formatNotificationMessage = (text) => {
-    // Rozdelenie textu na časti podľa apostrofov
+    // Ak je text pole, spracujeme každý prvok zvlášť
+    if (Array.isArray(text)) {
+        return text.map(item => formatNotificationMessage(item)).join('<br>');
+    }
+    
+    // Pôvodné spracovanie reťazca
     const parts = text.split("'");
     
-    // Ak nemáme dostatok častí, vrátime pôvodný text
     if (parts.length < 5) {
         return text;
     }
 
-    // Prvá časť (pred prvým apostrofom)
     let formattedText = parts[0];
     
-    // Prejdeme všetky páry apostrofov
     for (let i = 1; i < parts.length - 1; i += 2) {
         const value = parts[i];
         const nextPart = parts[i + 1];
         
-        // Formátujeme podľa poradia
         if (i === 1) {
-            // Prvý pár - šikmo
             formattedText += `<em>${value}</em>`;
         } else if (i === 3) {
-            // Druhý pár - bold
             formattedText += `<strong>${value}</strong>`;
         } else {
-            // Ostatné páry - normálne
             formattedText += value;
         }
         
-        // Pridáme text za apostrofom
         formattedText += nextPart;
-    }
-    
-    // Ak máme nejaké polia navyše, pridáme ich ako nový riadok
-    if (parts.length > 5) {
-        // Zistíme, či ide o hromadnú notifikáciu s viacerými zmenami
-        const changes = [];
-        
-        // Prejdeme všetky zvyšné časti
-        for (let i = 5; i < parts.length - 1; i += 2) {
-            if (i + 1 < parts.length) {
-                const fieldName = parts[i - 1]?.trim() || '';
-                const oldValue = parts[i];
-                const newValue = parts[i + 2];
-                
-                if (oldValue && newValue) {
-                    changes.push(`${fieldName} z <em>${oldValue}</em> na <strong>${newValue}</strong>`);
-                }
-                i += 2;
-            }
-        }
-        
-        if (changes.length > 0) {
-            formattedText += '<br>' + changes.join('<br>');
-        }
     }
     
     // Formátovanie telefónnych čísel
