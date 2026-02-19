@@ -17,7 +17,6 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
         let unsubscribe;
         const fetchTshirtSizes = () => {
             if (!window.db) {
-                console.log("Firestore DB nie je zatiaľ k dispozícii pre veľkosti tričiek.");
                 setTimeout(fetchTshirtSizes, 100);
                 return;
             }
@@ -28,14 +27,11 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                         const data = docSnapshot.data();
                         setTshirtSizes(data.sizes || []);
                     } else {
-                        console.warn("Dokument /settings/sizeTshirts neexistuje. Používa sa prázdne pole pre veľkosti tričiek.");
                         setTshirtSizes([]);
                     }
                 }, (error) => {
-                    console.error("Chyba pri načítaní veľkostí tričiek:", error);
                 });
             } catch (e) {
-                console.error("Chyba pri nastavovaní poslucháča pre veľkosti tričiek:", e);
             }
         };
 
@@ -51,7 +47,6 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
     // EFFECT: Načítanie limitov pre kategórie z Firestore
     React.useEffect(() => {
         if (!window.db) {
-            console.log("Firestore DB nie je k dispozícii pre načítanie limitov kategórií.");
             return;
         }
 
@@ -68,11 +63,9 @@ export function Page4Form({ formData, handlePrev, handleNextPage4, loading, setL
                 });
                 setCategoryLimits(limits);
             } else {
-                console.warn("Dokument /settings/categories neexistuje.");
                 setCategoryLimits({});
             }
         }, (error) => {
-            console.error("Chyba pri načítaní limitov kategórií:", error);
         });
 
         return () => unsubscribe();
