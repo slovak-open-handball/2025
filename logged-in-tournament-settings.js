@@ -161,6 +161,9 @@ const sendAdminNotification = async (db, auth, notificationData) => {
         }
         
         changesContent = changes;
+      } else if (notificationData.type === 'deletePackage') {
+        changesContent = `Zmazanie balíčka: '''${notificationData.data.deletedName} (cena: ${notificationData.data.deletedPrice}€)'`;
+      }
 
       await addDoc(notificationsCollectionRef, {
         userEmail: userEmail,
