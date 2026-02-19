@@ -134,9 +134,11 @@ const formatNotificationMessage = (text) => {
 };
 
 const showDatabaseNotification = (message, type = 'info') => {
+    // Už by nemalo byť pole, lebo sme ho spojili vyššie, ale pre istotu
     if (Array.isArray(message)) {
         message = message.join('<br>');
     }
+    
     let notificationContainer = document.getElementById('notification-container');
     if (!notificationContainer) {
         notificationContainer = document.createElement('div');
@@ -160,28 +162,8 @@ const showDatabaseNotification = (message, type = 'info') => {
 
     const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🔔';
     
-    // Spracovanie správy - rozdelenie podľa e-mailu a jednotlivých zmien
-    let formattedMessage = message;
-    
-    // Ak správa začína "Používateľ ...:", extrahujeme e-mail a zvyšok
-    const userMatch = message.match(/^(Používateľ [^:]+:)(.*)$/s);
-    
-    if (userMatch) {
-        const userInfo = userMatch[1].trim();
-        const restOfMessage = userMatch[2].trim();
-        
-        // Formátujeme hlavnú časť správy
-        const formattedRest = formatNotificationMessage(restOfMessage);
-        
-        // Zobrazenie: e-mail na prvom riadku, zmeny pod ním
-        formattedMessage = `
-            <div class="font-semibold text-blue-300">${userInfo}</div>
-            <div class="mt-1">${formattedRest}</div>
-        `;
-    } else {
-        // Ak nejde o používateľskú notifikáciu, normálne naformátujeme
-        formattedMessage = formatNotificationMessage(message);
-    }
+    // Rovno naformátujeme celú správu
+    const formattedMessage = formatNotificationMessage(message);
 
     notificationElement.innerHTML = `
         <div class="flex items-start space-x-2 w-full">
@@ -488,15 +470,16 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                     }
                     
                     if (newNotification.userEmail) {
-                        // Ak je changesMessage pole, pridáme email ku každému prvku?
                         if (Array.isArray(changesMessage)) {
-                            changesMessage = changesMessage.map(msg => 
-                                `Používateľ ${newNotification.userEmail}: ${msg}`
-                            );
+                            // Ak je to pole, spojíme ho a pridáme e-mail na začiatok
+                            changesMessage = `Používateľ ${newNotification.userEmail}:<br>${changesMessage.join('<br>')}`;
                         } else {
                             changesMessage = `Používateľ ${newNotification.userEmail}: ${changesMessage}`;
                         }
-                    }                    
+                    } else if (Array.isArray(changesMessage)) {
+                        // Ak nie je e-mail, ale je to pole, spojíme ho
+                        changesMessage = changesMessage.join('<br>');
+                    }                 
                     
                     showDatabaseNotification(changesMessage, newNotification.type || 'info');                    
                     
