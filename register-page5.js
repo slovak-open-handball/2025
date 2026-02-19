@@ -543,7 +543,8 @@ function TeamPackageSettings({
     onGranularTeamsDataChange, // Prop pre aktualizáciu dát v rodičovi
     loading,
     packages,
-    tournamentDays
+    tournamentDays,
+    selectedAccommodationType // NOVÝ PROP - typ ubytovania vybraný pre tento tím
 }) {
     const [selectedPackageId, setSelectedPackageId] = React.useState(team.packageId || '');
 
@@ -563,6 +564,24 @@ function TeamPackageSettings({
         } : null);
     };
 
+    // Filtrovanie balíčkov podľa vybraného typu ubytovania
+    const filteredPackages = React.useMemo(() => {
+        if (!selectedAccommodationType || selectedAccommodationType === 'bez ubytovania') {
+            // Pre "bez ubytovania" zobrazíme všetky balíčky
+            return packages;
+        }
+        
+        // Filtrujeme balíčky, ktoré obsahujú vybraný typ ubytovania
+        return packages.filter(pkg => 
+            pkg.accommodationTypes && pkg.accommodationTypes.includes(selectedAccommodationType)
+        );
+    }, [packages, selectedAccommodationType]);
+
+    // Zoradenie balíčkov podľa názvu
+    const sortedPackages = React.useMemo(() => {
+        return [...filteredPackages].sort((a, b) => a.name.localeCompare(b.name));
+    }, [filteredPackages]);
+
     return React.createElement(
         React.Fragment,
         null,
@@ -578,8 +597,8 @@ function TeamPackageSettings({
             React.createElement(
                 'div',
                 { className: 'mb-4 space-y-2' },
-                packages.length > 0 ? (
-                    packages.map((pkg) => (
+                sortedPackages.length > 0 ? (
+                    sortedPackages.map((pkg) => (
                         React.createElement(
                             'label',
                             {
@@ -639,7 +658,11 @@ function TeamPackageSettings({
                         )
                     ))
                 ) : (
-                    React.createElement('p', { className: 'text-gray-500 text-center py-4' }, 'Nie sú dostupné žiadne balíčky.')
+                    React.createElement('p', { className: 'text-gray-500 text-center py-4' }, 
+                        selectedAccommodationType && selectedAccommodationType !== 'bez ubytovania' 
+                            ? `Pre vybraný typ ubytovania (${selectedAccommodationType}) nie sú dostupné žiadne balíčky.`
+                            : 'Nie sú dostupné žiadne balíčky.'
+                    )
                 )
             )
         )
@@ -1439,6 +1462,7 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
                         loading: loading,
                         packages: packages,
                         tournamentDays: tournamentDays,
+                        selectedAccommodationType: team.accommodation?.type
                       })
                     )
                   ))
