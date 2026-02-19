@@ -1311,7 +1311,10 @@ const SpiderApp = ({ userProfileData }) => {
                                 React.createElement(MatchCell, { 
                                     match: spiderData.final, 
                                     title: 'Finále',
-                                    matchType: 'finále'
+                                    matchType: 'finále',
+                                    userProfileData: userProfileData,
+                                    generationInProgress: generationInProgress,
+                                    onGenerate: generateSingleMatch
                                 })
                             ),
                             
@@ -1326,7 +1329,10 @@ const SpiderApp = ({ userProfileData }) => {
                                 React.createElement(MatchCell, { 
                                     match: spiderData.semiFinals[0], 
                                     title: 'Semifinále 1',
-                                    matchType: 'semifinále 1'
+                                    matchType: 'semifinále 1',
+                                    userProfileData: userProfileData,
+                                    generationInProgress: generationInProgress,
+                                    onGenerate: generateSingleMatch
                                 }),
                                                                 
                                 // VODOROVNÁ ČIARA
@@ -1367,7 +1373,10 @@ const SpiderApp = ({ userProfileData }) => {
                                 React.createElement(MatchCell, { 
                                     match: spiderData.semiFinals[1], 
                                     title: 'Semifinále 2',
-                                    matchType: 'semifinále 2'
+                                    matchType: 'semifinále 2',
+                                    userProfileData: userProfileData,
+                                    generationInProgress: generationInProgress,
+                                    onGenerate: generateSingleMatch
                                 })
                             ),
                             
@@ -1378,7 +1387,10 @@ const SpiderApp = ({ userProfileData }) => {
                                 React.createElement(MatchCell, { 
                                     match: spiderData.thirdPlace, 
                                     title: 'O 3. miesto',
-                                    matchType: 'o 3. miesto'
+                                    matchType: 'o 3. miesto',
+                                    userProfileData: userProfileData,
+                                    generationInProgress: generationInProgress,
+                                    onGenerate: generateSingleMatch
                                 })
                             )
                         )
