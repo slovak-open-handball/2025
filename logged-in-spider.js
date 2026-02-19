@@ -1624,20 +1624,19 @@ const SpiderApp = ({ userProfileData }) => {
                                         )
                                     ),
                                     
-                                    // DRUHÝ RIADOK - Zlúčený a potom rozdelený na dva stĺpce pre semifinále
+                                    // DRUHÝ RIADOK - VŠETKY TRI STĹPCE ZLÚČENÉ a rozdelené na dva rovnaké
                                     React.createElement(
                                         'tr',
                                         { style: { height: '200px' } },
-                                        // Prvý stĺpec - zlúčený priestor (zaberá 2/3 šírky)
+                                        // Zlúčenie všetkých troch stĺpcov do jedného
                                         React.createElement(
                                             'td',
                                             { 
-                                                colSpan: 2,
+                                                colSpan: 3,
                                                 style: {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
-                                                    width: '66.66%',
                                                     border: '1px solid #d1d5db'
                                                 }
                                             },
@@ -1671,16 +1670,6 @@ const SpiderApp = ({ userProfileData }) => {
                                                     onGenerate: generateSingleMatch
                                                 })
                                             )
-                                        ),
-                                        // Tretí stĺpec - prázdny (zaberá 1/3 šírky)
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: { 
-                                                    width: '33.33%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            }
                                         )
                                     ),
                                     
