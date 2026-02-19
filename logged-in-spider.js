@@ -1350,7 +1350,6 @@ const SpiderApp = ({ userProfileData }) => {
                     style: { 
                         width: '100%', 
                         maxWidth: spiderLevel === 2 ? '1600px' : '1200px',
-                        border: '3px solid #3b82f6'
                     }
                 },
                 
@@ -1394,12 +1393,6 @@ const SpiderApp = ({ userProfileData }) => {
                             'h2',
                             { 
                                 className: 'text-2xl font-bold mb-12 text-gray-800',
-                                style: { 
-                                    padding: '10px 20px',
-                                    backgroundColor: '#f9fafb',
-                                    borderRadius: '8px',
-                                    border: '1px solid #e5e7eb'
-                                }
                             },
                             `Play-off ${spiderLevel === 2 ? '(so štvrťfinále)' : ''} - ${categories.find(c => c.id === selectedCategory)?.name || selectedCategory}`
                         ),
