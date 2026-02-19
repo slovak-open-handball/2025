@@ -25,6 +25,58 @@ if (!window.notificationContainer) {
     window.notificationContainer = container;
 }
 
+// Pridanie CSS pre čiary v pavúkovom zobrazení
+if (!document.getElementById('spider-line-styles')) {
+    const style = document.createElement('style');
+    style.id = 'spider-line-styles';
+    style.textContent = `
+        .spider-cell {
+            position: relative;
+        }
+        
+        .spider-line-horizontal {
+            position: absolute;
+            height: 2px;
+            background-color: #9ca3af;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 5;
+            pointer-events: none;
+        }
+        
+        .spider-line-vertical {
+            position: absolute;
+            width: 2px;
+            background-color: #9ca3af;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            pointer-events: none;
+        }
+        
+        .spider-line-vertical-top {
+            top: 0;
+            height: 50%;
+        }
+        
+        .spider-line-vertical-bottom {
+            bottom: 0;
+            height: 50%;
+        }
+        
+        .spider-line-right {
+            right: 0;
+            width: 50%;
+        }
+        
+        .spider-line-left {
+            left: 0;
+            width: 50%;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
 // Funkcia na zobrazenie globálnej notifikácie
 window.showGlobalNotification = function(message, type = 'info', duration = 3000) {
     const container = window.notificationContainer;
@@ -1836,7 +1888,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     React.Fragment,
                                     null,
                                     
-                                    // PRVÝ RIADOK - Finále (zabezpečený horizontálne)
+                                    // PRVÝ RIADOK - Finále (zabezpečený horizontálne) - so zvislou čiarou nadol
                                     React.createElement(
                                         'tr',
                                         { style: { height: '200px' } },
@@ -1844,16 +1896,18 @@ const SpiderApp = ({ userProfileData }) => {
                                             'td',
                                             { 
                                                 colSpan: 2,
+                                                className: 'spider-cell',
                                                 style: {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
-                                                    border: '1px solid #d1d5db'
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
                                                 }
                                             },
                                             React.createElement(
                                                 'div',
-                                                { style: { display: 'inline-block' } },
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
                                                 React.createElement(MatchCell, { 
                                                     match: spiderData.final, 
                                                     title: 'Finále',
@@ -1862,28 +1916,32 @@ const SpiderApp = ({ userProfileData }) => {
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch
                                                 })
-                                            )
+                                            ),
+                                            // Zvislá čiara od stredu bunky do spodného okraja
+                                            React.createElement('div', { className: 'spider-line-vertical spider-line-vertical-bottom' })
                                         )
                                     ),
                                     
-                                    // DRUHÝ RIADOK - Semifinále (SF1 vľavo, SF2 vpravo)
+                                    // DRUHÝ RIADOK - Semifinále (SF1 vľavo, SF2 vpravo) - s vodorovnými čiarami
                                     React.createElement(
                                         'tr',
                                         { style: { height: '200px' } },
                                         React.createElement(
                                             'td',
                                             { 
+                                                className: 'spider-cell',
                                                 style: {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
                                                     width: '50%',
-                                                    border: '1px solid #d1d5db'
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
                                                 }
                                             },
                                             React.createElement(
                                                 'div',
-                                                { style: { display: 'inline-block' } },
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
                                                 React.createElement(MatchCell, { 
                                                     match: spiderData.semiFinals[0], 
                                                     title: 'Semifinále 1',
@@ -1892,22 +1950,26 @@ const SpiderApp = ({ userProfileData }) => {
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch
                                                 })
-                                            )
+                                            ),
+                                            // Vodorovná čiara z ľavej bunky doprava (od stredu)
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-right' })
                                         ),
                                         React.createElement(
                                             'td',
                                             { 
+                                                className: 'spider-cell',
                                                 style: {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
                                                     width: '50%',
-                                                    border: '1px solid #d1d5db'
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
                                                 }
                                             },
                                             React.createElement(
                                                 'div',
-                                                { style: { display: 'inline-block' } },
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
                                                 React.createElement(MatchCell, { 
                                                     match: spiderData.semiFinals[1], 
                                                     title: 'Semifinále 2',
@@ -1916,11 +1978,13 @@ const SpiderApp = ({ userProfileData }) => {
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch
                                                 })
-                                            )
+                                            ),
+                                            // Vodorovná čiara z pravej bunky doľava (od stredu)
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-left' })
                                         )
                                     ),
                                     
-                                    // TRETÍ RIADOK - O 3. miesto (zabezpečený horizontálne)
+                                    // TRETÍ RIADOK - O 3. miesto (zabezpečený horizontálne) - so zvislou čiarou nahor
                                     React.createElement(
                                         'tr',
                                         { style: { height: '200px' } },
@@ -1928,16 +1992,18 @@ const SpiderApp = ({ userProfileData }) => {
                                             'td',
                                             { 
                                                 colSpan: 2,
+                                                className: 'spider-cell',
                                                 style: {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
-                                                    border: '1px solid #d1d5db'
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
                                                 }
                                             },
                                             React.createElement(
                                                 'div',
-                                                { style: { display: 'inline-block' } },
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
                                                 React.createElement(MatchCell, { 
                                                     match: spiderData.thirdPlace, 
                                                     title: 'O 3. miesto',
@@ -1946,7 +2012,9 @@ const SpiderApp = ({ userProfileData }) => {
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch
                                                 })
-                                            )
+                                            ),
+                                            // Zvislá čiara od stredu bunky do horného okraja
+                                            React.createElement('div', { className: 'spider-line-vertical spider-line-vertical-top' })
                                         )
                                     )
                                 ),
