@@ -2137,7 +2137,7 @@ const SpiderApp = ({ userProfileData }) => {
                                         )
                                     ),
                                     
-                                    // RIADOK 2 - prázdno, QF1 (colspan=2), prázdno, QF3 (colspan=2)
+                                    // RIADOK 2 - prázdno, Štvrťfinále 1 (colspan=2), prázdno, prázdno
                                     React.createElement(
                                         'tr',
                                         { style: { height: '200px' } },
@@ -2193,27 +2193,14 @@ const SpiderApp = ({ userProfileData }) => {
                                         React.createElement(
                                             'td',
                                             { 
-                                                colSpan: 2,
                                                 style: {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
-                                                    width: '40%',
+                                                    width: '20%',
                                                     border: '1px solid #d1d5db'
                                                 }
-                                            },
-                                            React.createElement(
-                                                'div',
-                                                { style: { display: 'inline-block' } },
-                                                React.createElement(MatchCell, { 
-                                                    match: spiderData.quarterFinals[2], 
-                                                    title: 'Štvrťfinále 3',
-                                                    matchType: 'štvrťfinále 3',
-                                                    userProfileData: userProfileData,
-                                                    generationInProgress: generationInProgress,
-                                                    onGenerate: generateSingleMatch
-                                                })
-                                            )
+                                            }
                                         )
                                     ),
                                     
@@ -2319,7 +2306,7 @@ const SpiderApp = ({ userProfileData }) => {
                                         )
                                     ),
                                     
-                                    // RIADOK 4 - prázdno, QF2 (colspan=2), prázdno, QF4 (colspan=2)
+                                    // RIADOK 4 - prázdno, prázdno, prázdno, Štvrťfinále 3 (colspan=2)
                                     React.createElement(
                                         'tr',
                                         { style: { height: '200px' } },
@@ -2338,27 +2325,14 @@ const SpiderApp = ({ userProfileData }) => {
                                         React.createElement(
                                             'td',
                                             { 
-                                                colSpan: 2,
                                                 style: {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
-                                                    width: '40%',
+                                                    width: '20%',
                                                     border: '1px solid #d1d5db'
                                                 }
-                                            },
-                                            React.createElement(
-                                                'div',
-                                                { style: { display: 'inline-block' } },
-                                                React.createElement(MatchCell, { 
-                                                    match: spiderData.quarterFinals[1], 
-                                                    title: 'Štvrťfinále 2',
-                                                    matchType: 'štvrťfinále 2',
-                                                    userProfileData: userProfileData,
-                                                    generationInProgress: generationInProgress,
-                                                    onGenerate: generateSingleMatch
-                                                })
-                                            )
+                                            }
                                         ),
                                         React.createElement(
                                             'td',
@@ -2388,9 +2362,9 @@ const SpiderApp = ({ userProfileData }) => {
                                                 'div',
                                                 { style: { display: 'inline-block' } },
                                                 React.createElement(MatchCell, { 
-                                                    match: spiderData.quarterFinals[3], 
-                                                    title: 'Štvrťfinále 4',
-                                                    matchType: 'štvrťfinále 4',
+                                                    match: spiderData.quarterFinals[2], 
+                                                    title: 'Štvrťfinále 3',
+                                                    matchType: 'štvrťfinále 3',
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch
@@ -2513,10 +2487,35 @@ const SpiderApp = ({ userProfileData }) => {
                                         )
                                     ),
                                     
-                                    // RIADOK 6 - prázdno, O 3. miesto (colspan=3), prázdno
+                                    // RIADOK 6 - Štvrťfinále 2 (colspan=2), O 3. miesto, Štvrťfinále 4 (colspan=2)
                                     React.createElement(
                                         'tr',
                                         { style: { height: '200px' } },
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                colSpan: 2,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '10px',
+                                                    width: '40%',
+                                                    border: '1px solid #d1d5db'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block' } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.quarterFinals[1], 
+                                                    title: 'Štvrťfinále 2',
+                                                    matchType: 'štvrťfinále 2',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch
+                                                })
+                                            )
+                                        ),
                                         React.createElement(
                                             'td',
                                             { 
@@ -2525,19 +2524,6 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
                                                     width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            }
-                                        ),
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                colSpan: 3,
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '60%',
                                                     border: '1px solid #d1d5db'
                                                 }
                                             },
@@ -2557,14 +2543,27 @@ const SpiderApp = ({ userProfileData }) => {
                                         React.createElement(
                                             'td',
                                             { 
+                                                colSpan: 2,
                                                 style: {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
-                                                    width: '20%',
+                                                    width: '40%',
                                                     border: '1px solid #d1d5db'
                                                 }
-                                            }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block' } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.quarterFinals[3], 
+                                                    title: 'Štvrťfinále 4',
+                                                    matchType: 'štvrťfinále 4',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch
+                                                })
+                                            )
                                         )
                                     ),
                                     
