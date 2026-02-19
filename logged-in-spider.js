@@ -1645,11 +1645,10 @@ const SpiderApp = ({ userProfileData }) => {
                                                 { 
                                                     style: { 
                                                         display: 'flex',
-                                                        justifyContent: 'space-around',
+                                                        justifyContent: 'center',
                                                         alignItems: 'center',
-                                                        width: '60%',
-                                                        margin: '0 auto',
-                                                        gap: '0px'
+                                                        width: '100%',
+                                                        gap: '40px'
                                                     }
                                                 },
                                                 // Semifinále 1
