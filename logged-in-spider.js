@@ -47,6 +47,8 @@ if (!document.getElementById('spider-line-styles')) {
         .spider-line-vertical {
             position: absolute;
             width: 2px;
+            height: '100%', 
+            top: 0,
             background-color: #9ca3af;
             left: 50%;
             transform: translateX(-50%);
