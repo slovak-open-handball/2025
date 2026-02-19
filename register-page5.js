@@ -417,7 +417,7 @@ function TeamAccommodationAndArrival({
                                 { 
                                     className: `ml-3 ${finalDisabled ? 'text-gray-400' : 'text-gray-800'}` 
                                 },
-                                `${acc.type} : ''}`
+                                acc.type
                             ),
                             isSelectedButNowFull && React.createElement(
                                 'span',
