@@ -2053,8 +2053,22 @@ const SpiderApp = ({ userProfileData }) => {
                                                     onGenerate: generateSingleMatch
                                                 })
                                             ),
-                                            // V ľavej hornej bunke vodorovná čiara od stredu doprava (opačný smer)
-                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-right' })
+                                            // V ľavej hornej bunke vodorovná čiara od stredu doprava
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-right' }),
+                                            
+                                            // Pravé orámovanie od stredu výšky po pravý dolný roh
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    right: 0,
+                                                    top: '50%',
+                                                    bottom: 0,
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
                                         ),
                                         React.createElement(
                                             'td',
@@ -2109,8 +2123,22 @@ const SpiderApp = ({ userProfileData }) => {
                                                     onGenerate: generateSingleMatch
                                                 })
                                             ),
-                                            // V pravej hornej bunke vodorovná čiara od stredu doľava (opačný smer)
-                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-left' })
+                                            // V pravej hornej bunke vodorovná čiara od stredu doľava
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-left' }),
+                                            
+                                            // Ľavé orámovanie od stredu výšky po ľavý dolný roh
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    left: 0,
+                                                    top: '50%',
+                                                    bottom: 0,
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
                                         )
                                     ),
                                     
@@ -2210,7 +2238,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                 }
                                             }),
                                             
-                                            // Zvislé čiary od 1/3 do 2/3 (zachovávame pôvodné)
+                                            // Zvislé čiary od 1/3 do 2/3
                                             React.createElement('div', { 
                                                 style: {
                                                     position: 'absolute',
@@ -2269,8 +2297,22 @@ const SpiderApp = ({ userProfileData }) => {
                                                     onGenerate: generateSingleMatch
                                                 })
                                             ),
-                                            // V ľavej dolnej bunke vodorovná čiara od stredu doprava (opačný smer)
-                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-right' })
+                                            // V ľavej dolnej bunke vodorovná čiara od stredu doprava
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-right' }),
+                                            
+                                            // Pravé orámovanie od stredu výšky po pravý horný roh
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    right: 0,
+                                                    top: 0,
+                                                    bottom: '50%',
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
                                         ),
                                         React.createElement(
                                             'td',
@@ -2325,8 +2367,22 @@ const SpiderApp = ({ userProfileData }) => {
                                                     onGenerate: generateSingleMatch
                                                 })
                                             ),
-                                            // V pravej dolnej bunke vodorovná čiara od stredu doľava (opačný smer)
-                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-left' })
+                                            // V pravej dolnej bunke vodorovná čiara od stredu doľava
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-left' }),
+                                            
+                                            // Ľavé orámovanie od stredu výšky po ľavý horný roh
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    left: 0,
+                                                    top: 0,
+                                                    bottom: '50%',
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
                                         )
                                     )
                                 ),
