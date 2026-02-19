@@ -2141,8 +2141,7 @@ const createTeamAssignmentNotification = async (action, team) => {
         
         // NOVÁ KONTROLA: Existujú pre túto skupinu zápasy?
         const categoryName = categoryIdToNameMap[targetCategoryId];
-        const groupHasMatches = false;
-//        const groupHasMatches = categoryName && targetGroupId ? hasMatchesInGroup(categoryName, targetGroupId) : false;
+        const groupHasMatches = categoryName && targetGroupId ? hasMatchesInGroup(categoryName, targetGroupId) : false;
    
         const sortedTeams = [...teamsToRender].sort((a, b) => {
             const oa = typeof a.order === 'number' ? a.order : Infinity;
