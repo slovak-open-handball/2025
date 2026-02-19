@@ -1416,8 +1416,8 @@ const SpiderApp = ({ userProfileData }) => {
                                         top: '20px',
                                         left: 0,
                                         right: 0,
-                                        paddingLeft: '50px',
-                                        paddingRight: '50px'
+                                        paddingLeft: '20px',
+                                        paddingRight: '20px'
                                     }
                                 },
                                 // Ľavá strana - Štvrťfinále 1
@@ -1474,8 +1474,8 @@ const SpiderApp = ({ userProfileData }) => {
                                         left: 0,
                                         right: 0,
                                         transform: 'translateY(-50%)',
-                                        paddingLeft: '50px',
-                                        paddingRight: '50px'
+                                        paddingLeft: '20px',
+                                        paddingRight: '20px'
                                     }
                                 },
                                 
@@ -1544,8 +1544,8 @@ const SpiderApp = ({ userProfileData }) => {
                                         bottom: '20px',
                                         left: 0,
                                         right: 0,
-                                        paddingLeft: '50px',
-                                        paddingRight: '50px'
+                                        paddingLeft: '20px',
+                                        paddingRight: '20px'
                                     }
                                 },
                                 // Ľavá strana - Štvrťfinále 2
