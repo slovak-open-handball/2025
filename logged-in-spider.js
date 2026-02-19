@@ -1339,9 +1339,7 @@ const SpiderApp = ({ userProfileData }) => {
             )
         ),
 
-        // Pôvodný kód od riadku cca 790 po koniec funkcie SpiderApp nahrádzame týmto:
-
-        // Obsah - pavúková tabuľka
+        // Obsah - pavúková tabuľka (bez čiar)
         React.createElement(
             'div',
             { className: 'flex-grow flex justify-center items-start w-full pt-24 pb-20' },
@@ -1352,8 +1350,7 @@ const SpiderApp = ({ userProfileData }) => {
                     style: { 
                         width: '100%', 
                         maxWidth: spiderLevel === 2 ? '1600px' : '1200px',
-                        border: '3px solid #3b82f6', // Modré ohraničenie celej tabuľky
-                        position: 'relative'
+                        border: '3px solid #3b82f6' // Len modré ohraničenie celej tabuľky
                     }
                 },
                 
@@ -1387,10 +1384,8 @@ const SpiderApp = ({ userProfileData }) => {
                         { 
                             className: 'flex flex-col items-center relative',
                             style: { 
-                                border: '2px dashed #f59e0b', // Oranžové ohraničenie pre vnútorný kontajner
-                                padding: '20px',
-                                borderRadius: '8px',
-                                minHeight: '700px'
+                                minHeight: '700px',
+                                padding: '20px'
                             }
                         },
                         
@@ -1400,10 +1395,10 @@ const SpiderApp = ({ userProfileData }) => {
                             { 
                                 className: 'text-2xl font-bold mb-12 text-gray-800',
                                 style: { 
-                                    border: '1px dotted #9ca3af', // Sivé ohraničenie pre nadpis
                                     padding: '10px 20px',
+                                    backgroundColor: '#f9fafb',
                                     borderRadius: '8px',
-                                    backgroundColor: '#f9fafb'
+                                    border: '1px solid #e5e7eb'
                                 }
                             },
                             `Play-off ${spiderLevel === 2 ? '(so štvrťfinále)' : ''} - ${categories.find(c => c.id === selectedCategory)?.name || selectedCategory}`
@@ -1416,29 +1411,9 @@ const SpiderApp = ({ userProfileData }) => {
                                 className: 'flex flex-col items-center w-full relative',
                                 style: { 
                                     minHeight: '600px',
-                                    border: '2px solid #10b981', // Zelené ohraničenie pre oblasť pavúka
-                                    padding: '10px',
-                                    position: 'relative',
-                                    backgroundColor: '#f0fdf4'
+                                    position: 'relative'
                                 }
                             },
-                            
-                            // Hlavná zvislá čiara
-                            React.createElement(
-                                'div',
-                                { 
-                                    className: 'absolute w-0.5 bg-gray-400',
-                                    style: { 
-                                        left: '50%',
-                                        top: spiderLevel === 2 ? '120px' : '40px',
-                                        bottom: spiderLevel === 2 ? '120px' : '40px',
-                                        transform: 'translateX(-50%)',
-                                        zIndex: 1,
-                                        backgroundColor: '#ef4444', // Červená hlavná čiara pre lepšiu viditeľnosť
-                                        width: '3px'
-                                    }
-                                }
-                            ),
                             
                             // HORNÝ RIADOK - Finále a štvrťfinále 1 a 3
                             React.createElement(
@@ -1451,27 +1426,14 @@ const SpiderApp = ({ userProfileData }) => {
                                         left: 0,
                                         right: 0,
                                         paddingLeft: '20px',
-                                        paddingRight: '20px',
-                                        border: '2px solid #3b82f6', // Modré ohraničenie pre horný riadok
-                                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                                        padding: '15px 20px',
-                                        margin: '0 10px',
-                                        width: 'calc(100% - 60px)',
-                                        left: '30px',
-                                        borderRadius: '8px'
+                                        paddingRight: '20px'
                                     }
                                 },
                                 // Ľavá strana - Štvrťfinále 1
                                 React.createElement(
                                     'div',
                                     { 
-                                        className: 'flex-1 flex justify-start',
-                                        style: { 
-                                            border: '1px solid #a78bfa', // Fialové ohraničenie pre stĺpec
-                                            padding: '10px',
-                                            borderRadius: '4px',
-                                            margin: '0 5px'
-                                        }
+                                        className: 'flex-1 flex justify-start'
                                     },
                                     spiderLevel === 2 ? React.createElement(MatchCell, { 
                                         match: spiderData.quarterFinals[0], 
@@ -1480,31 +1442,14 @@ const SpiderApp = ({ userProfileData }) => {
                                         userProfileData: userProfileData,
                                         generationInProgress: generationInProgress,
                                         onGenerate: generateSingleMatch
-                                    }) : React.createElement('div', { 
-                                        style: { 
-                                            width: '220px', 
-                                            height: '140px',
-                                            border: '2px dotted #9ca3af',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            backgroundColor: '#f3f4f6'
-                                        },
-                                        children: 'Prázdne miesto'
-                                    })
+                                    }) : React.createElement('div', { style: { width: '220px' } })
                                 ),
                                 
                                 // Stred - Finále
                                 React.createElement(
                                     'div',
                                     { 
-                                        className: 'flex-1 flex justify-center',
-                                        style: { 
-                                            border: '1px solid #a78bfa',
-                                            padding: '10px',
-                                            borderRadius: '4px',
-                                            margin: '0 5px'
-                                        }
+                                        className: 'flex-1 flex justify-center'
                                     },
                                     React.createElement(MatchCell, { 
                                         match: spiderData.final, 
@@ -1520,13 +1465,7 @@ const SpiderApp = ({ userProfileData }) => {
                                 React.createElement(
                                     'div',
                                     { 
-                                        className: 'flex-1 flex justify-end',
-                                        style: { 
-                                            border: '1px solid #a78bfa',
-                                            padding: '10px',
-                                            borderRadius: '4px',
-                                            margin: '0 5px'
-                                        }
+                                        className: 'flex-1 flex justify-end'
                                     },
                                     spiderLevel === 2 ? React.createElement(MatchCell, { 
                                         match: spiderData.quarterFinals[2], 
@@ -1535,18 +1474,7 @@ const SpiderApp = ({ userProfileData }) => {
                                         userProfileData: userProfileData,
                                         generationInProgress: generationInProgress,
                                         onGenerate: generateSingleMatch
-                                    }) : React.createElement('div', { 
-                                        style: { 
-                                            width: '220px', 
-                                            height: '140px',
-                                            border: '2px dotted #9ca3af',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            backgroundColor: '#f3f4f6'
-                                        },
-                                        children: 'Prázdne miesto'
-                                    })
+                                    }) : React.createElement('div', { style: { width: '220px' } })
                                 )
                             ),
                             
@@ -1562,94 +1490,29 @@ const SpiderApp = ({ userProfileData }) => {
                                         right: 0,
                                         transform: 'translateY(-50%)',
                                         paddingLeft: '20px',
-                                        paddingRight: '20px',
-                                        border: '2px solid #eab308', // Žlté ohraničenie pre stredný riadok
-                                        backgroundColor: 'rgba(234, 179, 8, 0.1)',
-                                        padding: '15px 20px',
-                                        margin: '0 10px',
-                                        width: 'calc(100% - 60px)',
-                                        left: '30px',
-                                        borderRadius: '8px'
+                                        paddingRight: '20px'
                                     }
                                 },
                                 
                                 // Semifinále 1
-                                React.createElement(
-                                    'div',
-                                    { 
-                                        style: { 
-                                            border: '1px solid #ec4899', // Ružové ohraničenie
-                                            padding: '10px',
-                                            borderRadius: '4px'
-                                        }
-                                    },
-                                    React.createElement(MatchCell, { 
-                                        match: spiderData.semiFinals[0], 
-                                        title: 'Semifinále 1',
-                                        matchType: 'semifinále 1',
-                                        userProfileData: userProfileData,
-                                        generationInProgress: generationInProgress,
-                                        onGenerate: generateSingleMatch
-                                    })
-                                ),
-                                
-                                // VODOROVNÁ ČIARA pre semifinále
-                                React.createElement(
-                                    React.Fragment,
-                                    null,
-                                    // Čiara z pravej strany SF1 do stredu
-                                    React.createElement(
-                                        'div',
-                                        { 
-                                            className: 'absolute h-0.5 bg-gray-400',
-                                            style: { 
-                                                left: 'calc(50% - 110px)',
-                                                width: '110px',
-                                                top: '50%',
-                                                marginTop: '-1px',
-                                                zIndex: 5,
-                                                backgroundColor: '#ef4444',
-                                                height: '3px'
-                                            }
-                                        }
-                                    ),
-                                    // Čiara zo stredu k ľavej strane SF2
-                                    React.createElement(
-                                        'div',
-                                        { 
-                                            className: 'absolute h-0.5 bg-gray-400',
-                                            style: { 
-                                                left: '50%',
-                                                width: '110px',
-                                                top: '50%',
-                                                marginTop: '-1px',
-                                                zIndex: 5,
-                                                backgroundColor: '#ef4444',
-                                                height: '3px'
-                                            }
-                                        }
-                                    )
-                                ),
+                                React.createElement(MatchCell, { 
+                                    match: spiderData.semiFinals[0], 
+                                    title: 'Semifinále 1',
+                                    matchType: 'semifinále 1',
+                                    userProfileData: userProfileData,
+                                    generationInProgress: generationInProgress,
+                                    onGenerate: generateSingleMatch
+                                }),
                                 
                                 // Semifinále 2
-                                React.createElement(
-                                    'div',
-                                    { 
-                                        style: { 
-                                            border: '1px solid #ec4899',
-                                            padding: '10px',
-                                            borderRadius: '4px'
-                                        }
-                                    },
-                                    React.createElement(MatchCell, { 
-                                        match: spiderData.semiFinals[1], 
-                                        title: 'Semifinále 2',
-                                        matchType: 'semifinále 2',
-                                        userProfileData: userProfileData,
-                                        generationInProgress: generationInProgress,
-                                        onGenerate: generateSingleMatch
-                                    })
-                                )
+                                React.createElement(MatchCell, { 
+                                    match: spiderData.semiFinals[1], 
+                                    title: 'Semifinále 2',
+                                    matchType: 'semifinále 2',
+                                    userProfileData: userProfileData,
+                                    generationInProgress: generationInProgress,
+                                    onGenerate: generateSingleMatch
+                                })
                             ),
                             
                             // DOLNÝ RIADOK - O 3. miesto a štvrťfinále 2 a 4
@@ -1663,27 +1526,14 @@ const SpiderApp = ({ userProfileData }) => {
                                         left: 0,
                                         right: 0,
                                         paddingLeft: '20px',
-                                        paddingRight: '20px',
-                                        border: '2px solid #8b5cf6', // Fialové ohraničenie pre dolný riadok
-                                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
-                                        padding: '15px 20px',
-                                        margin: '0 10px',
-                                        width: 'calc(100% - 60px)',
-                                        left: '30px',
-                                        borderRadius: '8px'
+                                        paddingRight: '20px'
                                     }
                                 },
                                 // Ľavá strana - Štvrťfinále 2
                                 React.createElement(
                                     'div',
                                     { 
-                                        className: 'flex-1 flex justify-start',
-                                        style: { 
-                                            border: '1px solid #a78bfa',
-                                            padding: '10px',
-                                            borderRadius: '4px',
-                                            margin: '0 5px'
-                                        }
+                                        className: 'flex-1 flex justify-start'
                                     },
                                     spiderLevel === 2 ? React.createElement(MatchCell, { 
                                         match: spiderData.quarterFinals[1], 
@@ -1692,31 +1542,14 @@ const SpiderApp = ({ userProfileData }) => {
                                         userProfileData: userProfileData,
                                         generationInProgress: generationInProgress,
                                         onGenerate: generateSingleMatch
-                                    }) : React.createElement('div', { 
-                                        style: { 
-                                            width: '220px', 
-                                            height: '140px',
-                                            border: '2px dotted #9ca3af',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            backgroundColor: '#f3f4f6'
-                                        },
-                                        children: 'Prázdne miesto'
-                                    })
+                                    }) : React.createElement('div', { style: { width: '220px' } })
                                 ),
                                 
                                 // Stred - O 3. miesto
                                 React.createElement(
                                     'div',
                                     { 
-                                        className: 'flex-1 flex justify-center',
-                                        style: { 
-                                            border: '1px solid #a78bfa',
-                                            padding: '10px',
-                                            borderRadius: '4px',
-                                            margin: '0 5px'
-                                        }
+                                        className: 'flex-1 flex justify-center'
                                     },
                                     React.createElement(MatchCell, { 
                                         match: spiderData.thirdPlace, 
@@ -1732,13 +1565,7 @@ const SpiderApp = ({ userProfileData }) => {
                                 React.createElement(
                                     'div',
                                     { 
-                                        className: 'flex-1 flex justify-end',
-                                        style: { 
-                                            border: '1px solid #a78bfa',
-                                            padding: '10px',
-                                            borderRadius: '4px',
-                                            margin: '0 5px'
-                                        }
+                                        className: 'flex-1 flex justify-end'
                                     },
                                     spiderLevel === 2 ? React.createElement(MatchCell, { 
                                         match: spiderData.quarterFinals[3], 
@@ -1747,18 +1574,7 @@ const SpiderApp = ({ userProfileData }) => {
                                         userProfileData: userProfileData,
                                         generationInProgress: generationInProgress,
                                         onGenerate: generateSingleMatch
-                                    }) : React.createElement('div', { 
-                                        style: { 
-                                            width: '220px', 
-                                            height: '140px',
-                                            border: '2px dotted #9ca3af',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            backgroundColor: '#f3f4f6'
-                                        },
-                                        children: 'Prázdne miesto'
-                                    })
+                                    }) : React.createElement('div', { style: { width: '220px' } })
                                 )
                             )
                         )
