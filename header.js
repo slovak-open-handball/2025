@@ -84,34 +84,33 @@ const formatPhoneNumber = (phoneNumber) => {
 };
 
 const formatNotificationMessage = (text) => {
-    // Ak je text pole, spracujeme každý prvok zvlášť a POTOM spojíme
     if (Array.isArray(text)) {
-        // Každý prvok poľa samostatne naformátujeme a potom spojíme
         return text.map(item => formatNotificationMessage(item)).join('<br>');
     }
     
-    // Pôvodné spracovanie reťazca (už je to string)
     const parts = text.split("'");
     
-    if (parts.length < 5) {
+    if (parts.length < 3) { // aspoň 2 apostrofy pre formátovanie
         return text;
     }
 
     let formattedText = parts[0];
     
-    for (let i = 1; i < parts.length - 1; i += 2) {
+    for (let i = 1; i < parts.length - 1; i++) {
         const value = parts[i];
         const nextPart = parts[i + 1];
         
-        if (i === 1) {
+        // Nepárne indexy (1,3,5,...) → šikmé písmo
+        if (i % 2 === 1) {
             formattedText += `<em>${value}</em>`;
-        } else if (i === 3) {
+        } 
+        // Párne indexy (2,4,6,...) → bold
+        else {
             formattedText += `<strong>${value}</strong>`;
-        } else {
-            formattedText += value;
         }
         
         formattedText += nextPart;
+        i++; // Preskočíme nextPart v ďalšej iterácii
     }
     
     // Formátovanie telefónnych čísel
