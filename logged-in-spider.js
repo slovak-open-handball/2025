@@ -1016,7 +1016,7 @@ const SpiderApp = ({ userProfileData }) => {
         }
     };
 
-    // Funkcia na vymazanie pavúkových zápasov pre vybranú kategóriu
+    // Funkcia na vymazanie pavúkových zápasov pre vybranú kategóriu (po úrovniach)
     const deleteSpiderMatches = async () => {
         const categoryId = selectedCategory;
         
@@ -1052,18 +1052,103 @@ const SpiderApp = ({ userProfileData }) => {
                 window.showGlobalNotification('Pre túto kategóriu neexistujú žiadne pavúkové zápasy', 'info');
                 return;
             }
+    
+            // Zistíme, aká je najvyššia úroveň
+            const hasEightfinals = existingSpiderMatches.some(m => ['osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
+                                                                     'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8'].includes(m.matchType));
+            const hasQuarterfinals = existingSpiderMatches.some(m => ['štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4'].includes(m.matchType));
             
-            // Vymažeme všetky nájdené zápasy
-            for (const match of existingSpiderMatches) {
+            let matchesToDelete = [];
+            let message = '';
+            
+            if (hasEightfinals) {
+                // Ak existujú osemfinále, zmažeme len ich
+                matchesToDelete = existingSpiderMatches.filter(m => 
+                    ['osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
+                     'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8'].includes(m.matchType)
+                );
+                
+                // Aktualizujeme identifikátory štvrťfinálových zápasov späť na '---'
+                const quarterfinal1 = existingSpiderMatches.find(m => m.matchType === 'štvrťfinále 1');
+                const quarterfinal2 = existingSpiderMatches.find(m => m.matchType === 'štvrťfinále 2');
+                const quarterfinal3 = existingSpiderMatches.find(m => m.matchType === 'štvrťfinále 3');
+                const quarterfinal4 = existingSpiderMatches.find(m => m.matchType === 'štvrťfinále 4');
+    
+                if (quarterfinal1) {
+                    await updateDoc(doc(window.db, 'matches', quarterfinal1.id), {
+                        homeTeamIdentifier: '---',
+                        awayTeamIdentifier: '---'
+                    });
+                }
+    
+                if (quarterfinal2) {
+                    await updateDoc(doc(window.db, 'matches', quarterfinal2.id), {
+                        homeTeamIdentifier: '---',
+                        awayTeamIdentifier: '---'
+                    });
+                }
+    
+                if (quarterfinal3) {
+                    await updateDoc(doc(window.db, 'matches', quarterfinal3.id), {
+                        homeTeamIdentifier: '---',
+                        awayTeamIdentifier: '---'
+                    });
+                }
+    
+                if (quarterfinal4) {
+                    await updateDoc(doc(window.db, 'matches', quarterfinal4.id), {
+                        homeTeamIdentifier: '---',
+                        awayTeamIdentifier: '---'
+                    });
+                }
+                
+                setSpiderLevel(2);
+                message = `Zmazané osemfinále (${matchesToDelete.length} zápasov)`;
+                
+            } else if (hasQuarterfinals) {
+                // Ak existujú štvrťfinále (ale nie osemfinále), zmažeme ich
+                matchesToDelete = existingSpiderMatches.filter(m => 
+                    ['štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4'].includes(m.matchType)
+                );
+                
+                // Aktualizujeme identifikátory semifinálových zápasov späť na '---'
+                const semifinal1 = existingSpiderMatches.find(m => m.matchType === 'semifinále 1');
+                const semifinal2 = existingSpiderMatches.find(m => m.matchType === 'semifinále 2');
+    
+                if (semifinal1) {
+                    await updateDoc(doc(window.db, 'matches', semifinal1.id), {
+                        homeTeamIdentifier: '---',
+                        awayTeamIdentifier: '---'
+                    });
+                }
+    
+                if (semifinal2) {
+                    await updateDoc(doc(window.db, 'matches', semifinal2.id), {
+                        homeTeamIdentifier: '---',
+                        awayTeamIdentifier: '---'
+                    });
+                }
+                
+                setSpiderLevel(1);
+                message = `Zmazané štvrťfinále (${matchesToDelete.length} zápasov)`;
+                
+            } else {
+                // Inak zmažeme všetky pavúkové zápasy (semifinále, finále, o 3. miesto)
+                matchesToDelete = existingSpiderMatches.filter(m => 
+                    ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto'].includes(m.matchType)
+                );
+                
+                setSpiderLevel(0);
+                setHasSpiderMatches(false);
+                message = `Zmazaný celý pavúk (${matchesToDelete.length} zápasov)`;
+            }
+            
+            // Vymažeme vybrané zápasy
+            for (const match of matchesToDelete) {
                 await deleteDoc(doc(window.db, 'matches', match.id));
             }
     
-            // Po vymazaní nastavíme, že už nie sú žiadne pavúkové zápasy
-            setSpiderData(null);
-            setHasSpiderMatches(false);
-            setSpiderLevel(1);
-            
-            window.showGlobalNotification(getDeletionMessage(existingSpiderMatches.length), 'success');
+            window.showGlobalNotification(message, 'success');
     
         } catch (error) {
             console.error('Chyba pri mazaní pavúka:', error);
