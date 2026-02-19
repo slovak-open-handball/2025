@@ -566,14 +566,24 @@ function TeamPackageSettings({
 
     // Filtrovanie balíčkov podľa vybraného typu ubytovania
     const filteredPackages = React.useMemo(() => {
-        if (!selectedAccommodationType || selectedAccommodationType === 'bez ubytovania') {
-            // Pre "bez ubytovania" zobrazíme všetky balíčky
-            return packages;
+        if (!selectedAccommodationType) {
+            // Ak ešte nie je vybraný typ ubytovania, nezobrazujeme žiadne balíčky
+            return [];
         }
         
-        // Filtrujeme balíčky, ktoré obsahujú vybraný typ ubytovania
+        if (selectedAccommodationType === 'bez ubytovania') {
+            // Pre "bez ubytovania" zobrazíme len balíčky, ktoré majú v accommodationTypes "bez ubytovania"
+            return packages.filter(pkg => 
+                pkg.accommodationTypes && pkg.accommodationTypes.includes('bez ubytovania')
+            );
+        }
+        
+        // Pre konkrétny typ ubytovania zobrazíme len balíčky, ktoré obsahujú tento typ
+        // a zároveň NEOBSAHUJÚ "bez ubytovania" (ak by ho náhodou mali)
         return packages.filter(pkg => 
-            pkg.accommodationTypes && pkg.accommodationTypes.includes(selectedAccommodationType)
+            pkg.accommodationTypes && 
+            pkg.accommodationTypes.includes(selectedAccommodationType) &&
+            !pkg.accommodationTypes.includes('bez ubytovania')
         );
     }, [packages, selectedAccommodationType]);
 
@@ -597,7 +607,11 @@ function TeamPackageSettings({
             React.createElement(
                 'div',
                 { className: 'mb-4 space-y-2' },
-                sortedPackages.length > 0 ? (
+                !selectedAccommodationType ? (
+                    React.createElement('p', { className: 'text-gray-500 text-center py-4' }, 
+                        'Najprv vyberte typ ubytovania.'
+                    )
+                ) : sortedPackages.length > 0 ? (
                     sortedPackages.map((pkg) => (
                         React.createElement(
                             'label',
@@ -659,9 +673,9 @@ function TeamPackageSettings({
                     ))
                 ) : (
                     React.createElement('p', { className: 'text-gray-500 text-center py-4' }, 
-                        selectedAccommodationType && selectedAccommodationType !== 'bez ubytovania' 
-                            ? `Pre vybraný typ ubytovania (${selectedAccommodationType}) nie sú dostupné žiadne balíčky.`
-                            : 'Nie sú dostupné žiadne balíčky.'
+                        selectedAccommodationType === 'bez ubytovania'
+                            ? 'Pre voľbu "bez ubytovania" nie sú dostupné žiadne balíčky.'
+                            : `Pre vybraný typ ubytovania (${selectedAccommodationType}) nie sú dostupné žiadne balíčky.`
                     )
                 )
             )
