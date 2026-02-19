@@ -200,17 +200,23 @@ function TeamAccommodationAndArrival({
         // Nájdeme vybraný typ ubytovania
         const selectedAccType = accommodationTypes.find(acc => acc.type === selectedAccommodation);
         if (!selectedAccType) return;
-
+    
         // KROK 1: Existujúce registrácie z databázy
         const existingCount = existingAccommodationCounts[selectedAccType.type] || 0;
-        
+    
         // KROK 2: Aktuálne prebiehajúca registrácia (bez tohto tímu)
         let currentCountWithoutThisTeam = currentRegistrationAccommodationCounts[selectedAccType.type] || 0;
-        
+    
+        // DÔLEŽITÉ: Odpočítame tento tím z aktuálnej registrácie
+        // Pretože currentRegistrationAccommodationCounts už obsahuje tento tím
+        if (team.accommodation?.type === selectedAccommodation) {
+            currentCountWithoutThisTeam -= currentTeamPeople;
+        }
+    
         // KROK 3: Celková obsadenosť
         const totalOccupied = existingCount + currentCountWithoutThisTeam;
         const remaining = selectedAccType.capacity - totalOccupied;
-        
+    
         // KROK 4: Ak už nie je dostatok miesta, zrušíme výber
         if (remaining < currentTeamPeople) {
             console.log(`Kapacita pre ${selectedAccommodation} je naplnená. Zostáva ${remaining} miest, potrebujeme ${currentTeamPeople}. Rušíme výber.`);
@@ -236,7 +242,8 @@ function TeamAccommodationAndArrival({
         currentTeamPeople, 
         categoryName, 
         teamIndex, 
-        onGranularTeamsDataChange
+        onGranularTeamsDataChange,
+        team.accommodation?.type
     ]);
 
     const handleAccommodationChange = (e) => {
