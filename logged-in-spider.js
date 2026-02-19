@@ -1648,6 +1648,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                         justifyContent: 'space-around',
                                                         alignItems: 'center',
                                                         width: '60%',
+                                                        margin: '0 auto',
                                                         gap: '0px'
                                                     }
                                                 },
