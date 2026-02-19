@@ -173,6 +173,7 @@ const SpiderApp = ({ userProfileData }) => {
     const [generationInProgress, setGenerationInProgress] = useState(false);
     const [isDeleteMatchesModalOpen, setIsDeleteMatchesModalOpen] = useState(false);
     const [hasSpiderMatches, setHasSpiderMatches] = useState(false);
+    const [hoveredMissingMatch, setHoveredMissingMatch] = useState(null);
 
     // Definícia isFilterActive - filter je aktívny, ak je vybratá nejaká kategória
     const isFilterActive = selectedCategory !== '';
@@ -534,6 +535,111 @@ const SpiderApp = ({ userProfileData }) => {
         }
     };
 
+    // Funkcia na vytvorenie jednotlivého chýbajúceho zápasu
+    const generateSingleMatch = async (matchType) => {
+        const categoryId = selectedCategory;
+        
+        if (!categoryId) {
+            window.showGlobalNotification('Vyberte kategóriu', 'error');
+            return;
+        }
+    
+        if (!window.db) {
+            window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
+            return;
+        }
+    
+        if (userProfileData?.role !== 'admin') {
+            window.showGlobalNotification('Na generovanie zápasu potrebujete administrátorské práva', 'error');
+            return;
+        }
+    
+        setGenerationInProgress(true);
+        
+        try {
+            // Skontrolujeme, či už zápas neexistuje
+            const existingMatch = allMatches.find(m => 
+                m.categoryId === categoryId && 
+                m.matchType === matchType
+            );
+            
+            if (existingMatch) {
+                window.showGlobalNotification('Tento zápas už existuje', 'warning');
+                return;
+            }
+    
+            // Získanie názvu kategórie
+            const category = categories.find(c => c.id === categoryId);
+            const categoryName = category ? category.name : `Kategória ${categoryId}`;
+            
+            // Odstránenie diakritiky z názvu kategórie pre identifikátory
+            const categoryWithoutDiacritics = categoryName
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '');
+            
+            // Príprava dát pre zápas podľa typu
+            let matchData = {
+                homeTeamIdentifier: '---',
+                awayTeamIdentifier: '---',
+                time: '--:--',
+                hallId: null,
+                categoryId: categoryId,
+                categoryName: categoryName,
+                groupName: null,
+                matchType: matchType,
+                status: 'pending',
+                createdAt: Timestamp.now(),
+                createdBy: userProfileData?.email || 'unknown',
+                createdByUid: userProfileData?.uid || null
+            };
+            
+            // Pre finále a o 3. miesto nastavíme identifikátory
+            if (matchType === 'finále') {
+                matchData.homeTeamIdentifier = `${categoryWithoutDiacritics} WSF01`;
+                matchData.awayTeamIdentifier = `${categoryWithoutDiacritics} WSF02`;
+            } else if (matchType === 'o 3. miesto') {
+                matchData.homeTeamIdentifier = `${categoryWithoutDiacritics} LSF01`;
+                matchData.awayTeamIdentifier = `${categoryWithoutDiacritics} LSF02`;
+            }
+            
+            // Uložíme zápas do Firebase
+            const matchesRef = collection(window.db, 'matches');
+            const docRef = await addDoc(matchesRef, matchData);
+            
+            // Aktualizujeme lokálnu štruktúru
+            const newMatch = {
+                id: docRef.id,
+                ...matchData,
+                exists: true
+            };
+            
+            // Aktualizujeme spiderData
+            const updatedSpiderData = { ...spiderData };
+            
+            if (matchType === 'finále') {
+                updatedSpiderData.final = newMatch;
+            } else if (matchType === 'semifinále 1') {
+                updatedSpiderData.semiFinals[0] = newMatch;
+            } else if (matchType === 'semifinále 2') {
+                updatedSpiderData.semiFinals[1] = newMatch;
+            } else if (matchType === 'o 3. miesto') {
+                updatedSpiderData.thirdPlace = newMatch;
+            }
+            
+            setSpiderData(updatedSpiderData);
+            setHasSpiderMatches(true);
+            
+            window.showGlobalNotification(`Zápas ${matchType} bol vygenerovaný`, 'success');
+    
+        } catch (error) {
+            console.error('Chyba pri generovaní zápasu:', error);
+            window.showGlobalNotification('Chyba pri generovaní zápasu: ' + error.message, 'error');
+        } finally {
+            setGenerationInProgress(false);
+            setHoveredMissingMatch(null);
+        }
+    };
+
     // Funkcia na vymazanie pavúkových zápasov pre vybranú kategóriu
     const deleteSpiderMatches = async () => {
         const categoryId = selectedCategory;
@@ -635,42 +741,79 @@ const SpiderApp = ({ userProfileData }) => {
     };
 
     // Komponent pre zobrazenie jedného zápasu v pavúkovom zobrazení
-    const MatchCell = ({ match, title = '' }) => {
+    const MatchCell = ({ match, title = '', matchType }) => {
+        const [isHovered, setIsHovered] = useState(false);
+        
         // Kontrola, či zápas existuje v databáze
         if (!match.exists) {
-            // Chýbajúci zápas - sivý čiarkovaný box s veľkým otáznikom
+            // Chýbajúci zápas - sivý čiarkovaný box s možnosťou generovania
             return React.createElement(
                 'div',
                 { 
-                    className: 'border-2 border-dashed border-gray-400 rounded-lg p-3 min-w-[220px] bg-gray-100',
+                    className: `border-2 border-dashed border-gray-400 rounded-lg p-3 min-w-[220px] transition-all duration-200 ${
+                        isHovered ? 'bg-green-50 border-green-500' : 'bg-gray-100'
+                    }`,
                     style: { 
                         zIndex: 10, 
                         position: 'relative',
                         minHeight: '140px',
                         display: 'flex',
-                        flexDirection: 'column'
+                        flexDirection: 'column',
+                        cursor: userProfileData?.role === 'admin' ? 'pointer' : 'default'
+                    },
+                    onMouseEnter: () => {
+                        if (userProfileData?.role === 'admin' && !generationInProgress) {
+                            setIsHovered(true);
+                            setHoveredMissingMatch(matchType);
+                        }
+                    },
+                    onMouseLeave: () => {
+                        setIsHovered(false);
+                        setHoveredMissingMatch(null);
+                    },
+                    onClick: () => {
+                        if (userProfileData?.role === 'admin' && !generationInProgress) {
+                            generateSingleMatch(matchType);
+                        }
                     }
                 },
                 // Nadpis (ak existuje)
                 title && React.createElement(
                     'div',
-                    { className: 'text-sm font-semibold text-gray-500 mb-2 pb-1 border-b border-dashed border-gray-300 text-center' },
+                    { className: `text-sm font-semibold mb-2 pb-1 border-b border-dashed text-center ${
+                        isHovered ? 'text-green-700 border-green-300' : 'text-gray-500 border-gray-300'
+                    }` },
                     title
                 ),
-                // Veľký otáznik uprostred
+                // Obsah - buď otáznik alebo tlačidlo +
                 React.createElement(
                     'div',
                     { 
                         className: 'flex-grow flex items-center justify-center',
                         style: { minHeight: title ? '80px' : '120px' }
                     },
-                    React.createElement(
-                        'span',
-                        { 
-                            className: 'text-gray-400',
-                            style: { fontSize: '72px', fontWeight: '300', lineHeight: 1 }
-                        },
-                        '?'
+                    isHovered && userProfileData?.role === 'admin' && !generationInProgress ? (
+                        React.createElement(
+                            'div',
+                            { 
+                                className: 'w-12 h-12 rounded-full bg-green-500 flex items-center justify-center shadow-lg transform transition-transform hover:scale-110',
+                                style: { animation: 'pulse 2s infinite' }
+                            },
+                            React.createElement(
+                                'span',
+                                { className: 'text-white text-3xl font-bold' },
+                                '+'
+                            )
+                        )
+                    ) : (
+                        React.createElement(
+                            'span',
+                            { 
+                                className: 'text-gray-400',
+                                style: { fontSize: '72px', fontWeight: '300', lineHeight: 1 }
+                            },
+                            '?'
+                        )
                     )
                 )
             );
@@ -1163,7 +1306,8 @@ const SpiderApp = ({ userProfileData }) => {
                                 { className: 'relative z-10 mt-8' },
                                 React.createElement(MatchCell, { 
                                     match: spiderData.final, 
-                                    title: 'Finále'
+                                    title: 'Finále',
+                                    matchType: 'finále'
                                 })
                             ),
                             
@@ -1177,7 +1321,8 @@ const SpiderApp = ({ userProfileData }) => {
                                 // Semifinále 1
                                 React.createElement(MatchCell, { 
                                     match: spiderData.semiFinals[0], 
-                                    title: 'Semifinále 1'
+                                    title: 'Semifinále 1',
+                                    matchType: 'semifinále 1'
                                 }),
                                                                 
                                 // VODOROVNÁ ČIARA
@@ -1217,7 +1362,8 @@ const SpiderApp = ({ userProfileData }) => {
                                 // Semifinále 2
                                 React.createElement(MatchCell, { 
                                     match: spiderData.semiFinals[1], 
-                                    title: 'Semifinále 2'
+                                    title: 'Semifinále 2',
+                                    matchType: 'semifinále 2'
                                 })
                             ),
                             
@@ -1227,7 +1373,8 @@ const SpiderApp = ({ userProfileData }) => {
                                 { className: 'relative z-10 mt-8 mb-8' },
                                 React.createElement(MatchCell, { 
                                     match: spiderData.thirdPlace, 
-                                    title: 'O 3. miesto'
+                                    title: 'O 3. miesto',
+                                    matchType: 'o 3. miesto'
                                 })
                             )
                         )
