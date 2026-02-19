@@ -1397,14 +1397,15 @@ const SpiderApp = ({ userProfileData }) => {
                             `Play-off ${spiderLevel === 2 ? '(so štvrťfinále)' : ''} - ${categories.find(c => c.id === selectedCategory)?.name || selectedCategory}`
                         ),
                         
-                        // Tabuľka pre pavúka
+                        // Tabuľka pre pavúka - s orámovaním každej bunky
                         React.createElement(
                             'table',
                             {
                                 style: {
                                     borderCollapse: 'collapse',
                                     width: '100%',
-                                    tableLayout: 'fixed'
+                                    tableLayout: 'fixed',
+                                    border: '1px solid #d1d5db' // Sivé orámovanie celej tabuľky
                                 }
                             },
                             
@@ -1430,7 +1431,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                 style: {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
-                                                    padding: '10px'
+                                                    padding: '10px',
+                                                    border: '1px solid #d1d5db' // Sivé orámovanie bunky
                                                 }
                                             },
                                             React.createElement(
@@ -1460,7 +1462,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
-                                                    width: '50%'
+                                                    width: '50%',
+                                                    border: '1px solid #d1d5db' // Sivé orámovanie bunky
                                                 }
                                             },
                                             React.createElement(
@@ -1484,7 +1487,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
-                                                    width: '50%'
+                                                    width: '50%',
+                                                    border: '1px solid #d1d5db' // Sivé orámovanie bunky
                                                 }
                                             },
                                             React.createElement(
@@ -1514,7 +1518,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                 style: {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
-                                                    padding: '10px'
+                                                    padding: '10px',
+                                                    border: '1px solid #d1d5db' // Sivé orámovanie bunky
                                                 }
                                             },
                                             React.createElement(
@@ -1550,7 +1555,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
-                                                    width: '33.33%'
+                                                    width: '33.33%',
+                                                    border: '1px solid #d1d5db' // Sivé orámovanie bunky
                                                 }
                                             },
                                             React.createElement(
@@ -1574,7 +1580,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
-                                                    width: '33.33%'
+                                                    width: '33.33%',
+                                                    border: '1px solid #d1d5db' // Sivé orámovanie bunky
                                                 }
                                             },
                                             React.createElement(
@@ -1598,7 +1605,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
-                                                    width: '33.33%'
+                                                    width: '33.33%',
+                                                    border: '1px solid #d1d5db' // Sivé orámovanie bunky
                                                 }
                                             },
                                             React.createElement(
@@ -1623,7 +1631,12 @@ const SpiderApp = ({ userProfileData }) => {
                                         // Prázdna bunka vľavo (pre zachovanie štruktúry)
                                         React.createElement(
                                             'td',
-                                            { style: { width: '33.33%' } }
+                                            { 
+                                                style: { 
+                                                    width: '33.33%',
+                                                    border: '1px solid #d1d5db' // Sivé orámovanie bunky
+                                                }
+                                            }
                                         ),
                                         // Semifinále 1 - stredný stĺpec
                                         React.createElement(
@@ -1633,7 +1646,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
-                                                    width: '33.33%'
+                                                    width: '33.33%',
+                                                    border: '1px solid #d1d5db' // Sivé orámovanie bunky
                                                 }
                                             },
                                             React.createElement(
@@ -1657,7 +1671,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
-                                                    width: '33.33%'
+                                                    width: '33.33%',
+                                                    border: '1px solid #d1d5db' // Sivé orámovanie bunky
                                                 }
                                             },
                                             React.createElement(
@@ -1687,7 +1702,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
-                                                    width: '33.33%'
+                                                    width: '33.33%',
+                                                    border: '1px solid #d1d5db' // Sivé orámovanie bunky
                                                 }
                                             },
                                             React.createElement(
@@ -1711,7 +1727,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
-                                                    width: '33.33%'
+                                                    width: '33.33%',
+                                                    border: '1px solid #d1d5db' // Sivé orámovanie bunky
                                                 }
                                             },
                                             React.createElement(
@@ -1735,7 +1752,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '10px',
-                                                    width: '33.33%'
+                                                    width: '33.33%',
+                                                    border: '1px solid #d1d5db' // Sivé orámovanie bunky
                                                 }
                                             },
                                             React.createElement(
