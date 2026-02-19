@@ -2212,19 +2212,21 @@ const createTeamAssignmentNotification = async (action, team) => {
                 teamsAtThisPosition.forEach((team, teamIdx) => {
                     const displayName = getCleanDisplayName(team);
                     const textColor = hasDuplicate ? 'text-red-700 font-semibold' : 'text-gray-800';
-                    
+    
                     // NOVÁ KONTROLA: Je tím v nadstavbovej skupine a chýba v základnej?
                     const isSuperstructureTeam = team.isSuperstructureTeam;
                     const isInSuperstructureGroup = team.groupName && 
                         allGroupsByCategoryId[targetCategoryId]?.some(g => 
                             g.name === team.groupName && g.type === 'nadstavbová skupina'
                         );
-                    
+    
                     let additionalClasses = '';
                     let title = '';
+                    let existsInBasic = true; // Predvolene true
                     
                     if (isSuperstructureTeam && isInSuperstructureGroup) {
-                        const existsInBasic = teamExistsInBasicGroup(team.teamName, team.category, team.groupName);
+                        // PRIDEĽTE hodnotu do existujúcej premennej, nie vytvárajte novú
+                        existsInBasic = teamExistsInBasicGroup(team.teamName, team.category, team.groupName);
                         if (!existsInBasic) {
                             additionalClasses = 'font-bold text-red-600';
                             title = 'Tím nemá zástupcu v základnej skupine!';
@@ -2307,7 +2309,6 @@ const createTeamAssignmentNotification = async (action, team) => {
             .forEach(team => {
                 const displayName = getCleanDisplayName(team);
                 
-                // NOVÁ KONTROLA pre extra tímy
                 const isSuperstructureTeam = team.isSuperstructureTeam;
                 const isInSuperstructureGroup = team.groupName && 
                     allGroupsByCategoryId[targetCategoryId]?.some(g => 
@@ -2316,9 +2317,11 @@ const createTeamAssignmentNotification = async (action, team) => {
                 
                 let additionalClasses = '';
                 let title = '';
+                let existsInBasic = true; // Predvolene true
                 
                 if (isSuperstructureTeam && isInSuperstructureGroup) {
-                    const existsInBasic = teamExistsInBasicGroup(team.teamName, team.category, team.groupName);
+                    // PRIDEĽTE hodnotu do existujúcej premennej
+                    existsInBasic = teamExistsInBasicGroup(team.teamName, team.category, team.groupName);
                     if (!existsInBasic) {
                         additionalClasses = 'font-bold text-red-600';
                         title = 'Tím nemá zástupcu v základnej skupine!';
