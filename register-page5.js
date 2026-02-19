@@ -359,18 +359,33 @@ function TeamAccommodationAndArrival({
                     
                     // Ostatné typy ubytovania s kontrolou kapacity
                     accommodationTypes.sort((a, b) => a.type.localeCompare(b.type)).map((acc) => {
-                        // Vypočítame dostupné miesta pre tento typ
-                        const availableSpots = getAvailableSpotsForTeam(acc.type);
+                        // Vypočítame dostupné miesta pre tento typ (bez tohto tímu)
+                        const availableSpotsWithoutTeam = getAvailableSpotsForTeam(acc.type);
+                        
+                        // Pre aktuálne vybraný typ, musíme zobraziť kapacitu BERÚC do úvahy, že tento tím už je v nej
+                        let displayOccupied;
+                        let displayRemaining;
+                        
+                        if (selectedAccommodation === acc.type) {
+                            // Ak je tento typ aktuálne vybraný, tak kapacita je obsadená existujúcimi + ostatnými v current + tento tím
+                            const existingCount = existingAccommodationCounts[acc.type] || 0;
+                            const currentCountWithoutThisTeam = getCurrentRegistrationCountWithoutThisTeam(acc.type);
+                            displayOccupied = existingCount + currentCountWithoutThisTeam + currentTeamPeople;
+                            displayRemaining = acc.capacity - displayOccupied;
+                        } else {
+                            // Ak nie je vybraný, tak kapacita je bez tohto tímu
+                            displayRemaining = availableSpotsWithoutTeam;
+                            displayOccupied = acc.capacity - displayRemaining;
+                        }
                         
                         // Typ je nedostupný ak:
-                        // 1. Nie je dostatok miest pre tento tím (availableSpots < currentTeamPeople)
+                        // 1. Pre tento tím nie je dostatok miest (availableSpotsWithoutTeam < currentTeamPeople)
                         // 2. A zároveň tento tím ešte nemá vybraný tento typ
-                        // (Ak ho už má vybraný, musíme ho nechať vybraný, ale zablokovať možnosť zmeny na iný plný typ)
-                        const isInsufficientCapacity = availableSpots < currentTeamPeople;
+                        const isInsufficientCapacity = availableSpotsWithoutTeam < currentTeamPeople;
                         
                         // Typ je dostupný len ak:
                         // 1. Je aktuálne vybraný (lebo ho už máme vybraný, tak ho musíme nechať vybraný)
-                        // 2. ALEBO má dostatočnú kapacitu
+                        // 2. ALEBO má dostatočnú kapacitu pre tento tím
                         const shouldDisable = isInsufficientCapacity && selectedAccommodation !== acc.type;
                         
                         // Ak je typ aktuálne vybraný a je nedostatočná kapacita, znamená to, že 
@@ -378,15 +393,6 @@ function TeamAccommodationAndArrival({
                         const isSelectedButNowFull = selectedAccommodation === acc.type && isInsufficientCapacity;
                         
                         const finalDisabled = shouldDisable || loading;
-                        
-                        // Vypočítame obsadenosť pre zobrazenie (s týmto tímom, ak je vybraný)
-                        let displayOccupied = 0;
-                        if (selectedAccommodation === acc.type) {
-                            displayOccupied = acc.capacity - (availableSpots - currentTeamPeople);
-                        } else {
-                            displayOccupied = acc.capacity - availableSpots;
-                        }
-                        const displayRemaining = acc.capacity - displayOccupied;
                         
                         return React.createElement(
                             'label',
