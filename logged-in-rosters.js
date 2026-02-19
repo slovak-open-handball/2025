@@ -1317,41 +1317,47 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                 ),
                 
                 React.createElement(
-                    'div',
-                    null,
-                    React.createElement('label', { htmlFor: 'packageName', className: 'block text-sm font-medium text-gray-700' }, 'Balík'),
-                    React.createElement('select', {
-                        id: 'packageName',
-                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
-                        value: editedPackageName,
-                        onChange: handlePackageNameChange,
-                        required: true,
-                        disabled: isDataEditDeadlinePassed
-                    },
-                    // Filtrujeme balíky podľa vybraného typu ubytovania
-                    (() => {
-                        // Získame všetky dostupné balíky z prop
-                        const allPackages = availablePackages || [];
-                        
-                        // Filtrujeme balíky, ktoré sú dostupné pre aktuálne vybraný typ ubytovania
-                        // POZNÁMKA: Toto je zjednodušená verzia - v reálnej aplikácii by ste potrebovali
-                        // mať k dispozícii aj informáciu o tom, ktoré typy ubytovania sú pre ktorý balík dostupné
-                        // Ak túto informáciu nemáte, budete musieť upraviť props aby ste ju odovzdávali
-                        
-                        // Pre demonštráciu - predpokladáme, že availablePackages je pole objektov s informáciou o dostupnosti
-                        // Alebo že máme samostatné pole filteredPackages podľa accommodationType
-                        
-                        const filteredPackages = allPackages.filter(pkg => {
-                            // Tu by mala byť logika na filtrovanie podľa pkg.accommodationTypes
-                            // Momentálne nemáme túto informáciu, preto vrátime všetky balíky
-                            return true;
-                        });
-                        
-                        return filteredPackages.sort().map((pkgName, idx) =>
-                            React.createElement('option', { key: idx, value: pkgName }, pkgName)
-                        );
-                    })()
-                    )
+                  'div',
+                  null,
+                  React.createElement('label', { htmlFor: 'packageName', className: 'block text-sm font-medium text-gray-700' }, 'Balík'),
+                  React.createElement('select', {
+                    id: 'packageName',
+                    className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                    value: editedPackageName,
+                    onChange: handlePackageNameChange,
+                    required: true,
+                    disabled: isDataEditDeadlinePassed
+                  },
+                  // Filtrujeme balíky podľa vybraného typu ubytovania
+                  (() => {
+                    // Získame všetky dostupné balíky (teraz sú to objekty s detailami)
+                    const allPackages = availablePackages || [];
+                    
+                    // Filtrujeme balíky, ktoré sú dostupné pre aktuálne vybraný typ ubytovania
+                    // Ak je vybraný typ "bez ubytovania", zobrazíme balíky, ktoré obsahujú "bez ubytovania" v accommodationTypes
+                    const filteredPackages = allPackages.filter(pkg => {
+                      // Ak balík nemá definované accommodationTypes, berieme ho ako dostupný pre všetky typy (pre spätnú kompatibilitu)
+                      if (!pkg.accommodationTypes || pkg.accommodationTypes.length === 0) {
+                        return true;
+                      }
+                      
+                      // Ak je vybraný typ "bez ubytovania", kontrolujeme či je v zozname
+                      if (editedAccommodationType === 'bez ubytovania') {
+                        return pkg.accommodationTypes.includes('bez ubytovania');
+                      }
+                      
+                      // Inak kontrolujeme, či je vybraný typ v zozname dostupných typov pre balík
+                      return pkg.accommodationTypes.includes(editedAccommodationType);
+                    });
+                    
+                    // Zoradíme podľa názvu a vrátime option elementy
+                    return filteredPackages
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .map((pkg, idx) =>
+                        React.createElement('option', { key: idx, value: pkg.name }, pkg.name)
+                      );
+                  })()
+                  )
                 ),
 
                 React.createElement(
@@ -1766,37 +1772,49 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                     )
                 ),
                 React.createElement(
-                    'div',
-                    null,
-                    React.createElement('label', { htmlFor: 'packageName', className: 'block text-sm font-medium text-gray-700' }, 'Balík'),
-                    React.createElement('select', {
-                        id: 'packageName',
-                        className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
-                        value: packageName,
-                        onChange: (e) => {
-                            setPackageName(e.target.value);
-                            setHasChanges(true);
-                        },
-                        required: true,
-                        disabled: isDataEditDeadlinePassed
+                  'div',
+                  null,
+                  React.createElement('label', { htmlFor: 'packageName', className: 'block text-sm font-medium text-gray-700' }, 'Balík'),
+                  React.createElement('select', {
+                    id: 'packageName',
+                    className: 'mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2',
+                    value: packageName,
+                    onChange: (e) => {
+                      setPackageName(e.target.value);
+                      setHasChanges(true);
                     },
-                    // Filtrujeme balíky podľa vybraného typu ubytovania
-                    (() => {
-                        // Získame všetky dostupné balíky
-                        const allPackages = availablePackages || [];
-                        
-                        // Filtrujeme balíky, ktoré sú dostupné pre aktuálne vybraný typ ubytovania
-                        // Rovnaká poznámka ako pri EditTeamModal
-                        const filteredPackages = allPackages.filter(pkg => {
-                            // Tu by mala byť logika na filtrovanie podľa pkg.accommodationTypes
-                            return true;
-                        });
-                        
-                        return filteredPackages.sort().map((pkgName, idx) =>
-                            React.createElement('option', { key: idx, value: pkgName }, pkgName)
-                        );
-                    })()
-                    )
+                    required: true,
+                    disabled: isDataEditDeadlinePassed
+                  },
+                  // Filtrujeme balíky podľa vybraného typu ubytovania
+                  (() => {
+                    // Získame všetky dostupné balíky (teraz sú to objekty s detailami)
+                    const allPackages = availablePackages || [];
+                    
+                    // Filtrujeme balíky, ktoré sú dostupné pre aktuálne vybraný typ ubytovania
+                    const filteredPackages = allPackages.filter(pkg => {
+                      // Ak balík nemá definované accommodationTypes, berieme ho ako dostupný pre všetky typy (pre spätnú kompatibilitu)
+                      if (!pkg.accommodationTypes || pkg.accommodationTypes.length === 0) {
+                        return true;
+                      }
+                      
+                      // Ak je vybraný typ "bez ubytovania", kontrolujeme či je v zozname
+                      if (accommodationType === 'bez ubytovania') {
+                        return pkg.accommodationTypes.includes('bez ubytovania');
+                      }
+                      
+                      // Inak kontrolujeme, či je vybraný typ v zozname dostupných typov pre balík
+                      return pkg.accommodationTypes.includes(accommodationType);
+                    });
+                    
+                    // Zoradíme podľa názvu a vrátime option elementy
+                    return filteredPackages
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .map((pkg, idx) =>
+                        React.createElement('option', { key: idx, value: pkg.name }, pkg.name)
+                      );
+                  })()
+                  )
                 ),
 
                 React.createElement(
@@ -2021,33 +2039,39 @@ useEffect(() => {
     return () => clearInterval(intervalId);
 }, [rosterEditDeadline, dataEditDeadline]);
 
-  useEffect(() => {
-      let unsubscribePackages;
-      if (db) {
-          try {
-              const packagesRef = collection(db, 'settings', 'packages', 'list');
-              unsubscribePackages = onSnapshot(packagesRef, (snapshot) => {
-                  const packagesList = [];
-                  snapshot.forEach(doc => {
-                      const data = doc.data();
-                      if (data.name) {
-                          packagesList.push(data.name);
-                      }
-                  });
-                  setAvailablePackages(packagesList);
-              }, (error) => {
-                  console.error("RostersApp: Error fetching packages:", error);
-              });
-          } catch (e) {
-              console.error("RostersApp: Error setting up onSnapshot for packages:", e);
+useEffect(() => {
+  let unsubscribePackages;
+  if (db) {
+    try {
+      const packagesRef = collection(db, 'settings', 'packages', 'list');
+      unsubscribePackages = onSnapshot(packagesRef, (snapshot) => {
+        const packagesList = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.name) {
+            packagesList.push({
+              name: data.name,
+              accommodationTypes: data.accommodationTypes || [],
+              price: data.price || 0,
+              meals: data.meals || {},
+              id: doc.id
+            });
           }
-      }
-      return () => {
-          if (unsubscribePackages) {
-              unsubscribePackages();
-          }
-      };
-  }, [db]);
+        });
+        setAvailablePackages(packagesList);
+      }, (error) => {
+        console.error("RostersApp: Error fetching packages:", error);
+      });
+    } catch (e) {
+      console.error("RostersApp: Error setting up onSnapshot for packages:", e);
+    }
+  }
+  return () => {
+    if (unsubscribePackages) {
+      unsubscribePackages();
+    }
+  };
+}, [db]);
 
   useEffect(() => {
       let unsubscribeAccommodation;
