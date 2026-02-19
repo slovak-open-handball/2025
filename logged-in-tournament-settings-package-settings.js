@@ -421,14 +421,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                         'div',
                         { key: pkg.id, className: 'flex justify-between items-center bg-gray-50 p-3 rounded-md shadow-sm mb-2 flex-wrap' },
                         React.createElement('div', { className: 'w-full md:w-auto' },
-                            React.createElement('span', { className: 'text-gray-800 font-medium' }, `${pkg.name} - ${pkg.price} €`),
-                            // Zobrazenie priradených typov ubytovania
-                            pkg.accommodationTypes && pkg.accommodationTypes.length > 0 && (
-                                React.createElement('div', { className: 'text-sm text-gray-600 mt-1' },
-                                    React.createElement('span', { className: 'font-semibold' }, 'Ubytovanie: '),
-                                    pkg.accommodationTypes.join(', ')
-                                )
-                            )
+                            React.createElement('span', { className: 'text-gray-800 font-medium' }, `${pkg.name} - ${pkg.price} €`)
                         ),
                         React.createElement(
                             'div',
@@ -452,7 +445,14 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                                 return null;
                             }),
                             (pkg.meals && pkg.meals.participantCard === 1) &&
-                                React.createElement('p', { className: 'ml-4 font-bold text-gray-700' }, 'zahŕňa účastnícku kartu')
+                                React.createElement('p', { className: 'ml-4 font-bold text-gray-700' }, 'zahŕňa účastnícku kartu'),
+                            // Zobrazenie priradených typov ubytovania pod účastníckou kartou
+                            pkg.accommodationTypes && pkg.accommodationTypes.length > 0 && (
+                                React.createElement('div', { className: 'ml-4 mt-1 text-gray-600' },
+                                    React.createElement('span', { className: 'font-semibold' }, 'Typy ubytovania: '),
+                                    pkg.accommodationTypes.join(', ')
+                                )
+                            )
                         ),
                         React.createElement(
                             'div',
