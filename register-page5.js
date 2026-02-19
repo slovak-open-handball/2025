@@ -190,6 +190,55 @@ function TeamAccommodationAndArrival({
         setArrivalMinutes(initialTime ? initialTime.split(':')[1] : '');
     }, [team.accommodation, team.arrival]);
 
+    // NOVÝ EFEKT: Kontrola kapacity pre aktuálne vybraný typ ubytovania
+    React.useEffect(() => {
+        // Ak nie je vybraný žiadny typ ubytovania alebo je to "bez ubytovania", nič nerobíme
+        if (!selectedAccommodation || selectedAccommodation === 'bez ubytovania') {
+            return;
+        }
+
+        // Nájdeme vybraný typ ubytovania
+        const selectedAccType = accommodationTypes.find(acc => acc.type === selectedAccommodation);
+        if (!selectedAccType) return;
+
+        // KROK 1: Existujúce registrácie z databázy
+        const existingCount = existingAccommodationCounts[selectedAccType.type] || 0;
+        
+        // KROK 2: Aktuálne prebiehajúca registrácia (bez tohto tímu)
+        let currentCountWithoutThisTeam = currentRegistrationAccommodationCounts[selectedAccType.type] || 0;
+        
+        // KROK 3: Celková obsadenosť
+        const totalOccupied = existingCount + currentCountWithoutThisTeam;
+        const remaining = selectedAccType.capacity - totalOccupied;
+        
+        // KROK 4: Ak už nie je dostatok miesta, zrušíme výber
+        if (remaining < currentTeamPeople) {
+            console.log(`Kapacita pre ${selectedAccommodation} je naplnená. Zostáva ${remaining} miest, potrebujeme ${currentTeamPeople}. Rušíme výber.`);
+            
+            // Zrušíme výber v lokálnom stave
+            setSelectedAccommodation('');
+            
+            // Zrušíme výber v rodičovskom stave
+            onGranularTeamsDataChange(categoryName, teamIndex, 'accommodation', { type: '' });
+            
+            // Zobrazíme notifikáciu (ak je k dispozícii)
+            if (typeof window.showNotification === 'function') {
+                window.showNotification(`Typ ubytovania "${selectedAccommodation}" už nie je k dispozícii. Kapacita je naplnená.`, 'warning');
+            } else {
+                alert(`Typ ubytovania "${selectedAccommodation}" už nie je k dispozícii. Kapacita je naplnená.`);
+            }
+        }
+    }, [
+        selectedAccommodation, 
+        accommodationTypes, 
+        existingAccommodationCounts, 
+        currentRegistrationAccommodationCounts, 
+        currentTeamPeople, 
+        categoryName, 
+        teamIndex, 
+        onGranularTeamsDataChange
+    ]);
+
     const handleAccommodationChange = (e) => {
         const newValue = e.target.value;
         
