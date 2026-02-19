@@ -2137,22 +2137,10 @@ const SpiderApp = ({ userProfileData }) => {
                                         )
                                     ),
                                     
-                                    // RIADOK 2 - prázdno, Štvrťfinále 1 (colspan=2), prázdno, prázdno
+                                    // RIADOK 2 - Štvrťfinále 1 (colspan=2), prázdno, prázdno, prázdno
                                     React.createElement(
                                         'tr',
                                         { style: { height: '200px' } },
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '10px',
-                                                    width: '20%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            }
-                                        ),
                                         React.createElement(
                                             'td',
                                             { 
@@ -2177,6 +2165,18 @@ const SpiderApp = ({ userProfileData }) => {
                                                     onGenerate: generateSingleMatch
                                                 })
                                             )
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '10px',
+                                                    width: '20%',
+                                                    border: '1px solid #d1d5db'
+                                                }
+                                            }
                                         ),
                                         React.createElement(
                                             'td',
