@@ -1648,7 +1648,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                         justifyContent: 'space-around',
                                                         alignItems: 'center',
                                                         width: '100%',
-                                                        gap: '20px'
+                                                        gap: '40px'
                                                     }
                                                 },
                                                 // Semifinále 1
