@@ -2,12 +2,12 @@ import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, Timestamp, g
 
 export function PackageSettings({ db, userProfileData, tournamentStartDate, tournamentEndDate, showNotification, sendAdminNotification }) {
   const [packages, setPackages] = React.useState([]);
-  const [accommodations, setAccommodations] = React.useState([]); // Nový state pre typy ubytovania
+  const [accommodations, setAccommodations] = React.useState([]);
   const [showPackageModal, setShowPackageModal] = React.useState(false);
   const [currentPackageEdit, setCurrentPackageEdit] = React.useState(null);
   const [newPackageName, setNewPackageName] = React.useState('');
   const [newPackagePrice, setNewPackagePrice] = React.useState(0);
-  const [selectedAccommodations, setSelectedAccommodations] = React.useState([]); // Vybrané typy ubytovania pre balíček
+  const [selectedAccommodations, setSelectedAccommodations] = React.useState([]);
   const [packageModalMode, setPackageModalMode] = React.useState('add');
   const [showConfirmDeletePackageModal, setShowConfirmDeletePackageModal] = React.useState(false);
   const [packageToDelete, setPackageToDelete] = React.useState(null);
@@ -23,12 +23,10 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     const [startYear, startMonth, startDay] = start.split('-').map(Number);
     const [endYear, endMonth, endDay] = end.split('-').map(Number);
 
-    // Používame UTC, aby sme sa vyhli problémom s časovými pásmami
     let currentDate = new Date(Date.UTC(startYear, startMonth - 1, startDay));
     const endDateAdjusted = new Date(Date.UTC(endYear, endMonth - 1, endDay));
 
     while (currentDate <= endDateAdjusted) {
-      // Dátum pridáme vo formáte ISO String YYYY-MM-DD
       dates.push(currentDate.toISOString().split('T')[0]);
       currentDate.setUTCDate(currentDate.getUTCDate() + 1);
     }
@@ -36,7 +34,6 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
   };
 
   const tournamentDays = React.useMemo(() => {
-    // Dátumy berieme priamo z props, ktoré by mali byť aktualizované z databázy
     const startDate = tournamentStartDate ? new Date(tournamentStartDate) : null;
     const endDate = tournamentEndDate ? new Date(tournamentEndDate) : null;
     if (startDate && endDate && !isNaN(startDate) && !isNaN(endDate)) {
@@ -96,7 +93,6 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         unsubscribeAccommodation = onSnapshot(accommodationDocRef, docSnapshot => {
           if (docSnapshot.exists()) {
             const data = docSnapshot.data();
-            // Zoradenie ubytovní abecedne podľa názvu (type)
             const sortedAccommodations = (data.types || []).sort((a, b) => a.type.localeCompare(b.type));
             setAccommodations(sortedAccommodations);
           } else {
@@ -139,27 +135,22 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
             const currentMeals = pkgData.meals || {};
             const oldMealDays = Object.keys(currentMeals).filter(day => day !== 'participantCard').sort();
             
-            // Porovnanie starých a nových dátumov
             const datesAreIdentical = JSON.stringify(oldMealDays) === JSON.stringify(newTournamentDays);
             
             if (!datesAreIdentical) {
-                // Dátumy sa nezhodujú, je potrebné balíček aktualizovať
                 const updatedMeals = {};
                 
-                // Zachovanie 'participantCard'
                 if (currentMeals.participantCard === 1) {
                     updatedMeals.participantCard = 1;
                 }
 
                 if (oldMealDays.length === newTournamentDays.length) {
-                    // Počet dní je rovnaký, len sa posunuli
                     oldMealDays.forEach((oldDay, index) => {
                         const newDay = newTournamentDays[index];
                         const oldDayMeals = currentMeals[oldDay] || { breakfast: 0, lunch: 0, dinner: 0, refreshment: 0 };
                         updatedMeals[newDay] = oldDayMeals;
                     });
                 } else {
-                    // Dĺžka turnaja sa zmenila, preklopíme existujúce dni a pridáme nové s nulovými hodnotami
                     newTournamentDays.forEach(day => {
                         if (currentMeals[day]) {
                             updatedMeals[day] = currentMeals[day];
@@ -189,8 +180,8 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     setPackageModalMode('add');
     setNewPackageName('');
     setNewPackagePrice(0);
-    setSelectedAccommodations([]); // Reset vybraných ubytovaní
-    setPackageMeals({}); // Reset meals for new package
+    setSelectedAccommodations([]);
+    setPackageMeals({});
     setPackageRefreshments([]);
     setCurrentPackageEdit(null);
     setShowPackageModal(true);
@@ -202,22 +193,20 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
     setPackageModalMode('edit');
     setNewPackageName(pkg.name);
     setNewPackagePrice(pkg.price);
-    setSelectedAccommodations(pkg.accommodationTypes || []); // Načítanie priradených ubytovaní
+    setSelectedAccommodations(pkg.accommodationTypes || []);
     
-    // Pri úprave balíčka inicializujeme meals pre všetky dni turnaja
     const initialMeals = {};
     tournamentDays.forEach(day => {
         initialMeals[day] = pkg.meals[day] || { breakfast: 0, lunch: 0, dinner: 0, refreshment: 0 };
     });
-    // Zachovať participantCard z pôvodného balíčka, ak existuje
     if (pkg.meals?.participantCard === 1) {
         initialMeals.participantCard = 1;
     } else {
-        delete initialMeals.participantCard; // Uistite sa, že nie je nastavené na 0, ak nebolo pôvodne
+        delete initialMeals.participantCard;
     }
     setPackageMeals(initialMeals);
     
-    setPackageRefreshments([]); // Refreshments are not currently managed via UI, keeping this for future expansion
+    setPackageRefreshments([]);
     setCurrentPackageEdit(pkg);
     setShowPackageModal(true);
     const hasRefreshment = tournamentDays.some(date => (pkg.meals || {})[date]?.refreshment === 1);
@@ -299,7 +288,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
       if (hasParticipantCard) {
         mealsToSave.participantCard = 1;
       } else {
-        delete mealsToSave.participantCard; // Odstrániť, ak nie je začiarknutá
+        delete mealsToSave.participantCard;
       }
 
       if (packageModalMode === 'add') {
@@ -307,10 +296,11 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
           showNotification(`Balíček "${trimmedName}" už existuje.`, 'error');
           return;
         }
+        
         await addDoc(packagesCollectionRef, {
           name: trimmedName,
           price: newPackagePrice,
-          accommodationTypes: selectedAccommodations, // Uloženie vybraných typov ubytovania
+          accommodationTypes: selectedAccommodations,
           meals: mealsToSave,
           refreshments: [],
           createdAt: Timestamp.fromDate(new Date())
@@ -318,24 +308,14 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         showNotification(`Balíček "${trimmedName}" úspešne pridaný!`, 'success');
         
         if (typeof sendAdminNotification === 'function') {
-          const changes = [];
-          
-          // Názov
-          changes.push(`Zmena pre názov: z '' na '${trimmedName}'`);
-          
-          // Cena
-          changes.push(`Zmena pre cena: z '0' na '${newPackagePrice}'`);
-          
-          // Ubytovania
-          const accommodationStr = selectedAccommodations.length > 0 
-            ? selectedAccommodations.join(', ') 
-            : 'žiadne';
-          changes.push(`Zmena pre ubytovania: z '' na '${accommodationStr}'`);
-          
           await sendAdminNotification({
             type: 'createPackage',
             data: {
-              changes: changes
+              name: trimmedName,
+              price: newPackagePrice,
+              accommodationTypes: selectedAccommodations,
+              meals: mealsToSave,
+              hasParticipantCard: hasParticipantCard
             }
           });
         }
@@ -358,7 +338,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
           name: originalPkgData.name,
           price: originalPkgData.price,
           accommodationTypes: [...originalPkgData.accommodationTypes],
-          meals: JSON.parse(JSON.stringify(originalPkgData.meals)), // Hlboká kópia
+          meals: JSON.parse(JSON.stringify(originalPkgData.meals)),
           hasParticipantCard: originalPkgData.meals?.participantCard === 1
         };
 
@@ -372,81 +352,22 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         });
         showNotification(`Balíček "${currentPackageEdit.name}" úspešne zmenený na "${trimmedName}"!`, 'success');
 
-        // --- KOMPLETNÁ NOTIFIKÁCIA SO VŠETKÝMI ZMENAMI ---
+        // --- KOMPLETNÁ NOTIFIKÁCIA PRE ÚPRAVU ---
         if (typeof sendAdminNotification === 'function') {
-          const changesList = [];
-
-          // 1. Zmena názvu
-          if (oldData.name !== trimmedName) {
-            changesList.push(`Zmena pre názov: z '${oldData.name}' na '${trimmedName}'`);
-          }
-
-          // 2. Zmena ceny
-          if (oldData.price !== newPackagePrice) {
-            changesList.push(`Zmena pre cena: z '${oldData.price}' na '${newPackagePrice}'`);
-          }
-
-          // 3. Zmena priradených ubytovaní
-          const oldAccommodations = oldData.accommodationTypes || [];
-          const newAccommodations = selectedAccommodations || [];
-          
-          const oldAccommodationsSorted = [...oldAccommodations].sort();
-          const newAccommodationsSorted = [...newAccommodations].sort();
-          
-          if (JSON.stringify(oldAccommodationsSorted) !== JSON.stringify(newAccommodationsSorted)) {
-            const oldStr = oldAccommodationsSorted.length > 0 ? oldAccommodationsSorted.join(', ') : 'žiadne';
-            const newStr = newAccommodationsSorted.length > 0 ? newAccommodationsSorted.join(', ') : 'žiadne';
-            changesList.push(`Zmena pre ubytovania: z '${oldStr}' na '${newStr}'`);
-          }
-
-          // 4. Zmena účastníckej karty
-          if (oldData.hasParticipantCard !== hasParticipantCard) {
-            changesList.push(`Zmena pre účastnícka karta: z '${oldData.hasParticipantCard ? 'áno' : 'nie'}' na '${hasParticipantCard ? 'áno' : 'nie'}'`);
-          }
-
-          // 5. Zmeny v stravovaní pre jednotlivé dni
-          tournamentDays.forEach(day => {
-            const oldMeal = oldData.meals[day] || { breakfast: 0, lunch: 0, dinner: 0, refreshment: 0 };
-            const newMeal = mealsToSave[day] || { breakfast: 0, lunch: 0, dinner: 0, refreshment: 0 };
-            
-            // Raňajky
-            if (oldMeal.breakfast !== newMeal.breakfast) {
-              changesList.push(`Zmena pre stravovanie (${new Date(day).toLocaleDateString('sk-SK')} - raňajky): z '${oldMeal.breakfast ? 'áno' : 'nie'}' na '${newMeal.breakfast ? 'áno' : 'nie'}'`);
-            }
-            
-            // Obed
-            if (oldMeal.lunch !== newMeal.lunch) {
-              changesList.push(`Zmena pre stravovanie (${new Date(day).toLocaleDateString('sk-SK')} - obed): z '${oldMeal.lunch ? 'áno' : 'nie'}' na '${newMeal.lunch ? 'áno' : 'nie'}'`);
-            }
-            
-            // Večera
-            if (oldMeal.dinner !== newMeal.dinner) {
-              changesList.push(`Zmena pre stravovanie (${new Date(day).toLocaleDateString('sk-SK')} - večera): z '${oldMeal.dinner ? 'áno' : 'nie'}' na '${newMeal.dinner ? 'áno' : 'nie'}'`);
-            }
-            
-            // Občerstvenie
-            if (oldMeal.refreshment !== newMeal.refreshment) {
-              changesList.push(`Zmena pre stravovanie (${new Date(day).toLocaleDateString('sk-SK')} - občerstvenie): z '${oldMeal.refreshment ? 'áno' : 'nie'}' na '${newMeal.refreshment ? 'áno' : 'nie'}'`);
-            }
-          });
-
-          // Ak nebola žiadna zmena, pošleme aspoň informáciu o aktualizácii
-          const finalChanges = changesList.length > 0
-            ? changesList
-            : [`Bez zmeny údajov (iba aktualizácia času) pre balíček: ${trimmedName}`];
+          const newData = {
+            name: trimmedName,
+            price: newPackagePrice,
+            accommodationTypes: selectedAccommodations,
+            meals: mealsToSave,
+            hasParticipantCard: hasParticipantCard
+          };
 
           await sendAdminNotification({
             type: 'editPackage',
             data: {
-              changes: finalChanges,
-              oldData: oldData, // Pôvodné dáta pre prípad potreby
-              newData: { // Nové dáta pre prípad potreby
-                name: trimmedName,
-                price: newPackagePrice,
-                accommodationTypes: selectedAccommodations,
-                meals: mealsToSave,
-                hasParticipantCard: hasParticipantCard
-              }
+              originalPackage: oldData,
+              newPackage: newData,
+              originalName: oldData.name // Pre prípad chyby
             }
           });
         }
@@ -471,7 +392,6 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
   const handleDeletePackage = async () => {
     if (typeof showNotification !== 'function') {
         console.error("DEBUG: showNotification prop is not a function in handleDeletePackage!");
-        console.error("Chyba: Nemáte oprávnenie na zmazanie balíčka (showNotification not available).");
         return; 
     }
     if (typeof sendAdminNotification !== 'function') {
@@ -490,24 +410,11 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
       showNotification(`Balíček "${packageToDelete.name}" úspešne zmazaný!`, 'success');
 
       if (typeof sendAdminNotification === 'function') {
-        const changes = [];
-        
-        // Názov
-        changes.push(`Zmena pre názov: z '${packageToDelete.name}' na ''`);
-        
-        // Cena
-        changes.push(`Zmena pre cena: z '${packageToDelete.price}' na '0'`);
-        
-        // Ubytovania
-        const accommodationStr = packageToDelete.accommodationTypes && packageToDelete.accommodationTypes.length > 0
-          ? packageToDelete.accommodationTypes.join(', ')
-          : 'žiadne';
-        changes.push(`Zmena pre ubytovania: z '${accommodationStr}' na ''`);
-
         await sendAdminNotification({
           type: 'deletePackage',
           data: {
-            changes: changes,
+            deletedName: packageToDelete.name,
+            deletedPrice: packageToDelete.price,
             deletedData: packageToDelete // Pôvodné dáta pre prípad potreby
           }
         });
@@ -536,7 +443,6 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                         { key: pkg.id, className: 'flex justify-between items-center bg-gray-50 p-3 rounded-md shadow-sm mb-2 flex-wrap' },
                         React.createElement('div', { className: 'w-full md:w-auto' },
                             React.createElement('span', { className: 'text-gray-800 font-medium' }, `${pkg.name} - ${pkg.price} €`),
-                            // Zobrazenie priradených typov ubytovania
                             pkg.accommodationTypes && pkg.accommodationTypes.length > 0 && (
                                 React.createElement('div', { className: 'text-sm text-gray-600 mt-1' },
                                     React.createElement('span', { className: 'font-semibold' }, 'Ubytovanie: '),
@@ -547,7 +453,6 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                         React.createElement(
                             'div',
                             { className: 'text-sm text-gray-600 w-full mt-2 md:mt-0' },
-                            // Filtrujeme iba dni, ktoré sú v aktuálnych tournamentDays
                             Object.keys(pkg.meals || {})
                                 .filter(date => date !== 'participantCard' && tournamentDays.includes(date))
                                 .sort()
@@ -616,7 +521,7 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
       { className: 'modal' },
       React.createElement(
         'div',
-        { className: 'modal-content max-w-4xl' }, // Zväčšený modal pre viac obsahu
+        { className: 'modal-content max-w-4xl' },
         React.createElement('h3', { className: 'text-xl font-bold mb-4' }, packageModalMode === 'add' ? 'Pridať nový balíček' : `Upraviť balíček: ${currentPackageEdit?.name}`),
         
         React.createElement('label', { className: 'block text-gray-700 text-sm font-bold mb-2', htmlFor: 'newPackageName' }, 'Názov balíčka'),
@@ -652,7 +557,6 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
             React.createElement('span', { className: 'text-gray-700 font-semibold text-lg' }, '€')
         ),
 
-        // Výber typov ubytovania pre balíček
         React.createElement('h4', { className: 'text-lg font-semibold mb-2' }, 'Dostupné pre typy ubytovania:'),
         accommodations.length > 0 ? (
           React.createElement(
