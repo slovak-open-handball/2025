@@ -189,11 +189,8 @@ const AddTeamsGroupApp = (props) => {
     // NOVÝ STAV: Sledovanie zápasov
     const [matchesData, setMatchesData] = useState([]);
 
-    const teamExistsInBasicGroup = (teamName, categoryName, groupName) => {
-        if (!teamName || !categoryName || !groupName) return false;
-    
-        // Získame posledné písmeno názvu skupiny (napr. "D" zo "Skupina D")
-        const groupLetter = groupName.slice(-1);
+    const teamExistsInBasicGroup = (teamName, categoryName, currentGroupName) => {
+        if (!teamName || !categoryName || !currentGroupName) return false;
     
         // Odstránime názov kategórie z názvu tímu (ak existuje)
         let teamNameWithoutCategory = teamName;
@@ -206,10 +203,10 @@ const AddTeamsGroupApp = (props) => {
         console.log(`Kontrolujem tím: ${teamName}`);
         console.log(`Kategória: ${categoryName}`);
         console.log(`Názov bez kategórie: ${teamNameWithoutCategory}`);
-        console.log(`Skupina: ${groupName}, písmeno: ${groupLetter}`);
+        console.log(`Aktuálna skupina tímu: ${currentGroupName}`);
     
         // Extrahujeme číselnú časť a písmeno z názvu tímu
-        // Hľadáme vzor: číslo + písmeno na KONCI reťazca (napr. "4D" v "U12 CH 4D")
+        // Hľadáme vzor: číslo + písmeno na KONCI reťazca (napr. "3E" v "U12 CH 3E")
         const match = teamNameWithoutCategory.match(/(\d+)([A-ZÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ])$/);
         
         if (!match) {
@@ -217,16 +214,10 @@ const AddTeamsGroupApp = (props) => {
             return false;
         }
     
-        const teamNumber = match[1]; // Napr. "4"
-        const teamLetter = match[2]; // Napr. "D"
+        const teamNumber = match[1]; // Napr. "3"
+        const teamLetter = match[2]; // Napr. "E"
     
         console.log(`Extrahované číslo: ${teamNumber}, písmeno: ${teamLetter}`);
-    
-        // Skontrolujeme, či písmeno v názve tímu zodpovedá písmenu skupiny
-        if (teamLetter !== groupLetter) {
-            console.log(`Písmeno v názve tímu (${teamLetter}) nezodpovedá písmenu skupiny (${groupLetter})`);
-            return false;
-        }
     
         // Nájdeme ID kategórie podľa názvu
         const categoryId = Object.keys(categoryIdToNameMap).find(id => categoryIdToNameMap[id] === categoryName);
@@ -240,7 +231,7 @@ const AddTeamsGroupApp = (props) => {
         const groupsInCategory = allGroupsByCategoryId[categoryId] || [];
         console.log(`Skupiny v kategórii ${categoryName}:`, groupsInCategory.map(g => g.name));
     
-        // Nájdeme skupinu, ktorá končí na teamLetter (napr. "Skupina D")
+        // Nájdeme skupinu, ktorá končí na teamLetter (napr. "Skupina E")
         const targetGroup = groupsInCategory.find(g => g.name.slice(-1) === teamLetter);
         
         if (!targetGroup) {
@@ -250,7 +241,7 @@ const AddTeamsGroupApp = (props) => {
     
         console.log(`Cieľová skupina: ${targetGroup.name}`);
     
-        // Nájdeme všetky tímy v tejto skupine
+        // Nájdeme všetky tímy v cieľovej skupine
         const teamsInTargetGroup = allTeams.filter(t => 
             t.category === categoryName && 
             t.groupName === targetGroup.name
