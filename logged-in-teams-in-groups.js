@@ -1377,7 +1377,8 @@ const createTeamAssignmentNotification = async (action, team) => {
           .map(group => ({
             ...group,
             // Pridáme informáciu, či je skupina zablokovaná kvôli existujúcim zápasom
-            isLocked: categoryName && hasMatchesInGroup(categoryName, group.name)
+            isLocked: categoryName && hasMatchesInGroup(categoryName, group.name),
+            isLocked: false
           }))
           .sort((a, b) => {
             // Zoradenie: najprv nezablokované, potom zablokované
@@ -1565,6 +1566,8 @@ const createTeamAssignmentNotification = async (action, team) => {
         if (!categoryName) return false;
         return hasMatchesInGroup(categoryName, selectedGroup);
       })();
+
+      selectedGroupLocked = false;
       
       const isSubmitDisabled =
         !isCategoryValid ||
