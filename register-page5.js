@@ -578,21 +578,11 @@ function TeamPackageSettings({
             );
         }
         
-        // Pre konkrétny typ ubytovania zobrazíme len balíčky, ktoré obsahujú tento typ
-        // a zároveň NEOBSAHUJÚ "bez ubytovania"
-        return packages.filter(pkg => {
-            // Ak balíček nemá žiadne accommodationTypes, nezobrazíme ho
-            if (!pkg.accommodationTypes) return false;
-            
-            // Balíček musí obsahovať vybraný typ ubytovania
-            const hasSelectedType = pkg.accommodationTypes.includes(selectedAccommodationType);
-            
-            // Balíček nesmie obsahovať "bez ubytovania" (ak by ho náhodou mal)
-            const hasNoAccommodation = pkg.accommodationTypes.includes('bez ubytovania');
-            
-            // Zobrazíme len balíčky, ktoré majú vybraný typ a nemajú "bez ubytovania"
-            return hasSelectedType && !hasNoAccommodation;
-        });
+        // Pre konkrétny typ ubytovania zobrazíme všetky balíčky, ktoré obsahujú tento typ
+        // (vrátane tých, ktoré majú zároveň "bez ubytovania")
+        return packages.filter(pkg => 
+            pkg.accommodationTypes && pkg.accommodationTypes.includes(selectedAccommodationType)
+        );
     }, [packages, selectedAccommodationType]);
 
     // Zoradenie balíčkov podľa názvu
