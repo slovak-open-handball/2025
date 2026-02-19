@@ -543,9 +543,10 @@ export function CategorySettings({
 
     // Handlery pre jednotlivé inputy
     const handleMaxTeamsChange = (catId, value) => {
-        // Maximálny počet tímov NIE JE blokovaný (ako v pôvodnom kóde)
-        const numValue = value === '' ? '' : Math.max(1, parseInt(value) || 1);
-        setEditedMaxTeams(prev => ({ ...prev, [catId]: numValue }));
+        if (!isRegistrationFrozen) {
+            const numValue = value === '' ? '' : Math.max(1, parseInt(value) || 1);
+            setEditedMaxTeams(prev => ({ ...prev, [catId]: numValue }));
+        }
     };
 
     // NOVÝ: Handler pre maxPlayers
@@ -1440,7 +1441,7 @@ export function CategorySettings({
                                     React.createElement(
                                         'div',
                                         { className: 'space-y-1' },
-                                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700' },
+                                        React.createElement('label', { className: `block text-sm font-medium ${isRegistrationFrozen ? 'text-gray-500' : 'text-gray-700'}` },
                                             'Maximálny počet tímov:'
                                         ),
                                         React.createElement('input', {
@@ -1448,8 +1449,17 @@ export function CategorySettings({
                                             min: 1,
                                             value: editedMaxTeams[selectedCategory.id] ?? selectedCategory.maxTeams,
                                             onChange: e => handleMaxTeamsChange(selectedCategory.id, e.target.value),
-                                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                                        })
+                                            disabled: isRegistrationFrozen,
+                                            className: `w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${
+                                                isRegistrationFrozen ? 'bg-gray-200 cursor-not-allowed opacity-75' : ''
+                                            }`
+                                        }),
+                                        isRegistrationFrozen && React.createElement(
+                                            'p',
+                                            { className: 'text-xs text-purple-600 mt-1 flex items-center gap-1' },
+                                            React.createElement('i', { className: 'fa-solid fa-lock' }),
+                                            'Toto nastavenie nie je možné meniť, pretože registrácia už začala.'
+                                        )
                                     ),
 
                                     // NOVÉ: Maximálny počet hráčov v tíme
