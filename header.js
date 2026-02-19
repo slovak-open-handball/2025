@@ -84,12 +84,13 @@ const formatPhoneNumber = (phoneNumber) => {
 };
 
 const formatNotificationMessage = (text) => {
-    // Ak je text pole, spracujeme každý prvok zvlášť
+    // Ak je text pole, spracujeme každý prvok zvlášť a POTOM spojíme
     if (Array.isArray(text)) {
+        // Každý prvok poľa samostatne naformátujeme a potom spojíme
         return text.map(item => formatNotificationMessage(item)).join('<br>');
     }
     
-    // Pôvodné spracovanie reťazca
+    // Pôvodné spracovanie reťazca (už je to string)
     const parts = text.split("'");
     
     if (parts.length < 5) {
