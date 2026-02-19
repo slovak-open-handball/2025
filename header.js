@@ -88,29 +88,37 @@ const formatNotificationMessage = (text) => {
         return text.map(item => formatNotificationMessage(item)).join('<br>');
     }
     
+    // Rozdelíme text podľa apostrofov
     const parts = text.split("'");
     
-    if (parts.length < 3) { // aspoň 2 apostrofy pre formátovanie
+    // Ak nemáme aspoň 3 časti (teda aspoň jeden pár apostrofov), vrátime pôvodný text
+    if (parts.length < 3) {
         return text;
     }
 
-    let formattedText = parts[0];
+    let formattedText = parts[0]; // Začneme prvou časťou (pred prvým apostrofom)
     
-    for (let i = 1; i < parts.length - 1; i++) {
-        const value = parts[i];
-        const nextPart = parts[i + 1];
+    // Prechádzame cez páry apostrofov
+    for (let i = 1; i < parts.length; i++) {
+        // Každý pár apostrofov tvorí: [text medzi 1. a 2. apostrofom] a potom [text za 2. apostrofom]
+        // i je nepárne pre text medzi apostrofmi, párne pre text za apostrofmi
         
-        // Nepárne indexy (1,3,5,...) → šikmé písmo
         if (i % 2 === 1) {
-            formattedText += `<em>${value}</em>`;
-        } 
-        // Párne indexy (2,4,6,...) → bold
-        else {
-            formattedText += `<strong>${value}</strong>`;
+            // Nepárny index = text medzi apostrofmi (1., 3., 5., ... výskyt)
+            // Podľa toho, koľký pár to je, určíme formátovanie
+            const pairIndex = Math.floor(i / 2) + 1; // Ktorý pár apostrofov to je (1., 2., 3., ...)
+            
+            if (pairIndex % 2 === 1) {
+                // 1., 3., 5., ... pár → šikmé písmo
+                formattedText += `<em>${parts[i]}</em>`;
+            } else {
+                // 2., 4., 6., ... pár → bold
+                formattedText += `<strong>${parts[i]}</strong>`;
+            }
+        } else {
+            // Párny index = text za apostrofmi (za 2., 4., 6., ... apostrofom)
+            formattedText += parts[i];
         }
-        
-        formattedText += nextPart;
-        i++; // Preskočíme nextPart v ďalšej iterácii
     }
     
     // Formátovanie telefónnych čísel
