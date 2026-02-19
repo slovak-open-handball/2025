@@ -1241,30 +1241,6 @@ export function Page5Form({ formData, handlePrev, handleSubmit, loading, setLoad
         };
     }, [db]);
 
-    // Táto funkcia teraz volá onGranularTeamsDataChange
-    const handleTeamDataChange = (categoryName, teamIndex, field, value) => {
-        onGranularTeamsDataChange(categoryName, teamIndex, field, value);
-    };
-
-    const teamsWithOwnTransport = React.useMemo(() => {
-        const teams = [];
-        for (const categoryName in teamsDataFromPage4) {
-            if (!teamsDataFromPage4[categoryName] || typeof teamsDataFromPage4[categoryName] !== 'object') continue;
-
-            (teamsDataFromPage4[categoryName] || []).filter(t => t).forEach((team, teamIndex) => {
-                if (team.arrival?.type === 'vlastná doprava') {
-                    teams.push({
-                        categoryName: categoryName,
-                        teamIndex: teamIndex,
-                        teamName: team.teamName,
-                        id: `${categoryName}-${teamIndex}`
-                    });
-                }
-            });
-        }
-        return teams;
-    }, [teamsDataFromPage4]);
-
     const getAvailableGenderOptions = React.useCallback((currentEntry) => {
         const allOptions = [
             React.createElement('option', { key: "placeholder", value: "" }, "Vyberte"),
