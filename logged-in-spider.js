@@ -1345,7 +1345,7 @@ const SpiderApp = ({ userProfileData }) => {
             { className: 'flex-grow flex justify-center items-start w-full pt-24 pb-20' },
             React.createElement(
                 'div',
-                { className: 'bg-white p-8', style: { width: '100%', maxWidth: spiderLevel === 2 ? '1400px' : '1200px' } },
+                { className: 'bg-white p-8', style: { width: '100%', maxWidth: spiderLevel === 2 ? '1600px' : '1200px' } },
                 
                 !selectedCategory ? (
                     React.createElement(
@@ -1388,7 +1388,7 @@ const SpiderApp = ({ userProfileData }) => {
                             'div',
                             { 
                                 className: 'flex flex-col items-center w-full relative py-8',
-                                style: { minHeight: '600px' }
+                                style: { minHeight: '800px' }
                             },
                             
                             // Hlavná zvislá čiara
@@ -1398,161 +1398,85 @@ const SpiderApp = ({ userProfileData }) => {
                                     className: 'absolute w-0.5 bg-gray-400',
                                     style: { 
                                         left: '50%',
-                                        top: spiderLevel === 2 ? '120px' : '100px',
-                                        bottom: spiderLevel === 2 ? '120px' : '100px',
+                                        top: spiderLevel === 2 ? '250px' : '100px',
+                                        bottom: spiderLevel === 2 ? '250px' : '100px',
                                         transform: 'translateX(-50%)',
                                         zIndex: 1
                                     }
                                 }
                             ),
                             
-                            // ŠTVRŤFINÁLE - rozdelené podľa úrovní
-                            spiderLevel === 2 && React.createElement(
-                                React.Fragment,
-                                null,
-                                // Horná úroveň (QF1 a QF3) - pri finále
-                                React.createElement(
-                                    'div',
-                                    { 
-                                        className: 'flex justify-between w-full absolute',
-                                        style: { 
-                                            top: '20px',
-                                            left: 0,
-                                            right: 0,
-                                            paddingLeft: '20px',
-                                            paddingRight: '20px'
-                                        }
-                                    },
-                                    // Ľavý horný box (QF1)
-                                    React.createElement(
-                                        'div',
-                                        null,
-                                        React.createElement(MatchCell, { 
-                                            match: spiderData.quarterFinals[0], 
-                                            title: 'Štvrťfinále 1',
-                                            matchType: 'štvrťfinále 1',
-                                            userProfileData: userProfileData,
-                                            generationInProgress: generationInProgress,
-                                            onGenerate: generateSingleMatch
-                                        })
-                                    ),
-                                    // Pravý horný box (QF3)
-                                    React.createElement(
-                                        'div',
-                                        null,
-                                        React.createElement(MatchCell, { 
-                                            match: spiderData.quarterFinals[2], 
-                                            title: 'Štvrťfinále 3',
-                                            matchType: 'štvrťfinále 3',
-                                            userProfileData: userProfileData,
-                                            generationInProgress: generationInProgress,
-                                            onGenerate: generateSingleMatch
-                                        })
-                                    )
-                                ),
-                                
-                                // Dolná úroveň (QF2 a QF4) - pri o 3. miesto
-                                React.createElement(
-                                    'div',
-                                    { 
-                                        className: 'flex justify-between w-full absolute',
-                                        style: { 
-                                            bottom: '20px',
-                                            left: 0,
-                                            right: 0,
-                                            paddingLeft: '20px',
-                                            paddingRight: '20px'
-                                        }
-                                    },
-                                    // Ľavý dolný box (QF2)
-                                    React.createElement(
-                                        'div',
-                                        null,
-                                        React.createElement(MatchCell, { 
-                                            match: spiderData.quarterFinals[1], 
-                                            title: 'Štvrťfinále 2',
-                                            matchType: 'štvrťfinále 2',
-                                            userProfileData: userProfileData,
-                                            generationInProgress: generationInProgress,
-                                            onGenerate: generateSingleMatch
-                                        })
-                                    ),
-                                    // Pravý dolný box (QF4)
-                                    React.createElement(
-                                        'div',
-                                        null,
-                                        React.createElement(MatchCell, { 
-                                            match: spiderData.quarterFinals[3], 
-                                            title: 'Štvrťfinále 4',
-                                            matchType: 'štvrťfinále 4',
-                                            userProfileData: userProfileData,
-                                            generationInProgress: generationInProgress,
-                                            onGenerate: generateSingleMatch
-                                        })
-                                    )
-                                ),
-                                
-                                // Spojovacie čiary pre štvrťfinále
-                                // Čiary z QF1 a QF3 do stredu (horná časť)
-                                React.createElement(
-                                    'div',
-                                    { 
-                                        className: 'absolute',
-                                        style: { 
-                                            top: '100px',
-                                            left: '50%',
-                                            transform: 'translateX(-50%)',
-                                            width: '2px',
-                                            height: '40px',
-                                            backgroundColor: '#9CA3AF',
-                                            zIndex: 5
-                                        }
-                                    }
-                                ),
-                                // Čiary z QF2 a QF4 do stredu (dolná časť)
-                                React.createElement(
-                                    'div',
-                                    { 
-                                        className: 'absolute',
-                                        style: { 
-                                            bottom: '100px',
-                                            left: '50%',
-                                            transform: 'translateX(-50%)',
-                                            width: '2px',
-                                            height: '40px',
-                                            backgroundColor: '#9CA3AF',
-                                            zIndex: 5
-                                        }
-                                    }
-                                )
-                            ),
-                            
-                            // FINÁLE - stred hore
+                            // HORNÝ RIADOK - Finále a štvrťfinále 1 a 3
                             React.createElement(
                                 'div',
                                 { 
-                                    className: 'relative z-10',
+                                    className: 'flex justify-between items-center w-full relative z-10',
                                     style: { 
-                                        marginTop: spiderLevel === 2 ? '140px' : '40px',
-                                        marginBottom: '40px'
+                                        position: 'absolute',
+                                        top: '50px',
+                                        left: 0,
+                                        right: 0,
+                                        paddingLeft: '50px',
+                                        paddingRight: '50px'
                                     }
                                 },
-                                React.createElement(MatchCell, { 
-                                    match: spiderData.final, 
-                                    title: 'Finále',
-                                    matchType: 'finále',
-                                    userProfileData: userProfileData,
-                                    generationInProgress: generationInProgress,
-                                    onGenerate: generateSingleMatch
-                                })
+                                // Ľavá strana - Štvrťfinále 1
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex-1 flex justify-start' },
+                                    spiderLevel === 2 ? React.createElement(MatchCell, { 
+                                        match: spiderData.quarterFinals[0], 
+                                        title: 'Štvrťfinále 1',
+                                        matchType: 'štvrťfinále 1',
+                                        userProfileData: userProfileData,
+                                        generationInProgress: generationInProgress,
+                                        onGenerate: generateSingleMatch
+                                    }) : React.createElement('div', { style: { width: '220px' } })
+                                ),
+                                
+                                // Stred - Finále
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex-1 flex justify-center' },
+                                    React.createElement(MatchCell, { 
+                                        match: spiderData.final, 
+                                        title: 'Finále',
+                                        matchType: 'finále',
+                                        userProfileData: userProfileData,
+                                        generationInProgress: generationInProgress,
+                                        onGenerate: generateSingleMatch
+                                    })
+                                ),
+                                
+                                // Pravá strana - Štvrťfinále 3
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex-1 flex justify-end' },
+                                    spiderLevel === 2 ? React.createElement(MatchCell, { 
+                                        match: spiderData.quarterFinals[2], 
+                                        title: 'Štvrťfinále 3',
+                                        matchType: 'štvrťfinále 3',
+                                        userProfileData: userProfileData,
+                                        generationInProgress: generationInProgress,
+                                        onGenerate: generateSingleMatch
+                                    }) : React.createElement('div', { style: { width: '220px' } })
+                                )
                             ),
                             
-                            // Semifinále - vedľa seba (v strede)
+                            // STREDNÝ RIADOK - Semifinále
                             React.createElement(
                                 'div',
                                 { 
                                     className: 'flex justify-center items-center gap-16 w-full relative z-10',
-                                    style: { marginBottom: '40px' }
+                                    style: { 
+                                        position: 'absolute',
+                                        top: '50%',
+                                        left: 0,
+                                        right: 0,
+                                        transform: 'translateY(-50%)',
+                                        paddingLeft: '50px',
+                                        paddingRight: '50px'
+                                    }
                                 },
                                 
                                 // Semifinále 1
@@ -1610,23 +1534,127 @@ const SpiderApp = ({ userProfileData }) => {
                                 })
                             ),
                             
-                            // Zápas o 3. miesto - dole
+                            // DOLNÝ RIADOK - O 3. miesto a štvrťfinále 2 a 4
                             React.createElement(
                                 'div',
                                 { 
-                                    className: 'relative z-10',
+                                    className: 'flex justify-between items-center w-full relative z-10',
                                     style: { 
-                                        marginBottom: spiderLevel === 2 ? '140px' : '0'
+                                        position: 'absolute',
+                                        bottom: '50px',
+                                        left: 0,
+                                        right: 0,
+                                        paddingLeft: '50px',
+                                        paddingRight: '50px'
                                     }
                                 },
-                                React.createElement(MatchCell, { 
-                                    match: spiderData.thirdPlace, 
-                                    title: 'O 3. miesto',
-                                    matchType: 'o 3. miesto',
-                                    userProfileData: userProfileData,
-                                    generationInProgress: generationInProgress,
-                                    onGenerate: generateSingleMatch
-                                })
+                                // Ľavá strana - Štvrťfinále 2
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex-1 flex justify-start' },
+                                    spiderLevel === 2 ? React.createElement(MatchCell, { 
+                                        match: spiderData.quarterFinals[1], 
+                                        title: 'Štvrťfinále 2',
+                                        matchType: 'štvrťfinále 2',
+                                        userProfileData: userProfileData,
+                                        generationInProgress: generationInProgress,
+                                        onGenerate: generateSingleMatch
+                                    }) : React.createElement('div', { style: { width: '220px' } })
+                                ),
+                                
+                                // Stred - O 3. miesto
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex-1 flex justify-center' },
+                                    React.createElement(MatchCell, { 
+                                        match: spiderData.thirdPlace, 
+                                        title: 'O 3. miesto',
+                                        matchType: 'o 3. miesto',
+                                        userProfileData: userProfileData,
+                                        generationInProgress: generationInProgress,
+                                        onGenerate: generateSingleMatch
+                                    })
+                                ),
+                                
+                                // Pravá strana - Štvrťfinále 4
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex-1 flex justify-end' },
+                                    spiderLevel === 2 ? React.createElement(MatchCell, { 
+                                        match: spiderData.quarterFinals[3], 
+                                        title: 'Štvrťfinále 4',
+                                        matchType: 'štvrťfinále 4',
+                                        userProfileData: userProfileData,
+                                        generationInProgress: generationInProgress,
+                                        onGenerate: generateSingleMatch
+                                    }) : React.createElement('div', { style: { width: '220px' } })
+                                )
+                            ),
+                            
+                            // Spojovacie čiary pre štvrťfinále
+                            spiderLevel === 2 && React.createElement(
+                                React.Fragment,
+                                null,
+                                // Čiara z QF1 do stredu (k SF1)
+                                React.createElement(
+                                    'div',
+                                    { 
+                                        className: 'absolute',
+                                        style: { 
+                                            left: 'calc(25% - 10px)',
+                                            top: '140px',
+                                            width: '2px',
+                                            height: 'calc(50% - 190px)',
+                                            backgroundColor: '#9CA3AF',
+                                            zIndex: 5
+                                        }
+                                    }
+                                ),
+                                // Čiara z QF3 do stredu (k SF2)
+                                React.createElement(
+                                    'div',
+                                    { 
+                                        className: 'absolute',
+                                        style: { 
+                                            right: 'calc(25% - 10px)',
+                                            top: '140px',
+                                            width: '2px',
+                                            height: 'calc(50% - 190px)',
+                                            backgroundColor: '#9CA3AF',
+                                            zIndex: 5
+                                        }
+                                    }
+                                ),
+                                // Čiara z QF2 do stredu (k SF1)
+                                React.createElement(
+                                    'div',
+                                    { 
+                                        className: 'absolute',
+                                        style: { 
+                                            left: 'calc(25% - 10px)',
+                                            bottom: '140px',
+                                            width: '2px',
+                                            height: 'calc(50% - 190px)',
+                                            backgroundColor: '#9CA3AF',
+                                            zIndex: 5
+                                        }
+                                    }
+                                ),
+                                // Čiara z QF4 do stredu (k SF2)
+                                React.createElement(
+                                    'div',
+                                    { 
+                                        className: 'absolute',
+                                        style: { 
+                                            right: 'calc(25% - 10px)',
+                                            bottom: '140px',
+                                            width: '2px',
+                                            height: 'calc(50% - 190px)',
+                                            backgroundColor: '#9CA3AF',
+                                            zIndex: 5
+                                        }
+                                    }
+                                )
                             )
                         )
                     )
