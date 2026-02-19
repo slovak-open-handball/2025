@@ -1339,7 +1339,7 @@ const SpiderApp = ({ userProfileData }) => {
             )
         ),
 
-        // Obsah - pavúková tabuľka (bez čiar)
+        // Obsah - pavúková tabuľka (s tabuľkou)
         React.createElement(
             'div',
             { className: 'flex-grow flex justify-center items-start w-full pt-24 pb-20' },
@@ -1350,7 +1350,7 @@ const SpiderApp = ({ userProfileData }) => {
                     style: { 
                         width: '100%', 
                         maxWidth: spiderLevel === 2 ? '1600px' : '1200px',
-                        border: '3px solid #3b82f6' // Len modré ohraničenie celej tabuľky
+                        border: '3px solid #3b82f6'
                     }
                 },
                 
@@ -1382,7 +1382,7 @@ const SpiderApp = ({ userProfileData }) => {
                     React.createElement(
                         'div',
                         { 
-                            className: 'flex flex-col items-center relative',
+                            className: 'flex flex-col items-center',
                             style: { 
                                 minHeight: '700px',
                                 padding: '20px'
@@ -1404,177 +1404,361 @@ const SpiderApp = ({ userProfileData }) => {
                             `Play-off ${spiderLevel === 2 ? '(so štvrťfinále)' : ''} - ${categories.find(c => c.id === selectedCategory)?.name || selectedCategory}`
                         ),
                         
-                        // Pavúková štruktúra
+                        // Tabuľka pre pavúka
                         React.createElement(
-                            'div',
-                            { 
-                                className: 'flex flex-col items-center w-full relative',
-                                style: { 
-                                    minHeight: '600px',
-                                    position: 'relative'
+                            'table',
+                            {
+                                style: {
+                                    borderCollapse: 'collapse',
+                                    width: '100%',
+                                    tableLayout: 'fixed'
                                 }
                             },
                             
-                            // HORNÝ RIADOK - Finále a štvrťfinále 1 a 3
+                            // Vytvorenie tela tabuľky
                             React.createElement(
-                                'div',
-                                { 
-                                    className: 'flex justify-between items-center w-full relative z-10',
-                                    style: { 
-                                        position: 'absolute',
-                                        top: '20px',
-                                        left: 0,
-                                        right: 0,
-                                        paddingLeft: '20px',
-                                        paddingRight: '20px'
-                                    }
-                                },
-                                // Ľavá strana - Štvrťfinále 1
-                                React.createElement(
-                                    'div',
-                                    { 
-                                        className: 'flex-1 flex justify-start'
-                                    },
-                                    spiderLevel === 2 ? React.createElement(MatchCell, { 
-                                        match: spiderData.quarterFinals[0], 
-                                        title: 'Štvrťfinále 1',
-                                        matchType: 'štvrťfinále 1',
-                                        userProfileData: userProfileData,
-                                        generationInProgress: generationInProgress,
-                                        onGenerate: generateSingleMatch
-                                    }) : React.createElement('div', { style: { width: '220px' } })
+                                'tbody',
+                                null,
+                                
+                                // ===== ÚROVEŇ 1 (len semifinále a finále) =====
+                                spiderLevel === 1 && React.createElement(
+                                    React.Fragment,
+                                    null,
+                                    
+                                    // PRVÝ RIADOK - Finále (zabezpečený horizontálne)
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '200px' } },
+                                        // Finále - zaberá všetky stĺpce
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                colSpan: 2,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '10px'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block' } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.final, 
+                                                    title: 'Finále',
+                                                    matchType: 'finále',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch
+                                                })
+                                            )
+                                        )
+                                    ),
+                                    
+                                    // DRUHÝ RIADOK - Semifinále (SF1 vľavo, SF2 vpravo)
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '200px' } },
+                                        // Semifinále 1 - ľavý stĺpec
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '10px',
+                                                    width: '50%'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block' } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.semiFinals[0], 
+                                                    title: 'Semifinále 1',
+                                                    matchType: 'semifinále 1',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch
+                                                })
+                                            )
+                                        ),
+                                        // Semifinále 2 - pravý stĺpec
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '10px',
+                                                    width: '50%'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block' } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.semiFinals[1], 
+                                                    title: 'Semifinále 2',
+                                                    matchType: 'semifinále 2',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch
+                                                })
+                                            )
+                                        )
+                                    ),
+                                    
+                                    // TRETÍ RIADOK - O 3. miesto (zabezpečený horizontálne)
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '200px' } },
+                                        // O 3. miesto - zaberá všetky stĺpce
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                colSpan: 2,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '10px'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block' } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.thirdPlace, 
+                                                    title: 'O 3. miesto',
+                                                    matchType: 'o 3. miesto',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch
+                                                })
+                                            )
+                                        )
+                                    )
                                 ),
                                 
-                                // Stred - Finále
-                                React.createElement(
-                                    'div',
-                                    { 
-                                        className: 'flex-1 flex justify-center'
-                                    },
-                                    React.createElement(MatchCell, { 
-                                        match: spiderData.final, 
-                                        title: 'Finále',
-                                        matchType: 'finále',
-                                        userProfileData: userProfileData,
-                                        generationInProgress: generationInProgress,
-                                        onGenerate: generateSingleMatch
-                                    })
-                                ),
-                                
-                                // Pravá strana - Štvrťfinále 3
-                                React.createElement(
-                                    'div',
-                                    { 
-                                        className: 'flex-1 flex justify-end'
-                                    },
-                                    spiderLevel === 2 ? React.createElement(MatchCell, { 
-                                        match: spiderData.quarterFinals[2], 
-                                        title: 'Štvrťfinále 3',
-                                        matchType: 'štvrťfinále 3',
-                                        userProfileData: userProfileData,
-                                        generationInProgress: generationInProgress,
-                                        onGenerate: generateSingleMatch
-                                    }) : React.createElement('div', { style: { width: '220px' } })
-                                )
-                            ),
-                            
-                            // STREDNÝ RIADOK - Semifinále
-                            React.createElement(
-                                'div',
-                                { 
-                                    className: 'flex justify-center items-center gap-16 w-full relative z-10',
-                                    style: { 
-                                        position: 'absolute',
-                                        top: '50%',
-                                        left: 0,
-                                        right: 0,
-                                        transform: 'translateY(-50%)',
-                                        paddingLeft: '20px',
-                                        paddingRight: '20px'
-                                    }
-                                },
-                                
-                                // Semifinále 1
-                                React.createElement(MatchCell, { 
-                                    match: spiderData.semiFinals[0], 
-                                    title: 'Semifinále 1',
-                                    matchType: 'semifinále 1',
-                                    userProfileData: userProfileData,
-                                    generationInProgress: generationInProgress,
-                                    onGenerate: generateSingleMatch
-                                }),
-                                
-                                // Semifinále 2
-                                React.createElement(MatchCell, { 
-                                    match: spiderData.semiFinals[1], 
-                                    title: 'Semifinále 2',
-                                    matchType: 'semifinále 2',
-                                    userProfileData: userProfileData,
-                                    generationInProgress: generationInProgress,
-                                    onGenerate: generateSingleMatch
-                                })
-                            ),
-                            
-                            // DOLNÝ RIADOK - O 3. miesto a štvrťfinále 2 a 4
-                            React.createElement(
-                                'div',
-                                { 
-                                    className: 'flex justify-between items-center w-full relative z-10',
-                                    style: { 
-                                        position: 'absolute',
-                                        bottom: '20px',
-                                        left: 0,
-                                        right: 0,
-                                        paddingLeft: '20px',
-                                        paddingRight: '20px'
-                                    }
-                                },
-                                // Ľavá strana - Štvrťfinále 2
-                                React.createElement(
-                                    'div',
-                                    { 
-                                        className: 'flex-1 flex justify-start'
-                                    },
-                                    spiderLevel === 2 ? React.createElement(MatchCell, { 
-                                        match: spiderData.quarterFinals[1], 
-                                        title: 'Štvrťfinále 2',
-                                        matchType: 'štvrťfinále 2',
-                                        userProfileData: userProfileData,
-                                        generationInProgress: generationInProgress,
-                                        onGenerate: generateSingleMatch
-                                    }) : React.createElement('div', { style: { width: '220px' } })
-                                ),
-                                
-                                // Stred - O 3. miesto
-                                React.createElement(
-                                    'div',
-                                    { 
-                                        className: 'flex-1 flex justify-center'
-                                    },
-                                    React.createElement(MatchCell, { 
-                                        match: spiderData.thirdPlace, 
-                                        title: 'O 3. miesto',
-                                        matchType: 'o 3. miesto',
-                                        userProfileData: userProfileData,
-                                        generationInProgress: generationInProgress,
-                                        onGenerate: generateSingleMatch
-                                    })
-                                ),
-                                
-                                // Pravá strana - Štvrťfinále 4
-                                React.createElement(
-                                    'div',
-                                    { 
-                                        className: 'flex-1 flex justify-end'
-                                    },
-                                    spiderLevel === 2 ? React.createElement(MatchCell, { 
-                                        match: spiderData.quarterFinals[3], 
-                                        title: 'Štvrťfinále 4',
-                                        matchType: 'štvrťfinále 4',
-                                        userProfileData: userProfileData,
-                                        generationInProgress: generationInProgress,
-                                        onGenerate: generateSingleMatch
-                                    }) : React.createElement('div', { style: { width: '220px' } })
+                                // ===== ÚROVEŇ 2 (so štvrťfinále) =====
+                                spiderLevel === 2 && React.createElement(
+                                    React.Fragment,
+                                    null,
+                                    
+                                    // PRVÝ RIADOK - QF1, Finále, QF3
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '200px' } },
+                                        // QF1 - ľavý stĺpec
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '10px',
+                                                    width: '33.33%'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block' } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.quarterFinals[0], 
+                                                    title: 'Štvrťfinále 1',
+                                                    matchType: 'štvrťfinále 1',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch
+                                                })
+                                            )
+                                        ),
+                                        // Finále - stredný stĺpec
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '10px',
+                                                    width: '33.33%'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block' } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.final, 
+                                                    title: 'Finále',
+                                                    matchType: 'finále',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch
+                                                })
+                                            )
+                                        ),
+                                        // QF3 - pravý stĺpec
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '10px',
+                                                    width: '33.33%'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block' } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.quarterFinals[2], 
+                                                    title: 'Štvrťfinále 3',
+                                                    matchType: 'štvrťfinále 3',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch
+                                                })
+                                            )
+                                        )
+                                    ),
+                                    
+                                    // DRUHÝ RIADOK - Semifinále (SF1 vľavo, SF2 vpravo)
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '200px' } },
+                                        // Prázdna bunka vľavo (pre zachovanie štruktúry)
+                                        React.createElement(
+                                            'td',
+                                            { style: { width: '33.33%' } }
+                                        ),
+                                        // Semifinále 1 - stredný stĺpec
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '10px',
+                                                    width: '33.33%'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block' } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.semiFinals[0], 
+                                                    title: 'Semifinále 1',
+                                                    matchType: 'semifinále 1',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch
+                                                })
+                                            )
+                                        ),
+                                        // Semifinále 2 - stredný stĺpec
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '10px',
+                                                    width: '33.33%'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block' } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.semiFinals[1], 
+                                                    title: 'Semifinále 2',
+                                                    matchType: 'semifinále 2',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch
+                                                })
+                                            )
+                                        )
+                                    ),
+                                    
+                                    // TRETÍ RIADOK - QF2, O 3. miesto, QF4
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '200px' } },
+                                        // QF2 - ľavý stĺpec
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '10px',
+                                                    width: '33.33%'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block' } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.quarterFinals[1], 
+                                                    title: 'Štvrťfinále 2',
+                                                    matchType: 'štvrťfinále 2',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch
+                                                })
+                                            )
+                                        ),
+                                        // O 3. miesto - stredný stĺpec
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '10px',
+                                                    width: '33.33%'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block' } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.thirdPlace, 
+                                                    title: 'O 3. miesto',
+                                                    matchType: 'o 3. miesto',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch
+                                                })
+                                            )
+                                        ),
+                                        // QF4 - pravý stĺpec
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '10px',
+                                                    width: '33.33%'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block' } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.quarterFinals[3], 
+                                                    title: 'Štvrťfinále 4',
+                                                    matchType: 'štvrťfinále 4',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch
+                                                })
+                                            )
+                                        )
+                                    )
                                 )
                             )
                         )
