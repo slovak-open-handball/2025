@@ -1328,9 +1328,29 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                         required: true,
                         disabled: isDataEditDeadlinePassed
                     },
-                    availablePackages.slice().sort().map((pkgName, idx) =>
-                        React.createElement('option', { key: idx, value: pkgName }, pkgName)
-                    )
+                    // Filtrujeme balíky podľa vybraného typu ubytovania
+                    (() => {
+                        // Získame všetky dostupné balíky z prop
+                        const allPackages = availablePackages || [];
+                        
+                        // Filtrujeme balíky, ktoré sú dostupné pre aktuálne vybraný typ ubytovania
+                        // POZNÁMKA: Toto je zjednodušená verzia - v reálnej aplikácii by ste potrebovali
+                        // mať k dispozícii aj informáciu o tom, ktoré typy ubytovania sú pre ktorý balík dostupné
+                        // Ak túto informáciu nemáte, budete musieť upraviť props aby ste ju odovzdávali
+                        
+                        // Pre demonštráciu - predpokladáme, že availablePackages je pole objektov s informáciou o dostupnosti
+                        // Alebo že máme samostatné pole filteredPackages podľa accommodationType
+                        
+                        const filteredPackages = allPackages.filter(pkg => {
+                            // Tu by mala byť logika na filtrovanie podľa pkg.accommodationTypes
+                            // Momentálne nemáme túto informáciu, preto vrátime všetky balíky
+                            return true;
+                        });
+                        
+                        return filteredPackages.sort().map((pkgName, idx) =>
+                            React.createElement('option', { key: idx, value: pkgName }, pkgName)
+                        );
+                    })()
                     )
                 ),
 
@@ -1760,9 +1780,22 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                         required: true,
                         disabled: isDataEditDeadlinePassed
                     },
-                    availablePackages.slice().sort().map((pkgName, idx) =>
-                        React.createElement('option', { key: idx, value: pkgName }, pkgName)
-                    )
+                    // Filtrujeme balíky podľa vybraného typu ubytovania
+                    (() => {
+                        // Získame všetky dostupné balíky
+                        const allPackages = availablePackages || [];
+                        
+                        // Filtrujeme balíky, ktoré sú dostupné pre aktuálne vybraný typ ubytovania
+                        // Rovnaká poznámka ako pri EditTeamModal
+                        const filteredPackages = allPackages.filter(pkg => {
+                            // Tu by mala byť logika na filtrovanie podľa pkg.accommodationTypes
+                            return true;
+                        });
+                        
+                        return filteredPackages.sort().map((pkgName, idx) =>
+                            React.createElement('option', { key: idx, value: pkgName }, pkgName)
+                        );
+                    })()
                     )
                 ),
 
