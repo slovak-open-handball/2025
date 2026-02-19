@@ -190,33 +190,48 @@ const AddTeamsGroupApp = (props) => {
     const [matchesData, setMatchesData] = useState([]);
 
     const teamExistsInBasicGroup = (teamName, categoryName, groupName) => {
-        if (!teamName || !categoryName || !groupName) return false; // Zmena: false namiesto true
+        if (!teamName || !categoryName || !groupName) return false;
     
         // Získame posledné písmeno názvu skupiny (napr. "D" zo "Skupina D")
         const groupLetter = groupName.slice(-1);
     
-        // Z názvu tímu extrahujeme číselnú časť
+        // Odstránime názov kategórie z názvu tímu (ak existuje)
         let teamNameWithoutCategory = teamName;
         if (categoryName && teamName.startsWith(categoryName + ' ')) {
             teamNameWithoutCategory = teamName.substring(categoryName.length + 1).trim();
+        } else {
+            // Ak názov nezačína názvom kategórie, skúsime ho aj tak použiť
+            teamNameWithoutCategory = teamName;
         }
     
-        // Extrahujeme číselnú časť (všetko pred posledným písmenom)
-        const match = teamNameWithoutCategory.match(/^(\d+)[A-ZÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ]$/);
+        console.log(`Kontrolujem tím: ${teamName}`);
+        console.log(`Kategória: ${categoryName}`);
+        console.log(`Názov bez kategórie: ${teamNameWithoutCategory}`);
+        console.log(`Skupina: ${groupName}, písmeno: ${groupLetter}`);
+    
+        // Extrahujeme číselnú časť a písmeno z názvu tímu
+        // Hľadáme vzor: číslo + písmeno na KONCI reťazca (napr. "4D" v "U12 CH 4D")
+        const match = teamNameWithoutCategory.match(/(\d+)([A-ZÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ])$/);
         
-        // Ak názov nemá očakávaný formát, vrátime FALSE (nie TRUE)
-        // To znamená, že tím NEMÁ zástupcu v základnej skupine
-        if (!match) return false;
+        if (!match) {
+            console.log(`Nenašiel sa vzor číslo+písmeno na konci názvu: ${teamNameWithoutCategory}`);
+            return false;
+        }
     
         const teamNumber = match[1]; // Napr. "4"
+        const teamLetter = match[2]; // Napr. "D"
     
-        // Očakávaný názov v základnej skupine
-        const expectedTeamName = showCategoryPrefix 
-            ? `${categoryName} ${teamNumber}${groupLetter}`
-            : `${teamNumber}${groupLetter}`;
+        console.log(`Extrahované číslo: ${teamNumber}, písmeno: ${teamLetter}`);
+    
+        // Skontrolujeme, či písmeno v názve tímu zodpovedá písmenu skupiny
+        if (teamLetter !== groupLetter) {
+            console.log(`Písmeno v názve tímu (${teamLetter}) nezodpovedá písmenu skupiny (${groupLetter})`);
+            return false;
+        }
     
         // Hľadáme v základných skupinách
         const basicGroups = Object.values(allGroupsByCategoryId).flat().filter(g => g.type === 'základná skupina');
+        console.log(`Počet základných skupín: ${basicGroups.length}`);
     
         for (const group of basicGroups) {
             const groupCategoryId = Object.keys(allGroupsByCategoryId).find(id => 
@@ -224,31 +239,59 @@ const AddTeamsGroupApp = (props) => {
             );
             const groupCategoryName = categoryIdToNameMap[groupCategoryId];
             
-            if (groupCategoryName !== categoryName) continue;
+            console.log(`Kontrolujem skupinu: ${group.name} v kategórii: ${groupCategoryName}`);
             
+            if (groupCategoryName !== categoryName) {
+                console.log(`Kategória nesedí (očakávaná: ${categoryName}, aktuálna: ${groupCategoryName})`);
+                continue;
+            }
+            
+            // Tímy v základnej skupine
             const teamsInBasicGroup = allTeams.filter(t => 
                 t.category === categoryName && 
                 t.groupName === group.name &&
                 !t.isSuperstructureTeam
             );
-        
+    
+            console.log(`Tímov v základnej skupine ${group.name}: ${teamsInBasicGroup.length}`);
+    
+            // Skontrolujeme, či existuje tím s číslom teamNumber
             const teamExists = teamsInBasicGroup.some(t => {
+                // Odstránime prefix kategórie z názvu tímu v základnej skupine
                 let basicTeamName = t.teamName;
                 if (categoryName && basicTeamName.startsWith(categoryName + ' ')) {
                     basicTeamName = basicTeamName.substring(categoryName.length + 1).trim();
                 }
-            
-                const expectedWithoutPrefix = showCategoryPrefix 
-                    ? `${teamNumber}${groupLetter}`
-                    : `${teamNumber}${groupLetter}`;
-            
-                return basicTeamName === expectedWithoutPrefix;
+    
+                console.log(`Porovnávam s tímom v základnej skupine: ${basicTeamName}`);
+    
+                // Extrahujeme číslo a písmeno z názvu tímu v základnej skupine
+                // V základnej skupine by mal byť názov vo formáte "4D" (alebo "U12 CH 4D"?)
+                const basicMatch = basicTeamName.match(/(\d+)([A-ZÁÄČĎÉÍĽĹŇÓÔŘŔŠŤÚŮÝŽ])$/);
+                if (!basicMatch) {
+                    console.log(`Tím v základnej skupine nemá správny formát: ${basicTeamName}`);
+                    return false;
+                }
+    
+                const basicNumber = basicMatch[1];
+                const basicLetter = basicMatch[2];
+    
+                console.log(`Základný tím: číslo=${basicNumber}, písmeno=${basicLetter}`);
+    
+                // Skontrolujeme, či číslo a písmeno zodpovedajú
+                const matches = basicNumber === teamNumber && basicLetter === teamLetter;
+                console.log(`Zhoda: ${matches}`);
+                return matches;
             });
-        
-            if (teamExists) return true;
+    
+            if (teamExists) {
+                console.log(`✓ Tím ${teamName} má zástupcu v základnej skupine ${group.name} (${teamNumber}${teamLetter})`);
+                return true;
+            }
         }
         
-        return false; // Tím neexistuje v žiadnej základnej skupine
+        console.log(`✗ Tím ${teamName} NEMÁ zástupcu v základnej skupine`);
+        return false;
     };
   
     const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
