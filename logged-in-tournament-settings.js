@@ -115,6 +115,9 @@ const sendAdminNotification = async (db, auth, notificationData) => {
             return; 
         }
 
+        // Pridáme názov balíčka na začiatok notifikácie
+        changes.push(`Úprava balíčka: ${originalPackage.name}`);
+
         if (originalPackage.name !== newPackage.name) {
           changes.push(`Názov: '${originalPackage.name}' -> '${newPackage.name}'`);
         }
@@ -158,9 +161,6 @@ const sendAdminNotification = async (db, auth, notificationData) => {
         }
         
         changesContent = changes;
-      } else if (notificationData.type === 'deletePackage') {
-        changesContent = `Zmazanie balíčka: '''${notificationData.data.deletedName} (cena: ${notificationData.data.deletedPrice}€)'`;
-      }
 
       await addDoc(notificationsCollectionRef, {
         userEmail: userEmail,
