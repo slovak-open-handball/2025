@@ -2216,7 +2216,7 @@ const SpiderApp = ({ userProfileData }) => {
                                             React.createElement('div', { 
                                                 className: 'spider-line-vertical',
                                                 style: { 
-                                                    left: '66.66%',
+                                                    left: '66.67%',
                                                     height: '100%',
                                                     top: 0,
                                                     transform: 'translateX(-50%)'
