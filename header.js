@@ -506,10 +506,7 @@ const setupNotificationListenerForAdmin = (userProfileData) => {
                                     return change.text || change.message || JSON.stringify(change);
                                 }
                                 return change;
-                            }).join(' • '); // Odrážky alebo ' • ' ako oddeľovač
-                            
-                            // Alternatívne môžeš použiť <br> ak chceš nové riadky:
-                            // changesMessage = newNotification.changes.join('<br>');
+                            }).join('<br>');
                             
                         } else if (typeof newNotification.changes === 'string') {
                             changesMessage = newNotification.changes;
