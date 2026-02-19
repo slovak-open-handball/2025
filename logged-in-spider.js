@@ -889,7 +889,7 @@ const SpiderApp = ({ userProfileData }) => {
                     'div',
                     { 
                         className: 'flex-grow flex items-center justify-center',
-                        style: { minHeight: title ? '80px' : '120px' }
+                        style: { minHeight: title ? '80px' : '60px' }
                     },
                     isHovered && userProfileData?.role === 'admin' && !generationInProgress ? (
                         React.createElement(
@@ -1398,8 +1398,8 @@ const SpiderApp = ({ userProfileData }) => {
                                     className: 'absolute w-0.5 bg-gray-400',
                                     style: { 
                                         left: '50%',
-                                        top: spiderLevel === 2 ? '120px' : '40px',
-                                        bottom: spiderLevel === 2 ? '120px' : '40px',
+                                        top: spiderLevel === 2 ? '60px' : '40px',
+                                        bottom: spiderLevel === 2 ? '60px' : '40px',
                                         transform: 'translateX(-50%)',
                                         zIndex: 1
                                     }
