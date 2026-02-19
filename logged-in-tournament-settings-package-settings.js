@@ -174,10 +174,10 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
                         meals: updatedMeals,
                         updatedAt: Timestamp.fromDate(new Date())
                     });
-                    console.log(`Balíček "${pkgData.name}" bol aktualizovaný na nové dátumy turnaja.`);
+                    console.log(`Balíček ${pkgData.name} bol aktualizovaný na nové dátumy turnaja.`);
                 } catch (error) {
-                    console.error(`Chyba pri aktualizácii balíčka "${pkgData.name}":`, error);
-                    showNotification(`Chyba pri aktualizácii balíčka "${pkgData.name}" s novými dátumami: ${error.message}`, 'error');
+                    console.error(`Chyba pri aktualizácii balíčka ${pkgData.name}:`, error);
+                    showNotification(`Chyba pri aktualizácii balíčka ${pkgData.name} s novými dátumami: ${error.message}`, 'error');
                 }
             }
         });
@@ -317,7 +317,6 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         });
         showNotification(`Balíček "${trimmedName}" úspešne pridaný!`, 'success');
         
-        // --- UPRAVENÁ NOTIFIKÁCIA PRE PRIDANIE ---
         if (typeof sendAdminNotification === 'function') {
           const changes = [];
           
@@ -340,7 +339,6 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
             }
           });
         }
-        // --- KONIEC ÚPRAVY ---
 
       } else if (packageModalMode === 'edit') {
         if (trimmedName !== currentPackageEdit.name && packages.some(pkg => pkg.name === trimmedName)) {
@@ -355,6 +353,15 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         originalPkgData.price = originalPkgData.price || 0; 
         originalPkgData.accommodationTypes = originalPkgData.accommodationTypes || [];
 
+        // Uložíme pôvodné hodnoty pre notifikáciu
+        const oldData = {
+          name: originalPkgData.name,
+          price: originalPkgData.price,
+          accommodationTypes: [...originalPkgData.accommodationTypes],
+          meals: JSON.parse(JSON.stringify(originalPkgData.meals)), // Hlboká kópia
+          hasParticipantCard: originalPkgData.meals?.participantCard === 1
+        };
+
         await updateDoc(packageDocRef, {
           name: trimmedName,
           price: newPackagePrice,
@@ -365,31 +372,63 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         });
         showNotification(`Balíček "${currentPackageEdit.name}" úspešne zmenený na "${trimmedName}"!`, 'success');
 
-        // --- UPRAVENÁ NOTIFIKÁCIA PRE ÚPRAVU ---
+        // --- KOMPLETNÁ NOTIFIKÁCIA SO VŠETKÝMI ZMENAMI ---
         if (typeof sendAdminNotification === 'function') {
           const changesList = [];
 
           // 1. Zmena názvu
-          if (originalPkgData.name !== trimmedName) {
-            changesList.push(`Zmena pre názov: z '${originalPkgData.name}' na '${trimmedName}'`);
+          if (oldData.name !== trimmedName) {
+            changesList.push(`Zmena pre názov: z '${oldData.name}' na '${trimmedName}'`);
           }
 
           // 2. Zmena ceny
-          if (originalPkgData.price !== newPackagePrice) {
-            changesList.push(`Zmena pre cena: z '${originalPkgData.price}' na '${newPackagePrice}'`);
+          if (oldData.price !== newPackagePrice) {
+            changesList.push(`Zmena pre cena: z '${oldData.price}' na '${newPackagePrice}'`);
           }
 
           // 3. Zmena priradených ubytovaní
-          const oldAccommodations = originalPkgData.accommodationTypes || [];
+          const oldAccommodations = oldData.accommodationTypes || [];
           const newAccommodations = selectedAccommodations || [];
           
-          // Porovnáme, či sa zoznam ubytovaní zmenil
-          const oldStr = oldAccommodations.sort().join(', ') || 'žiadne';
-          const newStr = newAccommodations.sort().join(', ') || 'žiadne';
+          const oldAccommodationsSorted = [...oldAccommodations].sort();
+          const newAccommodationsSorted = [...newAccommodations].sort();
           
-          if (oldStr !== newStr) {
+          if (JSON.stringify(oldAccommodationsSorted) !== JSON.stringify(newAccommodationsSorted)) {
+            const oldStr = oldAccommodationsSorted.length > 0 ? oldAccommodationsSorted.join(', ') : 'žiadne';
+            const newStr = newAccommodationsSorted.length > 0 ? newAccommodationsSorted.join(', ') : 'žiadne';
             changesList.push(`Zmena pre ubytovania: z '${oldStr}' na '${newStr}'`);
           }
+
+          // 4. Zmena účastníckej karty
+          if (oldData.hasParticipantCard !== hasParticipantCard) {
+            changesList.push(`Zmena pre účastnícka karta: z '${oldData.hasParticipantCard ? 'áno' : 'nie'}' na '${hasParticipantCard ? 'áno' : 'nie'}'`);
+          }
+
+          // 5. Zmeny v stravovaní pre jednotlivé dni
+          tournamentDays.forEach(day => {
+            const oldMeal = oldData.meals[day] || { breakfast: 0, lunch: 0, dinner: 0, refreshment: 0 };
+            const newMeal = mealsToSave[day] || { breakfast: 0, lunch: 0, dinner: 0, refreshment: 0 };
+            
+            // Raňajky
+            if (oldMeal.breakfast !== newMeal.breakfast) {
+              changesList.push(`Zmena pre stravovanie (${new Date(day).toLocaleDateString('sk-SK')} - raňajky): z '${oldMeal.breakfast ? 'áno' : 'nie'}' na '${newMeal.breakfast ? 'áno' : 'nie'}'`);
+            }
+            
+            // Obed
+            if (oldMeal.lunch !== newMeal.lunch) {
+              changesList.push(`Zmena pre stravovanie (${new Date(day).toLocaleDateString('sk-SK')} - obed): z '${oldMeal.lunch ? 'áno' : 'nie'}' na '${newMeal.lunch ? 'áno' : 'nie'}'`);
+            }
+            
+            // Večera
+            if (oldMeal.dinner !== newMeal.dinner) {
+              changesList.push(`Zmena pre stravovanie (${new Date(day).toLocaleDateString('sk-SK')} - večera): z '${oldMeal.dinner ? 'áno' : 'nie'}' na '${newMeal.dinner ? 'áno' : 'nie'}'`);
+            }
+            
+            // Občerstvenie
+            if (oldMeal.refreshment !== newMeal.refreshment) {
+              changesList.push(`Zmena pre stravovanie (${new Date(day).toLocaleDateString('sk-SK')} - občerstvenie): z '${oldMeal.refreshment ? 'áno' : 'nie'}' na '${newMeal.refreshment ? 'áno' : 'nie'}'`);
+            }
+          });
 
           // Ak nebola žiadna zmena, pošleme aspoň informáciu o aktualizácii
           const finalChanges = changesList.length > 0
@@ -399,11 +438,19 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
           await sendAdminNotification({
             type: 'editPackage',
             data: {
-              changes: finalChanges
+              changes: finalChanges,
+              oldData: oldData, // Pôvodné dáta pre prípad potreby
+              newData: { // Nové dáta pre prípad potreby
+                name: trimmedName,
+                price: newPackagePrice,
+                accommodationTypes: selectedAccommodations,
+                meals: mealsToSave,
+                hasParticipantCard: hasParticipantCard
+              }
             }
           });
         }
-        // --- KONIEC ÚPRAVY ---
+        // --- KONIEC NOTIFIKÁCIE ---
       }
       handleClosePackageModal();
     } catch (e) {
@@ -442,7 +489,6 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
       await deleteDoc(packageDocRef);
       showNotification(`Balíček "${packageToDelete.name}" úspešne zmazaný!`, 'success');
 
-      // --- UPRAVENÁ NOTIFIKÁCIA PRE MAZANIE ---
       if (typeof sendAdminNotification === 'function') {
         const changes = [];
         
@@ -461,11 +507,11 @@ export function PackageSettings({ db, userProfileData, tournamentStartDate, tour
         await sendAdminNotification({
           type: 'deletePackage',
           data: {
-            changes: changes
+            changes: changes,
+            deletedData: packageToDelete // Pôvodné dáta pre prípad potreby
           }
         });
       }
-      // --- KONIEC ÚPRAVY ---
 
       handleCloseConfirmDeletePackageModal();
     } catch (e) {
