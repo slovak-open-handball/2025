@@ -743,7 +743,7 @@ const SpiderApp = ({ userProfileData }) => {
     // Komponent pre zobrazenie jedného zápasu v pavúkovom zobrazení
     const MatchCell = ({ match, title = '', matchType }) => {
         const [isHovered, setIsHovered] = useState(false);
-        
+    
         // Kontrola, či zápas existuje v databáze
         if (!match.exists) {
             // Chýbajúci zápas - sivý čiarkovaný box s možnosťou generovania
@@ -751,7 +751,9 @@ const SpiderApp = ({ userProfileData }) => {
                 'div',
                 { 
                     className: `border-2 border-dashed border-gray-400 rounded-lg p-3 min-w-[220px] transition-all duration-200 ${
-                        isHovered ? 'bg-green-50 border-green-500' : 'bg-gray-100'
+                        isHovered && userProfileData?.role === 'admin' && !generationInProgress 
+                            ? 'bg-green-50 border-green-500' 
+                            : 'bg-gray-100'
                     }`,
                     style: { 
                         zIndex: 10, 
@@ -781,7 +783,9 @@ const SpiderApp = ({ userProfileData }) => {
                 title && React.createElement(
                     'div',
                     { className: `text-sm font-semibold mb-2 pb-1 border-b border-dashed text-center ${
-                        isHovered ? 'text-green-700 border-green-300' : 'text-gray-500 border-gray-300'
+                        isHovered && userProfileData?.role === 'admin' && !generationInProgress 
+                            ? 'text-green-700 border-green-300' 
+                            : 'text-gray-500 border-gray-300'
                     }` },
                     title
                 ),
