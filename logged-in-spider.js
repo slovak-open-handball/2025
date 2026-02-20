@@ -5551,13 +5551,13 @@ const SpiderApp = ({ userProfileData }) => {
                                             },
                                             // Zvislá čiara uprostred na celú výšku bunky
                                             React.createElement('div', { className: 'spider-line-vertical' }),
-                                            // Pravé orámovanie na celú výšku bunky
+                                            // Zvislá čiara na pravej strane od stredu po spodný okraj
                                             React.createElement('div', { 
                                                 className: 'spider-line-vertical',
                                                 style: { 
                                                     left: '100%',
-                                                    height: '100%',
-                                                    top: 0
+                                                    height: '50%',
+                                                    top: '50%'
                                                 }
                                             })
                                         ),
@@ -5638,13 +5638,13 @@ const SpiderApp = ({ userProfileData }) => {
                                             },
                                             // Zvislá čiara uprostred na celú výšku bunky
                                             React.createElement('div', { className: 'spider-line-vertical' }),
-                                            // Ľavé orámovanie na celú výšku bunky
+                                            // Zvislá čiara na ľavej strane od stredu po spodný okraj
                                             React.createElement('div', { 
                                                 className: 'spider-line-vertical',
                                                 style: { 
                                                     left: 0,
-                                                    height: '100%',
-                                                    top: 0
+                                                    height: '50%',
+                                                    top: '50%'
                                                 }
                                             })
                                         ),
