@@ -6372,12 +6372,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     onGenerate: generateSingleMatch,
                                                     onDelete: deleteSingleMatch
                                                 })
-                                            ),
-                                            
-                                            // Zvislá čiara v strede (odstránená - nie je v ľavej bunke)
-                                            
-                                            // Zvislá čiara na úrovni 1/4 šírky od stredu po horný okraj (height: 50%)
-                                            // Zmenené: teraz ide od stredu doľava namiesto doprava
+                                            ),                                           
                                             React.createElement('div', {
                                                 className: 'spider-line-vertical',
                                                 style: {
@@ -6385,7 +6380,15 @@ const SpiderApp = ({ userProfileData }) => {
                                                     height: '50%',
                                                     top: 0
                                                 }
-                                            })
+                                            }),                                            
+                                            React.createElement('div', {
+                                                className: 'spider-line-vertical',
+                                                style: {
+                                                    left: '50%', 
+                                                    height: '100%',
+                                                    top: 0
+                                                }
+                                            }),
                                         )
                                     ),
                                     
