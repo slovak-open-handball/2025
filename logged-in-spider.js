@@ -3043,8 +3043,8 @@ const SpiderApp = ({ userProfileData }) => {
                                 disabled: !selectedGroup || !selectedOrder || isAssigningTeam,
                                 className: `px-4 py-2 text-sm rounded-lg transition-colors ${
                                     !selectedGroup || !selectedOrder || isAssigningTeam
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                        ? 'bg-white text-blue-600 border-blue-600 cursor-not-allowed opacity-60'
+                                        : 'bg-blue-600 hover:bg-blue-700 text-white border-transparent'
                                 }`
                             },
                             isAssigningTeam ? 'Priraďujem...' : 'Priradiť tím'
