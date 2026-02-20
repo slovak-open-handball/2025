@@ -2952,9 +2952,11 @@ const SpiderApp = ({ userProfileData }) => {
                                 onChange: (e) => setSelectedGroup(e.target.value)
                             },
                             React.createElement('option', { value: '' }, '-- Vyberte skupinu --'),
-                            availableGroups.map((group, index) => 
-                                React.createElement('option', { key: index, value: group.name }, `${group.name} (${group.type || 'skupina'})`)
-                            )
+                            [...availableGroups]
+                                .sort((a, b) => a.name.localeCompare(b.name))
+                                .map((group, index) => 
+                                    React.createElement('option', { key: index, value: group.name }, `${group.name} (${group.type || 'skupina'})`)
+                                )
                         )
                     ),
     
