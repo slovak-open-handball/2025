@@ -433,7 +433,8 @@ const SpiderApp = ({ userProfileData }) => {
         }
         setSelectedGroup('');
         setTeamsInSelectedGroup([]);
-        setSelectedTeam(null);
+        setSelectedOrder(null); 
+        setMaxOrderInGroup(0);
     }, [selectedCategory, groupsData]);
 
     // Efekt pre načítanie tímov v skupine pri zmene vybranej skupiny
