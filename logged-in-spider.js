@@ -6439,7 +6439,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                 style: { 
                                                     left: '100%',
                                                     height: '50%',
-                                                    top: '50%'
+                                                    top: 0
                                                 }
                                             })
                                         ),
@@ -6549,13 +6549,11 @@ const SpiderApp = ({ userProfileData }) => {
                                                 style: { 
                                                     left: 0,
                                                     height: '50%',
-                                                    top: '50%'
+                                                    top: 0
                                                 }
                                             })
                                         )
-                                    )
-
-                                    
+                                    )                                    
                                 )
                             )
                         )
