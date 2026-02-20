@@ -242,7 +242,8 @@ const SpiderApp = ({ userProfileData }) => {
     const [availableGroups, setAvailableGroups] = useState([]);
     const [selectedGroup, setSelectedGroup] = useState('');
     const [teamsInSelectedGroup, setTeamsInSelectedGroup] = useState([]);
-    const [selectedTeam, setSelectedTeam] = useState(null);
+    const [selectedOrder, setSelectedOrder] = useState(null); // Zmenené z selectedTeam na selectedOrder
+    const [maxOrderInGroup, setMaxOrderInGroup] = useState(0); // Nový stav pre maximálne order
     const [isAssigningTeam, setIsAssigningTeam] = useState(false);
     
     // NOVÝ STAV: Dáta tímov pre debug a výber
@@ -455,24 +456,38 @@ const SpiderApp = ({ userProfileData }) => {
                     return oa - ob;
                 });
                 
+                // Zistíme maximálnu hodnotu order v skupine
+                const maxOrder = sortedTeams.reduce((max, team) => {
+                    const order = typeof team.order === 'number' ? team.order : 0;
+                    return order > max ? order : max;
+                }, 0);
+                
                 setTeamsInSelectedGroup(sortedTeams);
-                setSelectedTeam(null);
+                setMaxOrderInGroup(maxOrder);
+                setSelectedOrder(null);
             }
         } else {
             setTeamsInSelectedGroup([]);
-            setSelectedTeam(null);
+            setMaxOrderInGroup(0);
+            setSelectedOrder(null);
         }
     }, [selectedGroup, selectedCategory, categories, teamsData.allTeams]);
 
-    // Funkcia pre priradenie tímu k zápasu
+// Funkcia pre priradenie tímu k zápasu
     const assignTeamToMatch = async () => {
-        if (!selectedMatchForTeam || !selectedTeamPosition || !selectedTeam) {
+        if (!selectedMatchForTeam || !selectedTeamPosition || !selectedGroup || !selectedOrder) {
             window.showGlobalNotification('Nie sú vybraté všetky potrebné údaje', 'error');
             return;
         }
 
         if (userProfileData?.role !== 'admin') {
             window.showGlobalNotification('Na priradenie tímu potrebujete administrátorské práva', 'error');
+            return;
+        }
+
+        // Skontrolujeme, či zadané order nie je väčšie ako maximálne
+        if (selectedOrder > maxOrderInGroup) {
+            window.showGlobalNotification(`Maximálne povolené poradie v tejto skupine je ${maxOrderInGroup}`, 'error');
             return;
         }
 
@@ -491,7 +506,7 @@ const SpiderApp = ({ userProfileData }) => {
             const lastChar = selectedGroup.slice(-1);
             
             // Vytvorenie ID tímu v požadovanom formáte: "kategoria orderskupina" (bez medzery medzi order a skupina)
-            const teamIdentifier = `${categoryWithoutDiacritics} ${selectedTeam.order}${lastChar}`;
+            const teamIdentifier = `${categoryWithoutDiacritics} ${selectedOrder}${lastChar}`;
             
             // Aktualizácia zápasu v databáze
             const matchRef = doc(window.db, 'matches', selectedMatchForTeam.id);
@@ -512,7 +527,8 @@ const SpiderApp = ({ userProfileData }) => {
             setSelectedMatchForTeam(null);
             setSelectedTeamPosition(null);
             setSelectedGroup('');
-            setSelectedTeam(null);
+            setSelectedOrder(null);
+            setMaxOrderInGroup(0);
             
         } catch (error) {
             console.error('Chyba pri priraďovaní tímu:', error);
@@ -2876,7 +2892,6 @@ const SpiderApp = ({ userProfileData }) => {
             )
         ),
 
-        // MODÁLNE OKNO PRE VÝBER TÍMU
         isTeamSelectionModalOpen && createPortal(
             React.createElement(
                 'div',
@@ -2887,7 +2902,8 @@ const SpiderApp = ({ userProfileData }) => {
                         setSelectedMatchForTeam(null);
                         setSelectedTeamPosition(null);
                         setSelectedGroup('');
-                        setSelectedTeam(null);
+                        setSelectedOrder(null);
+                        setMaxOrderInGroup(0);
                     },
                     style: { backdropFilter: 'blur(4px)' }
                 },
@@ -2913,14 +2929,15 @@ const SpiderApp = ({ userProfileData }) => {
                                     setSelectedMatchForTeam(null);
                                     setSelectedTeamPosition(null);
                                     setSelectedGroup('');
-                                    setSelectedTeam(null);
+                                    setSelectedOrder(null);
+                                    setMaxOrderInGroup(0);
                                 },
                                 className: 'text-gray-400 hover:text-gray-600 transition-colors'
                             },
                             React.createElement('i', { className: 'fa-solid fa-times text-2xl' })
                         )
                     ),
-
+    
                     // Výber skupiny
                     React.createElement(
                         'div',
@@ -2939,61 +2956,48 @@ const SpiderApp = ({ userProfileData }) => {
                             )
                         )
                     ),
-
-                    // Zoznam tímov vo vybranej skupine
+    
+                    // Input pre zadanie čísla (order)
                     selectedGroup && React.createElement(
                         'div',
                         { className: 'mb-6' },
-                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Vyberte tím:'),
+                        React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 
+                            `Zadajte poradové číslo tímu (1 - ${maxOrderInGroup}):`
+                        ),
                         React.createElement(
                             'div',
-                            { className: 'border border-gray-200 rounded-lg max-h-60 overflow-y-auto' },
-                            teamsInSelectedGroup.length > 0 ? (
-                                teamsInSelectedGroup.map((team, index) => {
-                                    // Zobrazenie čistého názvu tímu bez prefixu kategórie
-                                    let displayName = team.teamName;
-                                    const category = categories.find(c => c.id === selectedCategory);
-                                    const categoryName = category ? category.name : '';
-                                    
-                                    if (categoryName && displayName.startsWith(categoryName + ' ')) {
-                                        displayName = displayName.substring(categoryName.length + 1);
+                            { className: 'flex items-center gap-2' },
+                            React.createElement('input', {
+                                type: 'number',
+                                min: '1',
+                                max: maxOrderInGroup,
+                                value: selectedOrder || '',
+                                onChange: (e) => {
+                                    const value = parseInt(e.target.value, 10);
+                                    if (e.target.value === '') {
+                                        setSelectedOrder(null);
+                                    } else if (!isNaN(value) && value >= 1 && value <= maxOrderInGroup) {
+                                        setSelectedOrder(value);
                                     }
-                                    
-                                    return React.createElement(
-                                        'div',
-                                        {
-                                            key: index,
-                                            className: `p-3 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-blue-50 transition-colors ${selectedTeam === team ? 'bg-blue-100 border-blue-300' : ''}`,
-                                            onClick: () => setSelectedTeam(team)
-                                        },
-                                        React.createElement(
-                                            'div',
-                                            { className: 'flex items-center justify-between' },
-                                            React.createElement(
-                                                'div',
-                                                null,
-                                                React.createElement('span', { className: 'font-medium' }, `${team.order}. ${displayName}`)
-                                            ),
-                                            React.createElement(
-                                                'span',
-                                                { className: 'text-sm text-gray-500' },
-                                                team.source === 'superstructure' ? 'Nadstavbový' : 'Používateľský'
-                                            )
-                                        )
-                                    );
-                                })
-                            ) : (
-                                React.createElement(
-                                    'div',
-                                    { className: 'p-4 text-center text-gray-500' },
-                                    'V tejto skupine nie sú žiadne tímy'
-                                )
+                                },
+                                className: 'w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
+                                placeholder: `Zadajte číslo od 1 do ${maxOrderInGroup}`
+                            }),
+                            React.createElement(
+                                'span',
+                                { className: 'text-sm text-gray-500' },
+                                `/ ${maxOrderInGroup}`
                             )
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-xs text-gray-500 mt-1' },
+                            'Zadajte poradové číslo tímu v tejto skupine'
                         )
                     ),
-
+    
                     // Náhľad výsledného ID
-                    selectedTeam && selectedGroup && React.createElement(
+                    selectedGroup && selectedOrder && React.createElement(
                         'div',
                         { className: 'mb-6 p-4 bg-gray-50 rounded-lg' },
                         React.createElement('p', { className: 'text-sm text-gray-600 mb-1' }, 'Výsledné ID tímu:'),
@@ -3007,11 +3011,11 @@ const SpiderApp = ({ userProfileData }) => {
                                     .normalize('NFD')
                                     .replace(/[\u0300-\u036f]/g, '');
                                 const lastChar = selectedGroup.slice(-1);
-                                return `${categoryWithoutDiacritics} ${selectedTeam.order}${lastChar}`;
+                                return `${categoryWithoutDiacritics} ${selectedOrder}${lastChar}`;
                             })()
                         )
                     ),
-
+    
                     // Tlačidlá
                     React.createElement(
                         'div',
@@ -3024,7 +3028,8 @@ const SpiderApp = ({ userProfileData }) => {
                                     setSelectedMatchForTeam(null);
                                     setSelectedTeamPosition(null);
                                     setSelectedGroup('');
-                                    setSelectedTeam(null);
+                                    setSelectedOrder(null);
+                                    setMaxOrderInGroup(0);
                                 },
                                 className: 'px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors'
                             },
@@ -3034,9 +3039,9 @@ const SpiderApp = ({ userProfileData }) => {
                             'button',
                             {
                                 onClick: assignTeamToMatch,
-                                disabled: !selectedTeam || isAssigningTeam,
+                                disabled: !selectedGroup || !selectedOrder || isAssigningTeam,
                                 className: `px-4 py-2 text-sm rounded-lg transition-colors ${
-                                    !selectedTeam || isAssigningTeam
+                                    !selectedGroup || !selectedOrder || isAssigningTeam
                                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                         : 'bg-blue-600 hover:bg-blue-700 text-white'
                                 }`
