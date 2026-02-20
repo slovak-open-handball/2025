@@ -2447,7 +2447,8 @@ const SpiderApp = ({ userProfileData }) => {
         
         // Handler pre kliknutie na "---" - otvorí modálne okno
         const handleTeamClick = (teamName, position) => {
-            if (teamName === '---' && userProfileData?.role === 'admin') {
+            // Povoliť kliknutie len pre adminov a len pre tímy, ktoré nie sú odkazmi na zápasy
+            if (userProfileData?.role === 'admin' && !isMatchReference(teamName)) {
                 onTeamClick(match, position);
             }
         };
