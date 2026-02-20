@@ -4400,7 +4400,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -4438,7 +4438,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db'
+                                                    border: '0px solid #d1d5db'
                                                 }
                                             })
                                         ),
@@ -4452,7 +4452,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -4498,7 +4498,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '28.56%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -4535,7 +4535,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db'
+                                                    border: '0px solid #d1d5db'
                                                 }
                                             })
                                         ),
@@ -4550,7 +4550,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '28.56%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -4584,7 +4584,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     React.createElement(
                                         'tr',
                                         { style: { height: '120px' } },
-                                        // 16F2
+                                        // 16F2 (stlpec 1)
                                         React.createElement(
                                             'td',
                                             { 
@@ -4594,7 +4594,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -4632,27 +4632,14 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
                                             // Zvislá čiara uprostred na celú výšku bunky
                                             React.createElement('div', { className: 'spider-line-vertical' })
                                         ),
-                                        // 4 prázdne bunky (stlpce 3-6)
-                                        ...Array(4).fill(null).map((_, i) => 
-                                            React.createElement('td', { 
-                                                key: `empty-3a-${i}`,
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '8px',
-                                                    width: '14.28%',
-                                                    border: '1px solid #d1d5db'
-                                                }
-                                            })
-                                        ),
-                                        // Prázdna bunka - stlpec 7
+                                        // Prázdna bunka - stlpec 3
                                         React.createElement(
                                             'td',
                                             { 
@@ -4661,14 +4648,53 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            }
+                                        ),
+                                        // Prázdna bunka - stlpec 4
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '14.28%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            }
+                                        ),
+                                        // Prázdna bunka - stlpec 5
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '14.28%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            }
+                                        ),
+                                        // Prázdna bunka - stlpec 6 - s čiarou
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '14.28%',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
                                             // Zvislá čiara uprostred na celú výšku bunky
                                             React.createElement('div', { className: 'spider-line-vertical' })
                                         ),
-                                        // 16F10
+                                        // 16F10 (stlpec 7)
                                         React.createElement(
                                             'td',
                                             { 
@@ -4678,7 +4704,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -4722,7 +4748,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db'
+                                                    border: '0px solid #d1d5db'
                                                 }
                                             }
                                         ),
@@ -4736,7 +4762,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -4776,7 +4802,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db'
+                                                    border: '0px solid #d1d5db'
                                                 }
                                             })
                                         ),
@@ -4790,7 +4816,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -4830,7 +4856,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db'
+                                                    border: '0px solid #d1d5db'
                                                 }
                                             }
                                         )
@@ -4850,7 +4876,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -4888,7 +4914,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative',
                                                     borderRight: '2px solid #000' // Pravé orámovanie
                                                 }
@@ -4905,7 +4931,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db'
+                                                    border: '0px solid #d1d5db'
                                                 }
                                             })
                                         ),
@@ -4918,7 +4944,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative',
                                                     borderLeft: '2px solid #000' // Ľavé orámovanie
                                                 }
@@ -4936,7 +4962,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -4982,7 +5008,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '28.56%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative',
                                                     borderRight: '2px solid #000' // Pravé orámovanie
                                                 }
@@ -5029,7 +5055,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db'
+                                                    border: '0px solid #d1d5db'
                                                 }
                                             })
                                         ),
@@ -5044,7 +5070,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '28.56%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative',
                                                     borderLeft: '2px solid #000' // Ľavé orámovanie
                                                 }
@@ -5098,7 +5124,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -5138,7 +5164,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative',
                                                     borderRight: '2px solid #000' // Pravé orámovanie bunky
                                                 }
@@ -5153,7 +5179,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db'
+                                                    border: '0px solid #d1d5db'
                                                 }
                                             }
                                         ),
@@ -5167,7 +5193,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -5202,7 +5228,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db'
+                                                    border: '0px solid #d1d5db'
                                                 }
                                             }
                                         ),
@@ -5215,7 +5241,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative',
                                                     borderLeft: '2px solid #000' // Ľavé orámovanie bunky
                                                 }
@@ -5231,7 +5257,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -5277,7 +5303,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db'
+                                                    border: '0px solid #d1d5db'
                                                 }
                                             }
                                         ),
@@ -5292,7 +5318,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '28.56%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -5329,7 +5355,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -5353,7 +5379,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '28.56%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -5390,7 +5416,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db'
+                                                    border: '0px solid #d1d5db'
                                                 }
                                             }
                                         )
