@@ -1027,7 +1027,7 @@ const SpiderApp = ({ userProfileData }) => {
         }
     }, [selectedCategory, allMatches]);
 
-    // Funkcia na vymazanie jednotlivého pavúkového zápasu
+    // Funkcia na vymazanie jednotlivého pavúkového zápasu a všetkých podradených zápasov
     const deleteSingleMatch = async (matchId, matchType) => {
         if (!window.db) {
             window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
@@ -1050,190 +1050,272 @@ const SpiderApp = ({ userProfileData }) => {
                 return;
             }
     
-            // Ak mažeme šestnásťfinálový zápas, aktualizujeme príslušný osemfinálový zápas
-            if (matchType.startsWith('šestnásťfinále')) {
-                // Získame číslo šestnásťfinále (1-16)
-                const matchNumber = parseInt(matchType.split(' ')[1]);
+            // Funkcia na rekurzívne zmazanie všetkých podradených zápasov
+            const deleteChildMatches = async (parentMatchType) => {
+                let childMatchesToDelete = [];
                 
-                // Určíme, ktorý osemfinálový zápas a ktorú pozíciu (domáci/hosť) treba aktualizovať
-                let eightfinalMatchType = '';
-                let position = ''; // 'home' alebo 'away'
-                
-                // Mapovanie šestnásťfinále na osemfinále
-                // Šestnásťfinále 1 a 2 -> Osemfinále 1 (domáci a hosť)
-                // Šestnásťfinále 3 a 4 -> Osemfinále 2 (domáci a hosť)
-                // Šestnásťfinále 5 a 6 -> Osemfinále 3 (domáci a hosť)
-                // Šestnásťfinále 7 a 8 -> Osemfinále 4 (domáci a hosť)
-                // Šestnásťfinále 9 a 10 -> Osemfinále 5 (domáci a hosť)
-                // Šestnásťfinále 11 a 12 -> Osemfinále 6 (domáci a hosť)
-                // Šestnásťfinále 13 a 14 -> Osemfinále 7 (domáci a hosť)
-                // Šestnásťfinále 15 a 16 -> Osemfinále 8 (domáci a hosť)
-                
-                const eightfinalNumber = Math.ceil(matchNumber / 2);
-                eightfinalMatchType = `osemfinále ${eightfinalNumber}`;
-                position = matchNumber % 2 === 1 ? 'home' : 'away';
-                
-                // Nájdeme príslušný osemfinálový zápas
-                const eightfinalMatch = allMatches.find(m => 
-                    m.categoryId === selectedCategory && 
-                    m.matchType === eightfinalMatchType
-                );
-                
-                if (eightfinalMatch) {
-                    // Aktualizujeme príslušný identifikátor na '---'
-                    const updateData = {};
-                    if (position === 'home') {
-                        updateData.homeTeamIdentifier = '---';
-                    } else {
-                        updateData.awayTeamIdentifier = '---';
+                // Ak mažeme finále, mažeme všetky pavúkové zápasy v kategórii
+                if (parentMatchType === 'finále') {
+                    childMatchesToDelete = allMatches.filter(m => 
+                        m.categoryId === selectedCategory && 
+                        m.matchType && 
+                        ['semifinále 1', 'semifinále 2', 'o 3. miesto', 
+                         'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4',
+                         'osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
+                         'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8',
+                         'šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
+                         'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
+                         'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
+                         'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
+                    );
+                }
+                // Ak mažeme semifinále 1, mažeme všetky zápasy v jeho vetve
+                else if (parentMatchType === 'semifinále 1') {
+                    childMatchesToDelete = allMatches.filter(m => 
+                        m.categoryId === selectedCategory && 
+                        m.matchType && 
+                        ['štvrťfinále 1', 'štvrťfinále 2', 
+                         'osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
+                         'šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
+                         'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8'].includes(m.matchType)
+                    );
+                }
+                // Ak mažeme semifinále 2, mažeme všetky zápasy v jeho vetve
+                else if (parentMatchType === 'semifinále 2') {
+                    childMatchesToDelete = allMatches.filter(m => 
+                        m.categoryId === selectedCategory && 
+                        m.matchType && 
+                        ['štvrťfinále 3', 'štvrťfinále 4',
+                         'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8',
+                         'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
+                         'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
+                    );
+                }
+                // Ak mažeme o 3. miesto, mažeme všetky zápasy v jeho vetve (rovnaké ako semifinále 1 a 2)
+                else if (parentMatchType === 'o 3. miesto') {
+                    childMatchesToDelete = allMatches.filter(m => 
+                        m.categoryId === selectedCategory && 
+                        m.matchType && 
+                        ['semifinále 1', 'semifinále 2',
+                         'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4',
+                         'osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
+                         'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8',
+                         'šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
+                         'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
+                         'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
+                         'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
+                    );
+                }
+                // Ak mažeme štvrťfinále, mažeme všetky zápasy pod ním
+                else if (parentMatchType.startsWith('štvrťfinále')) {
+                    const qfNumber = parseInt(parentMatchType.split(' ')[1]);
+                    
+                    let eightfinalNumbers = [];
+                    let sixteenfinalNumbers = [];
+                    
+                    if (qfNumber === 1) {
+                        eightfinalNumbers = [1, 2];
+                        sixteenfinalNumbers = [1, 2, 3, 4];
+                    } else if (qfNumber === 2) {
+                        eightfinalNumbers = [3, 4];
+                        sixteenfinalNumbers = [5, 6, 7, 8];
+                    } else if (qfNumber === 3) {
+                        eightfinalNumbers = [5, 6];
+                        sixteenfinalNumbers = [9, 10, 11, 12];
+                    } else if (qfNumber === 4) {
+                        eightfinalNumbers = [7, 8];
+                        sixteenfinalNumbers = [13, 14, 15, 16];
                     }
                     
-                    await updateDoc(doc(window.db, 'matches', eightfinalMatch.id), updateData);
+                    childMatchesToDelete = allMatches.filter(m => 
+                        m.categoryId === selectedCategory && 
+                        m.matchType && (
+                            eightfinalNumbers.some(num => m.matchType === `osemfinále ${num}`) ||
+                            sixteenfinalNumbers.some(num => m.matchType === `šestnásťfinále ${num}`)
+                        )
+                    );
                 }
-            }
+                // Ak mažeme osemfinále, mažeme všetky zápasy pod ním
+                else if (parentMatchType.startsWith('osemfinále')) {
+                    const efNumber = parseInt(parentMatchType.split(' ')[1]);
+                    
+                    let sixteenfinalNumbers = [];
+                    if (efNumber === 1) sixteenfinalNumbers = [1, 2];
+                    else if (efNumber === 2) sixteenfinalNumbers = [3, 4];
+                    else if (efNumber === 3) sixteenfinalNumbers = [5, 6];
+                    else if (efNumber === 4) sixteenfinalNumbers = [7, 8];
+                    else if (efNumber === 5) sixteenfinalNumbers = [9, 10];
+                    else if (efNumber === 6) sixteenfinalNumbers = [11, 12];
+                    else if (efNumber === 7) sixteenfinalNumbers = [13, 14];
+                    else if (efNumber === 8) sixteenfinalNumbers = [15, 16];
+                    
+                    childMatchesToDelete = allMatches.filter(m => 
+                        m.categoryId === selectedCategory && 
+                        m.matchType && 
+                        sixteenfinalNumbers.some(num => m.matchType === `šestnásťfinále ${num}`)
+                    );
+                }
+                
+                return childMatchesToDelete;
+            };
+    
+            // Získame všetky podradené zápasy, ktoré treba zmazať
+            const childMatches = await deleteChildMatches(matchType);
             
-            // Ak mažeme osemfinálový zápas, aktualizujeme príslušný štvrťfinálový zápas
-            else if (matchType.startsWith('osemfinále')) {
-                // Získame číslo osemfinále (1-8)
-                const matchNumber = parseInt(matchType.split(' ')[1]);
-                
-                // Určíme, ktorý štvrťfinálový zápas a ktorú pozíciu (domáci/hosť) treba aktualizovať
-                let quarterfinalMatchType = '';
-                let position = ''; // 'home' alebo 'away'
-                
-                // Mapovanie osemfinále na štvrťfinále
-                // Osemfinále 1 a 2 -> Štvrťfinále 1 (domáci a hosť)
-                // Osemfinále 3 a 4 -> Štvrťfinále 2 (domáci a hosť)
-                // Osemfinále 5 a 6 -> Štvrťfinále 3 (domáci a hosť)
-                // Osemfinále 7 a 8 -> Štvrťfinále 4 (domáci a hosť)
-                
-                if (matchNumber === 1 || matchNumber === 2) {
-                    quarterfinalMatchType = 'štvrťfinále 1';
-                    position = matchNumber === 1 ? 'home' : 'away';
-                } else if (matchNumber === 3 || matchNumber === 4) {
-                    quarterfinalMatchType = 'štvrťfinále 2';
-                    position = matchNumber === 3 ? 'home' : 'away';
-                } else if (matchNumber === 5 || matchNumber === 6) {
-                    quarterfinalMatchType = 'štvrťfinále 3';
-                    position = matchNumber === 5 ? 'home' : 'away';
-                } else if (matchNumber === 7 || matchNumber === 8) {
-                    quarterfinalMatchType = 'štvrťfinále 4';
-                    position = matchNumber === 7 ? 'home' : 'away';
+            // Vytvoríme pole všetkých zápasov na zmazanie (vrátane aktuálneho)
+            const allMatchesToDelete = [matchToDelete, ...childMatches];
+            
+            // Odstránime duplicity (ak nejaký zápas patrí do viacerých kategórií)
+            const uniqueMatchesToDelete = allMatchesToDelete.filter((match, index, self) => 
+                index === self.findIndex(m => m.id === match.id)
+            );
+    
+            // Pre každý zápas, ktorý mažeme, aktualizujeme nadradené zápasy
+            for (const match of uniqueMatchesToDelete) {
+                // Ak mažeme šestnásťfinálový zápas, aktualizujeme príslušný osemfinálový zápas
+                if (match.matchType.startsWith('šestnásťfinále')) {
+                    const matchNumber = parseInt(match.matchType.split(' ')[1]);
+                    const eightfinalNumber = Math.ceil(matchNumber / 2);
+                    const position = matchNumber % 2 === 1 ? 'home' : 'away';
+                    
+                    const eightfinalMatch = allMatches.find(m => 
+                        m.categoryId === selectedCategory && 
+                        m.matchType === `osemfinále ${eightfinalNumber}`
+                    );
+                    
+                    if (eightfinalMatch && !uniqueMatchesToDelete.some(m => m.id === eightfinalMatch.id)) {
+                        const updateData = {};
+                        if (position === 'home') {
+                            updateData.homeTeamIdentifier = '---';
+                        } else {
+                            updateData.awayTeamIdentifier = '---';
+                        }
+                        await updateDoc(doc(window.db, 'matches', eightfinalMatch.id), updateData);
+                    }
                 }
                 
-                // Nájdeme príslušný štvrťfinálový zápas
-                const quarterfinalMatch = allMatches.find(m => 
-                    m.categoryId === selectedCategory && 
-                    m.matchType === quarterfinalMatchType
-                );
-                
-                if (quarterfinalMatch) {
-                    // Aktualizujeme príslušný identifikátor na '---'
-                    const updateData = {};
-                    if (position === 'home') {
-                        updateData.homeTeamIdentifier = '---';
-                    } else {
-                        updateData.awayTeamIdentifier = '---';
+                // Ak mažeme osemfinálový zápas, aktualizujeme príslušný štvrťfinálový zápas
+                else if (match.matchType.startsWith('osemfinále')) {
+                    const matchNumber = parseInt(match.matchType.split(' ')[1]);
+                    
+                    let quarterfinalMatchType = '';
+                    let position = '';
+                    
+                    if (matchNumber === 1 || matchNumber === 2) {
+                        quarterfinalMatchType = 'štvrťfinále 1';
+                        position = matchNumber === 1 ? 'home' : 'away';
+                    } else if (matchNumber === 3 || matchNumber === 4) {
+                        quarterfinalMatchType = 'štvrťfinále 2';
+                        position = matchNumber === 3 ? 'home' : 'away';
+                    } else if (matchNumber === 5 || matchNumber === 6) {
+                        quarterfinalMatchType = 'štvrťfinále 3';
+                        position = matchNumber === 5 ? 'home' : 'away';
+                    } else if (matchNumber === 7 || matchNumber === 8) {
+                        quarterfinalMatchType = 'štvrťfinále 4';
+                        position = matchNumber === 7 ? 'home' : 'away';
                     }
                     
-                    await updateDoc(doc(window.db, 'matches', quarterfinalMatch.id), updateData);
-                }
-            }
-            
-            // Ak mažeme štvrťfinálový zápas, aktualizujeme príslušný semifinálový zápas
-            else if (matchType.startsWith('štvrťfinále')) {
-                // Získame číslo štvrťfinále (1-4)
-                const matchNumber = parseInt(matchType.split(' ')[1]);
-                
-                // Určíme, ktorý semifinálový zápas a ktorú pozíciu treba aktualizovať
-                let semifinalMatchType = '';
-                let position = '';
-                
-                // Mapovanie štvrťfinále na semifinále
-                // Štvrťfinále 1 a 2 -> Semifinále 1 (domáci a hosť)
-                // Štvrťfinále 3 a 4 -> Semifinále 2 (domáci a hosť)
-                
-                if (matchNumber === 1 || matchNumber === 2) {
-                    semifinalMatchType = 'semifinále 1';
-                    position = matchNumber === 1 ? 'home' : 'away';
-                } else if (matchNumber === 3 || matchNumber === 4) {
-                    semifinalMatchType = 'semifinále 2';
-                    position = matchNumber === 3 ? 'home' : 'away';
+                    const quarterfinalMatch = allMatches.find(m => 
+                        m.categoryId === selectedCategory && 
+                        m.matchType === quarterfinalMatchType
+                    );
+                    
+                    if (quarterfinalMatch && !uniqueMatchesToDelete.some(m => m.id === quarterfinalMatch.id)) {
+                        const updateData = {};
+                        if (position === 'home') {
+                            updateData.homeTeamIdentifier = '---';
+                        } else {
+                            updateData.awayTeamIdentifier = '---';
+                        }
+                        await updateDoc(doc(window.db, 'matches', quarterfinalMatch.id), updateData);
+                    }
                 }
                 
-                // Nájdeme príslušný semifinálový zápas
-                const semifinalMatch = allMatches.find(m => 
-                    m.categoryId === selectedCategory && 
-                    m.matchType === semifinalMatchType
-                );
-                
-                if (semifinalMatch) {
-                    // Aktualizujeme príslušný identifikátor na '---'
-                    const updateData = {};
-                    if (position === 'home') {
-                        updateData.homeTeamIdentifier = '---';
-                    } else {
-                        updateData.awayTeamIdentifier = '---';
+                // Ak mažeme štvrťfinálový zápas, aktualizujeme príslušný semifinálový zápas
+                else if (match.matchType.startsWith('štvrťfinále')) {
+                    const matchNumber = parseInt(match.matchType.split(' ')[1]);
+                    
+                    let semifinalMatchType = '';
+                    let position = '';
+                    
+                    if (matchNumber === 1 || matchNumber === 2) {
+                        semifinalMatchType = 'semifinále 1';
+                        position = matchNumber === 1 ? 'home' : 'away';
+                    } else if (matchNumber === 3 || matchNumber === 4) {
+                        semifinalMatchType = 'semifinále 2';
+                        position = matchNumber === 3 ? 'home' : 'away';
                     }
                     
-                    await updateDoc(doc(window.db, 'matches', semifinalMatch.id), updateData);
-                }
-            }
-            
-            // Ak mažeme semifinálový zápas, aktualizujeme finále a o 3. miesto
-            else if (matchType.startsWith('semifinále')) {
-                const matchNumber = parseInt(matchType.split(' ')[1]); // 1 alebo 2
-                
-                // Nájdeme finálový zápas
-                const finalMatch = allMatches.find(m => 
-                    m.categoryId === selectedCategory && 
-                    m.matchType === 'finále'
-                );
-                
-                // Nájdeme zápas o 3. miesto
-                const thirdPlaceMatch = allMatches.find(m => 
-                    m.categoryId === selectedCategory && 
-                    m.matchType === 'o 3. miesto'
-                );
-                
-                // Aktualizujeme finále
-                if (finalMatch) {
-                    if (matchNumber === 1) {
-                        // Semifinále 1 ovplyvňuje domáci tím vo finále (WSF01)
-                        await updateDoc(doc(window.db, 'matches', finalMatch.id), {
-                            homeTeamIdentifier: '---'
-                        });
-                    } else if (matchNumber === 2) {
-                        // Semifinále 2 ovplyvňuje hosťovský tím vo finále (WSF02)
-                        await updateDoc(doc(window.db, 'matches', finalMatch.id), {
-                            awayTeamIdentifier: '---'
-                        });
+                    const semifinalMatch = allMatches.find(m => 
+                        m.categoryId === selectedCategory && 
+                        m.matchType === semifinalMatchType
+                    );
+                    
+                    if (semifinalMatch && !uniqueMatchesToDelete.some(m => m.id === semifinalMatch.id)) {
+                        const updateData = {};
+                        if (position === 'home') {
+                            updateData.homeTeamIdentifier = '---';
+                        } else {
+                            updateData.awayTeamIdentifier = '---';
+                        }
+                        await updateDoc(doc(window.db, 'matches', semifinalMatch.id), updateData);
                     }
                 }
                 
-                // Aktualizujeme zápas o 3. miesto
-                if (thirdPlaceMatch) {
-                    if (matchNumber === 1) {
-                        // Semifinále 1 ovplyvňuje domáci tím o 3. miesto (LSF01)
-                        await updateDoc(doc(window.db, 'matches', thirdPlaceMatch.id), {
-                            homeTeamIdentifier: '---'
-                        });
-                    } else if (matchNumber === 2) {
-                        // Semifinále 2 ovplyvňuje hosťovský tím o 3. miesto (LSF02)
-                        await updateDoc(doc(window.db, 'matches', thirdPlaceMatch.id), {
-                            awayTeamIdentifier: '---'
-                        });
+                // Ak mažeme semifinálový zápas, aktualizujeme finále a o 3. miesto
+                else if (match.matchType.startsWith('semifinále')) {
+                    const matchNumber = parseInt(match.matchType.split(' ')[1]);
+                    
+                    const finalMatch = allMatches.find(m => 
+                        m.categoryId === selectedCategory && 
+                        m.matchType === 'finále'
+                    );
+                    
+                    const thirdPlaceMatch = allMatches.find(m => 
+                        m.categoryId === selectedCategory && 
+                        m.matchType === 'o 3. miesto'
+                    );
+                    
+                    if (finalMatch && !uniqueMatchesToDelete.some(m => m.id === finalMatch.id)) {
+                        if (matchNumber === 1) {
+                            await updateDoc(doc(window.db, 'matches', finalMatch.id), {
+                                homeTeamIdentifier: '---'
+                            });
+                        } else if (matchNumber === 2) {
+                            await updateDoc(doc(window.db, 'matches', finalMatch.id), {
+                                awayTeamIdentifier: '---'
+                            });
+                        }
+                    }
+                    
+                    if (thirdPlaceMatch && !uniqueMatchesToDelete.some(m => m.id === thirdPlaceMatch.id)) {
+                        if (matchNumber === 1) {
+                            await updateDoc(doc(window.db, 'matches', thirdPlaceMatch.id), {
+                                homeTeamIdentifier: '---'
+                            });
+                        } else if (matchNumber === 2) {
+                            await updateDoc(doc(window.db, 'matches', thirdPlaceMatch.id), {
+                                awayTeamIdentifier: '---'
+                            });
+                        }
                     }
                 }
             }
+    
+            // Vymažeme všetky zápasy
+            for (const match of uniqueMatchesToDelete) {
+                await deleteDoc(doc(window.db, 'matches', match.id));
+            }
             
-            // Ak mažeme finále, nemusíme aktualizovať nič (je to najvyššia úroveň)
-            // Ak mažeme o 3. miesto, tiež nemusíme aktualizovať nič (je to finálová vetva)
+            // Zostavíme správu o počte zmazaných zápasov
+            let message;
+            if (uniqueMatchesToDelete.length === 1) {
+                message = `Zápas ${matchType} bol zmazaný`;
+            } else {
+                message = `Zmazaných ${uniqueMatchesToDelete.length} zápasov (${matchType} a všetky podradené zápasy)`;
+            }
             
-            // Vymažeme samotný zápas
-            await deleteDoc(doc(window.db, 'matches', matchId));
-            
-            window.showGlobalNotification(`Zápas ${matchType} bol zmazaný`, 'success');
+            window.showGlobalNotification(message, 'success');
     
         } catch (error) {
             console.error('Chyba pri mazaní zápasu:', error);
