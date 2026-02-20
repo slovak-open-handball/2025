@@ -15,7 +15,6 @@ if (!window.notificationContainer) {
     container.id = 'global-notification-container';
     container.style.cssText = `
         position: fixed;
-    container.style.cssText = `
         top: 20px;
         left: 50%;
         transform: translateX(-50%);
