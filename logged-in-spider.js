@@ -3046,7 +3046,7 @@ const SpiderApp = ({ userProfileData }) => {
                                 className: `px-4 py-2 text-sm rounded-lg transition-colors border-2 ${
                                     !selectedGroup || !selectedOrder || isAssigningTeam
                                         ? 'bg-white text-blue-600 border-blue-600 cursor-not-allowed opacity-60'
-                                        : 'bg-blue-600 hover:bg-blue-700 text-white border-transparent'
+                                        : 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'
                                 }`
                             },
                             isAssigningTeam ? 'Priraďujem...' : 'Priradiť tím'
