@@ -2284,7 +2284,7 @@ const SpiderApp = ({ userProfileData }) => {
     };
 
     // Komponent pre zobrazenie jedného zápasu v pavúkovom zobrazení
-    const MatchCell = ({ match, title = '', matchType, userProfileData, generationInProgress, onGenerate, onDelete }) => {
+    const MatchCell = ({ match, title = '', matchType, userProfileData, generationInProgress, onGenerate, onDelete, onTeamClick }) => {
         const [isHovered, setIsHovered] = useState(false);
         const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     
