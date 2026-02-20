@@ -5043,8 +5043,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     padding: '8px',
                                                     width: '28.56%',
                                                     border: '0px solid #d1d5db',
-                                                    position: 'relative',
-                                                    borderRight: '2px solid #000' // Pravé orámovanie
+                                                    position: 'relative'
                                                 }
                                             },
                                             React.createElement(
@@ -5078,6 +5077,15 @@ const SpiderApp = ({ userProfileData }) => {
                                                     height: '50%',
                                                     top: 0
                                                 }
+                                            }),
+                                            // Pravé orámovanie (namiesto borderRight) - celá výška od horného okraja po spodný okraj
+                                            React.createElement('div', { 
+                                                className: 'spider-line-vertical',
+                                                style: { 
+                                                    left: '100%',
+                                                    height: '100%',
+                                                    top: 0
+                                                }
                                             })
                                         ),
                                         // 3 prázdne bunky
@@ -5105,8 +5113,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     padding: '8px',
                                                     width: '28.56%',
                                                     border: '0px solid #d1d5db',
-                                                    position: 'relative',
-                                                    borderLeft: '2px solid #000' // Ľavé orámovanie
+                                                    position: 'relative'
                                                 }
                                             },
                                             React.createElement(
@@ -5139,6 +5146,15 @@ const SpiderApp = ({ userProfileData }) => {
                                                 style: { 
                                                     left: '25%',
                                                     width: '25%' // od 1/4 do 1/2
+                                                }
+                                            }),
+                                            // Ľavé orámovanie (namiesto borderLeft) - celá výška od horného okraja po spodný okraj
+                                            React.createElement('div', { 
+                                                className: 'spider-line-vertical',
+                                                style: { 
+                                                    left: 0,
+                                                    height: '100%',
+                                                    top: 0
                                                 }
                                             })
                                         )
