@@ -4498,7 +4498,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '28.56%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -4546,7 +4546,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '1px solid #d1d5db'
+                                                    border: '0px solid #d1d5db'
                                                 }
                                             })
                                         ),
@@ -4561,7 +4561,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '28.56%',
-                                                    border: '1px solid #d1d5db',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -4937,12 +4937,20 @@ const SpiderApp = ({ userProfileData }) => {
                                                     padding: '8px',
                                                     width: '14.28%',
                                                     border: '0px solid #d1d5db',
-                                                    position: 'relative',
-                                                    borderRight: '2px solid #000' // Pravé orámovanie
+                                                    position: 'relative'
                                                 }
                                             },
                                             // Zvislá čiara uprostred na celú výšku bunky
-                                            React.createElement('div', { className: 'spider-line-vertical' })
+                                            React.createElement('div', { className: 'spider-line-vertical' }),
+                                            // Pravé orámovanie pomocou spider-line-vertical (nie borderRight)
+                                            React.createElement('div', { 
+                                                className: 'spider-line-vertical',
+                                                style: { 
+                                                    left: '100%',
+                                                    height: '100%',
+                                                    top: 0
+                                                }
+                                            })
                                         ),
                                         // 3 prázdne bunky (stlpce 3-5)
                                         ...Array(3).fill(null).map((_, i) => 
@@ -4967,12 +4975,20 @@ const SpiderApp = ({ userProfileData }) => {
                                                     padding: '8px',
                                                     width: '14.28%',
                                                     border: '0px solid #d1d5db',
-                                                    position: 'relative',
-                                                    borderLeft: '2px solid #000' // Ľavé orámovanie
+                                                    position: 'relative'
                                                 }
                                             },
                                             // Zvislá čiara uprostred na celú výšku bunky
-                                            React.createElement('div', { className: 'spider-line-vertical' })
+                                            React.createElement('div', { className: 'spider-line-vertical' }),
+                                            // Ľavé orámovanie pomocou spider-line-vertical (nie borderLeft)
+                                            React.createElement('div', { 
+                                                className: 'spider-line-vertical',
+                                                style: { 
+                                                    left: 0,
+                                                    height: '100%',
+                                                    top: 0
+                                                }
+                                            })
                                         ),
                                         // 16F11
                                         React.createElement(
