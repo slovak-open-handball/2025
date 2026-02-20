@@ -2777,9 +2777,10 @@ const SpiderApp = ({ userProfileData }) => {
                     className: 'bg-white p-8 rounded-xl shadow-lg overflow-x-auto',
                     style: { 
                         width: '100%', 
-                        maxWidth: spiderLevel === 4 ? '1400px' : 
-                                  (spiderLevel === 3 ? '1200px' : 
-                                   (spiderLevel === 2 ? '1000px' : '800px')),
+                        maxWidth: spiderLevel === 4 ? `${7 * (240 + 24 + 4)}px` : 
+                                    spiderLevel === 3 ? `${5 * (240 + 24 + 4)}px` : 
+                                      (spiderLevel === 2 ? `${3 * (260 + 24 + 4)}px` : 
+                                                        `${2 * (280 + 24 + 4)}px`),
                     }
                 },
                 
