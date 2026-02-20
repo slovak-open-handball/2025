@@ -6308,8 +6308,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     onDelete: deleteSingleMatch
                                                 })
                                             ),
-                                            // Zvislá čiara v strede (height: 100%) - ODSTRAŇUJEM
-                                            // React.createElement('div', { className: 'spider-line-vertical' }),
+                                            React.createElement('div', { className: 'spider-line-vertical' }),
                                             
                                             // Vodorovná čiara výškovo uprostred od stredu po 3/4 šírky
                                             React.createElement('div', {
@@ -6390,6 +6389,15 @@ const SpiderApp = ({ userProfileData }) => {
                                                     width: '25%' // od 1/4 do 1/2
                                                 }
                                             }),
+                                            // Ľavé orámovanie na celú výšku (height: 100%) - ODSTRAŇUJEM
+                                             React.createElement('div', {
+                                                 className: 'spider-line-vertical',
+                                                 style: {
+                                                     left: 0,
+                                                     height: '100%',
+                                                     top: 0
+                                                 }
+                                             })
                                         )
                                     ),
                                     
