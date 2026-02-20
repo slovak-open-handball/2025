@@ -5164,7 +5164,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     React.createElement(
                                         'tr',
                                         { style: { height: '120px' } },
-                                        // 16F4
+                                        // 16F4 (stlpec 1)
                                         React.createElement(
                                             'td',
                                             { 
@@ -5193,15 +5193,13 @@ const SpiderApp = ({ userProfileData }) => {
                                             ),
                                             // Vodorovná čiara od stredu po pravý okraj
                                             React.createElement('div', { className: 'spider-line-horizontal spider-line-right' }),
-                                            // Pravé orámovanie od stredu po horný pravý roh
+                                            // Pravé orámovanie od stredu po horný pravý roh (opravené)
                                             React.createElement('div', { 
                                                 className: 'spider-line-vertical',
                                                 style: { 
                                                     left: '100%',
                                                     height: '50%',
-                                                    top: 0,
-                                                    borderLeft: '2px solid #000',
-                                                    width: 0
+                                                    top: 0
                                                 }
                                             })
                                         ),
@@ -5215,10 +5213,18 @@ const SpiderApp = ({ userProfileData }) => {
                                                     padding: '8px',
                                                     width: '14.28%',
                                                     border: '0px solid #d1d5db',
-                                                    position: 'relative',
-                                                    borderRight: '2px solid #000' // Pravé orámovanie bunky
+                                                    position: 'relative'
                                                 }
-                                            }
+                                            },
+                                            // Pravé orámovanie na celú výšku bunky (namiesto borderRight)
+                                            React.createElement('div', { 
+                                                className: 'spider-line-vertical',
+                                                style: { 
+                                                    left: '100%',
+                                                    height: '100%',
+                                                    top: 0
+                                                }
+                                            })
                                         ),
                                         // Prázdna bunka - stlpec 3
                                         React.createElement(
@@ -5233,7 +5239,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                 }
                                             }
                                         ),
-                                        // Finále
+                                        // Finále (stlpec 4)
                                         React.createElement(
                                             'td',
                                             { 
@@ -5292,12 +5298,20 @@ const SpiderApp = ({ userProfileData }) => {
                                                     padding: '8px',
                                                     width: '14.28%',
                                                     border: '0px solid #d1d5db',
-                                                    position: 'relative',
-                                                    borderLeft: '2px solid #000' // Ľavé orámovanie bunky
+                                                    position: 'relative'
                                                 }
-                                            }
+                                            },
+                                            // Ľavé orámovanie na celú výšku bunky (namiesto borderLeft)
+                                            React.createElement('div', { 
+                                                className: 'spider-line-vertical',
+                                                style: { 
+                                                    left: 0,
+                                                    height: '100%',
+                                                    top: 0
+                                                }
+                                            })
                                         ),
-                                        // 16F12
+                                        // 16F12 (stlpec 7)
                                         React.createElement(
                                             'td',
                                             { 
@@ -5326,15 +5340,13 @@ const SpiderApp = ({ userProfileData }) => {
                                             ),
                                             // Vodorovná čiara od stredu po ľavý okraj
                                             React.createElement('div', { className: 'spider-line-horizontal spider-line-left' }),
-                                            // Ľavé orámovanie od stredu po horný ľavý roh
+                                            // Ľavé orámovanie od stredu po horný ľavý roh (opravené)
                                             React.createElement('div', { 
                                                 className: 'spider-line-vertical',
                                                 style: { 
                                                     left: 0,
                                                     height: '50%',
-                                                    top: 0,
-                                                    borderLeft: '2px solid #000',
-                                                    width: 0
+                                                    top: 0
                                                 }
                                             })
                                         )
