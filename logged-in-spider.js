@@ -6389,6 +6389,14 @@ const SpiderApp = ({ userProfileData }) => {
                                                     top: 0
                                                 }
                                             }),
+                                            React.createElement('div', {
+                                                className: 'spider-line-horizontal',
+                                                style: {
+                                                    left: 0,
+                                                    width: '50%',
+                                                    top: '50%'  // výškovo v strede bunky
+                                                }
+                                            })
                                         )
                                     ),
                                     
@@ -6564,6 +6572,8 @@ const SpiderApp = ({ userProfileData }) => {
                                             })
                                         )
                                     )
+
+                                    
                                 )
                             )
                         )
