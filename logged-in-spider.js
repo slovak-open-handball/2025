@@ -1,4 +1,3 @@
-// border: '0px solid #d1d5db' - orámovanie - border: '1px solid #d1d5db'
 // logged-in-spider.js (upravený - symetrické rozloženie s osemfinále a šestnásťfinále)
 import { doc, getDoc, getDocs, setDoc, onSnapshot, updateDoc, addDoc, deleteDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -235,6 +234,13 @@ const SpiderApp = ({ userProfileData }) => {
     const [hasSpiderMatches, setHasSpiderMatches] = useState(false);
     const [hoveredMissingMatch, setHoveredMissingMatch] = useState(null);
     const [spiderLevel, setSpiderLevel] = useState(1); // 1 = semifinále+, 2 = štvrťfinále+, 3 = osemfinále+, 4 = šestnásťfinále+
+    
+    // NOVÝ STAV: Dáta tímov pre debug
+    const [teamsData, setTeamsData] = useState({
+        userTeams: [],
+        superstructureTeams: [],
+        allTeams: []
+    });
 
     // Definícia isFilterActive - filter je aktívny, ak je vybratá nejaká kategória
     const isFilterActive = selectedCategory !== '';
@@ -293,8 +299,80 @@ const SpiderApp = ({ userProfileData }) => {
             return unsubscribe;
         };
 
+        // NOVÁ FUNKCIA: Načítanie tímov z databázy
+        const loadTeamsData = async () => {
+            try {
+                // Načítanie používateľských tímov
+                const usersSnapshot = await getDocs(collection(window.db, 'users'));
+                const userTeams = [];
+                
+                usersSnapshot.forEach((doc) => {
+                    const userData = doc.data();
+                    if (userData && userData.teams) {
+                        Object.entries(userData.teams).forEach(([categoryName, teamArray]) => {
+                            if (Array.isArray(teamArray)) {
+                                teamArray.forEach(team => {
+                                    if (team.teamName) {
+                                        userTeams.push({
+                                            uid: doc.id,
+                                            category: categoryName,
+                                            id: team.id,
+                                            teamName: team.teamName,
+                                            groupName: team.groupName || null,
+                                            order: team.order || null,
+                                            source: 'user'
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+                
+                // Načítanie superštruktúrnych tímov
+                const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
+                const superstructureDoc = await getDoc(doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/')));
+                const superstructureTeams = [];
+                
+                if (superstructureDoc.exists()) {
+                    const data = superstructureDoc.data() || {};
+                    Object.entries(data).forEach(([categoryName, teamArray]) => {
+                        if (Array.isArray(teamArray)) {
+                            teamArray.forEach(team => {
+                                superstructureTeams.push({
+                                    uid: 'global',
+                                    category: categoryName,
+                                    id: team.id || crypto.randomUUID(),
+                                    teamName: team.teamName,
+                                    groupName: team.groupName || null,
+                                    order: team.order || null,
+                                    source: 'superstructure'
+                                });
+                            });
+                        }
+                    });
+                }
+                
+                setTeamsData({
+                    userTeams,
+                    superstructureTeams,
+                    allTeams: [...userTeams, ...superstructureTeams]
+                });
+                
+                console.log('Načítané tímy:', {
+                    userTeams: userTeams.length,
+                    superstructureTeams: superstructureTeams.length,
+                    total: userTeams.length + superstructureTeams.length
+                });
+                
+            } catch (error) {
+                console.error('Chyba pri načítaní tímov:', error);
+            }
+        };
+
         loadCategorySettings();
         const unsubscribe = loadAllMatches();
+        loadTeamsData();
 
         return () => {
             if (unsubscribe) unsubscribe();
@@ -313,6 +391,108 @@ const SpiderApp = ({ userProfileData }) => {
             }
         }
     }, [categories]);
+
+    // NOVÁ FUNKCIA: Debug výpis tímov pre aktuálnu kategóriu
+    const debugTeamsInCategory = () => {
+        if (!selectedCategory) {
+            console.warn('Nie je vybratá žiadna kategória');
+            return;
+        }
+        
+        const category = categories.find(c => c.id === selectedCategory);
+        const categoryName = category ? category.name : `Kategória ${selectedCategory}`;
+        
+        console.log('========================================');
+        console.log(`🔍 DEBUG TÍMOV PRE KATEGÓRIU: ${categoryName}`);
+        console.log('========================================');
+        
+        // Filtrujeme tímy pre aktuálnu kategóriu
+        const teamsInCategory = teamsData.allTeams.filter(team => 
+            team.category === categoryName
+        );
+        
+        if (teamsInCategory.length === 0) {
+            console.log('ℹ️ Žiadne tímy v tejto kategórii');
+            return;
+        }
+        
+        // Zoskupenie podľa skupiny
+        const teamsByGroup = {};
+        const teamsWithoutGroup = [];
+        
+        teamsInCategory.forEach(team => {
+            if (team.groupName) {
+                if (!teamsByGroup[team.groupName]) {
+                    teamsByGroup[team.groupName] = [];
+                }
+                teamsByGroup[team.groupName].push(team);
+            } else {
+                teamsWithoutGroup.push(team);
+            }
+        });
+        
+        // Výpis tímov bez skupiny
+        if (teamsWithoutGroup.length > 0) {
+            console.log('\n📋 TÍMY BEZ SKUPINY:');
+            console.table(
+                teamsWithoutGroup.map(team => ({
+                    'Názov tímu': team.teamName,
+                    'Zdroj': team.source === 'superstructure' ? 'Nadstavbový' : 'Používateľský',
+                    'Order': team.order || '-'
+                }))
+            );
+        }
+        
+        // Výpis skupín a ich tímov
+        const sortedGroups = Object.keys(teamsByGroup).sort();
+        
+        for (const groupName of sortedGroups) {
+            const teams = teamsByGroup[groupName];
+            
+            // Zistenie typu skupiny (základná/nadstavbová)
+            const hasSuperstructureTeam = teams.some(t => t.source === 'superstructure');
+            const groupType = hasSuperstructureTeam ? '🏆 NADSTAVBOVÁ' : '📘 ZÁKLADNÁ';
+            
+            console.log(`\n${groupType} SKUPINA: ${groupName} (${teams.length} tímov)`);
+            
+            // Zoradenie podľa order
+            const sortedTeams = [...teams].sort((a, b) => {
+                const oa = typeof a.order === 'number' ? a.order : Infinity;
+                const ob = typeof b.order === 'number' ? b.order : Infinity;
+                return oa - ob;
+            });
+            
+            console.table(
+                sortedTeams.map(team => ({
+                    'Order': team.order || '?',
+                    'Názov tímu': team.teamName,
+                    'Zdroj': team.source === 'superstructure' ? 'Nadstavbový' : 'Používateľský'
+                }))
+            );
+            
+            // Kontrola duplicitných order hodnôt
+            const orders = teams.map(t => t.order).filter(o => o !== null && o !== undefined);
+            const duplicates = orders.filter((item, index) => orders.indexOf(item) !== index);
+            
+            if (duplicates.length > 0) {
+                console.warn(`⚠️  Upozornenie: V skupine ${groupName} sú duplicitné order hodnoty: ${[...new Set(duplicates)].join(', ')}`);
+            }
+            
+            // Kontrola dier v poradí
+            const validOrders = orders.filter(o => typeof o === 'number' && o >= 1);
+            if (validOrders.length > 0) {
+                const maxOrder = Math.max(...validOrders);
+                const expectedCount = maxOrder;
+                if (validOrders.length < expectedCount) {
+                    console.warn(`⚠️  V skupine ${groupName} chýbajú tímy (očakávaný počet: ${expectedCount}, aktuálny: ${validOrders.length})`);
+                }
+            }
+        }
+        
+        console.log('\n========================================');
+        console.log(`📊 CELKOVÝ POČET TÍMOV: ${teamsInCategory.length}`);
+        console.log('========================================');
+    };
 
     // Načítanie pavúka pre vybranú kategóriu
     useEffect(() => {
@@ -2160,6 +2340,13 @@ const SpiderApp = ({ userProfileData }) => {
         // Názov zápasu pre modálne okno
         const matchDisplayName = `${title} - ${homeTeam} vs ${awayTeam}`;
         
+        // NOVÁ FUNKCIA: Handler pre kliknutie na "---"
+        const handleTeamClick = (teamName) => {
+            if (teamName === '---') {
+                debugTeamsInCategory();
+            }
+        };
+        
         return React.createElement(
             React.Fragment,
             null,
@@ -2211,14 +2398,20 @@ const SpiderApp = ({ userProfileData }) => {
                 // Domáci tím
                 React.createElement(
                     'div',
-                    { className: 'flex justify-between items-center py-2 border-b border-gray-100' },
+                    { 
+                        className: `flex justify-between items-center py-2 border-b border-gray-100 ${homeTeam === '---' ? 'cursor-pointer hover:bg-gray-50' : ''}`,
+                        onClick: () => handleTeamClick(homeTeam)
+                    },
                     React.createElement('span', { className: 'text-sm font-medium' }, homeTeam),
                     homeScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, homeScore)
                 ),
                 // Hosťovský tím
                 React.createElement(
                     'div',
-                    { className: 'flex justify-between items-center py-2' },
+                    { 
+                        className: `flex justify-between items-center py-2 ${awayTeam === '---' ? 'cursor-pointer hover:bg-gray-50' : ''}`,
+                        onClick: () => handleTeamClick(awayTeam)
+                    },
                     React.createElement('span', { className: 'text-sm font-medium' }, awayTeam),
                     awayScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, awayScore)
                 ),
