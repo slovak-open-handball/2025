@@ -5563,8 +5563,9 @@ const SpiderApp = ({ userProfileData }) => {
                                                     border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
-                                            }
-                                            // Odstránená zvislá čiara uprostred
+                                            },
+                                            // Zvislá čiara uprostred na celú výšku bunky (pridané)
+                                            React.createElement('div', { className: 'spider-line-vertical' })
                                         ),
                                         // o 3. miesto (stlpec 4)
                                         React.createElement(
@@ -5627,8 +5628,16 @@ const SpiderApp = ({ userProfileData }) => {
                                                     border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
-                                            }
-                                            // Odstránená zvislá čiara uprostred
+                                            },
+                                            // Zvislá čiara na 1/4 šírky od ľavého okraja, od stredu po spodný okraj
+                                            React.createElement('div', { 
+                                                className: 'spider-line-vertical',
+                                                style: { 
+                                                    left: '25%',
+                                                    height: '50%',
+                                                    top: '50%'
+                                                }
+                                            })
                                         ),
                                         // 16F13 (stlpec 7)
                                         React.createElement(
@@ -5658,7 +5667,9 @@ const SpiderApp = ({ userProfileData }) => {
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu po ľavý okraj
-                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-left' })
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-left' }),
+                                            // Zvislá čiara uprostred na celú výšku bunky (pridané)
+                                            React.createElement('div', { className: 'spider-line-vertical' })
                                         )
                                     ),
                                     
