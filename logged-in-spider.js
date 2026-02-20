@@ -2568,7 +2568,7 @@ const SpiderApp = ({ userProfileData }) => {
                             'button',
                             {
                                 onClick: (e) => handleRemoveTeamClick(e, homeTeam, 'home'),
-                                className: 'w-6 h-6 bg-orange-500 hover:bg-orange-600 rounded-full flex items-center justify-center shadow-sm hover:shadow-md transform hover:scale-110 transition-all duration-200',
+                                className: 'w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center shadow-sm hover:shadow-md transform hover:scale-110 transition-all duration-200',
                                 style: { color: 'white' },
                                 title: 'Odstrániť priradenie tímu'
                             },
@@ -2615,7 +2615,7 @@ const SpiderApp = ({ userProfileData }) => {
                             'button',
                             {
                                 onClick: (e) => handleRemoveTeamClick(e, awayTeam, 'away'),
-                                className: 'w-6 h-6 bg-orange-500 hover:bg-orange-600 rounded-full flex items-center justify-center shadow-sm hover:shadow-md transform hover:scale-110 transition-all duration-200',
+                                className: 'w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center shadow-sm hover:shadow-md transform hover:scale-110 transition-all duration-200',
                                 style: { color: 'white' },
                                 title: 'Odstrániť priradenie tímu'
                             },
@@ -2803,7 +2803,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     className: `px-4 py-2 text-sm rounded-lg transition-colors ${
                                         generationInProgress
                                             ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                            : 'bg-orange-600 hover:bg-orange-700 text-white'
+                                            : 'bg-red-600 hover:bg-red-700 text-white'
                                     }`
                                 },
                                 'Odstrániť tím'
