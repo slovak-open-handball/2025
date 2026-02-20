@@ -1394,7 +1394,11 @@ const SpiderApp = ({ userProfileData }) => {
                 { 
                     className: 'border-2 border-gray-300 rounded-lg p-3 min-w-[220px] bg-white shadow-sm group relative',
                     'data-match-id': match.id,
-                    style: { zIndex: 10, position: 'relative' },
+                    style: { 
+                        zIndex: isDeleteModalOpen ? 1 : 10,
+                        position: 'relative',
+                        backgroundColor: 'white' // Vždy biele pozadie
+                    },
                     onMouseEnter: () => setIsHovered(true),
                     onMouseLeave: () => setIsHovered(false)
                 },
@@ -1403,7 +1407,7 @@ const SpiderApp = ({ userProfileData }) => {
                     'div',
                     { 
                         className: `absolute -top-2 -right-2 transition-all duration-200 ${
-                            isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
+                            isHovered && !isDeleteModalOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
                         }`,
                         style: { zIndex: 20 }
                     },
@@ -1453,14 +1457,14 @@ const SpiderApp = ({ userProfileData }) => {
             isDeleteModalOpen && React.createElement(
                 'div',
                 {
-                    className: 'fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center',
+                    className: 'fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center',
                     onClick: () => setIsDeleteModalOpen(false),
                     style: { backdropFilter: 'blur(4px)' }
                 },
                 React.createElement(
                     'div',
                     {
-                        className: 'bg-white rounded-xl p-6 w-full max-w-md shadow-2xl',
+                        className: 'bg-white rounded-xl p-6 w-full max-w-md shadow-2xl relative z-[10000]',
                         onClick: (e) => e.stopPropagation()
                     },
                     React.createElement(
