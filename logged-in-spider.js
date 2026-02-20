@@ -2985,12 +2985,7 @@ const SpiderApp = ({ userProfileData }) => {
                                 },
                                 className: 'w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
                                 placeholder: `Zadajte číslo od 1 do ${maxOrderInGroup}`
-                            }),
-                            React.createElement(
-                                'span',
-                                { className: 'text-sm text-gray-500' },
-                                `/ ${maxOrderInGroup}`
-                            )
+                            })
                         ),
                         React.createElement(
                             'p',
