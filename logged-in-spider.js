@@ -4525,15 +4525,13 @@ const SpiderApp = ({ userProfileData }) => {
                                                     width: '25%' // 1/4 z celkovej šírky bunky = od 1/2 do 3/4
                                                 }
                                             }),
-                                            // Pravé orámovanie od stredu bunky po jej spodný pravý okraj
+                                            // Zvislá čiara na úrovni 3/4 šírky od stredu bunky po jej spodný okraj
                                             React.createElement('div', { 
                                                 className: 'spider-line-vertical',
                                                 style: { 
-                                                    left: '100%',
+                                                    left: '75%',
                                                     height: '50%',
-                                                    top: '50%',
-                                                    borderLeft: '2px solid #000',
-                                                    width: 0
+                                                    top: '50%'
                                                 }
                                             })
                                         ),
@@ -4588,15 +4586,13 @@ const SpiderApp = ({ userProfileData }) => {
                                                     width: '25%' // od 1/4 do 1/2
                                                 }
                                             }),
-                                            // Ľavé orámovanie od stredu bunky po jej spodný ľavý okraj
+                                            // Zvislá čiara na úrovni 1/4 šírky od stredu bunky po jej spodný okraj
                                             React.createElement('div', { 
                                                 className: 'spider-line-vertical',
                                                 style: { 
-                                                    left: 0,
+                                                    left: '25%',
                                                     height: '50%',
-                                                    top: '50%',
-                                                    borderLeft: '2px solid #000',
-                                                    width: 0
+                                                    top: '50%'
                                                 }
                                             })
                                         )
