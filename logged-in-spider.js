@@ -1893,7 +1893,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     // PRVÝ RIADOK - Finále (zabezpečený horizontálne) - so zvislou čiarou nadol
                                     React.createElement(
                                         'tr',
-                                        { style: { height: '200px' } },
+                                        { style: { height: '150px' } },
                                         React.createElement(
                                             'td',
                                             { 
@@ -1938,7 +1938,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                                         
                                     React.createElement(
                                         'tr',
-                                        { style: { height: '200px' } },
+                                        { style: { height: '150px' } },
                                         React.createElement(
                                             'td',
                                             { 
@@ -2001,7 +2001,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     // TRETÍ RIADOK - O 3. miesto (zabezpečený horizontálne) - so zvislou čiarou nahor
                                     React.createElement(
                                         'tr',
-                                        { style: { height: '200px' } },
+                                        { style: { height: '150px' } },
                                         React.createElement(
                                             'td',
                                             { 
@@ -2041,7 +2041,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     // PRVÝ RIADOK - QF1, Finále, QF3
                                     React.createElement(
                                         'tr',
-                                        { style: { height: '200px' } },
+                                        { style: { height: '150px' } },
                                         React.createElement(
                                             'td',
                                             { 
@@ -2171,7 +2171,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     // DRUHÝ RIADOK - VŠETKY TRI STĹPCE ZLÚČENÉ a rozdelené na dva rovnaké
                                     React.createElement(
                                         'tr',
-                                        { style: { height: '200px' } },
+                                        { style: { height: '150px' } },
                                         React.createElement(
                                             'td',
                                             { 
@@ -2297,7 +2297,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     // TRETÍ RIADOK - QF2, O 3. miesto, QF4
                                     React.createElement(
                                         'tr',
-                                        { style: { height: '200px' } },
+                                        { style: { height: '150px' } },
                                         React.createElement(
                                             'td',
                                             { 
@@ -2421,7 +2421,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     // RIADOK 1 - Osemfinále 1, prázdno, prázdno, prázdno, Osemfinále 5
                                     React.createElement(
                                         'tr',
-                                        { style: { height: '200px' } },
+                                        { style: { height: '150px' } },
                                         React.createElement(
                                             'td',
                                             { 
@@ -2547,7 +2547,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     // RIADOK 2 - Štvrťfinále 1 (colspan=2), prázdno, Štvrťfinále 3 (colspan=2)
                                     React.createElement(
                                         'tr',
-                                        { style: { height: '200px' } },
+                                        { style: { height: '150px' } },
                                         React.createElement(
                                             'td',
                                             { 
@@ -2682,7 +2682,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     // RIADOK 3 - Osemfinále 2, prázdno, Finále, prázdno, Osemfinále 6
                                     React.createElement(
                                         'tr',
-                                        { style: { height: '200px' } },
+                                        { style: { height: '150px' } },
                                         React.createElement(
                                             'td',
                                             { 
@@ -2840,7 +2840,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     // RIADOK 4 - prázdno, Semifinále 1, prázdno, Semifinále 2, prázdno
                                     React.createElement(
                                         'tr',
-                                        { style: { height: '200px' } },
+                                        { style: { height: '150px' } },
                                         React.createElement(
                                             'td',
                                             { 
@@ -2975,7 +2975,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     // RIADOK 5 - Osemfinále 3, prázdno, O 3. miesto, prázdno, Osemfinále 7
                                     React.createElement(
                                         'tr',
-                                        { style: { height: '200px' } },
+                                        { style: { height: '150px' } },
                                         React.createElement(
                                             'td',
                                             { 
@@ -3133,7 +3133,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     // RIADOK 6 - Štvrťfinále 2 (colspan=2), prázdno, Štvrťfinále 4 (colspan=2)
                                     React.createElement(
                                         'tr',
-                                        { style: { height: '200px' } },
+                                        { style: { height: '150px' } },
                                         React.createElement(
                                             'td',
                                             { 
@@ -3269,7 +3269,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     // RIADOK 7 - Osemfinále 4, prázdno, prázdno, prázdno, Osemfinále 8
                                     React.createElement(
                                         'tr',
-                                        { style: { height: '200px' } },
+                                        { style: { height: '150px' } },
                                         React.createElement(
                                             'td',
                                             { 
