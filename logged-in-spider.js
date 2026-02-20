@@ -2376,6 +2376,14 @@ const SpiderApp = ({ userProfileData }) => {
             return matchRefPatterns.some(pattern => teamName.includes(pattern));
         };
     
+        // Handler pre otvorenie modálneho okna na odstránenie tímu
+        const handleRemoveTeamClick = (e, teamName, position) => {
+            e.stopPropagation(); // Zabraňujeme propagácii kliknutia na rodičovský element
+            if (userProfileData?.role === 'admin' && teamName !== '---' && !isMatchReference(teamName)) {
+                setTeamToRemove({ position, teamName });
+            }
+        };
+    
         // Kontrola, či zápas existuje v databáze
         if (!match.exists) {
             // Chýbajúci zápas - sivý čiarkovaný box s možnosťou generovania
