@@ -6128,7 +6128,7 @@ const SpiderApp = ({ userProfileData }) => {
                                         // 16F7 (stlpec 1)
                                         React.createElement(
                                             'td',
-                                            { 
+                                            {
                                                 className: 'spider-cell',
                                                 style: {
                                                     textAlign: 'center',
@@ -6142,8 +6142,8 @@ const SpiderApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
-                                                React.createElement(MatchCell, { 
-                                                    match: spiderData.sixteenFinals[6], 
+                                                React.createElement(MatchCell, {
+                                                    match: spiderData.sixteenFinals[6],
                                                     title: '16-finále 7',
                                                     matchType: 'šestnásťfinále 7',
                                                     userProfileData: userProfileData,
@@ -6154,20 +6154,20 @@ const SpiderApp = ({ userProfileData }) => {
                                             ),
                                             // Vodorovná čiara od stredu po pravý okraj
                                             React.createElement('div', { className: 'spider-line-horizontal spider-line-right' }),
-                                            // Zvislá čiara od stredu na pravej strane po horný pravý roh
-                                            React.createElement('div', { 
+                                            // Zvislá čiara od stredu na pravej strane po dolný okraj (zmena top: '50%')
+                                            React.createElement('div', {
                                                 className: 'spider-line-vertical',
-                                                style: { 
+                                                style: {
                                                     left: '100%',
                                                     height: '50%',
-                                                    top: 0
+                                                    top: '50%'  // začína v strede, ide dole
                                                 }
                                             })
                                         ),
                                         // Prázdna bunka - stlpec 2
                                         React.createElement(
                                             'td',
-                                            { 
+                                            {
                                                 style: {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
@@ -6183,7 +6183,7 @@ const SpiderApp = ({ userProfileData }) => {
                                         // Prázdna bunka - stlpec 3
                                         React.createElement(
                                             'td',
-                                            { 
+                                            {
                                                 style: {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
@@ -6196,7 +6196,7 @@ const SpiderApp = ({ userProfileData }) => {
                                         // Prázdna bunka - stlpec 4
                                         React.createElement(
                                             'td',
-                                            { 
+                                            {
                                                 style: {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
@@ -6209,7 +6209,7 @@ const SpiderApp = ({ userProfileData }) => {
                                         // Prázdna bunka - stlpec 5
                                         React.createElement(
                                             'td',
-                                            { 
+                                            {
                                                 style: {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
@@ -6222,7 +6222,7 @@ const SpiderApp = ({ userProfileData }) => {
                                         // Prázdna bunka - stlpec 6 - s čiarou
                                         React.createElement(
                                             'td',
-                                            { 
+                                            {
                                                 style: {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
@@ -6238,7 +6238,7 @@ const SpiderApp = ({ userProfileData }) => {
                                         // 16F15 (stlpec 7)
                                         React.createElement(
                                             'td',
-                                            { 
+                                            {
                                                 className: 'spider-cell',
                                                 style: {
                                                     textAlign: 'center',
@@ -6252,8 +6252,8 @@ const SpiderApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
-                                                React.createElement(MatchCell, { 
-                                                    match: spiderData.sixteenFinals[14], 
+                                                React.createElement(MatchCell, {
+                                                    match: spiderData.sixteenFinals[14],
                                                     title: '16-finále 15',
                                                     matchType: 'šestnásťfinále 15',
                                                     userProfileData: userProfileData,
@@ -6264,13 +6264,13 @@ const SpiderApp = ({ userProfileData }) => {
                                             ),
                                             // Vodorovná čiara od stredu po ľavý okraj
                                             React.createElement('div', { className: 'spider-line-horizontal spider-line-left' }),
-                                            // Zvislá čiara od stredu na ľavej strane po horný ľavý roh
-                                            React.createElement('div', { 
+                                            // Zvislá čiara od stredu na ľavej strane po dolný okraj (zmena top: '50%')
+                                            React.createElement('div', {
                                                 className: 'spider-line-vertical',
-                                                style: { 
+                                                style: {
                                                     left: 0,
                                                     height: '50%',
-                                                    top: 0
+                                                    top: '50%'  // začína v strede, ide dole
                                                 }
                                             })
                                         )
