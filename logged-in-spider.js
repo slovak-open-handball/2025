@@ -2605,7 +2605,7 @@ const SpiderApp = ({ userProfileData }) => {
                     { className: 'text-sm font-semibold text-center mb-2 pb-1 border-b border-gray-200' },
                     title
                 ),
-                // Domáci tím - s ikonou koša pre odstránenie priradenia
+                // Domáci tím - s ikonami pre úpravu a odstránenie
                 React.createElement(
                     'div',
                     { 
@@ -2628,16 +2628,34 @@ const SpiderApp = ({ userProfileData }) => {
                         }, homeTeam),
                         homeScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, homeScore)
                     ),
-                    // Ikona koša pre odstránenie priradenia tímu (len pre adminov a len ak nie je '---' a nie je odkaz na zápas)
-                    userProfileData?.role === 'admin' && homeTeam !== '---' && !isMatchReference(homeTeam) && React.createElement(
+                    // Ikony pre adminov (zobrazia sa pri hoveri na celý box)
+                    userProfileData?.role === 'admin' && React.createElement(
                         'div',
                         { 
-                            className: `transition-all duration-200 ${
+                            className: `flex items-center gap-1 transition-all duration-200 ${
                                 isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
                             }`,
                             style: { marginLeft: '4px' }
                         },
-                        React.createElement(
+                        // Modrá ikona ceruzky pre "---" (len ak nie je odkaz na zápas)
+                        homeTeam === '---' && !isMatchReference(homeTeam) && React.createElement(
+                            'button',
+                            {
+                                onClick: (e) => {
+                                    e.stopPropagation();
+                                    handleTeamClick(homeTeam, 'home');
+                                },
+                                className: 'w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow-sm hover:shadow-md transform hover:scale-110 transition-all duration-200',
+                                style: { color: 'white' },
+                                title: 'Priradiť tím'
+                            },
+                            React.createElement('i', { 
+                                className: 'fa-solid fa-pencil text-xs',
+                                style: { color: 'white' }
+                            })
+                        ),
+                        // Ikona koša pre odstránenie priradenia tímu (len ak nie je '---' a nie je odkaz na zápas)
+                        homeTeam !== '---' && !isMatchReference(homeTeam) && React.createElement(
                             'button',
                             {
                                 onClick: (e) => handleRemoveTeamClick(e, homeTeam, 'home'),
@@ -2652,7 +2670,7 @@ const SpiderApp = ({ userProfileData }) => {
                         )
                     )
                 ),
-                // Hosťovský tím - s ikonou koša pre odstránenie priradenia
+                // Hosťovský tím - s ikonami pre úpravu a odstránenie
                 React.createElement(
                     'div',
                     { 
@@ -2675,16 +2693,34 @@ const SpiderApp = ({ userProfileData }) => {
                         }, awayTeam),
                         awayScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, awayScore)
                     ),
-                    // Ikona koša pre odstránenie priradenia tímu (len pre adminov a len ak nie je '---' a nie je odkaz na zápas)
-                    userProfileData?.role === 'admin' && awayTeam !== '---' && !isMatchReference(awayTeam) && React.createElement(
+                    // Ikony pre adminov (zobrazia sa pri hoveri na celý box)
+                    userProfileData?.role === 'admin' && React.createElement(
                         'div',
                         { 
-                            className: `transition-all duration-200 ${
+                            className: `flex items-center gap-1 transition-all duration-200 ${
                                 isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
                             }`,
                             style: { marginLeft: '4px' }
                         },
-                        React.createElement(
+                        // Modrá ikona ceruzky pre "---" (len ak nie je odkaz na zápas)
+                        awayTeam === '---' && !isMatchReference(awayTeam) && React.createElement(
+                            'button',
+                            {
+                                onClick: (e) => {
+                                    e.stopPropagation();
+                                    handleTeamClick(awayTeam, 'away');
+                                },
+                                className: 'w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow-sm hover:shadow-md transform hover:scale-110 transition-all duration-200',
+                                style: { color: 'white' },
+                                title: 'Priradiť tím'
+                            },
+                            React.createElement('i', { 
+                                className: 'fa-solid fa-pencil text-xs',
+                                style: { color: 'white' }
+                            })
+                        ),
+                        // Ikona koša pre odstránenie priradenia tímu (len ak nie je '---' a nie je odkaz na zápas)
+                        awayTeam !== '---' && !isMatchReference(awayTeam) && React.createElement(
                             'button',
                             {
                                 onClick: (e) => handleRemoveTeamClick(e, awayTeam, 'away'),
