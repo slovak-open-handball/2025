@@ -5339,11 +5339,11 @@ const SpiderApp = ({ userProfileData }) => {
                                         )
                                     ),
                                     
-                                    // RIADOK 8: prázdno, Semifinále 1 (colspan=2), prázdno, Semifinále 2 (colspan=2), prázdno
+                                    // RIADOK 8: prázdno, Semifinále 1 (colspan=2), Semifinále 2 (colspan=2), prázdno
                                     React.createElement(
                                         'tr',
                                         { style: { height: '120px' } },
-                                        // prázdno (stlpec 1)
+                                        // prázdno (stlpec 1) - 16.66%
                                         React.createElement(
                                             'td',
                                             { 
@@ -5351,12 +5351,12 @@ const SpiderApp = ({ userProfileData }) => {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
-                                                    width: '14.28%',
+                                                    width: '16.66%',
                                                     border: '1px solid #d1d5db'
                                                 }
                                             }
                                         ),
-                                        // Semifinále 1 (colspan=2) - stlpce 2-3
+                                        // Semifinále 1 (colspan=2) - stlpce 2-3 (spolu 33.32%)
                                         React.createElement(
                                             'td',
                                             { 
@@ -5366,7 +5366,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
-                                                    width: '28.56%',
+                                                    width: '33.32%',
                                                     border: '1px solid #d1d5db',
                                                     position: 'relative'
                                                 }
@@ -5395,38 +5395,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                 }
                                             })
                                         ),
-                                        // prázdno - stlpec 4
-                                        React.createElement(
-                                            'td',
-                                            { 
-                                                style: {
-                                                    textAlign: 'center',
-                                                    verticalAlign: 'middle',
-                                                    padding: '8px',
-                                                    width: '14.28%',
-                                                    border: '1px solid #d1d5db',
-                                                    position: 'relative'
-                                                }
-                                            },
-                                            // Vodorovná čiara na celú šírku bunky výškovo uprostred
-                                            React.createElement('div', { 
-                                                className: 'spider-line-horizontal',
-                                                style: { 
-                                                    left: 0,
-                                                    width: '100%'
-                                                }
-                                            }),
-                                            // Zvislá čiara na 50% šírky bunky (v strede) na celú výšku
-                                            React.createElement('div', { 
-                                                className: 'spider-line-vertical',
-                                                style: { 
-                                                    left: '50%',
-                                                    height: '100%',
-                                                    top: 0
-                                                }
-                                            })
-                                        ),
-                                        // Semifinále 2 (colspan=2) - stlpce 5-6
+                                        // Semifinále 2 (colspan=2) - stlpce 4-5 (spolu 33.32%)
                                         React.createElement(
                                             'td',
                                             { 
@@ -5436,7 +5405,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
-                                                    width: '28.56%',
+                                                    width: '33.32%',
                                                     border: '1px solid #d1d5db',
                                                     position: 'relative'
                                                 }
@@ -5465,7 +5434,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                 }
                                             })
                                         ),
-                                        // prázdno (stlpec 7)
+                                        // prázdno (stlpec 6) - 16.66%
                                         React.createElement(
                                             'td',
                                             { 
@@ -5473,7 +5442,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
-                                                    width: '14.28%',
+                                                    width: '16.66%',
                                                     border: '1px solid #d1d5db'
                                                 }
                                             }
