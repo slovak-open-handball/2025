@@ -1,5 +1,5 @@
 // border: '0px solid #d1d5db' - orámovanie - border: '1px solid #d1d5db'
-// logged-in-spider.js (upravený - symetrické rozloženie s osemfinále)
+// logged-in-spider.js (upravený - symetrické rozloženie s osemfinále a šestnásťfinále)
 import { doc, getDoc, getDocs, setDoc, onSnapshot, updateDoc, addDoc, deleteDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { createPortal } = ReactDOM;
@@ -234,7 +234,7 @@ const SpiderApp = ({ userProfileData }) => {
     const [isDeleteMatchesModalOpen, setIsDeleteMatchesModalOpen] = useState(false);
     const [hasSpiderMatches, setHasSpiderMatches] = useState(false);
     const [hoveredMissingMatch, setHoveredMissingMatch] = useState(null);
-    const [spiderLevel, setSpiderLevel] = useState(1); // 1 = semifinále+, 2 = štvrťfinále+, 3 = osemfinále+
+    const [spiderLevel, setSpiderLevel] = useState(1); // 1 = semifinále+, 2 = štvrťfinále+, 3 = osemfinále+, 4 = šestnásťfinále+
 
     // Definícia isFilterActive - filter je aktívny, ak je vybratá nejaká kategória
     const isFilterActive = selectedCategory !== '';
@@ -324,7 +324,11 @@ const SpiderApp = ({ userProfileData }) => {
                 ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto', 
                  'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4',
                  'osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
-                 'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8'].includes(m.matchType)
+                 'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8',
+                 'šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
+                 'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
+                 'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
+                 'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
             );
             
             console.log('Nájdené pavúkové zápasy pre kategóriu:', spiderMatches);
@@ -334,10 +338,16 @@ const SpiderApp = ({ userProfileData }) => {
             const hasQuarterfinalMatches = spiderMatches.some(m => ['štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4'].includes(m.matchType));
             const hasEightfinalMatches = spiderMatches.some(m => ['osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
                                                                   'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8'].includes(m.matchType));
+            const hasSixteenfinalMatches = spiderMatches.some(m => ['šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
+                                                                    'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
+                                                                    'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
+                                                                    'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType));
             
             setHasSpiderMatches(spiderMatches.length > 0);
             
-            if (hasEightfinalMatches) {
+            if (hasSixteenfinalMatches) {
+                setSpiderLevel(4);
+            } else if (hasEightfinalMatches) {
                 setSpiderLevel(3);
             } else if (hasQuarterfinalMatches) {
                 setSpiderLevel(2);
@@ -489,6 +499,152 @@ const SpiderApp = ({ userProfileData }) => {
                             exists: false
                         }
                     ],
+                    sixteenFinals: [
+                        spiderMatches.find(m => m.matchType === 'šestnásťfinále 1') || { 
+                            id: 'sf1', 
+                            homeTeam: '---', 
+                            awayTeam: '---', 
+                            homeScore: '', 
+                            awayScore: '', 
+                            date: null,
+                            exists: false
+                        },
+                        spiderMatches.find(m => m.matchType === 'šestnásťfinále 2') || { 
+                            id: 'sf2', 
+                            homeTeam: '---', 
+                            awayTeam: '---', 
+                            homeScore: '', 
+                            awayScore: '', 
+                            date: null,
+                            exists: false
+                        },
+                        spiderMatches.find(m => m.matchType === 'šestnásťfinále 3') || { 
+                            id: 'sf3', 
+                            homeTeam: '---', 
+                            awayTeam: '---', 
+                            homeScore: '', 
+                            awayScore: '', 
+                            date: null,
+                            exists: false
+                        },
+                        spiderMatches.find(m => m.matchType === 'šestnásťfinále 4') || { 
+                            id: 'sf4', 
+                            homeTeam: '---', 
+                            awayTeam: '---', 
+                            homeScore: '', 
+                            awayScore: '', 
+                            date: null,
+                            exists: false
+                        },
+                        spiderMatches.find(m => m.matchType === 'šestnásťfinále 5') || { 
+                            id: 'sf5', 
+                            homeTeam: '---', 
+                            awayTeam: '---', 
+                            homeScore: '', 
+                            awayScore: '', 
+                            date: null,
+                            exists: false
+                        },
+                        spiderMatches.find(m => m.matchType === 'šestnásťfinále 6') || { 
+                            id: 'sf6', 
+                            homeTeam: '---', 
+                            awayTeam: '---', 
+                            homeScore: '', 
+                            awayScore: '', 
+                            date: null,
+                            exists: false
+                        },
+                        spiderMatches.find(m => m.matchType === 'šestnásťfinále 7') || { 
+                            id: 'sf7', 
+                            homeTeam: '---', 
+                            awayTeam: '---', 
+                            homeScore: '', 
+                            awayScore: '', 
+                            date: null,
+                            exists: false
+                        },
+                        spiderMatches.find(m => m.matchType === 'šestnásťfinále 8') || { 
+                            id: 'sf8', 
+                            homeTeam: '---', 
+                            awayTeam: '---', 
+                            homeScore: '', 
+                            awayScore: '', 
+                            date: null,
+                            exists: false
+                        },
+                        spiderMatches.find(m => m.matchType === 'šestnásťfinále 9') || { 
+                            id: 'sf9', 
+                            homeTeam: '---', 
+                            awayTeam: '---', 
+                            homeScore: '', 
+                            awayScore: '', 
+                            date: null,
+                            exists: false
+                        },
+                        spiderMatches.find(m => m.matchType === 'šestnásťfinále 10') || { 
+                            id: 'sf10', 
+                            homeTeam: '---', 
+                            awayTeam: '---', 
+                            homeScore: '', 
+                            awayScore: '', 
+                            date: null,
+                            exists: false
+                        },
+                        spiderMatches.find(m => m.matchType === 'šestnásťfinále 11') || { 
+                            id: 'sf11', 
+                            homeTeam: '---', 
+                            awayTeam: '---', 
+                            homeScore: '', 
+                            awayScore: '', 
+                            date: null,
+                            exists: false
+                        },
+                        spiderMatches.find(m => m.matchType === 'šestnásťfinále 12') || { 
+                            id: 'sf12', 
+                            homeTeam: '---', 
+                            awayTeam: '---', 
+                            homeScore: '', 
+                            awayScore: '', 
+                            date: null,
+                            exists: false
+                        },
+                        spiderMatches.find(m => m.matchType === 'šestnásťfinále 13') || { 
+                            id: 'sf13', 
+                            homeTeam: '---', 
+                            awayTeam: '---', 
+                            homeScore: '', 
+                            awayScore: '', 
+                            date: null,
+                            exists: false
+                        },
+                        spiderMatches.find(m => m.matchType === 'šestnásťfinále 14') || { 
+                            id: 'sf14', 
+                            homeTeam: '---', 
+                            awayTeam: '---', 
+                            homeScore: '', 
+                            awayScore: '', 
+                            date: null,
+                            exists: false
+                        },
+                        spiderMatches.find(m => m.matchType === 'šestnásťfinále 15') || { 
+                            id: 'sf15', 
+                            homeTeam: '---', 
+                            awayTeam: '---', 
+                            homeScore: '', 
+                            awayScore: '', 
+                            date: null,
+                            exists: false
+                        },
+                        spiderMatches.find(m => m.matchType === 'šestnásťfinále 16') || { 
+                            id: 'sf16', 
+                            homeTeam: '---', 
+                            awayTeam: '---', 
+                            homeScore: '', 
+                            awayScore: '', 
+                            date: null,
+                            exists: false
+                        }
+                    ],
                     thirdPlace: spiderMatches.find(m => m.matchType === 'o 3. miesto') || { 
                         id: 'third', 
                         homeTeam: '---', 
@@ -577,6 +733,17 @@ const SpiderApp = ({ userProfileData }) => {
                             spiderStructure.eightFinals[index].awayScore = match.awayScore;
                             spiderStructure.eightFinals[index].date = match.date;
                         }
+                    } else if (match.matchType.startsWith('šestnásťfinále')) {
+                        const index = parseInt(match.matchType.split(' ')[1]) - 1;
+                        if (index >= 0 && index < 16) {
+                            spiderStructure.sixteenFinals[index].exists = true;
+                            spiderStructure.sixteenFinals[index].id = match.id;
+                            spiderStructure.sixteenFinals[index].homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
+                            spiderStructure.sixteenFinals[index].awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
+                            spiderStructure.sixteenFinals[index].homeScore = match.homeScore;
+                            spiderStructure.sixteenFinals[index].awayScore = match.awayScore;
+                            spiderStructure.sixteenFinals[index].date = match.date;
+                        }
                     }
                 });
                 
@@ -615,8 +782,50 @@ const SpiderApp = ({ userProfileData }) => {
                 return;
             }
     
+            // Ak mažeme šestnásťfinálový zápas, aktualizujeme príslušný osemfinálový zápas
+            if (matchType.startsWith('šestnásťfinále')) {
+                // Získame číslo šestnásťfinále (1-16)
+                const matchNumber = parseInt(matchType.split(' ')[1]);
+                
+                // Určíme, ktorý osemfinálový zápas a ktorú pozíciu (domáci/hosť) treba aktualizovať
+                let eightfinalMatchType = '';
+                let position = ''; // 'home' alebo 'away'
+                
+                // Mapovanie šestnásťfinále na osemfinále
+                // Šestnásťfinále 1 a 2 -> Osemfinále 1 (domáci a hosť)
+                // Šestnásťfinále 3 a 4 -> Osemfinále 2 (domáci a hosť)
+                // Šestnásťfinále 5 a 6 -> Osemfinále 3 (domáci a hosť)
+                // Šestnásťfinále 7 a 8 -> Osemfinále 4 (domáci a hosť)
+                // Šestnásťfinále 9 a 10 -> Osemfinále 5 (domáci a hosť)
+                // Šestnásťfinále 11 a 12 -> Osemfinále 6 (domáci a hosť)
+                // Šestnásťfinále 13 a 14 -> Osemfinále 7 (domáci a hosť)
+                // Šestnásťfinále 15 a 16 -> Osemfinále 8 (domáci a hosť)
+                
+                const eightfinalNumber = Math.ceil(matchNumber / 2);
+                eightfinalMatchType = `osemfinále ${eightfinalNumber}`;
+                position = matchNumber % 2 === 1 ? 'home' : 'away';
+                
+                // Nájdeme príslušný osemfinálový zápas
+                const eightfinalMatch = allMatches.find(m => 
+                    m.categoryId === selectedCategory && 
+                    m.matchType === eightfinalMatchType
+                );
+                
+                if (eightfinalMatch) {
+                    // Aktualizujeme príslušný identifikátor na '---'
+                    const updateData = {};
+                    if (position === 'home') {
+                        updateData.homeTeamIdentifier = '---';
+                    } else {
+                        updateData.awayTeamIdentifier = '---';
+                    }
+                    
+                    await updateDoc(doc(window.db, 'matches', eightfinalMatch.id), updateData);
+                }
+            }
+            
             // Ak mažeme osemfinálový zápas, aktualizujeme príslušný štvrťfinálový zápas
-            if (matchType.startsWith('osemfinále')) {
+            else if (matchType.startsWith('osemfinále')) {
                 // Získame číslo osemfinále (1-8)
                 const matchNumber = parseInt(matchType.split(' ')[1]);
                 
@@ -795,17 +1004,25 @@ const SpiderApp = ({ userProfileData }) => {
                 ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto', 
                  'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4',
                  'osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
-                 'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8'].includes(m.matchType)
+                 'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8',
+                 'šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
+                 'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
+                 'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
+                 'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
             );
             
             const hasSemifinals = existingSpiderMatches.some(m => ['semifinále 1', 'semifinále 2'].includes(m.matchType));
             const hasQuarterfinals = existingSpiderMatches.some(m => ['štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4'].includes(m.matchType));
             const hasEightfinals = existingSpiderMatches.some(m => ['osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
                                                                      'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8'].includes(m.matchType));
+            const hasSixteenfinals = existingSpiderMatches.some(m => ['šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
+                                                                      'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
+                                                                      'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
+                                                                      'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType));
             
-            // Ak už existujú osemfinále, nebudeme generovať nič
-            if (hasEightfinals) {
-                window.showGlobalNotification('Pavúk už má osemfinále. Ďalšia úroveň zatiaľ nie je implementovaná.', 'warning');
+            // Ak už existujú šestnásťfinále, nebudeme generovať nič
+            if (hasSixteenfinals) {
+                window.showGlobalNotification('Pavúk už má šestnásťfinále. Ďalšia úroveň zatiaľ nie je implementovaná.', 'warning');
                 setGenerationInProgress(false);
                 return;
             }
@@ -971,7 +1188,7 @@ const SpiderApp = ({ userProfileData }) => {
                 }
                 
                 setSpiderLevel(2);
-            } else {
+            } else if (!hasEightfinals) {
                 // Tretie generovanie - osemfinále (8 zápasov)
                 matchesToSave = [
                     // Osemfinále 1
@@ -1131,6 +1348,44 @@ const SpiderApp = ({ userProfileData }) => {
                 }
                 
                 setSpiderLevel(3);
+            } else {
+                // Štvrté generovanie - šestnásťfinále (16 zápasov)
+                matchesToSave = [];
+                
+                // Vytvoríme 16 šestnásťfinálových zápasov
+                for (let i = 1; i <= 16; i++) {
+                    matchesToSave.push({
+                        homeTeamIdentifier: '---',
+                        awayTeamIdentifier: '---',
+                        time: '--:--',
+                        hallId: null,
+                        categoryId: categoryId,
+                        categoryName: categoryName,
+                        groupName: null,
+                        matchType: `šestnásťfinále ${i}`,
+                        status: 'pending',
+                        createdAt: Timestamp.now(),
+                        createdBy: userProfileData?.email || 'unknown',
+                        createdByUid: userProfileData?.uid || null
+                    });
+                }
+
+                // Nájdeme existujúce osemfinálové zápasy a aktualizujeme ich identifikátory
+                for (let i = 1; i <= 8; i++) {
+                    const eightfinalMatch = existingSpiderMatches.find(m => m.matchType === `osemfinále ${i}`);
+                    
+                    if (eightfinalMatch) {
+                        const homeIdentifier = `W16F${(i * 2) - 1}`;
+                        const awayIdentifier = `W16F${i * 2}`;
+                        
+                        await updateDoc(doc(window.db, 'matches', eightfinalMatch.id), {
+                            homeTeamIdentifier: `${categoryWithoutDiacritics} ${homeIdentifier}`,
+                            awayTeamIdentifier: `${categoryWithoutDiacritics} ${awayIdentifier}`
+                        });
+                    }
+                }
+                
+                setSpiderLevel(4);
             }
     
             // Uložíme zápasy do Firebase
@@ -1156,8 +1411,10 @@ const SpiderApp = ({ userProfileData }) => {
                 message = `Pavúk bol vygenerovaný a uložených ${savedMatches.length} zápasov do databázy`;
             } else if (!hasQuarterfinals) {
                 message = `Štvrťfinále bolo vygenerované (${savedMatches.length} zápasov)`;
-            } else {
+            } else if (!hasEightfinals) {
                 message = `Osemfinále bolo vygenerované (${savedMatches.length} zápasov)`;
+            } else {
+                message = `Šestnásťfinále bolo vygenerované (${savedMatches.length} zápasov)`;
             }
             
             window.showGlobalNotification(message, 'success');
@@ -1227,12 +1484,39 @@ const SpiderApp = ({ userProfileData }) => {
                 createdByUid: userProfileData?.uid || null
             };
             
-            // Pre osemfinálový zápas - nastavíme identifikátory podľa toho, či existujú podradené zápasy
-            if (matchType.startsWith('osemfinále')) {
+            // Pre šestnásťfinálový zápas - nastavíme identifikátory podľa toho, či existujú podradené zápasy
+            if (matchType.startsWith('šestnásťfinále')) {
+                // Šestnásťfinále nemá podradené zápasy, takže identifikátory zostávajú '---'
+            }
+            
+            // Pre osemfinálový zápas - nastavíme identifikátory podľa existujúcich šestnásťfinálových zápasov
+            else if (matchType.startsWith('osemfinále')) {
                 const matchNumber = parseInt(matchType.split(' ')[1]);
                 
-                // Osemfinále nemá podradené zápasy, takže identifikátory zostávajú '---'
-                // (alebo by sa mali nastaviť podľa niečoho iného?)
+                // Zistíme, ktoré šestnásťfinálové zápasy patria pod tento osemfinálový zápas
+                const sixteenfinal1Number = (matchNumber * 2) - 1;
+                const sixteenfinal2Number = matchNumber * 2;
+                
+                // Skontrolujeme, či existujú príslušné šestnásťfinálové zápasy
+                const sixteenfinal1Exists = allMatches.some(m => 
+                    m.categoryId === selectedCategory && 
+                    m.matchType === `šestnásťfinále ${sixteenfinal1Number}`
+                );
+                
+                const sixteenfinal2Exists = allMatches.some(m => 
+                    m.categoryId === selectedCategory && 
+                    m.matchType === `šestnásťfinále ${sixteenfinal2Number}`
+                );
+                
+                // Ak existuje šestnásťfinále 1, nastavíme homeTeamIdentifier, inak necháme '---'
+                if (sixteenfinal1Exists) {
+                    matchData.homeTeamIdentifier = `${categoryWithoutDiacritics} W16F${sixteenfinal1Number}`;
+                }
+                
+                // Ak existuje šestnásťfinále 2, nastavíme awayTeamIdentifier, inak necháme '---'
+                if (sixteenfinal2Exists) {
+                    matchData.awayTeamIdentifier = `${categoryWithoutDiacritics} W16F${sixteenfinal2Number}`;
+                }
             }
             
             // Pre štvrťfinálový zápas - nastavíme identifikátory podľa existujúcich osemfinálových zápasov
@@ -1383,8 +1667,37 @@ const SpiderApp = ({ userProfileData }) => {
             // Po úspešnom vytvorení zápasu aktualizujeme nadväzujúce zápasy (o úroveň vyššie)
             const newMatchId = docRef.id;
             
+            // Ak sme vytvorili šestnásťfinálový zápas, aktualizujeme príslušný osemfinálový zápas
+            if (matchType.startsWith('šestnásťfinále')) {
+                // Získame číslo šestnásťfinále (1-16)
+                const matchNumber = parseInt(matchType.split(' ')[1]);
+                
+                // Určíme, ktorý osemfinálový zápas a ktorú pozíciu (domáci/hosť) treba aktualizovať
+                const eightfinalNumber = Math.ceil(matchNumber / 2);
+                const position = matchNumber % 2 === 1 ? 'home' : 'away';
+                const identifierSuffix = `W16F${matchNumber}`;
+                
+                // Nájdeme príslušný osemfinálový zápas
+                const eightfinalMatch = allMatches.find(m => 
+                    m.categoryId === selectedCategory && 
+                    m.matchType === `osemfinále ${eightfinalNumber}`
+                );
+                
+                if (eightfinalMatch) {
+                    // Aktualizujeme príslušný identifikátor
+                    const updateData = {};
+                    if (position === 'home') {
+                        updateData.homeTeamIdentifier = `${categoryWithoutDiacritics} ${identifierSuffix}`;
+                    } else {
+                        updateData.awayTeamIdentifier = `${categoryWithoutDiacritics} ${identifierSuffix}`;
+                    }
+                    
+                    await updateDoc(doc(window.db, 'matches', eightfinalMatch.id), updateData);
+                }
+            }
+            
             // Ak sme vytvorili osemfinálový zápas, aktualizujeme príslušný štvrťfinálový zápas
-            if (matchType.startsWith('osemfinále')) {
+            else if (matchType.startsWith('osemfinále')) {
                 // Získame číslo osemfinále (1-8)
                 const matchNumber = parseInt(matchType.split(' ')[1]);
                 
@@ -1557,7 +1870,11 @@ const SpiderApp = ({ userProfileData }) => {
                 ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto', 
                  'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4',
                  'osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
-                 'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8'].includes(m.matchType)
+                 'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8',
+                 'šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
+                 'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
+                 'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
+                 'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
             );
             
             if (existingSpiderMatches.length === 0) {
@@ -1566,6 +1883,10 @@ const SpiderApp = ({ userProfileData }) => {
             }
     
             // Zistíme, aká je najvyššia úroveň
+            const hasSixteenfinals = existingSpiderMatches.some(m => ['šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
+                                                                      'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
+                                                                      'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
+                                                                      'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType));
             const hasEightfinals = existingSpiderMatches.some(m => ['osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
                                                                      'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8'].includes(m.matchType));
             const hasQuarterfinals = existingSpiderMatches.some(m => ['štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4'].includes(m.matchType));
@@ -1573,8 +1894,32 @@ const SpiderApp = ({ userProfileData }) => {
             let matchesToDelete = [];
             let message = '';
             
-            if (hasEightfinals) {
-                // Ak existujú osemfinále, zmažeme len ich
+            if (hasSixteenfinals) {
+                // Ak existujú šestnásťfinále, zmažeme len ich
+                matchesToDelete = existingSpiderMatches.filter(m => 
+                    ['šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
+                     'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
+                     'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
+                     'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
+                );
+                
+                // Aktualizujeme identifikátory osemfinálových zápasov späť na '---'
+                for (let i = 1; i <= 8; i++) {
+                    const eightfinalMatch = existingSpiderMatches.find(m => m.matchType === `osemfinále ${i}`);
+                    
+                    if (eightfinalMatch) {
+                        await updateDoc(doc(window.db, 'matches', eightfinalMatch.id), {
+                            homeTeamIdentifier: '---',
+                            awayTeamIdentifier: '---'
+                        });
+                    }
+                }
+                
+                setSpiderLevel(3);
+                message = `Zmazané šestnásťfinále (${matchesToDelete.length} zápasov)`;
+                
+            } else if (hasEightfinals) {
+                // Ak existujú osemfinále (ale nie šestnásťfinále), zmažeme ich
                 matchesToDelete = existingSpiderMatches.filter(m => 
                     ['osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
                      'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8'].includes(m.matchType)
@@ -2084,10 +2429,14 @@ const SpiderApp = ({ userProfileData }) => {
                                         ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto', 
                                          'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4',
                                          'osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
-                                         'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8'].includes(m.matchType)
+                                         'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8',
+                                         'šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
+                                         'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
+                                         'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
+                                         'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
                                     ).length;
                                     
-                                    const level = spiderMatches >= 12 ? 3 : (spiderMatches >= 8 ? 2 : (spiderMatches >= 4 ? 1 : 0));
+                                    const level = spiderMatches >= 28 ? 4 : (spiderMatches >= 12 ? 3 : (spiderMatches >= 8 ? 2 : (spiderMatches >= 4 ? 1 : 0)));
                                     
                                     return React.createElement('option', { 
                                         key: cat.id, 
@@ -2175,6 +2524,7 @@ const SpiderApp = ({ userProfileData }) => {
                         title: !selectedCategory ? 'Najprv vyberte kategóriu' : 
                                (spiderLevel === 1 ? 'Generovať štvrťfinále' : 
                                 spiderLevel === 2 ? 'Generovať osemfinále' : 
+                                spiderLevel === 3 ? 'Generovať šestnásťfinále' : 
                                 'Generovať pavúka')
                     },
                     React.createElement(
@@ -2332,9 +2682,19 @@ const SpiderApp = ({ userProfileData }) => {
                         ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto', 
                          'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4',
                          'osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
-                         'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8'].includes(m.matchType)
+                         'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8',
+                         'šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
+                         'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
+                         'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
+                         'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
                     );
                     
+                    const hasSixteenfinals = existingSpiderMatches.some(m => 
+                        ['šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
+                         'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
+                         'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
+                         'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
+                    );
                     const hasEightfinals = existingSpiderMatches.some(m => 
                         ['osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
                          'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8'].includes(m.matchType)
@@ -2346,7 +2706,15 @@ const SpiderApp = ({ userProfileData }) => {
                     let deleteMessage = '';
                     let deleteCount = 0;
                     
-                    if (hasEightfinals) {
+                    if (hasSixteenfinals) {
+                        deleteCount = existingSpiderMatches.filter(m => 
+                            ['šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
+                             'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
+                             'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
+                             'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
+                        ).length;
+                        deleteMessage = `Naozaj chcete zmazať všetky šestnásťfinálové zápasy (${deleteCount}) pre kategóriu "${categories.find(c => c.id === selectedCategory)?.name || selectedCategory}"?`;
+                    } else if (hasEightfinals) {
                         deleteCount = existingSpiderMatches.filter(m => 
                             ['osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
                              'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8'].includes(m.matchType)
@@ -2406,12 +2774,12 @@ const SpiderApp = ({ userProfileData }) => {
             React.createElement(
                 'div',
                 { 
-                    className: 'bg-white p-8 rounded-xl shadow-lg',
+                    className: 'bg-white p-8 rounded-xl shadow-lg overflow-x-auto',
                     style: { 
                         width: '100%', 
-                        maxWidth: spiderLevel === 3 ? `${5 * (240 + 24 + 4)}px` : 
-                                  (spiderLevel === 2 ? `${3 * (260 + 24 + 4)}px` : 
-                                                      `${2 * (280 + 24 + 4)}px`),
+                        maxWidth: spiderLevel === 4 ? '1400px' : 
+                                  (spiderLevel === 3 ? '1200px' : 
+                                   (spiderLevel === 2 ? '1000px' : '800px')),
                     }
                 },
                 
@@ -2456,7 +2824,7 @@ const SpiderApp = ({ userProfileData }) => {
                             { 
                                 className: 'text-2xl font-bold mb-12 text-gray-800',
                             },
-                            `Play-off ${spiderLevel === 3 ? '(osemfinále)' : (spiderLevel === 2 ? '(štvrťfinále)' : '')} - ${categories.find(c => c.id === selectedCategory)?.name || selectedCategory}`
+                            `Play-off ${spiderLevel === 4 ? '(šestnásťfinále)' : (spiderLevel === 3 ? '(osemfinále)' : (spiderLevel === 2 ? '(štvrťfinále)' : ''))} - ${categories.find(c => c.id === selectedCategory)?.name || selectedCategory}`
                         ),
                         
                         // Tabuľka pre pavúka - s orámovaním každej bunky
@@ -3016,7 +3384,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     )
                                 ),
                                 
-                                // ÚROVEŇ 3 (s osemfinále) - s čiarami
+                                // ===== ÚROVEŇ 3 (s osemfinále) =====
                                 spiderLevel === 3 && React.createElement(
                                     React.Fragment,
                                     null,
@@ -4008,6 +4376,1900 @@ const SpiderApp = ({ userProfileData }) => {
                                                     pointerEvents: 'none'
                                                 }
                                             })
+                                        )
+                                    )
+                                ),
+                                
+                                // ===== ÚROVEŇ 4 (so šestnásťfinále) =====
+                                spiderLevel === 4 && React.createElement(
+                                    React.Fragment,
+                                    null,
+                                    
+                                    // PREHEAD: 16-finále má 16 zápasov v najnižšej úrovni
+                                    // Štruktúra:
+                                    // - Riadok 1: 16F1, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, 16F9
+                                    // - Riadok 2: prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno (možno zlúčené)
+                                    // - Riadok 3: 16F2, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, 16F10
+                                    // - Riadok 4: Osemfinále 1 (colspan=2), prázdno, prázdno, prázdno, Osemfinále 5 (colspan=2)
+                                    // - Riadok 5: 16F3, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, 16F11
+                                    // - Riadok 6: prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno
+                                    // - Riadok 7: 16F4, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, 16F12
+                                    // - Riadok 8: Štvrťfinále 1 (colspan=4), prázdno, Štvrťfinále 3 (colspan=4)
+                                    // - Riadok 9: 16F5, prázdno, prázdno, prázdno, Finále, prázdno, prázdno, prázdno, 16F13
+                                    // - Riadok 10: prázdno, prázdno, prázdno, Semifinále 1, prázdno, Semifinále 2, prázdno, prázdno, prázdno
+                                    // - Riadok 11: 16F6, prázdno, prázdno, prázdno, O 3. miesto, prázdno, prázdno, prázdno, 16F14
+                                    // - Riadok 12: Štvrťfinále 2 (colspan=4), prázdno, Štvrťfinále 4 (colspan=4)
+                                    // - Riadok 13: 16F7, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, 16F15
+                                    // - Riadok 14: prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno
+                                    // - Riadok 15: 16F8, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, 16F16
+                                    // - Riadok 16: Osemfinále 2 (colspan=2), prázdno, prázdno, prázdno, Osemfinále 6 (colspan=2)
+                                    // - Riadok 17: prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno
+                                    // - Riadok 18: prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno
+                                    // - Riadok 19: prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno
+                                    // - Riadok 20: prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno
+                                    // - Riadok 21: prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno
+                                    // - Riadok 22: Osemfinále 3 (colspan=2), prázdno, prázdno, prázdno, Osemfinále 7 (colspan=2)
+                                    // - Riadok 23: prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno
+                                    // - Riadok 24: prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno
+                                    // - Riadok 25: prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno
+                                    // - Riadok 26: prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno
+                                    // - Riadok 27: prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno, prázdno
+                                    // - Riadok 28: Osemfinále 4 (colspan=2), prázdno, prázdno, prázdno, Osemfinále 8 (colspan=2)
+                                    // - Riadok 29: 16F...
+                                    
+                                    // RIADOK 1: Šestnásťfinále 1, prázdno x7, Šestnásťfinále 9
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '120px' } },
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.sixteenFinals[0], 
+                                                    title: '16-finále 1',
+                                                    matchType: 'šestnásťfinále 1',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Vodorovná čiara od stredu po pravý okraj
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-right' }),
+                                            
+                                            // Pravé orámovanie od stredu po spodný okraj
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    right: 0,
+                                                    top: '50%',
+                                                    bottom: 0,
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
+                                        ),
+                                        // 7 prázdnych buniek
+                                        ...Array(7).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-1-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.sixteenFinals[8], 
+                                                    title: '16-finále 9',
+                                                    matchType: 'šestnásťfinále 9',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Vodorovná čiara od stredu po ľavý okraj
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-left' }),
+                                            
+                                            // Ľavé orámovanie od stredu po spodný okraj
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    left: 0,
+                                                    top: '50%',
+                                                    bottom: 0,
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 2: Všetky prázdne
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '40px' } },
+                                        ...Array(9).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-2-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 3: Šestnásťfinále 2, prázdno x7, Šestnásťfinále 10
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '120px' } },
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.sixteenFinals[1], 
+                                                    title: '16-finále 2',
+                                                    matchType: 'šestnásťfinále 2',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Vodorovná čiara od stredu po pravý okraj
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-right' }),
+                                            
+                                            // Pravé orámovanie od stredu po horný okraj
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    right: 0,
+                                                    top: 0,
+                                                    bottom: '50%',
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
+                                        ),
+                                        ...Array(7).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-3-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.sixteenFinals[9], 
+                                                    title: '16-finále 10',
+                                                    matchType: 'šestnásťfinále 10',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Vodorovná čiara od stredu po ľavý okraj
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-left' }),
+                                            
+                                            // Ľavé orámovanie od stredu po horný okraj
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    left: 0,
+                                                    top: 0,
+                                                    bottom: '50%',
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 4: Osemfinále 1 (colspan=2), prázdno x2, Osemfinále 5 (colspan=2), prázdno x2, prázdno
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '120px' } },
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                colSpan: 2,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '22.22%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.eightFinals[0], 
+                                                    title: 'Osemfinále 1',
+                                                    matchType: 'osemfinále 1',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Zvislá čiara v strede
+                                            React.createElement('div', { className: 'spider-line-vertical' })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                colSpan: 2,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '22.22%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            }
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                colSpan: 2,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '22.22%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.eightFinals[4], 
+                                                    title: 'Osemfinále 5',
+                                                    matchType: 'osemfinále 5',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Zvislá čiara v strede
+                                            React.createElement('div', { className: 'spider-line-vertical' })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                colSpan: 2,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '22.22%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            }
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            }
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 5: Šestnásťfinále 3, prázdno x7, Šestnásťfinále 11
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '120px' } },
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.sixteenFinals[2], 
+                                                    title: '16-finále 3',
+                                                    matchType: 'šestnásťfinále 3',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Vodorovná čiara od stredu po pravý okraj
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-right' }),
+                                            
+                                            // Pravé orámovanie od stredu po spodný okraj
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    right: 0,
+                                                    top: '50%',
+                                                    bottom: 0,
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
+                                        ),
+                                        ...Array(7).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-5-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.sixteenFinals[10], 
+                                                    title: '16-finále 11',
+                                                    matchType: 'šestnásťfinále 11',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Vodorovná čiara od stredu po ľavý okraj
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-left' }),
+                                            
+                                            // Ľavé orámovanie od stredu po spodný okraj
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    left: 0,
+                                                    top: '50%',
+                                                    bottom: 0,
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 6: Všetky prázdne
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '40px' } },
+                                        ...Array(9).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-6-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 7: Šestnásťfinále 4, prázdno x7, Šestnásťfinále 12
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '120px' } },
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.sixteenFinals[3], 
+                                                    title: '16-finále 4',
+                                                    matchType: 'šestnásťfinále 4',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Vodorovná čiara od stredu po pravý okraj
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-right' }),
+                                            
+                                            // Pravé orámovanie od stredu po horný okraj
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    right: 0,
+                                                    top: 0,
+                                                    bottom: '50%',
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
+                                        ),
+                                        ...Array(7).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-7-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.sixteenFinals[11], 
+                                                    title: '16-finále 12',
+                                                    matchType: 'šestnásťfinále 12',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Vodorovná čiara od stredu po ľavý okraj
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-left' }),
+                                            
+                                            // Ľavé orámovanie od stredu po horný okraj
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    left: 0,
+                                                    top: 0,
+                                                    bottom: '50%',
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 8: Štvrťfinále 1 (colspan=4), prázdno, Štvrťfinále 3 (colspan=4)
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '120px' } },
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                colSpan: 4,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '44.44%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.quarterFinals[0], 
+                                                    title: 'Štvrťfinále 1',
+                                                    matchType: 'štvrťfinále 1',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Zvislá čiara v strede
+                                            React.createElement('div', { className: 'spider-line-vertical' })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            }
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                colSpan: 4,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '44.44%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.quarterFinals[2], 
+                                                    title: 'Štvrťfinále 3',
+                                                    matchType: 'štvrťfinále 3',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Zvislá čiara v strede
+                                            React.createElement('div', { className: 'spider-line-vertical' })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 9: Šestnásťfinále 5, prázdno x3, Finále, prázdno x3, Šestnásťfinále 13
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '120px' } },
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.sixteenFinals[4], 
+                                                    title: '16-finále 5',
+                                                    matchType: 'šestnásťfinále 5',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Vodorovná čiara od stredu po pravý okraj
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-right' }),
+                                            
+                                            // Pravé orámovanie od stredu po spodný okraj
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    right: 0,
+                                                    top: '50%',
+                                                    bottom: 0,
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
+                                        ),
+                                        ...Array(3).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-9a-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block' } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.final, 
+                                                    title: 'Finále',
+                                                    matchType: 'finále',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Zvislá čiara od stredu po spodný okraj
+                                            React.createElement('div', { 
+                                                className: 'spider-line-vertical',
+                                                style: { 
+                                                    height: '50%',
+                                                    top: '50%'
+                                                }
+                                            })
+                                        ),
+                                        ...Array(3).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-9b-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.sixteenFinals[12], 
+                                                    title: '16-finále 13',
+                                                    matchType: 'šestnásťfinále 13',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Vodorovná čiara od stredu po ľavý okraj
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-left' }),
+                                            
+                                            // Ľavé orámovanie od stredu po spodný okraj
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    left: 0,
+                                                    top: '50%',
+                                                    bottom: 0,
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 10: prázdno x3, Semifinále 1, prázdno, Semifinále 2, prázdno x3
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '120px' } },
+                                        ...Array(3).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-10a-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block' } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.semiFinals[0], 
+                                                    title: 'Semifinále 1',
+                                                    matchType: 'semifinále 1',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Vodorovná čiara od stredu po pravý okraj
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-right' }),
+                                            
+                                            // Zvislá čiara v strede
+                                            React.createElement('div', { className: 'spider-line-vertical' })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            null,
+                                            // Vodorovná čiara v strede na celú šírku
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    height: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    left: 0,
+                                                    width: '100%',
+                                                    top: '50%',
+                                                    transform: 'translateY(-50%)',
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block' } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.semiFinals[1], 
+                                                    title: 'Semifinále 2',
+                                                    matchType: 'semifinále 2',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Vodorovná čiara od stredu po ľavý okraj
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-left' }),
+                                            
+                                            // Zvislá čiara v strede
+                                            React.createElement('div', { className: 'spider-line-vertical' })
+                                        ),
+                                        ...Array(3).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-10b-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 11: Šestnásťfinále 6, prázdno x3, O 3. miesto, prázdno x3, Šestnásťfinále 14
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '120px' } },
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.sixteenFinals[5], 
+                                                    title: '16-finále 6',
+                                                    matchType: 'šestnásťfinále 6',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Vodorovná čiara od stredu po pravý okraj
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-right' }),
+                                            
+                                            // Pravé orámovanie od stredu po horný okraj
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    right: 0,
+                                                    top: 0,
+                                                    bottom: '50%',
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
+                                        ),
+                                        ...Array(3).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-11a-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block' } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.thirdPlace, 
+                                                    title: 'O 3. miesto',
+                                                    matchType: 'o 3. miesto',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Zvislá čiara od stredu po horný okraj
+                                            React.createElement('div', { 
+                                                className: 'spider-line-vertical',
+                                                style: { 
+                                                    height: '50%',
+                                                    top: 0
+                                                }
+                                            })
+                                        ),
+                                        ...Array(3).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-11b-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.sixteenFinals[13], 
+                                                    title: '16-finále 14',
+                                                    matchType: 'šestnásťfinále 14',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Vodorovná čiara od stredu po ľavý okraj
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-left' }),
+                                            
+                                            // Ľavé orámovanie od stredu po horný okraj
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    left: 0,
+                                                    top: 0,
+                                                    bottom: '50%',
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 12: Štvrťfinále 2 (colspan=4), prázdno, Štvrťfinále 4 (colspan=4)
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '120px' } },
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                colSpan: 4,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '44.44%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.quarterFinals[1], 
+                                                    title: 'Štvrťfinále 2',
+                                                    matchType: 'štvrťfinále 2',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Zvislá čiara v strede
+                                            React.createElement('div', { className: 'spider-line-vertical' })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            }
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                colSpan: 4,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '44.44%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.quarterFinals[3], 
+                                                    title: 'Štvrťfinále 4',
+                                                    matchType: 'štvrťfinále 4',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Zvislá čiara v strede
+                                            React.createElement('div', { className: 'spider-line-vertical' })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 13: Šestnásťfinále 7, prázdno x7, Šestnásťfinále 15
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '120px' } },
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.sixteenFinals[6], 
+                                                    title: '16-finále 7',
+                                                    matchType: 'šestnásťfinále 7',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Vodorovná čiara od stredu po pravý okraj
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-right' }),
+                                            
+                                            // Pravé orámovanie od stredu po spodný okraj
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    right: 0,
+                                                    top: '50%',
+                                                    bottom: 0,
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
+                                        ),
+                                        ...Array(7).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-13-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.sixteenFinals[14], 
+                                                    title: '16-finále 15',
+                                                    matchType: 'šestnásťfinále 15',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Vodorovná čiara od stredu po ľavý okraj
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-left' }),
+                                            
+                                            // Ľavé orámovanie od stredu po spodný okraj
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    left: 0,
+                                                    top: '50%',
+                                                    bottom: 0,
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 14: Všetky prázdne
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '40px' } },
+                                        ...Array(9).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-14-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 15: Šestnásťfinále 8, prázdno x7, Šestnásťfinále 16
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '120px' } },
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.sixteenFinals[7], 
+                                                    title: '16-finále 8',
+                                                    matchType: 'šestnásťfinále 8',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Vodorovná čiara od stredu po pravý okraj
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-right' }),
+                                            
+                                            // Pravé orámovanie od stredu po horný okraj
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    right: 0,
+                                                    top: 0,
+                                                    bottom: '50%',
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
+                                        ),
+                                        ...Array(7).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-15-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.sixteenFinals[15], 
+                                                    title: '16-finále 16',
+                                                    matchType: 'šestnásťfinále 16',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Vodorovná čiara od stredu po ľavý okraj
+                                            React.createElement('div', { className: 'spider-line-horizontal spider-line-left' }),
+                                            
+                                            // Ľavé orámovanie od stredu po horný okraj
+                                            React.createElement('div', { 
+                                                style: {
+                                                    position: 'absolute',
+                                                    width: '2px',
+                                                    backgroundColor: '#9ca3af',
+                                                    left: 0,
+                                                    top: 0,
+                                                    bottom: '50%',
+                                                    zIndex: 5,
+                                                    pointerEvents: 'none'
+                                                }
+                                            })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 16: Osemfinále 2 (colspan=2), prázdno x2, Osemfinále 6 (colspan=2), prázdno x2, prázdno
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '120px' } },
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                colSpan: 2,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '22.22%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.eightFinals[1], 
+                                                    title: 'Osemfinále 2',
+                                                    matchType: 'osemfinále 2',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Zvislá čiara v strede
+                                            React.createElement('div', { className: 'spider-line-vertical' })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                colSpan: 2,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '22.22%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            }
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                colSpan: 2,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '22.22%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.eightFinals[5], 
+                                                    title: 'Osemfinále 6',
+                                                    matchType: 'osemfinále 6',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Zvislá čiara v strede
+                                            React.createElement('div', { className: 'spider-line-vertical' })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                colSpan: 2,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '22.22%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            }
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            }
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 17: Všetky prázdne
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '40px' } },
+                                        ...Array(9).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-17-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 18: Všetky prázdne
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '40px' } },
+                                        ...Array(9).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-18-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 19: Všetky prázdne
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '40px' } },
+                                        ...Array(9).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-19-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 20: Všetky prázdne
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '40px' } },
+                                        ...Array(9).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-20-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 21: Všetky prázdne
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '40px' } },
+                                        ...Array(9).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-21-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 22: Osemfinále 3 (colspan=2), prázdno x2, Osemfinále 7 (colspan=2), prázdno x2, prázdno
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '120px' } },
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                colSpan: 2,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '22.22%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.eightFinals[2], 
+                                                    title: 'Osemfinále 3',
+                                                    matchType: 'osemfinále 3',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Zvislá čiara v strede
+                                            React.createElement('div', { className: 'spider-line-vertical' })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                colSpan: 2,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '22.22%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            }
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                colSpan: 2,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '22.22%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.eightFinals[6], 
+                                                    title: 'Osemfinále 7',
+                                                    matchType: 'osemfinále 7',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Zvislá čiara v strede
+                                            React.createElement('div', { className: 'spider-line-vertical' })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                colSpan: 2,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '22.22%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            }
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            }
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 23: Všetky prázdne
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '40px' } },
+                                        ...Array(9).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-23-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 24: Všetky prázdne
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '40px' } },
+                                        ...Array(9).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-24-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 25: Všetky prázdne
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '40px' } },
+                                        ...Array(9).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-25-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 26: Všetky prázdne
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '40px' } },
+                                        ...Array(9).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-26-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 27: Všetky prázdne
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '40px' } },
+                                        ...Array(9).fill(null).map((_, i) => 
+                                            React.createElement('td', { 
+                                                key: `empty-27-${i}`,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            })
+                                        )
+                                    ),
+                                    
+                                    // RIADOK 28: Osemfinále 4 (colspan=2), prázdno x2, Osemfinále 8 (colspan=2), prázdno x2, prázdno
+                                    React.createElement(
+                                        'tr',
+                                        { style: { height: '120px' } },
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                colSpan: 2,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '22.22%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.eightFinals[3], 
+                                                    title: 'Osemfinále 4',
+                                                    matchType: 'osemfinále 4',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Zvislá čiara v strede
+                                            React.createElement('div', { className: 'spider-line-vertical' })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                colSpan: 2,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '22.22%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            }
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                className: 'spider-cell',
+                                                colSpan: 2,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '22.22%',
+                                                    border: '0px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                React.createElement(MatchCell, { 
+                                                    match: spiderData.eightFinals[7], 
+                                                    title: 'Osemfinále 8',
+                                                    matchType: 'osemfinále 8',
+                                                    userProfileData: userProfileData,
+                                                    generationInProgress: generationInProgress,
+                                                    onGenerate: generateSingleMatch,
+                                                    onDelete: deleteSingleMatch
+                                                })
+                                            ),
+                                            // Zvislá čiara v strede
+                                            React.createElement('div', { className: 'spider-line-vertical' })
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                colSpan: 2,
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '22.22%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            }
+                                        ),
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '11.11%',
+                                                    border: '0px solid #d1d5db'
+                                                }
+                                            }
                                         )
                                     )
                                 )
