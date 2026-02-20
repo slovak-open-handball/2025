@@ -2376,6 +2376,13 @@ const SpiderApp = ({ userProfileData }) => {
             return matchRefPatterns.some(pattern => teamName.includes(pattern));
         };
     
+        const handleTeamClick = (teamName, position) => {
+            // Povoliť kliknutie len pre adminov a len pre tímy, ktoré nie sú odkazmi na zápasy
+            if (userProfileData?.role === 'admin' && !isMatchReference(teamName)) {
+                onTeamClick(match, position);
+            }
+        };
+
         // Handler pre otvorenie modálneho okna na odstránenie tímu
         const handleRemoveTeamClick = (e, teamName, position) => {
             e.stopPropagation(); // Zabraňujeme propagácii kliknutia na rodičovský element
