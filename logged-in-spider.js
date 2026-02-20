@@ -5,6 +5,10 @@ import { doc, getDoc, getDocs, setDoc, onSnapshot, updateDoc, addDoc, deleteDoc,
 const { createPortal } = ReactDOM;
 const { useState, useEffect } = React;
 
+const faCSS = document.createElement('link');
+faCSS.rel = 'stylesheet';
+faCSS.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css';document.head.appendChild(faCSS);
+
 // GLOBÁLNY SYSTÉM NOTIFIKÁCIÍ
 if (!window.notificationContainer) {
     // Vytvorenie kontajnera pre notifikácie
