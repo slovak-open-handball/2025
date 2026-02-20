@@ -5507,6 +5507,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -5544,11 +5545,11 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
-                                            },
-                                            // Zvislá čiara uprostred na celú výšku bunky
-                                            React.createElement('div', { className: 'spider-line-vertical' })
+                                            }
+                                            // Odstránená zvislá čiara uprostred
                                         ),
                                         // Prázdna bunka - stlpec 3
                                         React.createElement(
@@ -5559,11 +5560,11 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
-                                            },
-                                            // Zvislá čiara uprostred na celú výšku bunky
-                                            React.createElement('div', { className: 'spider-line-vertical' })
+                                            }
+                                            // Odstránená zvislá čiara uprostred
                                         ),
                                         // o 3. miesto (stlpec 4)
                                         React.createElement(
@@ -5575,6 +5576,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -5591,7 +5593,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     onDelete: deleteSingleMatch
                                                 })
                                             ),
-                                            // Zvislá čiara od stredu po horný okraj
+                                            // Zvislá čiara od stredu po horný okraj (ponechaná, lebo má height: '50%')
                                             React.createElement('div', { 
                                                 className: 'spider-line-vertical',
                                                 style: { 
@@ -5608,7 +5610,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
-                                                    width: '14.28%'
+                                                    width: '14.28%',
+                                                    border: '0px solid #d1d5db'
                                                 }
                                             }
                                         ),
@@ -5621,11 +5624,11 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
-                                            },
-                                            // Zvislá čiara uprostred na celú výšku bunky
-                                            React.createElement('div', { className: 'spider-line-vertical' })
+                                            }
+                                            // Odstránená zvislá čiara uprostred
                                         ),
                                         // 16F13 (stlpec 7)
                                         React.createElement(
@@ -5637,6 +5640,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
+                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
