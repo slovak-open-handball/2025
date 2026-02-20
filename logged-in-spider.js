@@ -2,6 +2,7 @@
 // logged-in-spider.js (upravený - symetrické rozloženie s osemfinále)
 import { doc, getDoc, getDocs, setDoc, onSnapshot, updateDoc, addDoc, deleteDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+const { createPortal } = ReactDOM;
 const { useState, useEffect } = React;
 
 // GLOBÁLNY SYSTÉM NOTIFIKÁCIÍ
@@ -1453,93 +1454,96 @@ const SpiderApp = ({ userProfileData }) => {
                 )
             ),
             
-            // Modálne okno pre potvrdenie zmazania konkrétneho zápasu
-            isDeleteModalOpen && React.createElement(
-                'div',
-                {
-                    className: 'fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center',
-                    onClick: () => setIsDeleteModalOpen(false),
-                    style: { backdropFilter: 'blur(4px)' }
-                },
+            // Modálne okno pre potvrdenie zmazania konkrétneho zápasu - použijeme Portal
+            isDeleteModalOpen && createPortal(
                 React.createElement(
                     'div',
                     {
-                        className: 'bg-white rounded-xl p-6 w-full max-w-md shadow-2xl relative z-[10000]',
-                        onClick: (e) => e.stopPropagation()
+                        className: 'fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center',
+                        onClick: () => setIsDeleteModalOpen(false),
+                        style: { backdropFilter: 'blur(4px)' }
                     },
                     React.createElement(
                         'div',
-                        { className: 'flex justify-between items-center mb-4' },
+                        {
+                            className: 'bg-white rounded-xl p-6 w-full max-w-md shadow-2xl',
+                            onClick: (e) => e.stopPropagation()
+                        },
                         React.createElement(
-                            'h3',
-                            { className: 'text-xl font-semibold text-gray-800' },
-                            'Potvrdenie zmazania zápasu'
-                        ),
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: () => setIsDeleteModalOpen(false),
-                                className: 'text-gray-400 hover:text-gray-600 transition-colors'
-                            },
-                            React.createElement('i', { className: 'fa-solid fa-times text-2xl' })
-                        )
-                    ),
-                    
-                    React.createElement(
-                        'p',
-                        { className: 'text-gray-600 mb-2' },
-                        'Naozaj chcete zmazať tento zápas?'
-                    ),
-                    
-                    React.createElement(
-                        'div',
-                        { className: 'bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200' },
-                        React.createElement(
-                            'p',
-                            { className: 'font-medium text-gray-800 mb-1' },
-                            matchDisplayName
-                        ),
-                        React.createElement(
-                            'p',
-                            { className: 'text-sm text-gray-500' },
-                            `Typ: ${matchType}`
-                        ),
-                        match.date && React.createElement(
-                            'p',
-                            { className: 'text-sm text-gray-500' },
-                            `Dátum: ${formattedDate}`
-                        )
-                    ),
-                    
-                    React.createElement(
-                        'div',
-                        { className: 'flex justify-end gap-2' },
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: () => setIsDeleteModalOpen(false),
-                                className: 'px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors'
-                            },
-                            'Zrušiť'
-                        ),
-                        React.createElement(
-                            'button',
-                            {
-                                onClick: () => {
-                                    onDelete(match.id, matchType);
-                                    setIsDeleteModalOpen(false);
+                            'div',
+                            { className: 'flex justify-between items-center mb-4' },
+                            React.createElement(
+                                'h3',
+                                { className: 'text-xl font-semibold text-gray-800' },
+                                'Potvrdenie zmazania zápasu'
+                            ),
+                            React.createElement(
+                                'button',
+                                {
+                                    onClick: () => setIsDeleteModalOpen(false),
+                                    className: 'text-gray-400 hover:text-gray-600 transition-colors'
                                 },
-                                disabled: generationInProgress,
-                                className: `px-4 py-2 text-sm rounded-lg transition-colors ${
-                                    generationInProgress
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-red-600 hover:bg-red-700 text-white'
-                                }`
-                            },
-                            'Zmazať zápas'
+                                React.createElement('i', { className: 'fa-solid fa-times text-2xl' })
+                            )
+                        ),
+                        
+                        React.createElement(
+                            'p',
+                            { className: 'text-gray-600 mb-2' },
+                            'Naozaj chcete zmazať tento zápas?'
+                        ),
+                        
+                        React.createElement(
+                            'div',
+                            { className: 'bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200' },
+                            React.createElement(
+                                'p',
+                                { className: 'font-medium text-gray-800 mb-1' },
+                                matchDisplayName
+                            ),
+                            React.createElement(
+                                'p',
+                                { className: 'text-sm text-gray-500' },
+                                `Typ: ${matchType}`
+                            ),
+                            match.date && React.createElement(
+                                'p',
+                                { className: 'text-sm text-gray-500' },
+                                `Dátum: ${formattedDate}`
+                            )
+                        ),
+                        
+                        React.createElement(
+                            'div',
+                            { className: 'flex justify-end gap-2' },
+                            React.createElement(
+                                'button',
+                                {
+                                    onClick: () => setIsDeleteModalOpen(false),
+                                    className: 'px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors'
+                                },
+                                'Zrušiť'
+                            ),
+                            React.createElement(
+                                'button',
+                                {
+                                    onClick: () => {
+                                        onDelete(match.id, matchType);
+                                        setIsDeleteModalOpen(false);
+                                    },
+                                    disabled: generationInProgress,
+                                    className: `px-4 py-2 text-sm rounded-lg transition-colors ${
+                                        generationInProgress
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-red-600 hover:bg-red-700 text-white'
+                                    }`
+                                },
+                                'Zmazať zápas'
+                            )
                         )
                     )
-                )
+                ),
+                document.body // Vykreslíme modálne okno priamo do body
             )
         );
     };
