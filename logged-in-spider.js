@@ -15,6 +15,7 @@ if (!window.notificationContainer) {
     container.id = 'global-notification-container';
     container.style.cssText = `
         position: fixed;
+    container.style.cssText = `
         top: 20px;
         left: 50%;
         transform: translateX(-50%);
@@ -2605,7 +2606,7 @@ const SpiderApp = ({ userProfileData }) => {
                     { className: 'text-sm font-semibold text-center mb-2 pb-1 border-b border-gray-200' },
                     title
                 ),
-                // Domáci tím - s ikonami pre úpravu a odstránenie
+                // Domáci tím - s ikonami pre úpravu a odstránenie (riadok nie je klikateľný)
                 React.createElement(
                     'div',
                     { 
@@ -2615,16 +2616,13 @@ const SpiderApp = ({ userProfileData }) => {
                     React.createElement(
                         'div',
                         { 
-                            className: `flex-grow flex justify-between items-center ${
-                                userProfileData?.role === 'admin' && !isMatchReference(homeTeam) ? 'cursor-pointer hover:bg-gray-50' : ''
-                            }`,
-                            onClick: () => handleTeamClick(homeTeam, 'home'),
-                            style: { padding: '2px 0' }
+                            className: `flex-grow flex justify-between items-center`,
+                            style: { padding: '2px 0', cursor: 'default' }
                         },
                         React.createElement('span', { 
                             className: 'text-sm font-medium',
                             title: isMatchReference(homeTeam) ? 'Toto je odkaz na víťaza iného zápasu, nedá sa priamo zmeniť' : 
-                                   (homeTeam === '---' ? 'Kliknutím priradíte tím' : 'Kliknutím zmeníte tím')
+                                   (homeTeam === '---' ? 'Pre priradenie tímu kliknite na modrú ikonu' : 'Pre zmenu tímu kliknite na modrú ikonu')
                         }, homeTeam),
                         homeScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, homeScore)
                     ),
@@ -2667,10 +2665,28 @@ const SpiderApp = ({ userProfileData }) => {
                                 className: 'fa-solid fa-trash-can text-xs',
                                 style: { color: 'white' }
                             })
+                        ),
+                        // Modrá ikona ceruzky pre existujúce tímy (ak nie je odkaz na zápas)
+                        homeTeam !== '---' && !isMatchReference(homeTeam) && React.createElement(
+                            'button',
+                            {
+                                onClick: (e) => {
+                                    e.stopPropagation();
+                                    handleTeamClick(homeTeam, 'home');
+                                },
+                                className: 'w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow-sm hover:shadow-md transform hover:scale-110 transition-all duration-200',
+                                style: { color: 'white' },
+                                title: 'Zmeniť tím'
+                            },
+                            React.createElement('i', { 
+                                className: 'fa-solid fa-pencil text-xs',
+                                style: { color: 'white' }
+                            })
                         )
                     )
                 ),
-                // Hosťovský tím - s ikonami pre úpravu a odstránenie
+                
+                // Hosťovský tím - s ikonami pre úpravu a odstránenie (riadok nie je klikateľný)
                 React.createElement(
                     'div',
                     { 
@@ -2680,16 +2696,13 @@ const SpiderApp = ({ userProfileData }) => {
                     React.createElement(
                         'div',
                         { 
-                            className: `flex-grow flex justify-between items-center ${
-                                userProfileData?.role === 'admin' && !isMatchReference(awayTeam) ? 'cursor-pointer hover:bg-gray-50' : ''
-                            }`,
-                            onClick: () => handleTeamClick(awayTeam, 'away'),
-                            style: { padding: '2px 0' }
+                            className: `flex-grow flex justify-between items-center`,
+                            style: { padding: '2px 0', cursor: 'default' }
                         },
                         React.createElement('span', { 
                             className: 'text-sm font-medium',
                             title: isMatchReference(awayTeam) ? 'Toto je odkaz na víťaza iného zápasu, nedá sa priamo zmeniť' : 
-                                   (awayTeam === '---' ? 'Kliknutím priradíte tím' : 'Kliknutím zmeníte tím')
+                                   (awayTeam === '---' ? 'Pre priradenie tímu kliknite na modrú ikonu' : 'Pre zmenu tímu kliknite na modrú ikonu')
                         }, awayTeam),
                         awayScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, awayScore)
                     ),
@@ -2730,6 +2743,23 @@ const SpiderApp = ({ userProfileData }) => {
                             },
                             React.createElement('i', { 
                                 className: 'fa-solid fa-trash-can text-xs',
+                                style: { color: 'white' }
+                            })
+                        ),
+                        // Modrá ikona ceruzky pre existujúce tímy (ak nie je odkaz na zápas)
+                        awayTeam !== '---' && !isMatchReference(awayTeam) && React.createElement(
+                            'button',
+                            {
+                                onClick: (e) => {
+                                    e.stopPropagation();
+                                    handleTeamClick(awayTeam, 'away');
+                                },
+                                className: 'w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow-sm hover:shadow-md transform hover:scale-110 transition-all duration-200',
+                                style: { color: 'white' },
+                                title: 'Zmeniť tím'
+                            },
+                            React.createElement('i', { 
+                                className: 'fa-solid fa-pencil text-xs',
                                 style: { color: 'white' }
                             })
                         )
