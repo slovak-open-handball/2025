@@ -2344,14 +2344,6 @@ const SpiderApp = ({ userProfileData }) => {
             return matchRefPatterns.some(pattern => teamName.includes(pattern));
         };
     
-        // Handler pre kliknutie na tím - otvorí modálne okno len pre tímy, ktoré nie sú odkazmi na zápasy
-        const handleTeamClick = (teamName, position) => {
-            // Povoliť kliknutie len pre adminov a len pre tímy, ktoré nie sú odkazmi na zápasy
-            if (userProfileData?.role === 'admin' && !isMatchReference(teamName)) {
-                onTeamClick(match, position);
-            }
-        };
-    
         // Kontrola, či zápas existuje v databáze
         if (!match.exists) {
             // Chýbajúci zápas - sivý čiarkovaný box s možnosťou generovania
