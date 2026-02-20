@@ -2384,7 +2384,7 @@ const SpiderApp = ({ userProfileData }) => {
         // Handler pre kliknutie na "---" - otvorí modálne okno
         const handleTeamClick = (teamName, position) => {
             if (teamName === '---' && userProfileData?.role === 'admin') {
-                handleTeamClick(match, position);
+                onTeamClick(match, position);
             }
         };
         
@@ -3284,7 +3284,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Zvislá čiara od stredu bunky do spodného okraja
@@ -3331,7 +3332,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara z ľavej bunky doprava (od stredu)
@@ -3360,7 +3362,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara z pravej bunky doľava (od stredu)
@@ -3395,7 +3398,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Zvislá čiara od stredu bunky do horného okraja
@@ -3436,7 +3440,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // V ľavej hornej bunke vodorovná čiara od stredu doprava
@@ -3479,7 +3484,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // V hornej prostrednej bunke zvislá čiara od stredu po spodný okraj
@@ -3520,7 +3526,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // V pravej hornej bunke vodorovná čiara od stredu doľava
@@ -3579,7 +3586,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 }),
                                                 React.createElement(MatchCell, { 
                                                     match: spiderData.semiFinals[1], 
@@ -3588,7 +3596,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             
@@ -3697,7 +3706,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // V ľavej dolnej bunke vodorovná čiara od stredu doprava
@@ -3740,7 +3750,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // V spodnej prostrednej bunke zvislá čiara od stredu po horný okraj
@@ -3769,7 +3780,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // V pravej dolnej bunke vodorovná čiara od stredu doľava
@@ -3824,7 +3836,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu bunky po pravý okraj
@@ -3903,7 +3916,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu bunky po ľavý okraj
@@ -3952,7 +3966,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Zvislá čiara presne doprostred na celú výšku bunky
@@ -4024,7 +4039,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Zvislá čiara presne doprostred na celú výšku bunky
@@ -4089,7 +4105,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu bunky po pravý okraj
@@ -4149,7 +4166,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Zvislá čiara od stredu bunky po jej spodný okraj (pridanie)
@@ -4201,7 +4219,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu bunky po ľavý okraj
@@ -4262,7 +4281,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu bunky po pravý okraj
@@ -4331,7 +4351,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu bunky po ľavý okraj
@@ -4387,7 +4408,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu bunky po pravý okraj
@@ -4447,7 +4469,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Zvislá čiara od stredu bunky po jej horný okraj (pridanie)
@@ -4499,7 +4522,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu bunky po ľavý okraj
@@ -4549,7 +4573,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Zvislá čiara presne doprostred na celú výšku bunky
@@ -4621,7 +4646,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Zvislá čiara presne doprostred na celú výšku bunky
@@ -4686,7 +4712,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu bunky po pravý okraj
@@ -4765,7 +4792,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu bunky po ľavý okraj
@@ -4821,7 +4849,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu po pravý okraj
@@ -4873,7 +4902,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu po ľavý okraj
@@ -4919,7 +4949,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Zvislá čiara v strede
@@ -4980,7 +5011,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Zvislá čiara v strede
@@ -5033,7 +5065,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu po pravý okraj
@@ -5143,7 +5176,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu po ľavý okraj
@@ -5201,7 +5235,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu po pravý okraj
@@ -5255,7 +5290,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu po ľavý okraj
@@ -5315,7 +5351,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu po pravý okraj
@@ -5417,7 +5454,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu po ľavý okraj
@@ -5463,7 +5501,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Zvislá čiara v strede
@@ -5533,7 +5572,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Zvislá čiara v strede
@@ -5595,7 +5635,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu po pravý okraj
@@ -5670,7 +5711,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Zvislá čiara od stredu po spodný okraj
@@ -5742,7 +5784,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu po ľavý okraj
@@ -5801,7 +5844,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Zvislá čiara v strede
@@ -5871,7 +5915,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Zvislá čiara v strede
@@ -5928,7 +5973,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu po pravý okraj
@@ -6005,7 +6051,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Zvislá čiara od stredu po horný okraj (ponechaná, lebo má height: '50%')
@@ -6077,7 +6124,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu po ľavý okraj
@@ -6123,7 +6171,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Zvislá čiara v strede
@@ -6193,7 +6242,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Zvislá čiara v strede
@@ -6442,7 +6492,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu po pravý okraj
@@ -6496,7 +6547,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu po ľavý okraj
@@ -6835,7 +6887,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu po pravý okraj
@@ -6945,7 +6998,8 @@ const SpiderApp = ({ userProfileData }) => {
                                                     userProfileData: userProfileData,
                                                     generationInProgress: generationInProgress,
                                                     onGenerate: generateSingleMatch,
-                                                    onDelete: deleteSingleMatch
+                                                    onDelete: deleteSingleMatch,
+                                                    onTeamClick: handleTeamClick
                                                 })
                                             ),
                                             // Vodorovná čiara od stredu po ľavý okraj
