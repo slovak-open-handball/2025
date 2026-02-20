@@ -1091,20 +1091,9 @@ const SpiderApp = ({ userProfileData }) => {
                          'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
                     );
                 }
-                // Ak mažeme o 3. miesto, mažeme všetky zápasy v jeho vetve (rovnaké ako semifinále 1 a 2)
+                // Ak mažeme o 3. miesto, NEMAŽEME žiadne podradené zápasy - IBA TENTO JEDEN ZÁPAS
                 else if (parentMatchType === 'o 3. miesto') {
-                    childMatchesToDelete = allMatches.filter(m => 
-                        m.categoryId === selectedCategory && 
-                        m.matchType && 
-                        ['semifinále 1', 'semifinále 2',
-                         'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4',
-                         'osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
-                         'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8',
-                         'šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
-                         'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
-                         'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
-                         'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
-                    );
+                    childMatchesToDelete = []; // Žiadne podradené zápasy
                 }
                 // Ak mažeme štvrťfinále, mažeme všetky zápasy pod ním
                 else if (parentMatchType.startsWith('štvrťfinále')) {
@@ -1170,7 +1159,7 @@ const SpiderApp = ({ userProfileData }) => {
                 index === self.findIndex(m => m.id === match.id)
             );
     
-            // Pre každý zápas, ktorý mažeme, aktualizujeme nadradené zápasy
+            // Pre každý zápas, ktorý mažeme, aktualizujeme nadradené zápasy (LEN AK TO NIE JE O 3. MIEST0)
             for (const match of uniqueMatchesToDelete) {
                 // Ak mažeme šestnásťfinálový zápas, aktualizujeme príslušný osemfinálový zápas
                 if (match.matchType.startsWith('šestnásťfinále')) {
@@ -1300,6 +1289,8 @@ const SpiderApp = ({ userProfileData }) => {
                         }
                     }
                 }
+                
+                // Pre zápas o 3. miesto NEROBÍME ŽIADNE AKTUALIZÁCIE nadradených zápasov
             }
     
             // Vymažeme všetky zápasy
