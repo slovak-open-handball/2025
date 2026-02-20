@@ -2498,9 +2498,10 @@ const SpiderApp = ({ userProfileData }) => {
                     'div',
                     { 
                         className: `flex justify-between items-center py-2 border-b border-gray-100 ${
-                            userProfileData?.role === 'admin' ? 'cursor-pointer hover:bg-gray-50' : ''
+                            userProfileData?.role === 'admin' && !isMatchReference(homeTeam) ? 'cursor-pointer hover:bg-gray-50' : ''
                         }`,
-                        onClick: () => handleTeamClick(homeTeam, 'home')
+                        onClick: () => handleTeamClick(homeTeam, 'home'),
+                        title: isMatchReference(homeTeam) ? 'Toto je odkaz na víťaza iného zápasu, nedá sa priamo zmeniť' : ''
                     },
                     React.createElement('span', { className: 'text-sm font-medium' }, homeTeam),
                     homeScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, homeScore)
@@ -2510,9 +2511,10 @@ const SpiderApp = ({ userProfileData }) => {
                     'div',
                     { 
                         className: `flex justify-between items-center py-2 ${
-                            userProfileData?.role === 'admin' ? 'cursor-pointer hover:bg-gray-50' : ''
+                            userProfileData?.role === 'admin' && !isMatchReference(awayTeam) ? 'cursor-pointer hover:bg-gray-50' : ''
                         }`,
-                        onClick: () => handleTeamClick(awayTeam, 'away')
+                        onClick: () => handleTeamClick(awayTeam, 'away'),
+                        title: isMatchReference(awayTeam) ? 'Toto je odkaz na víťaza iného zápasu, nedá sa priamo zmeniť' : ''
                     },
                     React.createElement('span', { className: 'text-sm font-medium' }, awayTeam),
                     awayScore !== '' && React.createElement('span', { className: 'font-mono font-bold text-lg' }, awayScore)
