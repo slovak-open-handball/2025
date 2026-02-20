@@ -1821,8 +1821,8 @@ const SpiderApp = ({ userProfileData }) => {
                     style: { 
                         width: '100%', 
                         maxWidth: spiderLevel === 3 ? `${5 * (240 + 24 + 4)}px` : 
-                                  (spiderLevel === 2 ? `${3 * (240 + 24 + 4)}px` : 
-                                                      `${2 * (240 + 24 + 4)}px`),
+                                  (spiderLevel === 2 ? `${3 * (260 + 24 + 4)}px` : 
+                                                      `${2 * (280 + 24 + 4)}px`),
                     }
                 },
                 
