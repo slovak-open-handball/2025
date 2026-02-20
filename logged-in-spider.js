@@ -5160,7 +5160,7 @@ const SpiderApp = ({ userProfileData }) => {
                                         )
                                     ),
                                     
-                                    // RIADOK 7: 16F4, prázdno, Finále, prázdno, prázdno, 16F12
+                                    // RIADOK 7: 16F4, prázdno, prázdno, Finále, prázdno, prázdno, 16F12
                                     React.createElement(
                                         'tr',
                                         { style: { height: '120px' } },
@@ -5226,7 +5226,20 @@ const SpiderApp = ({ userProfileData }) => {
                                                 }
                                             })
                                         ),
-                                        // Finále (pôvodne stlpec 3, teraz obsahuje finálový zápas)
+                                        // Prázdna bunka - stlpec 3
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '14.28%',
+                                                    border: '1px solid #d1d5db'
+                                                }
+                                            }
+                                        ),
+                                        // Finále (stlpec 4)
                                         React.createElement(
                                             'td',
                                             { 
@@ -5262,7 +5275,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                 }
                                             })
                                         ),
-                                        // Prázdna bunka - stlpec 4 (pôvodne stlpec 5)
+                                        // Prázdna bunka - stlpec 5
                                         React.createElement(
                                             'td',
                                             { 
@@ -5275,7 +5288,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                 }
                                             }
                                         ),
-                                        // Prázdna bunka - stlpec 5 (pôvodne stlpec 6)
+                                        // Prázdna bunka - stlpec 6
                                         React.createElement(
                                             'td',
                                             { 
@@ -5298,7 +5311,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                 }
                                             })
                                         ),
-                                        // 16F12 (stlpec 6 - pôvodne stlpec 7)
+                                        // 16F12 (stlpec 7)
                                         React.createElement(
                                             'td',
                                             { 
@@ -5339,11 +5352,11 @@ const SpiderApp = ({ userProfileData }) => {
                                         )
                                     ),
                                     
-                                    // RIADOK 8: prázdno, Semifinále 1 (colspan=2), Semifinále 2 (colspan=2), prázdno
+                                    // RIADOK 8: prázdno, Semifinále 1 (colspan=2), prázdno, Semifinále 2 (colspan=2), prázdno
                                     React.createElement(
                                         'tr',
                                         { style: { height: '120px' } },
-                                        // prázdno (stlpec 1) - 16.66%
+                                        // prázdno (stlpec 1)
                                         React.createElement(
                                             'td',
                                             { 
@@ -5351,12 +5364,12 @@ const SpiderApp = ({ userProfileData }) => {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
-                                                    width: '16.66%',
+                                                    width: '14.28%',
                                                     border: '1px solid #d1d5db'
                                                 }
                                             }
                                         ),
-                                        // Semifinále 1 (colspan=2) - stlpce 2-3 (spolu 33.32%)
+                                        // Semifinále 1 (colspan=2) - stlpce 2-3
                                         React.createElement(
                                             'td',
                                             { 
@@ -5366,7 +5379,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
-                                                    width: '33.32%',
+                                                    width: '28.56%',
                                                     border: '1px solid #d1d5db',
                                                     position: 'relative'
                                                 }
@@ -5395,7 +5408,38 @@ const SpiderApp = ({ userProfileData }) => {
                                                 }
                                             })
                                         ),
-                                        // Semifinále 2 (colspan=2) - stlpce 4-5 (spolu 33.32%)
+                                        // prázdno - stlpec 4
+                                        React.createElement(
+                                            'td',
+                                            { 
+                                                style: {
+                                                    textAlign: 'center',
+                                                    verticalAlign: 'middle',
+                                                    padding: '8px',
+                                                    width: '14.28%',
+                                                    border: '1px solid #d1d5db',
+                                                    position: 'relative'
+                                                }
+                                            },
+                                            // Vodorovná čiara na celú šírku bunky výškovo uprostred
+                                            React.createElement('div', { 
+                                                className: 'spider-line-horizontal',
+                                                style: { 
+                                                    left: 0,
+                                                    width: '100%'
+                                                }
+                                            }),
+                                            // Zvislá čiara na 50% šírky bunky (v strede) na celú výšku
+                                            React.createElement('div', { 
+                                                className: 'spider-line-vertical',
+                                                style: { 
+                                                    left: '50%',
+                                                    height: '100%',
+                                                    top: 0
+                                                }
+                                            })
+                                        ),
+                                        // Semifinále 2 (colspan=2) - stlpce 5-6
                                         React.createElement(
                                             'td',
                                             { 
@@ -5405,7 +5449,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
-                                                    width: '33.32%',
+                                                    width: '28.56%',
                                                     border: '1px solid #d1d5db',
                                                     position: 'relative'
                                                 }
@@ -5434,7 +5478,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                 }
                                             })
                                         ),
-                                        // prázdno (stlpec 6) - 16.66%
+                                        // prázdno (stlpec 7)
                                         React.createElement(
                                             'td',
                                             { 
@@ -5442,7 +5486,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
-                                                    width: '16.66%',
+                                                    width: '14.28%',
                                                     border: '1px solid #d1d5db'
                                                 }
                                             }
