@@ -437,7 +437,7 @@ const SpiderApp = ({ userProfileData }) => {
         setMaxOrderInGroup(0);
     }, [selectedCategory, groupsData]);
 
-    // Efekt pre načítanie tímov v skupine pri zmene vybranej skupiny
+    // V modálnom okne pre výber tímu - upravený useEffect pre predvyplnenie
     useEffect(() => {
         if (selectedGroup && selectedCategory) {
             const category = categories.find(c => c.id === selectedCategory);
@@ -465,7 +465,11 @@ const SpiderApp = ({ userProfileData }) => {
                 
                 setTeamsInSelectedGroup(sortedTeams);
                 setMaxOrderInGroup(maxOrder);
-                setSelectedOrder(null);
+                
+                // Ak už máme selectedOrder a je väčší ako nové maxOrder, vynulujeme ho
+                if (selectedOrder && selectedOrder > maxOrder) {
+                    setSelectedOrder(null);
+                }
             }
         } else {
             setTeamsInSelectedGroup([]);
@@ -474,26 +478,26 @@ const SpiderApp = ({ userProfileData }) => {
         }
     }, [selectedGroup, selectedCategory, categories, teamsData.allTeams]);
 
-// Funkcia pre priradenie tímu k zápasu
+    // Funkcia pre priradenie tímu k zápasu - upravená pre editáciu existujúcich tímov
     const assignTeamToMatch = async () => {
         if (!selectedMatchForTeam || !selectedTeamPosition || !selectedGroup || !selectedOrder) {
             window.showGlobalNotification('Nie sú vybraté všetky potrebné údaje', 'error');
             return;
         }
-
+    
         if (userProfileData?.role !== 'admin') {
             window.showGlobalNotification('Na priradenie tímu potrebujete administrátorské práva', 'error');
             return;
         }
-
+    
         // Skontrolujeme, či zadané order nie je väčšie ako maximálne
         if (selectedOrder > maxOrderInGroup) {
             window.showGlobalNotification(`Maximálne povolené poradie v tejto skupine je ${maxOrderInGroup}`, 'error');
             return;
         }
-
+    
         setIsAssigningTeam(true);
-
+    
         try {
             const category = categories.find(c => c.id === selectedCategory);
             const categoryName = category ? category.name : '';
@@ -538,16 +542,36 @@ const SpiderApp = ({ userProfileData }) => {
             setIsAssigningTeam(false);
         }
     };
-
-    // Handler pre otvorenie modálneho okna s výberom tímu
+    
+    // Handler pre otvorenie modálneho okna s výberom tímu - UPRAVENÝ PRE VŠETKY TÍMY
     const handleTeamClick = (match, position) => {
-        // Ak je tím "---" a používateľ je admin, otvoríme modálne okno
-        if (match.exists && userProfileData?.role === 'admin') {
+        // Ak je používateľ admin, otvoríme modálne okno pre všetky tímy (nielen "---")
+        if (userProfileData?.role === 'admin') {
             const teamValue = position === 'home' ? match.homeTeam : match.awayTeam;
-            if (teamValue === '---') {
-                setSelectedMatchForTeam(match);
-                setSelectedTeamPosition(position);
-                setIsTeamSelectionModalOpen(true);
+            
+            setSelectedMatchForTeam(match);
+            setSelectedTeamPosition(position);
+            setIsTeamSelectionModalOpen(true);
+            
+            // Ak už je tím priradený, pokúsime sa načítať jeho skupinu a order pre predvyplnenie
+            if (teamValue !== '---') {
+                // Formát teamIdentifier: "Kategoria orderSkupina" (napr. "Starší žiaci 3A")
+                // Skúsime extrahovať order a skupinu
+                const match = teamValue.match(/\s(\d+)([A-Z])$/); // Hľadá číslo a písmeno na konci
+                
+                if (match) {
+                    const order = parseInt(match[1], 10);
+                    const groupLetter = match[2];
+                    
+                    // Nájdeme skupinu končiacu na toto písmeno
+                    if (availableGroups.length > 0) {
+                        const group = availableGroups.find(g => g.name.endsWith(groupLetter));
+                        if (group) {
+                            setSelectedGroup(group.name);
+                            setSelectedOrder(order);
+                        }
+                    }
+                }
             }
         }
     };
@@ -2457,7 +2481,9 @@ const SpiderApp = ({ userProfileData }) => {
                 React.createElement(
                     'div',
                     { 
-                        className: `flex justify-between items-center py-2 border-b border-gray-100 ${homeTeam === '---' && userProfileData?.role === 'admin' ? 'cursor-pointer hover:bg-gray-50' : ''}`,
+                        className: `flex justify-between items-center py-2 border-b border-gray-100 ${
+                            userProfileData?.role === 'admin' ? 'cursor-pointer hover:bg-gray-50' : ''
+                        }`,
                         onClick: () => handleTeamClick(homeTeam, 'home')
                     },
                     React.createElement('span', { className: 'text-sm font-medium' }, homeTeam),
@@ -2467,7 +2493,9 @@ const SpiderApp = ({ userProfileData }) => {
                 React.createElement(
                     'div',
                     { 
-                        className: `flex justify-between items-center py-2 ${awayTeam === '---' && userProfileData?.role === 'admin' ? 'cursor-pointer hover:bg-gray-50' : ''}`,
+                        className: `flex justify-between items-center py-2 ${
+                            userProfileData?.role === 'admin' ? 'cursor-pointer hover:bg-gray-50' : ''
+                        }`,
                         onClick: () => handleTeamClick(awayTeam, 'away')
                     },
                     React.createElement('span', { className: 'text-sm font-medium' }, awayTeam),
