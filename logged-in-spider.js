@@ -543,9 +543,9 @@ const SpiderApp = ({ userProfileData }) => {
         }
     };
     
-    // Handler pre otvorenie modálneho okna s výberom tímu - UPRAVENÝ PRE VŠETKY TÍMY
+    // Handler pre otvorenie modálneho okna s výberom tímu - UPRAVENÝ PRE VŠETKY TÍMY OKREM ODKAZOV
     const handleTeamClick = (match, position) => {
-        // Ak je používateľ admin, otvoríme modálne okno pre všetky tímy (nielen "---")
+        // Ak je používateľ admin, otvoríme modálne okno
         if (userProfileData?.role === 'admin') {
             const teamValue = position === 'home' ? match.homeTeam : match.awayTeam;
             
@@ -553,22 +553,28 @@ const SpiderApp = ({ userProfileData }) => {
             setSelectedTeamPosition(position);
             setIsTeamSelectionModalOpen(true);
             
-            // Ak už je tím priradený, pokúsime sa načítať jeho skupinu a order pre predvyplnenie
+            // Ak už je tím priradený a nie je to odkaz na zápas, pokúsime sa načítať jeho skupinu a order pre predvyplnenie
             if (teamValue !== '---') {
-                // Formát teamIdentifier: "Kategoria orderSkupina" (napr. "Starší žiaci 3A")
-                // Skúsime extrahovať order a skupinu
-                const match = teamValue.match(/\s(\d+)([A-Z])$/); // Hľadá číslo a písmeno na konci
+                // Skontrolujeme, či to nie je odkaz na zápas
+                const matchRefPatterns = ['WSF', 'LSF', 'WQF', 'W8F', 'W16F'];
+                const isMatchReference = matchRefPatterns.some(pattern => teamValue.includes(pattern));
                 
-                if (match) {
-                    const order = parseInt(match[1], 10);
-                    const groupLetter = match[2];
+                if (!isMatchReference) {
+                    // Formát teamIdentifier: "Kategoria orderSkupina" (napr. "Starší žiaci 3A")
+                    // Skúsime extrahovať order a skupinu
+                    const match = teamValue.match(/\s(\d+)([A-Z])$/); // Hľadá číslo a písmeno na konci
                     
-                    // Nájdeme skupinu končiacu na toto písmeno
-                    if (availableGroups.length > 0) {
-                        const group = availableGroups.find(g => g.name.endsWith(groupLetter));
-                        if (group) {
-                            setSelectedGroup(group.name);
-                            setSelectedOrder(order);
+                    if (match) {
+                        const order = parseInt(match[1], 10);
+                        const groupLetter = match[2];
+                        
+                        // Nájdeme skupinu končiacu na toto písmeno
+                        if (availableGroups.length > 0) {
+                            const group = availableGroups.find(g => g.name.endsWith(groupLetter));
+                            if (group) {
+                                setSelectedGroup(group.name);
+                                setSelectedOrder(order);
+                            }
                         }
                     }
                 }
@@ -2328,6 +2334,23 @@ const SpiderApp = ({ userProfileData }) => {
     const MatchCell = ({ match, title = '', matchType, userProfileData, generationInProgress, onGenerate, onDelete, onTeamClick }) => {
         const [isHovered, setIsHovered] = useState(false);
         const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+        const isMatchReference = (teamName) => {
+            if (teamName === '---') return false;
+            // Kontrola, či reťazec obsahuje niektorý z identifikátorov zápasov
+            const matchRefPatterns = [
+                'WSF', 'LSF', 'WQF', 'W8F', 'W16F'
+            ];
+            return matchRefPatterns.some(pattern => teamName.includes(pattern));
+        };
+    
+        // Handler pre kliknutie na tím - otvorí modálne okno len pre tímy, ktoré nie sú odkazmi na zápasy
+        const handleTeamClick = (teamName, position) => {
+            // Povoliť kliknutie len pre adminov a len pre tímy, ktoré nie sú odkazmi na zápasy
+            if (userProfileData?.role === 'admin' && !isMatchReference(teamName)) {
+                onTeamClick(match, position);
+            }
+        };
     
         // Kontrola, či zápas existuje v databáze
         if (!match.exists) {
