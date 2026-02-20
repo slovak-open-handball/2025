@@ -5507,7 +5507,6 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -5545,7 +5544,6 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -5561,7 +5559,6 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -5578,7 +5575,6 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -5612,8 +5608,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                     textAlign: 'center',
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
-                                                    width: '14.28%',
-                                                    border: '0px solid #d1d5db'
+                                                    width: '14.28%'
                                                 }
                                             }
                                         ),
@@ -5626,7 +5621,6 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -5643,7 +5637,6 @@ const SpiderApp = ({ userProfileData }) => {
                                                     verticalAlign: 'middle',
                                                     padding: '8px',
                                                     width: '14.28%',
-                                                    border: '0px solid #d1d5db',
                                                     position: 'relative'
                                                 }
                                             },
@@ -5662,7 +5655,6 @@ const SpiderApp = ({ userProfileData }) => {
                                             ),
                                             // Vodorovná čiara od stredu po ľavý okraj
                                             React.createElement('div', { className: 'spider-line-horizontal spider-line-left' })
-                                            // Odstránená zvislá čiara na ľavej strane
                                         )
                                     ),
                                     
