@@ -1408,7 +1408,7 @@ const SpiderApp = ({ userProfileData }) => {
                     'div',
                     { 
                         className: `absolute -top-2 -right-2 transition-all duration-200 ${
-                            isHovered && !isDeleteModalOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
+                            isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
                         }`,
                         style: { zIndex: 20 }
                     },
