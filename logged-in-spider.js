@@ -5356,7 +5356,7 @@ const SpiderApp = ({ userProfileData }) => {
                                     React.createElement(
                                         'tr',
                                         { style: { height: '120px' } },
-                                        // prázdno
+                                        // prázdno (stlpec 1)
                                         React.createElement(
                                             'td',
                                             { 
@@ -5369,7 +5369,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                 }
                                             }
                                         ),
-                                        // Semifinále 1 (colspan=2)
+                                        // Semifinále 1 (colspan=2) - stlpce 2-3
                                         React.createElement(
                                             'td',
                                             { 
@@ -5428,9 +5428,18 @@ const SpiderApp = ({ userProfileData }) => {
                                                     left: 0,
                                                     width: '100%'
                                                 }
+                                            }),
+                                            // Zvislá čiara na 50% šírky bunky (v strede) na celú výšku
+                                            React.createElement('div', { 
+                                                className: 'spider-line-vertical',
+                                                style: { 
+                                                    left: '50%',
+                                                    height: '100%',
+                                                    top: 0
+                                                }
                                             })
                                         ),
-                                        // Semifinále 2 (colspan=2)
+                                        // Semifinále 2 (colspan=2) - stlpce 5-6
                                         React.createElement(
                                             'td',
                                             { 
@@ -5469,7 +5478,7 @@ const SpiderApp = ({ userProfileData }) => {
                                                 }
                                             })
                                         ),
-                                        // prázdno
+                                        // prázdno (stlpec 7)
                                         React.createElement(
                                             'td',
                                             { 
