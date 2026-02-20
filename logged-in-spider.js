@@ -6382,41 +6382,10 @@ const SpiderApp = ({ userProfileData }) => {
                                                 className: 'spider-line-vertical',
                                                 style: {
                                                     left: '25%',  // zachované, ale teraz je to ľavá časť
-                                                    height: '50%',
+                                                    height: '100%',
                                                     top: 0
                                                 }
-                                            }),
-                                            
-                                            // Vodorovná čiara výškovo uprostred od stredu po 1/4 šírky
-                                            // Zmenené: teraz ide od 25% do 50% (zľava doprava)
-                                            React.createElement('div', {
-                                                className: 'spider-line-horizontal',
-                                                style: {
-                                                    left: '25%',
-                                                    width: '25%' // od 1/4 do 1/2
-                                                }
-                                            }),
-                                            
-                                            // Pridaná zvislá čiara na pravej strane (zrkadlovo k ľavej bunke)
-                                            React.createElement('div', {
-                                                className: 'spider-line-vertical',
-                                                style: {
-                                                    left: '75%',
-                                                    height: '50%',
-                                                    top: 0
-                                                }
-                                            }),
-                                            
-                                            // Pridaná vodorovná čiara na pravej strane (zrkadlovo k ľavej bunke)
-                                            React.createElement('div', {
-                                                className: 'spider-line-horizontal',
-                                                style: {
-                                                    left: '50%',
-                                                    width: '25%' // od 1/2 do 3/4
-                                                }
-                                            }),
-                                            
-                                            // Ľavé orámovanie na celú výšku - ODSTRÁNENÉ (nie je v ľavej bunke)
+                                            })
                                         )
                                     ),
                                     
