@@ -2366,6 +2366,7 @@ const SpiderApp = ({ userProfileData }) => {
     const MatchCell = ({ match, title = '', matchType, userProfileData, generationInProgress, onGenerate, onDelete, onTeamClick, onRemoveTeam }) => {
         const [isHovered, setIsHovered] = useState(false);
         const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+        const [teamToRemove, setTeamToRemove] = useState(null);
 
         const isMatchReference = (teamName) => {
             if (teamName === '---') return false;
