@@ -1419,10 +1419,14 @@ const SpiderApp = ({ userProfileData }) => {
                                 e.stopPropagation();
                                 setIsDeleteModalOpen(true);
                             },
-                            className: 'w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md hover:shadow-lg transform hover:scale-110 transition-all duration-200',
+                            className: 'w-8 h-8 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center shadow-md hover:shadow-lg transform hover:scale-110 transition-all duration-200',
+                            style: { color: 'white' }, // Pridaný inline style pre istotu
                             title: 'Odstrániť zápas'
                         },
-                        React.createElement('i', { className: 'fa-solid fa-trash-can text-sm' })
+                        React.createElement('i', { 
+                            className: 'fa-solid fa-trash-can text-sm',
+                            style: { color: 'white' } // Pridaný inline style pre ikonu
+                        })
                     )
                 ),
                 // Nadpis (ak existuje)
