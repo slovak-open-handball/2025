@@ -221,13 +221,14 @@ const findCategoryIdByName = (categories, categoryName) => {
     return category ? category.id : '';
 };
 
-// Komponent pre pavúkovú tabuľku
+// Komponent pre pavúkovú tabuľku - UPRAVENÝ PRE ZOBRAZENIE NÁZVOV HÁL
 const SpiderApp = ({ userProfileData }) => {
     const [categories, setCategories] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState('');
     const [loading, setLoading] = useState(true);
     const [spiderData, setSpiderData] = useState(null);
     const [allMatches, setAllMatches] = useState([]); // Všetky zápasy z databázy (aj bežné, aj pavúkové)
+    const [sportHalls, setSportHalls] = useState([]); // NOVÝ STAV: Zoznam športových hál
     const [isSelectOpen, setIsSelectOpen] = useState(false);
     const [generationInProgress, setGenerationInProgress] = useState(false);
     const [isDeleteMatchesModalOpen, setIsDeleteMatchesModalOpen] = useState(false);
@@ -258,6 +259,13 @@ const SpiderApp = ({ userProfileData }) => {
 
     // Definícia isFilterActive - filter je aktívny, ak je vybratá nejaká kategória
     const isFilterActive = selectedCategory !== '';
+
+    // NOVÁ FUNKCIA: Získanie názvu haly podľa ID
+    const getHallNameById = (hallId) => {
+        if (!hallId) return '';
+        const hall = sportHalls.find(h => h.id === hallId);
+        return hall ? hall.name : '';
+    };
 
     // Načítanie kategórií a všetkých zápasov
     useEffect(() => {
@@ -290,6 +298,37 @@ const SpiderApp = ({ userProfileData }) => {
                 console.error("Chyba pri načítaní kategórií:", error);
                 setLoading(false);
             }
+        };
+
+        // NOVÉ: Načítanie športových hál z kolekcie 'places'
+        const loadSportHalls = () => {
+            const placesRef = collection(window.db, 'places');
+            
+            const unsubscribe = onSnapshot(placesRef, (snapshot) => {
+                const loadedHalls = [];
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    const loc = data.location;
+                    
+                    loadedHalls.push({
+                        id: docSnap.id,
+                        name: data.name,
+                        type: data.type,
+                        lat: loc?.latitude ?? data.lat,
+                        lng: loc?.longitude ?? data.lng,
+                    });
+                });
+                
+                // Filtrujeme len športové haly
+                const filteredHalls = loadedHalls.filter(place => place.type === 'sportova_hala');
+                setSportHalls(filteredHalls);
+                
+                console.log(`SpiderApp: Načítaných ${filteredHalls.length} športových hál`);
+            }, (error) => {
+                console.error("SpiderApp: Chyba pri načítaní miest:", error);
+            });
+
+            return unsubscribe;
         };
 
         // Načítanie VŠETKÝCH zápasov z Firebase (kolekcia 'matches')
@@ -400,12 +439,14 @@ const SpiderApp = ({ userProfileData }) => {
         };
 
         loadCategorySettings();
-        const unsubscribe = loadAllMatches();
+        const unsubscribeMatches = loadAllMatches();
+        const unsubscribeHalls = loadSportHalls(); // NOVÉ: Načítanie hál
         loadTeamsData();
         loadGroupsData();
 
         return () => {
-            if (unsubscribe) unsubscribe();
+            if (unsubscribeMatches) unsubscribeMatches();
+            if (unsubscribeHalls) unsubscribeHalls(); // NOVÉ: Odhlásenie odberu hál
         };
     }, []);
 
@@ -2435,8 +2476,7 @@ const SpiderApp = ({ userProfileData }) => {
         }
     };
 
-    // Komponent pre zobrazenie jedného zápasu v pavúkovom zobrazení - UPRAVENÝ PRE ZOBRAZENIE DÁTUMU, ČASU A MIESTA
-    const MatchCell = ({ match, title = '', matchType, userProfileData, generationInProgress, onGenerate, onDelete, onTeamClick, onRemoveTeam }) => {
+const MatchCell = ({ match, title = '', matchType, userProfileData, generationInProgress, onGenerate, onDelete, onTeamClick, onRemoveTeam }) => {
         const [isHovered, setIsHovered] = useState(false);
         const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
         const [teamToRemove, setTeamToRemove] = useState(null);
@@ -2550,8 +2590,8 @@ const SpiderApp = ({ userProfileData }) => {
         const formattedDate = matchDate ? formatDateWithDay(matchDate) : '';
         const matchTime = matchDate ? `${matchDate.getHours().toString().padStart(2, '0')}:${matchDate.getMinutes().toString().padStart(2, '0')}` : '';
         
-        // Získanie názvu haly (ak existuje)
-        const hallName = match.hallName || '';
+        // Získanie názvu haly podľa ID (ak existuje)
+        const hallName = getHallNameById(match.hallId);
         
         // Použijeme homeTeamIdentifier a awayTeamIdentifier ak existujú, inak homeTeam/awayTeam
         const homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
@@ -2792,22 +2832,14 @@ const SpiderApp = ({ userProfileData }) => {
                         )
                     ),
                     
-                    // Miesto (športová hala)
+                    // Miesto (športová hala) - TERAZ POUŽÍVAME hallName Z funkcie getHallNameById
                     hallName && React.createElement(
                         'div',
                         { className: 'flex items-center gap-1' },
                         React.createElement('i', { className: 'fa-solid fa-location-dot text-gray-400 text-xs' }),
                         React.createElement('span', { className: 'truncate', title: hallName }, hallName)
                     )
-                ),
-                
-                // Dátum (zachovaný pre spätnú kompatibilitu, ale už ho nepotrebujeme)
-                // formattedDate && React.createElement(
-                //     'div',
-                //     { className: 'text-xs text-gray-500 mt-2 text-center border-t border-gray-100 pt-2' },
-                //     React.createElement('i', { className: 'fa-regular fa-calendar mr-1' }),
-                //     formattedDate
-                // )
+                )
             ),
             
             // Modálne okno pre potvrdenie zmazania celého zápasu
