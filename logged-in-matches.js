@@ -408,7 +408,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                 
                 setAvailableOrders1(orders);
                 
-                // Ak je vybraný order, nájdeme informácie o tíme
+                // Ak je vybraný order, nájdeme informácie o tíme (len pre interné použitie)
                 if (selectedOrder1) {
                     const team = teamsInGroup.find(t => t.order === parseInt(selectedOrder1));
                     setTeam1Info(team || null);
@@ -439,7 +439,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                 
                 setAvailableOrders2(orders);
                 
-                // Ak je vybraný order, nájdeme informácie o tíme
+                // Ak je vybraný order, nájdeme informácie o tíme (len pre interné použitie)
                 if (selectedOrder2) {
                     const team = teamsInGroup.find(t => t.order === parseInt(selectedOrder2));
                     setTeam2Info(team || null);
@@ -640,14 +640,6 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                             React.createElement('option', { key: order, value: order }, order)
                         )
                     )
-                ),
-                
-                // Zobrazenie vybraného tímu
-                team2Info && React.createElement(
-                    'div',
-                    { className: 'mt-2 p-2 bg-white rounded border border-purple-200' },
-                    React.createElement('p', { className: 'text-sm font-medium text-gray-800' }, team2Info.teamName),
-                    React.createElement('p', { className: 'text-xs text-gray-500' }, `ID: ${team2Info.id || 'Neznáme'}`)
                 )
             ),
 
