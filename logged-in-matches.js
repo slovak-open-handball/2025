@@ -7606,8 +7606,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     React.createElement('i', { 
                                                                                         className: `fa-solid ${
                                                                                             match.matchType.includes('finále') ? 'fa-trophy' :
-                                                                                                match.matchType.includes('semifinále') ? 'fa-medal' :
-                                                                                                match.matchType.includes('štvrťfinále') ? 'fa-star' :
                                                                                                 ''
                                                                                             } ${
                                                                                                 match.matchType.includes('finále') ? 'text-yellow-600' :
