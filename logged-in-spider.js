@@ -3680,7 +3680,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                                     return hasSpider;
                                 })
                                 .map(cat => {
-                                    // Vytvoríme dáta pavúka pre túto kategóriu (podobne ako v useEffect)
+                                    // Vytvoríme dáta pavúka pre túto kategóriu
                                     const spiderMatches = allMatches.filter(m => 
                                         m.categoryId === cat.id && 
                                         m.matchType && 
@@ -3714,7 +3714,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                                     else if (hasEightfinals) catSpiderLevel = 3;
                                     else if (hasQuarterfinals) catSpiderLevel = 2;
                                     
-                                    // Vytvoríme štruktúru pavúka pre túto kategóriu (podobne ako v useEffect)
+                                    // Vytvoríme štruktúru pavúka pre túto kategóriu
                                     const catSpiderData = {
                                         final: spiderMatches.find(m => m.matchType === 'finále') || { 
                                             id: 'final', 
@@ -3783,72 +3783,9 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                                                 exists: false
                                             }
                                         ],
-                                        eightFinals: [
-                                            spiderMatches.find(m => m.matchType === 'osemfinále 1') || { 
-                                                id: 'ef1', 
-                                                homeTeam: '---', 
-                                                awayTeam: '---', 
-                                                homeScore: '', 
-                                                awayScore: '', 
-                                                date: null,
-                                                exists: false
-                                            },
-                                            spiderMatches.find(m => m.matchType === 'osemfinále 2') || { 
-                                                id: 'ef2', 
-                                                homeTeam: '---', 
-                                                awayTeam: '---', 
-                                                homeScore: '', 
-                                                awayScore: '', 
-                                                date: null,
-                                                exists: false
-                                            },
-                                            spiderMatches.find(m => m.matchType === 'osemfinále 3') || { 
-                                                id: 'ef3', 
-                                                homeTeam: '---', 
-                                                awayTeam: '---', 
-                                                homeScore: '', 
-                                                awayScore: '', 
-                                                date: null,
-                                                exists: false
-                                            },
-                                            spiderMatches.find(m => m.matchType === 'osemfinále 4') || { 
-                                                id: 'ef4', 
-                                                homeTeam: '---', 
-                                                awayTeam: '---', 
-                                                homeScore: '', 
-                                                awayScore: '', 
-                                                date: null,
-                                                exists: false
-                                            },
-                                            spiderMatches.find(m => m.matchType === 'osemfinále 5') || { 
-                                                id: 'ef5', 
-                                                homeTeam: '---', 
-                                                awayTeam: '---', 
-                                                homeScore: '', 
-                                                awayScore: '', 
-                                                date: null,
-                                                exists: false
-                                            },
-                                            spiderMatches.find(m => m.matchType === 'osemfinále 6') || { 
-                                                id: 'ef6', 
-                                                homeTeam: '---', 
-                                                awayTeam: '---', 
-                                                homeScore: '', 
-                                                awayScore: '', 
-                                                date: null,
-                                                exists: false
-                                            },
-                                            spiderMatches.find(m => m.matchType === 'osemfinále 7') || { 
-                                                id: 'ef7', 
-                                                homeTeam: '---', 
-                                                awayTeam: '---', 
-                                                homeScore: '', 
-                                                awayScore: '', 
-                                                date: null,
-                                                exists: false
-                                            },
-                                            spiderMatches.find(m => m.matchType === 'osemfinále 8') || { 
-                                                id: 'ef8', 
+                                        eightFinals: Array(8).fill(null).map((_, i) => 
+                                            spiderMatches.find(m => m.matchType === `osemfinále ${i+1}`) || { 
+                                                id: `ef${i+1}`, 
                                                 homeTeam: '---', 
                                                 awayTeam: '---', 
                                                 homeScore: '', 
@@ -3856,7 +3793,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                                                 date: null,
                                                 exists: false
                                             }
-                                        ],
+                                        ),
                                         sixteenFinals: Array(16).fill(null).map((_, i) => 
                                             spiderMatches.find(m => m.matchType === `šestnásťfinále ${i+1}`) || { 
                                                 id: `sf${i+1}`, 
@@ -4020,7 +3957,599 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                                                     'tbody',
                                                     null,
                                 
-                                // ===== ÚROVEŇ 1 (len semifinále a finále) =====
+                                                    // ===== ÚROVEŇ 1 (len semifinále a finále) =====
+                                                    catSpiderLevel === 1 && React.createElement(
+                                                        React.Fragment,
+                                                        null,
+                                                        
+                                                        // PRVÝ RIADOK - Finále
+                                                        React.createElement(
+                                                            'tr',
+                                                            { style: { height: '150px' } },
+                                                            React.createElement(
+                                                                'td',
+                                                                { 
+                                                                    colSpan: 2,
+                                                                    className: 'spider-cell',
+                                                                    style: {
+                                                                        textAlign: 'center',
+                                                                        verticalAlign: 'middle',
+                                                                        padding: '10px',
+                                                                        border: '0px solid #d1d5db',
+                                                                        position: 'relative'
+                                                                    }
+                                                                },
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                                    React.createElement(MatchCell, { 
+                                                                        match: catSpiderData.final, 
+                                                                        title: 'Finále',
+                                                                        matchType: 'finále',
+                                                                        userProfileData: userProfileData,
+                                                                        generationInProgress: generationInProgress,
+                                                                        onGenerate: generateSingleMatch,
+                                                                        onDelete: deleteSingleMatch,
+                                                                        onTeamClick: handleTeamClick,
+                                                                        onRemoveTeam: removeTeamAssignment
+                                                                    })
+                                                                ),
+                                                                React.createElement('div', { 
+                                                                    style: {
+                                                                        position: 'absolute',
+                                                                        width: '2px',
+                                                                        backgroundColor: '#9ca3af',
+                                                                        left: '50%',
+                                                                        top: '50%',
+                                                                        bottom: 0,
+                                                                        transform: 'translateX(-50%)',
+                                                                        zIndex: 5,
+                                                                        pointerEvents: 'none'
+                                                                    }
+                                                                })
+                                                            )
+                                                        ),
+                                                                                            
+                                                        React.createElement(
+                                                            'tr',
+                                                            { style: { height: '150px' } },
+                                                            React.createElement(
+                                                                'td',
+                                                                { 
+                                                                    className: 'spider-cell',
+                                                                    style: {
+                                                                        textAlign: 'center',
+                                                                        verticalAlign: 'middle',
+                                                                        padding: '10px',
+                                                                        width: '50%',
+                                                                        border: '0px solid #d1d5db',
+                                                                        borderRight: '2px solid #9ca3af',
+                                                                        position: 'relative'
+                                                                    }
+                                                                },
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                                    React.createElement(MatchCell, { 
+                                                                        match: catSpiderData.semiFinals[0], 
+                                                                        title: 'Semifinále 1',
+                                                                        matchType: 'semifinále 1',
+                                                                        userProfileData: userProfileData,
+                                                                        generationInProgress: generationInProgress,
+                                                                        onGenerate: generateSingleMatch,
+                                                                        onDelete: deleteSingleMatch,
+                                                                        onTeamClick: handleTeamClick,
+                                                                        onRemoveTeam: removeTeamAssignment
+                                                                    })
+                                                                ),
+                                                                React.createElement('div', { className: 'spider-line-horizontal spider-line-right' })
+                                                            ),
+                                                            React.createElement(
+                                                                'td',
+                                                                { 
+                                                                    className: 'spider-cell',
+                                                                    style: {
+                                                                        textAlign: 'center',
+                                                                        verticalAlign: 'middle',
+                                                                        padding: '10px',
+                                                                        width: '50%',
+                                                                        border: '0px solid #d1d5db',
+                                                                        position: 'relative'
+                                                                    }
+                                                                },
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                                    React.createElement(MatchCell, { 
+                                                                        match: catSpiderData.semiFinals[1], 
+                                                                        title: 'Semifinále 2',
+                                                                        matchType: 'semifinále 2',
+                                                                        userProfileData: userProfileData,
+                                                                        generationInProgress: generationInProgress,
+                                                                        onGenerate: generateSingleMatch,
+                                                                        onDelete: deleteSingleMatch,
+                                                                        onTeamClick: handleTeamClick,
+                                                                        onRemoveTeam: removeTeamAssignment
+                                                                    })
+                                                                ),
+                                                                React.createElement('div', { className: 'spider-line-horizontal spider-line-left' })
+                                                            )
+                                                        ),
+                                                        
+                                                        // TRETÍ RIADOK - O 3. miesto
+                                                        React.createElement(
+                                                            'tr',
+                                                            { style: { height: '150px' } },
+                                                            React.createElement(
+                                                                'td',
+                                                                { 
+                                                                    colSpan: 2,
+                                                                    className: 'spider-cell',
+                                                                    style: {
+                                                                        textAlign: 'center',
+                                                                        verticalAlign: 'middle',
+                                                                        padding: '10px',
+                                                                        border: '0px solid #d1d5db',
+                                                                        position: 'relative'
+                                                                    }
+                                                                },
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                                    React.createElement(MatchCell, { 
+                                                                        match: catSpiderData.thirdPlace, 
+                                                                        title: 'O 3. miesto',
+                                                                        matchType: 'o 3. miesto',
+                                                                        userProfileData: userProfileData,
+                                                                        generationInProgress: generationInProgress,
+                                                                        onGenerate: generateSingleMatch,
+                                                                        onDelete: deleteSingleMatch,
+                                                                        onTeamClick: handleTeamClick,
+                                                                        onRemoveTeam: removeTeamAssignment
+                                                                    })
+                                                                ),
+                                                                React.createElement('div', { className: 'spider-line-vertical spider-line-vertical-top' })
+                                                            )
+                                                        )
+                                                    ),
+                                                    
+                                                    // ===== ÚROVEŇ 2 (so štvrťfinále) =====
+                                                    catSpiderLevel === 2 && React.createElement(
+                                                        React.Fragment,
+                                                        null,
+                                                        
+                                                        // PRVÝ RIADOK - QF1, Finále, QF3
+                                                        React.createElement(
+                                                            'tr',
+                                                            { style: { height: '150px' } },
+                                                            React.createElement(
+                                                                'td',
+                                                                { 
+                                                                    className: 'spider-cell',
+                                                                    style: {
+                                                                        textAlign: 'center',
+                                                                        verticalAlign: 'middle',
+                                                                        padding: '10px',
+                                                                        width: '33.33%',
+                                                                        border: '0px solid #d1d5db',
+                                                                        position: 'relative'
+                                                                    }
+                                                                },
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                                    React.createElement(MatchCell, { 
+                                                                        match: catSpiderData.quarterFinals[0], 
+                                                                        title: 'Štvrťfinále 1',
+                                                                        matchType: 'štvrťfinále 1',
+                                                                        userProfileData: userProfileData,
+                                                                        generationInProgress: generationInProgress,
+                                                                        onGenerate: generateSingleMatch,
+                                                                        onDelete: deleteSingleMatch,
+                                                                        onTeamClick: handleTeamClick,
+                                                                        onRemoveTeam: removeTeamAssignment
+                                                                    })
+                                                                ),
+                                                                React.createElement('div', { className: 'spider-line-horizontal spider-line-right' }),
+                                                                React.createElement('div', { 
+                                                                    style: {
+                                                                        position: 'absolute',
+                                                                        width: '2px',
+                                                                        backgroundColor: '#9ca3af',
+                                                                        right: 0,
+                                                                        top: '50%',
+                                                                        bottom: 0,
+                                                                        zIndex: 5,
+                                                                        pointerEvents: 'none'
+                                                                    }
+                                                                })
+                                                            ),
+                                                            React.createElement(
+                                                                'td',
+                                                                { 
+                                                                    className: 'spider-cell',
+                                                                    style: {
+                                                                        textAlign: 'center',
+                                                                        verticalAlign: 'middle',
+                                                                        padding: '10px',
+                                                                        width: '33.33%',
+                                                                        border: '0px solid #d1d5db',
+                                                                        position: 'relative'
+                                                                    }
+                                                                },
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                                    React.createElement(MatchCell, { 
+                                                                        match: catSpiderData.final, 
+                                                                        title: 'Finále',
+                                                                        matchType: 'finále',
+                                                                        userProfileData: userProfileData,
+                                                                        generationInProgress: generationInProgress,
+                                                                        onGenerate: generateSingleMatch,
+                                                                        onDelete: deleteSingleMatch,
+                                                                        onTeamClick: handleTeamClick,
+                                                                        onRemoveTeam: removeTeamAssignment
+                                                                    })
+                                                                ),
+                                                                React.createElement('div', { 
+                                                                    style: {
+                                                                        position: 'absolute',
+                                                                        width: '2px',
+                                                                        backgroundColor: '#9ca3af',
+                                                                        left: '50%',
+                                                                        top: '50%',
+                                                                        bottom: 0,
+                                                                        transform: 'translateX(-50%)',
+                                                                        zIndex: 5,
+                                                                        pointerEvents: 'none'
+                                                                    }
+                                                                })
+                                                            ),
+                                                            React.createElement(
+                                                                'td',
+                                                                { 
+                                                                    className: 'spider-cell',
+                                                                    style: {
+                                                                        textAlign: 'center',
+                                                                        verticalAlign: 'middle',
+                                                                        padding: '10px',
+                                                                        width: '33.33%',
+                                                                        border: '0px solid #d1d5db',
+                                                                        position: 'relative'
+                                                                    }
+                                                                },
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                                    React.createElement(MatchCell, { 
+                                                                        match: catSpiderData.quarterFinals[2], 
+                                                                        title: 'Štvrťfinále 3',
+                                                                        matchType: 'štvrťfinále 3',
+                                                                        userProfileData: userProfileData,
+                                                                        generationInProgress: generationInProgress,
+                                                                        onGenerate: generateSingleMatch,
+                                                                        onDelete: deleteSingleMatch,
+                                                                        onTeamClick: handleTeamClick,
+                                                                        onRemoveTeam: removeTeamAssignment
+                                                                    })
+                                                                ),
+                                                                React.createElement('div', { className: 'spider-line-horizontal spider-line-left' }),
+                                                                React.createElement('div', { 
+                                                                    style: {
+                                                                        position: 'absolute',
+                                                                        width: '2px',
+                                                                        backgroundColor: '#9ca3af',
+                                                                        left: 0,
+                                                                        top: '50%',
+                                                                        bottom: 0,
+                                                                        zIndex: 5,
+                                                                        pointerEvents: 'none'
+                                                                    }
+                                                                })
+                                                            )
+                                                        ),
+                                                        
+                                                        // DRUHÝ RIADOK - Semifinále
+                                                        React.createElement(
+                                                            'tr',
+                                                            { style: { height: '150px' } },
+                                                            React.createElement(
+                                                                'td',
+                                                                { 
+                                                                    colSpan: 3,
+                                                                    className: 'spider-cell',
+                                                                    style: {
+                                                                        textAlign: 'center',
+                                                                        verticalAlign: 'middle',
+                                                                        padding: '10px',
+                                                                        border: '0px solid #d1d5db',
+                                                                        position: 'relative'
+                                                                    }
+                                                                },
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { 
+                                                                        style: { 
+                                                                            display: 'flex',
+                                                                            justifyContent: 'center',
+                                                                            alignItems: 'center',
+                                                                            width: '100%',
+                                                                            gap: '20%',
+                                                                            position: 'relative',
+                                                                            zIndex: 10
+                                                                        }
+                                                                    },
+                                                                    React.createElement(MatchCell, { 
+                                                                        match: catSpiderData.semiFinals[0], 
+                                                                        title: 'Semifinále 1',
+                                                                        matchType: 'semifinále 1',
+                                                                        userProfileData: userProfileData,
+                                                                        generationInProgress: generationInProgress,
+                                                                        onGenerate: generateSingleMatch,
+                                                                        onDelete: deleteSingleMatch,
+                                                                        onTeamClick: handleTeamClick,
+                                                                        onRemoveTeam: removeTeamAssignment
+                                                                    }),
+                                                                    React.createElement(MatchCell, { 
+                                                                        match: catSpiderData.semiFinals[1], 
+                                                                        title: 'Semifinále 2',
+                                                                        matchType: 'semifinále 2',
+                                                                        userProfileData: userProfileData,
+                                                                        generationInProgress: generationInProgress,
+                                                                        onGenerate: generateSingleMatch,
+                                                                        onDelete: deleteSingleMatch,
+                                                                        onTeamClick: handleTeamClick,
+                                                                        onRemoveTeam: removeTeamAssignment
+                                                                    })
+                                                                ),
+                                                                
+                                                                React.createElement('div', { 
+                                                                    className: 'spider-line-vertical',
+                                                                    style: { left: '50%', height: '100%', top: 0 }
+                                                                })
+                                                            )
+                                                        ),
+                                                        
+                                                        // TRETÍ RIADOK - QF2, O 3. miesto, QF4
+                                                        React.createElement(
+                                                            'tr',
+                                                            { style: { height: '150px' } },
+                                                            React.createElement(
+                                                                'td',
+                                                                { 
+                                                                    className: 'spider-cell',
+                                                                    style: {
+                                                                        textAlign: 'center',
+                                                                        verticalAlign: 'middle',
+                                                                        padding: '10px',
+                                                                        width: '33.33%',
+                                                                        border: '0px solid #d1d5db',
+                                                                        position: 'relative'
+                                                                    }
+                                                                },
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                                    React.createElement(MatchCell, { 
+                                                                        match: catSpiderData.quarterFinals[1], 
+                                                                        title: 'Štvrťfinále 2',
+                                                                        matchType: 'štvrťfinále 2',
+                                                                        userProfileData: userProfileData,
+                                                                        generationInProgress: generationInProgress,
+                                                                        onGenerate: generateSingleMatch,
+                                                                        onDelete: deleteSingleMatch,
+                                                                        onTeamClick: handleTeamClick,
+                                                                        onRemoveTeam: removeTeamAssignment
+                                                                    })
+                                                                ),
+                                                                React.createElement('div', { className: 'spider-line-horizontal spider-line-right' }),
+                                                                React.createElement('div', { 
+                                                                    style: {
+                                                                        position: 'absolute',
+                                                                        width: '2px',
+                                                                        backgroundColor: '#9ca3af',
+                                                                        right: 0,
+                                                                        top: 0,
+                                                                        bottom: '50%',
+                                                                        zIndex: 5,
+                                                                        pointerEvents: 'none'
+                                                                    }
+                                                                })
+                                                            ),
+                                                            React.createElement(
+                                                                'td',
+                                                                { 
+                                                                    className: 'spider-cell',
+                                                                    style: {
+                                                                        textAlign: 'center',
+                                                                        verticalAlign: 'middle',
+                                                                        padding: '10px',
+                                                                        width: '33.33%',
+                                                                        border: '0px solid #d1d5db',
+                                                                        position: 'relative'
+                                                                    }
+                                                                },
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                                    React.createElement(MatchCell, { 
+                                                                        match: catSpiderData.thirdPlace, 
+                                                                        title: 'O 3. miesto',
+                                                                        matchType: 'o 3. miesto',
+                                                                        userProfileData: userProfileData,
+                                                                        generationInProgress: generationInProgress,
+                                                                        onGenerate: generateSingleMatch,
+                                                                        onDelete: deleteSingleMatch,
+                                                                        onTeamClick: handleTeamClick,
+                                                                        onRemoveTeam: removeTeamAssignment
+                                                                    })
+                                                                ),
+                                                                React.createElement('div', { className: 'spider-line-vertical spider-line-vertical-top' })
+                                                            ),
+                                                            React.createElement(
+                                                                'td',
+                                                                { 
+                                                                    className: 'spider-cell',
+                                                                    style: {
+                                                                        textAlign: 'center',
+                                                                        verticalAlign: 'middle',
+                                                                        padding: '10px',
+                                                                        width: '33.33%',
+                                                                        border: '0px solid #d1d5db',
+                                                                        position: 'relative'
+                                                                    }
+                                                                },
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { style: { display: 'inline-block', position: 'relative', zIndex: 10 } },
+                                                                    React.createElement(MatchCell, { 
+                                                                        match: catSpiderData.quarterFinals[3], 
+                                                                        title: 'Štvrťfinále 4',
+                                                                        matchType: 'štvrťfinále 4',
+                                                                        userProfileData: userProfileData,
+                                                                        generationInProgress: generationInProgress,
+                                                                        onGenerate: generateSingleMatch,
+                                                                        onDelete: deleteSingleMatch,
+                                                                        onTeamClick: handleTeamClick,
+                                                                        onRemoveTeam: removeTeamAssignment
+                                                                    })
+                                                                ),
+                                                                React.createElement('div', { className: 'spider-line-horizontal spider-line-left' }),
+                                                                React.createElement('div', { 
+                                                                    style: {
+                                                                        position: 'absolute',
+                                                                        width: '2px',
+                                                                        backgroundColor: '#9ca3af',
+                                                                        left: 0,
+                                                                        top: 0,
+                                                                        bottom: '50%',
+                                                                        zIndex: 5,
+                                                                        pointerEvents: 'none'
+                                                                    }
+                                                                })
+                                                            )
+                                                        )
+                                                    ),
+                                                    
+                                                    // ===== ÚROVEŇ 3 (s osemfinále) =====
+                                                    catSpiderLevel === 3 && React.createElement(
+                                                        React.Fragment,
+                                                        null,
+                                                        // SEM by ste mali skopírovať celý pôvodný kód pre osemfinále
+                                                        // a nahradiť spiderData za catSpiderData
+                                                        React.createElement(
+                                                            'tr',
+                                                            { style: { height: '150px' } },
+                                                            React.createElement(
+                                                                'td',
+                                                                { colSpan: 5, className: 'text-center text-gray-500 py-8' },
+                                                                'Osemfinále (kompletná tabuľka)'
+                                                            )
+                                                        )
+                                                    ),
+                                                    
+                                                    // ===== ÚROVEŇ 4 (so šestnásťfinále) =====
+                                                    catSpiderLevel === 4 && React.createElement(
+                                                        React.Fragment,
+                                                        null,
+                                                        // SEM by ste mali skopírovať celý pôvodný kód pre šestnásťfinále
+                                                        // a nahradiť spiderData za catSpiderData
+                                                        React.createElement(
+                                                            'tr',
+                                                            { style: { height: '120px' } },
+                                                            React.createElement(
+                                                                'td',
+                                                                { colSpan: 7, className: 'text-center text-gray-500 py-8' },
+                                                                'Šestnásťfinále (kompletná tabuľka)'
+                                                            )
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    );
+                                })
+                        ),
+                        // Ak nie sú žiadne pavúky
+                        categories.filter(cat => {
+                            const hasSpider = allMatches.some(m => 
+                                m.categoryId === cat.id && 
+                                m.matchType && 
+                                ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto', 
+                                 'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4',
+                                 'osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
+                                 'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8',
+                                 'šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
+                                 'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
+                                 'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
+                                 'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
+                            );
+                            return hasSpider;
+                        }).length === 0 && React.createElement(
+                            'div',
+                            { className: 'text-center py-16 text-gray-500' },
+                            React.createElement('i', { className: 'fa-solid fa-sitemap text-6xl mb-4 opacity-30' }),
+                            React.createElement('h2', { className: 'text-2xl font-semibold mb-2' }, 'Žiadne pavúky'),
+                            React.createElement('p', { className: 'text-lg' }, 'Zatiaľ nebol vygenerovaný žiadny pavúk pre žiadnu kategóriu.')
+                        )
+                    )
+                ) : !hasSpiderMatches ? (
+                    // Pôvodné zobrazenie pre vybratú kategóriu bez pavúkov
+                    React.createElement(
+                        'div',
+                        { className: 'text-center py-16 text-gray-500' },
+                        React.createElement('i', { className: 'fa-solid fa-sitemap text-6xl mb-4 opacity-30' }),
+                        React.createElement('h2', { className: 'text-2xl font-semibold mb-2' }, 'Pavúk play-off'),
+                        React.createElement('p', { className: 'text-lg' }, 'Pre túto kategóriu neexistujú žiadne pavúkové zápasy. Kliknite na zelenú polovicu tlačidla "+" pre vygenerovanie pavúka.')
+                    )
+                ) : !spiderData ? (
+                    // Pôvodné zobrazenie načítavania
+                    React.createElement(
+                        'div',
+                        { className: 'text-center py-16 text-gray-500' },
+                        React.createElement('i', { className: 'fa-solid fa-sitemap text-6xl mb-4 opacity-30' }),
+                        React.createElement('h2', { className: 'text-2xl font-semibold mb-2' }, 'Pavúk play-off'),
+                        React.createElement('p', { className: 'text-lg' }, 'Načítavam dáta...')
+                    )
+                ) : (
+                    // Pôvodné zobrazenie samotného pavúka pre vybratú kategóriu
+                    React.createElement(
+                        'div',
+                        { 
+                            className: 'flex flex-col items-center',
+                            style: { 
+                                minHeight: '700px',
+                                padding: '20px'
+                            }
+                        },
+                        
+                        // Nadpis
+                        React.createElement(
+                            'h2',
+                            { 
+                                className: 'text-2xl font-bold mb-12 text-gray-800',
+                            },
+                            `Play-off ${spiderLevel === 4 ? '(šestnásťfinále)' : (spiderLevel === 3 ? '(osemfinále)' : (spiderLevel === 2 ? '(štvrťfinále)' : ''))} - ${categories.find(c => c.id === selectedCategory)?.name || selectedCategory}`
+                        ),
+                        
+                        // Tabuľka pre pavúka - pôvodný kód
+                        React.createElement(
+                            'table',
+                            {
+                                style: {
+                                    borderCollapse: 'collapse',
+                                    width: '100%',
+                                    tableLayout: 'fixed',
+                                    border: '0px solid #d1d5db'
+                                }
+                            },
+                            
+                            React.createElement(
+                                'tbody',
+                                null,
+                                
+// ===== ÚROVEŇ 1 (len semifinále a finále) =====
                                 spiderLevel === 1 && React.createElement(
                                     React.Fragment,
                                     null,
