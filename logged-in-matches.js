@@ -310,7 +310,7 @@ const GenerationTypeModal = ({ isOpen, onClose, onSelectType }) => {
                             'div',
                             null,
                             React.createElement('h4', { className: 'font-semibold text-gray-800 text-lg' }, 'Zápas o umiestnenie'),
-                            React.createElement('p', { className: 'text-sm text-gray-600' }, 'Vytvoriť jeden zápas (finále, semifinále, o 3. miesto)')
+                            React.createElement('p', { className: 'text-sm text-gray-600' }, 'Vytvoriť jeden zápas')
                         )
                     )
                 )
@@ -368,11 +368,10 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
         return [...categories].sort((a, b) => a.name.localeCompare(b.name));
     }, [categories]);
 
-    // Aktualizácia dostupných skupín pri zmene kategórie
+    // Aktualizácia dostupných skupín pri zmene kategórie - BEZ FILTRA
     useEffect(() => {
         if (selectedCategory && groupsByCategory[selectedCategory]) {
             const sortedGroups = [...groupsByCategory[selectedCategory]]
-                .filter(g => g.type !== 'základná skupina') // Filtrujeme len nadstavbové skupiny
                 .sort((a, b) => a.name.localeCompare(b.name));
             setAvailableGroups(sortedGroups);
             setSelectedGroup1('');
