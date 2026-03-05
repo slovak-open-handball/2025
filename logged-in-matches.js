@@ -336,12 +336,14 @@ const GenerationTypeModal = ({ isOpen, onClose, onSelectType }) => {
 // Modálne okno pre vytvorenie zápasu o umiestnenie
 const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByCategory }) => {
     const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedGroupType, setSelectedGroupType] = useState(''); // 'základná skupina' alebo 'nadstavbová skupina'
     const [selectedGroup1, setSelectedGroup1] = useState('');
     const [selectedGroup2, setSelectedGroup2] = useState('');
     const [selectedOrder1, setSelectedOrder1] = useState('');
     const [selectedOrder2, setSelectedOrder2] = useState('');
     const [matchTitle, setMatchTitle] = useState('');
     const [availableGroups, setAvailableGroups] = useState([]);
+    const [filteredGroupsByType, setFilteredGroupsByType] = useState([]);
     const [orderError1, setOrderError1] = useState('');
     const [orderError2, setOrderError2] = useState('');
     const [maxTeamsInGroup1, setMaxTeamsInGroup1] = useState(0);
@@ -350,12 +352,14 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
     useEffect(() => {
         if (!isOpen) {
             setSelectedCategory('');
+            setSelectedGroupType('');
             setSelectedGroup1('');
             setSelectedGroup2('');
             setSelectedOrder1('');
             setSelectedOrder2('');
             setMatchTitle('');
             setAvailableGroups([]);
+            setFilteredGroupsByType([]);
             setOrderError1('');
             setOrderError2('');
             setMaxTeamsInGroup1(0);
@@ -368,6 +372,12 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
         return [...categories].sort((a, b) => a.name.localeCompare(b.name));
     }, [categories]);
 
+    // Možnosti pre typ skupiny
+    const groupTypeOptions = [
+        { value: 'základná skupina', label: 'Základná skupina', icon: 'fa-layer-group', color: 'green' },
+        { value: 'nadstavbová skupina', label: 'Nadstavbová skupina', icon: 'fa-chart-line', color: 'purple' }
+    ];
+
     // Aktualizácia dostupných skupín pri zmene kategórie
     useEffect(() => {
         if (selectedCategory) {
@@ -379,6 +389,38 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                 setAvailableGroups([]);
             }
             
+            setSelectedGroupType('');
+            setSelectedGroup1('');
+            setSelectedGroup2('');
+            setSelectedOrder1('');
+            setSelectedOrder2('');
+            setOrderError1('');
+            setOrderError2('');
+            setMaxTeamsInGroup1(0);
+            setMaxTeamsInGroup2(0);
+            setFilteredGroupsByType([]);
+        } else {
+            setAvailableGroups([]);
+            setSelectedGroupType('');
+            setSelectedGroup1('');
+            setSelectedGroup2('');
+            setSelectedOrder1('');
+            setSelectedOrder2('');
+            setOrderError1('');
+            setOrderError2('');
+            setMaxTeamsInGroup1(0);
+            setMaxTeamsInGroup2(0);
+            setFilteredGroupsByType([]);
+        }
+    }, [selectedCategory, groupsByCategory]);
+
+    // Filtrovanie skupín podľa vybraného typu
+    useEffect(() => {
+        if (selectedCategory && selectedGroupType && availableGroups.length > 0) {
+            const filtered = availableGroups.filter(group => group.type === selectedGroupType);
+            setFilteredGroupsByType(filtered);
+            
+            // Reset vybraných skupín pri zmene typu
             setSelectedGroup1('');
             setSelectedGroup2('');
             setSelectedOrder1('');
@@ -388,7 +430,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             setMaxTeamsInGroup1(0);
             setMaxTeamsInGroup2(0);
         } else {
-            setAvailableGroups([]);
+            setFilteredGroupsByType([]);
             setSelectedGroup1('');
             setSelectedGroup2('');
             setSelectedOrder1('');
@@ -398,7 +440,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             setMaxTeamsInGroup1(0);
             setMaxTeamsInGroup2(0);
         }
-    }, [selectedCategory, groupsByCategory]);
+    }, [selectedCategory, selectedGroupType, availableGroups]);
 
     // Zistenie počtu tímov v skupine podľa skupiny
     const getTeamCountInGroup = (groupName) => {
@@ -572,6 +614,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
     if (!isOpen) return null;
 
     const isValid = selectedCategory && 
+                    selectedGroupType &&
                     selectedGroup1 && 
                     selectedGroup2 && 
                     selectedOrder1 && 
@@ -629,8 +672,32 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                 )
             ),
 
-            // Prvý tím
+            // Výber typu skupiny
             selectedCategory && React.createElement(
+                'div',
+                { className: 'mb-4' },
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                    'Typ skupiny:'
+                ),
+                React.createElement(
+                    'select',
+                    {
+                        value: selectedGroupType,
+                        onChange: (e) => setSelectedGroupType(e.target.value),
+                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                    },
+                    React.createElement('option', { value: '' }, '-- Vyberte typ skupiny --'),
+                    groupTypeOptions.map(option => 
+                        React.createElement('option', { 
+                            key: option.value, 
+                            value: option.value 
+                        }, option.label)
+                    )
+                )
+            ),
+
+            // Prvý tím
+            selectedCategory && selectedGroupType && React.createElement(
                 'div',
                 { className: 'mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200' },
                 React.createElement('h4', { className: 'font-semibold text-gray-700 mb-3' }, 'Prvý tím'),
@@ -654,9 +721,15 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                             className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
                         },
                         React.createElement('option', { value: '' }, '-- Vyberte skupinu --'),
-                        availableGroups.map(group => 
+                        filteredGroupsByType.map(group => 
                             React.createElement('option', { key: group.name, value: group.name }, group.name)
                         )
+                    ),
+                    filteredGroupsByType.length === 0 && React.createElement(
+                        'p',
+                        { className: 'text-xs text-orange-500 mt-1 flex items-center gap-1' },
+                        React.createElement('i', { className: 'fa-solid fa-info-circle' }),
+                        'Pre tento typ nie sú žiadne skupiny'
                     )
                 ),
                 
@@ -693,7 +766,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             ),
 
             // Druhý tím
-            selectedCategory && React.createElement(
+            selectedCategory && selectedGroupType && React.createElement(
                 'div',
                 { className: 'mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200' },
                 React.createElement('h4', { className: 'font-semibold text-gray-700 mb-3' }, 'Druhý tím'),
@@ -717,9 +790,15 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                             className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
                         },
                         React.createElement('option', { value: '' }, '-- Vyberte skupinu --'),
-                        availableGroups.map(group => 
+                        filteredGroupsByType.map(group => 
                             React.createElement('option', { key: group.name, value: group.name }, group.name)
                         )
+                    ),
+                    filteredGroupsByType.length === 0 && React.createElement(
+                        'p',
+                        { className: 'text-xs text-orange-500 mt-1 flex items-center gap-1' },
+                        React.createElement('i', { className: 'fa-solid fa-info-circle' }),
+                        'Pre tento typ nie sú žiadne skupiny'
                     )
                 ),
                 
