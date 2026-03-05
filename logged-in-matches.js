@@ -904,11 +904,6 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                         { className: 'text-xs text-red-500 mt-1 flex items-center gap-1' },
                         React.createElement('i', { className: 'fa-solid fa-exclamation-triangle' }),
                         rankError
-                    ),
-                    React.createElement(
-                        'p',
-                        { className: 'text-xs text-gray-500 mt-1' },
-                        'Zadajte kladné celé číslo (napr. 1 = finále, 3 = o 3. miesto, atď.)'
                     )
                 )
             ),
