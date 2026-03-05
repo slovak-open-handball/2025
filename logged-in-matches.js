@@ -344,7 +344,8 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
     const [availableGroups, setAvailableGroups] = useState([]);
     const [orderError1, setOrderError1] = useState('');
     const [orderError2, setOrderError2] = useState('');
-    const [maxTeams, setMaxTeams] = useState(8);
+    const [maxTeamsInGroup1, setMaxTeamsInGroup1] = useState(0);
+    const [maxTeamsInGroup2, setMaxTeamsInGroup2] = useState(0);
 
     useEffect(() => {
         if (!isOpen) {
@@ -357,7 +358,8 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             setAvailableGroups([]);
             setOrderError1('');
             setOrderError2('');
-            setMaxTeams(8);
+            setMaxTeamsInGroup1(0);
+            setMaxTeamsInGroup2(0);
         }
     }, [isOpen]);
 
@@ -366,12 +368,9 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
         return [...categories].sort((a, b) => a.name.localeCompare(b.name));
     }, [categories]);
 
-    // Aktualizácia dostupných skupín pri zmene kategórie a nastavenie maxTeams
+    // Aktualizácia dostupných skupín pri zmene kategórie
     useEffect(() => {
         if (selectedCategory) {
-            const category = categories.find(c => c.id === selectedCategory);
-            setMaxTeams(category?.maxTeams || 8);
-            
             if (groupsByCategory[selectedCategory]) {
                 const sortedGroups = [...groupsByCategory[selectedCategory]]
                     .sort((a, b) => a.name.localeCompare(b.name));
@@ -386,17 +385,80 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             setSelectedOrder2('');
             setOrderError1('');
             setOrderError2('');
+            setMaxTeamsInGroup1(0);
+            setMaxTeamsInGroup2(0);
         } else {
             setAvailableGroups([]);
-            setMaxTeams(8);
             setSelectedGroup1('');
             setSelectedGroup2('');
             setSelectedOrder1('');
             setSelectedOrder2('');
             setOrderError1('');
             setOrderError2('');
+            setMaxTeamsInGroup1(0);
+            setMaxTeamsInGroup2(0);
         }
-    }, [selectedCategory, categories, groupsByCategory]);
+    }, [selectedCategory, groupsByCategory]);
+
+    // Zistenie počtu tímov v skupine podľa skupiny
+    const getTeamCountInGroup = (groupName) => {
+        if (!selectedCategory || !groupName || !window.__teamManagerData?.allTeams) {
+            return 0;
+        }
+        
+        const category = categories.find(c => c.id === selectedCategory);
+        if (!category) return 0;
+        
+        // Filtrujeme tímy podľa kategórie a názvu skupiny
+        const teamsInGroup = window.__teamManagerData.allTeams.filter(t => 
+            t.category === category.name && 
+            t.groupName === groupName
+        );
+        
+        return teamsInGroup.length;
+    };
+
+    // Aktualizácia maxTeams pre prvú skupinu pri zmene skupiny
+    useEffect(() => {
+        if (selectedGroup1) {
+            const teamCount = getTeamCountInGroup(selectedGroup1);
+            setMaxTeamsInGroup1(teamCount);
+            
+            // Ak je už zadané poradie, skontrolujeme ho
+            if (selectedOrder1) {
+                const numValue = parseInt(selectedOrder1, 10);
+                if (numValue > teamCount) {
+                    setOrderError1(`V skupine je len ${teamCount} tímov`);
+                } else {
+                    setOrderError1('');
+                }
+            }
+        } else {
+            setMaxTeamsInGroup1(0);
+            setOrderError1('');
+        }
+    }, [selectedGroup1, selectedCategory, categories]);
+
+    // Aktualizácia maxTeams pre druhú skupinu pri zmene skupiny
+    useEffect(() => {
+        if (selectedGroup2) {
+            const teamCount = getTeamCountInGroup(selectedGroup2);
+            setMaxTeamsInGroup2(teamCount);
+            
+            // Ak je už zadané poradie, skontrolujeme ho
+            if (selectedOrder2) {
+                const numValue = parseInt(selectedOrder2, 10);
+                if (numValue > teamCount) {
+                    setOrderError2(`V skupine je len ${teamCount} tímov`);
+                } else {
+                    setOrderError2('');
+                }
+            }
+        } else {
+            setMaxTeamsInGroup2(0);
+            setOrderError2('');
+        }
+    }, [selectedGroup2, selectedCategory, categories]);
 
     // Validácia a spracovanie zmeny poradia pre prvý tím
     const handleOrder1Change = (e) => {
@@ -423,9 +485,9 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             return;
         }
         
-        // Skontrolovať, či nepresahuje maxTeams
-        if (numValue > maxTeams) {
-            setOrderError1(`Maximálne poradie je ${maxTeams}`);
+        // Skontrolovať, či nepresahuje počet tímov v skupine
+        if (numValue > maxTeamsInGroup1) {
+            setOrderError1(`V skupine je len ${maxTeamsInGroup1} tímov`);
             return;
         }
         
@@ -459,9 +521,9 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             return;
         }
         
-        // Skontrolovať, či nepresahuje maxTeams
-        if (numValue > maxTeams) {
-            setOrderError2(`Maximálne poradie je ${maxTeams}`);
+        // Skontrolovať, či nepresahuje počet tímov v skupine
+        if (numValue > maxTeamsInGroup2) {
+            setOrderError2(`V skupine je len ${maxTeamsInGroup2} tímov`);
             return;
         }
         
@@ -515,7 +577,9 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                     selectedOrder1 && 
                     selectedOrder2 && 
                     !orderError1 && 
-                    !orderError2;
+                    !orderError2 &&
+                    maxTeamsInGroup1 > 0 &&
+                    maxTeamsInGroup2 > 0;
 
     return React.createElement(
         'div',
@@ -601,7 +665,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                     'div',
                     { className: 'mb-3' },
                     React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
-                        `Poradie (1-${maxTeams}):`
+                        `Poradie (1-${maxTeamsInGroup1 || '?'}):`
                     ),
                     React.createElement('input', {
                         type: 'text',
@@ -609,14 +673,21 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                         pattern: '[0-9]*',
                         value: selectedOrder1,
                         onChange: handleOrder1Change,
-                        placeholder: `Zadajte číslo 1-${maxTeams}`,
-                        className: `w-full px-3 py-2 border ${orderError1 ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black`
+                        placeholder: maxTeamsInGroup1 ? `Zadajte číslo 1-${maxTeamsInGroup1}` : 'Najprv vyberte skupinu',
+                        disabled: !maxTeamsInGroup1,
+                        className: `w-full px-3 py-2 border ${orderError1 ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${!maxTeamsInGroup1 ? 'bg-gray-100' : ''}`
                     }),
                     orderError1 && React.createElement(
                         'p',
                         { className: 'text-xs text-red-500 mt-1 flex items-center gap-1' },
                         React.createElement('i', { className: 'fa-solid fa-exclamation-triangle' }),
                         orderError1
+                    ),
+                    maxTeamsInGroup1 === 0 && selectedGroup1 && React.createElement(
+                        'p',
+                        { className: 'text-xs text-orange-500 mt-1 flex items-center gap-1' },
+                        React.createElement('i', { className: 'fa-solid fa-info-circle' }),
+                        'V tejto skupine nie sú žiadne tímy'
                     )
                 )
             ),
@@ -657,7 +728,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                     'div',
                     { className: 'mb-3' },
                     React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
-                        `Poradie (1-${maxTeams}):`
+                        `Poradie (1-${maxTeamsInGroup2 || '?'}):`
                     ),
                     React.createElement('input', {
                         type: 'text',
@@ -665,14 +736,21 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                         pattern: '[0-9]*',
                         value: selectedOrder2,
                         onChange: handleOrder2Change,
-                        placeholder: `Zadajte číslo 1-${maxTeams}`,
-                        className: `w-full px-3 py-2 border ${orderError2 ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black`
+                        placeholder: maxTeamsInGroup2 ? `Zadajte číslo 1-${maxTeamsInGroup2}` : 'Najprv vyberte skupinu',
+                        disabled: !maxTeamsInGroup2,
+                        className: `w-full px-3 py-2 border ${orderError2 ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black ${!maxTeamsInGroup2 ? 'bg-gray-100' : ''}`
                     }),
                     orderError2 && React.createElement(
                         'p',
                         { className: 'text-xs text-red-500 mt-1 flex items-center gap-1' },
                         React.createElement('i', { className: 'fa-solid fa-exclamation-triangle' }),
                         orderError2
+                    ),
+                    maxTeamsInGroup2 === 0 && selectedGroup2 && React.createElement(
+                        'p',
+                        { className: 'text-xs text-orange-500 mt-1 flex items-center gap-1' },
+                        React.createElement('i', { className: 'fa-solid fa-info-circle' }),
+                        'V tejto skupine nie sú žiadne tímy'
                     )
                 )
             ),
