@@ -7608,7 +7608,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                             match.matchType.includes('finále') ? 'fa-trophy' :
                                                                                                 match.matchType.includes('semifinále') ? 'fa-medal' :
                                                                                                 match.matchType.includes('štvrťfinále') ? 'fa-star' :
-                                                                                                'fa-sitemap'
+                                                                                                ''
                                                                                             } ${
                                                                                                 match.matchType.includes('finále') ? 'text-yellow-600' :
                                                                                                 match.matchType.includes('semifinále') ? 'text-blue-600' :
