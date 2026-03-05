@@ -295,7 +295,7 @@ const GenerationTypeModal = ({ isOpen, onClose, onSelectType }) => {
                 React.createElement(
                     'button',
                     {
-                        className: 'w-full p-4 bg-purple-50 hover:bg-purple-100 border-2 border-purple-200 rounded-xl text-left transition-colors',
+                        className: 'w-full p-4 bg-gray-50 hover:bg-gray-100 border-2 border-gray-200 rounded-xl text-left transition-colors',
                         onClick: () => onSelectType('placement')
                     },
                     React.createElement(
@@ -303,7 +303,7 @@ const GenerationTypeModal = ({ isOpen, onClose, onSelectType }) => {
                         { className: 'flex items-center gap-3' },
                         React.createElement(
                             'div',
-                            { className: 'w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0' },
+                            { className: 'w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center flex-shrink-0' },
                             React.createElement('i', { className: 'fa-solid fa-trophy text-white text-lg' })
                         ),
                         React.createElement(
@@ -379,7 +379,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
     // Možnosti pre typ skupiny
     const groupTypeOptions = [
         { value: 'základná skupina', label: 'Základná skupina', icon: 'fa-layer-group', color: 'green' },
-        { value: 'nadstavbová skupina', label: 'Nadstavbová skupina', icon: 'fa-chart-line', color: 'purple' }
+        { value: 'nadstavbová skupina', label: 'Nadstavbová skupina', icon: 'fa-chart-line', color: 'gray' }
     ];
 
     // Aktualizácia dostupných skupín pri zmene kategórie
@@ -813,7 +813,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             // Druhý tím
             selectedCategory && selectedGroupType && React.createElement(
                 'div',
-                { className: 'mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200' },
+                { className: 'mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200' },
                 React.createElement('h4', { className: 'font-semibold text-gray-700 mb-3' }, 'Druhý tím'),
                 
                 // Výber skupiny pre druhý tím
@@ -1120,7 +1120,7 @@ const DeleteMatchesModal = ({ isOpen, onClose, onConfirm, categories, groupsByCa
                             className: `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                 selectedGroupType === 'Základná skupina' 
                                     ? 'bg-green-100 text-green-800' 
-                                    : 'bg-purple-100 text-purple-800'
+                                    : 'bg-gray-100 text-gray-800'
                             }` 
                         },
                         React.createElement('i', { 
@@ -3160,7 +3160,7 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                             className: `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                 selectedGroupType === 'Základná skupina' 
                                     ? 'bg-green-100 text-green-800' 
-                                    : 'bg-purple-100 text-purple-800'
+                                    : 'bg-gray-100 text-gray-800'
                             }` 
                         },
                         React.createElement('i', { 
@@ -3200,7 +3200,7 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
             // NOVÝ: Checkbox pre prenos zo základnej skupiny (len pre nadstavbové skupiny)
             selectedGroup && selectedGroupType === 'Nadstavbová skupina' && React.createElement(
                 'div',
-                { className: 'mb-6 p-3 bg-purple-50 rounded-lg border border-purple-200' },
+                { className: 'mb-6 p-3 bg-gray-50 rounded-lg border border-gray-200' },
                 React.createElement(
                     'label',
                     { className: 'flex items-start gap-2 cursor-pointer' },
@@ -3208,7 +3208,7 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                         type: 'checkbox',
                         checked: transferFromBasicGroup,
                         onChange: (e) => setTransferFromBasicGroup(e.target.checked),
-                        className: 'w-4 h-4 text-purple-600 rounded mt-0.5'
+                        className: 'w-4 h-4 text-gray-600 rounded mt-0.5'
                     }),
                     React.createElement(
                         'div',
@@ -6323,7 +6323,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                     url.searchParams.set('view', 'spider');
                                     window.location.href = url.toString();
                                 },
-                                className: 'px-3 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors whitespace-nowrap ml-2',
+                                className: 'px-3 py-1.5 text-sm bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors whitespace-nowrap ml-2',
                                 title: 'Prejsť do zobrazenia pavúka (semifinále, finále, o 3. miesto)'
                             },
                             'Pavúk'
@@ -6670,7 +6670,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             ),
                                             match.isPlacementMatch && match.placementRank && React.createElement(
                                                 'span',
-                                                { className: 'ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full' },
+                                                { className: 'ml-2 text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full' },
                                                 `o ${match.placementRank}. miesto`
                                             ),
                                             match.matchType && !match.isPlacementMatch && React.createElement(
@@ -6680,7 +6680,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         match.matchType === 'finále' ? 'bg-yellow-100 text-yellow-700' :
                                                         match.matchType.startsWith('semifinále') ? 'bg-blue-100 text-blue-700' :
                                                         match.matchType.startsWith('štvrťfinále') ? 'bg-green-100 text-green-700' :
-                                                        match.matchType.startsWith('osemfinále') ? 'bg-purple-100 text-purple-700' :
+                                                        match.matchType.startsWith('osemfinále') ? 'bg-gray-100 text-gray-700' :
                                                         match.matchType.startsWith('šestnásťfinále') ? 'bg-indigo-100 text-indigo-700' :
                                                         'bg-gray-100 text-gray-700'
                                                     }` 
@@ -7602,7 +7602,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 match.isPlacementMatch && match.placementRank && React.createElement(
                                                                                     'div',
                                                                                     { className: 'flex items-center justify-center gap-1 w-full mt-0.5' },
-                                                                                    React.createElement('span', { className: 'text-xs text-purple-600 font-medium' }, `o ${match.placementRank}. miesto`)
+                                                                                    React.createElement('span', { className: 'text-xs text-gray-600 font-medium' }, `o ${match.placementRank}. miesto`)
                                                                                 ),
                                                                                 // Druhý riadok - pre ostatné typy zápasov (finále, semifinále, atď.)
                                                                                 match.matchType && !match.isPlacementMatch && React.createElement(
@@ -7616,7 +7616,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                 match.matchType.includes('finále') ? 'text-yellow-600' :
                                                                                                 match.matchType.includes('semifinále') ? 'text-blue-600' :
                                                                                                 match.matchType.includes('štvrťfinále') ? 'text-green-600' :
-                                                                                                'text-purple-600'
+                                                                                                'text-gray-600'
                                                                                             } text-xs flex-shrink-0` 
                                                                                     }),
                                                                                     React.createElement('span', { 
@@ -7624,7 +7624,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                             match.matchType.includes('finále') ? 'text-yellow-600' :
                                                                                             match.matchType.includes('semifinále') ? 'text-blue-600' :
                                                                                             match.matchType.includes('štvrťfinále') ? 'text-green-600' :
-                                                                                            'text-purple-600'
+                                                                                            'text-gray-600'
                                                                                         } font-medium` 
                                                                                     }, match.matchType)
                                                                                 )
