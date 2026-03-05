@@ -3639,22 +3639,148 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                     className: 'bg-white p-8 rounded-xl shadow-lg overflow-x-auto',
                     style: { 
                         width: '100%', 
-                        maxWidth: spiderLevel === 4 ? `${7 * (240 + 24 + 4)}px` : 
-                                    spiderLevel === 3 ? `${5 * (240 + 24 + 4)}px` : 
-                                      (spiderLevel === 2 ? `${3 * (260 + 24 + 4)}px` : 
-                                                        `${2 * (280 + 24 + 4)}px`),
+                        maxWidth: selectedCategory 
+                            ? (spiderLevel === 4 ? `${7 * (240 + 24 + 4)}px` : 
+                               spiderLevel === 3 ? `${5 * (240 + 24 + 4)}px` : 
+                               (spiderLevel === 2 ? `${3 * (260 + 24 + 4)}px` : 
+                                `${2 * (280 + 24 + 4)}px`))
+                            : '1200px', // Šírka pre zoznam všetkých pavúkov
                     }
                 },
                 
+                // Podmienka pre zobrazenie: Ak nie je vybratá kategória
                 !selectedCategory ? (
+                    // ZOBRAZENIE VŠETKÝCH PAVÚKOV
                     React.createElement(
                         'div',
-                        { className: 'text-center py-16 text-gray-500' },
-                        React.createElement('i', { className: 'fa-solid fa-sitemap text-6xl mb-4 opacity-30' }),
-                        React.createElement('h2', { className: 'text-2xl font-semibold mb-2' }, 'Pavúk play-off'),
-                        React.createElement('p', { className: 'text-lg' }, 'Vyberte kategóriu pre zobrazenie pavúka')
+                        { className: 'w-full' },
+                        React.createElement(
+                            'h2',
+                            { className: 'text-2xl font-bold mb-6 text-gray-800 text-center' },
+                            'Všetky pavúky'
+                        ),
+                        React.createElement(
+                            'div',
+                            { className: 'flex flex-col gap-6' },
+                            // Filtrujeme kategórie, ktoré majú aspoň jeden pavúkový zápas
+                            categories
+                                .filter(cat => {
+                                    const hasSpider = allMatches.some(m => 
+                                        m.categoryId === cat.id && 
+                                        m.matchType && 
+                                        ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto', 
+                                         'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4',
+                                         'osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
+                                         'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8',
+                                         'šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
+                                         'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
+                                         'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
+                                         'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
+                                    );
+                                    return hasSpider;
+                                })
+                                .map(cat => {
+                                    // Získame pavúkové zápasy pre túto kategóriu
+                                    const spiderMatches = allMatches.filter(m => 
+                                        m.categoryId === cat.id && 
+                                        m.matchType && 
+                                        ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto', 
+                                         'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4',
+                                         'osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
+                                         'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8',
+                                         'šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
+                                         'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
+                                         'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
+                                         'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
+                                    );
+                                    
+                                    // Zistenie úrovne pavúka
+                                    const hasSixteenfinals = spiderMatches.some(m => 
+                                        ['šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
+                                         'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
+                                         'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
+                                         'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
+                                    );
+                                    const hasEightfinals = spiderMatches.some(m => 
+                                        ['osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
+                                         'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8'].includes(m.matchType)
+                                    );
+                                    const hasQuarterfinals = spiderMatches.some(m => 
+                                        ['štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4'].includes(m.matchType)
+                                    );
+                                    
+                                    let levelText = '';
+                                    if (hasSixteenfinals) levelText = 'šestnásťfinále';
+                                    else if (hasEightfinals) levelText = 'osemfinále';
+                                    else if (hasQuarterfinals) levelText = 'štvrťfinále';
+                                    else levelText = 'semifinále+';
+                                    
+                                    // Počet zápasov
+                                    const matchCount = spiderMatches.length;
+                                    
+                                    return React.createElement(
+                                        'div',
+                                        { 
+                                            key: cat.id,
+                                            className: 'border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer',
+                                            onClick: () => {
+                                                setSelectedCategory(cat.id);
+                                                updateUrlWithCategoryName(cat.name);
+                                            }
+                                        },
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex justify-between items-center' },
+                                            React.createElement(
+                                                'h3',
+                                                { className: 'text-lg font-semibold text-gray-800' },
+                                                cat.name
+                                            ),
+                                            React.createElement(
+                                                'span',
+                                                { className: 'text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full' },
+                                                `${matchCount} zápasov`
+                                            )
+                                        ),
+                                        React.createElement(
+                                            'p',
+                                            { className: 'text-sm text-gray-600 mt-1' },
+                                            `Úroveň: ${levelText}`
+                                        ),
+                                        React.createElement(
+                                            'div',
+                                            { className: 'mt-2 text-xs text-blue-600 flex items-center gap-1' },
+                                            React.createElement('i', { className: 'fa-solid fa-arrow-right' }),
+                                            'Kliknutím zobrazíte pavúka'
+                                        )
+                                    );
+                                })
+                        ),
+                        // Ak nie sú žiadne pavúky
+                        categories.filter(cat => {
+                            const hasSpider = allMatches.some(m => 
+                                m.categoryId === cat.id && 
+                                m.matchType && 
+                                ['finále', 'semifinále 1', 'semifinále 2', 'o 3. miesto', 
+                                 'štvrťfinále 1', 'štvrťfinále 2', 'štvrťfinále 3', 'štvrťfinále 4',
+                                 'osemfinále 1', 'osemfinále 2', 'osemfinále 3', 'osemfinále 4',
+                                 'osemfinále 5', 'osemfinále 6', 'osemfinále 7', 'osemfinále 8',
+                                 'šestnásťfinále 1', 'šestnásťfinále 2', 'šestnásťfinále 3', 'šestnásťfinále 4',
+                                 'šestnásťfinále 5', 'šestnásťfinále 6', 'šestnásťfinále 7', 'šestnásťfinále 8',
+                                 'šestnásťfinále 9', 'šestnásťfinále 10', 'šestnásťfinále 11', 'šestnásťfinále 12',
+                                 'šestnásťfinále 13', 'šestnásťfinále 14', 'šestnásťfinále 15', 'šestnásťfinále 16'].includes(m.matchType)
+                            );
+                            return hasSpider;
+                        }).length === 0 && React.createElement(
+                            'div',
+                            { className: 'text-center py-16 text-gray-500' },
+                            React.createElement('i', { className: 'fa-solid fa-sitemap text-6xl mb-4 opacity-30' }),
+                            React.createElement('h2', { className: 'text-2xl font-semibold mb-2' }, 'Žiadne pavúky'),
+                            React.createElement('p', { className: 'text-lg' }, 'Zatiaľ nebol vygenerovaný žiadny pavúk pre žiadnu kategóriu.')
+                        )
                     )
                 ) : !hasSpiderMatches ? (
+                    // Pôvodné zobrazenie pre vybratú kategóriu bez pavúkov
                     React.createElement(
                         'div',
                         { className: 'text-center py-16 text-gray-500' },
@@ -3663,6 +3789,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                         React.createElement('p', { className: 'text-lg' }, 'Pre túto kategóriu neexistujú žiadne pavúkové zápasy. Kliknite na zelenú polovicu tlačidla "+" pre vygenerovanie pavúka.')
                     )
                 ) : !spiderData ? (
+                    // Pôvodné zobrazenie načítavania
                     React.createElement(
                         'div',
                         { className: 'text-center py-16 text-gray-500' },
@@ -3671,6 +3798,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                         React.createElement('p', { className: 'text-lg' }, 'Načítavam dáta...')
                     )
                 ) : (
+                    // Pôvodné zobrazenie samotného pavúka (celý ten veľký blok s tabuľkou)
                     React.createElement(
                         'div',
                         { 
