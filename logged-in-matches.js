@@ -7605,7 +7605,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     { className: 'flex items-center justify-center gap-1 w-full mt-0.5' },
                                                                                     React.createElement('i', { 
                                                                                         className: `fa-solid ${
-                                                                                            match.matchType.includes('finále') ? 'fa-trophy' :
+                                                                                            match.matchType === 'finále' ? 'fa-trophy' :
                                                                                                 ''
                                                                                             } ${
                                                                                                 match.matchType.includes('finále') ? 'text-yellow-600' :
