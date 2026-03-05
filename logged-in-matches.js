@@ -342,8 +342,9 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
     const [selectedOrder2, setSelectedOrder2] = useState('');
     const [matchTitle, setMatchTitle] = useState('');
     const [availableGroups, setAvailableGroups] = useState([]);
-    const [availableOrders1, setAvailableOrders1] = useState([]);
-    const [availableOrders2, setAvailableOrders2] = useState([]);
+    const [orderError1, setOrderError1] = useState('');
+    const [orderError2, setOrderError2] = useState('');
+    const [maxTeams, setMaxTeams] = useState(8);
 
     useEffect(() => {
         if (!isOpen) {
@@ -354,8 +355,9 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             setSelectedOrder2('');
             setMatchTitle('');
             setAvailableGroups([]);
-            setAvailableOrders1([]);
-            setAvailableOrders2([]);
+            setOrderError1('');
+            setOrderError2('');
+            setMaxTeams(8);
         }
     }, [isOpen]);
 
@@ -364,57 +366,109 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
         return [...categories].sort((a, b) => a.name.localeCompare(b.name));
     }, [categories]);
 
-    // Aktualizácia dostupných skupín pri zmene kategórie
+    // Aktualizácia dostupných skupín pri zmene kategórie a nastavenie maxTeams
     useEffect(() => {
-        if (selectedCategory && groupsByCategory[selectedCategory]) {
-            const sortedGroups = [...groupsByCategory[selectedCategory]]
-                .sort((a, b) => a.name.localeCompare(b.name));
-            setAvailableGroups(sortedGroups);
+        if (selectedCategory) {
+            const category = categories.find(c => c.id === selectedCategory);
+            setMaxTeams(category?.maxTeams || 8);
+            
+            if (groupsByCategory[selectedCategory]) {
+                const sortedGroups = [...groupsByCategory[selectedCategory]]
+                    .sort((a, b) => a.name.localeCompare(b.name));
+                setAvailableGroups(sortedGroups);
+            } else {
+                setAvailableGroups([]);
+            }
+            
             setSelectedGroup1('');
             setSelectedGroup2('');
             setSelectedOrder1('');
             setSelectedOrder2('');
+            setOrderError1('');
+            setOrderError2('');
         } else {
             setAvailableGroups([]);
+            setMaxTeams(8);
             setSelectedGroup1('');
             setSelectedGroup2('');
             setSelectedOrder1('');
             setSelectedOrder2('');
+            setOrderError1('');
+            setOrderError2('');
         }
-    }, [selectedCategory, groupsByCategory]);
+    }, [selectedCategory, categories, groupsByCategory]);
 
-    // Generovanie dostupných poradí pre prvý tím (1-8)
-    useEffect(() => {
-        if (selectedCategory && selectedGroup1) {
-            // Vygenerujeme čísla 1-8 (alebo podľa maxTeams z kategórie)
-            const category = categories.find(c => c.id === selectedCategory);
-            const maxTeams = category?.maxTeams || 8;
-            
-            const orders = [];
-            for (let i = 1; i <= maxTeams; i++) {
-                orders.push(i);
-            }
-            setAvailableOrders1(orders);
-        } else {
-            setAvailableOrders1([]);
+    // Validácia a spracovanie zmeny poradia pre prvý tím
+    const handleOrder1Change = (e) => {
+        const value = e.target.value;
+        
+        // Povoliť prázdnu hodnotu
+        if (value === '') {
+            setSelectedOrder1('');
+            setOrderError1('');
+            return;
         }
-    }, [selectedCategory, selectedGroup1, categories]);
+        
+        // Skontrolovať, či je to číslo
+        if (!/^\d+$/.test(value)) {
+            setOrderError1('Zadajte platné číslo');
+            return;
+        }
+        
+        const numValue = parseInt(value, 10);
+        
+        // Skontrolovať, či je to kladné číslo (nie 0)
+        if (numValue <= 0) {
+            setOrderError1('Poradie musí byť väčšie ako 0');
+            return;
+        }
+        
+        // Skontrolovať, či nepresahuje maxTeams
+        if (numValue > maxTeams) {
+            setOrderError1(`Maximálne poradie je ${maxTeams}`);
+            return;
+        }
+        
+        // Všetko v poriadku
+        setSelectedOrder1(value);
+        setOrderError1('');
+    };
 
-    // Generovanie dostupných poradí pre druhý tím (1-8)
-    useEffect(() => {
-        if (selectedCategory && selectedGroup2) {
-            const category = categories.find(c => c.id === selectedCategory);
-            const maxTeams = category?.maxTeams || 8;
-            
-            const orders = [];
-            for (let i = 1; i <= maxTeams; i++) {
-                orders.push(i);
-            }
-            setAvailableOrders2(orders);
-        } else {
-            setAvailableOrders2([]);
+    // Validácia a spracovanie zmeny poradia pre druhý tím
+    const handleOrder2Change = (e) => {
+        const value = e.target.value;
+        
+        // Povoliť prázdnu hodnotu
+        if (value === '') {
+            setSelectedOrder2('');
+            setOrderError2('');
+            return;
         }
-    }, [selectedCategory, selectedGroup2, categories]);
+        
+        // Skontrolovať, či je to číslo
+        if (!/^\d+$/.test(value)) {
+            setOrderError2('Zadajte platné číslo');
+            return;
+        }
+        
+        const numValue = parseInt(value, 10);
+        
+        // Skontrolovať, či je to kladné číslo (nie 0)
+        if (numValue <= 0) {
+            setOrderError2('Poradie musí byť väčšie ako 0');
+            return;
+        }
+        
+        // Skontrolovať, či nepresahuje maxTeams
+        if (numValue > maxTeams) {
+            setOrderError2(`Maximálne poradie je ${maxTeams}`);
+            return;
+        }
+        
+        // Všetko v poriadku
+        setSelectedOrder2(value);
+        setOrderError2('');
+    };
 
     // Automatické generovanie názvu zápasu (len pre informáciu)
     useEffect(() => {
@@ -455,7 +509,13 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
 
     if (!isOpen) return null;
 
-    const isValid = selectedCategory && selectedGroup1 && selectedGroup2 && selectedOrder1 && selectedOrder2;
+    const isValid = selectedCategory && 
+                    selectedGroup1 && 
+                    selectedGroup2 && 
+                    selectedOrder1 && 
+                    selectedOrder2 && 
+                    !orderError1 && 
+                    !orderError2;
 
     return React.createElement(
         'div',
@@ -525,6 +585,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                             onChange: (e) => {
                                 setSelectedGroup1(e.target.value);
                                 setSelectedOrder1('');
+                                setOrderError1('');
                             },
                             className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
                         },
@@ -535,24 +596,27 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                     )
                 ),
                 
-                // Výber poradia pre prvý tím
+                // Výber poradia pre prvý tím (input)
                 selectedGroup1 && React.createElement(
                     'div',
                     { className: 'mb-3' },
                     React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
-                        'Poradie (1-8):'
+                        `Poradie (1-${maxTeams}):`
                     ),
-                    React.createElement(
-                        'select',
-                        {
-                            value: selectedOrder1,
-                            onChange: (e) => setSelectedOrder1(e.target.value),
-                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                        },
-                        React.createElement('option', { value: '' }, '-- Vyberte poradie --'),
-                        availableOrders1.map(order => 
-                            React.createElement('option', { key: order, value: order }, order)
-                        )
+                    React.createElement('input', {
+                        type: 'text',
+                        inputMode: 'numeric',
+                        pattern: '[0-9]*',
+                        value: selectedOrder1,
+                        onChange: handleOrder1Change,
+                        placeholder: `Zadajte číslo 1-${maxTeams}`,
+                        className: `w-full px-3 py-2 border ${orderError1 ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black`
+                    }),
+                    orderError1 && React.createElement(
+                        'p',
+                        { className: 'text-xs text-red-500 mt-1 flex items-center gap-1' },
+                        React.createElement('i', { className: 'fa-solid fa-exclamation-triangle' }),
+                        orderError1
                     )
                 )
             ),
@@ -577,6 +641,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                             onChange: (e) => {
                                 setSelectedGroup2(e.target.value);
                                 setSelectedOrder2('');
+                                setOrderError2('');
                             },
                             className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
                         },
@@ -587,24 +652,27 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                     )
                 ),
                 
-                // Výber poradia pre druhý tím
+                // Výber poradia pre druhý tím (input)
                 selectedGroup2 && React.createElement(
                     'div',
                     { className: 'mb-3' },
                     React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
-                        'Poradie (1-8):'
+                        `Poradie (1-${maxTeams}):`
                     ),
-                    React.createElement(
-                        'select',
-                        {
-                            value: selectedOrder2,
-                            onChange: (e) => setSelectedOrder2(e.target.value),
-                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
-                        },
-                        React.createElement('option', { value: '' }, '-- Vyberte poradie --'),
-                        availableOrders2.map(order => 
-                            React.createElement('option', { key: order, value: order }, order)
-                        )
+                    React.createElement('input', {
+                        type: 'text',
+                        inputMode: 'numeric',
+                        pattern: '[0-9]*',
+                        value: selectedOrder2,
+                        onChange: handleOrder2Change,
+                        placeholder: `Zadajte číslo 1-${maxTeams}`,
+                        className: `w-full px-3 py-2 border ${orderError2 ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black`
+                    }),
+                    orderError2 && React.createElement(
+                        'p',
+                        { className: 'text-xs text-red-500 mt-1 flex items-center gap-1' },
+                        React.createElement('i', { className: 'fa-solid fa-exclamation-triangle' }),
+                        orderError2
                     )
                 )
             ),
