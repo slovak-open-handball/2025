@@ -6678,11 +6678,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 'span',
                                                 { 
                                                     className: `ml-2 text-xs px-2 py-0.5 rounded-full ${
-                                                        match.matchType.includes('finále') ? 'bg-yellow-100 text-yellow-700' :
-                                                        match.matchType.includes('semifinále') ? 'bg-blue-100 text-blue-700' :
-                                                        match.matchType.includes('štvrťfinále') ? 'bg-green-100 text-green-700' :
-                                                        match.matchType.includes('osemfinále') ? 'bg-purple-100 text-purple-700' :
-                                                        match.matchType.includes('šestnásťfinále') ? 'bg-indigo-100 text-indigo-700' :
+                                                        match.matchType === 'finále' ? 'bg-yellow-100 text-yellow-700' :
+                                                        match.matchType.startsWith('semifinále') ? 'bg-blue-100 text-blue-700' :
+                                                        match.matchType.startsWith('štvrťfinále') ? 'bg-green-100 text-green-700' :
+                                                        match.matchType.startsWith('osemfinále') ? 'bg-purple-100 text-purple-700' :
+                                                        match.matchType.startsWith('šestnásťfinále') ? 'bg-indigo-100 text-indigo-700' :
                                                         'bg-gray-100 text-gray-700'
                                                     }` 
                                                 },
