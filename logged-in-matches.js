@@ -7602,7 +7602,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 match.isPlacementMatch && match.placementRank && React.createElement(
                                                                                     'div',
                                                                                     { className: 'flex items-center justify-center gap-1 w-full mt-0.5' },
-                                                                                    React.createElement('i', { className: 'fa-solid fa-trophy text-purple-600 text-xs flex-shrink-0' }),
                                                                                     React.createElement('span', { className: 'text-xs text-purple-600 font-medium' }, `o ${match.placementRank}. miesto`)
                                                                                 ),
                                                                                 // Druhý riadok - pre ostatné typy zápasov (finále, semifinále, atď.)
