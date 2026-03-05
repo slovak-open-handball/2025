@@ -588,14 +588,6 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                             React.createElement('option', { key: order, value: order }, order)
                         )
                     )
-                ),
-                
-                // Zobrazenie vybraného tímu
-                team1Info && React.createElement(
-                    'div',
-                    { className: 'mt-2 p-2 bg-white rounded border border-blue-200' },
-                    React.createElement('p', { className: 'text-sm font-medium text-gray-800' }, team1Info.teamName),
-                    React.createElement('p', { className: 'text-xs text-gray-500' }, `ID: ${team1Info.id || 'Neznáme'}`)
                 )
             ),
 
