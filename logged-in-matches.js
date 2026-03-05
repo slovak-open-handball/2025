@@ -7541,120 +7541,132 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                             
                                                                 // Pridáme zápas (VŽDY, bez ohľadu na filter)
                                                                 allElements.push(
-                                                                React.createElement(
-                                                                    'div',
-                                                                    {
-                                                                        key: `match-${match.id}`,
-                                                                        className: `p-2 rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match ${
-                                                                            colorHighlight ? '' : 'bg-white'
-                                                                        }`,
-                                                                        style: { 
-                                                                            width: 'fit-content',
-                                                                            backgroundColor: colorHighlight && match.categoryName ? 
-                                                                                (categories.find(c => c.name === match.categoryName)?.drawColor || 'white') 
-                                                                                : 'white'
-                                                                        }
-                                                                    },
                                                                     React.createElement(
                                                                         'div',
-                                                                        { 
-                                                                            className: 'grid items-center text-xs',
+                                                                        {
+                                                                            key: `match-${match.id}`,
+                                                                            className: `p-2 rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match ${
+                                                                                colorHighlight ? '' : 'bg-white'
+                                                                            }`,
                                                                             style: { 
-                                                                                gridTemplateColumns: displayMode === 'both' 
-                                                                                    ? '130px 280px 10px 280px 160px 160px' 
-                                                                                    : '130px 280px 10px 280px 0px 0px',
-                                                                                width: 'fit-content'
-                                                                            },
-                                                                            onClick: (e) => {
-                                                                                e.stopPropagation();
-                                                                                handleMatchCardClick(match);
-                                                                            },
-                                                                            title: `Kliknite pre úpravu zápasu`
+                                                                                width: 'fit-content',
+                                                                                backgroundColor: colorHighlight && match.categoryName ? 
+                                                                                    (categories.find(c => c.name === match.categoryName)?.drawColor || 'white') 
+                                                                                    : 'white'
+                                                                            }
                                                                         },
-                                                                        // Časový údaj
-                                                                        React.createElement(
-                                                                            'div',
-                                                                            { className: 'flex items-center justify-center gap-1 px-2 py-1 border-r border-gray-300' },
-                                                                            React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs flex-shrink-0' }),
-                                                                            React.createElement('span', { className: 'font-medium text-blue-700 truncate' }, `${matchTime} - ${endTime}`)
-                                                                        ),
-                                                                        
-                                                                        // Domáci tím
                                                                         React.createElement(
                                                                             'div',
                                                                             { 
-                                                                                className: 'px-2 py-1 flex items-center border-r border-gray-300',
-                                                                                style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
-                                                                            },
-                                                                            React.createElement(
-                                                                                'span',
-                                                                                { 
-                                                                                    className: `${selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium'} text-gray-800 truncate block w-full`, 
-                                                                                    title: displayMode === 'both' ? homeDisplay.name : homeDisplay 
+                                                                                className: 'grid items-center text-xs',
+                                                                                style: { 
+                                                                                    gridTemplateColumns: displayMode === 'both' 
+                                                                                        ? '130px 280px 10px 280px 160px 160px' 
+                                                                                        : '130px 280px 10px 280px 0px 0px',
+                                                                                    width: 'fit-content'
                                                                                 },
-                                                                                displayMode === 'both' ? homeDisplay.name : homeDisplay
-                                                                            )
-                                                                        ),
-                                                                        
-                                                                        // VS ikona
-                                                                        React.createElement(
-                                                                            'div',
-                                                                            { className: 'text-gray-400 px-2 py-1 flex items-center justify-center' },
-                                                                            React.createElement('i', { className: 'fa-solid fa-vs text-xs' })
-                                                                        ),
-                                                                        
-                                                                        // Hosťovský tím
-                                                                        React.createElement(
-                                                                            'div',
-                                                                            { 
-                                                                                className: `px-2 py-1 flex items-center ${displayMode === 'both' ? 'border-r border-gray-300' : ''}`,
-                                                                                style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
-                                                                            },
-                                                                            React.createElement(
-                                                                                'span',
-                                                                                { 
-                                                                                    className: `${selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium'} text-gray-800 truncate block w-full`,
-                                                                                    title: displayMode === 'both' ? awayDisplay.name : awayDisplay 
-                                                                                },   
-                                                                                displayMode === 'both' ? awayDisplay.name : awayDisplay
-                                                                            )
-                                                                        ),
-                                                                        
-                                                                        // ID domáceho tímu (ak je režim both)
-                                                                        displayMode === 'both' ? React.createElement(
-                                                                            'div',
-                                                                            { 
-                                                                                className: 'px-2 py-1 flex items-center border-r border-gray-300',
-                                                                                style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
-                                                                            },
-                                                                            React.createElement(
-                                                                                'span',
-                                                                                { 
-                                                                                    className: `${selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium'} text-gray-500 font-mono text-[10px] truncate block w-full`,
-                                                                                    title: homeDisplay.id 
+                                                                                onClick: (e) => {
+                                                                                    e.stopPropagation();
+                                                                                    handleMatchCardClick(match);
                                                                                 },
-                                                                                `(${homeDisplay.id})`
-                                                                            )
-                                                                        ) : React.createElement('div', { className: 'px-2 py-1 overflow-hidden' }),
-                                                                        
-                                                                        // ID hosťovského tímu (ak je režim both)
-                                                                        displayMode === 'both' ? React.createElement(
-                                                                            'div',
-                                                                            { 
-                                                                                className: 'px-2 py-1 flex items-center',
-                                                                                style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
+                                                                                title: `Kliknite pre úpravu zápasu`
                                                                             },
+                                                                            // Časový údaj - upravený pre zápasy o umiestnenie
                                                                             React.createElement(
-                                                                                'span',
+                                                                                'div',
+                                                                                { className: 'flex items-center justify-center gap-1 px-2 py-1 border-r border-gray-300' },
+                                                                                match.isPlacementMatch && match.placementRank ? 
+                                                                                    // Pre zápasy o umiestnenie - rovnaká ikonka ako v nepriradených kartách
+                                                                                    React.createElement('i', { className: 'fa-solid fa-trophy text-purple-600 text-xs flex-shrink-0' }) 
+                                                                                    : 
+                                                                                    // Pre bežné zápasy - ikonka hodín
+                                                                                    React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs flex-shrink-0' }),
+                                                                                React.createElement('span', { className: 'font-medium text-blue-700 truncate' }, `${matchTime} - ${endTime}`),
+                                                                                // Ak je zápas o umiestnenie, zobrazíme aj o aké miesto
+                                                                                match.isPlacementMatch && match.placementRank && React.createElement(
+                                                                                    'span',
+                                                                                    { className: 'ml-1 text-xs text-purple-600 font-medium' },
+                                                                                    `(o ${match.placementRank}. miesto)`
+                                                                                )
+                                                                            ),
+                                                                            
+                                                                            // Domáci tím (bez zmeny)
+                                                                            React.createElement(
+                                                                                'div',
                                                                                 { 
-                                                                                    className: `${selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium'} text-gray-500 font-mono text-[10px] truncate block w-full`,
-                                                                                    title: awayDisplay.id 
+                                                                                    className: 'px-2 py-1 flex items-center border-r border-gray-300',
+                                                                                    style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
                                                                                 },
-                                                                                `(${awayDisplay.id})`
-                                                                            )
-                                                                        ) : React.createElement('div', { className: 'px-2 py-1 overflow-hidden' }),
-                                                                    ),
+                                                                                React.createElement(
+                                                                                    'span',
+                                                                                    { 
+                                                                                        className: `${selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium'} text-gray-800 truncate block w-full`, 
+                                                                                        title: displayMode === 'both' ? homeDisplay.name : homeDisplay 
+                                                                                    },
+                                                                                    displayMode === 'both' ? homeDisplay.name : homeDisplay
+                                                                                )
+                                                                            ),
+                                                                            
+                                                                            // VS ikona (bez zmeny)
+                                                                            React.createElement(
+                                                                                'div',
+                                                                                { className: 'text-gray-400 px-2 py-1 flex items-center justify-center' },
+                                                                                React.createElement('i', { className: 'fa-solid fa-vs text-xs' })
+                                                                            ),
+                                                                            
+                                                                            // Hosťovský tím (bez zmeny)
+                                                                            React.createElement(
+                                                                                'div',
+                                                                                { 
+                                                                                    className: `px-2 py-1 flex items-center ${displayMode === 'both' ? 'border-r border-gray-300' : ''}`,
+                                                                                    style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
+                                                                                },
+                                                                                React.createElement(
+                                                                                    'span',
+                                                                                    { 
+                                                                                        className: `${selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium'} text-gray-800 truncate block w-full`,
+                                                                                        title: displayMode === 'both' ? awayDisplay.name : awayDisplay 
+                                                                                    },   
+                                                                                    displayMode === 'both' ? awayDisplay.name : awayDisplay
+                                                                                )
+                                                                            ),
+                                                                            
+                                                                            // ID domáceho tímu (ak je režim both) - bez zmeny
+                                                                            displayMode === 'both' ? React.createElement(
+                                                                                'div',
+                                                                                { 
+                                                                                    className: 'px-2 py-1 flex items-center border-r border-gray-300',
+                                                                                    style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
+                                                                                },
+                                                                                React.createElement(
+                                                                                    'span',
+                                                                                    { 
+                                                                                        className: `${selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium'} text-gray-500 font-mono text-[10px] truncate block w-full`,
+                                                                                        title: homeDisplay.id 
+                                                                                    },
+                                                                                    `(${homeDisplay.id})`
+                                                                                )
+                                                                            ) : React.createElement('div', { className: 'px-2 py-1 overflow-hidden' }),
+                                                                            
+                                                                            // ID hosťovského tímu (ak je režim both) - bez zmeny
+                                                                            displayMode === 'both' ? React.createElement(
+                                                                                'div',
+                                                                                { 
+                                                                                    className: 'px-2 py-1 flex items-center',
+                                                                                    style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
+                                                                                },
+                                                                                React.createElement(
+                                                                                    'span',
+                                                                                    { 
+                                                                                        className: `${selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium'} text-gray-500 font-mono text-[10px] truncate block w-full`,
+                                                                                        title: awayDisplay.id 
+                                                                                    },
+                                                                                    `(${awayDisplay.id})`
+                                                                                )
+                                                                            ) : React.createElement('div', { className: 'px-2 py-1 overflow-hidden' }),
+                                                                        ),
                                                                         
+                                                                        // Admin tlačidlá (bez zmeny)
                                                                         userProfileData?.role === 'admin' && React.createElement(
                                                                             'div',
                                                                             { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/match:opacity-100 transition-opacity' },
