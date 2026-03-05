@@ -2435,12 +2435,12 @@ const SpiderApp = ({ userProfileData }) => {
         }
     };
 
-    // Komponent pre zobrazenie jedného zápasu v pavúkovom zobrazení
+    // Komponent pre zobrazenie jedného zápasu v pavúkovom zobrazení - UPRAVENÝ PRE ZOBRAZENIE DÁTUMU, ČASU A MIESTA
     const MatchCell = ({ match, title = '', matchType, userProfileData, generationInProgress, onGenerate, onDelete, onTeamClick, onRemoveTeam }) => {
         const [isHovered, setIsHovered] = useState(false);
         const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
         const [teamToRemove, setTeamToRemove] = useState(null);
-
+    
         const isMatchReference = (teamName) => {
             if (teamName === '---') return false;
             // Kontrola, či reťazec obsahuje niektorý z identifikátorov zápasov
@@ -2456,7 +2456,7 @@ const SpiderApp = ({ userProfileData }) => {
                 onTeamClick(match, position);
             }
         };
-
+    
         // Handler pre otvorenie modálneho okna na odstránenie tímu
         const handleRemoveTeamClick = (e, teamName, position) => {
             e.stopPropagation(); // Zabraňujeme propagácii kliknutia na rodičovský element
@@ -2546,15 +2546,19 @@ const SpiderApp = ({ userProfileData }) => {
         }
     
         // Existujúci zápas - normálne zobrazenie
-        const matchDate = match.date ? new Date(match.date) : null;
+        const matchDate = match.scheduledTime ? match.scheduledTime.toDate() : null;
         const formattedDate = matchDate ? formatDateWithDay(matchDate) : '';
+        const matchTime = matchDate ? `${matchDate.getHours().toString().padStart(2, '0')}:${matchDate.getMinutes().toString().padStart(2, '0')}` : '';
+        
+        // Získanie názvu haly (ak existuje)
+        const hallName = match.hallName || '';
         
         // Použijeme homeTeamIdentifier a awayTeamIdentifier ak existujú, inak homeTeam/awayTeam
         const homeTeam = match.homeTeamIdentifier || match.homeTeam || '---';
         const awayTeam = match.awayTeamIdentifier || match.awayTeam || '---';
         const homeScore = match.homeScore !== undefined ? match.homeScore : '';
         const awayScore = match.awayScore !== undefined ? match.awayScore : '';
-
+    
         const matchDisplayName = `${title} - ${homeTeam} vs ${awayTeam}`;
     
         return React.createElement(
@@ -2563,7 +2567,7 @@ const SpiderApp = ({ userProfileData }) => {
             React.createElement(
                 'div',
                 { 
-                    className: 'border-2 border-gray-300 rounded-lg p-3 min-w-[220px] bg-white shadow-sm group relative',
+                    className: 'border-2 border-gray-300 rounded-lg p-3 min-w-[240px] bg-white shadow-sm group relative',
                     'data-match-id': match.id,
                     style: { 
                         zIndex: isDeleteModalOpen || teamToRemove ? 1 : 10,
@@ -2689,7 +2693,7 @@ const SpiderApp = ({ userProfileData }) => {
                 React.createElement(
                     'div',
                     { 
-                        className: `flex justify-between items-center py-2 group/team`,
+                        className: `flex justify-between items-center py-2 border-b border-gray-100 group/team`,
                         style: { position: 'relative' }
                     },
                     React.createElement(
@@ -2764,13 +2768,46 @@ const SpiderApp = ({ userProfileData }) => {
                         )
                     )
                 ),
-                // Dátum (ak existuje)
-                formattedDate && React.createElement(
+                
+                // NOVÝ RIADOK - Informácie o dátume, čase a mieste (len ak sú k dispozícii)
+                (formattedDate || matchTime || hallName) && React.createElement(
                     'div',
-                    { className: 'text-xs text-gray-500 mt-2 text-center border-t border-gray-100 pt-2' },
-                    React.createElement('i', { className: 'fa-regular fa-calendar mr-1' }),
-                    formattedDate
-                )
+                    { className: 'flex flex-col gap-1 mt-2 pt-2 border-t border-gray-200 text-xs text-gray-600' },
+                    
+                    // Dátum a čas v jednom riadku
+                    (formattedDate || matchTime) && React.createElement(
+                        'div',
+                        { className: 'flex items-center justify-between' },
+                        React.createElement(
+                            'span',
+                            { className: 'flex items-center gap-1' },
+                            React.createElement('i', { className: 'fa-regular fa-calendar text-gray-400 text-xs' }),
+                            formattedDate || 'Dátum neurčený'
+                        ),
+                        React.createElement(
+                            'span',
+                            { className: 'flex items-center gap-1' },
+                            React.createElement('i', { className: 'fa-regular fa-clock text-gray-400 text-xs' }),
+                            matchTime || '--:--'
+                        )
+                    ),
+                    
+                    // Miesto (športová hala)
+                    hallName && React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-1' },
+                        React.createElement('i', { className: 'fa-solid fa-location-dot text-gray-400 text-xs' }),
+                        React.createElement('span', { className: 'truncate', title: hallName }, hallName)
+                    )
+                ),
+                
+                // Dátum (zachovaný pre spätnú kompatibilitu, ale už ho nepotrebujeme)
+                // formattedDate && React.createElement(
+                //     'div',
+                //     { className: 'text-xs text-gray-500 mt-2 text-center border-t border-gray-100 pt-2' },
+                //     React.createElement('i', { className: 'fa-regular fa-calendar mr-1' }),
+                //     formattedDate
+                // )
             ),
             
             // Modálne okno pre potvrdenie zmazania celého zápasu
@@ -2825,10 +2862,15 @@ const SpiderApp = ({ userProfileData }) => {
                                 { className: 'text-sm text-gray-500' },
                                 `Typ: ${matchType}`
                             ),
-                            match.date && React.createElement(
+                            formattedDate && React.createElement(
                                 'p',
                                 { className: 'text-sm text-gray-500' },
-                                `Dátum: ${formattedDate}`
+                                `Dátum: ${formattedDate} ${matchTime ? 'v ' + matchTime : ''}`
+                            ),
+                            hallName && React.createElement(
+                                'p',
+                                { className: 'text-sm text-gray-500' },
+                                `Miesto: ${hallName}`
                             )
                         ),
                         
