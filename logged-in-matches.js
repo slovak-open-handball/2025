@@ -654,15 +654,25 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                     React.createElement(
                         'div',
                         { className: 'text-left' },
-                        React.createElement('p', { className: 'font-semibold text-gray-800' }, team1Info.teamName),
-                        React.createElement('p', { className: 'text-xs text-gray-500' }, `(${team1Info.id || 'Neznáme ID'})`)
+                        React.createElement('p', { className: 'font-semibold text-gray-800' }, 
+                            (() => {
+                                const category = categories.find(c => c.id === selectedCategory);
+                                const groupName = selectedGroup1.replace('skupina ', '');
+                                return `${category?.name || ''} ${groupName}${selectedOrder1}`;
+                            })()
+                        )
                     ),
                     React.createElement('i', { className: 'fa-solid fa-vs text-gray-400 mx-4' }),
                     React.createElement(
                         'div',
                         { className: 'text-right' },
-                        React.createElement('p', { className: 'font-semibold text-gray-800' }, team2Info.teamName),
-                        React.createElement('p', { className: 'text-xs text-gray-500' }, `(${team2Info.id || 'Neznáme ID'})`)
+                        React.createElement('p', { className: 'font-semibold text-gray-800' }, 
+                            (() => {
+                                const category = categories.find(c => c.id === selectedCategory);
+                                const groupName = selectedGroup2.replace('skupina ', '');
+                                return `${category?.name || ''} ${groupName}${selectedOrder2}`;
+                            })()
+                        )
                     )
                 ),
                 matchTitle && React.createElement(
