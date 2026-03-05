@@ -674,11 +674,6 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                             })()
                         )
                     )
-                ),
-                matchTitle && React.createElement(
-                    'p',
-                    { className: 'text-sm text-gray-600 mt-2 text-center' },
-                    matchTitle
                 )
             ),
 
