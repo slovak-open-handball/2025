@@ -231,6 +231,494 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferF
     return matches;
 };
 
+// Modálne okno pre výber typu generovania
+const GenerationTypeModal = ({ isOpen, onClose, onSelectType }) => {
+    if (!isOpen) return null;
+
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[110]',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) onClose();
+            }
+        },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
+            
+            // Hlavička
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center mb-4' },
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 'Vyberte typ generovania'),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'text-gray-500 hover:text-gray-700'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-times text-xl' })
+                )
+            ),
+
+            // Možnosti výberu
+            React.createElement(
+                'div',
+                { className: 'space-y-3' },
+                
+                // Klasické zápasy
+                React.createElement(
+                    'button',
+                    {
+                        className: 'w-full p-4 bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 rounded-xl text-left transition-colors',
+                        onClick: () => onSelectType('regular')
+                    },
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-3' },
+                        React.createElement(
+                            'div',
+                            { className: 'w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0' },
+                            React.createElement('i', { className: 'fa-solid fa-table-cells-large text-white text-lg' })
+                        ),
+                        React.createElement(
+                            'div',
+                            null,
+                            React.createElement('h4', { className: 'font-semibold text-gray-800 text-lg' }, 'Klasické zápasy'),
+                            React.createElement('p', { className: 'text-sm text-gray-600' }, 'Generovať zápasy v skupinách (každý s každým)')
+                        )
+                    )
+                ),
+                
+                // Zápas o umiestnenie
+                React.createElement(
+                    'button',
+                    {
+                        className: 'w-full p-4 bg-purple-50 hover:bg-purple-100 border-2 border-purple-200 rounded-xl text-left transition-colors',
+                        onClick: () => onSelectType('placement')
+                    },
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-3' },
+                        React.createElement(
+                            'div',
+                            { className: 'w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0' },
+                            React.createElement('i', { className: 'fa-solid fa-trophy text-white text-lg' })
+                        ),
+                        React.createElement(
+                            'div',
+                            null,
+                            React.createElement('h4', { className: 'font-semibold text-gray-800 text-lg' }, 'Zápas o umiestnenie'),
+                            React.createElement('p', { className: 'text-sm text-gray-600' }, 'Vytvoriť jeden zápas (finále, semifinále, o 3. miesto)')
+                        )
+                    )
+                )
+            ),
+
+            // Tlačidlo Zrušiť
+            React.createElement(
+                'div',
+                { className: 'flex justify-end mt-4' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
+                    },
+                    'Zrušiť'
+                )
+            )
+        )
+    );
+};
+
+// Modálne okno pre vytvorenie zápasu o umiestnenie
+const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByCategory, teams }) => {
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedGroup1, setSelectedGroup1] = useState('');
+    const [selectedGroup2, setSelectedGroup2] = useState('');
+    const [selectedOrder1, setSelectedOrder1] = useState('');
+    const [selectedOrder2, setSelectedOrder2] = useState('');
+    const [matchTitle, setMatchTitle] = useState('');
+    const [availableGroups, setAvailableGroups] = useState([]);
+    const [availableOrders1, setAvailableOrders1] = useState([]);
+    const [availableOrders2, setAvailableOrders2] = useState([]);
+    const [team1Info, setTeam1Info] = useState(null);
+    const [team2Info, setTeam2Info] = useState(null);
+
+    useEffect(() => {
+        if (!isOpen) {
+            setSelectedCategory('');
+            setSelectedGroup1('');
+            setSelectedGroup2('');
+            setSelectedOrder1('');
+            setSelectedOrder2('');
+            setMatchTitle('');
+            setAvailableGroups([]);
+            setAvailableOrders1([]);
+            setAvailableOrders2([]);
+            setTeam1Info(null);
+            setTeam2Info(null);
+        }
+    }, [isOpen]);
+
+    // Zoradenie kategórií podľa abecedy
+    const sortedCategories = React.useMemo(() => {
+        return [...categories].sort((a, b) => a.name.localeCompare(b.name));
+    }, [categories]);
+
+    // Aktualizácia dostupných skupín pri zmene kategórie
+    useEffect(() => {
+        if (selectedCategory && groupsByCategory[selectedCategory]) {
+            const sortedGroups = [...groupsByCategory[selectedCategory]]
+                .filter(g => g.type !== 'základná skupina') // Filtrujeme len nadstavbové skupiny
+                .sort((a, b) => a.name.localeCompare(b.name));
+            setAvailableGroups(sortedGroups);
+            setSelectedGroup1('');
+            setSelectedGroup2('');
+            setSelectedOrder1('');
+            setSelectedOrder2('');
+            setTeam1Info(null);
+            setTeam2Info(null);
+        } else {
+            setAvailableGroups([]);
+            setSelectedGroup1('');
+            setSelectedGroup2('');
+            setSelectedOrder1('');
+            setSelectedOrder2('');
+            setTeam1Info(null);
+            setTeam2Info(null);
+        }
+    }, [selectedCategory, groupsByCategory]);
+
+    // Načítanie dostupných orderov pre prvý tím
+    useEffect(() => {
+        if (selectedCategory && selectedGroup1) {
+            const category = categories.find(c => c.id === selectedCategory);
+            if (category && teams.allTeams) {
+                const teamsInGroup = teams.allTeams.filter(t => 
+                    t.category === category.name && 
+                    t.groupName === selectedGroup1
+                );
+                
+                const orders = teamsInGroup
+                    .map(t => t.order)
+                    .filter(o => o)
+                    .sort((a, b) => a - b);
+                
+                setAvailableOrders1(orders);
+                
+                // Ak je vybraný order, nájdeme informácie o tíme
+                if (selectedOrder1) {
+                    const team = teamsInGroup.find(t => t.order === parseInt(selectedOrder1));
+                    setTeam1Info(team || null);
+                } else {
+                    setTeam1Info(null);
+                }
+            }
+        } else {
+            setAvailableOrders1([]);
+            setTeam1Info(null);
+        }
+    }, [selectedCategory, selectedGroup1, selectedOrder1, teams, categories]);
+
+    // Načítanie dostupných orderov pre druhý tím
+    useEffect(() => {
+        if (selectedCategory && selectedGroup2) {
+            const category = categories.find(c => c.id === selectedCategory);
+            if (category && teams.allTeams) {
+                const teamsInGroup = teams.allTeams.filter(t => 
+                    t.category === category.name && 
+                    t.groupName === selectedGroup2
+                );
+                
+                const orders = teamsInGroup
+                    .map(t => t.order)
+                    .filter(o => o)
+                    .sort((a, b) => a - b);
+                
+                setAvailableOrders2(orders);
+                
+                // Ak je vybraný order, nájdeme informácie o tíme
+                if (selectedOrder2) {
+                    const team = teamsInGroup.find(t => t.order === parseInt(selectedOrder2));
+                    setTeam2Info(team || null);
+                } else {
+                    setTeam2Info(null);
+                }
+            }
+        } else {
+            setAvailableOrders2([]);
+            setTeam2Info(null);
+        }
+    }, [selectedCategory, selectedGroup2, selectedOrder2, teams, categories]);
+
+    // Automatické generovanie názvu zápasu
+    useEffect(() => {
+        if (team1Info && team2Info) {
+            const category = categories.find(c => c.id === selectedCategory);
+            const group1Name = selectedGroup1.replace('skupina ', '');
+            const group2Name = selectedGroup2.replace('skupina ', '');
+            
+            setMatchTitle(`${team1Info.teamName} - ${team2Info.teamName}`);
+        } else {
+            setMatchTitle('');
+        }
+    }, [team1Info, team2Info, selectedCategory, selectedGroup1, selectedGroup2, categories]);
+
+    const handleConfirm = () => {
+        if (team1Info && team2Info) {
+            const category = categories.find(c => c.id === selectedCategory);
+            
+            // Vytvorenie identifikátorov
+            const homeTeamIdentifier = `${category.name} ${selectedGroup1.replace('skupina ', '')}${team1Info.order}`;
+            const awayTeamIdentifier = `${category.name} ${selectedGroup2.replace('skupina ', '')}${team2Info.order}`;
+            
+            onConfirm({
+                homeTeamIdentifier,
+                awayTeamIdentifier,
+                categoryId: selectedCategory,
+                categoryName: category.name,
+                groupName: `${selectedGroup1} - ${selectedGroup2}`,
+                matchTitle,
+                team1: team1Info,
+                team2: team2Info
+            });
+        }
+    };
+
+    if (!isOpen) return null;
+
+    const isValid = team1Info && team2Info;
+
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[115]',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) onClose();
+            }
+        },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto' },
+            
+            // Hlavička
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center mb-4' },
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 'Vytvoriť zápas o umiestnenie'),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'text-gray-500 hover:text-gray-700'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-times text-xl' })
+                )
+            ),
+
+            // Výber kategórie
+            React.createElement(
+                'div',
+                { className: 'mb-4' },
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                    'Kategória:'
+                ),
+                React.createElement(
+                    'select',
+                    {
+                        value: selectedCategory,
+                        onChange: (e) => setSelectedCategory(e.target.value),
+                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                    },
+                    React.createElement('option', { value: '' }, '-- Vyberte kategóriu --'),
+                    sortedCategories.map(cat => 
+                        React.createElement('option', { key: cat.id, value: cat.id }, cat.name)
+                    )
+                )
+            ),
+
+            // Prvý tím
+            selectedCategory && React.createElement(
+                'div',
+                { className: 'mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200' },
+                React.createElement('h4', { className: 'font-semibold text-gray-700 mb-3' }, 'Prvý tím'),
+                
+                // Výber skupiny pre prvý tím
+                React.createElement(
+                    'div',
+                    { className: 'mb-3' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                        'Skupina:'
+                    ),
+                    React.createElement(
+                        'select',
+                        {
+                            value: selectedGroup1,
+                            onChange: (e) => {
+                                setSelectedGroup1(e.target.value);
+                                setSelectedOrder1('');
+                            },
+                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                        },
+                        React.createElement('option', { value: '' }, '-- Vyberte skupinu --'),
+                        availableGroups.map(group => 
+                            React.createElement('option', { key: group.name, value: group.name }, group.name)
+                        )
+                    )
+                ),
+                
+                // Výber poradia pre prvý tím
+                selectedGroup1 && React.createElement(
+                    'div',
+                    { className: 'mb-3' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                        'Poradie:'
+                    ),
+                    React.createElement(
+                        'select',
+                        {
+                            value: selectedOrder1,
+                            onChange: (e) => setSelectedOrder1(e.target.value),
+                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                        },
+                        React.createElement('option', { value: '' }, '-- Vyberte poradie --'),
+                        availableOrders1.map(order => 
+                            React.createElement('option', { key: order, value: order }, order)
+                        )
+                    )
+                ),
+                
+                // Zobrazenie vybraného tímu
+                team1Info && React.createElement(
+                    'div',
+                    { className: 'mt-2 p-2 bg-white rounded border border-blue-200' },
+                    React.createElement('p', { className: 'text-sm font-medium text-gray-800' }, team1Info.teamName),
+                    React.createElement('p', { className: 'text-xs text-gray-500' }, `ID: ${team1Info.id || 'Neznáme'}`)
+                )
+            ),
+
+            // Druhý tím
+            selectedCategory && React.createElement(
+                'div',
+                { className: 'mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200' },
+                React.createElement('h4', { className: 'font-semibold text-gray-700 mb-3' }, 'Druhý tím'),
+                
+                // Výber skupiny pre druhý tím
+                React.createElement(
+                    'div',
+                    { className: 'mb-3' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                        'Skupina:'
+                    ),
+                    React.createElement(
+                        'select',
+                        {
+                            value: selectedGroup2,
+                            onChange: (e) => {
+                                setSelectedGroup2(e.target.value);
+                                setSelectedOrder2('');
+                            },
+                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                        },
+                        React.createElement('option', { value: '' }, '-- Vyberte skupinu --'),
+                        availableGroups.map(group => 
+                            React.createElement('option', { key: group.name, value: group.name }, group.name)
+                        )
+                    )
+                ),
+                
+                // Výber poradia pre druhý tím
+                selectedGroup2 && React.createElement(
+                    'div',
+                    { className: 'mb-3' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                        'Poradie:'
+                    ),
+                    React.createElement(
+                        'select',
+                        {
+                            value: selectedOrder2,
+                            onChange: (e) => setSelectedOrder2(e.target.value),
+                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                        },
+                        React.createElement('option', { value: '' }, '-- Vyberte poradie --'),
+                        availableOrders2.map(order => 
+                            React.createElement('option', { key: order, value: order }, order)
+                        )
+                    )
+                ),
+                
+                // Zobrazenie vybraného tímu
+                team2Info && React.createElement(
+                    'div',
+                    { className: 'mt-2 p-2 bg-white rounded border border-purple-200' },
+                    React.createElement('p', { className: 'text-sm font-medium text-gray-800' }, team2Info.teamName),
+                    React.createElement('p', { className: 'text-xs text-gray-500' }, `ID: ${team2Info.id || 'Neznáme'}`)
+                )
+            ),
+
+            // Náhľad zápasu
+            isValid && React.createElement(
+                'div',
+                { className: 'mb-6 p-4 bg-green-50 rounded-lg border border-green-200' },
+                React.createElement('h4', { className: 'font-semibold text-gray-700 mb-2' }, 'Náhľad zápasu:'),
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center justify-between' },
+                    React.createElement(
+                        'div',
+                        { className: 'text-left' },
+                        React.createElement('p', { className: 'font-semibold text-gray-800' }, team1Info.teamName),
+                        React.createElement('p', { className: 'text-xs text-gray-500' }, `(${team1Info.id || 'Neznáme ID'})`)
+                    ),
+                    React.createElement('i', { className: 'fa-solid fa-vs text-gray-400 mx-4' }),
+                    React.createElement(
+                        'div',
+                        { className: 'text-right' },
+                        React.createElement('p', { className: 'font-semibold text-gray-800' }, team2Info.teamName),
+                        React.createElement('p', { className: 'text-xs text-gray-500' }, `(${team2Info.id || 'Neznáme ID'})`)
+                    )
+                ),
+                matchTitle && React.createElement(
+                    'p',
+                    { className: 'text-sm text-gray-600 mt-2 text-center' },
+                    matchTitle
+                )
+            ),
+
+            // Tlačidlá
+            React.createElement(
+                'div',
+                { className: 'flex justify-end gap-3' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
+                    },
+                    'Zrušiť'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: handleConfirm,
+                        disabled: !isValid,
+                        className: `px-4 py-2 text-white rounded-lg transition-colors ${
+                            isValid
+                                ? 'bg-green-600 hover:bg-green-700 cursor-pointer' 
+                                : 'bg-gray-400 cursor-not-allowed'
+                        }`
+                    },
+                    'Vytvoriť zápas'
+                )
+            )
+        )
+    );
+};
+
 // Modálne okno pre výber mazania zápasov
 const DeleteMatchesModal = ({ isOpen, onClose, onConfirm, categories, groupsByCategory }) => {
     const [selectedCategory, setSelectedCategory] = useState('');
@@ -2827,6 +3315,9 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     const [selectedTeamIdFilter, setSelectedTeamIdFilter] = useState('');
 
+    const [isGenerationTypeModalOpen, setIsGenerationTypeModalOpen] = useState(false);
+    const [isPlacementMatchModalOpen, setIsPlacementMatchModalOpen] = useState(false);
+
     // Načítanie filtrov pri inicializácii
     const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
     const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
@@ -2849,6 +3340,53 @@ const AddMatchesApp = ({ userProfileData }) => {
         
         // Konvertujeme na pole a zoradíme podľa abecedy
         return Array.from(teamIds).sort((a, b) => a.localeCompare(b));
+    };
+
+    // Funkcia pre uloženie zápasu o umiestnenie
+    const savePlacementMatch = async (matchData) => {
+        if (!window.db) {
+            window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
+            return;
+        }
+    
+        if (userProfileData?.role !== 'admin') {
+            window.showGlobalNotification('Na vytvorenie zápasu potrebujete administrátorské práva', 'error');
+            return;
+        }
+    
+        if (!userProfileData?.approved) {
+            window.showGlobalNotification('Váš účet ešte nebol schválený administrátorom.', 'error');
+            return;
+        }
+    
+        try {
+            const matchesRef = collection(window.db, 'matches');
+            
+            const matchToSave = {
+                homeTeamIdentifier: matchData.homeTeamIdentifier,
+                awayTeamIdentifier: matchData.awayTeamIdentifier,
+                time: '--:--',
+                hallId: null,
+                categoryId: matchData.categoryId,
+                categoryName: matchData.categoryName,
+                groupName: matchData.groupName,
+                status: 'pending',
+                isPlacementMatch: true, // Označíme, že ide o zápas o umiestnenie
+                matchTitle: matchData.matchTitle,
+                createdAt: Timestamp.now(),
+                createdBy: userProfileData?.email || 'unknown',
+                createdByUid: userProfileData?.uid || null
+            };
+    
+            const docRef = await addDoc(matchesRef, matchToSave);
+            
+            console.log('Zápas o umiestnenie uložený s ID:', docRef.id);
+            window.showGlobalNotification('Zápas o umiestnenie bol úspešne vytvorený', 'success');
+            
+        } catch (error) {
+            console.error('Chyba pri ukladaní zápasu o umiestnenie:', error);
+            window.showGlobalNotification('Chyba pri ukladaní zápasu: ' + error.message, 'error');
+        }
     };
 
     // Aktualizujte funkciu getFilteredMatches
@@ -5231,6 +5769,35 @@ const AddMatchesApp = ({ userProfileData }) => {
             date: selectedMatchForBreak?.scheduledTime ? formatDateForDisplay(selectedMatchForBreak.scheduledTime) : '',
             currentTime: selectedMatchCurrentTime
         }),
+        // Pridajte k ostatným modálnym oknám v render časti (približne riadok 4400)
+        React.createElement(GenerationTypeModal, {
+            isOpen: isGenerationTypeModalOpen,
+            onClose: () => setIsGenerationTypeModalOpen(false),
+            onSelectType: (type) => {
+                setIsGenerationTypeModalOpen(false);
+                if (type === 'regular') {
+                    setIsModalOpen(true); // Otvorí pôvodné modálne okno pre generovanie
+                } else if (type === 'placement') {
+                    setIsPlacementMatchModalOpen(true); // Otvorí modálne okno pre zápas o umiestnenie
+                }
+            }
+        }),
+        React.createElement(PlacementMatchModal, {
+            isOpen: isPlacementMatchModalOpen,
+            onClose: () => setIsPlacementMatchModalOpen(false),
+            onConfirm: (matchData) => {
+                // Tu pridáme logiku pre uloženie zápasu o umiestnenie
+                console.log('Vytváram zápas o umiestnenie:', matchData);
+                
+                // Zavoláme funkciu na uloženie zápasu (podobne ako v generateMatches)
+                savePlacementMatch(matchData);
+                
+                setIsPlacementMatchModalOpen(false);
+            },
+            categories: categories,
+            groupsByCategory: groupsByCategory,
+            teams: teamData
+        }),
 
         // Ovládacie prvky - filtre a prepínač (upravené)
         React.createElement(
@@ -5595,7 +6162,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                         style: { 
                             clipPath: 'polygon(0 0, 100% 0, 0 100%)', // Diagonálne rozdelenie - horná ľavá časť
                         },
-                        onClick: () => setIsModalOpen(true),
+                        onClick: () => setIsGenerationTypeModalOpen(true),
                         disabled: generationInProgress,
                         title: 'Generovať zápasy'
                     },
@@ -5841,6 +6408,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 'span',
                                                 { className: `text-xs ${!hasCategory ? 'text-gray-400' : 'text-gray-500'}` },
                                                 !hasCategory ? '—' : (match.categoryName || 'Neznáma kategória')
+                                            ),
+                                            match.isPlacementMatch && React.createElement(
+                                                'span',
+                                                { className: 'ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full' },
+                                                React.createElement('i', { className: 'fa-solid fa-trophy mr-1 text-xs' }),
+                                                'O umiestnenie'
                                             )
                                         ),
                                         
