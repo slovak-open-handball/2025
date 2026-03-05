@@ -6663,21 +6663,16 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         React.createElement(
                                             'div',
                                             { className: 'flex justify-between items-start mb-2' },
-//                                            React.createElement(
-//                                                'span',
-//                                                { className: 'text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 rounded-full' },
-//                                                '--:--'
-//                                            ),
                                             React.createElement(
                                                 'span',
                                                 { className: `text-xs ${!hasCategory ? 'text-gray-400' : 'text-gray-500'}` },
                                                 !hasCategory ? '—' : (match.categoryName || 'Neznáma kategória')
                                             ),
-                                            match.isPlacementMatch && React.createElement(
+                                            match.isPlacementMatch && match.placementRank && React.createElement(
                                                 'span',
                                                 { className: 'ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full' },
                                                 React.createElement('i', { className: 'fa-solid fa-trophy mr-1 text-xs' }),
-                                                'O umiestnenie'
+                                                `o ${match.placementRank}. miesto`
                                             )
                                         ),
                                         
