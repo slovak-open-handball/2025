@@ -6671,7 +6671,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             match.isPlacementMatch && match.placementRank && React.createElement(
                                                 'span',
                                                 { className: 'ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full' },
-                                                React.createElement('i', { className: 'fa-solid fa-trophy mr-1 text-xs' }),
                                                 `o ${match.placementRank}. miesto`
                                             ),
                                             match.matchType && !match.isPlacementMatch && React.createElement(
