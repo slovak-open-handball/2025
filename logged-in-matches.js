@@ -341,11 +341,13 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
     const [selectedGroup2, setSelectedGroup2] = useState('');
     const [selectedOrder1, setSelectedOrder1] = useState('');
     const [selectedOrder2, setSelectedOrder2] = useState('');
+    const [placementRank, setPlacementRank] = useState(''); // Nový stav pre umiestnenie
     const [matchTitle, setMatchTitle] = useState('');
     const [availableGroups, setAvailableGroups] = useState([]);
     const [filteredGroupsByType, setFilteredGroupsByType] = useState([]);
     const [orderError1, setOrderError1] = useState('');
     const [orderError2, setOrderError2] = useState('');
+    const [rankError, setRankError] = useState(''); // Chyba pre umiestnenie
     const [maxTeamsInGroup1, setMaxTeamsInGroup1] = useState(0);
     const [maxTeamsInGroup2, setMaxTeamsInGroup2] = useState(0);
 
@@ -357,11 +359,13 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             setSelectedGroup2('');
             setSelectedOrder1('');
             setSelectedOrder2('');
+            setPlacementRank('');
             setMatchTitle('');
             setAvailableGroups([]);
             setFilteredGroupsByType([]);
             setOrderError1('');
             setOrderError2('');
+            setRankError('');
             setMaxTeamsInGroup1(0);
             setMaxTeamsInGroup2(0);
         }
@@ -394,8 +398,10 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             setSelectedGroup2('');
             setSelectedOrder1('');
             setSelectedOrder2('');
+            setPlacementRank('');
             setOrderError1('');
             setOrderError2('');
+            setRankError('');
             setMaxTeamsInGroup1(0);
             setMaxTeamsInGroup2(0);
             setFilteredGroupsByType([]);
@@ -406,8 +412,10 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             setSelectedGroup2('');
             setSelectedOrder1('');
             setSelectedOrder2('');
+            setPlacementRank('');
             setOrderError1('');
             setOrderError2('');
+            setRankError('');
             setMaxTeamsInGroup1(0);
             setMaxTeamsInGroup2(0);
             setFilteredGroupsByType([]);
@@ -425,8 +433,10 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             setSelectedGroup2('');
             setSelectedOrder1('');
             setSelectedOrder2('');
+            setPlacementRank('');
             setOrderError1('');
             setOrderError2('');
+            setRankError('');
             setMaxTeamsInGroup1(0);
             setMaxTeamsInGroup2(0);
         } else {
@@ -435,8 +445,10 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             setSelectedGroup2('');
             setSelectedOrder1('');
             setSelectedOrder2('');
+            setPlacementRank('');
             setOrderError1('');
             setOrderError2('');
+            setRankError('');
             setMaxTeamsInGroup1(0);
             setMaxTeamsInGroup2(0);
         }
@@ -574,21 +586,51 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
         setOrderError2('');
     };
 
+    // Validácia a spracovanie zmeny umiestnenia
+    const handleRankChange = (e) => {
+        const value = e.target.value;
+        
+        // Povoliť prázdnu hodnotu
+        if (value === '') {
+            setPlacementRank('');
+            setRankError('');
+            return;
+        }
+        
+        // Skontrolovať, či je to číslo
+        if (!/^\d+$/.test(value)) {
+            setRankError('Zadajte platné číslo');
+            return;
+        }
+        
+        const numValue = parseInt(value, 10);
+        
+        // Skontrolovať, či je to kladné číslo (nie 0)
+        if (numValue <= 0) {
+            setRankError('Umiestnenie musí byť väčšie ako 0');
+            return;
+        }
+        
+        // Všetko v poriadku
+        setPlacementRank(value);
+        setRankError('');
+    };
+
     // Automatické generovanie názvu zápasu (len pre informáciu)
     useEffect(() => {
-        if (selectedCategory && selectedGroup1 && selectedOrder1 && selectedGroup2 && selectedOrder2) {
+        if (selectedCategory && selectedGroup1 && selectedOrder1 && selectedGroup2 && selectedOrder2 && placementRank) {
             const category = categories.find(c => c.id === selectedCategory);
             const group1Name = selectedGroup1.replace('skupina ', '');
             const group2Name = selectedGroup2.replace('skupina ', '');
             
-            setMatchTitle(`${category.name} ${selectedOrder1}${group1Name} - ${category.name} ${selectedOrder2}${group2Name}`);
+            setMatchTitle(`${category.name} ${selectedOrder1}${group1Name} - ${category.name} ${selectedOrder2}${group2Name} (o ${placementRank}. miesto)`);
         } else {
             setMatchTitle('');
         }
-    }, [selectedCategory, selectedGroup1, selectedGroup2, selectedOrder1, selectedOrder2, categories]);
+    }, [selectedCategory, selectedGroup1, selectedGroup2, selectedOrder1, selectedOrder2, placementRank, categories]);
 
     const handleConfirm = () => {
-        if (selectedCategory && selectedGroup1 && selectedGroup2 && selectedOrder1 && selectedOrder2) {
+        if (selectedCategory && selectedGroup1 && selectedGroup2 && selectedOrder1 && selectedOrder2 && placementRank) {
             const category = categories.find(c => c.id === selectedCategory);
             
             // Odstránime "skupina " z názvov skupín
@@ -606,6 +648,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                 categoryId: selectedCategory,
                 categoryName: category.name,
                 groupName: `${selectedGroup1} - ${selectedGroup2}`,
+                placementRank: parseInt(placementRank, 10), // Uložíme ako číslo
                 matchTitle
             });
         }
@@ -619,8 +662,10 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                     selectedGroup2 && 
                     selectedOrder1 && 
                     selectedOrder2 && 
+                    placementRank &&
                     !orderError1 && 
                     !orderError2 &&
+                    !rankError &&
                     maxTeamsInGroup1 > 0 &&
                     maxTeamsInGroup2 > 0;
 
@@ -834,6 +879,40 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                 )
             ),
 
+            // Umiestnenie (o aké miesto sa hrá)
+            selectedCategory && selectedGroupType && React.createElement(
+                'div',
+                { className: 'mb-6 p-4 bg-amber-50 rounded-lg border border-amber-200' },
+                React.createElement('h4', { className: 'font-semibold text-gray-700 mb-3' }, 'Umiestnenie'),
+                React.createElement(
+                    'div',
+                    { className: 'mb-3' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                        'O aké miesto sa hrá:'
+                    ),
+                    React.createElement('input', {
+                        type: 'text',
+                        inputMode: 'numeric',
+                        pattern: '[0-9]*',
+                        value: placementRank,
+                        onChange: handleRankChange,
+                        placeholder: 'Zadajte číslo (napr. 1, 3, 5...)',
+                        className: `w-full px-3 py-2 border ${rankError ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black`
+                    }),
+                    rankError && React.createElement(
+                        'p',
+                        { className: 'text-xs text-red-500 mt-1 flex items-center gap-1' },
+                        React.createElement('i', { className: 'fa-solid fa-exclamation-triangle' }),
+                        rankError
+                    ),
+                    React.createElement(
+                        'p',
+                        { className: 'text-xs text-gray-500 mt-1' },
+                        'Zadajte kladné celé číslo (napr. 1 = finále, 3 = o 3. miesto, atď.)'
+                    )
+                )
+            ),
+
             // Náhľad zápasu
             isValid && React.createElement(
                 'div',
@@ -865,6 +944,11 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                             })()
                         )
                     )
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-sm font-medium text-amber-600 mt-2 text-center' },
+                    `O ${placementRank}. miesto`
                 ),
                 React.createElement(
                     'p',
@@ -3556,6 +3640,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 groupName: matchData.groupName,
                 status: 'pending',
                 isPlacementMatch: true, // Označíme, že ide o zápas o umiestnenie
+                placementRank: matchData.placementRank, // Uložíme umiestnenie
                 matchTitle: matchData.matchTitle,
                 createdAt: Timestamp.now(),
                 createdBy: userProfileData?.email || 'unknown',
@@ -3565,7 +3650,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             const docRef = await addDoc(matchesRef, matchToSave);
             
             console.log('Zápas o umiestnenie uložený s ID:', docRef.id);
-            window.showGlobalNotification('Zápas o umiestnenie bol úspešne vytvorený', 'success');
+            window.showGlobalNotification(`Zápas o ${matchData.placementRank}. miesto bol úspešne vytvorený`, 'success');
             
         } catch (error) {
             console.error('Chyba pri ukladaní zápasu o umiestnenie:', error);
