@@ -7558,7 +7558,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         React.createElement(
                                                                             'div',
                                                                             { 
-                                                                                className: 'grid items-center text-xs',
+                                                                                className: 'grid items-start text-xs',
                                                                                 style: { 
                                                                                     gridTemplateColumns: displayMode === 'both' 
                                                                                         ? '130px 280px 10px 280px 160px 160px' 
@@ -7571,22 +7571,26 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 },
                                                                                 title: `Kliknite pre úpravu zápasu`
                                                                             },
-                                                                            // Časový údaj - upravený pre zápasy o umiestnenie
+                                                                            // Časový údaj - upravený na dva riadky
                                                                             React.createElement(
                                                                                 'div',
-                                                                                { className: 'flex items-center justify-center gap-1 px-2 py-1 border-r border-gray-300' },
-                                                                                match.isPlacementMatch && match.placementRank ? 
-                                                                                    // Pre zápasy o umiestnenie - rovnaká ikonka ako v nepriradených kartách
-                                                                                    React.createElement('i', { className: 'fa-solid fa-trophy text-purple-600 text-xs flex-shrink-0' }) 
-                                                                                    : 
-                                                                                    // Pre bežné zápasy - ikonka hodín
+                                                                                { 
+                                                                                    className: 'flex flex-col items-center justify-center px-2 py-1 border-r border-gray-300',
+                                                                                    style: { minWidth: '130px' }
+                                                                                },
+                                                                                // Prvý riadok - ikonka hodín a čas
+                                                                                React.createElement(
+                                                                                    'div',
+                                                                                    { className: 'flex items-center justify-center gap-1 w-full' },
                                                                                     React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs flex-shrink-0' }),
-                                                                                React.createElement('span', { className: 'font-medium text-blue-700 truncate' }, `${matchTime} - ${endTime}`),
-                                                                                // Ak je zápas o umiestnenie, zobrazíme aj o aké miesto
+                                                                                    React.createElement('span', { className: 'font-medium text-blue-700 truncate' }, `${matchTime} - ${endTime}`)
+                                                                                ),
+                                                                                // Druhý riadok - ikonka trophy a umiestnenie (len pre zápasy o umiestnenie)
                                                                                 match.isPlacementMatch && match.placementRank && React.createElement(
-                                                                                    'span',
-                                                                                    { className: 'ml-1 text-xs text-purple-600 font-medium' },
-                                                                                    `(o ${match.placementRank}. miesto)`
+                                                                                    'div',
+                                                                                    { className: 'flex items-center justify-center gap-1 w-full mt-0.5' },
+                                                                                    React.createElement('i', { className: 'fa-solid fa-trophy text-purple-600 text-xs flex-shrink-0' }),
+                                                                                    React.createElement('span', { className: 'text-xs text-purple-600 font-medium' }, `o ${match.placementRank}. miesto`)
                                                                                 )
                                                                             ),
                                                                             
