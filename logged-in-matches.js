@@ -423,7 +423,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             const group1Name = selectedGroup1.replace('skupina ', '');
             const group2Name = selectedGroup2.replace('skupina ', '');
             
-            setMatchTitle(`${category.name} ${group1Name}${selectedOrder1} - ${category.name} ${group2Name}${selectedOrder2}`);
+            setMatchTitle(`${category.name} ${selectedOrder1}${group1Name} - ${category.name} ${selectedOrder2}${group2Name}`);
         } else {
             setMatchTitle('');
         }
@@ -437,10 +437,10 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             const cleanGroup1 = selectedGroup1.replace('skupina ', '');
             const cleanGroup2 = selectedGroup2.replace('skupina ', '');
             
-            // Vytvorenie identifikátorov v tvare: "Kategória SkupinaPoradie"
-            // Napr. "U10 A1" alebo "Starší žiaci B3"
-            const homeTeamIdentifier = `${category.name} ${cleanGroup1}${selectedOrder1}`;
-            const awayTeamIdentifier = `${category.name} ${cleanGroup2}${selectedOrder2}`;
+            // Vytvorenie identifikátorov v tvare: "Kategória PoradieSkupina"
+            // Napr. "U10 1A" alebo "Starší žiaci 3B"
+            const homeTeamIdentifier = `${category.name} ${selectedOrder1}${cleanGroup1}`;
+            const awayTeamIdentifier = `${category.name} ${selectedOrder2}${cleanGroup2}`;
             
             onConfirm({
                 homeTeamIdentifier,
@@ -624,7 +624,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                             (() => {
                                 const category = categories.find(c => c.id === selectedCategory);
                                 const cleanGroup1 = selectedGroup1.replace('skupina ', '');
-                                return `${category?.name || ''} ${cleanGroup1}${selectedOrder1}`;
+                                return `${category?.name || ''} ${selectedOrder1}${cleanGroup1}`;
                             })()
                         )
                     ),
@@ -636,7 +636,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                             (() => {
                                 const category = categories.find(c => c.id === selectedCategory);
                                 const cleanGroup2 = selectedGroup2.replace('skupina ', '');
-                                return `${category?.name || ''} ${cleanGroup2}${selectedOrder2}`;
+                                return `${category?.name || ''} ${selectedOrder2}${cleanGroup2}`;
                             })()
                         )
                     )
