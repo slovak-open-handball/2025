@@ -7600,39 +7600,31 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     React.createElement('span', { className: 'font-medium text-blue-700 truncate' }, `${matchTime} - ${endTime}`)
                                                                                 ),
                                                                                 // Druhý riadok - ikonka trophy a umiestnenie (len pre zápasy o umiestnenie)
-                                                                                match.isPlacementMatch && match.placementRank && React.createElement(
+                                                                                match.matchType && !match.isPlacementMatch && React.createElement(
                                                                                     'div',
                                                                                     { className: 'flex items-center justify-center gap-1 w-full mt-0.5' },
-                                                                                    React.createElement('i', { className: 'fa-solid fa-trophy text-purple-600 text-xs flex-shrink-0' }),
-                                                                                    React.createElement('span', { className: 'text-xs text-purple-600 font-medium' }, `o ${match.placementRank}. miesto`)
-                                                                                )
-                                                                            ),
-
-                                                                            match.matchType && !match.isPlacementMatch && React.createElement(
-                                                                                'div',
-                                                                                { className: 'flex items-center justify-center gap-1 w-full mt-0.5' },
-                                                                                React.createElement('i', { 
-                                                                                    className: `fa-solid ${
-                                                                                        match.matchType.includes('finále') ? 'fa-trophy' :
-                                                                                            match.matchType.includes('semifinále') ? 'fa-medal' :
-                                                                                            match.matchType.includes('štvrťfinále') ? 'fa-star' :
-                                                                                            'fa-sitemap'
-                                                                                        } ${
-                                                                                            match.matchType.includes('finále') ? 'text-yellow-600' :
-                                                                                            match.matchType.includes('semifinále') ? 'text-blue-600' :
-                                                                                            match.matchType.includes('štvrťfinále') ? 'text-green-600' :
-                                                                                            'text-purple-600'
-                                                                                        } text-xs flex-shrink-0` 
-                                                                                    }),
-                                                                                    React.createElement('span', { 
-                                                                                        className: `text-xs ${
-                                                                                            match.matchType.includes('finále') ? 'text-yellow-600' :
-                                                                                            match.matchType.includes('semifinále') ? 'text-blue-600' :
-                                                                                            match.matchType.includes('štvrťfinále') ? 'text-green-600' :
-                                                                                            'text-purple-600'
-                                                                                        } font-medium` 
-                                                                                    }, match.matchType)
-                                                                                )
+                                                                                    React.createElement('i', { 
+                                                                                        className: `fa-solid ${
+                                                                                            match.matchType.includes('finále') ? 'fa-trophy' :
+                                                                                                match.matchType.includes('semifinále') ? 'fa-medal' :
+                                                                                                match.matchType.includes('štvrťfinále') ? 'fa-star' :
+                                                                                                'fa-sitemap'
+                                                                                            } ${
+                                                                                                match.matchType.includes('finále') ? 'text-yellow-600' :
+                                                                                                match.matchType.includes('semifinále') ? 'text-blue-600' :
+                                                                                                match.matchType.includes('štvrťfinále') ? 'text-green-600' :
+                                                                                                'text-purple-600'
+                                                                                            } text-xs flex-shrink-0` 
+                                                                                        }),
+                                                                                        React.createElement('span', { 
+                                                                                            className: `text-xs ${
+                                                                                                match.matchType.includes('finále') ? 'text-yellow-600' :
+                                                                                                match.matchType.includes('semifinále') ? 'text-blue-600' :
+                                                                                                match.matchType.includes('štvrťfinále') ? 'text-green-600' :
+                                                                                                'text-purple-600'
+                                                                                            } font-medium` 
+                                                                                        }, match.matchType)
+                                                                                    )
                                                                             ),
                                                                             
                                                                             // Domáci tím (bez zmeny)
