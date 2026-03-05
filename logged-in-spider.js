@@ -222,6 +222,11 @@ const findCategoryIdByName = (categories, categoryName) => {
 };
 
 // =====================================================
+// HLAVNÝ KOMPONENT SPIDERAPP
+// =====================================================
+const SpiderApp = ({ userProfileData }) => {
+
+    // =====================================================
 // FUNKCIE PRE VYKRESLENIE JEDNOTLIVÝCH ÚROVNÍ PAVÚKA
 // =====================================================
 
@@ -4052,11 +4057,7 @@ const renderLevel4 = (spiderData, userProfileData, generationInProgress, generat
         )
     );
 };
-
-// =====================================================
-// HLAVNÝ KOMPONENT SPIDERAPP
-// =====================================================
-const SpiderApp = ({ userProfileData }) => {
+    
     const [categories, setCategories] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState('');
     const [loading, setLoading] = useState(true);
