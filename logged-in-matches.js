@@ -6673,6 +6673,20 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 { className: 'ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full' },
                                                 React.createElement('i', { className: 'fa-solid fa-trophy mr-1 text-xs' }),
                                                 `o ${match.placementRank}. miesto`
+                                            ),
+                                            match.matchType && !match.isPlacementMatch && React.createElement(
+                                                'span',
+                                                { 
+                                                    className: `ml-2 text-xs px-2 py-0.5 rounded-full ${
+                                                        match.matchType.includes('finále') ? 'bg-yellow-100 text-yellow-700' :
+                                                        match.matchType.includes('semifinále') ? 'bg-blue-100 text-blue-700' :
+                                                        match.matchType.includes('štvrťfinále') ? 'bg-green-100 text-green-700' :
+                                                        match.matchType.includes('osemfinále') ? 'bg-purple-100 text-purple-700' :
+                                                        match.matchType.includes('šestnásťfinále') ? 'bg-indigo-100 text-indigo-700' :
+                                                        'bg-gray-100 text-gray-700'
+                                                    }` 
+                                                },
+                                                match.matchType
                                             )
                                         ),
                                         
@@ -7591,6 +7605,33 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     { className: 'flex items-center justify-center gap-1 w-full mt-0.5' },
                                                                                     React.createElement('i', { className: 'fa-solid fa-trophy text-purple-600 text-xs flex-shrink-0' }),
                                                                                     React.createElement('span', { className: 'text-xs text-purple-600 font-medium' }, `o ${match.placementRank}. miesto`)
+                                                                                )
+                                                                            ),
+
+                                                                            match.matchType && !match.isPlacementMatch && React.createElement(
+                                                                                'div',
+                                                                                { className: 'flex items-center justify-center gap-1 w-full mt-0.5' },
+                                                                                React.createElement('i', { 
+                                                                                    className: `fa-solid ${
+                                                                                        match.matchType.includes('finále') ? 'fa-trophy' :
+                                                                                            match.matchType.includes('semifinále') ? 'fa-medal' :
+                                                                                            match.matchType.includes('štvrťfinále') ? 'fa-star' :
+                                                                                            'fa-sitemap'
+                                                                                        } ${
+                                                                                            match.matchType.includes('finále') ? 'text-yellow-600' :
+                                                                                            match.matchType.includes('semifinále') ? 'text-blue-600' :
+                                                                                            match.matchType.includes('štvrťfinále') ? 'text-green-600' :
+                                                                                            'text-purple-600'
+                                                                                        } text-xs flex-shrink-0` 
+                                                                                    }),
+                                                                                    React.createElement('span', { 
+                                                                                        className: `text-xs ${
+                                                                                            match.matchType.includes('finále') ? 'text-yellow-600' :
+                                                                                            match.matchType.includes('semifinále') ? 'text-blue-600' :
+                                                                                            match.matchType.includes('štvrťfinále') ? 'text-green-600' :
+                                                                                            'text-purple-600'
+                                                                                        } font-medium` 
+                                                                                    }, match.matchType)
                                                                                 )
                                                                             ),
                                                                             
