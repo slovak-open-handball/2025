@@ -334,7 +334,7 @@ const GenerationTypeModal = ({ isOpen, onClose, onSelectType }) => {
 };
 
 // Modálne okno pre vytvorenie zápasu o umiestnenie
-const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByCategory, teams }) => {
+const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByCategory }) => {
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedGroup1, setSelectedGroup1] = useState('');
     const [selectedGroup2, setSelectedGroup2] = useState('');
@@ -344,8 +344,6 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
     const [availableGroups, setAvailableGroups] = useState([]);
     const [availableOrders1, setAvailableOrders1] = useState([]);
     const [availableOrders2, setAvailableOrders2] = useState([]);
-    const [team1Info, setTeam1Info] = useState(null);
-    const [team2Info, setTeam2Info] = useState(null);
 
     useEffect(() => {
         if (!isOpen) {
@@ -358,8 +356,6 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             setAvailableGroups([]);
             setAvailableOrders1([]);
             setAvailableOrders2([]);
-            setTeam1Info(null);
-            setTeam2Info(null);
         }
     }, [isOpen]);
 
@@ -368,7 +364,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
         return [...categories].sort((a, b) => a.name.localeCompare(b.name));
     }, [categories]);
 
-    // Aktualizácia dostupných skupín pri zmene kategórie - BEZ FILTRA
+    // Aktualizácia dostupných skupín pri zmene kategórie
     useEffect(() => {
         if (selectedCategory && groupsByCategory[selectedCategory]) {
             const sortedGroups = [...groupsByCategory[selectedCategory]]
@@ -378,101 +374,73 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
             setSelectedGroup2('');
             setSelectedOrder1('');
             setSelectedOrder2('');
-            setTeam1Info(null);
-            setTeam2Info(null);
         } else {
             setAvailableGroups([]);
             setSelectedGroup1('');
             setSelectedGroup2('');
             setSelectedOrder1('');
             setSelectedOrder2('');
-            setTeam1Info(null);
-            setTeam2Info(null);
         }
     }, [selectedCategory, groupsByCategory]);
 
-    // Načítanie dostupných orderov pre prvý tím
+    // Generovanie dostupných poradí pre prvý tím (1-8)
     useEffect(() => {
         if (selectedCategory && selectedGroup1) {
+            // Vygenerujeme čísla 1-8 (alebo podľa maxTeams z kategórie)
             const category = categories.find(c => c.id === selectedCategory);
-            if (category && teams.allTeams) {
-                const teamsInGroup = teams.allTeams.filter(t => 
-                    t.category === category.name && 
-                    t.groupName === selectedGroup1
-                );
-                
-                const orders = teamsInGroup
-                    .map(t => t.order)
-                    .filter(o => o)
-                    .sort((a, b) => a - b);
-                
-                setAvailableOrders1(orders);
-                
-                // Ak je vybraný order, nájdeme informácie o tíme (len pre interné použitie)
-                if (selectedOrder1) {
-                    const team = teamsInGroup.find(t => t.order === parseInt(selectedOrder1));
-                    setTeam1Info(team || null);
-                } else {
-                    setTeam1Info(null);
-                }
+            const maxTeams = category?.maxTeams || 8;
+            
+            const orders = [];
+            for (let i = 1; i <= maxTeams; i++) {
+                orders.push(i);
             }
+            setAvailableOrders1(orders);
         } else {
             setAvailableOrders1([]);
-            setTeam1Info(null);
         }
-    }, [selectedCategory, selectedGroup1, selectedOrder1, teams, categories]);
+    }, [selectedCategory, selectedGroup1, categories]);
 
-    // Načítanie dostupných orderov pre druhý tím
+    // Generovanie dostupných poradí pre druhý tím (1-8)
     useEffect(() => {
         if (selectedCategory && selectedGroup2) {
             const category = categories.find(c => c.id === selectedCategory);
-            if (category && teams.allTeams) {
-                const teamsInGroup = teams.allTeams.filter(t => 
-                    t.category === category.name && 
-                    t.groupName === selectedGroup2
-                );
-                
-                const orders = teamsInGroup
-                    .map(t => t.order)
-                    .filter(o => o)
-                    .sort((a, b) => a - b);
-                
-                setAvailableOrders2(orders);
-                
-                // Ak je vybraný order, nájdeme informácie o tíme (len pre interné použitie)
-                if (selectedOrder2) {
-                    const team = teamsInGroup.find(t => t.order === parseInt(selectedOrder2));
-                    setTeam2Info(team || null);
-                } else {
-                    setTeam2Info(null);
-                }
+            const maxTeams = category?.maxTeams || 8;
+            
+            const orders = [];
+            for (let i = 1; i <= maxTeams; i++) {
+                orders.push(i);
             }
+            setAvailableOrders2(orders);
         } else {
             setAvailableOrders2([]);
-            setTeam2Info(null);
         }
-    }, [selectedCategory, selectedGroup2, selectedOrder2, teams, categories]);
+    }, [selectedCategory, selectedGroup2, categories]);
 
-    // Automatické generovanie názvu zápasu
+    // Automatické generovanie názvu zápasu (len pre informáciu)
     useEffect(() => {
-        if (team1Info && team2Info) {
+        if (selectedCategory && selectedGroup1 && selectedOrder1 && selectedGroup2 && selectedOrder2) {
             const category = categories.find(c => c.id === selectedCategory);
             const group1Name = selectedGroup1.replace('skupina ', '');
             const group2Name = selectedGroup2.replace('skupina ', '');
             
-            setMatchTitle(`${team1Info.teamName} - ${team2Info.teamName}`);
+            setMatchTitle(`${category.name} ${group1Name}${selectedOrder1} - ${category.name} ${group2Name}${selectedOrder2}`);
         } else {
             setMatchTitle('');
         }
-    }, [team1Info, team2Info, selectedCategory, selectedGroup1, selectedGroup2, categories]);
+    }, [selectedCategory, selectedGroup1, selectedGroup2, selectedOrder1, selectedOrder2, categories]);
 
     const handleConfirm = () => {
-        if (team1Info && team2Info) {
+        if (selectedCategory && selectedGroup1 && selectedGroup2 && selectedOrder1 && selectedOrder2) {
             const category = categories.find(c => c.id === selectedCategory);
             
-            // Vytvorenie identifikátorov
-            const homeTeamIdentifier = `${category.name} ${selectedGroup1.replace('skupina ', '')}${team1Info.order}`;
-            const awayTeamIdentifier = `${category.name} ${selectedGroup2.replace('skupina ', '')}${team2Info.order}`;
+            // Odstránime "skupina " z názvov skupín
+            const cleanGroup1 = selectedGroup1.replace('skupina ', '');
+            const cleanGroup2 = selectedGroup2.replace('skupina ', '');
+            
+            // Vytvorenie identifikátorov v tvare: "Kategória SkupinaPoradie"
+            // Napr. "U10 A1" alebo "Starší žiaci B3"
+            const homeTeamIdentifier = `${category.name} ${cleanGroup1}${selectedOrder1}`;
+            const awayTeamIdentifier = `${category.name} ${cleanGroup2}${selectedOrder2}`;
             
             onConfirm({
                 homeTeamIdentifier,
@@ -480,16 +448,14 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                 categoryId: selectedCategory,
                 categoryName: category.name,
                 groupName: `${selectedGroup1} - ${selectedGroup2}`,
-                matchTitle,
-                team1: team1Info,
-                team2: team2Info
+                matchTitle
             });
         }
     };
 
     if (!isOpen) return null;
 
-    const isValid = team1Info && team2Info;
+    const isValid = selectedCategory && selectedGroup1 && selectedGroup2 && selectedOrder1 && selectedOrder2;
 
     return React.createElement(
         'div',
@@ -574,7 +540,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                     'div',
                     { className: 'mb-3' },
                     React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
-                        'Poradie:'
+                        'Poradie (1-8):'
                     ),
                     React.createElement(
                         'select',
@@ -626,7 +592,7 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                     'div',
                     { className: 'mb-3' },
                     React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
-                        'Poradie:'
+                        'Poradie (1-8):'
                     ),
                     React.createElement(
                         'select',
@@ -657,8 +623,8 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                         React.createElement('p', { className: 'font-semibold text-gray-800' }, 
                             (() => {
                                 const category = categories.find(c => c.id === selectedCategory);
-                                const groupName = selectedGroup1.replace('skupina ', '');
-                                return `${category?.name || ''} ${groupName}${selectedOrder1}`;
+                                const cleanGroup1 = selectedGroup1.replace('skupina ', '');
+                                return `${category?.name || ''} ${cleanGroup1}${selectedOrder1}`;
                             })()
                         )
                     ),
@@ -669,11 +635,16 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
                         React.createElement('p', { className: 'font-semibold text-gray-800' }, 
                             (() => {
                                 const category = categories.find(c => c.id === selectedCategory);
-                                const groupName = selectedGroup2.replace('skupina ', '');
-                                return `${category?.name || ''} ${groupName}${selectedOrder2}`;
+                                const cleanGroup2 = selectedGroup2.replace('skupina ', '');
+                                return `${category?.name || ''} ${cleanGroup2}${selectedOrder2}`;
                             })()
                         )
                     )
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-xs text-gray-500 mt-2 text-center' },
+                    `ID: ${matchTitle}`
                 )
             ),
 
