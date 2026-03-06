@@ -158,7 +158,6 @@ const matchesHallApp = ({ userProfileData }) => {
             const unsubscribe = window.teamManager.subscribe((data) => {
                 setTeamData(data);
                 // VYPÍŠEME TÍMY PRI KAŽDEJ AKTUALIZÁCII
-//                console.log('=== TÍMY V SKUPINÁCH (po aktualizácii) ===');
                 logAllTeams(data.allTeams);
             });
             
@@ -168,7 +167,6 @@ const matchesHallApp = ({ userProfileData }) => {
         } else if (window.__teamManagerData) {
             setTeamData(window.__teamManagerData);
             // VYPÍŠEME TÍMY PRI NAČÍTANÍ
-//            console.log('=== TÍMY V SKUPINÁCH (pri načítaní) ===');
             logAllTeams(window.__teamManagerData.allTeams);
         }
     }, []);
@@ -176,12 +174,9 @@ const matchesHallApp = ({ userProfileData }) => {
     // FUNKCIA PRE VYPISOVANIE VŠETKÝCH TÍMOV
     const logAllTeams = (teams) => {
         if (!teams || teams.length === 0) {
-//            console.log('Žiadne tímy nie sú k dispozícii');
             return;
         }
-        
-//        console.log(`Celkový počet tímov: ${teams.length}`);
-        
+                
         // Zoskupíme tímy podľa kategórie a skupiny
         const teamsByCategory = {};
         
@@ -198,42 +193,14 @@ const matchesHallApp = ({ userProfileData }) => {
             
             teamsByCategory[category][group].push(team);
         });
-        
-        // Vypíšeme tímy podľa kategórií a skupín
-//        Object.entries(teamsByCategory).forEach(([category, groups], catIndex) => {
-//            console.log(`\nKategória #${catIndex + 1}: ${category}`);
-//            
-//            Object.entries(groups).forEach(([group, groupTeams]) => {
-//                console.log(`  Skupina: ${group}`);
-//                
-//                // Zoradíme tímy podľa poradia
-//                const sortedTeams = [...groupTeams].sort((a, b) => {
-//                    const orderA = a.order !== null && a.order !== undefined ? a.order : Infinity;
-//                    const orderB = b.order !== null && b.order !== undefined ? b.order : Infinity;
-//                    return orderA - orderB;
-//                });
-//                
-//                sortedTeams.forEach((team, teamIndex) => {
-//                    const orderText = team.order !== null && team.order !== undefined ? `poradie: ${team.order}` : 'bez poradia';
-//                    console.log(`    ${teamIndex + 1}. ${team.teamName} (${orderText})`);
-//                    if (team.id) console.log(`       ID: ${team.id}`);
-//                    if (team.uid && team.uid !== 'global') console.log(`       UID používateľa: ${team.uid}`);
-//                });
-//            });
-//        });
-//        
-//        console.log('=========================================');
     };
 
     // FUNKCIA PRE VYPISOVANIE VŠETKÝCH TÍMOV POUŽÍVATEĽOV V JEDNEJ PREHĽADNEJ TABUĽKE
     const logAllUsers = (usersList) => {
         if (!usersList || usersList.length === 0) {
-//            console.log('Žiadni používatelia nie sú k dispozícii');
             return;
         }
-        
-//        console.log('=== VŠETKY TÍMY POUŽÍVATEĽOV ZORADENÉ PODĽA KATEGÓRIE A SKUPINY ===');
-        
+                
         // Vytvoríme centrálnu štruktúru pre všetky tímy
         const allTeamsByCategory = {};
         let totalTeams = 0;
@@ -269,16 +236,12 @@ const matchesHallApp = ({ userProfileData }) => {
                 });
             });
         });
-        
-//        console.log(`Celkový počet tímov naprieč všetkými používateľmi: ${totalTeams}`);
-//        console.log('');
-        
+                
         // Zoradíme kategórie podľa abecedy
         const sortedCategories = Object.keys(allTeamsByCategory).sort((a, b) => a.localeCompare(b));
         
         // Prejdeme všetky kategórie
         sortedCategories.forEach(categoryName => {
-//            console.log(`\nKategória: ${categoryName}`);
             
             const groups = allTeamsByCategory[categoryName];
             
@@ -291,7 +254,6 @@ const matchesHallApp = ({ userProfileData }) => {
             
             // Prejdeme všetky skupiny v kategórii
             sortedGroups.forEach(groupName => {
-//                console.log(`  Skupina: ${groupName}`);
                 
                 const teamsInGroup = groups[groupName];
                 
@@ -305,23 +267,18 @@ const matchesHallApp = ({ userProfileData }) => {
                 // Vypíšeme každý tím
                 sortedTeams.forEach(team => {
                     const orderText = team.order !== null && team.order !== undefined ? `, poradie: ${team.order}` : '';
-//                    console.log(`    - ${team.teamName}${orderText} (používateľ: ${team.userEmail})`);
                 });
             });
         });
         
-//        console.log('\n===========================================');
     };
 
     // FUNKCIA PRE VYPISOVANIE VŠETKÝCH SUPERSTRUCTURE TÍMOV
     const logSuperstructureTeams = (superstructureData) => {
         if (!superstructureData || Object.keys(superstructureData).length === 0) {
-            console.log('Žiadne superstructure tímy nie sú k dispozícii');
             return;
         }
-        
-        console.log('=== VŠETKY SUPERSTRUCTURE TÍMY ZORADENÉ PODĽA KATEGÓRIE A SKUPINY ===');
-        
+                
         let totalTeams = 0;
         
         // Zoradíme kategórie podľa abecedy
@@ -331,9 +288,7 @@ const matchesHallApp = ({ userProfileData }) => {
             const teams = superstructureData[categoryName] || [];
             
             if (teams.length === 0) return;
-            
-            console.log(`\nKategória: ${categoryName}`);
-            
+                        
             // Zoskupíme tímy podľa skupiny
             const teamsByGroup = {};
             
@@ -354,7 +309,6 @@ const matchesHallApp = ({ userProfileData }) => {
             
             sortedGroups.forEach(groupName => {
                 const teamsInGroup = teamsByGroup[groupName];
-                console.log(`  Skupina: ${groupName}`);
                 
                 // Zoradíme tímy podľa poradia
                 const sortedTeams = [...teamsInGroup].sort((a, b) => {
@@ -365,15 +319,11 @@ const matchesHallApp = ({ userProfileData }) => {
                 
                 sortedTeams.forEach(team => {
                     const orderText = team.order !== null && team.order !== undefined ? `, poradie: ${team.order}` : '';
-                    console.log(`    - ${team.teamName}${orderText}`);
-                    if (team.id) console.log(`       ID: ${team.id}`);
                     totalTeams++;
                 });
             });
         });
         
-        console.log(`\nCelkový počet superstructure tímov: ${totalTeams}`);
-        console.log('===========================================');
     };
 
     // Načítanie kategórií z databázy
@@ -397,15 +347,11 @@ const matchesHallApp = ({ userProfileData }) => {
                     });
                     
                     setCategories(categoriesList);
-                    console.log('=== NAČÍTANÉ KATEGÓRIE ===');
-                    console.log('Počet kategórií:', categoriesList.length);
                     categoriesList.forEach((cat, index) => {
-                        console.log(`Kategória #${index + 1}:`, {
                             id: cat.id,
                             name: cat.name
                         });
                     });
-                    console.log('===========================');
                 }
             } catch (error) {
                 console.error("Chyba pri načítaní kategórií:", error);
@@ -419,8 +365,6 @@ const matchesHallApp = ({ userProfileData }) => {
     useEffect(() => {
         if (!window.db) return;
 
-        console.log('Načítavam skupiny z databázy...');
-
         const loadGroups = async () => {
             try {
                 const groupsRef = doc(window.db, 'settings', 'groups');
@@ -429,38 +373,18 @@ const matchesHallApp = ({ userProfileData }) => {
                 if (groupsSnap.exists()) {
                     const groupsData = groupsSnap.data();
                     setGroupsByCategory(groupsData);
-                    
-                    console.log('=== NAČÍTANÉ SKUPINY PODĽA KATEGÓRIÍ ===');
-                    
+                                        
                     // Pre každú kategóriu vypíšeme jej skupiny
                     Object.entries(groupsData).forEach(([categoryId, groups], catIndex) => {
                         // Nájdeme názov kategórie podľa ID
                         const category = categories.find(c => c.id === categoryId);
                         const categoryName = category ? category.name : `Neznáma kategória (ID: ${categoryId})`;
-                        
-                        console.log(`Kategória #${catIndex + 1}: ${categoryName} (ID: ${categoryId})`);
-                        console.log(`  Počet skupín: ${groups.length}`);
-                        
+                                            
                         // Rozdelíme skupiny podľa typu
                         const basicGroups = groups.filter(g => g.type === 'základná skupina');
                         const superGroups = groups.filter(g => g.type === 'nadstavbová skupina');
-                        
-                        console.log(`  Základné skupiny (${basicGroups.length}):`);
-                        basicGroups.forEach((group, groupIndex) => {
-                            console.log(`    ${groupIndex + 1}. ${group.name}`);
-                        });
-                        
-                        console.log(`  Nadstavbové skupiny (${superGroups.length}):`);
-                        superGroups.forEach((group, groupIndex) => {
-                            console.log(`    ${groupIndex + 1}. ${group.name}`);
-                        });
-                        console.log('  ---');
-                    });
-                    
-                    console.log('===========================================');
-                    
+                    });                                        
                 } else {
-                    console.log('Dokument groups neexistuje');
                     setGroupsByCategory({});
                 }
             } catch (error) {
@@ -476,7 +400,6 @@ const matchesHallApp = ({ userProfileData }) => {
             if (docSnap.exists()) {
                 const groupsData = docSnap.data();
                 setGroupsByCategory(groupsData);
-                console.log('Skupiny boli aktualizované v reálnom čase');
             }
         }, (error) => {
             console.error('Chyba pri real-time sledovaní skupín:', error);
@@ -489,18 +412,14 @@ const matchesHallApp = ({ userProfileData }) => {
     useEffect(() => {
         if (!window.db) return;
 
-        console.log('Načítavam superstructure tímy z dokumentu settings/superstructureGroups...');
-
         const superstructureDocRef = doc(window.db, 'settings', 'superstructureGroups');
         
         const unsubscribeSuperstructure = onSnapshot(superstructureDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 setSuperstructureTeams(data);
-                console.log('=== SUPERSTRUCTURE TÍMY BOLI NAČÍTANÉ ===');
                 logSuperstructureTeams(data);
             } else {
-                console.log('Dokument settings/superstructureGroups neexistuje');
                 setSuperstructureTeams({});
             }
         }, (error) => {
@@ -514,8 +433,6 @@ const matchesHallApp = ({ userProfileData }) => {
     // NOVÝ LISTENER: Načítanie všetkých používateľov z kolekcie users
     useEffect(() => {
         if (!window.db) return;
-
-        console.log('Načítavam používateľov z kolekcie users...');
 
         const unsubscribeUsers = onSnapshot(query(collection(window.db, 'users')), (querySnapshot) => {
             const usersList = [];
@@ -547,108 +464,147 @@ const matchesHallApp = ({ userProfileData }) => {
         return () => unsubscribeUsers();
     }, []); // Prázdne pole závislostí - spustí sa raz pri načítaní
 
-    // Načítanie zápasov pre túto halu
-    useEffect(() => {
-        if (!window.db || !hallId) {
-            setLoading(false);
-            return;
-        }
+// Načítanie zápasov pre túto halu
+useEffect(() => {
+    if (!window.db || !hallId) {
+        setLoading(false);
+        return;
+    }
 
-        console.log(`Načítavam zápasy pre halu ${hallId}...`);
-
-        const matchesRef = collection(window.db, 'matches');
-        const q = query(matchesRef, where("hallId", "==", hallId));
+    const matchesRef = collection(window.db, 'matches');
+    const q = query(matchesRef, where("hallId", "==", hallId));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const loadedMatches = [];
+        snapshot.forEach((doc) => {
+            loadedMatches.push({
+                id: doc.id,
+                ...doc.data()
+            });
+        });
         
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const loadedMatches = [];
-            snapshot.forEach((doc) => {
-                loadedMatches.push({
-                    id: doc.id,
-                    ...doc.data()
-                });
-            });
-            
-            // Zoradíme podľa času
-            loadedMatches.sort((a, b) => {
-                if (!a.scheduledTime) return 1;
-                if (!b.scheduledTime) return -1;
-                return a.scheduledTime.toDate() - b.scheduledTime.toDate();
-            });
-            
-            setMatches(loadedMatches);
-            
-            // Zoskupenie podľa dňa
-            const grouped = {};
-            loadedMatches.forEach(match => {
-                if (match.scheduledTime) {
-                    const date = match.scheduledTime.toDate();
-                    const dateStr = getLocalDateStr(date);
+        // Zoradíme podľa času
+        loadedMatches.sort((a, b) => {
+            if (!a.scheduledTime) return 1;
+            if (!b.scheduledTime) return -1;
+            return a.scheduledTime.toDate() - b.scheduledTime.toDate();
+        });
+        
+        setMatches(loadedMatches);
+        
+        // Zoskupenie podľa dňa
+        const grouped = {};
+        loadedMatches.forEach(match => {
+            if (match.scheduledTime) {
+                const date = match.scheduledTime.toDate();
+                const dateStr = getLocalDateStr(date);
+                
+                if (!grouped[dateStr]) {
+                    grouped[dateStr] = {
+                        date: date,
+                        dateStr: dateStr,
+                        matches: []
+                    };
+                }
+                grouped[dateStr].matches.push(match);
+            }
+        });
+        
+        setGroupedMatches(grouped);
+        setLoading(false);
                     
-                    if (!grouped[dateStr]) {
-                        grouped[dateStr] = {
-                            date: date,
-                            dateStr: dateStr,
-                            matches: []
-                        };
-                    }
-                    grouped[dateStr].matches.push(match);
-                }
-            });
+        // VÝPIS KAŽDÉHO ZÁPASU DO KONZOLY S PODROBNÝMI NASTAVENIAMI KATEGÓRIE
+        console.log('=== VŠETKY ZÁPASY V TEJTO HALE S NASTAVENIAMI KATEGÓRIE ===');
+        loadedMatches.forEach((match, index) => {
+            const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
+            const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
+            const matchTime = match.scheduledTime ? formatTime(match.scheduledTime) : 'neurčený';
+            const matchDate = match.scheduledTime ? formatDateWithDay(match.scheduledTime.toDate()) : 'neurčený';
+            const categoryName = match.categoryName || 'Neznáma kategória';
             
-            setGroupedMatches(grouped);
-            setLoading(false);
+            // Nájdeme kategóriu podľa názvu
+            const category = categories.find(c => c.name === match.categoryName);
             
-            console.log(`Načítaných ${loadedMatches.length} zápasov pre halu ${hallId}`);
-            
-            // VÝPIS KAŽDÉHO ZÁPASU DO KONZOLY
-            console.log('=== VŠETKY ZÁPASY V TEJTO HALE ===');
-            loadedMatches.forEach((match, index) => {
-                const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
-                const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
-                const matchTime = match.scheduledTime ? formatTime(match.scheduledTime) : 'neurčený';
-                const matchDate = match.scheduledTime ? formatDateWithDay(match.scheduledTime.toDate()) : 'neurčený';
-                const categoryName = match.categoryName || 'Neznáma kategória';
-                
-                console.log(`Zápas #${index + 1}:`);
-                console.log(`  ID: ${match.id}`);
-                console.log(`  Dátum: ${matchDate}`);
-                console.log(`  Čas: ${matchTime}`);
-                console.log(`  Kategória: ${categoryName}`);
-                console.log(`  Skupina: ${match.groupName || 'neurčená'}`);
-                console.log(`  Domáci: ${homeTeamName} (${match.homeTeamIdentifier})`);
-                console.log(`  Hostia: ${awayTeamName} (${match.awayTeamIdentifier})`);
-                console.log(`  Status: ${match.status || 'neurčený'}`);
-                if (match.isPlacementMatch) {
-                    console.log(`  Typ: Zápas o ${match.placementRank}. miesto`);
-                }
-                console.log('---');
-            });
-            console.log(`Celkový počet zápasov: ${loadedMatches.length}`);
-            console.log('=================================');
-            
-            // Skontrolujeme URL parametre pre domácich a hostí
-            const homeIdentifierFromUrl = getUrlParameter('domaci');
-            const awayIdentifierFromUrl = getUrlParameter('hostia');
-            
-            if (homeIdentifierFromUrl && awayIdentifierFromUrl && !selectedMatch) {
-                // Hľadáme zápas, ktorý má oba identifikátory
-                const matchFromUrl = loadedMatches.find(m => 
-                    m.homeTeamIdentifier === homeIdentifierFromUrl && 
-                    m.awayTeamIdentifier === awayIdentifierFromUrl
-                );
-                
-                if (matchFromUrl) {
-                    setSelectedMatch(matchFromUrl);
-                }
+            console.log(`Zápas #${index + 1}:`);
+            console.log(`  ID: ${match.id}`);
+            console.log(`  Dátum: ${matchDate}`);
+            console.log(`  Čas: ${matchTime}`);
+            console.log(`  Kategória: ${categoryName}`);
+            console.log(`  Skupina: ${match.groupName || 'neurčená'}`);
+            console.log(`  Domáci: ${homeTeamName} (${match.homeTeamIdentifier})`);
+            console.log(`  Hostia: ${awayTeamName} (${match.awayTeamIdentifier})`);
+            console.log(`  Status: ${match.status || 'neurčený'}`);
+            if (match.isPlacementMatch) {
+                console.log(`  Typ: Zápas o ${match.placementRank}. miesto`);
             }
             
-        }, (error) => {
-            console.error("Chyba pri načítaní zápasov:", error);
-            setLoading(false);
+            // VÝPIS NASTAVENÍ KATEGÓRIE
+            if (category) {
+                console.log(`  --- NASTAVENIA KATEGÓRIE ${category.name} ---`);
+                console.log(`  • Maximálny počet tímov: ${category.maxTeams ?? 12}`);
+                console.log(`  • Maximálny počet hráčov v tíme: ${category.maxPlayers ?? 12}`);
+                console.log(`  • Maximálny počet členov RT: ${category.maxImplementationTeam ?? 3}`);
+                console.log(`  • Počet periód: ${category.periods ?? 2}`);
+                console.log(`  • Trvanie periódy: ${category.periodDuration ?? 20} min`);
+                console.log(`  • Prestávka medzi periódami: ${category.breakDuration ?? 2} min`);
+                console.log(`  • Prestávka medzi zápasmi: ${category.matchBreak ?? 5} min`);
+                console.log(`  • Farba pre rozlosovanie: ${category.drawColor ?? '#3B82F6'}`);
+                console.log(`  • Farba pre dopravu: ${category.transportColor ?? '#10B981'}`);
+                console.log(`  • Počet timeoutov: ${category.timeoutCount ?? 2}`);
+                console.log(`  • Trvanie timeoutu: ${category.timeoutDuration ?? 1} min`);
+                console.log(`  • Čas vylúčenia: ${category.exclusionTime ?? 2} min`);
+                
+                // Dátumy narodenia
+                if (category.dateFrom || category.dateTo) {
+                    console.log(`  • Dátum narodenia od: ${category.dateFrom ? category.dateFrom : 'neurčený'} ${category.dateFromActive ? '(aktívny)' : '(neaktívny)'}`);
+                    console.log(`  • Dátum narodenia do: ${category.dateTo ? category.dateTo : 'neurčený'} ${category.dateToActive ? '(aktívny)' : '(neaktívny)'}`);
+                }
+                
+                // Výpočet celkového času zápasu
+                const periods = category.periods ?? 2;
+                const periodDuration = category.periodDuration ?? 20;
+                const breakDuration = category.breakDuration ?? 2;
+                const matchBreak = category.matchBreak ?? 5;
+                
+                const playingTime = periods * periodDuration;
+                const breaksBetweenPeriods = (periods - 1) * breakDuration;
+                const totalTimeWithMatchBreak = playingTime + breaksBetweenPeriods + matchBreak;
+                
+                console.log(`  • Čistý hrací čas: ${playingTime} min`);
+                console.log(`  • Prestávky v zápase: ${breaksBetweenPeriods} min`);
+                console.log(`  • Celkový čas s prestávkou: ${totalTimeWithMatchBreak} min`);
+            } else {
+                console.log(`  • Nastavenia kategórie nie sú k dispozícii`);
+            }
+            
+            console.log('---');
         });
+        console.log(`Celkový počet zápasov: ${loadedMatches.length}`);
+        console.log('===========================================');
+        
+        // Skontrolujeme URL parametre pre domácich a hostí
+        const homeIdentifierFromUrl = getUrlParameter('domaci');
+        const awayIdentifierFromUrl = getUrlParameter('hostia');
+        
+        if (homeIdentifierFromUrl && awayIdentifierFromUrl && !selectedMatch) {
+            // Hľadáme zápas, ktorý má oba identifikátory
+            const matchFromUrl = loadedMatches.find(m => 
+                m.homeTeamIdentifier === homeIdentifierFromUrl && 
+                m.awayTeamIdentifier === awayIdentifierFromUrl
+            );
+            
+            if (matchFromUrl) {
+                setSelectedMatch(matchFromUrl);
+            }
+        }
+        
+    }, (error) => {
+        console.error("Chyba pri načítaní zápasov:", error);
+        setLoading(false);
+    });
 
-        return () => unsubscribe();
-    }, [hallId]);
+    return () => unsubscribe();
+}, [hallId]);
 
     // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA - TERAZ POUŽÍVA DÁTA Z USERS AJ SUPERSTRUCTURE
     const getTeamNameByIdentifier = (identifier) => {
@@ -688,9 +644,7 @@ const matchesHallApp = ({ userProfileData }) => {
         // Vytvoríme názov skupiny v tvare "skupina X" (napr. "F" -> "skupina F")
         const fullGroupName = `skupina ${groupLetter}`;
         const orderNum = parseInt(order, 10);
-        
-        console.log(`Hľadám tím: Kategória: ${category}, Skupina: ${fullGroupName}, Poradie: ${orderNum}`);
-        
+                
         // Hľadáme v users (načítaných používateľoch)
         if (users && users.length > 0) {
             for (const user of users) {
@@ -704,21 +658,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     t.order === orderNum
                 );
                 
-                if (team) {
-                    console.log(`  Nájdený používateľský tím: ${team.teamName} (používateľ: ${user.email})`);
-                    
-                    // VYPÍSANIE CELÉHO DOKUMENTU POUŽÍVATEĽA
-                    console.log('=== CELÝ DOKUMENT POUŽÍVATEĽA ===');
-                    console.log('ID používateľa:', user.id);
-                    console.log('Email:', user.email);
-                    console.log('Meno:', user.displayName);
-                    console.log('Rola:', user.role);
-                    console.log('Schválený:', user.approved);
-                    console.log('Dátum vytvorenia:', user.createdAt);
-                    console.log('ID haly:', user.hallId);
-                    console.log('Tímy používateľa:', JSON.stringify(user.teams, null, 2));
-                    console.log('================================');
-                    
+                if (team) {                                        
                     return team.teamName;
                 }
             }
@@ -727,18 +667,9 @@ const matchesHallApp = ({ userProfileData }) => {
         // Pre superstructure tímy - hľadáme podľa kategórie a skupiny+poradia
         if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
             const categoryTeams = superstructureTeams[category] || [];
-            
-            console.log(`  Hľadám v superstructure tímoch, kategória ${category} má ${categoryTeams.length} tímov`);
-            
-            // V superstructure tímoch je názov vo formáte "Kategória ČísloPísmeno" (napr. "U12 D 2B")
-            // Potrebujeme nájsť tím, ktorý je v skupine fullGroupName a má order = orderNum
-            // Ale v superstructure tímoch order nie je priamo poradie, ale je to order v rámci skupiny
-            
-            // Najprv získame všetky tímy v tejto skupine
+                        
             const teamsInGroup = categoryTeams.filter(t => t.groupName === fullGroupName);
-            
-            console.log(`    V skupine ${fullGroupName} je ${teamsInGroup.length} tímov`);
-            
+                        
             // Zoradíme ich podľa poradia
             const sortedTeams = [...teamsInGroup].sort((a, b) => {
                 const orderA = a.order !== null && a.order !== undefined ? a.order : Infinity;
@@ -746,23 +677,11 @@ const matchesHallApp = ({ userProfileData }) => {
                 return orderA - orderB;
             });
             
-            // Vypíšeme všetky tímy v skupine pre debug
-            sortedTeams.forEach((t, idx) => {
-                console.log(`      ${idx+1}. ${t.teamName} (order: ${t.order})`);
-            });
-            
-            // Hľadáme tím s týmto poradím
             if (orderNum <= sortedTeams.length && orderNum >= 1) {
                 const foundTeam = sortedTeams[orderNum - 1];
-                console.log(`    Nájdený superstructure tím na pozícii ${orderNum}: ${foundTeam.teamName}`);
                 return foundTeam.teamName;
-            } else {
-                console.log(`    Poradie ${orderNum} je mimo rozsahu (1-${sortedTeams.length})`);
             }
         }
-        
-        // Fallback
-        console.log(`  Tím NENájdený, používam fallback`);
         return `${category} ${groupLetter}${order}`;
     };
 
@@ -1594,7 +1513,6 @@ const handleDataUpdateAndRender = (event) => {
     if (userProfileData) {
         // Synchronizácia e-mailu
         if (window.auth && window.db && !isEmailSyncListenerSetup) {
-//            console.log("matches-hall.js: Nastavujem poslúcháča na synchronizáciu e-mailu.");
             
             onAuthStateChanged(window.auth, async (user) => {
                 if (user) {
@@ -1629,7 +1547,6 @@ const handleDataUpdateAndRender = (event) => {
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(matchesHallApp, { userProfileData }));
-//            console.log("matches-hall.js: Aplikácia bola vykreslená.");
         }
     } else {
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
