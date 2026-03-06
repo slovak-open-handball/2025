@@ -136,7 +136,7 @@ const matchesHallApp = ({ userProfileData }) => {
             const unsubscribe = window.teamManager.subscribe((data) => {
                 setTeamData(data);
                 // VYPÍŠEME TÍMY PRI KAŽDEJ AKTUALIZÁCII
-                console.log('=== TÍMY V SKUPINÁCH (po aktualizácii) ===');
+//                console.log('=== TÍMY V SKUPINÁCH (po aktualizácii) ===');
                 logAllTeams(data.allTeams);
             });
             
@@ -146,7 +146,7 @@ const matchesHallApp = ({ userProfileData }) => {
         } else if (window.__teamManagerData) {
             setTeamData(window.__teamManagerData);
             // VYPÍŠEME TÍMY PRI NAČÍTANÍ
-            console.log('=== TÍMY V SKUPINÁCH (pri načítaní) ===');
+//            console.log('=== TÍMY V SKUPINÁCH (pri načítaní) ===');
             logAllTeams(window.__teamManagerData.allTeams);
         }
     }, []);
@@ -154,11 +154,11 @@ const matchesHallApp = ({ userProfileData }) => {
     // FUNKCIA PRE VYPISOVANIE VŠETKÝCH TÍMOV
     const logAllTeams = (teams) => {
         if (!teams || teams.length === 0) {
-            console.log('Žiadne tímy nie sú k dispozícii');
+//            console.log('Žiadne tímy nie sú k dispozícii');
             return;
         }
         
-        console.log(`Celkový počet tímov: ${teams.length}`);
+//        console.log(`Celkový počet tímov: ${teams.length}`);
         
         // Zoskupíme tímy podľa kategórie a skupiny
         const teamsByCategory = {};
@@ -206,11 +206,11 @@ const matchesHallApp = ({ userProfileData }) => {
     // FUNKCIA PRE VYPISOVANIE VŠETKÝCH TÍMOV POUŽÍVATEĽOV V JEDNEJ PREHĽADNEJ TABUĽKE
     const logAllUsers = (usersList) => {
         if (!usersList || usersList.length === 0) {
-            console.log('Žiadni používatelia nie sú k dispozícii');
+//            console.log('Žiadni používatelia nie sú k dispozícii');
             return;
         }
         
-        console.log('=== VŠETKY TÍMY POUŽÍVATEĽOV ZORADENÉ PODĽA KATEGÓRIE A SKUPINY ===');
+//        console.log('=== VŠETKY TÍMY POUŽÍVATEĽOV ZORADENÉ PODĽA KATEGÓRIE A SKUPINY ===');
         
         // Vytvoríme centrálnu štruktúru pre všetky tímy
         const allTeamsByCategory = {};
@@ -248,15 +248,15 @@ const matchesHallApp = ({ userProfileData }) => {
             });
         });
         
-        console.log(`Celkový počet tímov naprieč všetkými používateľmi: ${totalTeams}`);
-        console.log('');
+//        console.log(`Celkový počet tímov naprieč všetkými používateľmi: ${totalTeams}`);
+//        console.log('');
         
         // Zoradíme kategórie podľa abecedy
         const sortedCategories = Object.keys(allTeamsByCategory).sort((a, b) => a.localeCompare(b));
         
         // Prejdeme všetky kategórie
         sortedCategories.forEach(categoryName => {
-            console.log(`\nKategória: ${categoryName}`);
+//            console.log(`\nKategória: ${categoryName}`);
             
             const groups = allTeamsByCategory[categoryName];
             
@@ -269,7 +269,7 @@ const matchesHallApp = ({ userProfileData }) => {
             
             // Prejdeme všetky skupiny v kategórii
             sortedGroups.forEach(groupName => {
-                console.log(`  Skupina: ${groupName}`);
+//                console.log(`  Skupina: ${groupName}`);
                 
                 const teamsInGroup = groups[groupName];
                 
@@ -283,12 +283,12 @@ const matchesHallApp = ({ userProfileData }) => {
                 // Vypíšeme každý tím
                 sortedTeams.forEach(team => {
                     const orderText = team.order !== null && team.order !== undefined ? `, poradie: ${team.order}` : '';
-                    console.log(`    - ${team.teamName}${orderText} (používateľ: ${team.userEmail})`);
+//                    console.log(`    - ${team.teamName}${orderText} (používateľ: ${team.userEmail})`);
                 });
             });
         });
         
-        console.log('\n===========================================');
+//        console.log('\n===========================================');
     };
 
     // FUNKCIA PRE VYPISOVANIE VŠETKÝCH SUPERSTRUCTURE TÍMOV
@@ -587,22 +587,22 @@ const matchesHallApp = ({ userProfileData }) => {
                 const matchDate = match.scheduledTime ? formatDateWithDay(match.scheduledTime.toDate()) : 'neurčený';
                 const categoryName = match.categoryName || 'Neznáma kategória';
                 
-                console.log(`Zápas #${index + 1}:`);
-                console.log(`  ID: ${match.id}`);
-                console.log(`  Dátum: ${matchDate}`);
-                console.log(`  Čas: ${matchTime}`);
-                console.log(`  Kategória: ${categoryName}`);
-                console.log(`  Skupina: ${match.groupName || 'neurčená'}`);
-                console.log(`  Domáci: ${homeTeamName} (${match.homeTeamIdentifier})`);
-                console.log(`  Hosť: ${awayTeamName} (${match.awayTeamIdentifier})`);
-                console.log(`  Status: ${match.status || 'neurčený'}`);
-                if (match.isPlacementMatch) {
-                    console.log(`  Typ: Zápas o ${match.placementRank}. miesto`);
-                }
-                console.log('---');
+//                console.log(`Zápas #${index + 1}:`);
+//                console.log(`  ID: ${match.id}`);
+//                console.log(`  Dátum: ${matchDate}`);
+//                console.log(`  Čas: ${matchTime}`);
+//                console.log(`  Kategória: ${categoryName}`);
+//                console.log(`  Skupina: ${match.groupName || 'neurčená'}`);
+//                console.log(`  Domáci: ${homeTeamName} (${match.homeTeamIdentifier})`);
+//                console.log(`  Hosť: ${awayTeamName} (${match.awayTeamIdentifier})`);
+//                console.log(`  Status: ${match.status || 'neurčený'}`);
+//                if (match.isPlacementMatch) {
+//                    console.log(`  Typ: Zápas o ${match.placementRank}. miesto`);
+//                }
+//                console.log('---');
             });
-            console.log(`Celkový počet zápasov: ${loadedMatches.length}`);
-            console.log('=================================');
+//            console.log(`Celkový počet zápasov: ${loadedMatches.length}`);
+//            console.log('=================================');
             
         }, (error) => {
             console.error("Chyba pri načítaní zápasov:", error);
@@ -651,7 +651,7 @@ const matchesHallApp = ({ userProfileData }) => {
         const fullGroupName = `skupina ${groupName}`;
         const orderNum = parseInt(order, 10);
         
-        console.log(`Hľadám tím: Kategória: ${category}, Skupina: ${fullGroupName}, Poradie: ${orderNum}`);
+//        console.log(`Hľadám tím: Kategória: ${category}, Skupina: ${fullGroupName}, Poradie: ${orderNum}`);
         
         // Hľadáme v users (načítaných používateľoch)
         if (users && users.length > 0) {
@@ -670,7 +670,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 );
                 
                 if (team) {
-                    console.log(`  Nájdený tím: ${team.teamName} (používateľ: ${user.email})`);
+//                    console.log(`  Nájdený tím: ${team.teamName} (používateľ: ${user.email})`);
                     return team.teamName;
                 }
             }
@@ -690,7 +690,7 @@ const matchesHallApp = ({ userProfileData }) => {
         }
         
         // Fallback - vrátime identifikátor v čitateľnej forme
-        console.log(`  Tím NENájdený, používam fallback`);
+//        console.log(`  Tím NENájdený, používam fallback`);
         return `${category} ${groupName}${order}`;
     };
 
@@ -844,7 +844,7 @@ const handleDataUpdateAndRender = (event) => {
     if (userProfileData) {
         // Synchronizácia e-mailu
         if (window.auth && window.db && !isEmailSyncListenerSetup) {
-            console.log("matches-hall.js: Nastavujem poslúcháča na synchronizáciu e-mailu.");
+//            console.log("matches-hall.js: Nastavujem poslúcháča na synchronizáciu e-mailu.");
             
             onAuthStateChanged(window.auth, async (user) => {
                 if (user) {
@@ -879,7 +879,7 @@ const handleDataUpdateAndRender = (event) => {
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
             root.render(React.createElement(matchesHallApp, { userProfileData }));
-            console.log("matches-hall.js: Aplikácia bola vykreslená.");
+//            console.log("matches-hall.js: Aplikácia bola vykreslená.");
         }
     } else {
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
