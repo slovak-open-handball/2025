@@ -1935,63 +1935,80 @@ const matchesHallApp = ({ userProfileData }) => {
                                 )
                             ),
                             
-                            // Ovládacie tlačidlá pre adminov a hall users - JEDNOTNÉ pre oba tímy
+                            // Ovládacie tlačidlá pre adminov a hall users - nahraďte celú túto časť
+                            
                             (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && React.createElement(
                                 'div',
                                 { className: 'flex flex-wrap gap-2 justify-center mb-4' },
-                                // Nahraďte existujúce tlačidlo pre gól týmto:
+                                
+                                // Tlačidlo GÓL
                                 React.createElement(
                                     'button',
                                     {
                                         className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 border-2 ${
-                                            eventType === 'goal' 
+                                            eventType === 'goal' && eventSubType !== 'scored' 
                                                 ? 'bg-green-600 text-white border-green-600' 
+                                                : eventType === 'goal' && eventSubType === 'scored'
+                                                ? 'bg-green-600 text-white border-green-600' // Premenený 7m - stále zelené
+                                                : eventType === 'penalty' && eventSubType === 'scored'
+                                                ? 'bg-green-600 text-white border-green-600' // Toto je stav, keď je aktívny 7m a klikli ste na gól
                                                 : 'bg-white text-green-600 border-green-600 hover:bg-green-50'
                                         }`,
                                         onClick: () => {
                                             if (eventType === 'goal') {
+                                                // Vypneme režim gól
                                                 setEventType(null);
                                                 setEventTeam(null);
+                                                setEventSubType(null);
                                             } else if (eventType === 'penalty') {
-                                                // Ak je aktívny režim 7m, zmeníme ho na režim goal+penalty
-                                                // Toto signalizuje, že používateľ chce pridať premenený 7m hod
-                                                setEventType('goal');
-                                                setEventSubType('scored');
+                                                // Ak je aktívny režim 7m, prepneme na premenený 7m
+                                                // Tlačidlo 7m zostane modré, tlačidlo gól sa zvýrazní zeleno
+                                                setEventType('penalty'); // Zostáva penalty
+                                                setEventSubType('scored'); // Nastavíme ako premenený
                                             } else {
+                                                // Normálny gól (bez 7m)
                                                 setEventType('goal');
+                                                setEventSubType(null);
                                             }
                                         }
                                     },
-                                    React.createElement('i', { className: `fa-solid fa-futbol ${eventType === 'goal' ? 'text-white' : 'text-green-600'}` }),
+                                    React.createElement('i', { className: `fa-solid fa-futbol ${
+                                        (eventType === 'goal') || (eventType === 'penalty' && eventSubType === 'scored') 
+                                            ? 'text-white' 
+                                            : 'text-green-600'
+                                    }` }),
                                     'Gól'
                                 ),
-                               // V časti s ovládacími tlačidlami - nahraďte tlačidlo pre 7m týmto:
-                               React.createElement(
-                                   'button',
-                                   {
-                                       className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 border-2 ${
-                                           eventType === 'penalty' 
-                                               ? 'bg-blue-600 text-white border-blue-600' 
-                                               : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-50'
-                                       }`,
-                                       onClick: () => {
-                                           if (eventType === 'penalty') {
-                                               // Vypneme režim 7m
-                                               setEventType(null);
-                                               setEventTeam(null);
-                                               setEventSubType(null);
-                                           } else {
-                                               // Zapneme režim 7m
-                                               setEventType('penalty');
-                                               // Vymažeme predchádzajúce stavy
-                                               setEventSubType(null);
-                                               setSelectedPlayerForEvent(null);
-                                           }
-                                       }
-                                   },
-                                   React.createElement('i', { className: `fa-solid fa-circle-dot ${eventType === 'penalty' ? 'text-white' : 'text-blue-600'}` }),
-                                   '7m'
-                               ),
+                                
+                                // Tlačidlo 7m
+                                React.createElement(
+                                    'button',
+                                    {
+                                        className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 border-2 ${
+                                            eventType === 'penalty' 
+                                                ? 'bg-blue-600 text-white border-blue-600' 
+                                                : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-50'
+                                        }`,
+                                        onClick: () => {
+                                            if (eventType === 'penalty') {
+                                                // Vypneme režim 7m
+                                                setEventType(null);
+                                                setEventTeam(null);
+                                                setEventSubType(null);
+                                                setSelectedPlayerForEvent(null);
+                                            } else {
+                                                // Zapneme režim 7m - štandardne ako nepremenený
+                                                setEventType('penalty');
+                                                setEventSubType('missed'); // Predvolene nepremenený
+                                                setSelectedPlayerForEvent(null);
+                                            }
+                                        }
+                                    },
+                                    React.createElement('i', { className: `fa-solid fa-circle-dot ${eventType === 'penalty' ? 'text-white' : 'text-blue-600'}` }),
+                                    '7m'
+                                ),
+                                
+                                // Ostatné tlačidlá (ŽK, ČK, MK, Vylúčenie) zostávajú rovnaké
                                 React.createElement(
                                     'button',
                                     {
