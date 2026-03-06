@@ -1746,7 +1746,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     if (eventType) {
                                                         setEventTeam('home');
                                                         setSelectedPlayerForEvent(staffIdentifier);
-                                                        setTimeout(() => addMatchEvent(), 100);
+                                                        addMatchEvent();
                                                     }
                                                 }
                                             },
@@ -1754,13 +1754,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 'div',
                                                 { className: 'flex items-center gap-2' },
                                                 React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs' }),
-                                                React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`),
-                                                
-                                                eventType && React.createElement(
-                                                    'span',
-                                                    { className: 'ml-2 text-xs text-green-600 opacity-0 group-hover:opacity-100 transition-opacity' },
-                                                    `➕ ${eventType === 'goal' ? 'gól' : eventType === 'yellow' ? 'žltá' : eventType === 'red' ? 'červená' : eventType === 'blue' ? 'modrá' : eventType === 'exclusion' ? 'vylúčenie' : '7m'}`
-                                                )
+                                                React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`)
                                             )
                                         );
                                     }),
@@ -1786,7 +1780,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     if (eventType) {
                                                         setEventTeam('home');
                                                         setSelectedPlayerForEvent(staffIdentifier);
-                                                        setTimeout(() => addMatchEvent(), 100);
+                                                        addMatchEvent();
                                                     }
                                                 }
                                             },
@@ -1794,13 +1788,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 'div',
                                                 { className: 'flex items-center gap-2' },
                                                 React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs' }),
-                                                React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`),
-                                                
-                                                eventType && React.createElement(
-                                                    'span',
-                                                    { className: 'ml-2 text-xs text-green-600 opacity-0 group-hover:opacity-100 transition-opacity' },
-                                                    `➕ ${eventType === 'goal' ? 'gól' : eventType === 'yellow' ? 'žltá' : eventType === 'red' ? 'červená' : eventType === 'blue' ? 'modrá' : eventType === 'exclusion' ? 'vylúčenie' : '7m'}`
-                                                )
+                                                React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`)
                                             )
                                         );
                                     }),
@@ -1860,7 +1848,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             if (eventType) {
                                                                 setEventTeam('home'); // Nastavíme tím podľa toho, na ktorého hráča sa kliklo
                                                                 setSelectedPlayerForEvent(playerIdentifier);
-                                                                setTimeout(() => addMatchEvent(), 100);
+                                                                addMatchEvent();
                                                             }
                                                         }
                                                     },
@@ -1877,14 +1865,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             'span',
                                                             { className: 'font-medium' },
                                                             `${player.firstName} ${player.lastName}`
-                                                        ),
-                                                        // ✅ ODSTRÁNENÝ rok narodenia
-                                                        
-                                                        // Zobraziť indikátor, že je možné kliknúť (ak je vybratý typ udalosti)
-                                                        eventType && React.createElement(
-                                                            'span',
-                                                            { className: 'ml-2 text-xs text-green-600 opacity-0 group-hover:opacity-100 transition-opacity' },
-                                                            `➕ ${eventType === 'goal' ? 'gól' : eventType === 'yellow' ? 'žltá' : eventType === 'red' ? 'červená' : eventType === 'blue' ? 'modrá' : eventType === 'exclusion' ? 'vylúčenie' : '7m'}`
                                                         )
                                                     )
                                                 );
@@ -2196,7 +2176,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     if (eventType) {
                                                         setEventTeam('away');
                                                         setSelectedPlayerForEvent(staffIdentifier);
-                                                        setTimeout(() => addMatchEvent(), 100);
+                                                        addMatchEvent();
                                                     }
                                                 }
                                             },
@@ -2204,13 +2184,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 'div',
                                                 { className: 'flex items-center gap-2' },
                                                 React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs' }),
-                                                React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`),
-                                                
-                                                eventType && React.createElement(
-                                                    'span',
-                                                    { className: 'ml-2 text-xs text-green-600 opacity-0 group-hover:opacity-100 transition-opacity' },
-                                                    `➕ ${eventType === 'goal' ? 'gól' : eventType === 'yellow' ? 'žltá' : eventType === 'red' ? 'červená' : eventType === 'blue' ? 'modrá' : eventType === 'exclusion' ? 'vylúčenie' : '7m'}`
-                                                )
+                                                React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`)
                                             )
                                         );
                                     }),
@@ -2236,7 +2210,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     if (eventType) {
                                                         setEventTeam('away');
                                                         setSelectedPlayerForEvent(staffIdentifier);
-                                                        setTimeout(() => addMatchEvent(), 100);
+                                                        addMatchEvent();
                                                     }
                                                 }
                                             },
@@ -2244,13 +2218,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 'div',
                                                 { className: 'flex items-center gap-2' },
                                                 React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs' }),
-                                                React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`),
-                                                
-                                                eventType && React.createElement(
-                                                    'span',
-                                                    { className: 'ml-2 text-xs text-green-600 opacity-0 group-hover:opacity-100 transition-opacity' },
-                                                    `➕ ${eventType === 'goal' ? 'gól' : eventType === 'yellow' ? 'žltá' : eventType === 'red' ? 'červená' : eventType === 'blue' ? 'modrá' : eventType === 'exclusion' ? 'vylúčenie' : '7m'}`
-                                                )
+                                                React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`)
                                             )
                                         );
                                     }),
@@ -2310,7 +2278,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             if (eventType) {
                                                                 setEventTeam('away');
                                                                 setSelectedPlayerForEvent(playerIdentifier);
-                                                                setTimeout(() => addMatchEvent(), 100);
+                                                                addMatchEvent();
                                                             }
                                                         }
                                                     },
@@ -2327,13 +2295,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             'span',
                                                             { className: 'font-medium' },
                                                             `${player.firstName} ${player.lastName}`
-                                                        ),
-                                                        // ✅ ODSTRÁNENÝ rok narodenia
-                                                        
-                                                        eventType && React.createElement(
-                                                            'span',
-                                                            { className: 'ml-2 text-xs text-green-600 opacity-0 group-hover:opacity-100 transition-opacity' },
-                                                            `➕ ${eventType === 'goal' ? 'gól' : eventType === 'yellow' ? 'žltá' : eventType === 'red' ? 'červená' : eventType === 'blue' ? 'modrá' : eventType === 'exclusion' ? 'vylúčenie' : '7m'}`
                                                         )
                                                     )
                                                 );
