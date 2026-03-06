@@ -2111,16 +2111,28 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 )
                                             ),
                                             
-                                            // Stredný stĺpec - vždy čas (čierny)
+                                            // Stredný stĺpec - vždy čas, pri hoveri sa zmení na kôš
                                             React.createElement(
                                                 'div',
-                                                { className: 'text-center' },
-                                                React.createElement('span', { className: 'font-mono text-xs text-gray-800' }, 
+                                                { className: 'text-center relative' },
+                                                // Čas - normálne viditeľný
+                                                React.createElement(
+                                                    'span',
+                                                    { className: 'font-mono text-xs text-gray-800 group-hover:hidden' }, 
                                                     `${event.minute}:${event.second?.toString().padStart(2, '0') || '00'}`
+                                                ),
+                                                // Kôš - viditeľný len pri hoveri
+                                                (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && React.createElement(
+                                                    'button',
+                                                    {
+                                                        className: 'hidden group-hover:inline-block text-red-500 hover:text-red-700',
+                                                        onClick: () => deleteMatchEvent(event.id)
+                                                    },
+                                                    React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
                                                 )
                                             ),
                                             
-                                            // Pravý stĺpec - pre hostí + tlačidlo
+                                            // Pravý stĺpec - pre hostí
                                             React.createElement(
                                                 'div',
                                                 { className: 'flex items-center justify-end gap-2' },
@@ -2129,14 +2141,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     null,
                                                     React.createElement('span', { className: 'text-gray-700' }, playerName),
                                                     eventDisplay
-                                                ),
-                                                (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && React.createElement(
-                                                    'button',
-                                                    {
-                                                        className: 'opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 ml-2',
-                                                        onClick: () => deleteMatchEvent(event.id)
-                                                    },
-                                                    React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
                                                 )
                                             )
                                         );
