@@ -2345,8 +2345,8 @@ const matchesHallApp = ({ userProfileData }) => {
                                     'div',
                                     { className: 'text-sm text-gray-500 italic p-2' },
                                     'Nedostupné'
-                                ) 
-                            ) 
+                                ) // <-- TOTO JE SPRÁVNE UKONČENÉ
+                            ) // <-- TOTO JE ZATVORENIE HLAVNÉHO DIVU
                     ),
                     
                     // Informácia o pozícii v zozname
