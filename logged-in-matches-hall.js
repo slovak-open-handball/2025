@@ -1697,13 +1697,13 @@ const matchesHallApp = ({ userProfileData }) => {
                     // DETAILY TÍMOV - realizačný tím, hráči a priebeh zápasu
                     React.createElement(
                         'div',
-                        { className: 'grid grid-cols-3 gap-6' },
+                        { className: 'grid grid-cols-5 gap-6' },
                         
                         // Domáci tím - detail (1. stĺpec)
                         // ... (zvyšný kód pre domáci tím zostáva rovnaký)
                         React.createElement(
                             'div',
-                            { className: 'bg-gray-50 rounded-lg p-4 border border-gray-200' },
+                            { className: 'col-span-1 bg-gray-50 rounded-lg p-4 border border-gray-200' },
                             React.createElement(
                                 'h3',
                                 { className: 'font-bold text-lg text-gray-800 mb-3 text-center border-b border-gray-200 pb-2' },
@@ -1909,7 +1909,7 @@ const matchesHallApp = ({ userProfileData }) => {
                         // Druhý box - Priebeh zápasu (NOVÝ)
                         React.createElement(
                             'div',
-                            { className: 'bg-gray-50 rounded-lg p-4 border border-gray-200 flex flex-col' },
+                            { className: 'col-span-3 bg-gray-50 rounded-lg p-4 border border-gray-200 flex flex-col' },
                             React.createElement(
                                 'h3',
                                 { className: 'font-bold text-lg text-gray-800 mb-3 text-center border-b border-gray-200 pb-2' },
@@ -2156,7 +2156,7 @@ const matchesHallApp = ({ userProfileData }) => {
                         // Hosťovský tím - detail (3. stĺpec)
                         React.createElement(
                             'div',
-                            { className: 'bg-gray-50 rounded-lg p-4 border border-gray-200' },
+                            { className: 'col-span-1 bg-gray-50 rounded-lg p-4 border border-gray-200' },
                             React.createElement(
                                 'h3',
                                 { className: 'font-bold text-lg text-gray-800 mb-3 text-center border-b border-gray-200 pb-2' },
