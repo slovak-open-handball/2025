@@ -2134,7 +2134,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 ), 
                                                 React.createElement('i', { className: `fa-solid ${eventIcon} ${eventColor} text-xs` }),
                                                 React.createElement('span', { className: 'text-gray-700' }, eventText),
-                                                React.createElement('span', { className: 'text-xs text-gray-400' }, event.team === 'home' ? '(D)' : '(H)')
+                                                React.createElement('span', { className: 'text-xs text-gray-400' }, event.team === 'home' ? '(D)' : '(H)'),
                                             ),
                                             (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && React.createElement(
                                                 'button',
