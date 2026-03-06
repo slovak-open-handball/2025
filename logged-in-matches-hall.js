@@ -181,6 +181,9 @@ const matchesHallApp = ({ userProfileData }) => {
 
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [eventToDelete, setEventToDelete] = useState(null);
+    
+    const [resetModalOpen, setResetModalOpen] = useState(false);
+    const [resetMatchId, setResetMatchId] = useState(null);    
 
     const formatMatchTime = (seconds) => {
         // Ochrana proti nečíselným hodnotám
@@ -292,10 +295,10 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     };
     
-    const resetMatchTimer = async (matchId) => {
+    // Nahraďte existujúcu funkciu resetMatchTimer
+
+    const resetMatchTimer = async (matchId, deleteEvents = false) => {
         if (!window.db || !matchId) return;
-        
-        if (!window.confirm('Naozaj chcete resetovať tento zápas? Všetky údaje o priebehu sa vymažú.')) return;
         
         try {
             const matchRef = doc(window.db, 'matches', matchId);
@@ -317,7 +320,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
             
             // Vymažeme aj všetky udalosti zápasu (voliteľné)
-            if (window.confirm('Chcete vymazať aj všetky udalosti zápasu (góly, karty, atď.)?')) {
+            if (deleteEvents) {
                 const eventsRef = collection(window.db, 'matchEvents');
                 const q = query(eventsRef, where("matchId", "==", matchId));
                 const querySnapshot = await getDocs(q);
@@ -337,6 +340,12 @@ const matchesHallApp = ({ userProfileData }) => {
             console.error('Chyba pri resetovaní časovača:', error);
             window.showGlobalNotification('Chyba pri resetovaní časovača', 'error');
         }
+    };
+    
+    // Pridajte funkciu pre otvorenie reset modálneho okna
+    const openResetModal = (matchId) => {
+        setResetMatchId(matchId);
+        setResetModalOpen(true);
     };
     
     const increasePeriod = async (matchId, maxPeriods) => {
@@ -1722,7 +1731,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 'button',
                                 {
                                     className: 'px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
-                                    onClick: () => resetMatchTimer(selectedMatch.id)
+                                    onClick: () => openResetModal(selectedMatch.id)
                                 },
                                 React.createElement('i', { className: 'fa-solid fa-rotate-right' }),
                                 'Reset zápasu'
@@ -2500,6 +2509,17 @@ const matchesHallApp = ({ userProfileData }) => {
                 onConfirm: confirmDeleteEvent,
                 title: 'Zmazanie udalosti',
                 message: 'Naozaj chcete zmazať túto udalosť? Táto akcia je nenávratná.'
+            }),
+            React.createElement(ResetMatchModal, {
+                isOpen: resetModalOpen,
+                onClose: () => {
+                    setResetModalOpen(false);
+                    setResetMatchId(null);
+                },
+                onConfirm: () => resetMatchTimer(resetMatchId, false),
+                onConfirmWithDelete: () => resetMatchTimer(resetMatchId, true),
+                title: 'Reset zápasu',
+                message: 'Naozaj chcete resetovať tento zápas? Čas sa vynuluje a zápas sa vráti do stavu "Naplánované".'
             })
         );
     }
@@ -2668,6 +2688,82 @@ const matchesHallApp = ({ userProfileData }) => {
                             })
                         )
                     )
+                )
+            )
+        )
+    );
+};
+
+// Pridajte tento komponent vedľa ostatných modálnych okien (napr. za ConfirmModal)
+
+// Komponent pre modálne okno resetu zápasu
+const ResetMatchModal = ({ isOpen, onClose, onConfirm, onConfirmWithDelete, title, message }) => {
+    if (!isOpen) return null;
+
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[140]',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) onClose();
+            }
+        },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
+            
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center mb-4' },
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, title || 'Reset zápasu'),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'text-gray-500 hover:text-gray-700'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-times text-xl' })
+                )
+            ),
+
+            React.createElement(
+                'p',
+                { className: 'text-gray-600 mb-6' },
+                message || 'Naozaj chcete resetovať tento zápas?'
+            ),
+
+            React.createElement(
+                'div',
+                { className: 'flex justify-end gap-3' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
+                    },
+                    'Zrušiť'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => {
+                            onConfirm();
+                            onClose();
+                        },
+                        className: 'px-4 py-2 text-white bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors'
+                    },
+                    'Len reset'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => {
+                            onConfirmWithDelete();
+                            onClose();
+                        },
+                        className: 'px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors'
+                    },
+                    'Reset a vymazať udalosti'
                 )
             )
         )
