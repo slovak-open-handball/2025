@@ -343,15 +343,50 @@ const matchesHallApp = ({ userProfileData }) => {
                         categoriesList.push({
                             id: id,
                             name: obj.name || `Kategória ${id}`,
+                            // Pridáme všetky potrebné vlastnosti z nastavení kategórie
+                            maxTeams: obj.maxTeams ?? 12,
+                            maxPlayers: obj.maxPlayers ?? 12,
+                            maxImplementationTeam: obj.maxImplementationTeam ?? 3,
+                            periods: obj.periods ?? 2,
+                            periodDuration: obj.periodDuration ?? 20,
+                            breakDuration: obj.breakDuration ?? 2,
+                            matchBreak: obj.matchBreak ?? 5,
+                            drawColor: obj.drawColor ?? '#3B82F6',
+                            transportColor: obj.transportColor ?? '#10B981',
+                            dateFrom: obj.dateFrom ?? '',
+                            dateTo: obj.dateTo ?? '',
+                            dateFromActive: obj.dateFromActive ?? false,
+                            dateToActive: obj.dateToActive ?? false,
+                            timeoutCount: obj.timeoutCount ?? 2,
+                            timeoutDuration: obj.timeoutDuration ?? 1,
+                            exclusionTime: obj.exclusionTime ?? 2
                         });
                     });
                     
                     setCategories(categoriesList);
+                    
+                    // Voliteľný výpis do konzoly pre ladenie
+                    console.log('=== NAČÍTANÉ KATEGÓRIE S NASTAVENIAMI ===');
                     categoriesList.forEach((cat, index) => {
+                        console.log(`Kategória #${index + 1}:`, {
                             id: cat.id,
-                            name: cat.name
+                            name: cat.name,
+                            maxTeams: cat.maxTeams,
+                            maxPlayers: cat.maxPlayers,
+                            maxImplementationTeam: cat.maxImplementationTeam,
+                            periods: cat.periods,
+                            periodDuration: cat.periodDuration,
+                            breakDuration: cat.breakDuration,
+                            matchBreak: cat.matchBreak,
+                            drawColor: cat.drawColor,
+                            transportColor: cat.transportColor
                         });
                     });
+                    console.log('=========================================');
+                    
+                } else {
+                    console.log("Neboli nájdené žiadne kategórie");
+                    setCategories([]);
                 }
             } catch (error) {
                 console.error("Chyba pri načítaní kategórií:", error);
@@ -359,7 +394,7 @@ const matchesHallApp = ({ userProfileData }) => {
         };
         
         loadCategorySettings();
-    }, []);
+    }, []); // Prázdne pole - spustí sa len raz
 
     // Načítanie skupín z databázy
     useEffect(() => {
