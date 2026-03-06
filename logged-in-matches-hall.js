@@ -616,7 +616,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 console.log(`  Kategória: ${categoryName}`);
                 console.log(`  Skupina: ${match.groupName || 'neurčená'}`);
                 console.log(`  Domáci: ${homeTeamName} (${match.homeTeamIdentifier})`);
-                console.log(`  Hosť: ${awayTeamName} (${match.awayTeamIdentifier})`);
+                console.log(`  Hostia: ${awayTeamName} (${match.awayTeamIdentifier})`);
                 console.log(`  Status: ${match.status || 'neurčený'}`);
                 if (match.isPlacementMatch) {
                     console.log(`  Typ: Zápas o ${match.placementRank}. miesto`);
@@ -847,7 +847,7 @@ const matchesHallApp = ({ userProfileData }) => {
                         React.createElement(
                             'div',
                             { className: 'flex-1 text-center' },
-                            React.createElement('div', { className: 'text-sm text-gray-500 mb-2' }, 'HOSŤ'),
+                            React.createElement('div', { className: 'text-sm text-gray-500 mb-2' }, 'HOSTIA'),
                             React.createElement('div', { className: 'text-xl font-bold text-gray-800' }, awayTeamName)
                         )
                     ),
