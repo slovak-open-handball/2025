@@ -2099,59 +2099,60 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 eventText = 'Neznáma udalosť';
                                         }
                                         
-                                        // Ak je udalosť pre domácich, zobrazíme ju vľavo, ak pre hostí, vpravo
-                                        if (event.team === 'home') {
-                                            return React.createElement(
+                                        // Vytvoríme grid s 3 stĺpcami
+                                        return React.createElement(
+                                            'div',
+                                            {
+                                                key: event.id,
+                                                className: 'grid grid-cols-3 gap-2 p-2 bg-white rounded-lg border border-gray-200 text-sm group items-center'
+                                            },
+                                            // Ľavý stĺpec - pre domácich
+                                            React.createElement(
                                                 'div',
-                                                {
-                                                    key: event.id,
-                                                    className: 'flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200 text-sm group'
-                                                },
-                                                React.createElement(
-                                                    'div',
-                                                    { className: 'flex items-center gap-3' },
+                                                { className: 'flex items-center gap-2' },
+                                                event.team === 'home' && React.createElement(
+                                                    React.Fragment,
+                                                    null,
                                                     React.createElement('span', { className: `font-mono text-xs ${eventColor}` }, 
                                                         `${event.minute}:${event.second?.toString().padStart(2, '0') || '00'}`
                                                     ),
                                                     React.createElement('i', { className: `fa-solid ${eventIcon} ${eventColor} text-xs` }),
                                                     React.createElement('span', { className: 'text-gray-700' }, eventText)
-                                                ),
-                                                (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && React.createElement(
-                                                    'button',
-                                                    {
-                                                        className: 'opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700',
-                                                        onClick: () => deleteMatchEvent(event.id)
-                                                    },
-                                                    React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
                                                 )
-                                            );
-                                        } else {
-                                            // Udalosť pre hostí - zarovnaná doprava
-                                            return React.createElement(
+                                            ),
+                                            
+                                            // Stredný stĺpec - vždy čas
+                                            React.createElement(
                                                 'div',
-                                                {
-                                                    key: event.id,
-                                                    className: 'flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200 text-sm group'
-                                                },
-                                                (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && React.createElement(
-                                                    'button',
-                                                    {
-                                                        className: 'opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700',
-                                                        onClick: () => deleteMatchEvent(event.id)
-                                                    },
-                                                    React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
-                                                ),
-                                                React.createElement(
-                                                    'div',
-                                                    { className: 'flex items-center gap-3 ml-auto' },
+                                                { className: 'text-center' },
+                                                React.createElement('span', { className: `font-mono text-xs ${eventColor}` }, 
+                                                    `${event.minute}:${event.second?.toString().padStart(2, '0') || '00'}`
+                                                )
+                                            ),
+                                            
+                                            // Pravý stĺpec - pre hostí + tlačidlo
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex items-center justify-end gap-2' },
+                                                event.team === 'away' && React.createElement(
+                                                    React.Fragment,
+                                                    null,
                                                     React.createElement('span', { className: 'text-gray-700' }, eventText),
                                                     React.createElement('i', { className: `fa-solid ${eventIcon} ${eventColor} text-xs` }),
                                                     React.createElement('span', { className: `font-mono text-xs ${eventColor}` }, 
                                                         `${event.minute}:${event.second?.toString().padStart(2, '0') || '00'}`
                                                     )
+                                                ),
+                                                (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && React.createElement(
+                                                    'button',
+                                                    {
+                                                        className: 'opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 ml-2',
+                                                        onClick: () => deleteMatchEvent(event.id)
+                                                    },
+                                                    React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
                                                 )
-                                            );
-                                        }
+                                            )
+                                        );
                                     })
                                 )
                             )
