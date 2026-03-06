@@ -1734,7 +1734,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     onClick: () => openResetModal(selectedMatch.id)
                                 },
                                 React.createElement('i', { className: 'fa-solid fa-rotate-right' }),
-                                'Reset zápasu'
+                                'Reset'
                             ),
                             
                             // Ukončiť zápas (zobrazí sa len pre neukončené zápasy)
