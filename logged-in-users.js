@@ -1234,12 +1234,45 @@ function UsersManagementApp() {
                     className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out ml-2'
                   },
                   'Odstrániť'
+                )
               )
             )
-          )
-        })
+          })
+        )
       )
-    )
+    ),
+    React.createElement(NotificationModal, { message: notification.message, onClose: () => setNotification({ message: '', type: 'info' }), type: notification.type }),
+    userToEdit && React.createElement(ChangeRoleModal, {
+      user: userToEdit,
+      onClose: () => setUserToEdit(null),
+      onRoleChange: handleChangeRole
+    }),
+    userToAssignHall && React.createElement(AssignHallModal, {
+      user: userToAssignHall,
+      onClose: () => setUserToAssignHall(null),
+      onAssign: handleAssignHall
+    }),
+    userToDelete && React.createElement(ConfirmationModal, {
+      message: `Naozaj chcete odstrániť používateľa ${userToDelete.firstName} ${userToDelete.lastName}? Táto akcia je nezvratná.`,
+      onConfirm: handleDeleteUser,
+      onCancel: () => setUserToDelete(null),
+      userEmail: userToDelete.email
+    }),
+    showFilterModal && React.createElement(FilterRolesModal, {
+        onClose: () => setShowFilterModal(false),
+        onApplyFilter: (roles) => {
+            setSelectedRoles(roles);
+            setShowFilterModal(false);
+        },
+        initialRoles: selectedRoles
+    }),
+    showDateEditModal && React.createElement(EditDateModal, {
+      user: dateToEditUser,
+      dateType: dateToEditType,
+      currentDate: dateToEditCurrentValue,
+      onClose: () => setShowDateEditModal(false),
+      onSave: handleDateSave
+    })
   );
 }
 
