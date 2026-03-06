@@ -2191,7 +2191,9 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 key: `away-men-${idx}`, 
                                                 className: 'bg-white p-2 rounded border border-gray-200 text-sm group relative hover:bg-blue-50 transition-colors cursor-pointer',
                                                 onClick: () => {
-                                                    if (eventType && eventTeam === 'away' && (eventType === 'yellow' || eventType === 'red' || eventType === 'blue')) {
+                                                    // ✅ UPRAVENÉ: Pridaný setEventTeam('away')
+                                                    if (eventType && (eventType === 'yellow' || eventType === 'red' || eventType === 'blue')) {
+                                                        setEventTeam('away');
                                                         setSelectedPlayerForEvent(staffIdentifier);
                                                         setTimeout(() => addMatchEvent(), 100);
                                                     }
@@ -2203,7 +2205,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs' }),
                                                 React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`),
                                                 
-                                                eventType && eventTeam === 'away' && (eventType === 'yellow' || eventType === 'red' || eventType === 'blue') && React.createElement(
+                                                eventType && (eventType === 'yellow' || eventType === 'red' || eventType === 'blue') && React.createElement(
                                                     'span',
                                                     { className: 'ml-2 text-xs text-green-600 opacity-0 group-hover:opacity-100 transition-opacity' },
                                                     `➕ ${eventType === 'yellow' ? 'žltá' : eventType === 'red' ? 'červená' : 'modrá'}`
@@ -2229,7 +2231,9 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 key: `away-women-${idx}`, 
                                                 className: 'bg-white p-2 rounded border border-gray-200 text-sm group relative hover:bg-blue-50 transition-colors cursor-pointer',
                                                 onClick: () => {
-                                                    if (eventType && eventTeam === 'away' && (eventType === 'yellow' || eventType === 'red' || eventType === 'blue')) {
+                                                    // ✅ UPRAVENÉ: Pridaný setEventTeam('away')
+                                                    if (eventType && (eventType === 'yellow' || eventType === 'red' || eventType === 'blue')) {
+                                                        setEventTeam('away');
                                                         setSelectedPlayerForEvent(staffIdentifier);
                                                         setTimeout(() => addMatchEvent(), 100);
                                                     }
@@ -2241,7 +2245,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs' }),
                                                 React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`),
                                                 
-                                                eventType && eventTeam === 'away' && (eventType === 'yellow' || eventType === 'red' || eventType === 'blue') && React.createElement(
+                                                eventType && (eventType === 'yellow' || eventType === 'red' || eventType === 'blue') && React.createElement(
                                                     'span',
                                                     { className: 'ml-2 text-xs text-green-600 opacity-0 group-hover:opacity-100 transition-opacity' },
                                                     `➕ ${eventType === 'yellow' ? 'žltá' : eventType === 'red' ? 'červená' : 'modrá'}`
@@ -2279,6 +2283,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 awayTeamDetails ? React.createElement(
                                     'div',
                                     { className: 'space-y-1' },
+                                    // Hráči hosťovského tímu
                                     awayTeamDetails.team.playerDetails && awayTeamDetails.team.playerDetails.length > 0 ? 
                                         [...awayTeamDetails.team.playerDetails]
                                             .sort((a, b) => {
@@ -2300,7 +2305,9 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         key: `away-player-${idx}`, 
                                                         className: 'bg-white p-2 rounded border border-gray-200 text-sm group relative hover:bg-blue-50 transition-colors cursor-pointer',
                                                         onClick: () => {
-                                                            if (eventType && eventTeam === 'away') {
+                                                            // ✅ UPRAVENÉ: Pridaný setEventTeam('away')
+                                                            if (eventType) {
+                                                                setEventTeam('away');
                                                                 setSelectedPlayerForEvent(playerIdentifier);
                                                                 setTimeout(() => addMatchEvent(), 100);
                                                             }
@@ -2326,7 +2333,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             `(${new Date(player.dateOfBirth).getFullYear()})`
                                                         ),
                                                         
-                                                        eventType && eventTeam === 'away' && React.createElement(
+                                                        eventType && React.createElement(
                                                             'span',
                                                             { className: 'ml-2 text-xs text-green-600 opacity-0 group-hover:opacity-100 transition-opacity' },
                                                             `➕ ${eventType === 'goal' ? 'gól' : eventType === 'yellow' ? 'žltá' : eventType === 'red' ? 'červená' : eventType === 'blue' ? 'modrá' : eventType === 'exclusion' ? 'vylúčenie' : '7m'}`
