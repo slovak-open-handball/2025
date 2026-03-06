@@ -706,6 +706,19 @@ const matchesHallApp = ({ userProfileData }) => {
                 
                 if (team) {
                     console.log(`  Nájdený používateľský tím: ${team.teamName} (používateľ: ${user.email})`);
+                    
+                    // VYPÍSANIE CELÉHO DOKUMENTU POUŽÍVATEĽA
+                    console.log('=== CELÝ DOKUMENT POUŽÍVATEĽA ===');
+                    console.log('ID používateľa:', user.id);
+                    console.log('Email:', user.email);
+                    console.log('Meno:', user.displayName);
+                    console.log('Rola:', user.role);
+                    console.log('Schválený:', user.approved);
+                    console.log('Dátum vytvorenia:', user.createdAt);
+                    console.log('ID haly:', user.hallId);
+                    console.log('Tímy používateľa:', JSON.stringify(user.teams, null, 2));
+                    console.log('================================');
+                    
                     return team.teamName;
                 }
             }
