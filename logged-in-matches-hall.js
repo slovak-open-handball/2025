@@ -560,31 +560,14 @@ const matchesHallApp = ({ userProfileData }) => {
                 // Nájdeme kategóriu podľa názvu
                 const category = categories.find(c => c.name === match.categoryName);
                 
-                console.log(`Zápas #${index + 1}:`);
-                console.log(`  ID: ${match.id}`);
-                console.log(`  Dátum: ${matchDate}`);
-                console.log(`  Čas: ${matchTime}`);
-                console.log(`  Kategória: ${categoryName}`);
-                console.log(`  Skupina: ${match.groupName || 'neurčená'}`);
-                console.log(`  Domáci: ${homeTeamName} (${match.homeTeamIdentifier})`);
-                console.log(`  Hostia: ${awayTeamName} (${match.awayTeamIdentifier})`);
-                console.log(`  Status: ${match.status || 'neurčený'}`);
-                if (match.isPlacementMatch) {
-                    console.log(`  Typ: Zápas o ${match.placementRank}. miesto`);
-                }
-                
                 // VÝPIS NASTAVENÍ KATEGÓRIE
                 if (category) {
                     console.log(`  --- NASTAVENIA KATEGÓRIE ${category.name} ---`);
-                    console.log(`  • Maximálny počet tímov: ${category.maxTeams ?? 12}`);
-                    console.log(`  • Maximálny počet hráčov v tíme: ${category.maxPlayers ?? 12}`);
-                    console.log(`  • Maximálny počet členov RT: ${category.maxImplementationTeam ?? 3}`);
                     console.log(`  • Počet periód: ${category.periods ?? 2}`);
                     console.log(`  • Trvanie periódy: ${category.periodDuration ?? 20} min`);
                     console.log(`  • Prestávka medzi periódami: ${category.breakDuration ?? 2} min`);
                     console.log(`  • Prestávka medzi zápasmi: ${category.matchBreak ?? 5} min`);
                     console.log(`  • Farba pre rozlosovanie: ${category.drawColor ?? '#3B82F6'}`);
-                    console.log(`  • Farba pre dopravu: ${category.transportColor ?? '#10B981'}`);
                     console.log(`  • Počet timeoutov: ${category.timeoutCount ?? 2}`);
                     console.log(`  • Trvanie timeoutu: ${category.timeoutDuration ?? 1} min`);
                     console.log(`  • Čas vylúčenia: ${category.exclusionTime ?? 2} min`);
