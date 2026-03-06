@@ -780,6 +780,35 @@ const matchesHallApp = ({ userProfileData }) => {
         
         // Zistenie, či má zápas typ (finále, semifinále, o umiestnenie)
         const hasMatchType = selectedMatch.isPlacementMatch || selectedMatch.matchType;
+        
+        // Získanie zoradených zápasov podľa času pre navigáciu
+        const sortedMatchesForNavigation = [...matches].sort((a, b) => {
+            if (!a.scheduledTime) return 1;
+            if (!b.scheduledTime) return -1;
+            return a.scheduledTime.toDate() - b.scheduledTime.toDate();
+        });
+        
+        // Nájdenie indexu aktuálneho zápasu v zoradenom zozname
+        const currentIndex = sortedMatchesForNavigation.findIndex(m => m.id === selectedMatch.id);
+        
+        // Zistenie, či existuje predchádzajúci a nasledujúci zápas
+        const hasPrevious = currentIndex > 0;
+        const hasNext = currentIndex < sortedMatchesForNavigation.length - 1;
+        
+        // Funkcie pre navigáciu
+        const goToPreviousMatch = () => {
+            if (hasPrevious) {
+                const previousMatch = sortedMatchesForNavigation[currentIndex - 1];
+                selectMatch(previousMatch);
+            }
+        };
+        
+        const goToNextMatch = () => {
+            if (hasNext) {
+                const nextMatch = sortedMatchesForNavigation[currentIndex + 1];
+                selectMatch(nextMatch);
+            }
+        };
     
         return React.createElement(
             'div',
@@ -788,7 +817,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 'div',
                 { className: 'w-full max-w-4xl bg-white rounded-xl shadow-xl p-8' },
                 
-                // Hlavička s názvom haly a tlačidlom späť
+                // Hlavička s názvom haly a navigačnými tlačidlami
                 React.createElement(
                     'div',
                     { className: 'flex flex-col items-center justify-center mb-8 p-4 -mx-8 -mt-8 rounded-t-xl bg-gradient-to-r from-red-50 to-white border-b border-red-200 relative' },
@@ -802,6 +831,34 @@ const matchesHallApp = ({ userProfileData }) => {
                         },
                         React.createElement('i', { className: 'fa-solid fa-arrow-left' }),
                         'Všetky zápasy'
+                    ),
+                    
+                    // Navigačné tlačidlá v pravom hornom rohu
+                    React.createElement(
+                        'div',
+                        { className: 'absolute right-4 top-4 flex items-center gap-2' },
+                        
+                        // Tlačidlo Predchádzajúci zápas (zobrazí sa len ak existuje)
+                        hasPrevious && React.createElement(
+                            'button',
+                            { 
+                                onClick: goToPreviousMatch,
+                                className: 'flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-gray-700 font-medium'
+                            },
+                            React.createElement('i', { className: 'fa-solid fa-chevron-left' }),
+                            'Predchádzajúci'
+                        ),
+                        
+                        // Tlačidlo Nasledujúci zápas (zobrazí sa len ak existuje)
+                        hasNext && React.createElement(
+                            'button',
+                            { 
+                                onClick: goToNextMatch,
+                                className: 'flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-gray-700 font-medium'
+                            },
+                            'Nasledujúci',
+                            React.createElement('i', { className: 'fa-solid fa-chevron-right' })
+                        )
                     ),
                     
                     React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center text-gray-800' }, 'Detail zápasu'),
@@ -855,7 +912,7 @@ const matchesHallApp = ({ userProfileData }) => {
                         )
                     ),
                     
-                    // Kategória a typ zápasu/skupina - UPRAVENÉ PODĽA POŽIADAVKY
+                    // Kategória a typ zápasu/skupina
                     React.createElement(
                         'div',
                         { className: 'grid grid-cols-2 gap-4 mb-6' },
@@ -893,13 +950,18 @@ const matchesHallApp = ({ userProfileData }) => {
                             selectedMatch.status === 'completed' ? 'Odohrané' :
                             selectedMatch.status === 'in-progress' ? 'Prebieha' : 'Naplánované'
                         )
+                    ),
+                    
+                    // Informácia o pozícii v zozname (voliteľné, pre lepšiu orientáciu)
+                    React.createElement(
+                        'div',
+                        { className: 'text-center text-xs text-gray-400 mt-4' },
+                        `${currentIndex + 1} / ${sortedMatchesForNavigation.length}`
                     )
                 )
             )
         );
     }
-
-    // ... (zvyšok kódu zostáva rovnaký)
 
     // Inak zobrazíme zoznam všetkých zápasov
     return React.createElement(
