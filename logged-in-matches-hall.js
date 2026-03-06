@@ -1,5 +1,5 @@
 // Importy pre Firebase funkcie (Tieto sa nebudú používať na inicializáciu, ale na typy a funkcie)
-import { doc, getDoc, onSnapshot, updateDoc, addDoc, collection, Timestamp, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, updateDoc, addDoc, deleteDoc, collection, Timestamp, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const { useState, useEffect } = React;
@@ -119,6 +119,16 @@ const matchesHallApp = ({ userProfileData }) => {
     const [superstructureTeams, setSuperstructureTeams] = useState({});
     // NOVÝ STAV PRE VYBRANÝ ZÁPAS
     const [selectedMatch, setSelectedMatch] = useState(null);
+
+    const [matchEvents, setMatchEvents] = useState([]);
+    const [matchScore, setMatchScore] = useState({ home: 0, away: 0 });
+    const [loadingEvents, setLoadingEvents] = useState(false);
+    const [selectedPlayerForEvent, setSelectedPlayerForEvent] = useState(null);
+    const [eventModalOpen, setEventModalOpen] = useState(false);
+    const [eventType, setEventType] = useState(null);
+    const [eventTeam, setEventTeam] = useState(null); // 'home' alebo 'away'
+    const [eventMinute, setEventMinute] = useState('');
+    const [eventSubType, setEventSubType] = useState(null); // pre 7m hody: 'scored' alebo 'missed'
 
     // Načítanie názvu haly
     useEffect(() => {
@@ -324,6 +334,226 @@ const matchesHallApp = ({ userProfileData }) => {
             });
         });
         
+    };
+
+    // 🔴 NOVÝ useEffect PRE NAČÍTANIE UDALOSTÍ ZÁPASU - PRIDAŤ SEM
+    useEffect(() => {
+        if (!selectedMatch || !window.db) return;
+    
+        const eventsRef = collection(window.db, 'matchEvents');
+        const q = query(eventsRef, where("matchId", "==", selectedMatch.id));
+        
+        setLoadingEvents(true);
+        
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const loadedEvents = [];
+            let homeScore = 0;
+            let awayScore = 0;
+            
+            snapshot.forEach((doc) => {
+                const event = { id: doc.id, ...doc.data() };
+                loadedEvents.push(event);
+                
+                // Výpočet skóre
+                if (event.type === 'goal') {
+                    if (event.team === 'home') homeScore++;
+                    else if (event.team === 'away') awayScore++;
+                } else if (event.type === 'penalty' && event.subType === 'scored') {
+                    if (event.team === 'home') homeScore++;
+                    else if (event.team === 'away') awayScore++;
+                }
+            });
+            
+            // Zoradenie podľa minúty
+            loadedEvents.sort((a, b) => (a.minute || 0) - (b.minute || 0));
+            
+            setMatchEvents(loadedEvents);
+            setMatchScore({ home: homeScore, away: awayScore });
+            setLoadingEvents(false);
+        }, (error) => {
+            console.error("Chyba pri načítaní udalostí zápasu:", error);
+            setLoadingEvents(false);
+        });
+    
+        return () => unsubscribe();
+    }, [selectedMatch]);
+    
+    // 🔴 NOVÉ FUNKCIE PRE SPRÁVU UDALOSTÍ - PRIDAŤ SEM
+    const addMatchEvent = async () => {
+        if (!selectedMatch || !window.db || !eventType || !eventTeam || !eventMinute) {
+            window.showGlobalNotification('Vyplňte všetky údaje', 'error');
+            return;
+        }
+    
+        // Pre penalty potrebujeme aj subType
+        if (eventType === 'penalty' && !eventSubType) {
+            window.showGlobalNotification('Vyberte typ penalty (premenená/nepremenená)', 'error');
+            return;
+        }
+    
+        // Pre gól a vylúčenie potrebujeme vybraného hráča
+        if ((eventType === 'goal' || eventType === 'exclusion') && !selectedPlayerForEvent) {
+            window.showGlobalNotification('Vyberte hráča', 'error');
+            return;
+        }
+    
+        // Pre karty potrebujeme vybraného hráča (ak nie je pre trénera)
+        if ((eventType === 'yellow' || eventType === 'red' || eventType === 'blue') && !selectedPlayerForEvent) {
+            window.showGlobalNotification('Vyberte hráča alebo člena realizačného tímu', 'error');
+            return;
+        }
+    
+        try {
+            const eventsRef = collection(window.db, 'matchEvents');
+            
+            const eventData = {
+                matchId: selectedMatch.id,
+                type: eventType,
+                team: eventTeam,
+                minute: parseInt(eventMinute),
+                timestamp: Timestamp.now(),
+                createdBy: userProfileData?.email || 'unknown',
+                createdByUid: userProfileData?.uid || null
+            };
+    
+            // Pridanie referencie na hráča
+            if (selectedPlayerForEvent) {
+                eventData.playerRef = {
+                    userId: selectedPlayerForEvent.userId,
+                    teamIdentifier: selectedPlayerForEvent.teamIdentifier,
+                    playerId: selectedPlayerForEvent.playerId
+                };
+                
+                if (eventType === 'yellow' || eventType === 'red' || eventType === 'blue' || eventType === 'exclusion') {
+                    eventData.cardType = eventType === 'exclusion' ? 'exclusion' : eventType;
+                }
+            }
+    
+            // Pre penalty ukladáme subType
+            if (eventType === 'penalty') {
+                eventData.subType = eventSubType;
+            }
+    
+            await addDoc(eventsRef, eventData);
+            
+            window.showGlobalNotification('Udalosť bola pridaná', 'success');
+            
+            // Zatvorenie modálneho okna a reset
+            setEventModalOpen(false);
+            setSelectedPlayerForEvent(null);
+            setEventType(null);
+            setEventTeam(null);
+            setEventMinute('');
+            setEventSubType(null);
+            
+        } catch (error) {
+            console.error('Chyba pri pridávaní udalosti:', error);
+            window.showGlobalNotification('Chyba pri ukladaní udalosti', 'error');
+        }
+    };
+    
+    const deleteMatchEvent = async (eventId) => {
+        if (!window.db || !eventId) return;
+        
+        if (!window.confirm('Naozaj chcete zmazať túto udalosť?')) return;
+        
+        try {
+            const eventRef = doc(window.db, 'matchEvents', eventId);
+            await deleteDoc(eventRef);
+            window.showGlobalNotification('Udalosť bola zmazaná', 'success');
+        } catch (error) {
+            console.error('Chyba pri mazaní udalosti:', error);
+            window.showGlobalNotification('Chyba pri mazaní udalosti', 'error');
+        }
+    };
+    
+    const getPlayerNameFromRef = (playerRef) => {
+        if (!playerRef || !playerRef.userId || !playerRef.teamIdentifier) return 'Neznámy hráč';
+        
+        const user = users.find(u => u.id === playerRef.userId);
+        if (!user) return 'Neznámy hráč';
+        
+        const parts = playerRef.teamIdentifier.split(' ');
+        const groupAndOrder = parts.pop();
+        const category = parts.join(' ');
+        
+        let groupLetter = '';
+        let order = '';
+        for (let i = 0; i < groupAndOrder.length; i++) {
+            const char = groupAndOrder[i];
+            if (char >= '0' && char <= '9') {
+                order = groupAndOrder.substring(i);
+                groupLetter = groupAndOrder.substring(0, i);
+                break;
+            }
+        }
+        
+        const fullGroupName = `skupina ${groupLetter}`;
+        const orderNum = parseInt(order, 10);
+        
+        const userTeams = user.teams?.[category];
+        if (!userTeams || !Array.isArray(userTeams)) return 'Neznámy hráč';
+        
+        const team = userTeams.find(t => t.groupName === fullGroupName && t.order === orderNum);
+        if (!team) return 'Neznámy hráč';
+        
+        if (playerRef.playerId && team.playerDetails) {
+            const player = team.playerDetails.find(p => 
+                p.id === playerRef.playerId || 
+                (p.firstName + ' ' + p.lastName) === playerRef.playerId
+            );
+            if (player) {
+                return `${player.firstName} ${player.lastName}`;
+            }
+        }
+        
+        return 'Neznámy hráč';
+    };
+    
+    const getPlayersForTeam = (teamDetails) => {
+        if (!teamDetails || !teamDetails.team || !teamDetails.team.playerDetails) return [];
+        
+        return teamDetails.team.playerDetails.map((player, index) => ({
+            ...player,
+            userId: teamDetails.userId,
+            teamIdentifier: teamDetails.team.id || `${teamDetails.team.category} ${teamDetails.team.groupName?.replace('skupina ', '')}${teamDetails.team.order}`,
+            playerId: player.id || `${player.firstName} ${player.lastName}`,
+            displayName: `${player.firstName} ${player.lastName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`
+        }));
+    };
+    
+    const getStaffForTeam = (teamDetails) => {
+        if (!teamDetails || !teamDetails.team) return [];
+        
+        const staff = [];
+        
+        if (teamDetails.team.menTeamMemberDetails) {
+            teamDetails.team.menTeamMemberDetails.forEach((member, index) => {
+                staff.push({
+                    ...member,
+                    userId: teamDetails.userId,
+                    teamIdentifier: teamDetails.team.id || `${teamDetails.team.category} ${teamDetails.team.groupName?.replace('skupina ', '')}${teamDetails.team.order}`,
+                    playerId: `staff-men-${index}`,
+                    displayName: `${member.firstName} ${member.lastName} (tréner)`,
+                    isStaff: true
+                });
+            });
+        }
+        
+        if (teamDetails.team.womenTeamMemberDetails) {
+            teamDetails.team.womenTeamMemberDetails.forEach((member, index) => {
+                staff.push({
+                    ...member,
+                    userId: teamDetails.userId,
+                    teamIdentifier: teamDetails.team.id || `${teamDetails.team.category} ${teamDetails.team.groupName?.replace('skupina ', '')}${teamDetails.team.order}`,
+                    playerId: `staff-women-${index}`,
+                    displayName: `${member.firstName} ${member.lastName} (trénerka)`,
+                    isStaff: true
+            });
+            });
+        }
+        
+        return staff;
     };
 
     // Načítanie kategórií z databázy
@@ -1145,7 +1375,7 @@ const matchesHallApp = ({ userProfileData }) => {
                             )
                         ),
 
-                        // Druhý box - Priebeh zápasu
+                        // Druhý box - Priebeh zápasu (NOVÝ)
                         React.createElement(
                             'div',
                             { className: 'bg-gray-50 rounded-lg p-4 border border-gray-200 flex flex-col' },
@@ -1162,80 +1392,180 @@ const matchesHallApp = ({ userProfileData }) => {
                                 React.createElement(
                                     'div',
                                     { className: 'text-3xl font-bold text-gray-800 mb-1' },
-                                    '-- : --'
+                                    loadingEvents ? '...' : `${matchScore.home} : ${matchScore.away}`
                                 ),
                                 React.createElement(
                                     'div',
                                     { className: 'text-xs text-gray-500' },
-                                    'Konečné skóre'
+                                    'Aktuálne skóre'
                                 )
                             ),
                             
-                            // Tlačidlá pre zadávanie udalostí (pre adminov)
-                            userProfileData?.role === 'admin' && React.createElement(
+                            // Ovládacie tlačidlá pre adminov a hall users
+                            (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && React.createElement(
                                 'div',
-                                { className: 'mb-4 grid grid-cols-2 gap-2' },
+                                { className: 'flex flex-wrap gap-2 justify-center mb-4' },
                                 React.createElement(
                                     'button',
                                     {
-                                        className: 'bg-green-500 hover:bg-green-600 text-white py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1',
-                                        onClick: () => console.log('Gól domáci')
+                                        className: 'px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-1',
+                                        onClick: () => {
+                                            setEventType('goal');
+                                            setEventModalOpen(true);
+                                        }
                                     },
-                                    React.createElement('i', { className: 'fa-solid fa-futbol text-xs' }),
-                                    'Gól (D)'
+                                    React.createElement('i', { className: 'fa-solid fa-futbol' }),
+                                    'Gól'
                                 ),
                                 React.createElement(
                                     'button',
                                     {
-                                        className: 'bg-blue-500 hover:bg-blue-600 text-white py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1',
-                                        onClick: () => console.log('Gól hostia')
+                                        className: 'px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-1',
+                                        onClick: () => {
+                                            setEventType('penalty');
+                                            setEventModalOpen(true);
+                                        }
                                     },
-                                    React.createElement('i', { className: 'fa-solid fa-futbol text-xs' }),
-                                    'Gól (H)'
+                                    React.createElement('i', { className: 'fa-solid fa-circle-dot' }),
+                                    '7m'
                                 ),
                                 React.createElement(
                                     'button',
                                     {
-                                        className: 'bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1',
-                                        onClick: () => console.log('Žltá karta')
+                                        className: 'px-3 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-1',
+                                        onClick: () => {
+                                            setEventType('yellow');
+                                            setEventModalOpen(true);
+                                        }
                                     },
-                                    React.createElement('i', { className: 'fa-solid fa-square text-xs' }),
+                                    React.createElement('i', { className: 'fa-solid fa-square' }),
                                     'ŽK'
                                 ),
                                 React.createElement(
                                     'button',
                                     {
-                                        className: 'bg-red-500 hover:bg-red-600 text-white py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1',
-                                        onClick: () => console.log('Červená karta')
+                                        className: 'px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-1',
+                                        onClick: () => {
+                                            setEventType('red');
+                                            setEventModalOpen(true);
+                                        }
                                     },
-                                    React.createElement('i', { className: 'fa-solid fa-square text-xs' }),
+                                    React.createElement('i', { className: 'fa-solid fa-square' }),
                                     'ČK'
                                 ),
                                 React.createElement(
                                     'button',
                                     {
-                                        className: 'bg-purple-500 hover:bg-purple-600 text-white py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1 col-span-2',
-                                        onClick: () => console.log('Ukončiť zápas')
+                                        className: 'px-3 py-2 bg-blue-800 hover:bg-blue-900 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-1',
+                                        onClick: () => {
+                                            setEventType('blue');
+                                            setEventModalOpen(true);
+                                        }
                                     },
-                                    React.createElement('i', { className: 'fa-solid fa-flag-checkered text-xs' }),
-                                    'Ukončiť zápas'
+                                    React.createElement('i', { className: 'fa-solid fa-square' }),
+                                    'MK'
+                                ),
+                                React.createElement(
+                                    'button',
+                                    {
+                                        className: 'px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-1',
+                                        onClick: () => {
+                                            setEventType('exclusion');
+                                            setEventModalOpen(true);
+                                        }
+                                    },
+                                    React.createElement('i', { className: 'fa-solid fa-user-slash' }),
+                                    'Vylúč.'
                                 )
                             ),
                             
                             // Zoznam udalostí
                             React.createElement(
                                 'div',
-                                { className: 'flex-1' },
+                                { className: 'bg-gray-50 rounded-lg p-4 border border-gray-200' },
                                 React.createElement(
                                     'h4',
-                                    { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
+                                    { className: 'font-semibold text-sm text-gray-700 mb-3 flex items-center gap-1' },
                                     React.createElement('i', { className: 'fa-solid fa-clock text-xs text-gray-500' }),
-                                    'Priebeh'
+                                    'Priebeh zápasu',
+                                    loadingEvents && React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 ml-2' })
                                 ),
-                                React.createElement(
+                                
+                                matchEvents.length === 0 ? React.createElement(
                                     'div',
-                                    { className: 'space-y-2 text-sm text-gray-500 italic p-2 text-center bg-white rounded-lg border border-gray-200' },
-                                    'Zápas ešte nezačal'
+                                    { className: 'text-sm text-gray-500 italic p-4 text-center' },
+                                    'Zatiaľ žiadne udalosti'
+                                ) : React.createElement(
+                                    'div',
+                                    { className: 'space-y-2 max-h-60 overflow-y-auto' },
+                                    matchEvents.map((event) => {
+                                        const playerName = event.playerRef ? getPlayerNameFromRef(event.playerRef) : '';
+                                        
+                                        let eventText = '';
+                                        let eventIcon = '';
+                                        let eventColor = '';
+                                        
+                                        switch (event.type) {
+                                            case 'goal':
+                                                eventIcon = 'fa-futbol';
+                                                eventColor = 'text-green-600';
+                                                eventText = `Gól - ${playerName}`;
+                                                break;
+                                            case 'penalty':
+                                                eventIcon = 'fa-circle-dot';
+                                                eventColor = event.subType === 'scored' ? 'text-green-600' : 'text-red-600';
+                                                eventText = `7m hod - ${event.subType === 'scored' ? 'premenený' : 'nepremenený'}${playerName ? ` (${playerName})` : ''}`;
+                                                break;
+                                            case 'yellow':
+                                                eventIcon = 'fa-square';
+                                                eventColor = 'text-yellow-600';
+                                                eventText = `Žltá karta - ${playerName}`;
+                                                break;
+                                            case 'red':
+                                                eventIcon = 'fa-square';
+                                                eventColor = 'text-red-600';
+                                                eventText = `Červená karta - ${playerName}`;
+                                                break;
+                                            case 'blue':
+                                                eventIcon = 'fa-square';
+                                                eventColor = 'text-blue-600';
+                                                eventText = `Modrá karta - ${playerName}`;
+                                                break;
+                                            case 'exclusion':
+                                                eventIcon = 'fa-user-slash';
+                                                eventColor = 'text-orange-600';
+                                                eventText = `Vylúčenie - ${playerName}`;
+                                                break;
+                                            default:
+                                                eventIcon = 'fa-clock';
+                                                eventColor = 'text-gray-600';
+                                                eventText = 'Neznáma udalosť';
+                                        }
+                                        
+                                        return React.createElement(
+                                            'div',
+                                            {
+                                                key: event.id,
+                                                className: 'flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200 text-sm group'
+                                            },
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex items-center gap-3' },
+                                                React.createElement('span', { className: `font-mono text-xs ${eventColor}` }, `${event.minute}'`),
+                                                React.createElement('i', { className: `fa-solid ${eventIcon} ${eventColor} text-xs` }),
+                                                React.createElement('span', { className: 'text-gray-700' }, eventText),
+                                                React.createElement('span', { className: 'text-xs text-gray-400' }, event.team === 'home' ? '(D)' : '(H)')
+                                            ),
+                                            (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && React.createElement(
+                                                'button',
+                                                {
+                                                    className: 'opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700',
+                                                    onClick: () => deleteMatchEvent(event.id)
+                                                },
+                                                React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                            )
+                                        );
+                                    })
                                 )
                             )
                         ),
@@ -1381,6 +1711,28 @@ const matchesHallApp = ({ userProfileData }) => {
                 )
             )
         );
+
+        // Pridáme modálne okná na koniec render funkcie
+        React.createElement(EventModal, {
+            isOpen: eventModalOpen,
+            onClose: () => {
+                setEventModalOpen(false);
+                setEventType(null);
+                setEventTeam(null);
+                setEventMinute('');
+                setEventSubType(null);
+                setSelectedPlayerForEvent(null);
+            },
+            onConfirm: (data) => {
+                setEventTeam(data.team);
+                setEventMinute(data.minute);
+                setEventSubType(data.subType);
+                setSelectedPlayerForEvent(data.player);
+                addMatchEvent();
+            },
+            homeTeamDetails: homeTeamDetails,
+            awayTeamDetails: awayTeamDetails
+        })
     }
 
     // Inak zobrazíme zoznam všetkých zápasov
@@ -1550,6 +1902,379 @@ const matchesHallApp = ({ userProfileData }) => {
                 )
             )
         )
+    );
+};
+
+// 🔴 NOVÉ MODÁLNE OKNÁ - PRIDAŤ SEM (pred handleDataUpdateAndRender)
+
+// Komponent pre modálne okno výberu hráča
+const PlayerSelectModal = ({ isOpen, onClose, onSelect, players, staff, teamName }) => {
+    const [selectedPlayerId, setSelectedPlayerId] = useState('');
+
+    if (!isOpen) return null;
+
+    const allPeople = [...players, ...staff];
+
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[120]',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) onClose();
+            }
+        },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto' },
+            
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center mb-4' },
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, `Výber osoby - ${teamName}`),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'text-gray-500 hover:text-gray-700'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-times text-xl' })
+                )
+            ),
+
+            allPeople.length === 0 ? React.createElement(
+                'div',
+                { className: 'text-center py-8 text-gray-500' },
+                'Žiadne osoby na výber'
+            ) : React.createElement(
+                'div',
+                { className: 'space-y-2' },
+                allPeople.map((person, idx) => 
+                    React.createElement(
+                        'button',
+                        {
+                            key: idx,
+                            className: `w-full p-3 text-left rounded-lg border transition-colors ${
+                                selectedPlayerId === (person.playerId || idx)
+                                    ? 'bg-blue-100 border-blue-500'
+                                    : 'bg-white border-gray-200 hover:bg-gray-50'
+                            }`,
+                            onClick: () => setSelectedPlayerId(person.playerId || idx)
+                        },
+                        React.createElement(
+                            'div',
+                            { className: 'flex items-center gap-2' },
+                            React.createElement('i', { 
+                                className: `fa-solid ${
+                                    person.isStaff ? 'fa-user-tie' : 'fa-user'
+                                } text-gray-500 text-sm` 
+                            }),
+                            React.createElement('span', { className: 'font-medium' }, person.displayName)
+                        )
+                    )
+                ),
+                
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-3 mt-4' },
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: onClose,
+                            className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => {
+                                const selected = allPeople.find(p => (p.playerId || p) === selectedPlayerId);
+                                if (selected) {
+                                    onSelect(selected);
+                                    onClose();
+                                }
+                            },
+                            disabled: !selectedPlayerId,
+                            className: `px-4 py-2 text-white rounded-lg transition-colors ${
+                                selectedPlayerId
+                                    ? 'bg-blue-600 hover:bg-blue-700'
+                                    : 'bg-gray-400 cursor-not-allowed'
+                            }`
+                        },
+                        'Vybrať'
+                    )
+                )
+            )
+        )
+    );
+};
+
+// Komponent pre modálne okno pridania udalosti
+const EventModal = ({ isOpen, onClose, onConfirm, homeTeamDetails, awayTeamDetails }) => {
+    const [localEventType, setLocalEventType] = useState(null);
+    const [localEventTeam, setLocalEventTeam] = useState(null);
+    const [localEventMinute, setLocalEventMinute] = useState('');
+    const [localEventSubType, setLocalEventSubType] = useState(null);
+    const [localSelectedPlayer, setLocalSelectedPlayer] = useState(null);
+    const [playerModalOpen, setPlayerModalOpen] = useState(false);
+    const [selectingForTeam, setSelectingForTeam] = useState(null);
+
+    React.useEffect(() => {
+        if (isOpen) {
+            setLocalEventType(null);
+            setLocalEventTeam(null);
+            setLocalEventMinute('');
+            setLocalEventSubType(null);
+            setLocalSelectedPlayer(null);
+        }
+    }, [isOpen]);
+
+    const handleSelectPlayer = (team) => {
+        setSelectingForTeam(team);
+        setPlayerModalOpen(true);
+    };
+
+    const handlePlayerSelected = (player) => {
+        setLocalSelectedPlayer(player);
+    };
+
+    const handleConfirm = () => {
+        if (!localEventType || !localEventTeam || !localEventMinute) return;
+        
+        if (localEventType === 'penalty' && !localEventSubType) return;
+        
+        if ((localEventType === 'goal' || localEventType === 'exclusion') && !localSelectedPlayer) return;
+        
+        if ((localEventType === 'yellow' || localEventType === 'red' || localEventType === 'blue') && !localSelectedPlayer) return;
+        
+        onConfirm({
+            type: localEventType,
+            team: localEventTeam,
+            minute: localEventMinute,
+            subType: localEventSubType,
+            player: localSelectedPlayer
+        });
+    };
+
+    const getTeamName = (team) => {
+        if (team === 'home' && homeTeamDetails) {
+            const teamObj = homeTeamDetails.team;
+            return teamObj.teamName || `${teamObj.category} ${teamObj.groupName?.replace('skupina ', '')}${teamObj.order}`;
+        }
+        if (team === 'away' && awayTeamDetails) {
+            const teamObj = awayTeamDetails.team;
+            return teamObj.teamName || `${teamObj.category} ${teamObj.groupName?.replace('skupina ', '')}${teamObj.order}`;
+        }
+        return '';
+    };
+
+    if (!isOpen) return null;
+
+    return React.createElement(
+        React.Fragment,
+        null,
+        React.createElement(
+            'div',
+            {
+                className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[110]',
+                onClick: (e) => {
+                    if (e.target === e.currentTarget) onClose();
+                }
+            },
+            React.createElement(
+                'div',
+                { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
+                
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-between items-center mb-4' },
+                    React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 'Pridať udalosť'),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: onClose,
+                            className: 'text-gray-500 hover:text-gray-700'
+                        },
+                        React.createElement('i', { className: 'fa-solid fa-times text-xl' })
+                    )
+                ),
+
+                // Výber typu udalosti
+                React.createElement(
+                    'div',
+                    { className: 'mb-4' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Typ udalosti:'),
+                    React.createElement(
+                        'div',
+                        { className: 'grid grid-cols-2 gap-2' },
+                        [
+                            { type: 'goal', label: 'Gól', icon: 'fa-futbol', color: 'green' },
+                            { type: 'penalty', label: '7m hod', icon: 'fa-circle-dot', color: 'blue' },
+                            { type: 'yellow', label: 'Žltá', icon: 'fa-square', color: 'yellow' },
+                            { type: 'red', label: 'Červená', icon: 'fa-square', color: 'red' },
+                            { type: 'blue', label: 'Modrá', icon: 'fa-square', color: 'blue' },
+                            { type: 'exclusion', label: 'Vylúčenie', icon: 'fa-user-slash', color: 'orange' }
+                        ].map(btn => React.createElement(
+                            'button',
+                            {
+                                key: btn.type,
+                                className: `p-2 rounded-lg border transition-colors flex items-center justify-center gap-1 ${
+                                    localEventType === btn.type 
+                                        ? `bg-${btn.color}-100 border-${btn.color}-500 text-${btn.color}-700` 
+                                        : 'bg-white border-gray-300 hover:bg-gray-50'
+                                }`,
+                                onClick: () => setLocalEventType(btn.type)
+                            },
+                            React.createElement('i', { className: `fa-solid ${btn.icon}` }),
+                            btn.label
+                        ))
+                    )
+                ),
+
+                // Výber tímu
+                localEventType && React.createElement(
+                    'div',
+                    { className: 'mb-4' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Tím:'),
+                    React.createElement(
+                        'div',
+                        { className: 'grid grid-cols-2 gap-2' },
+                        React.createElement(
+                            'button',
+                            {
+                                className: `p-2 rounded-lg border transition-colors ${
+                                    localEventTeam === 'home' ? 'bg-blue-100 border-blue-500' : 'bg-white border-gray-300 hover:bg-gray-50'
+                                }`,
+                                onClick: () => setLocalEventTeam('home')
+                            },
+                            'Domáci'
+                        ),
+                        React.createElement(
+                            'button',
+                            {
+                                className: `p-2 rounded-lg border transition-colors ${
+                                    localEventTeam === 'away' ? 'bg-purple-100 border-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'
+                                }`,
+                                onClick: () => setLocalEventTeam('away')
+                            },
+                            'Hostia'
+                        )
+                    )
+                ),
+
+                // Pre penalty - výber premenená/nepremenená
+                localEventType === 'penalty' && localEventTeam && React.createElement(
+                    'div',
+                    { className: 'mb-4' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 'Typ 7m hodu:'),
+                    React.createElement(
+                        'div',
+                        { className: 'grid grid-cols-2 gap-2' },
+                        React.createElement(
+                            'button',
+                            {
+                                className: `p-2 rounded-lg border transition-colors ${
+                                    localEventSubType === 'scored' ? 'bg-green-100 border-green-500' : 'bg-white border-gray-300 hover:bg-gray-50'
+                                }`,
+                                onClick: () => setLocalEventSubType('scored')
+                            },
+                            'Premenený'
+                        ),
+                        React.createElement(
+                            'button',
+                            {
+                                className: `p-2 rounded-lg border transition-colors ${
+                                    localEventSubType === 'missed' ? 'bg-red-100 border-red-500' : 'bg-white border-gray-300 hover:bg-gray-50'
+                                }`,
+                                onClick: () => setLocalEventSubType('missed')
+                            },
+                            'Nepremenený'
+                        )
+                    )
+                ),
+
+                // Výber hráča
+                (localEventType === 'goal' || localEventType === 'exclusion' || 
+                 localEventType === 'yellow' || localEventType === 'red' || localEventType === 'blue') && 
+                 localEventTeam && React.createElement(
+                    'div',
+                    { className: 'mb-4' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, 
+                        localEventType === 'goal' ? 'Strelec:' :
+                        localEventType === 'exclusion' ? 'Vylúčený hráč:' :
+                        'Kartovaný hráč/tréner:'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            className: `w-full p-2 text-left rounded-lg border transition-colors ${
+                                localSelectedPlayer ? 'bg-green-100 border-green-500' : 'bg-white border-gray-300 hover:bg-gray-50'
+                            }`,
+                            onClick: () => handleSelectPlayer(localEventTeam)
+                        },
+                        localSelectedPlayer 
+                            ? localSelectedPlayer.displayName
+                            : `Vybrať ${localEventType === 'goal' ? 'strelea' : 'osobu'}`
+                    )
+                ),
+
+                // Minúta
+                localEventType && localEventTeam && React.createElement(
+                    'div',
+                    { className: 'mb-4' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Minúta:'),
+                    React.createElement('input', {
+                        type: 'number',
+                        min: '1',
+                        max: '60',
+                        value: localEventMinute,
+                        onChange: (e) => setLocalEventMinute(e.target.value),
+                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
+                    })
+                ),
+
+                // Tlačidlá
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-end gap-3 mt-4' },
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: onClose,
+                            className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: handleConfirm,
+                            disabled: !localEventType || !localEventTeam || !localEventMinute || 
+                                     (localEventType === 'penalty' && !localEventSubType) ||
+                                     ((localEventType === 'goal' || localEventType === 'exclusion' || 
+                                       localEventType === 'yellow' || localEventType === 'red' || localEventType === 'blue') && !localSelectedPlayer),
+                            className: `px-4 py-2 text-white rounded-lg transition-colors ${
+                                localEventType && localEventTeam && localEventMinute && 
+                                (!(localEventType === 'penalty') || localEventSubType) &&
+                                (!(localEventType === 'goal' || localEventType === 'exclusion' || 
+                                   localEventType === 'yellow' || localEventType === 'red' || localEventType === 'blue') || localSelectedPlayer)
+                                    ? 'bg-green-600 hover:bg-green-700'
+                                    : 'bg-gray-400 cursor-not-allowed'
+                            }`
+                        },
+                        'Pridať'
+                    )
+                )
+            )
+        ),
+        React.createElement(PlayerSelectModal, {
+            isOpen: playerModalOpen,
+            onClose: () => setPlayerModalOpen(false),
+            onSelect: handlePlayerSelected,
+            players: selectingForTeam === 'home' ? getPlayersForTeam(homeTeamDetails) : getPlayersForTeam(awayTeamDetails),
+            staff: selectingForTeam === 'home' ? getStaffForTeam(homeTeamDetails) : getStaffForTeam(awayTeamDetails),
+            teamName: getTeamName(selectingForTeam)
+        })
     );
 };
 
