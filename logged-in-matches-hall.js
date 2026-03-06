@@ -2123,7 +2123,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 eventDisplay = React.createElement('i', { className: 'fa-solid fa-futbol text-black text-sm' });
                                                 break;
                                             case 'penalty':
-                                                eventDisplay = React.createElement('i', { className: `fa-solid fa-circle-dot ${event.subType === 'scored' ? 'text-green-600' : 'text-red-600'} text-sm` });
+                                                eventDisplay = React.createElement('i', { className: `fa-solid fa-futbol ${event.subType === 'scored' ? 'text-green-600' : 'text-red-600'} text-sm` });
                                                 break;
                                             case 'yellow':
                                                 eventDisplay = React.createElement(
