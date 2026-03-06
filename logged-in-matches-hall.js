@@ -2204,7 +2204,12 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     React.Fragment,
                                                     null,
                                                     eventDisplay,
-                                                    React.createElement('span', { className: 'text-gray-700' }, playerName)
+                                                    React.createElement(
+                                                        'div',
+                                                        { className: 'flex flex-col leading-tight' },
+                                                        React.createElement('span', { className: 'text-gray-700 text-xs' }, playerName.split(' ')[0]), // Krstné meno
+                                                        playerName.includes(' ') && React.createElement('span', { className: 'text-gray-700 text-xs' }, playerName.split(' ').slice(1).join(' ')) // Priezvisko (zvyšok)
+                                                    )
                                                 )
                                             ),
                                             
@@ -2236,7 +2241,12 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 event.team === 'away' && React.createElement(
                                                     React.Fragment,
                                                     null,
-                                                    React.createElement('span', { className: 'text-gray-700' }, playerName),
+                                                    React.createElement(
+                                                        'div',
+                                                        { className: 'flex flex-col leading-tight text-right' },
+                                                        React.createElement('span', { className: 'text-gray-700 text-xs' }, playerName.split(' ')[0]), // Krstné meno
+                                                        playerName.includes(' ') && React.createElement('span', { className: 'text-gray-700 text-xs' }, playerName.split(' ').slice(1).join(' ')) // Priezvisko (zvyšok)
+                                                    ),
                                                     eventDisplay
                                                 )
                                             )
