@@ -95,7 +95,8 @@ const matchesHallApp = ({ userProfileData }) => {
     const [groupedMatches, setGroupedMatches] = useState({});
     const [categories, setCategories] = useState([]);
     const [groupsByCategory, setGroupsByCategory] = useState({});
-    const [users, setUsers] = useState([]); // NOVÝ STAV PRE POUŽÍVATEĽOV
+    const [users, setUsers] = useState([]);
+    const [superstructureTeams, setSuperstructureTeams] = useState({}); // NOVÝ STAV PRE SUPERSTRUCTURE TÍMY
     
     // Načítanie názvu haly
     useEffect(() => {
@@ -290,6 +291,69 @@ const matchesHallApp = ({ userProfileData }) => {
         console.log('\n===========================================');
     };
 
+    // FUNKCIA PRE VYPISOVANIE VŠETKÝCH SUPERSTRUCTURE TÍMOV
+    const logSuperstructureTeams = (superstructureData) => {
+        if (!superstructureData || Object.keys(superstructureData).length === 0) {
+            console.log('Žiadne superstructure tímy nie sú k dispozícii');
+            return;
+        }
+        
+        console.log('=== VŠETKY SUPERSTRUCTURE TÍMY ZORADENÉ PODĽA KATEGÓRIE A SKUPINY ===');
+        
+        let totalTeams = 0;
+        
+        // Zoradíme kategórie podľa abecedy
+        const sortedCategories = Object.keys(superstructureData).sort((a, b) => a.localeCompare(b));
+        
+        sortedCategories.forEach(categoryName => {
+            const teams = superstructureData[categoryName] || [];
+            
+            if (teams.length === 0) return;
+            
+            console.log(`\nKategória: ${categoryName}`);
+            
+            // Zoskupíme tímy podľa skupiny
+            const teamsByGroup = {};
+            
+            teams.forEach(team => {
+                const groupName = team.groupName || 'Bez skupiny';
+                if (!teamsByGroup[groupName]) {
+                    teamsByGroup[groupName] = [];
+                }
+                teamsByGroup[groupName].push(team);
+            });
+            
+            // Zoradíme skupiny - "Bez skupiny" dáme na koniec
+            const sortedGroups = Object.keys(teamsByGroup).sort((a, b) => {
+                if (a === 'Bez skupiny') return 1;
+                if (b === 'Bez skupiny') return -1;
+                return a.localeCompare(b);
+            });
+            
+            sortedGroups.forEach(groupName => {
+                const teamsInGroup = teamsByGroup[groupName];
+                console.log(`  Skupina: ${groupName}`);
+                
+                // Zoradíme tímy podľa poradia
+                const sortedTeams = [...teamsInGroup].sort((a, b) => {
+                    const orderA = a.order !== null && a.order !== undefined ? a.order : Infinity;
+                    const orderB = b.order !== null && b.order !== undefined ? b.order : Infinity;
+                    return orderA - orderB;
+                });
+                
+                sortedTeams.forEach(team => {
+                    const orderText = team.order !== null && team.order !== undefined ? `, poradie: ${team.order}` : '';
+                    console.log(`    - ${team.teamName}${orderText}`);
+                    if (team.id) console.log(`       ID: ${team.id}`);
+                    totalTeams++;
+                });
+            });
+        });
+        
+        console.log(`\nCelkový počet superstructure tímov: ${totalTeams}`);
+        console.log('===========================================');
+    };
+
     // Načítanie kategórií z databázy
     useEffect(() => {
         const loadCategorySettings = async () => {
@@ -347,31 +411,31 @@ const matchesHallApp = ({ userProfileData }) => {
                     console.log('=== NAČÍTANÉ SKUPINY PODĽA KATEGÓRIÍ ===');
                     
                     // Pre každú kategóriu vypíšeme jej skupiny
-//                    Object.entries(groupsData).forEach(([categoryId, groups], catIndex) => {
-//                        // Nájdeme názov kategórie podľa ID
-//                        const category = categories.find(c => c.id === categoryId);
-//                        const categoryName = category ? category.name : `Neznáma kategória (ID: ${categoryId})`;
-//                        
-//                        console.log(`Kategória #${catIndex + 1}: ${categoryName} (ID: ${categoryId})`);
-//                        console.log(`  Počet skupín: ${groups.length}`);
-//                        
-//                        // Rozdelíme skupiny podľa typu
-//                        const basicGroups = groups.filter(g => g.type === 'základná skupina');
-//                        const superGroups = groups.filter(g => g.type === 'nadstavbová skupina');
-//                        
-//                        console.log(`  Základné skupiny (${basicGroups.length}):`);
-//                        basicGroups.forEach((group, groupIndex) => {
-//                            console.log(`    ${groupIndex + 1}. ${group.name}`);
-//                        });
-//                        
-//                        console.log(`  Nadstavbové skupiny (${superGroups.length}):`);
-//                        superGroups.forEach((group, groupIndex) => {
-//                            console.log(`    ${groupIndex + 1}. ${group.name}`);
-//                        });
-//                        console.log('  ---');
-//                    });
-//                    
-//                    console.log('===========================================');
+                    Object.entries(groupsData).forEach(([categoryId, groups], catIndex) => {
+                        // Nájdeme názov kategórie podľa ID
+                        const category = categories.find(c => c.id === categoryId);
+                        const categoryName = category ? category.name : `Neznáma kategória (ID: ${categoryId})`;
+                        
+                        console.log(`Kategória #${catIndex + 1}: ${categoryName} (ID: ${categoryId})`);
+                        console.log(`  Počet skupín: ${groups.length}`);
+                        
+                        // Rozdelíme skupiny podľa typu
+                        const basicGroups = groups.filter(g => g.type === 'základná skupina');
+                        const superGroups = groups.filter(g => g.type === 'nadstavbová skupina');
+                        
+                        console.log(`  Základné skupiny (${basicGroups.length}):`);
+                        basicGroups.forEach((group, groupIndex) => {
+                            console.log(`    ${groupIndex + 1}. ${group.name}`);
+                        });
+                        
+                        console.log(`  Nadstavbové skupiny (${superGroups.length}):`);
+                        superGroups.forEach((group, groupIndex) => {
+                            console.log(`    ${groupIndex + 1}. ${group.name}`);
+                        });
+                        console.log('  ---');
+                    });
+                    
+                    console.log('===========================================');
                     
                 } else {
                     console.log('Dokument groups neexistuje');
@@ -398,6 +462,32 @@ const matchesHallApp = ({ userProfileData }) => {
         
         return () => unsubscribeGroups();
     }, [categories]);
+
+    // NOVÝ LISTENER: Načítanie superstructure tímov z kolekcie settings/superstructureGroups
+    useEffect(() => {
+        if (!window.db) return;
+
+        console.log('Načítavam superstructure tímy z dokumentu settings/superstructureGroups...');
+
+        const superstructureDocRef = doc(window.db, 'settings', 'superstructureGroups');
+        
+        const unsubscribeSuperstructure = onSnapshot(superstructureDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setSuperstructureTeams(data);
+                console.log('=== SUPERSTRUCTURE TÍMY BOLI NAČÍTANÉ ===');
+                logSuperstructureTeams(data);
+            } else {
+                console.log('Dokument settings/superstructureGroups neexistuje');
+                setSuperstructureTeams({});
+            }
+        }, (error) => {
+            console.error('Chyba pri načítaní superstructure tímov:', error);
+            setSuperstructureTeams({});
+        });
+
+        return () => unsubscribeSuperstructure();
+    }, []);
 
     // NOVÝ LISTENER: Načítanie všetkých používateľov z kolekcie users
     useEffect(() => {
