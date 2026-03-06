@@ -185,6 +185,9 @@ const matchesHallApp = ({ userProfileData }) => {
     const [resetModalOpen, setResetModalOpen] = useState(false);
     const [resetMatchId, setResetMatchId] = useState(null);    
 
+    const [endMatchModalOpen, setEndMatchModalOpen] = useState(false);
+    const [endMatchId, setEndMatchId] = useState(null);
+
     const formatMatchTime = (seconds) => {
         // Ochrana proti nečíselným hodnotám
         if (typeof seconds !== 'number' || isNaN(seconds) || seconds < 0) {
@@ -278,12 +281,15 @@ const matchesHallApp = ({ userProfileData }) => {
     };
 
     const endMatch = async (matchId) => {
-        if (!window.db || !matchId) return;
-        
-        if (!window.confirm('Naozaj chcete ukončiť tento zápas?')) return;
+        setEndMatchId(matchId);
+        setEndMatchModalOpen(true);
+    };
+
+    const confirmEndMatch = async () => {
+        if (!window.db || !endMatchId) return;
         
         try {
-            const matchRef = doc(window.db, 'matches', matchId);
+            const matchRef = doc(window.db, 'matches', endMatchId);
             await updateDoc(matchRef, {
                 status: 'completed',
                 endedAt: Timestamp.now()
@@ -2520,6 +2526,20 @@ const matchesHallApp = ({ userProfileData }) => {
                 onConfirmWithDelete: () => resetMatchTimer(resetMatchId, true),
                 title: 'Reset zápasu',
                 message: 'Naozaj chcete resetovať tento zápas? Čas sa vynuluje a zápas sa vráti do stavu "Naplánované".'
+            }),
+            React.createElement(EndMatchModal, {
+                isOpen: endMatchModalOpen,
+                onClose: () => {
+                    setEndMatchModalOpen(false);
+                    setEndMatchId(null);
+                },
+                onConfirm: () => {
+                    confirmEndMatch();
+                    setEndMatchModalOpen(false);
+                    setEndMatchId(null);
+                },
+                title: 'Ukončenie zápasu',
+                message: 'Naozaj chcete ukončiť tento zápas? Po ukončení zápasu už nebude možné pridávať ďalšie udalosti.'
             })
         );
     }
@@ -2694,7 +2714,67 @@ const matchesHallApp = ({ userProfileData }) => {
     );
 };
 
-// Pridajte tento komponent vedľa ostatných modálnych okien (napr. za ConfirmModal)
+const EndMatchModal = ({ isOpen, onClose, onConfirm, title, message }) => {
+    if (!isOpen) return null;
+
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[150]',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) onClose();
+            }
+        },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
+            
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center mb-4' },
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, title || 'Ukončenie zápasu'),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'text-gray-500 hover:text-gray-700'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-times text-xl' })
+                )
+            ),
+
+            React.createElement(
+                'p',
+                { className: 'text-gray-600 mb-6' },
+                message || 'Naozaj chcete ukončiť tento zápas?'
+            ),
+
+            React.createElement(
+                'div',
+                { className: 'flex justify-end gap-3' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
+                    },
+                    'Zrušiť'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => {
+                            onConfirm();
+                            onClose();
+                        },
+                        className: 'px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors'
+                    },
+                    'Ukončiť zápas'
+                )
+            )
+        )
+    );
+};
 
 // Komponent pre modálne okno resetu zápasu
 const ResetMatchModal = ({ isOpen, onClose, onConfirm, onConfirmWithDelete, title, message }) => {
