@@ -2062,7 +2062,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                         
                                         switch (event.type) {
                                             case 'goal':
-                                                eventDisplay = React.createElement('i', { className: 'fa-solid fa-futbol text-gray-800 text-sm' });
+                                                eventDisplay = React.createElement('i', { className: 'fa-solid fa-futbol text-black text-sm' });
                                                 break;
                                             case 'penalty':
                                                 eventDisplay = React.createElement('i', { className: `fa-solid fa-circle-dot ${event.subType === 'scored' ? 'text-green-600' : 'text-red-600'} text-sm` });
