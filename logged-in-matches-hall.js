@@ -1915,32 +1915,30 @@ const matchesHallApp = ({ userProfileData }) => {
                                 React.createElement(
                                     'button',
                                     {
-                                        className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
+                                        className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 border-2 ${
                                             eventType === 'goal' 
-                                                ? 'bg-green-700 text-white ring-2 ring-green-300' 
-                                                : 'bg-green-600 hover:bg-green-700 text-white'
+                                                ? 'bg-green-600 text-white border-green-600' 
+                                                : 'bg-white text-green-600 border-green-600 hover:bg-green-50'
                                         }`,
                                         onClick: () => {
-                                            // Ak je už vybratý rovnaký typ, zrušíme výber, inak nastavíme
                                             if (eventType === 'goal') {
                                                 setEventType(null);
                                                 setEventTeam(null);
                                             } else {
                                                 setEventType('goal');
-                                                // eventTeam sa nastaví až pri kliknutí na hráča
                                             }
                                         }
                                     },
-                                    React.createElement('i', { className: 'fa-solid fa-futbol' }),
+                                    React.createElement('i', { className: `fa-solid fa-futbol ${eventType === 'goal' ? 'text-white' : 'text-green-600'}` }),
                                     'Gól'
                                 ),
                                 React.createElement(
                                     'button',
                                     {
-                                        className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
+                                        className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 border-2 ${
                                             eventType === 'penalty' 
-                                                ? 'bg-blue-700 text-white ring-2 ring-blue-300' 
-                                                : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                                ? 'bg-blue-600 text-white border-blue-600' 
+                                                : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-50'
                                         }`,
                                         onClick: () => {
                                             if (eventType === 'penalty') {
@@ -1951,16 +1949,16 @@ const matchesHallApp = ({ userProfileData }) => {
                                             }
                                         }
                                     },
-                                    React.createElement('i', { className: 'fa-solid fa-circle-dot' }),
+                                    React.createElement('i', { className: `fa-solid fa-circle-dot ${eventType === 'penalty' ? 'text-white' : 'text-blue-600'}` }),
                                     '7m'
                                 ),
                                 React.createElement(
                                     'button',
                                     {
-                                        className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
+                                        className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 border-2 ${
                                             eventType === 'yellow' 
-                                                ? 'bg-yellow-700 text-white ring-2 ring-yellow-300' 
-                                                : 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                                                ? 'bg-yellow-500 text-white border-yellow-500' 
+                                                : 'bg-white text-yellow-600 border-yellow-500 hover:bg-yellow-50'
                                         }`,
                                         onClick: () => {
                                             if (eventType === 'yellow') {
@@ -1971,16 +1969,16 @@ const matchesHallApp = ({ userProfileData }) => {
                                             }
                                         }
                                     },
-                                    React.createElement('i', { className: 'fa-solid fa-square' }),
+                                    React.createElement('i', { className: `fa-solid fa-square ${eventType === 'yellow' ? 'text-white' : 'text-yellow-600'}` }),
                                     'ŽK'
                                 ),
                                 React.createElement(
                                     'button',
                                     {
-                                        className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
+                                        className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 border-2 ${
                                             eventType === 'red' 
-                                                ? 'bg-red-700 text-white ring-2 ring-red-300' 
-                                                : 'bg-red-600 hover:bg-red-700 text-white'
+                                                ? 'bg-red-600 text-white border-red-600' 
+                                                : 'bg-white text-red-600 border-red-600 hover:bg-red-50'
                                         }`,
                                         onClick: () => {
                                             if (eventType === 'red') {
@@ -1991,16 +1989,16 @@ const matchesHallApp = ({ userProfileData }) => {
                                             }
                                         }
                                     },
-                                    React.createElement('i', { className: 'fa-solid fa-square' }),
+                                    React.createElement('i', { className: `fa-solid fa-square ${eventType === 'red' ? 'text-white' : 'text-red-600'}` }),
                                     'ČK'
                                 ),
                                 React.createElement(
                                     'button',
                                     {
-                                        className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
+                                        className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 border-2 ${
                                             eventType === 'blue' 
-                                                ? 'bg-blue-900 text-white ring-2 ring-blue-300' 
-                                                : 'bg-blue-800 hover:bg-blue-900 text-white'
+                                                ? 'bg-blue-800 text-white border-blue-800' 
+                                                : 'bg-white text-blue-800 border-blue-800 hover:bg-blue-100'
                                         }`,
                                         onClick: () => {
                                             if (eventType === 'blue') {
@@ -2011,16 +2009,16 @@ const matchesHallApp = ({ userProfileData }) => {
                                             }
                                         }
                                     },
-                                    React.createElement('i', { className: 'fa-solid fa-square' }),
+                                    React.createElement('i', { className: `fa-solid fa-square ${eventType === 'blue' ? 'text-white' : 'text-blue-800'}` }),
                                     'MK'
                                 ),
                                 React.createElement(
                                     'button',
                                     {
-                                        className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
+                                        className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 border-2 ${
                                             eventType === 'exclusion' 
-                                                ? 'bg-orange-700 text-white ring-2 ring-orange-300' 
-                                                : 'bg-orange-600 hover:bg-orange-700 text-white'
+                                                ? 'bg-orange-600 text-white border-orange-600' 
+                                                : 'bg-white text-orange-600 border-orange-600 hover:bg-orange-50'
                                         }`,
                                         onClick: () => {
                                             if (eventType === 'exclusion') {
@@ -2031,7 +2029,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             }
                                         }
                                     },
-                                    React.createElement('i', { className: 'fa-solid fa-user-slash' }),
+                                    React.createElement('i', { className: `fa-solid fa-user-slash ${eventType === 'exclusion' ? 'text-white' : 'text-orange-600'}` }),
                                     'Vylúčenie'
                                 )
                             ),
