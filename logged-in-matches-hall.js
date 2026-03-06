@@ -50,13 +50,11 @@ const matcheshallApp = ({ userProfileData }) => {
     // Extrahujeme hallId z userProfileData
     const hallId = userProfileData?.hallId;
     const [hallName, setHallName] = useState(null);
-    const [loading, setLoading] = useState(true);
     
     useEffect(() => {
         const fetchHallName = async () => {
             if (!hallId || !window.db) {
                 setHallName('Žiadna priradená hala');
-                setLoading(false);
                 return;
             }
             
@@ -76,8 +74,6 @@ const matcheshallApp = ({ userProfileData }) => {
             } catch (error) {
                 console.error("Chyba pri načítaní názvu haly:", error);
                 setHallName(hallId || 'Chyba načítania');
-            } finally {
-                setLoading(false);
             }
         };
         
@@ -94,8 +90,8 @@ const matcheshallApp = ({ userProfileData }) => {
                 'div',
                 { className: `flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl` },
                 React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Zápasy'),
-                // Zobrazenie názvu haly pod nadpisom
-                React.createElement(
+                // Zobrazenie názvu haly pod nadpisom (iba ak je načítaný)
+                hallName && React.createElement(
                     'div',
                     { className: 'mt-2 text-lg text-gray-600' },
                     `Športová hala ${hallName}`
