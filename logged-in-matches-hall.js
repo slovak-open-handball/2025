@@ -1091,31 +1091,31 @@ const matchesHallApp = ({ userProfileData }) => {
                 // Nájdeme kategóriu podľa názvu
                 const category = categories.find(c => c.name === match.categoryName);
                 
-                console.log(`\n📋 ZÁPAS #${index + 1}:`);
-                console.log(`  🆔 ID: ${match.id}`);
-                console.log(`  📅 Dátum: ${matchDate}`);
-                console.log(`  ⏰ Čas: ${matchTime}`);
-                console.log(`  🏷️ Kategória: ${categoryName}`);
-                console.log(`  👥 Skupina: ${match.groupName || 'neurčená'}`);
-                console.log(`  ⚽ Domáci: ${homeTeamName}`);
-                console.log(`  ⚽ Hosť: ${awayTeamName}`);
-                console.log(`  📊 Status: ${match.status || 'neurčený'}`);
-                if (match.isPlacementMatch) {
-                    console.log(`  🏆 Typ: Zápas o ${match.placementRank}. miesto`);
-                }
+//                console.log(`\n📋 ZÁPAS #${index + 1}:`);
+//                console.log(`  🆔 ID: ${match.id}`);
+//                console.log(`  📅 Dátum: ${matchDate}`);
+//                console.log(`  ⏰ Čas: ${matchTime}`);
+//                console.log(`  🏷️ Kategória: ${categoryName}`);
+//                console.log(`  👥 Skupina: ${match.groupName || 'neurčená'}`);
+//                console.log(`  ⚽ Domáci: ${homeTeamName}`);
+//                console.log(`  ⚽ Hosť: ${awayTeamName}`);
+//                console.log(`  📊 Status: ${match.status || 'neurčený'}`);
+//                if (match.isPlacementMatch) {
+//                    console.log(`  🏆 Typ: Zápas o ${match.placementRank}. miesto`);
+//                }
                 
                 // VÝPIS NASTAVENÍ KATEGÓRIE
                 if (category) {
-                    console.log(`\n  📌 NASTAVENIA KATEGÓRIE ${category.name}:`);
-                    console.log(`  • Maximálny počet tímov: ${category.maxTeams ?? 'neuvedené'}`);
-                    console.log(`  • Maximálny počet hráčov v tíme: ${category.maxPlayers ?? 'neuvedené'}`);
-                    console.log(`  • Maximálny počet členov RT: ${category.maxImplementationTeam ?? 'neuvedené'}`);
-                    console.log(`  • Počet periód: ${category.periods ?? 'neuvedené'}`);
-                    console.log(`  • Trvanie periódy: ${category.periodDuration ?? 'neuvedené'} min`);
-                    console.log(`  • Prestávka medzi periódami: ${category.breakDuration ?? 'neuvedené'} min`);
-                    console.log(`  • Prestávka medzi zápasmi: ${category.matchBreak ?? 'neuvedené'} min`);
-                    console.log(`  • Farba pre rozlosovanie: ${category.drawColor ?? 'neuvedené'}`);
-                    console.log(`  • Farba pre dopravu: ${category.transportColor ?? 'neuvedené'}`);
+//                    console.log(`\n  📌 NASTAVENIA KATEGÓRIE ${category.name}:`);
+//                    console.log(`  • Maximálny počet tímov: ${category.maxTeams ?? 'neuvedené'}`);
+//                    console.log(`  • Maximálny počet hráčov v tíme: ${category.maxPlayers ?? 'neuvedené'}`);
+//                    console.log(`  • Maximálny počet členov RT: ${category.maxImplementationTeam ?? 'neuvedené'}`);
+//                    console.log(`  • Počet periód: ${category.periods ?? 'neuvedené'}`);
+//                    console.log(`  • Trvanie periódy: ${category.periodDuration ?? 'neuvedené'} min`);
+//                    console.log(`  • Prestávka medzi periódami: ${category.breakDuration ?? 'neuvedené'} min`);
+//                    console.log(`  • Prestávka medzi zápasmi: ${category.matchBreak ?? 'neuvedené'} min`);
+//                    console.log(`  • Farba pre rozlosovanie: ${category.drawColor ?? 'neuvedené'}`);
+//                    console.log(`  • Farba pre dopravu: ${category.transportColor ?? 'neuvedené'}`);
                     
                     // Výpočet celkového času zápasu
                     const periods = category.periods ?? 2;
