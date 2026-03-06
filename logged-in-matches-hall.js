@@ -176,6 +176,14 @@ const matchesHallApp = ({ userProfileData }) => {
     const [eventMinute, setEventMinute] = useState('');
     const [eventSubType, setEventSubType] = useState(null); // pre 7m hody: 'scored' alebo 'missed'
     const [matchPaused, setMatchPaused] = useState(false);
+    const [matchTime, setMatchTime] = useState(0); // čas v sekundách
+    const [timerInterval, setTimerInterval] = useState(null);
+
+    const formatMatchTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
 
     // Funkcie pre ovládanie času a periód
     const startMatchTimer = async (matchId) => {
@@ -197,13 +205,20 @@ const matchesHallApp = ({ userProfileData }) => {
     
     const stopMatchTimer = async (matchId) => {
         if (!window.db || !matchId) return;
-        
+    
         try {
             const matchRef = doc(window.db, 'matches', matchId);
             await updateDoc(matchRef, {
-                status: 'paused', // Nový stav pre pozastavený zápas
+                status: 'paused',
                 pausedAt: Timestamp.now()
             });
+        
+            // Zastavíme interval
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                setTimerInterval(null);
+            }
+        
             setMatchPaused(true);
             window.showGlobalNotification('Čas zápasu pozastavený', 'success');
         } catch (error) {
@@ -250,7 +265,6 @@ const matchesHallApp = ({ userProfileData }) => {
     const resetMatchTimer = async (matchId) => {
         if (!window.db || !matchId) return;
         
-        // Opýtame sa na potvrdenie pri resetovaní
         if (!window.confirm('Naozaj chcete resetovať tento zápas? Všetky údaje o priebehu sa vymažú.')) return;
         
         try {
@@ -262,6 +276,15 @@ const matchesHallApp = ({ userProfileData }) => {
                 pausedAt: null,
                 currentPeriod: 1
             });
+            
+            // Vynulujeme čas
+            setMatchTime(0);
+            
+            // Zastavíme interval
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                setTimerInterval(null);
+            }
             
             // Vymažeme aj všetky udalosti zápasu (voliteľné)
             if (window.confirm('Chcete vymazať aj všetky udalosti zápasu (góly, karty, atď.)?')) {
@@ -327,6 +350,67 @@ const matchesHallApp = ({ userProfileData }) => {
             window.showGlobalNotification('Chyba pri zmene periódy', 'error');
         }
     };
+
+    // Inicializácia času pri výbere zápasu
+    useEffect(() => {
+        if (selectedMatch && selectedMatch.startedAt) {
+            // Ak zápas už beží, vypočítame aktuálny čas
+            const now = Timestamp.now();
+            const startedAt = selectedMatch.startedAt;
+            const elapsedSeconds = Math.floor((now.seconds - startedAt.seconds));
+            
+            // Ak je zápas pozastavený, použijeme pausedAt na výpočet
+            if (selectedMatch.status === 'paused' && selectedMatch.pausedAt) {
+                const pausedAt = selectedMatch.pausedAt;
+                const elapsedUntilPause = Math.floor((pausedAt.seconds - startedAt.seconds));
+                setMatchTime(elapsedUntilPause);
+            } else {
+                setMatchTime(elapsedSeconds);
+            }
+        } else {
+            setMatchTime(0);
+        }
+    }, [selectedMatch]);
+
+    // Timer pre priebeh zápasu
+    useEffect(() => {
+        // Vymažeme existujúci interval
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            setTimerInterval(null);
+        }
+        
+        // Spustíme nový interval len ak je zápas v priebehu
+        if (selectedMatch && selectedMatch.status === 'in-progress' && selectedMatch.startedAt) {
+            const interval = setInterval(() => {
+                const now = Timestamp.now();
+                const startedAt = selectedMatch.startedAt;
+                const elapsedSeconds = Math.floor((now.seconds - startedAt.seconds));
+                
+                setMatchTime(elapsedSeconds);
+                
+                // Automatické zastavenie pri dosiahnutí maxima podľa kategórie
+                if (category) {
+                    const totalPeriodSeconds = (category.periodDuration || 20) * 60; // prevod na sekundy
+                    if (elapsedSeconds >= totalPeriodSeconds && selectedMatch.status === 'in-progress') {
+                        // Zastavíme čas
+                        stopMatchTimer(selectedMatch.id);
+                        window.showGlobalNotification(`Koniec ${selectedMatch.currentPeriod}. periódy`, 'info');
+                    }
+                }
+            }, 1000);
+            
+            setTimerInterval(interval);
+            
+            return () => clearInterval(interval);
+        }
+        
+        return () => {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+        };
+    }, [selectedMatch, selectedMatch?.status, selectedMatch?.startedAt, category]);
 
     // Načítanie názvu haly
     useEffect(() => {
@@ -1407,6 +1491,40 @@ const matchesHallApp = ({ userProfileData }) => {
                                 selectedMatch.status === 'in-progress' ? 'Prebieha' :
                                 selectedMatch.status === 'paused' ? 'Pozastavené' : 
                                 'Naplánované'
+                            )
+                        ),
+                        
+                        // PRIEBEH ČASU (nový prvok)
+                        (selectedMatch.status === 'in-progress' || selectedMatch.status === 'paused') && category && React.createElement(
+                            'div',
+                            { className: 'text-center mb-4 p-3 bg-white rounded-lg border border-gray-200' },
+                            React.createElement('div', { className: 'text-xs text-gray-500 mb-1' }, 'Priebeh času'),
+                            React.createElement(
+                                'div',
+                                { className: 'text-3xl font-mono font-bold' },
+                                formatMatchTime(matchTime)
+                            ),
+                            React.createElement(
+                                'div',
+                                { className: 'text-xs text-gray-500 mt-1' },
+                                `z celkových ${category.periodDuration} minút`
+                            ),
+                            
+                            // Vizuálny progress bar
+                            React.createElement(
+                                'div',
+                                { className: 'w-full bg-gray-200 rounded-full h-2.5 mt-2' },
+                                React.createElement(
+                                    'div',
+                                    {
+                                        className: `h-2.5 rounded-full transition-all duration-1000 ${
+                                            matchTime >= (category.periodDuration * 60) ? 'bg-red-600' : 'bg-blue-600'
+                                        }`,
+                                        style: {
+                                            width: `${Math.min(100, (matchTime / (category.periodDuration * 60)) * 100)}%`
+                                        }
+                                    }
+                                )
                             )
                         ),
                         
