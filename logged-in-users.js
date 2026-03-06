@@ -1115,7 +1115,6 @@ function UsersManagementApp() {
             React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Meno'),
             React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'E-mail'),
             React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer', onClick: () => setShowFilterModal(true) }, 'Rola'),
-            (window.isCurrentUserAdmin) && React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Priradená hala'), // Nový stĺpec
             (window.isCurrentUserAdmin) && React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Úprava údajov'),
             (window.isCurrentUserAdmin) && React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Úprava súpisiek'),
             React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Akcie')
@@ -1130,6 +1129,7 @@ function UsersManagementApp() {
             const canChangeRole = window.isCurrentUserAdmin && isNotCurrentUser && !isUserOldestAdmin;
             const canEditDataDeadline = ['club', 'referee', 'volunteer'].includes(user.role);
             const canEditRosterDeadline = ['club'].includes(user.role);
+            const isHall = user.role === 'hall'; // Zistenie, či ide o používateľa s rolou hall
             
             // Logika na skrytie riadku pre ostatných používateľov
             if (isUserOldestAdmin && !isCurrentUserOldestAdmin) {
@@ -1150,12 +1150,23 @@ function UsersManagementApp() {
                   getTranslatedRoleForDisplay(user.role, isUserOldestAdmin, isCurrentUserOldestAdmin)
                 )
               ),
-              (window.isCurrentUserAdmin) && React.createElement(
+              
+              // PRE HALL: Zlúčené bunky pre dátumy
+              (window.isCurrentUserAdmin && isHall) && React.createElement(
                 'td',
-                { className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-500' },
-                user.hallId ? 'Áno' : 'Nie' // Zjednodušené zobrazenie, či má priradenú halu
+                { 
+                  colSpan: "2",
+                  className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-medium'
+                },
+                user.hallId ? (() => {
+                  // Pre zjednodušenie zobrazujeme placeholder, v reáli by sme chceli načítať názov haly
+                  // Môžeme pridať stav pre ukladanie názvov hál alebo ich načítať priamo tu
+                  return `Priradená hala: ${user.hallName || 'ID: ' + user.hallId}`;
+                })() : 'Žiadna priradená hala'
               ),
-              (window.isCurrentUserAdmin) && React.createElement(
+              
+              // PRE OSTATNÉ ROLY: Štandardné zobrazenie dátumov
+              (window.isCurrentUserAdmin && !isHall) && React.createElement(
                 'td',
                 {
                   className: `px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${canEditDataDeadline ? 'cursor-pointer hover:bg-gray-50' : ''}`,
@@ -1167,7 +1178,8 @@ function UsersManagementApp() {
                 },
                 canEditDataDeadline ? formatDate(user.dataEditDeadline) : '-'
               ),
-              (window.isCurrentUserAdmin) && React.createElement(
+              
+              (window.isCurrentUserAdmin && !isHall) && React.createElement(
                 'td',
                 {
                   className: `px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${canEditRosterDeadline ? 'cursor-pointer hover:bg-gray-50' : ''}`,
@@ -1179,6 +1191,7 @@ function UsersManagementApp() {
                 },
                 canEditRosterDeadline ? formatDate(user.rosterEditDeadline) : '-'
               ),
+              
               React.createElement(
                 'td',
                 { className: 'px-6 py-4 whitespace-nowrap text-sm font-medium' },
@@ -1203,7 +1216,7 @@ function UsersManagementApp() {
                       },
                       'Upraviť rolu'
                     ),
-                    // UPRAVENÉ: Tlačidlo "Priradiť halu" - zobrazí sa IBA pre používateľov s rolou 'hall'
+                    // Tlačidlo "Priradiť halu" - zobrazí sa IBA pre používateľov s rolou 'hall'
                     (window.isCurrentUserAdmin && isNotCurrentUser && !isUserOldestAdmin && user.role === 'hall') && React.createElement(
                       'button',
                       {
@@ -1221,45 +1234,12 @@ function UsersManagementApp() {
                     className: 'bg-red-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-red-600 transition-colors duration-200 ease-in-out ml-2'
                   },
                   'Odstrániť'
-                )
               )
             )
-          })
-        )
+          )
+        })
       )
-    ),
-    React.createElement(NotificationModal, { message: notification.message, onClose: () => setNotification({ message: '', type: 'info' }), type: notification.type }),
-    userToEdit && React.createElement(ChangeRoleModal, {
-      user: userToEdit,
-      onClose: () => setUserToEdit(null),
-      onRoleChange: handleChangeRole
-    }),
-    userToAssignHall && React.createElement(AssignHallModal, {
-      user: userToAssignHall,
-      onClose: () => setUserToAssignHall(null),
-      onAssign: handleAssignHall
-    }),
-    userToDelete && React.createElement(ConfirmationModal, {
-      message: `Naozaj chcete odstrániť používateľa ${userToDelete.firstName} ${userToDelete.lastName}? Táto akcia je nezvratná.`,
-      onConfirm: handleDeleteUser,
-      onCancel: () => setUserToDelete(null),
-      userEmail: userToDelete.email
-    }),
-    showFilterModal && React.createElement(FilterRolesModal, {
-        onClose: () => setShowFilterModal(false),
-        onApplyFilter: (roles) => {
-            setSelectedRoles(roles);
-            setShowFilterModal(false);
-        },
-        initialRoles: selectedRoles
-    }),
-    showDateEditModal && React.createElement(EditDateModal, {
-      user: dateToEditUser,
-      dateType: dateToEditType,
-      currentDate: dateToEditCurrentValue,
-      onClose: () => setShowDateEditModal(false),
-      onSave: handleDateSave
-    })
+    )
   );
 }
 
