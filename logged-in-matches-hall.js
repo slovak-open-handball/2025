@@ -123,7 +123,7 @@ const matchesHallApp = ({ userProfileData }) => {
         fetchHallName();
     }, [hallId]);
 
-    // Načítanie tímov z teamManager - ROVNAKÉ AKO V DRUHOM KÓDE
+    // Načítanie tímov z teamManager
     useEffect(() => {
         if (window.teamManager) {
             if (window.__teamManagerData) {
@@ -399,7 +399,7 @@ const matchesHallApp = ({ userProfileData }) => {
                             )
                         ),
 
-                        // Zoznam zápasov pre tento deň - TERAZ POUŽÍVAME getTeamNameByIdentifier Z TOHTO KOMPONENTU
+                        // Zoznam zápasov pre tento deň
                         React.createElement(
                             'div',
                             { className: 'divide-y divide-gray-100' },
