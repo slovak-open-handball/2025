@@ -6346,7 +6346,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
             return React.createElement(
                 'div',
                 { 
-                    className: `border-2 border-dashed border-gray-400 rounded-lg p-3 min-w-[220px] transition-all duration-200 ${
+                    className: `border-2 border-dashed border-gray-400 rounded-lg p-3 min-w-[200px] transition-all duration-200 ${
                         isHovered && userProfileData?.role === 'admin' && !generationInProgress 
                             ? 'bg-green-50 border-green-500' 
                             : 'bg-gray-100'
@@ -7474,10 +7474,10 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                     className: 'bg-white p-8 rounded-xl shadow-lg overflow-x-auto',
                     style: { 
                         width: '100%', 
-                        maxWidth: spiderLevel === 4 ? `${7 * (240 + 24 + 4)}px` : 
-                                    spiderLevel === 3 ? `${5 * (240 + 24 + 4)}px` : 
-                                      (spiderLevel === 2 ? `${3 * (260 + 24 + 4)}px` : 
-                                                        `${2 * (280 + 24 + 4)}px`),
+                        maxWidth: spiderLevel === 4 ? `${7 * (220 + 24 + 4)}px` : 
+                                    spiderLevel === 3 ? `${5 * (220 + 24 + 4)}px` : 
+                                      (spiderLevel === 2 ? `${3 * (240 + 24 + 4)}px` : 
+                                                        `${2 * (260 + 24 + 4)}px`),
                     }
                 },
                 
