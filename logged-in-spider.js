@@ -6644,30 +6644,28 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                     )
                 ),
                 
-                // NOVÝ RIADOK - Informácie o dátume, čase a mieste (len ak sú k dispozícii)
+                // NOVÝ RIADOK - Informácie o dátume, čase a mieste (len ak sú k dispozícii) - KAŽDÝ V SAMOSTATNOM RIADKU
                 (formattedDate || matchTime || hallName) && React.createElement(
                     'div',
                     { className: 'flex flex-col gap-1 mt-2 pt-2 border-t border-gray-200 text-xs text-gray-600' },
                     
-                    // Dátum a čas v jednom riadku
-                    (formattedDate || matchTime) && React.createElement(
+                    // Dátum v samostatnom riadku
+                    formattedDate && React.createElement(
                         'div',
-                        { className: 'flex items-center justify-between' },
-                        React.createElement(
-                            'span',
-                            { className: 'flex items-center gap-1' },
-                            React.createElement('i', { className: 'fa-regular fa-calendar text-gray-400 text-xs' }),
-                            formattedDate || 'Dátum neurčený'
-                        ),
-                        React.createElement(
-                            'span',
-                            { className: 'flex items-center gap-1' },
-                            React.createElement('i', { className: 'fa-regular fa-clock text-gray-400 text-xs' }),
-                            matchTime || '--:--'
-                        )
+                        { className: 'flex items-center gap-1' },
+                        React.createElement('i', { className: 'fa-regular fa-calendar text-gray-400 text-xs' }),
+                        React.createElement('span', null, formattedDate)
                     ),
                     
-                    // Miesto (športová hala) - TERAZ POUŽÍVAME hallName Z funkcie getHallNameById
+                    // Čas v samostatnom riadku
+                    matchTime && React.createElement(
+                        'div',
+                        { className: 'flex items-center gap-1' },
+                        React.createElement('i', { className: 'fa-regular fa-clock text-gray-400 text-xs' }),
+                        React.createElement('span', null, matchTime)
+                    ),
+    
+                    // Miesto (športová hala) v samostatnom riadku
                     hallName && React.createElement(
                         'div',
                         { className: 'flex items-center gap-1' },
