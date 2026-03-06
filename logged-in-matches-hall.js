@@ -560,19 +560,6 @@ const matchesHallApp = ({ userProfileData }) => {
                 // Nájdeme kategóriu podľa názvu
                 const category = categories.find(c => c.name === match.categoryName);
                 
-                console.log(`Zápas #${index + 1}:`);
-                console.log(`  ID: ${match.id}`);
-                console.log(`  Dátum: ${matchDate}`);
-                console.log(`  Čas: ${matchTime}`);
-                console.log(`  Kategória: ${categoryName}`);
-                console.log(`  Skupina: ${match.groupName || 'neurčená'}`);
-                console.log(`  Domáci: ${homeTeamName} (${match.homeTeamIdentifier})`);
-                console.log(`  Hostia: ${awayTeamName} (${match.awayTeamIdentifier})`);
-                console.log(`  Status: ${match.status || 'neurčený'}`);
-                if (match.isPlacementMatch) {
-                    console.log(`  Typ: Zápas o ${match.placementRank}. miesto`);
-                }
-                
                 // VÝPIS NASTAVENÍ KATEGÓRIE
                 if (category) {
                     console.log(`  --- NASTAVENIA KATEGÓRIE ${category.name} ---`);
