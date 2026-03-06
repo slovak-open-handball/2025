@@ -133,6 +133,9 @@ const matchesHallApp = ({ userProfileData }) => {
             
             const unsubscribe = window.teamManager.subscribe((data) => {
                 setTeamData(data);
+                // VYPÍŠEME TÍMY PRI KAŽDEJ AKTUALIZÁCII
+                console.log('=== TÍMY V SKUPINÁCH (po aktualizácii) ===');
+                logAllTeams(data.allTeams);
             });
             
             return () => {
@@ -140,8 +143,63 @@ const matchesHallApp = ({ userProfileData }) => {
             };
         } else if (window.__teamManagerData) {
             setTeamData(window.__teamManagerData);
+            // VYPÍŠEME TÍMY PRI NAČÍTANÍ
+            console.log('=== TÍMY V SKUPINÁCH (pri načítaní) ===');
+            logAllTeams(window.__teamManagerData.allTeams);
         }
     }, []);
+
+    // FUNKCIA PRE VYPISOVANIE VŠETKÝCH TÍMOV
+    const logAllTeams = (teams) => {
+        if (!teams || teams.length === 0) {
+            console.log('Žiadne tímy nie sú k dispozícii');
+            return;
+        }
+        
+        console.log(`Celkový počet tímov: ${teams.length}`);
+        
+        // Zoskupíme tímy podľa kategórie a skupiny
+        const teamsByCategory = {};
+        
+        teams.forEach(team => {
+            const category = team.category || 'Neznáma kategória';
+            if (!teamsByCategory[category]) {
+                teamsByCategory[category] = {};
+            }
+            
+            const group = team.groupName || 'Bez skupiny';
+            if (!teamsByCategory[category][group]) {
+                teamsByCategory[category][group] = [];
+            }
+            
+            teamsByCategory[category][group].push(team);
+        });
+        
+        // Vypíšeme tímy podľa kategórií a skupín
+        Object.entries(teamsByCategory).forEach(([category, groups], catIndex) => {
+            console.log(`\nKategória #${catIndex + 1}: ${category}`);
+            
+            Object.entries(groups).forEach(([group, groupTeams]) => {
+                console.log(`  Skupina: ${group}`);
+                
+                // Zoradíme tímy podľa poradia
+                const sortedTeams = [...groupTeams].sort((a, b) => {
+                    const orderA = a.order !== null && a.order !== undefined ? a.order : Infinity;
+                    const orderB = b.order !== null && b.order !== undefined ? b.order : Infinity;
+                    return orderA - orderB;
+                });
+                
+                sortedTeams.forEach((team, teamIndex) => {
+                    const orderText = team.order !== null && team.order !== undefined ? `poradie: ${team.order}` : 'bez poradia';
+                    console.log(`    ${teamIndex + 1}. ${team.teamName} (${orderText})`);
+                    if (team.id) console.log(`       ID: ${team.id}`);
+                    if (team.uid && team.uid !== 'global') console.log(`       UID používateľa: ${team.uid}`);
+                });
+            });
+        });
+        
+        console.log('=========================================');
+    };
 
     // Načítanie kategórií z databázy
     useEffect(() => {
