@@ -15,7 +15,8 @@ import {
   increment,
   setDoc,
   serverTimestamp,
-  deleteField
+  deleteField,
+  getDocs // Pridané pre načítanie hál
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // NotificationModal Component
@@ -213,7 +214,120 @@ function ChangeRoleModal({ user, onClose, onRoleChange }) {
   );
 }
 
-// Nový komponent pre modálne okno na filtrovanie rolí
+// Nový komponent pre modálne okno na výber športovej haly
+function AssignHallModal({ user, onClose, onAssign }) {
+  const [halls, setHalls] = useState([]);
+  const [selectedHallId, setSelectedHallId] = useState(user.hallId || '');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchHalls = async () => {
+      try {
+        setLoading(true);
+        const placesRef = collection(window.db, 'places');
+        const q = query(placesRef);
+        const querySnapshot = await getDocs(q);
+        
+        const hallsList = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.type === 'sportova_hala') {
+            hallsList.push({
+              id: doc.id,
+              name: data.name || 'Neznámy názov',
+              ...data
+            });
+          }
+        });
+        
+        // Zoradenie podľa názvu
+        hallsList.sort((a, b) => a.name.localeCompare(b.name, 'sk'));
+        setHalls(hallsList);
+      } catch (error) {
+        console.error('Chyba pri načítaní hál:', error);
+        window.showGlobalNotification('Nepodarilo sa načítať zoznam hál', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHalls();
+  }, []);
+
+  const handleSave = () => {
+    onAssign(user, selectedHallId);
+    onClose();
+  };
+
+  return React.createElement(
+    'div',
+    { className: 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50' },
+    React.createElement(
+      'div',
+      { className: 'bg-white p-8 rounded-lg shadow-xl w-96 max-h-[80vh] overflow-y-auto' },
+      React.createElement('h2', { className: 'text-2xl font-bold mb-4' }, `Priradiť halu pre ${user.firstName} ${user.lastName}`),
+      
+      loading ? React.createElement('div', { className: 'flex justify-center py-8' },
+        React.createElement('div', { className: 'animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500' })
+      ) : React.createElement('div', { className: 'mb-4' },
+        halls.length === 0 ? React.createElement('p', { className: 'text-gray-500 text-center py-4' },
+          'Žiadne športové haly nie sú k dispozícii'
+        ) : React.createElement('div', { className: 'space-y-2' },
+          React.createElement('div', { key: 'none', className: 'flex items-center p-2 hover:bg-gray-50 rounded' },
+            React.createElement('input', {
+              type: 'radio',
+              id: 'no-hall',
+              name: 'hall',
+              value: '',
+              checked: selectedHallId === '',
+              onChange: () => setSelectedHallId(''),
+              className: 'form-radio h-4 w-4 text-brown-600 mr-3'
+            }),
+            React.createElement('label', { htmlFor: 'no-hall', className: 'text-gray-700' },
+              'Žiadna hala'
+            )
+          ),
+          halls.map(hall => React.createElement('div', { key: hall.id, className: 'flex items-center p-2 hover:bg-gray-50 rounded' },
+            React.createElement('input', {
+              type: 'radio',
+              id: hall.id,
+              name: 'hall',
+              value: hall.id,
+              checked: selectedHallId === hall.id,
+              onChange: () => setSelectedHallId(hall.id),
+              className: 'form-radio h-4 w-4 text-brown-600 mr-3'
+            }),
+            React.createElement('label', { htmlFor: hall.id, className: 'text-gray-700' },
+              hall.name
+            )
+          ))
+        )
+      ),
+      
+      React.createElement('div', { className: 'flex justify-end mt-6' },
+        React.createElement(
+          'button',
+          {
+            onClick: onClose,
+            className: 'bg-gray-300 text-gray-800 px-4 py-2 rounded-md mr-2 hover:bg-gray-400 transition-colors'
+          },
+          'Zrušiť'
+        ),
+        React.createElement(
+          'button',
+          {
+            onClick: handleSave,
+            disabled: loading,
+            className: 'bg-brown-600 text-white px-4 py-2 rounded-md hover:bg-brown-700 transition-colors disabled:bg-brown-300'
+          },
+          'Uložiť'
+        )
+      )
+    )
+  );
+}
+
+// Komponent pre modálne okno na filtrovanie rolí
 function FilterRolesModal({ onClose, onApplyFilter, initialRoles }) {
     const [selectedRoles, setSelectedRoles] = useState(initialRoles);
 
@@ -409,6 +523,7 @@ function UsersManagementApp() {
   const [notification, setNotification] = useState({ message: '', type: 'info' });
   const [userToEdit, setUserToEdit] = useState(null);
   const [userToDelete, setUserToDelete] = useState(null);
+  const [userToAssignHall, setUserToAssignHall] = useState(null); // Nový stav pre priradenie haly
   const [oldestAdminId, setOldestAdminId] = useState(null);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState([]);
@@ -674,6 +789,49 @@ function UsersManagementApp() {
     } catch (error) {
       console.error("Chyba pri zmene roly používateľa:", error);
       setNotification({ message: 'Nepodarilo sa zmeniť rolu používateľa.', type: 'error' });
+    }
+  };
+  
+  // Nová funkcia na priradenie haly
+  const handleAssignHall = async (userToUpdate, hallId) => {
+    try {
+      const userDocRef = doc(db, `users`, userToUpdate.id);
+      const oldHallId = userToUpdate.hallId || 'žiadna';
+      
+      // Získanie názvu haly pre logovanie (ak je hallId prázdne, použijeme 'žiadna')
+      let hallNameForLog = 'žiadna';
+      if (hallId) {
+        try {
+          const hallDoc = await getDoc(doc(db, 'places', hallId));
+          if (hallDoc.exists()) {
+            hallNameForLog = hallDoc.data().name || 'neznáma hala';
+          }
+        } catch (error) {
+          console.error('Chyba pri načítaní názvu haly:', error);
+        }
+      }
+      
+      const updateData = {};
+      if (hallId) {
+        updateData.hallId = hallId;
+      } else {
+        updateData.hallId = deleteField();
+      }
+      
+      await updateDoc(userDocRef, updateData);
+      
+      const oldHallName = oldHallId === 'žiadna' ? 'žiadna' : (() => {
+        // Pokúsime sa nájsť názov starej haly v users liste (ak je uložený)
+        // Toto je zjednodušené, v reáli by sme možno chceli načítať názov z places
+        return oldHallId || 'žiadna';
+      })();
+      
+      setNotification({ message: `Hala bola ${hallId ? 'priradená' : 'odstránená'} pre používateľa ${userToUpdate.firstName} ${userToUpdate.lastName}.`, type: 'success' });
+      
+      await logChanges([`Zmena priradenej haly pre ${userToUpdate.firstName} ${userToUpdate.lastName} z: '${oldHallName}' na: '${hallNameForLog}'`]);
+    } catch (error) {
+      console.error('Chyba pri priradení haly:', error);
+      setNotification({ message: 'Nepodarilo sa priradiť halu.', type: 'error' });
     }
   };
   
@@ -957,6 +1115,7 @@ function UsersManagementApp() {
             React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Meno'),
             React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'E-mail'),
             React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer', onClick: () => setShowFilterModal(true) }, 'Rola'),
+            (window.isCurrentUserAdmin) && React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Priradená hala'), // Nový stĺpec
             (window.isCurrentUserAdmin) && React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Úprava údajov'),
             (window.isCurrentUserAdmin) && React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Úprava súpisiek'),
             React.createElement('th', { className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Akcie')
@@ -990,6 +1149,11 @@ function UsersManagementApp() {
                   { style: { color: getRoleColor(user.role) }, className: 'font-semibold' },
                   getTranslatedRoleForDisplay(user.role, isUserOldestAdmin, isCurrentUserOldestAdmin)
                 )
+              ),
+              (window.isCurrentUserAdmin) && React.createElement(
+                'td',
+                { className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-500' },
+                user.hallId ? 'Áno' : 'Nie' // Zjednodušené zobrazenie, či má priradenú halu
               ),
               (window.isCurrentUserAdmin) && React.createElement(
                 'td',
@@ -1038,6 +1202,15 @@ function UsersManagementApp() {
                         className: 'bg-blue-500 text-white px-4 py-2 rounded-full shadow-md hover:bg-blue-600 transition-colors duration-200 ease-in-out mr-2'
                       },
                       'Upraviť rolu'
+                    ),
+                    // Nové tlačidlo "Priradiť halu" - zobrazí sa pre všetkých používateľov okrem aktuálneho a superadmina
+                    (window.isCurrentUserAdmin && isNotCurrentUser && !isUserOldestAdmin) && React.createElement(
+                      'button',
+                      {
+                        onClick: () => setUserToAssignHall(user),
+                        className: 'bg-brown-600 text-white px-4 py-2 rounded-full shadow-md hover:bg-brown-700 transition-colors duration-200 ease-in-out mr-2'
+                      },
+                      'Priradiť halu'
                     )
                   ) : null,
                 // Tlačidlo "Odstrániť" sa zobrazí len pre superadministrátora, a to pre všetkých ostatných používateľov okrem neho samotného
@@ -1060,6 +1233,11 @@ function UsersManagementApp() {
       user: userToEdit,
       onClose: () => setUserToEdit(null),
       onRoleChange: handleChangeRole
+    }),
+    userToAssignHall && React.createElement(AssignHallModal, {
+      user: userToAssignHall,
+      onClose: () => setUserToAssignHall(null),
+      onAssign: handleAssignHall
     }),
     userToDelete && React.createElement(ConfirmationModal, {
       message: `Naozaj chcete odstrániť používateľa ${userToDelete.firstName} ${userToDelete.lastName}? Táto akcia je nezvratná.`,
@@ -1108,6 +1286,18 @@ const initializeAndRenderApp = () => {
   root.render(React.createElement(UsersManagementApp, null));
   console.log("logged-in-users.js: React App (UsersManagementApp) vykreslená.");
 };
+
+// Pridanie štýlov pre hnedú farbu (ak ešte nie sú definované)
+const style = document.createElement('style');
+style.textContent = `
+  .bg-brown-600 { background-color: #8B4513; }
+  .bg-brown-700 { background-color: #5D3A1A; }
+  .bg-brown-300 { background-color: #D2B48C; }
+  .text-brown-600 { color: #8B4513; }
+  .hover\\:bg-brown-700:hover { background-color: #5D3A1A; }
+  .disabled\\:bg-brown-300:disabled { background-color: #D2B48C; }
+`;
+document.head.appendChild(style);
 
 // Vykreslíme loader a zaregistrujeme poslucháča udalostí
 const rootElement = document.getElementById('users-management-root');
