@@ -1093,7 +1093,8 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         };
     
-        return React.createElement(
+        // ✅ HLAVNÝ OBSAH - vykreslenie detailu zápasu
+        const mainContent = React.createElement(
             'div',
             { className: 'flex-grow flex justify-center items-start p-4' },
             React.createElement(
@@ -1242,7 +1243,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     // DETAILY TÍMOV - realizačný tím, hráči a priebeh zápasu
                     React.createElement(
                         'div',
-                        { className: 'grid grid-cols-3 gap-6' }, // Zmena z grid-cols-2 na grid-cols-3
+                        { className: 'grid grid-cols-3 gap-6' },
                         
                         // Domáci tím - detail (1. stĺpec)
                         React.createElement(
@@ -1374,7 +1375,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 )
                             )
                         ),
-
+    
                         // Druhý box - Priebeh zápasu (NOVÝ)
                         React.createElement(
                             'div',
@@ -1711,30 +1712,35 @@ const matchesHallApp = ({ userProfileData }) => {
                 )
             )
         );
-
-        // Pridáme modálne okná na koniec render funkcie
-        React.createElement(EventModal, {
-            isOpen: eventModalOpen,
-            onClose: () => {
-                setEventModalOpen(false);
-                setEventType(null);
-                setEventTeam(null);
-                setEventMinute('');
-                setEventSubType(null);
-                setSelectedPlayerForEvent(null);
-            },
-            onConfirm: (data) => {
-                setEventTeam(data.team);
-                setEventMinute(data.minute);
-                setEventSubType(data.subType);
-                setSelectedPlayerForEvent(data.player);
-                addMatchEvent();
-            },
-            homeTeamDetails: homeTeamDetails,
-            awayTeamDetails: awayTeamDetails
-        })
+    
+        // ✅ VRÁTIME HLAVNÝ OBSAH AJ MODÁLNE OKNO SPOLU
+        return React.createElement(
+            React.Fragment,
+            null,
+            mainContent,
+            React.createElement(EventModal, {
+                isOpen: eventModalOpen,
+                onClose: () => {
+                    setEventModalOpen(false);
+                    setEventType(null);
+                    setEventTeam(null);
+                    setEventMinute('');
+                    setEventSubType(null);
+                    setSelectedPlayerForEvent(null);
+                },
+                onConfirm: (data) => {
+                    setEventTeam(data.team);
+                    setEventMinute(data.minute);
+                    setEventSubType(data.subType);
+                    setSelectedPlayerForEvent(data.player);
+                    addMatchEvent();
+                },
+                homeTeamDetails: homeTeamDetails,
+                awayTeamDetails: awayTeamDetails
+            })
+        );
     }
-
+    
     // Inak zobrazíme zoznam všetkých zápasov
     return React.createElement(
         'div',
