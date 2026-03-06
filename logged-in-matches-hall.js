@@ -334,31 +334,31 @@ const matchesHallApp = ({ userProfileData }) => {
                     console.log('=== NAČÍTANÉ SKUPINY PODĽA KATEGÓRIÍ ===');
                     
                     // Pre každú kategóriu vypíšeme jej skupiny
-                    Object.entries(groupsData).forEach(([categoryId, groups], catIndex) => {
-                        // Nájdeme názov kategórie podľa ID
-                        const category = categories.find(c => c.id === categoryId);
-                        const categoryName = category ? category.name : `Neznáma kategória (ID: ${categoryId})`;
-                        
-                        console.log(`Kategória #${catIndex + 1}: ${categoryName} (ID: ${categoryId})`);
-                        console.log(`  Počet skupín: ${groups.length}`);
-                        
-                        // Rozdelíme skupiny podľa typu
-                        const basicGroups = groups.filter(g => g.type === 'základná skupina');
-                        const superGroups = groups.filter(g => g.type === 'nadstavbová skupina');
-                        
-                        console.log(`  Základné skupiny (${basicGroups.length}):`);
-                        basicGroups.forEach((group, groupIndex) => {
-                            console.log(`    ${groupIndex + 1}. ${group.name}`);
-                        });
-                        
-                        console.log(`  Nadstavbové skupiny (${superGroups.length}):`);
-                        superGroups.forEach((group, groupIndex) => {
-                            console.log(`    ${groupIndex + 1}. ${group.name}`);
-                        });
-                        console.log('  ---');
-                    });
-                    
-                    console.log('===========================================');
+//                    Object.entries(groupsData).forEach(([categoryId, groups], catIndex) => {
+//                        // Nájdeme názov kategórie podľa ID
+//                        const category = categories.find(c => c.id === categoryId);
+//                        const categoryName = category ? category.name : `Neznáma kategória (ID: ${categoryId})`;
+//                        
+//                        console.log(`Kategória #${catIndex + 1}: ${categoryName} (ID: ${categoryId})`);
+//                        console.log(`  Počet skupín: ${groups.length}`);
+//                        
+//                        // Rozdelíme skupiny podľa typu
+//                        const basicGroups = groups.filter(g => g.type === 'základná skupina');
+//                        const superGroups = groups.filter(g => g.type === 'nadstavbová skupina');
+//                        
+//                        console.log(`  Základné skupiny (${basicGroups.length}):`);
+//                        basicGroups.forEach((group, groupIndex) => {
+//                            console.log(`    ${groupIndex + 1}. ${group.name}`);
+//                        });
+//                        
+//                        console.log(`  Nadstavbové skupiny (${superGroups.length}):`);
+//                        superGroups.forEach((group, groupIndex) => {
+//                            console.log(`    ${groupIndex + 1}. ${group.name}`);
+//                        });
+//                        console.log('  ---');
+//                    });
+//                    
+//                    console.log('===========================================');
                     
                 } else {
                     console.log('Dokument groups neexistuje');
