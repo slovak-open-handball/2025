@@ -1162,7 +1162,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 React.createElement(
                                     'div',
                                     { className: 'text-3xl font-bold text-gray-800 mb-1' },
-                                    '0 : 0'
+                                    '-- : --'
                                 ),
                                 React.createElement(
                                     'div',
