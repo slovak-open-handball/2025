@@ -1746,7 +1746,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     if (eventType) {
                                                         setEventTeam('home');
                                                         setSelectedPlayerForEvent(staffIdentifier);
-                                                        addMatchEvent();
+                                                        setTimeout(() => addMatchEvent(), 50);
                                                     }
                                                 }
                                             },
@@ -1780,7 +1780,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     if (eventType) {
                                                         setEventTeam('home');
                                                         setSelectedPlayerForEvent(staffIdentifier);
-                                                        addMatchEvent();
+                                                        setTimeout(() => addMatchEvent(), 50);
                                                     }
                                                 }
                                             },
@@ -1848,7 +1848,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             if (eventType) {
                                                                 setEventTeam('home'); // Nastavíme tím podľa toho, na ktorého hráča sa kliklo
                                                                 setSelectedPlayerForEvent(playerIdentifier);
-                                                                addMatchEvent();
+                                                                setTimeout(() => addMatchEvent(), 50);
                                                             }
                                                         }
                                                     },
@@ -2195,7 +2195,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     if (eventType) {
                                                         setEventTeam('away');
                                                         setSelectedPlayerForEvent(staffIdentifier);
-                                                        addMatchEvent();
+                                                        setTimeout(() => addMatchEvent(), 50);
                                                     }
                                                 }
                                             },
@@ -2229,7 +2229,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     if (eventType) {
                                                         setEventTeam('away');
                                                         setSelectedPlayerForEvent(staffIdentifier);
-                                                        addMatchEvent();
+                                                        setTimeout(() => addMatchEvent(), 50);
                                                     }
                                                 }
                                             },
@@ -2297,7 +2297,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             if (eventType) {
                                                                 setEventTeam('away');
                                                                 setSelectedPlayerForEvent(playerIdentifier);
-                                                                addMatchEvent();
+                                                                setTimeout(() => addMatchEvent(), 50);
                                                             }
                                                         }
                                                     },
@@ -2362,7 +2362,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     setEventMinute(data.minute);
                     setEventSubType(data.subType);
                     setSelectedPlayerForEvent(data.player);
-                    addMatchEvent();
+                    setTimeout(() => addMatchEvent(), 50);
                 },
                 homeTeamDetails: homeTeamDetails,
                 awayTeamDetails: awayTeamDetails
