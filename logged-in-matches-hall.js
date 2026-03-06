@@ -776,7 +776,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 matchId: selectedMatch.id,
                 type: eventType,
                 team: eventTeam,
-                minute: parseInt(eventMinute),
+                minute: Math.floor(matchTime / 60) + 1,
                 timestamp: Timestamp.now(),
                 createdBy: userProfileData?.email || 'unknown',
                 createdByUid: userProfileData?.uid || null
@@ -1697,7 +1697,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 homeTeamName
                             ),
                             
-                            // Realizačný tím
+                            // Realizačný tím pre domáci tím
                             React.createElement(
                                 'div',
                                 { className: 'mb-4' },
@@ -1714,33 +1714,79 @@ const matchesHallApp = ({ userProfileData }) => {
                                     
                                     // Muži v realizačnom tíme
                                     homeTeamDetails.team.menTeamMemberDetails && homeTeamDetails.team.menTeamMemberDetails.length > 0 && 
-                                    homeTeamDetails.team.menTeamMemberDetails.map((member, idx) => 
-                                        React.createElement(
+                                    homeTeamDetails.team.menTeamMemberDetails.map((member, idx) => {
+                                        const staffIdentifier = {
+                                            userId: homeTeamDetails.userId,
+                                            teamIdentifier: selectedMatch.homeTeamIdentifier,
+                                            playerId: `staff-men-${idx}`,
+                                            displayName: `${member.firstName} ${member.lastName} (tréner)`,
+                                            isStaff: true
+                                        };
+                                        
+                                        return React.createElement(
                                             'div',
-                                            { key: `home-men-${idx}`, className: 'bg-white p-2 rounded border border-gray-200 text-sm' },
+                                            { 
+                                                key: `home-men-${idx}`, 
+                                                className: 'bg-white p-2 rounded border border-gray-200 text-sm group relative hover:bg-blue-50 transition-colors cursor-pointer',
+                                                onClick: () => {
+                                                    if (eventType && eventTeam === 'home' && (eventType === 'yellow' || eventType === 'red' || eventType === 'blue')) {
+                                                        setSelectedPlayerForEvent(staffIdentifier);
+                                                        setTimeout(() => addMatchEvent(), 100);
+                                                    }
+                                                }
+                                            },
                                             React.createElement(
                                                 'div',
                                                 { className: 'flex items-center gap-2' },
                                                 React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs' }),
-                                                React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`)
+                                                React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`),
+                                                
+                                                eventType && eventTeam === 'home' && (eventType === 'yellow' || eventType === 'red' || eventType === 'blue') && React.createElement(
+                                                    'span',
+                                                    { className: 'ml-2 text-xs text-green-600 opacity-0 group-hover:opacity-100 transition-opacity' },
+                                                    `➕ ${eventType === 'yellow' ? 'žltá' : eventType === 'red' ? 'červená' : 'modrá'}`
+                                                )
                                             )
-                                        )
-                                    ),
+                                        );
+                                    }),
                                     
                                     // Ženy v realizačnom tíme
                                     homeTeamDetails.team.womenTeamMemberDetails && homeTeamDetails.team.womenTeamMemberDetails.length > 0 && 
-                                    homeTeamDetails.team.womenTeamMemberDetails.map((member, idx) => 
-                                        React.createElement(
+                                    homeTeamDetails.team.womenTeamMemberDetails.map((member, idx) => {
+                                        const staffIdentifier = {
+                                            userId: homeTeamDetails.userId,
+                                            teamIdentifier: selectedMatch.homeTeamIdentifier,
+                                            playerId: `staff-women-${idx}`,
+                                            displayName: `${member.firstName} ${member.lastName} (trénerka)`,
+                                            isStaff: true
+                                        };
+                                        
+                                        return React.createElement(
                                             'div',
-                                            { key: `home-women-${idx}`, className: 'bg-white p-2 rounded border border-gray-200 text-sm' },
+                                            { 
+                                                key: `home-women-${idx}`, 
+                                                className: 'bg-white p-2 rounded border border-gray-200 text-sm group relative hover:bg-blue-50 transition-colors cursor-pointer',
+                                                onClick: () => {
+                                                    if (eventType && eventTeam === 'home' && (eventType === 'yellow' || eventType === 'red' || eventType === 'blue')) {
+                                                        setSelectedPlayerForEvent(staffIdentifier);
+                                                        setTimeout(() => addMatchEvent(), 100);
+                                                    }
+                                                }
+                                            },
                                             React.createElement(
                                                 'div',
                                                 { className: 'flex items-center gap-2' },
                                                 React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs' }),
-                                                React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`)
+                                                React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`),
+                                                
+                                                eventType && eventTeam === 'home' && (eventType === 'yellow' || eventType === 'red' || eventType === 'blue') && React.createElement(
+                                                    'span',
+                                                    { className: 'ml-2 text-xs text-green-600 opacity-0 group-hover:opacity-100 transition-opacity' },
+                                                    `➕ ${eventType === 'yellow' ? 'žltá' : eventType === 'red' ? 'červená' : 'modrá'}`
+                                                )
                                             )
-                                        )
-                                    ),
+                                        );
+                                    }),
                                     
                                     // Ak nie sú žiadni členovia realizačného tímu
                                     (!homeTeamDetails.team.menTeamMemberDetails || homeTeamDetails.team.menTeamMemberDetails.length === 0) &&
@@ -1757,7 +1803,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 )
                             ),
                             
-                            // Hráči
+                            // V časti s hráčmi pre domáci tím (1. stĺpec) - nahraďte existujúcu časť s hráčmi
                             React.createElement(
                                 'div',
                                 null,
@@ -1774,15 +1820,33 @@ const matchesHallApp = ({ userProfileData }) => {
                                     homeTeamDetails.team.playerDetails && homeTeamDetails.team.playerDetails.length > 0 ? 
                                         [...homeTeamDetails.team.playerDetails]
                                             .sort((a, b) => {
-                                                // Zoradenie podľa čísla dresu (ak existuje)
                                                 const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
                                                 const numB = b.jerseyNumber ? parseInt(b.jerseyNumber) || 999 : 999;
                                                 return numA - numB;
                                             })
-                                            .map((player, idx) => 
-                                                React.createElement(
+                                            .map((player, idx) => {
+                                                // Vytvoríme identifikátor hráča
+                                                const playerIdentifier = {
+                                                    userId: homeTeamDetails.userId,
+                                                    teamIdentifier: selectedMatch.homeTeamIdentifier,
+                                                    playerId: player.id || `${player.firstName} ${player.lastName}`,
+                                                    displayName: `${player.firstName} ${player.lastName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`
+                                                };
+                                                
+                                                return React.createElement(
                                                     'div',
-                                                    { key: `home-player-${idx}`, className: 'bg-white p-2 rounded border border-gray-200 text-sm' },
+                                                    { 
+                                                        key: `home-player-${idx}`, 
+                                                        className: 'bg-white p-2 rounded border border-gray-200 text-sm group relative hover:bg-blue-50 transition-colors cursor-pointer',
+                                                        onClick: () => {
+                                                            // Ak je vybratý typ udalosti, uložíme hráča a pridáme udalosť
+                                                            if (eventType && eventTeam === 'home') {
+                                                                setSelectedPlayerForEvent(playerIdentifier);
+                                                                // Automaticky pridáme udalosť
+                                                                setTimeout(() => addMatchEvent(), 100);
+                                                            }
+                                                        }
+                                                    },
                                                     React.createElement(
                                                         'div',
                                                         { className: 'flex items-center gap-2 flex-wrap' },
@@ -1801,10 +1865,17 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             'span',
                                                             { className: 'text-xs text-gray-500' },
                                                             `(${new Date(player.dateOfBirth).getFullYear()})`
+                                                        ),
+                                                        
+                                                        // Zobraziť indikátor, že je možné kliknúť (ak je vybratý typ udalosti)
+                                                        eventType && eventTeam === 'home' && React.createElement(
+                                                            'span',
+                                                            { className: 'ml-2 text-xs text-green-600 opacity-0 group-hover:opacity-100 transition-opacity' },
+                                                            `➕ ${eventType === 'goal' ? 'gól' : eventType === 'yellow' ? 'žltá' : eventType === 'red' ? 'červená' : eventType === 'blue' ? 'modrá' : eventType === 'exclusion' ? 'vylúčenie' : '7m'}`
                                                         )
                                                     )
-                                                )
-                                            )
+                                                );
+                                            })
                                         : React.createElement(
                                             'div',
                                             { className: 'text-sm text-gray-500 italic p-2' },
