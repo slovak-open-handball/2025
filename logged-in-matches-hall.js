@@ -1145,7 +1145,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         player.jerseyNumber && React.createElement(
                                                             'span',
                                                             { className: 'font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded' },
-                                                            `#${player.jerseyNumber}`
+                                                            `${player.jerseyNumber}`
                                                         ),
                                                         React.createElement(
                                                             'span',
@@ -1277,7 +1277,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         player.jerseyNumber && React.createElement(
                                                             'span',
                                                             { className: 'font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded' },
-                                                            `#${player.jerseyNumber}`
+                                                            `${player.jerseyNumber}`
                                                         ),
                                                         React.createElement(
                                                             'span',
