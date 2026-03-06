@@ -180,7 +180,6 @@ const matchesHallApp = ({ userProfileData }) => {
     const [timerInterval, setTimerInterval] = useState(null);
 
     const formatMatchTime = (seconds) => {
-        console.log('formatMatchTime volaný s hodnotou:', seconds);
         // Ochrana proti nečíselným hodnotám
         if (typeof seconds !== 'number' || isNaN(seconds) || seconds < 0) {
             return '00:00';
@@ -404,11 +403,6 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     }, [selectedMatch]);
 
-    // Sledovanie zmien matchTime
-    useEffect(() => {
-        console.log('matchTime sa zmenil na:', matchTime, 'formátovaný:', formatMatchTime(matchTime));
-    }, [matchTime]);
-
     // Timer pre priebeh zápasu
     useEffect(() => {
         console.log('Timer useEffect - stav:', selectedMatch?.status, 'matchTime:', matchTime);
@@ -461,7 +455,6 @@ const matchesHallApp = ({ userProfileData }) => {
                 }
                 
                 const elapsedSeconds = Math.floor((now.seconds - startedAt.seconds));
-                console.log('Timer tick - elapsedSeconds:', elapsedSeconds, 'currentPeriod:', currentPeriod, 'totalElapsedForCurrentPeriod:', totalElapsedForCurrentPeriod);
                 
                 // OVERENIE: Priamo nastavujeme matchTime
                 setMatchTime(elapsedSeconds);
