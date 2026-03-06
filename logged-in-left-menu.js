@@ -20,6 +20,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
     const mapLink = document.getElementById('map-link'); 
     const teamsAccommodationLink = document.getElementById('teams-accommodation-link');
     const matchesLink = document.getElementById('matches-link');
+    const matchesHallLink = document.getElementById('matches-hall-link');
     
     if (!leftMenu || !menuToggleButton || menuTexts.length === 0 || !menuSpacer) {
         return;
@@ -280,6 +281,8 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             if (notificationBadgeCount) {
                 notificationBadgeCount.classList.add('hidden');
             }
+        } else if (userProfileData.role === 'hall') {
+            matchesHallLink.classList.remove('hidden');
         } else {
             addCategoriesLink.classList.add('hidden');
             addGroupsLink.classList.add('hidden');
