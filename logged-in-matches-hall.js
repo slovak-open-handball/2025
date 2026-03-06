@@ -883,8 +883,7 @@ const matchesHallApp = ({ userProfileData }) => {
                         React.createElement(
                             'div', 
                             { className: 'text-2xl font-bold text-blue-600 mt-1 flex items-center justify-center gap-1' },
-                            matchTime,
-                            React.createElement('span', { className: 'text-base font-normal text-blue-500' }, 'hod.')
+                            `${matchTime} hod.`
                         )
                     ),
                     
