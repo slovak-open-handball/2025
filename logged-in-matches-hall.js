@@ -2363,7 +2363,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                     setTimeout(() => addMatchEvent(), 50);
                                                                 } else {
                                                                     // Ostatné udalosti
-                                                                    setEventTeam('home');
+                                                                    setEventTeam('away');
                                                                     setSelectedPlayerForEvent(playerIdentifier);
                                                                     setTimeout(() => addMatchEvent(), 50);
                                                                 }
