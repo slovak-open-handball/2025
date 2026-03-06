@@ -382,7 +382,7 @@ const matchesHallApp = ({ userProfileData }) => {
             console.log('Žiadny startedAt, nastavujem 0');
             setMatchTime(0);
         }
-    }, [selectedMatch]);
+    }, [selectedMatch]); // ZÁVISLOSŤ LEN NA selectedMatch
 
     // Sledovanie zmien matchTime
     useEffect(() => {
@@ -409,23 +409,27 @@ const matchesHallApp = ({ userProfileData }) => {
             const interval = setInterval(() => {
                 const now = Timestamp.now();
                 const startedAt = selectedMatch.startedAt;
-                const elapsedSeconds = Math.floor((now.seconds - startedAt.seconds));
                 
-                console.log('Timer tick - elapsedSeconds:', elapsedSeconds);
-                
-                // OVERENIE: Nastavujeme matchTime?
-                setMatchTime(prevTime => {
-                    console.log('Nastavujem matchTime z', prevTime, 'na', elapsedSeconds);
-                    return elapsedSeconds;
-                });
-                
-                // Automatické zastavenie pri dosiahnutí maxima podľa kategórie
-                const totalPeriodSeconds = (currentCategory.periodDuration || 20) * 60; // prevod na sekundy
-                if (elapsedSeconds >= totalPeriodSeconds && selectedMatch.status === 'in-progress') {
-                    console.log('Dosiahnutý max čas, zastavujem');
-                    // Zastavíme čas
-                    stopMatchTimer(selectedMatch.id);
-                    window.showGlobalNotification(`Koniec ${selectedMatch.currentPeriod}. periódy`, 'info');
+                // DÔLEŽITÉ: Použijeme aktuálny startedAt z selectedMatch, nie z uzavretia
+                // Ak je zápas pozastavený, použijeme pausedAt
+                if (selectedMatch.status === 'paused' && selectedMatch.pausedAt) {
+                    // Pri pozastavení čas nebeží, takže ponecháme aktuálny matchTime
+                    // Toto by sa malo riešiť inde
+                } else {
+                    const elapsedSeconds = Math.floor((now.seconds - startedAt.seconds));
+                    console.log('Timer tick - elapsedSeconds:', elapsedSeconds);
+                    
+                    // OVERENIE: Priamo nastavujeme matchTime
+                    setMatchTime(elapsedSeconds);
+                    
+                    // Automatické zastavenie pri dosiahnutí maxima podľa kategórie
+                    const totalPeriodSeconds = (currentCategory.periodDuration || 20) * 60; // prevod na sekundy
+                    if (elapsedSeconds >= totalPeriodSeconds && selectedMatch.status === 'in-progress') {
+                        console.log('Dosiahnutý max čas, zastavujem');
+                        // Zastavíme čas
+                        stopMatchTimer(selectedMatch.id);
+                        window.showGlobalNotification(`Koniec ${selectedMatch.currentPeriod}. periódy`, 'info');
+                    }
                 }
             }, 1000);
             
@@ -439,7 +443,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 clearInterval(timerInterval);
             }
         };
-    }, [selectedMatch, selectedMatch?.status, selectedMatch?.startedAt, categories]);
+    }, [selectedMatch, selectedMatch?.status, selectedMatch?.startedAt, selectedMatch?.pausedAt, categories]); // PRIDANÉ pausedAt ako závislosť
 
     // Načítanie názvu haly
     useEffect(() => {
