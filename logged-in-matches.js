@@ -6646,8 +6646,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 },
                                                 React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-xs' })
                                             ),
-                                            // Červené tlačidlo pre zmazanie
-                                            React.createElement(
+                                            // Červené tlačidlo pre zmazanie - ZOBRAZÍ SA LEN AK NIE JE PAVÚKOVÝ ZÁPAS
+                                            !match.matchType && React.createElement(
                                                 'button',
                                                 {
                                                     className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
