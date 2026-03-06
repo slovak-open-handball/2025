@@ -259,12 +259,11 @@ const matchesHallApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, [hallId]);
 
-    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA - ROVNAKÁ AKO V DRUHOM KÓDE
+    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA - UPRAVENÁ PRE FORMÁT "skupina X"
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
         
         // Parsujeme identifikátor v tvare "kategória skupinaorder" (napr. "U10 A1")
-        // Rozdelíme podľa medzier - bude to mať 2 časti: [kategória, skupinaorder]
         const parts = identifier.split(' ');
         
         if (parts.length < 2) {
@@ -295,14 +294,14 @@ const matchesHallApp = ({ userProfileData }) => {
             groupName = groupAndOrder;
         }
         
+        // Vytvoríme názov skupiny v tvare "skupina X" (napr. "A" -> "skupina A")
+        const fullGroupName = `skupina ${groupName}`;
+        
         // Hľadáme v teamData
         if (teamData.allTeams && teamData.allTeams.length > 0) {
-            // Pripravíme si groupName s "skupina " pre vyhľadávanie
-            const groupNameWithPrefix = `skupina ${groupName}`;
-            
             const team = teamData.allTeams.find(t => 
                 t.category === category && 
-                (t.groupName === groupNameWithPrefix || t.groupName === groupName) &&
+                t.groupName === fullGroupName && // Používame fullGroupName
                 t.order?.toString() === order
             );
             
@@ -313,11 +312,9 @@ const matchesHallApp = ({ userProfileData }) => {
         
         // Skúsime v __teamManagerData
         if (window.__teamManagerData?.allTeams) {
-            const groupNameWithPrefix = `skupina ${groupName}`;
-            
             const team = window.__teamManagerData.allTeams.find(t => 
                 t.category === category && 
-                (t.groupName === groupNameWithPrefix || t.groupName === groupName) &&
+                t.groupName === fullGroupName && // Používame fullGroupName
                 t.order?.toString() === order
             );
             
