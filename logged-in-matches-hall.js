@@ -865,6 +865,8 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     };
     
+    // Upravte funkciu getPlayerNameFromRef pre členov RT
+
     const getPlayerNameFromRef = (playerRef) => {
         if (!playerRef || !playerRef.userId || !playerRef.teamIdentifier) return 'Neznámy hráč';
         
@@ -886,11 +888,11 @@ const matchesHallApp = ({ userProfileData }) => {
                 if (staffType === 'men' && teamDetails.team.menTeamMemberDetails && 
                     teamDetails.team.menTeamMemberDetails[staffIndex]) {
                     const member = teamDetails.team.menTeamMemberDetails[staffIndex];
-                    return `${member.firstName} ${member.lastName} (tréner)`;
+                    return `${member.firstName} ${member.lastName}`; // Odstránené (tréner)
                 } else if (staffType === 'women' && teamDetails.team.womenTeamMemberDetails && 
                            teamDetails.team.womenTeamMemberDetails[staffIndex]) {
                     const member = teamDetails.team.womenTeamMemberDetails[staffIndex];
-                    return `${member.firstName} ${member.lastName} (trénerka)`;
+                    return `${member.firstName} ${member.lastName}`; // Odstránené (trénerka)
                 }
             }
             return 'Neznámy člen RT';
@@ -2186,7 +2188,8 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 eventDisplay = React.createElement('i', { className: 'fa-solid fa-clock text-gray-600 text-sm' });
                                         }
                                         
-                                        // Vytvoríme grid s 3 stĺpcami
+                                        // V časti matchEvents.map - nahraďte existujúci return
+
                                         return React.createElement(
                                             'div',
                                             {
