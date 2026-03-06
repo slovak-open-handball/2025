@@ -1877,12 +1877,8 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             'span',
                                                             { className: 'font-medium' },
                                                             `${player.firstName} ${player.lastName}`
-                                                        ),
-                                                        player.dateOfBirth && React.createElement(
-                                                            'span',
-                                                            { className: 'text-xs text-gray-500' },
-                                                            `(${new Date(player.dateOfBirth).getFullYear()})`
-                                                        ),
+                                                        )
+                                                        // ✅ ODSTRÁNENÝ rok narodenia
                                                         
                                                         // Zobraziť indikátor, že je možné kliknúť (ak je vybratý typ udalosti)
                                                         eventType && React.createElement(
@@ -2330,12 +2326,8 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             'span',
                                                             { className: 'font-medium' },
                                                             `${player.firstName} ${player.lastName}`
-                                                        ),
-                                                        player.dateOfBirth && React.createElement(
-                                                            'span',
-                                                            { className: 'text-xs text-gray-500' },
-                                                            `(${new Date(player.dateOfBirth).getFullYear()})`
-                                                        ),
+                                                        )
+                                                        // ✅ ODSTRÁNENÝ rok narodenia
                                                         
                                                         eventType && React.createElement(
                                                             'span',
