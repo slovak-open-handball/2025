@@ -180,6 +180,7 @@ const matchesHallApp = ({ userProfileData }) => {
     const [timerInterval, setTimerInterval] = useState(null);
 
     const formatMatchTime = (seconds) => {
+        console.log('formatMatchTime volaný s hodnotou:', seconds);
         // Ochrana proti nečíselným hodnotám
         if (typeof seconds !== 'number' || isNaN(seconds) || seconds < 0) {
             return '00:00';
