@@ -1793,9 +1793,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             window.showGlobalNotification('Gól a 7m hod môžu byť priradené len hráčom', 'error');
                                                             return;
                                                         }
-                                                        setEventTeam('home');
-                                                        setSelectedPlayerForEvent(staffIdentifier);
-                                                        setTimeout(() => addMatchEvent(), 50);
+                                                        addMatchEvent(eventType, 'home', null, staffIdentifier);
                                                     }
                                                 }
                                             },
@@ -1831,9 +1829,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             window.showGlobalNotification('Gól a 7m hod môžu byť priradené len hráčom', 'error');
                                                             return;
                                                         }
-                                                        setEventTeam('home');
-                                                        setSelectedPlayerForEvent(staffIdentifier);
-                                                        setTimeout(() => addMatchEvent(), 50);
+                                                        addMatchEvent(eventType, 'home', null, staffIdentifier);
                                                     }
                                                 }
                                             },
@@ -2295,9 +2291,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             window.showGlobalNotification('Gól a 7m hod môžu byť priradené len hráčom', 'error');
                                                             return;
                                                         }
-                                                        setEventTeam('away');
-                                                        setSelectedPlayerForEvent(staffIdentifier);
-                                                        setTimeout(() => addMatchEvent(), 50);
+                                                        addMatchEvent(eventType, 'away', null, staffIdentifier);
                                                     }
                                                 }
                                             },
@@ -2333,9 +2327,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             window.showGlobalNotification('Gól a 7m hod môžu byť priradené len hráčom', 'error');
                                                             return;
                                                         }
-                                                        setEventTeam('away');
-                                                        setSelectedPlayerForEvent(staffIdentifier);
-                                                        setTimeout(() => addMatchEvent(), 50);
+                                                        addMatchEvent(eventType, 'away', null, staffIdentifier);
                                                     }
                                                 }
                                             },
