@@ -98,7 +98,7 @@ const matcheshallApp = ({ userProfileData }) => {
                 React.createElement(
                     'div',
                     { className: 'mt-2 text-lg text-gray-600' },
-                    `Hala: ${hallName}`
+                    `Športová hala ${hallName}`
                 )
             )
         )
