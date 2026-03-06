@@ -1708,7 +1708,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                         onClick: () => decreasePeriod(selectedMatch.id)
                                     },
                                     React.createElement('i', { className: 'fa-solid fa-minus' }),
-                                    'Perióda -'
+                                    'Perióda'
                                 ),
                                 React.createElement(
                                     'div',
@@ -1722,7 +1722,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                         onClick: () => increasePeriod(selectedMatch.id, category.periods)
                                     },
                                     React.createElement('i', { className: 'fa-solid fa-plus' }),
-                                    'Perióda +'
+                                    'Perióda'
                                 )
                             ),
                             
