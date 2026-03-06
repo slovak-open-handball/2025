@@ -871,6 +871,32 @@ const matchesHallApp = ({ userProfileData }) => {
         const user = users.find(u => u.id === playerRef.userId);
         if (!user) return 'Neznámy hráč';
         
+        // Kontrola, či ide o člena realizačného tímu (staff)
+        if (playerRef.playerId && playerRef.playerId.startsWith('staff-')) {
+            // Získame detail tímu podľa identifikátora
+            const teamDetails = getTeamDetails(playerRef.teamIdentifier);
+            if (!teamDetails) return 'Neznámy člen RT';
+            
+            // Rozdelíme playerId na typ a index (napr. "staff-men-0" -> ["staff", "men", "0"])
+            const parts = playerRef.playerId.split('-');
+            if (parts.length >= 3) {
+                const staffType = parts[1]; // 'men' alebo 'women'
+                const staffIndex = parseInt(parts[2], 10);
+                
+                if (staffType === 'men' && teamDetails.team.menTeamMemberDetails && 
+                    teamDetails.team.menTeamMemberDetails[staffIndex]) {
+                    const member = teamDetails.team.menTeamMemberDetails[staffIndex];
+                    return `${member.firstName} ${member.lastName} (tréner)`;
+                } else if (staffType === 'women' && teamDetails.team.womenTeamMemberDetails && 
+                           teamDetails.team.womenTeamMemberDetails[staffIndex]) {
+                    const member = teamDetails.team.womenTeamMemberDetails[staffIndex];
+                    return `${member.firstName} ${member.lastName} (trénerka)`;
+                }
+            }
+            return 'Neznámy člen RT';
+        }
+        
+        // Pôvodná logika pre hráčov
         const parts = playerRef.teamIdentifier.split(' ');
         const groupAndOrder = parts.pop();
         const category = parts.join(' ');
