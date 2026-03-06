@@ -2068,6 +2068,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 ) : React.createElement(
                                     'div',
                                     { className: 'space-y-2 max-h-60 overflow-y-auto' },
+                                    // V zozname udalostí, približne riadok 2400
                                     matchEvents.map((event) => {
                                         const playerName = event.playerRef ? getPlayerNameFromRef(event.playerRef) : '';
                                         
@@ -2123,7 +2124,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 { className: 'flex items-center gap-3' },
                                                 React.createElement('span', { className: `font-mono text-xs ${eventColor}` }, 
                                                     `${event.minute}:${event.second?.toString().padStart(2, '0') || '00'}'`
-                                                )
+                                                ), // <-- Chýbala čiarka
                                                 React.createElement('i', { className: `fa-solid ${eventIcon} ${eventColor} text-xs` }),
                                                 React.createElement('span', { className: 'text-gray-700' }, eventText),
                                                 React.createElement('span', { className: 'text-xs text-gray-400' }, event.team === 'home' ? '(D)' : '(H)')
