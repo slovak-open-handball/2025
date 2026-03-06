@@ -243,6 +243,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             mapLink?.classList.remove('hidden');
             teamsAccommodationLink?.classList.remove('hidden');
             matchesLink.classList.remove('hidden');
+            matchesHallLink.classList.add('hidden');
     
             const unreadCount = userProfileData.unreadNotificationCount || 0;
             if (notificationsTextWithCount) {
@@ -274,6 +275,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             mapLink?.classList.add('hidden');
             teamsAccommodationLink?.classList.add('hidden');
             matchesLink.classList.add('hidden');
+            matchesHallLink.classList.add('hidden');
             
             if (notificationsTextWithCount) {
                 notificationsTextWithCount.textContent = 'Upozornenia';
@@ -295,6 +297,7 @@ const setupMenuListeners = (userProfileData, db, userId) => {
             mapLink?.classList.add('hidden');
             teamsAccommodationLink?.classList.add('hidden');
             matchesLink.classList.add('hidden');
+            matchesHallLink.classList.add('hidden');
             
             if (notificationsTextWithCount) {
                 notificationsTextWithCount.textContent = 'Upozornenia';
