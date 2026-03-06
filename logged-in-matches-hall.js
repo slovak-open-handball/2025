@@ -1877,7 +1877,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             'span',
                                                             { className: 'font-medium' },
                                                             `${player.firstName} ${player.lastName}`
-                                                        )
+                                                        ),
                                                         // ✅ ODSTRÁNENÝ rok narodenia
                                                         
                                                         // Zobraziť indikátor, že je možné kliknúť (ak je vybratý typ udalosti)
@@ -2327,7 +2327,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             'span',
                                                             { className: 'font-medium' },
                                                             `${player.firstName} ${player.lastName}`
-                                                        )
+                                                        ),
                                                         // ✅ ODSTRÁNENÝ rok narodenia
                                                         
                                                         eventType && React.createElement(
