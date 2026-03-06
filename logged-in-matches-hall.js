@@ -1048,7 +1048,6 @@ const matchesHallApp = ({ userProfileData }) => {
                             React.createElement(
                                 'h3',
                                 { className: 'font-bold text-lg text-gray-800 mb-3 text-center border-b border-gray-200 pb-2' },
-                                'DOMÁCI - ',
                                 homeTeamName
                             ),
                             
@@ -1275,7 +1274,6 @@ const matchesHallApp = ({ userProfileData }) => {
                             React.createElement(
                                 'h3',
                                 { className: 'font-bold text-lg text-gray-800 mb-3 text-center border-b border-gray-200 pb-2' },
-                                'HOSTIA - ',
                                 awayTeamName
                             ),
                             
