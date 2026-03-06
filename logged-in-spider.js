@@ -6662,7 +6662,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
                         'div',
                         { className: 'flex items-center gap-1' },
                         React.createElement('i', { className: 'fa-regular fa-clock text-gray-400 text-xs' }),
-                        React.createElement('span', null, matchTime)
+                        RReact.createElement('span', null, matchTime + ' hod.')
                     ),
     
                     // Miesto (športová hala) v samostatnom riadku
