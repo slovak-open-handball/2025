@@ -177,29 +177,29 @@ const matchesHallApp = ({ userProfileData }) => {
         });
         
         // Vypíšeme tímy podľa kategórií a skupín
-        Object.entries(teamsByCategory).forEach(([category, groups], catIndex) => {
-            console.log(`\nKategória #${catIndex + 1}: ${category}`);
-            
-            Object.entries(groups).forEach(([group, groupTeams]) => {
-                console.log(`  Skupina: ${group}`);
-                
-                // Zoradíme tímy podľa poradia
-                const sortedTeams = [...groupTeams].sort((a, b) => {
-                    const orderA = a.order !== null && a.order !== undefined ? a.order : Infinity;
-                    const orderB = b.order !== null && b.order !== undefined ? b.order : Infinity;
-                    return orderA - orderB;
-                });
-                
-                sortedTeams.forEach((team, teamIndex) => {
-                    const orderText = team.order !== null && team.order !== undefined ? `poradie: ${team.order}` : 'bez poradia';
-                    console.log(`    ${teamIndex + 1}. ${team.teamName} (${orderText})`);
-                    if (team.id) console.log(`       ID: ${team.id}`);
-                    if (team.uid && team.uid !== 'global') console.log(`       UID používateľa: ${team.uid}`);
-                });
-            });
-        });
-        
-        console.log('=========================================');
+//        Object.entries(teamsByCategory).forEach(([category, groups], catIndex) => {
+//            console.log(`\nKategória #${catIndex + 1}: ${category}`);
+//            
+//            Object.entries(groups).forEach(([group, groupTeams]) => {
+//                console.log(`  Skupina: ${group}`);
+//                
+//                // Zoradíme tímy podľa poradia
+//                const sortedTeams = [...groupTeams].sort((a, b) => {
+//                    const orderA = a.order !== null && a.order !== undefined ? a.order : Infinity;
+//                    const orderB = b.order !== null && b.order !== undefined ? b.order : Infinity;
+//                    return orderA - orderB;
+//                });
+//                
+//                sortedTeams.forEach((team, teamIndex) => {
+//                    const orderText = team.order !== null && team.order !== undefined ? `poradie: ${team.order}` : 'bez poradia';
+//                    console.log(`    ${teamIndex + 1}. ${team.teamName} (${orderText})`);
+//                    if (team.id) console.log(`       ID: ${team.id}`);
+//                    if (team.uid && team.uid !== 'global') console.log(`       UID používateľa: ${team.uid}`);
+//                });
+//            });
+//        });
+//        
+//        console.log('=========================================');
     };
 
     // FUNKCIA PRE VYPISOVANIE VŠETKÝCH POUŽÍVATEĽOV V PREHĽADNEJ TABUĽKE
