@@ -98,12 +98,7 @@ const matcheshallApp = ({ userProfileData }) => {
                 React.createElement(
                     'div',
                     { className: 'mt-2 text-lg text-gray-600' },
-                    loading 
-                        ? React.createElement('div', { className: 'flex items-center justify-center' },
-                            React.createElement('div', { className: 'animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500 mr-2' }),
-                            'Načítavam názov haly...'
-                          )
-                        : `Hala: ${hallName}`
+                    `Hala: ${hallName}`
                 )
             )
         )
