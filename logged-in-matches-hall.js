@@ -1742,7 +1742,9 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 key: `home-men-${idx}`, 
                                                 className: 'bg-white p-2 rounded border border-gray-200 text-sm group relative hover:bg-blue-50 transition-colors cursor-pointer',
                                                 onClick: () => {
-                                                    if (eventType && eventTeam === 'home' && (eventType === 'yellow' || eventType === 'red' || eventType === 'blue')) {
+                                                    // ✅ UPRAVENÉ: Povolené všetky typy udalostí pre trénerov
+                                                    if (eventType) {
+                                                        setEventTeam('home');
                                                         setSelectedPlayerForEvent(staffIdentifier);
                                                         setTimeout(() => addMatchEvent(), 100);
                                                     }
@@ -1754,15 +1756,15 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs' }),
                                                 React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`),
                                                 
-                                                eventType && eventTeam === 'home' && (eventType === 'yellow' || eventType === 'red' || eventType === 'blue') && React.createElement(
+                                                eventType && React.createElement(
                                                     'span',
                                                     { className: 'ml-2 text-xs text-green-600 opacity-0 group-hover:opacity-100 transition-opacity' },
-                                                    `➕ ${eventType === 'yellow' ? 'žltá' : eventType === 'red' ? 'červená' : 'modrá'}`
+                                                    `➕ ${eventType === 'goal' ? 'gól' : eventType === 'yellow' ? 'žltá' : eventType === 'red' ? 'červená' : eventType === 'blue' ? 'modrá' : eventType === 'exclusion' ? 'vylúčenie' : '7m'}`
                                                 )
                                             )
                                         );
                                     }),
-                                    
+                                                                        
                                     // Ženy v realizačnom tíme
                                     homeTeamDetails.team.womenTeamMemberDetails && homeTeamDetails.team.womenTeamMemberDetails.length > 0 && 
                                     homeTeamDetails.team.womenTeamMemberDetails.map((member, idx) => {
@@ -1780,7 +1782,9 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 key: `home-women-${idx}`, 
                                                 className: 'bg-white p-2 rounded border border-gray-200 text-sm group relative hover:bg-blue-50 transition-colors cursor-pointer',
                                                 onClick: () => {
-                                                    if (eventType && eventTeam === 'home' && (eventType === 'yellow' || eventType === 'red' || eventType === 'blue')) {
+                                                    // ✅ UPRAVENÉ: Povolené všetky typy udalostí pre trénerky
+                                                    if (eventType) {
+                                                        setEventTeam('home');
                                                         setSelectedPlayerForEvent(staffIdentifier);
                                                         setTimeout(() => addMatchEvent(), 100);
                                                     }
@@ -1792,10 +1796,10 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs' }),
                                                 React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`),
                                                 
-                                                eventType && eventTeam === 'home' && (eventType === 'yellow' || eventType === 'red' || eventType === 'blue') && React.createElement(
+                                                eventType && React.createElement(
                                                     'span',
                                                     { className: 'ml-2 text-xs text-green-600 opacity-0 group-hover:opacity-100 transition-opacity' },
-                                                    `➕ ${eventType === 'yellow' ? 'žltá' : eventType === 'red' ? 'červená' : 'modrá'}`
+                                                    `➕ ${eventType === 'goal' ? 'gól' : eventType === 'yellow' ? 'žltá' : eventType === 'red' ? 'červená' : eventType === 'blue' ? 'modrá' : eventType === 'exclusion' ? 'vylúčenie' : '7m'}`
                                                 )
                                             )
                                         );
@@ -2191,8 +2195,8 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 key: `away-men-${idx}`, 
                                                 className: 'bg-white p-2 rounded border border-gray-200 text-sm group relative hover:bg-blue-50 transition-colors cursor-pointer',
                                                 onClick: () => {
-                                                    // ✅ UPRAVENÉ: Pridaný setEventTeam('away')
-                                                    if (eventType && (eventType === 'yellow' || eventType === 'red' || eventType === 'blue')) {
+                                                    // ✅ UPRAVENÉ: Povolené všetky typy udalostí pre trénerov
+                                                    if (eventType) {
                                                         setEventTeam('away');
                                                         setSelectedPlayerForEvent(staffIdentifier);
                                                         setTimeout(() => addMatchEvent(), 100);
@@ -2205,15 +2209,15 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs' }),
                                                 React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`),
                                                 
-                                                eventType && (eventType === 'yellow' || eventType === 'red' || eventType === 'blue') && React.createElement(
+                                                eventType && React.createElement(
                                                     'span',
                                                     { className: 'ml-2 text-xs text-green-600 opacity-0 group-hover:opacity-100 transition-opacity' },
-                                                    `➕ ${eventType === 'yellow' ? 'žltá' : eventType === 'red' ? 'červená' : 'modrá'}`
+                                                    `➕ ${eventType === 'goal' ? 'gól' : eventType === 'yellow' ? 'žltá' : eventType === 'red' ? 'červená' : eventType === 'blue' ? 'modrá' : eventType === 'exclusion' ? 'vylúčenie' : '7m'}`
                                                 )
                                             )
                                         );
                                     }),
-                                    
+                                                                        
                                     // Ženy v realizačnom tíme
                                     awayTeamDetails.team.womenTeamMemberDetails && awayTeamDetails.team.womenTeamMemberDetails.length > 0 && 
                                     awayTeamDetails.team.womenTeamMemberDetails.map((member, idx) => {
@@ -2231,8 +2235,8 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 key: `away-women-${idx}`, 
                                                 className: 'bg-white p-2 rounded border border-gray-200 text-sm group relative hover:bg-blue-50 transition-colors cursor-pointer',
                                                 onClick: () => {
-                                                    // ✅ UPRAVENÉ: Pridaný setEventTeam('away')
-                                                    if (eventType && (eventType === 'yellow' || eventType === 'red' || eventType === 'blue')) {
+                                                    // ✅ UPRAVENÉ: Povolené všetky typy udalostí pre trénerky
+                                                    if (eventType) {
                                                         setEventTeam('away');
                                                         setSelectedPlayerForEvent(staffIdentifier);
                                                         setTimeout(() => addMatchEvent(), 100);
@@ -2245,10 +2249,10 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs' }),
                                                 React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`),
                                                 
-                                                eventType && (eventType === 'yellow' || eventType === 'red' || eventType === 'blue') && React.createElement(
+                                                eventType && React.createElement(
                                                     'span',
                                                     { className: 'ml-2 text-xs text-green-600 opacity-0 group-hover:opacity-100 transition-opacity' },
-                                                    `➕ ${eventType === 'yellow' ? 'žltá' : eventType === 'red' ? 'červená' : 'modrá'}`
+                                                    `➕ ${eventType === 'goal' ? 'gól' : eventType === 'yellow' ? 'žltá' : eventType === 'red' ? 'červená' : eventType === 'blue' ? 'modrá' : eventType === 'exclusion' ? 'vylúčenie' : '7m'}`
                                                 )
                                             )
                                         );
