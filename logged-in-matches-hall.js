@@ -45,19 +45,22 @@ const getLocalDateStr = (date) => {
     return `${year}-${month}-${day}`;
 };
 
-// Funkcia na získanie parametra z URL
 const getUrlParameter = (name) => {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get(name);
 };
 
 // Funkcia na aktualizáciu URL bez reloadu
-const updateUrlParameter = (paramName, paramValue) => {
+const updateUrlParameters = (homeIdentifier, awayIdentifier) => {
     const url = new URL(window.location.href);
-    if (paramValue) {
-        url.searchParams.set(paramName, paramValue);
+    if (homeIdentifier && awayIdentifier) {
+        url.searchParams.set('domaci', homeIdentifier);
+        url.searchParams.set('hostia', awayIdentifier);
+        // Odstránime starý parameter match ak existuje
+        url.searchParams.delete('match');
     } else {
-        url.searchParams.delete(paramName);
+        url.searchParams.delete('domaci');
+        url.searchParams.delete('hostia');
     }
     window.history.replaceState({}, '', url);
 };
@@ -623,10 +626,17 @@ const matchesHallApp = ({ userProfileData }) => {
             console.log(`Celkový počet zápasov: ${loadedMatches.length}`);
             console.log('=================================');
             
-            // Skontrolujeme URL parameter pre zápas
-            const matchIdFromUrl = getUrlParameter('match');
-            if (matchIdFromUrl && !selectedMatch) {
-                const matchFromUrl = loadedMatches.find(m => m.id === matchIdFromUrl);
+            // Skontrolujeme URL parametre pre domácich a hostí
+            const homeIdentifierFromUrl = getUrlParameter('domaci');
+            const awayIdentifierFromUrl = getUrlParameter('hostia');
+            
+            if (homeIdentifierFromUrl && awayIdentifierFromUrl && !selectedMatch) {
+                // Hľadáme zápas, ktorý má oba identifikátory
+                const matchFromUrl = loadedMatches.find(m => 
+                    m.homeTeamIdentifier === homeIdentifierFromUrl && 
+                    m.awayTeamIdentifier === awayIdentifierFromUrl
+                );
+                
                 if (matchFromUrl) {
                     setSelectedMatch(matchFromUrl);
                 }
@@ -746,13 +756,13 @@ const matchesHallApp = ({ userProfileData }) => {
     // FUNKCIA PRE ZOBRAZENIE VŠETKÝCH ZÁPASOV
     const showAllMatches = () => {
         setSelectedMatch(null);
-        updateUrlParameter('match', null); // Odstránime parameter z URL
+        updateUrlParameters(null, null); // Odstránime parametre z URL
     };
 
     // FUNKCIA PRE VÝBER ZÁPASU
-    const selectMatch = (match) => {
+     const selectMatch = (match) => {
         setSelectedMatch(match);
-        updateUrlParameter('match', match.id); // Pridáme ID zápasu do URL
+        updateUrlParameters(match.homeTeamIdentifier, match.awayTeamIdentifier);
     };
 
     // Zoradenie dní podľa dátumu
