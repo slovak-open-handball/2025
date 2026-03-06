@@ -410,18 +410,28 @@ const matchesHallApp = ({ userProfileData }) => {
             // Uložíme startedAt do premennej mimo interval
             const startedAt = selectedMatch.startedAt;
             const matchId = selectedMatch.id;
-            const currentPeriod = selectedMatch.currentPeriod || 1;
+            let currentPeriod = selectedMatch.currentPeriod || 1;
             
-            // Výpočet celkového času pre aktuálnu periódu
-            // Každá perióda má svoj vlastný čas (periodDuration)
-            // Čas sa počíta od začiatku zápasu, ale zastavuje sa na konci každej periódy
-            const periodDurationSeconds = (currentCategory.periodDuration || 20) * 60; // dĺžka jednej periódy v sekundách
+            // Dĺžka jednej periódy v sekundách
+            const periodDurationSeconds = (currentCategory.periodDuration || 20) * 60;
+            // Dĺžka prestávky medzi periódami v sekundách
+            const breakDurationSeconds = (currentCategory.breakDuration || 2) * 60;
             
-            // Celkový čas, ktorý by mal uplynúť do konca aktuálnej periódy
-            // Je to: (currentPeriod - 1) * periodDurationSeconds (predchádzajúce periódy) + periodDurationSeconds (aktuálna)
-            const totalElapsedForCurrentPeriod = currentPeriod * periodDurationSeconds;
+            // Vypočítame, v akej fáze sa zápas nachádza
+            // Pre 1. periódu: 0 - periodDurationSeconds
+            // Prestávka po 1. perióde: periodDurationSeconds - periodDurationSeconds + breakDurationSeconds
+            // Pre 2. periódu: periodDurationSeconds + breakDurationSeconds - 2*periodDurationSeconds + breakDurationSeconds
+            // atď.
             
-            console.log(`Perióda ${currentPeriod}/${currentCategory.periods}, dĺžka periódy: ${periodDurationSeconds}s, celkový čas do konca: ${totalElapsedForCurrentPeriod}s`);
+            // Celkový čas do konca aktuálnej periódy (vrátane prestávok)
+            // Pre aktuálnu periódu currentPeriod:
+            // - Predchádzajúce periódy: (currentPeriod - 1) * periodDurationSeconds
+            // - Prestávky medzi periódami: (currentPeriod - 1) * breakDurationSeconds
+            // - Aktuálna perióda: periodDurationSeconds
+            const totalElapsedForCurrentPeriod = (currentPeriod - 1) * (periodDurationSeconds + breakDurationSeconds) + periodDurationSeconds;
+            
+            console.log(`Perióda ${currentPeriod}/${currentCategory.periods}, dĺžka periódy: ${periodDurationSeconds}s, prestávka: ${breakDurationSeconds}s`);
+            console.log(`Celkový čas do konca ${currentPeriod}. periódy: ${totalElapsedForCurrentPeriod}s`);
             
             const interval = setInterval(() => {
                 const now = Timestamp.now();
@@ -441,12 +451,16 @@ const matchesHallApp = ({ userProfileData }) => {
                 if (elapsedSeconds >= totalElapsedForCurrentPeriod) {
                     console.log(`Dosiahnutý koniec ${currentPeriod}. periódy, elapsedSeconds: ${elapsedSeconds} >= ${totalElapsedForCurrentPeriod}`);
                     
-                    // Ak to nie je posledná perióda, zvýšime číslo periódy
+                    // Ak to nie je posledná perióda
                     if (currentPeriod < currentCategory.periods) {
-                        console.log(`Zvyšujem periódu na ${currentPeriod + 1}`);
-                        // Zvýšime periódu v databáze
-                        increasePeriod(matchId, currentCategory.periods);
-                        window.showGlobalNotification(`Koniec ${currentPeriod}. periódy`, 'info');
+                        console.log(`Koniec ${currentPeriod}. periódy, začína prestávka`);
+                        
+                        // Zastavíme časovač (prestávka)
+                        stopMatchTimer(matchId);
+                        window.showGlobalNotification(`Koniec ${currentPeriod}. periódy - prestávka ${currentCategory.breakDuration} min`, 'info');
+                        
+                        // Počkáme na manuálne spustenie ďalšej periódy
+                        // increasePeriod sa zavolá manuálne cez tlačidlo "Perióda +"
                     } else {
                         // Ak je to posledná perióda, ukončíme zápas
                         console.log('Posledná perióda, ukončujem zápas');
