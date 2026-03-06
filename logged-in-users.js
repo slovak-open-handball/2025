@@ -1203,8 +1203,8 @@ function UsersManagementApp() {
                       },
                       'Upraviť rolu'
                     ),
-                    // Nové tlačidlo "Priradiť halu" - zobrazí sa pre všetkých používateľov okrem aktuálneho a superadmina
-                    (window.isCurrentUserAdmin && isNotCurrentUser && !isUserOldestAdmin) && React.createElement(
+                    // UPRAVENÉ: Tlačidlo "Priradiť halu" - zobrazí sa IBA pre používateľov s rolou 'hall'
+                    (window.isCurrentUserAdmin && isNotCurrentUser && !isUserOldestAdmin && user.role === 'hall') && React.createElement(
                       'button',
                       {
                         onClick: () => setUserToAssignHall(user),
