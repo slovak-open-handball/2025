@@ -899,6 +899,8 @@ const matchesHallApp = ({ userProfileData }) => {
         );
     }
 
+    // ... (zvyšok kódu zostáva rovnaký)
+
     // Inak zobrazíme zoznam všetkých zápasov
     return React.createElement(
         'div',
@@ -924,14 +926,14 @@ const matchesHallApp = ({ userProfileData }) => {
                     hallName
                 )
             ),
-
+    
             // Indikátor načítavania
             loading && React.createElement(
                 'div',
                 { className: 'flex justify-center items-center py-12' },
                 React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500' })
             ),
-
+    
             // Žiadne zápasy
             !loading && matches.length === 0 && React.createElement(
                 'div',
@@ -939,7 +941,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-5xl mb-4 opacity-30' }),
                 React.createElement('p', { className: 'text-xl' }, 'Pre túto halu nie sú naplánované žiadne zápasy')
             ),
-
+    
             // Zápasy zoskupené podľa dní
             !loading && matches.length > 0 && React.createElement(
                 'div',
@@ -965,7 +967,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 )
                             )
                         ),
-
+    
                         // Zoznam zápasov pre tento deň
                         React.createElement(
                             'div',
@@ -975,6 +977,31 @@ const matchesHallApp = ({ userProfileData }) => {
                                 const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
                                 const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
                                 const category = categories.find(c => c.name === match.categoryName);
+                                
+                                // Zistenie, či má zápas typ (finále, semifinále, o umiestnenie)
+                                const hasMatchType = match.isPlacementMatch || match.matchType;
+                                
+                                // Príprava textu pre skupinu alebo typ zápasu
+                                let groupOrTypeText = '';
+                                let groupOrTypeClass = '';
+                                
+                                if (hasMatchType) {
+                                    // Ak má zápas typ, zobrazíme typ
+                                    if (match.isPlacementMatch) {
+                                        groupOrTypeText = `o ${match.placementRank}. miesto`;
+                                    } else {
+                                        groupOrTypeText = match.matchType;
+                                    }
+                                    groupOrTypeClass = 'bg-purple-100 text-purple-700';
+                                } else if (match.groupName) {
+                                    // Ak má skupinu, zobrazíme skupinu
+                                    groupOrTypeText = match.groupName;
+                                    groupOrTypeClass = 'bg-green-100 text-green-700';
+                                } else {
+                                    // Ak nemá nič, zobrazíme pomlčku
+                                    groupOrTypeText = '—';
+                                    groupOrTypeClass = 'bg-gray-100 text-gray-500';
+                                }
                                 
                                 return React.createElement(
                                     'div',
@@ -995,7 +1022,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement('span', { className: 'font-mono font-medium' }, formatTime(match.scheduledTime))
                                         ),
                                         
-                                        // VS - TERAZ ZOBRAZUJEME NÁZVY TÍMOV
+                                        // VS - ZOBRAZUJEME NÁZVY TÍMOV
                                         React.createElement(
                                             'div',
                                             { className: 'flex items-center gap-3 flex-1' },
@@ -1016,13 +1043,22 @@ const matchesHallApp = ({ userProfileData }) => {
                                         category && React.createElement(
                                             'span',
                                             { 
-                                                className: 'px-3 py-1 text-xs font-medium rounded-full',
+                                                className: 'px-3 py-1 text-xs font-medium rounded-full mr-2',
                                                 style: { 
                                                     backgroundColor: '#EFF6FF',
                                                     color: '#1E40AF'
                                                 }
                                             },
                                             category.name
+                                        ),
+                                        
+                                        // Skupina alebo typ zápasu
+                                        React.createElement(
+                                            'span',
+                                            { 
+                                                className: `px-3 py-1 text-xs font-medium rounded-full ${groupOrTypeClass}`,
+                                            },
+                                            groupOrTypeText
                                         )
                                     )
                                 );
