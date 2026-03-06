@@ -6442,7 +6442,7 @@ const MatchCell = ({ match, title = '', matchType, userProfileData, generationIn
             React.createElement(
                 'div',
                 { 
-                    className: 'border-2 border-gray-300 rounded-lg p-3 min-w-[240px] bg-white shadow-sm group relative',
+                    className: 'border-2 border-gray-300 rounded-lg p-3 min-w-[200px] bg-white shadow-sm group relative',
                     'data-match-id': match.id,
                     style: { 
                         zIndex: isDeleteModalOpen || teamToRemove ? 1 : 10,
