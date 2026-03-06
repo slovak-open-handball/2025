@@ -105,6 +105,52 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
+const getPlayersForTeam = (teamDetails) => {
+    if (!teamDetails || !teamDetails.team || !teamDetails.team.playerDetails) return [];
+    
+    return teamDetails.team.playerDetails.map((player, index) => ({
+        ...player,
+        userId: teamDetails.userId,
+        teamIdentifier: teamDetails.team.id || `${teamDetails.team.category} ${teamDetails.team.groupName?.replace('skupina ', '')}${teamDetails.team.order}`,
+        playerId: player.id || `${player.firstName} ${player.lastName}`,
+        displayName: `${player.firstName} ${player.lastName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`
+    }));
+};
+
+const getStaffForTeam = (teamDetails) => {
+    if (!teamDetails || !teamDetails.team) return [];
+    
+    const staff = [];
+    
+    if (teamDetails.team.menTeamMemberDetails) {
+        teamDetails.team.menTeamMemberDetails.forEach((member, index) => {
+            staff.push({
+                ...member,
+                userId: teamDetails.userId,
+                teamIdentifier: teamDetails.team.id || `${teamDetails.team.category} ${teamDetails.team.groupName?.replace('skupina ', '')}${teamDetails.team.order}`,
+                playerId: `staff-men-${index}`,
+                displayName: `${member.firstName} ${member.lastName} (tréner)`,
+                isStaff: true
+            });
+        });
+    }
+    
+    if (teamDetails.team.womenTeamMemberDetails) {
+        teamDetails.team.womenTeamMemberDetails.forEach((member, index) => {
+            staff.push({
+                ...member,
+                userId: teamDetails.userId,
+                teamIdentifier: teamDetails.team.id || `${teamDetails.team.category} ${teamDetails.team.groupName?.replace('skupina ', '')}${teamDetails.team.order}`,
+                playerId: `staff-women-${index}`,
+                displayName: `${member.firstName} ${member.lastName} (trénerka)`,
+                isStaff: true
+        });
+        });
+    }
+    
+    return staff;
+};
+
 const matchesHallApp = ({ userProfileData }) => {
     // Extrahujeme hallId z userProfileData
     const hallId = userProfileData?.hallId;
@@ -508,52 +554,6 @@ const matchesHallApp = ({ userProfileData }) => {
         }
         
         return 'Neznámy hráč';
-    };
-    
-    const getPlayersForTeam = (teamDetails) => {
-        if (!teamDetails || !teamDetails.team || !teamDetails.team.playerDetails) return [];
-        
-        return teamDetails.team.playerDetails.map((player, index) => ({
-            ...player,
-            userId: teamDetails.userId,
-            teamIdentifier: teamDetails.team.id || `${teamDetails.team.category} ${teamDetails.team.groupName?.replace('skupina ', '')}${teamDetails.team.order}`,
-            playerId: player.id || `${player.firstName} ${player.lastName}`,
-            displayName: `${player.firstName} ${player.lastName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`
-        }));
-    };
-    
-    const getStaffForTeam = (teamDetails) => {
-        if (!teamDetails || !teamDetails.team) return [];
-        
-        const staff = [];
-        
-        if (teamDetails.team.menTeamMemberDetails) {
-            teamDetails.team.menTeamMemberDetails.forEach((member, index) => {
-                staff.push({
-                    ...member,
-                    userId: teamDetails.userId,
-                    teamIdentifier: teamDetails.team.id || `${teamDetails.team.category} ${teamDetails.team.groupName?.replace('skupina ', '')}${teamDetails.team.order}`,
-                    playerId: `staff-men-${index}`,
-                    displayName: `${member.firstName} ${member.lastName} (tréner)`,
-                    isStaff: true
-                });
-            });
-        }
-        
-        if (teamDetails.team.womenTeamMemberDetails) {
-            teamDetails.team.womenTeamMemberDetails.forEach((member, index) => {
-                staff.push({
-                    ...member,
-                    userId: teamDetails.userId,
-                    teamIdentifier: teamDetails.team.id || `${teamDetails.team.category} ${teamDetails.team.groupName?.replace('skupina ', '')}${teamDetails.team.order}`,
-                    playerId: `staff-women-${index}`,
-                    displayName: `${member.firstName} ${member.lastName} (trénerka)`,
-                    isStaff: true
-            });
-            });
-        }
-        
-        return staff;
     };
 
     // Načítanie kategórií z databázy
