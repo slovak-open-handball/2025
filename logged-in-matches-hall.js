@@ -1864,16 +1864,19 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         onClick: () => {
                                                             if (eventType) {
                                                                 if (eventType === 'penalty') {
-                                                                    // Režim 7m bez gólu = nepremenený
-                                                                    addMatchEvent('penalty', 'home', 'missed', playerIdentifier);
-                                                                } else if (eventType === 'goal' && eventSubType === 'scored') {
-                                                                    // Režim 7m + gól = premenený
-                                                                    addMatchEvent('penalty', 'home', 'scored', playerIdentifier);
+                                                                    // Skontrolujeme, či je aktívny premenený 7m (cez eventSubType)
+                                                                    if (eventSubType === 'scored') {
+                                                                        // Premenený 7m
+                                                                        addMatchEvent('penalty', 'home', 'scored', playerIdentifier);
+                                                                    } else {
+                                                                        // Nepremenený 7m (štandardne)
+                                                                        addMatchEvent('penalty', 'home', 'missed', playerIdentifier);
+                                                                    }
                                                                 } else if (eventType === 'goal') {
                                                                     // Normálny gól
                                                                     addMatchEvent('goal', 'home', null, playerIdentifier);
                                                                 } else {
-                                                                    // Ostatné udalosti
+                                                                    // Ostatné udalosti (karty, vylúčenia)
                                                                     addMatchEvent(eventType, 'home', null, playerIdentifier);
                                                                 }
                                                             }
@@ -2359,20 +2362,23 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     { 
                                                         key: `away-player-${idx}`, 
                                                         className: 'bg-white p-2 rounded border border-gray-200 text-sm group relative hover:bg-blue-50 transition-colors cursor-pointer',
-                                                        // Pre hostujuci tím
+                                                        // Pre hosťovský tím - nahraďte onClick handler
                                                         onClick: () => {
                                                             if (eventType) {
                                                                 if (eventType === 'penalty') {
-                                                                    // Režim 7m bez gólu = nepremenený
-                                                                    addMatchEvent('penalty', 'away', 'missed', playerIdentifier);
-                                                                } else if (eventType === 'goal' && eventSubType === 'scored') {
-                                                                    // Režim 7m + gól = premenený
-                                                                    addMatchEvent('penalty', 'away', 'scored', playerIdentifier);
+                                                                    // Skontrolujeme, či je aktívny premenený 7m (cez eventSubType)
+                                                                    if (eventSubType === 'scored') {
+                                                                        // Premenený 7m
+                                                                        addMatchEvent('penalty', 'away', 'scored', playerIdentifier);
+                                                                    } else {
+                                                                        // Nepremenený 7m (štandardne)
+                                                                        addMatchEvent('penalty', 'away', 'missed', playerIdentifier);
+                                                                    }
                                                                 } else if (eventType === 'goal') {
                                                                     // Normálny gól
                                                                     addMatchEvent('goal', 'away', null, playerIdentifier);
                                                                 } else {
-                                                                    // Ostatné udalosti
+                                                                    // Ostatné udalosti (karty, vylúčenia)
                                                                     addMatchEvent(eventType, 'away', null, playerIdentifier);
                                                                 }
                                                             }
