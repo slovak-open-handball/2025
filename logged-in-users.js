@@ -523,10 +523,11 @@ function UsersManagementApp() {
   const [notification, setNotification] = useState({ message: '', type: 'info' });
   const [userToEdit, setUserToEdit] = useState(null);
   const [userToDelete, setUserToDelete] = useState(null);
-  const [userToAssignHall, setUserToAssignHall] = useState(null); // Nový stav pre priradenie haly
+  const [userToAssignHall, setUserToAssignHall] = useState(null);
   const [oldestAdminId, setOldestAdminId] = useState(null);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState([]);
+  const [hallNames, setHallNames] = useState({}); // Nový stav pre uchovávanie názvov hál
   // Nové stavy pre modálne okno úpravy dátumu
   const [showDateEditModal, setShowDateEditModal] = useState(false);
   const [dateToEditUser, setDateToEditUser] = useState(null);
@@ -543,6 +544,30 @@ function UsersManagementApp() {
     dataEditDeadline: null,
     rosterEditDeadline: null
   });
+
+  // Funkcia na načítanie názvov hál podľa ID
+  const fetchHallNames = async (hallIds) => {
+    const uniqueHallIds = [...new Set(hallIds.filter(id => id))];
+    const newHallNames = { ...hallNames };
+    
+    for (const hallId of uniqueHallIds) {
+      if (!newHallNames[hallId]) {
+        try {
+          const hallDoc = await getDoc(doc(db, 'places', hallId));
+          if (hallDoc.exists()) {
+            newHallNames[hallId] = hallDoc.data().name || 'Neznámy názov';
+          } else {
+            newHallNames[hallId] = 'Neznáma hala';
+          }
+        } catch (error) {
+          console.error('Chyba pri načítaní názvu haly:', error);
+          newHallNames[hallId] = 'Chyba načítania';
+        }
+      }
+    }
+    
+    setHallNames(newHallNames);
+  };
 
   // Funkcia na preklad anglických rolí na slovenské
   const getTranslatedRole = (role) => {
@@ -717,6 +742,13 @@ function UsersManagementApp() {
         }
 
         setUsers(usersList);
+        
+        // Načítanie názvov hál pre všetkých používateľov
+        const hallIds = usersList.map(user => user.hallId).filter(id => id);
+        if (hallIds.length > 0) {
+          fetchHallNames(hallIds);
+        }
+        
         setLoading(false);
       }, (error) => {
         console.error("Chyba při načítání uživatelů:", error);
@@ -805,6 +837,11 @@ function UsersManagementApp() {
           const hallDoc = await getDoc(doc(db, 'places', hallId));
           if (hallDoc.exists()) {
             hallNameForLog = hallDoc.data().name || 'neznáma hala';
+            // Aktualizujeme stav s názvami hál
+            setHallNames(prev => ({
+              ...prev,
+              [hallId]: hallNameForLog
+            }));
           }
         } catch (error) {
           console.error('Chyba pri načítaní názvu haly:', error);
@@ -820,11 +857,7 @@ function UsersManagementApp() {
       
       await updateDoc(userDocRef, updateData);
       
-      const oldHallName = oldHallId === 'žiadna' ? 'žiadna' : (() => {
-        // Pokúsime sa nájsť názov starej haly v users liste (ak je uložený)
-        // Toto je zjednodušené, v reáli by sme možno chceli načítať názov z places
-        return oldHallId || 'žiadna';
-      })();
+      const oldHallName = oldHallId === 'žiadna' ? 'žiadna' : (hallNames[oldHallId] || oldHallId);
       
       setNotification({ message: `Hala bola ${hallId ? 'priradená' : 'odstránená'} pre používateľa ${userToUpdate.firstName} ${userToUpdate.lastName}.`, type: 'success' });
       
@@ -1158,11 +1191,7 @@ function UsersManagementApp() {
                   colSpan: "2",
                   className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-medium'
                 },
-                user.hallId ? (() => {
-                  // Pre zjednodušenie zobrazujeme placeholder, v reáli by sme chceli načítať názov haly
-                  // Môžeme pridať stav pre ukladanie názvov hál alebo ich načítať priamo tu
-                  return `Priradená hala: ${user.hallName || 'ID: ' + user.hallId}`;
-                })() : 'Žiadna priradená hala'
+                user.hallId ? (hallNames[user.hallId] || 'Načítavam...') : 'Žiadna priradená hala'
               ),
               
               // PRE OSTATNÉ ROLY: Štandardné zobrazenie dátumov
@@ -1216,14 +1245,14 @@ function UsersManagementApp() {
                       },
                       'Upraviť rolu'
                     ),
-                    // Tlačidlo "Priradiť halu" - zobrazí sa IBA pre používateľov s rolou 'hall'
+                    // UPRAVENÉ: Tlačidlo "Priradiť halu" / "Upraviť halu" - zobrazí sa IBA pre používateľov s rolou 'hall'
                     (window.isCurrentUserAdmin && isNotCurrentUser && !isUserOldestAdmin && user.role === 'hall') && React.createElement(
                       'button',
                       {
                         onClick: () => setUserToAssignHall(user),
                         className: 'bg-brown-600 text-white px-4 py-2 rounded-full shadow-md hover:bg-brown-700 transition-colors duration-200 ease-in-out mr-2'
                       },
-                      'Priradiť halu'
+                      user.hallId ? 'Upraviť halu' : 'Priradiť halu'
                     )
                   ) : null,
                 // Tlačidlo "Odstrániť" sa zobrazí len pre superadministrátora, a to pre všetkých ostatných používateľov okrem neho samotného
