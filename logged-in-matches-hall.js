@@ -2070,19 +2070,19 @@ const matchesHallApp = ({ userProfileData }) => {
                                             case 'yellow':
                                                 eventDisplay = React.createElement(
                                                     'div',
-                                                    { className: 'w-4 h-5 bg-yellow-400 rounded' }
+                                                    { className: 'w-4 h-5 bg-yellow-400 rounded-sm' }
                                                 );
                                                 break;
                                             case 'red':
                                                 eventDisplay = React.createElement(
                                                     'div',
-                                                    { className: 'w-4 h-5 bg-red-600 rounded' }
+                                                    { className: 'w-4 h-5 bg-red-600 rounded-sm' }
                                                 );
                                                 break;
                                             case 'blue':
                                                 eventDisplay = React.createElement(
                                                     'div',
-                                                    { className: 'w-4 h-5 bg-blue-600 rounded' }
+                                                    { className: 'w-4 h-5 bg-blue-600 rounded-sm' }
                                                 );
                                                 break;
                                             case 'exclusion':
