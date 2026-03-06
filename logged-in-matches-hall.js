@@ -94,6 +94,7 @@ const matchesHallApp = ({ userProfileData }) => {
     const [teamData, setTeamData] = useState({ allTeams: [] });
     const [groupedMatches, setGroupedMatches] = useState({});
     const [categories, setCategories] = useState([]);
+    const [groupsByCategory, setGroupsByCategory] = useState({}); // NOVÝ STAV PRE SKUPINY
     
     // Načítanie názvu haly
     useEffect(() => {
@@ -163,6 +164,15 @@ const matchesHallApp = ({ userProfileData }) => {
                     });
                     
                     setCategories(categoriesList);
+                    console.log('=== NAČÍTANÉ KATEGÓRIE ===');
+                    console.log('Počet kategórií:', categoriesList.length);
+                    categoriesList.forEach((cat, index) => {
+                        console.log(`Kategória #${index + 1}:`, {
+                            id: cat.id,
+                            name: cat.name
+                        });
+                    });
+                    console.log('===========================');
                 }
             } catch (error) {
                 console.error("Chyba pri načítaní kategórií:", error);
@@ -171,6 +181,76 @@ const matchesHallApp = ({ userProfileData }) => {
         
         loadCategorySettings();
     }, []);
+
+    // Načítanie skupín z databázy
+    useEffect(() => {
+        if (!window.db) return;
+
+        console.log('Načítavam skupiny z databázy...');
+
+        const loadGroups = async () => {
+            try {
+                const groupsRef = doc(window.db, 'settings', 'groups');
+                const groupsSnap = await getDoc(groupsRef);
+                
+                if (groupsSnap.exists()) {
+                    const groupsData = groupsSnap.data();
+                    setGroupsByCategory(groupsData);
+                    
+                    console.log('=== NAČÍTANÉ SKUPINY PODĽA KATEGÓRIÍ ===');
+                    
+                    // Pre každú kategóriu vypíšeme jej skupiny
+                    Object.entries(groupsData).forEach(([categoryId, groups], catIndex) => {
+                        // Nájdeme názov kategórie podľa ID
+                        const category = categories.find(c => c.id === categoryId);
+                        const categoryName = category ? category.name : `Neznáma kategória (ID: ${categoryId})`;
+                        
+                        console.log(`Kategória #${catIndex + 1}: ${categoryName} (ID: ${categoryId})`);
+                        console.log(`  Počet skupín: ${groups.length}`);
+                        
+                        // Rozdelíme skupiny podľa typu
+                        const basicGroups = groups.filter(g => g.type === 'základná skupina');
+                        const superGroups = groups.filter(g => g.type === 'nadstavbová skupina');
+                        
+                        console.log(`  Základné skupiny (${basicGroups.length}):`);
+                        basicGroups.forEach((group, groupIndex) => {
+                            console.log(`    ${groupIndex + 1}. ${group.name}`);
+                        });
+                        
+                        console.log(`  Nadstavbové skupiny (${superGroups.length}):`);
+                        superGroups.forEach((group, groupIndex) => {
+                            console.log(`    ${groupIndex + 1}. ${group.name}`);
+                        });
+                        console.log('  ---');
+                    });
+                    
+                    console.log('===========================================');
+                    
+                } else {
+                    console.log('Dokument groups neexistuje');
+                    setGroupsByCategory({});
+                }
+            } catch (error) {
+                console.error('Chyba pri načítaní skupín:', error);
+                setGroupsByCategory({});
+            }
+        };
+        
+        loadGroups();
+        
+        // Môžeme pridať aj real-time listener pre skupiny
+        const unsubscribeGroups = onSnapshot(doc(window.db, 'settings', 'groups'), (docSnap) => {
+            if (docSnap.exists()) {
+                const groupsData = docSnap.data();
+                setGroupsByCategory(groupsData);
+                console.log('Skupiny boli aktualizované v reálnom čase');
+            }
+        }, (error) => {
+            console.error('Chyba pri real-time sledovaní skupín:', error);
+        });
+        
+        return () => unsubscribeGroups();
+    }, [categories]); // Závisí od categories, aby sme mohli zobraziť názvy kategórií
 
     // Načítanie zápasov pre túto halu
     useEffect(() => {
