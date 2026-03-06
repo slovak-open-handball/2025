@@ -2054,8 +2054,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     'Zatiaľ žiadne udalosti'
                                 ) : React.createElement(
                                     'div',
-                                    { className: 'space-y-2' }, // Odstránené max-h-60 a overflow-y-auto
-                                    // V zozname udalostí, približne riadok 2400
+                                    { className: 'space-y-2' },
                                     matchEvents.map((event) => {
                                         const playerName = event.playerRef ? getPlayerNameFromRef(event.playerRef) : '';
                                         
@@ -2100,31 +2099,59 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 eventText = 'Neznáma udalosť';
                                         }
                                         
-                                        return React.createElement(
-                                            'div',
-                                            {
-                                                key: event.id,
-                                                className: 'flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200 text-sm group'
-                                            },
-                                            React.createElement(
+                                        // Ak je udalosť pre domácich, zobrazíme ju vľavo, ak pre hostí, vpravo
+                                        if (event.team === 'home') {
+                                            return React.createElement(
                                                 'div',
-                                                { className: 'flex items-center gap-3' },
-                                                React.createElement('span', { className: `font-mono text-xs ${eventColor}` }, 
-                                                    `${event.minute}:${event.second?.toString().padStart(2, '0') || '00'}`
-                                                ), 
-                                                React.createElement('i', { className: `fa-solid ${eventIcon} ${eventColor} text-xs` }),
-                                                React.createElement('span', { className: 'text-gray-700' }, eventText),
-                                                React.createElement('span', { className: 'text-xs text-gray-400' }, event.team === 'home' ? '(D)' : '(H)'),
-                                            ),
-                                            (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && React.createElement(
-                                                'button',
                                                 {
-                                                    className: 'opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700',
-                                                    onClick: () => deleteMatchEvent(event.id)
+                                                    key: event.id,
+                                                    className: 'flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200 text-sm group'
                                                 },
-                                                React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
-                                            )
-                                        );
+                                                React.createElement(
+                                                    'div',
+                                                    { className: 'flex items-center gap-3' },
+                                                    React.createElement('span', { className: `font-mono text-xs ${eventColor}` }, 
+                                                        `${event.minute}:${event.second?.toString().padStart(2, '0') || '00'}`
+                                                    ),
+                                                    React.createElement('i', { className: `fa-solid ${eventIcon} ${eventColor} text-xs` }),
+                                                    React.createElement('span', { className: 'text-gray-700' }, eventText)
+                                                ),
+                                                (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && React.createElement(
+                                                    'button',
+                                                    {
+                                                        className: 'opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700',
+                                                        onClick: () => deleteMatchEvent(event.id)
+                                                    },
+                                                    React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                                )
+                                            );
+                                        } else {
+                                            // Udalosť pre hostí - zarovnaná doprava
+                                            return React.createElement(
+                                                'div',
+                                                {
+                                                    key: event.id,
+                                                    className: 'flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200 text-sm group'
+                                                },
+                                                (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && React.createElement(
+                                                    'button',
+                                                    {
+                                                        className: 'opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700',
+                                                        onClick: () => deleteMatchEvent(event.id)
+                                                    },
+                                                    React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                                ),
+                                                React.createElement(
+                                                    'div',
+                                                    { className: 'flex items-center gap-3 ml-auto' },
+                                                    React.createElement('span', { className: 'text-gray-700' }, eventText),
+                                                    React.createElement('i', { className: `fa-solid ${eventIcon} ${eventColor} text-xs` }),
+                                                    React.createElement('span', { className: `font-mono text-xs ${eventColor}` }, 
+                                                        `${event.minute}:${event.second?.toString().padStart(2, '0') || '00'}`
+                                                    )
+                                                )
+                                            );
+                                        }
                                     })
                                 )
                             )
