@@ -441,7 +441,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 clearInterval(timerInterval);
             }
         };
-    }, [selectedMatch, selectedMatch?.status, selectedMatch?.startedAt, selectedMatch?.pausedAt, categories, matchTime]); // PRIDANÉ matchTime ako závislosť
+    }, [selectedMatch, selectedMatch?.status, selectedMatch?.startedAt, selectedMatch?.pausedAt, categories]); // ODSTRÁNENÉ matchTime zo závislostí
 
     // Načítanie názvu haly
     useEffect(() => {
