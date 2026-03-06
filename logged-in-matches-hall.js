@@ -410,7 +410,18 @@ const matchesHallApp = ({ userProfileData }) => {
             // Uložíme startedAt do premennej mimo interval
             const startedAt = selectedMatch.startedAt;
             const matchId = selectedMatch.id;
-            const currentPeriod = selectedMatch.currentPeriod;
+            const currentPeriod = selectedMatch.currentPeriod || 1;
+            
+            // Výpočet celkového času pre aktuálnu periódu
+            // Každá perióda má svoj vlastný čas (periodDuration)
+            // Čas sa počíta od začiatku zápasu, ale zastavuje sa na konci každej periódy
+            const periodDurationSeconds = (currentCategory.periodDuration || 20) * 60; // dĺžka jednej periódy v sekundách
+            
+            // Celkový čas, ktorý by mal uplynúť do konca aktuálnej periódy
+            // Je to: (currentPeriod - 1) * periodDurationSeconds (predchádzajúce periódy) + periodDurationSeconds (aktuálna)
+            const totalElapsedForCurrentPeriod = currentPeriod * periodDurationSeconds;
+            
+            console.log(`Perióda ${currentPeriod}/${currentCategory.periods}, dĺžka periódy: ${periodDurationSeconds}s, celkový čas do konca: ${totalElapsedForCurrentPeriod}s`);
             
             const interval = setInterval(() => {
                 const now = Timestamp.now();
@@ -421,18 +432,27 @@ const matchesHallApp = ({ userProfileData }) => {
                 }
                 
                 const elapsedSeconds = Math.floor((now.seconds - startedAt.seconds));
-                console.log('Timer tick - elapsedSeconds:', elapsedSeconds);
+                console.log('Timer tick - elapsedSeconds:', elapsedSeconds, 'currentPeriod:', currentPeriod, 'totalElapsedForCurrentPeriod:', totalElapsedForCurrentPeriod);
                 
                 // OVERENIE: Priamo nastavujeme matchTime
                 setMatchTime(elapsedSeconds);
                 
-                // Automatické zastavenie pri dosiahnutí maxima podľa kategórie
-                const totalPeriodSeconds = (currentCategory.periodDuration || 20) * 60; // prevod na sekundy
-                if (elapsedSeconds >= totalPeriodSeconds) {
-                    console.log('Dosiahnutý max čas, zastavujem');
-                    // Zastavíme čas
-                    stopMatchTimer(matchId);
-                    window.showGlobalNotification(`Koniec ${currentPeriod}. periódy`, 'info');
+                // Automatické zastavenie pri dosiahnutí konca aktuálnej periódy
+                if (elapsedSeconds >= totalElapsedForCurrentPeriod) {
+                    console.log(`Dosiahnutý koniec ${currentPeriod}. periódy, elapsedSeconds: ${elapsedSeconds} >= ${totalElapsedForCurrentPeriod}`);
+                    
+                    // Ak to nie je posledná perióda, zvýšime číslo periódy
+                    if (currentPeriod < currentCategory.periods) {
+                        console.log(`Zvyšujem periódu na ${currentPeriod + 1}`);
+                        // Zvýšime periódu v databáze
+                        increasePeriod(matchId, currentCategory.periods);
+                        window.showGlobalNotification(`Koniec ${currentPeriod}. periódy`, 'info');
+                    } else {
+                        // Ak je to posledná perióda, ukončíme zápas
+                        console.log('Posledná perióda, ukončujem zápas');
+                        stopMatchTimer(matchId);
+                        window.showGlobalNotification(`Koniec zápasu`, 'info');
+                    }
                 }
             }, 1000);
             
@@ -446,7 +466,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 clearInterval(timerInterval);
             }
         };
-    }, [selectedMatch, selectedMatch?.status, selectedMatch?.startedAt, selectedMatch?.pausedAt, categories]); // ODSTRÁNENÉ matchTime zo závislostí
+    }, [selectedMatch, selectedMatch?.status, selectedMatch?.startedAt, selectedMatch?.pausedAt, selectedMatch?.currentPeriod, categories]);
 
     // Načítanie názvu haly
     useEffect(() => {
