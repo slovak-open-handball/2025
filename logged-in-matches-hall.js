@@ -46,7 +46,7 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
-const TemplateApp = ({ userProfileData }) => {
+const matches-hallApp = ({ userProfileData }) => {
     return React.createElement(
         'div',
         { className: 'flex-grow flex justify-center items-center' },
@@ -78,7 +78,7 @@ const handleDataUpdateAndRender = (event) => {
         // Ak sa dáta načítali, nastavíme poslucháča na synchronizáciu e-mailu, ak ešte nebol nastavený
         // Používame window.auth a window.db, ktoré by mali byť nastavené pri načítaní aplikácie.
         if (window.auth && window.db && !isEmailSyncListenerSetup) {
-            console.log("logged-in-template.js: Nastavujem poslucháča na synchronizáciu e-mailu.");
+            console.log("logged-in-matches-hall.js: Nastavujem poslucháča na synchronizáciu e-mailu.");
             
             onAuthStateChanged(window.auth, async (user) => {
                 if (user) {
@@ -89,7 +89,7 @@ const handleDataUpdateAndRender = (event) => {
                         if (docSnap.exists()) {
                             const firestoreEmail = docSnap.data().email;
                             if (user.email !== firestoreEmail) {
-                                console.log(`logged-in-template.js: E-mail v autentifikácii (${user.email}) sa líši od e-mailu vo Firestore (${firestoreEmail}). Aktualizujem...`);
+                                console.log(`logged-in-matches-hall.js: E-mail v autentifikácii (${user.email}) sa líši od e-mailu vo Firestore (${firestoreEmail}). Aktualizujem...`);
                                 
                                 await updateDoc(userProfileRef, {
                                     email: user.email
@@ -104,14 +104,14 @@ const handleDataUpdateAndRender = (event) => {
                                 });
                                 
                                 window.showGlobalNotification('E-mailová adresa bola automaticky aktualizovaná a synchronizovaná.', 'success');
-                                console.log("logged-in-template.js: E-mail vo Firestore bol aktualizovaný a notifikácia vytvorená.");
+                                console.log("logged-in-matches-hall.js: E-mail vo Firestore bol aktualizovaný a notifikácia vytvorená.");
             
                             } else {
-                                console.log("logged-in-template.js: E-maily sú synchronizované, nie je potrebné nič aktualizovať.");
+                                console.log("logged-in-matches-hall.js: E-maily sú synchronizované, nie je potrebné nič aktualizovať.");
                             }
                         }
                     } catch (error) {
-                        console.error("logged-in-template.js: Chyba pri porovnávaní a aktualizácii e-mailu:", error);
+                        console.error("logged-in-matches-hall.js: Chyba pri porovnávaní a aktualizácii e-mailu:", error);
                         window.showGlobalNotification('Nastala chyba pri synchronizácii e-mailovej adresy.', 'error');
                     }
                 }
@@ -121,10 +121,10 @@ const handleDataUpdateAndRender = (event) => {
 
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
             const root = ReactDOM.createRoot(rootElement);
-            root.render(React.createElement(TemplateApp, { userProfileData }));
-            console.log("logged-in-template.js: Aplikácia bola vykreslená po udalosti 'globalDataUpdated'.");
+            root.render(React.createElement(matches-hallApp, { userProfileData }));
+            console.log("logged-in-matches-hall.js: Aplikácia bola vykreslená po udalosti 'globalDataUpdated'.");
         } else {
-            console.error("logged-in-template.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
+            console.error("logged-in-matches-hall.js: HTML element 'root' alebo React/ReactDOM nie sú dostupné.");
         }
     } else {
         // Ak dáta nie sú dostupné, zobrazíme loader
@@ -138,19 +138,19 @@ const handleDataUpdateAndRender = (event) => {
                 )
             );
         }
-        console.error("logged-in-template.js: Dáta používateľa nie sú dostupné v udalosti 'globalDataUpdated'. Zobrazujem loader.");
+        console.error("logged-in-matches-hall.js: Dáta používateľa nie sú dostupné v udalosti 'globalDataUpdated'. Zobrazujem loader.");
     }
 };
 
 // Zaregistrujeme poslucháča udalosti 'globalDataUpdated'.
-console.log("logged-in-template.js: Registrujem poslucháča pre 'globalDataUpdated'.");
+console.log("logged-in-matches-hall.js: Registrujem poslucháča pre 'globalDataUpdated'.");
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
 // Aby sme predišli premeškaniu udalosti, ak sa načíta skôr, ako sa tento poslucháč zaregistruje,
 // skontrolujeme, či sú dáta už dostupné.
-console.log("logged-in-template.js: Kontrolujem, či existujú globálne dáta.");
+console.log("logged-in-matches-hall.js: Kontrolujem, či existujú globálne dáta.");
 if (window.globalUserProfileData) {
-    console.log("logged-in-template.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
+    console.log("logged-in-matches-hall.js: Globálne dáta už existujú. Vykresľujem aplikáciu okamžite.");
     handleDataUpdateAndRender({ detail: window.globalUserProfileData });
 } else {
     // Ak dáta nie sú dostupné, čakáme na event listener, zatiaľ zobrazíme loader
