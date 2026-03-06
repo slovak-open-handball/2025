@@ -164,7 +164,7 @@ const matchesHallApp = ({ userProfileData }) => {
     const [users, setUsers] = useState([]);
     const [superstructureTeams, setSuperstructureTeams] = useState({});
     // NOVÝ STAV PRE VYBRANÝ ZÁPAS
-    const [selectedMatch, setSelectedMatch] = useState(null);
+    const [selectedMatch, setSelectedMatch] = useState(null);    
 
     const [matchEvents, setMatchEvents] = useState([]);
     const [matchScore, setMatchScore] = useState({ home: 0, away: 0 });
@@ -175,6 +175,100 @@ const matchesHallApp = ({ userProfileData }) => {
     const [eventTeam, setEventTeam] = useState(null); // 'home' alebo 'away'
     const [eventMinute, setEventMinute] = useState('');
     const [eventSubType, setEventSubType] = useState(null); // pre 7m hody: 'scored' alebo 'missed'
+
+    // Funkcie pre ovládanie času a periód
+    const startMatchTimer = async (matchId) => {
+        if (!window.db || !matchId) return;
+        
+        try {
+            const matchRef = doc(window.db, 'matches', matchId);
+            await updateDoc(matchRef, {
+                status: 'in-progress',
+                startedAt: Timestamp.now(),
+                currentPeriod: 1
+            });
+            window.showGlobalNotification('Čas zápasu spustený', 'success');
+        } catch (error) {
+            console.error('Chyba pri spúšťaní časovača:', error);
+            window.showGlobalNotification('Chyba pri spúšťaní časovača', 'error');
+        }
+    };
+    
+    const stopMatchTimer = async (matchId) => {
+        if (!window.db || !matchId) return;
+        
+        try {
+            const matchRef = doc(window.db, 'matches', matchId);
+            await updateDoc(matchRef, {
+                status: 'completed',
+                endedAt: Timestamp.now()
+            });
+            window.showGlobalNotification('Čas zápasu zastavený', 'success');
+        } catch (error) {
+            console.error('Chyba pri zastavovaní časovača:', error);
+            window.showGlobalNotification('Chyba pri zastavovaní časovača', 'error');
+        }
+    };
+    
+    const resetMatchTimer = async (matchId) => {
+        if (!window.db || !matchId) return;
+        
+        try {
+            const matchRef = doc(window.db, 'matches', matchId);
+            await updateDoc(matchRef, {
+                status: 'scheduled',
+                startedAt: null,
+                endedAt: null,
+                currentPeriod: 1
+            });
+            window.showGlobalNotification('Čas zápasu resetovaný', 'success');
+        } catch (error) {
+            console.error('Chyba pri resetovaní časovača:', error);
+            window.showGlobalNotification('Chyba pri resetovaní časovača', 'error');
+        }
+    };
+    
+    const increasePeriod = async (matchId, maxPeriods) => {
+        if (!window.db || !matchId || !selectedMatch) return;
+        
+        const currentPeriod = selectedMatch.currentPeriod || 1;
+        if (currentPeriod >= maxPeriods) {
+            window.showGlobalNotification('Posledná perióda', 'info');
+            return;
+        }
+        
+        try {
+            const matchRef = doc(window.db, 'matches', matchId);
+            await updateDoc(matchRef, {
+                currentPeriod: currentPeriod + 1
+            });
+            window.showGlobalNotification(`Perióda zmenená na ${currentPeriod + 1}`, 'success');
+        } catch (error) {
+            console.error('Chyba pri zvyšovaní periódy:', error);
+            window.showGlobalNotification('Chyba pri zmene periódy', 'error');
+        }
+    };
+    
+    const decreasePeriod = async (matchId) => {
+        if (!window.db || !matchId || !selectedMatch) return;
+        
+        const currentPeriod = selectedMatch.currentPeriod || 1;
+        if (currentPeriod <= 1) {
+            window.showGlobalNotification('Prvá perióda', 'info');
+            return;
+        }
+        
+        try {
+            const matchRef = doc(window.db, 'matches', matchId);
+            await updateDoc(matchRef, {
+                currentPeriod: currentPeriod - 1
+            });
+            window.showGlobalNotification(`Perióda zmenená na ${currentPeriod - 1}`, 'success');
+        } catch (error) {
+            console.error('Chyba pri znižovaní periódy:', error);
+            window.showGlobalNotification('Chyba pri zmene periódy', 'error');
+        }
+    };
 
     // Načítanie názvu haly
     useEffect(() => {
@@ -423,6 +517,8 @@ const matchesHallApp = ({ userProfileData }) => {
     
         return () => unsubscribe();
     }, [selectedMatch]);
+
+    
     
     // 🔴 NOVÉ FUNKCIE PRE SPRÁVU UDALOSTÍ - PRIDAŤ SEM
     const addMatchEvent = async () => {
@@ -744,7 +840,8 @@ const matchesHallApp = ({ userProfileData }) => {
             snapshot.forEach((doc) => {
                 loadedMatches.push({
                     id: doc.id,
-                    ...doc.data()
+                    ...doc.data(),
+                    currentPeriod: doc.data().currentPeriod || 1
                 });
             });
             
@@ -1153,7 +1250,7 @@ const matchesHallApp = ({ userProfileData }) => {
                         `Športová hala ${hallName}`
                     )
                 ),
-    
+        
                 // Detail zápasu
                 React.createElement(
                     'div',
@@ -1227,16 +1324,91 @@ const matchesHallApp = ({ userProfileData }) => {
                         )
                     ),
                     
-                    // Status
+                    // Status a ovládacie prvky
                     React.createElement(
                         'div',
-                        { className: 'bg-gray-50 p-3 rounded-lg text-center mb-8' },
-                        React.createElement('div', { className: 'text-xs text-gray-500 mb-1' }, 'Status'),
+                        { className: 'bg-gray-50 p-4 rounded-lg mb-8' },
+                        
+                        // Status
                         React.createElement(
-                            'div', 
-                            { className: `font-medium ${selectedMatch.status === 'completed' ? 'text-green-600' : selectedMatch.status === 'in-progress' ? 'text-blue-600' : 'text-gray-600'}` },
-                            selectedMatch.status === 'completed' ? 'Odohrané' :
-                            selectedMatch.status === 'in-progress' ? 'Prebieha' : 'Naplánované'
+                            'div',
+                            { className: 'text-center mb-4' },
+                            React.createElement('div', { className: 'text-xs text-gray-500 mb-1' }, 'Status'),
+                            React.createElement(
+                                'div', 
+                                { className: `font-medium ${selectedMatch.status === 'completed' ? 'text-green-600' : selectedMatch.status === 'in-progress' ? 'text-blue-600' : 'text-gray-600'}` },
+                                selectedMatch.status === 'completed' ? 'Odohrané' :
+                                selectedMatch.status === 'in-progress' ? 'Prebieha' : 'Naplánované'
+                            )
+                        ),
+                        
+                        // Ovládacie prvky pre adminov a hall users (iba pre status "Naplánované" alebo "Prebieha")
+                        (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && 
+                        (selectedMatch.status === 'scheduled' || selectedMatch.status === 'in-progress' || !selectedMatch.status) && 
+                        React.createElement(
+                            'div',
+                            { className: 'flex flex-wrap items-center justify-center gap-3 pt-2 border-t border-gray-200' },
+                            
+                            // Čas štart / Čas stop
+                            selectedMatch.status === 'in-progress' ? 
+                                React.createElement(
+                                    'button',
+                                    {
+                                        className: 'px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
+                                        onClick: () => stopMatchTimer(selectedMatch.id)
+                                    },
+                                    React.createElement('i', { className: 'fa-solid fa-stop' }),
+                                    'Čas stop'
+                                ) :
+                                React.createElement(
+                                    'button',
+                                    {
+                                        className: 'px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
+                                        onClick: () => startMatchTimer(selectedMatch.id)
+                                    },
+                                    React.createElement('i', { className: 'fa-solid fa-play' }),
+                                    'Čas štart'
+                                ),
+                            
+                            // Perióda + / Perióda - (ak má kategória viac ako 1 periódu)
+                            category && category.periods > 1 && React.createElement(
+                                React.Fragment,
+                                null,
+                                React.createElement(
+                                    'button',
+                                    {
+                                        className: 'px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
+                                        onClick: () => decreasePeriod(selectedMatch.id)
+                                    },
+                                    React.createElement('i', { className: 'fa-solid fa-minus' }),
+                                    'Perióda -'
+                                ),
+                                React.createElement(
+                                    'div',
+                                    { className: 'px-4 py-2 bg-gray-100 rounded-lg text-sm font-medium' },
+                                    `Perióda: ${selectedMatch.currentPeriod || 1} / ${category.periods}`
+                                ),
+                                React.createElement(
+                                    'button',
+                                    {
+                                        className: 'px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
+                                        onClick: () => increasePeriod(selectedMatch.id, category.periods)
+                                    },
+                                    React.createElement('i', { className: 'fa-solid fa-plus' }),
+                                    'Perióda +'
+                                )
+                            ),
+                            
+                            // Reset čas
+                            React.createElement(
+                                'button',
+                                {
+                                    className: 'px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
+                                    onClick: () => resetMatchTimer(selectedMatch.id)
+                                },
+                                React.createElement('i', { className: 'fa-solid fa-rotate-right' }),
+                                'Reset čas'
+                            )
                         )
                     ),
                     
@@ -1246,6 +1418,7 @@ const matchesHallApp = ({ userProfileData }) => {
                         { className: 'grid grid-cols-3 gap-6' },
                         
                         // Domáci tím - detail (1. stĺpec)
+                        // ... (zvyšný kód pre domáci tím zostáva rovnaký)
                         React.createElement(
                             'div',
                             { className: 'bg-gray-50 rounded-lg p-4 border border-gray-200' },
@@ -1375,7 +1548,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 )
                             )
                         ),
-    
+        
                         // Druhý box - Priebeh zápasu (NOVÝ)
                         React.createElement(
                             'div',
