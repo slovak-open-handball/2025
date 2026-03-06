@@ -45,6 +45,23 @@ const getLocalDateStr = (date) => {
     return `${year}-${month}-${day}`;
 };
 
+// Funkcia na získanie parametra z URL
+const getUrlParameter = (name) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(name);
+};
+
+// Funkcia na aktualizáciu URL bez reloadu
+const updateUrlParameter = (paramName, paramValue) => {
+    const url = new URL(window.location.href);
+    if (paramValue) {
+        url.searchParams.set(paramName, paramValue);
+    } else {
+        url.searchParams.delete(paramName);
+    }
+    window.history.replaceState({}, '', url);
+};
+
 /**
  * Globálna funkcia pre zobrazenie notifikácií
  */
@@ -606,6 +623,15 @@ const matchesHallApp = ({ userProfileData }) => {
             console.log(`Celkový počet zápasov: ${loadedMatches.length}`);
             console.log('=================================');
             
+            // Skontrolujeme URL parameter pre zápas
+            const matchIdFromUrl = getUrlParameter('match');
+            if (matchIdFromUrl && !selectedMatch) {
+                const matchFromUrl = loadedMatches.find(m => m.id === matchIdFromUrl);
+                if (matchFromUrl) {
+                    setSelectedMatch(matchFromUrl);
+                }
+            }
+            
         }, (error) => {
             console.error("Chyba pri načítaní zápasov:", error);
             setLoading(false);
@@ -720,11 +746,13 @@ const matchesHallApp = ({ userProfileData }) => {
     // FUNKCIA PRE ZOBRAZENIE VŠETKÝCH ZÁPASOV
     const showAllMatches = () => {
         setSelectedMatch(null);
+        updateUrlParameter('match', null); // Odstránime parameter z URL
     };
 
     // FUNKCIA PRE VÝBER ZÁPASU
     const selectMatch = (match) => {
         setSelectedMatch(match);
+        updateUrlParameter('match', match.id); // Pridáme ID zápasu do URL
     };
 
     // Zoradenie dní podľa dátumu
