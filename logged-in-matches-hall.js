@@ -250,6 +250,9 @@ const matchesHallApp = ({ userProfileData }) => {
     const resetMatchTimer = async (matchId) => {
         if (!window.db || !matchId) return;
         
+        // Opýtame sa na potvrdenie pri resetovaní
+        if (!window.confirm('Naozaj chcete resetovať tento zápas? Všetky údaje o priebehu sa vymažú.')) return;
+        
         try {
             const matchRef = doc(window.db, 'matches', matchId);
             await updateDoc(matchRef, {
@@ -259,6 +262,22 @@ const matchesHallApp = ({ userProfileData }) => {
                 pausedAt: null,
                 currentPeriod: 1
             });
+            
+            // Vymažeme aj všetky udalosti zápasu (voliteľné)
+            if (window.confirm('Chcete vymazať aj všetky udalosti zápasu (góly, karty, atď.)?')) {
+                const eventsRef = collection(window.db, 'matchEvents');
+                const q = query(eventsRef, where("matchId", "==", matchId));
+                const querySnapshot = await getDocs(q);
+                
+                const deletePromises = [];
+                querySnapshot.forEach((doc) => {
+                    deletePromises.push(deleteDoc(doc.ref));
+                });
+                
+                await Promise.all(deletePromises);
+                window.showGlobalNotification('Všetky udalosti zápasu boli vymazané', 'success');
+            }
+            
             setMatchPaused(false);
             window.showGlobalNotification('Čas zápasu resetovaný', 'success');
         } catch (error) {
@@ -1391,9 +1410,8 @@ const matchesHallApp = ({ userProfileData }) => {
                             )
                         ),
                         
-                        // Ovládacie prvky pre adminov a hall users (iba pre zápasy, ktoré nie sú ukončené)
+                        // Ovládacie prvky pre adminov a hall users (ZOBRAZENÉ VŽDY)
                         (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && 
-                        (selectedMatch.status !== 'completed') && 
                         React.createElement(
                             'div',
                             { className: 'flex flex-wrap items-center justify-center gap-3 pt-2 border-t border-gray-200' },
@@ -1458,7 +1476,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 )
                             ),
                             
-                            // Reset čas
+                            // Reset čas (vždy zobrazený)
                             React.createElement(
                                 'button',
                                 {
@@ -1469,8 +1487,8 @@ const matchesHallApp = ({ userProfileData }) => {
                                 'Reset čas'
                             ),
                             
-                            // Ukončiť zápas (zobrazí sa len pre prebiehajúce alebo pozastavené zápasy)
-                            (selectedMatch.status === 'in-progress' || selectedMatch.status === 'paused') && React.createElement(
+                            // Ukončiť zápas (zobrazí sa len pre neukončené zápasy)
+                            selectedMatch.status !== 'completed' && React.createElement(
                                 'button',
                                 {
                                     className: 'px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
