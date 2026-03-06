@@ -1036,281 +1036,275 @@ const matchesHallApp = ({ userProfileData }) => {
                         )
                     ),
                     
-                    // ... (zvyšok kódu zostáva rovnaký)
-                    
-                    // DETAILY TÍMOV - realizačný tím a hráči
+// DETAILY TÍMOV - realizačný tím a hráči
+React.createElement(
+    'div',
+    { className: 'grid grid-cols-2 gap-6' },
+    
+    // Domáci tím - detail
+    React.createElement(
+        'div',
+        { className: 'bg-gray-50 rounded-lg p-4 border border-gray-200' },
+        React.createElement(
+            'h3',
+            { className: 'font-bold text-lg text-gray-800 mb-3 text-center border-b border-gray-200 pb-2' },
+            'DOMÁCI - ',
+            homeTeamName
+        ),
+        
+        // Realizačný tím - UPRAVENÉ: odstránené zobrazenie pohlavia
+        React.createElement(
+            'div',
+            { className: 'mb-4' },
+            React.createElement(
+                'h4',
+                { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
+                React.createElement('i', { className: 'fa-solid fa-user-tie text-xs text-gray-500' }),
+                'Realizačný tím'
+            ),
+            
+            homeTeamDetails ? React.createElement(
+                'div',
+                { className: 'space-y-2' },
+                
+                // Muži v realizačnom tíme - UPRAVENÉ: odstránené (muž)
+                homeTeamDetails.team.menTeamMemberDetails && homeTeamDetails.team.menTeamMemberDetails.length > 0 && 
+                homeTeamDetails.team.menTeamMemberDetails.map((member, idx) => 
                     React.createElement(
                         'div',
-                        { className: 'grid grid-cols-2 gap-6' },
-                        
-                        // Domáci tím - detail
+                        { key: `home-men-${idx}`, className: 'bg-white p-2 rounded border border-gray-200 text-sm' },
                         React.createElement(
                             'div',
-                            { className: 'bg-gray-50 rounded-lg p-4 border border-gray-200' },
-                            React.createElement(
-                                'h3',
-                                { className: 'font-bold text-lg text-gray-800 mb-3 text-center border-b border-gray-200 pb-2' },
-                                'DOMÁCI - ',
-                                homeTeamName
-                            ),
-                            
-                            // Realizačný tím
-                            React.createElement(
-                                'div',
-                                { className: 'mb-4' },
-                                React.createElement(
-                                    'h4',
-                                    { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
-                                    React.createElement('i', { className: 'fa-solid fa-user-tie text-xs text-gray-500' }),
-                                    'Realizačný tím'
-                                ),
-                                
-                                homeTeamDetails ? React.createElement(
-                                    'div',
-                                    { className: 'space-y-2' },
-                                    
-                                    // Muži v realizačnom tíme
-                                    homeTeamDetails.team.menTeamMemberDetails && homeTeamDetails.team.menTeamMemberDetails.length > 0 && 
-                                    homeTeamDetails.team.menTeamMemberDetails.map((member, idx) => 
-                                        React.createElement(
-                                            'div',
-                                            { key: `home-men-${idx}`, className: 'bg-white p-2 rounded border border-gray-200 text-sm' },
-                                            React.createElement(
-                                                'div',
-                                                { className: 'flex items-center gap-2' },
-                                                React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs' }),
-                                                React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`),
-                                                React.createElement('span', { className: 'text-xs text-gray-500' }, '(muž)')
-                                            )
-                                        )
-                                    ),
-                                    
-                                    // Ženy v realizačnom tíme
-                                    homeTeamDetails.team.womenTeamMemberDetails && homeTeamDetails.team.womenTeamMemberDetails.length > 0 && 
-                                    homeTeamDetails.team.womenTeamMemberDetails.map((member, idx) => 
-                                        React.createElement(
-                                            'div',
-                                            { key: `home-women-${idx}`, className: 'bg-white p-2 rounded border border-gray-200 text-sm' },
-                                            React.createElement(
-                                                'div',
-                                                { className: 'flex items-center gap-2' },
-                                                React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs' }),
-                                                React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`),
-                                                React.createElement('span', { className: 'text-xs text-gray-500' }, '(žena)')
-                                            )
-                                        )
-                                    ),
-                                    
-                                    // Ak nie sú žiadni členovia realizačného tímu
-                                    (!homeTeamDetails.team.menTeamMemberDetails || homeTeamDetails.team.menTeamMemberDetails.length === 0) &&
-                                    (!homeTeamDetails.team.womenTeamMemberDetails || homeTeamDetails.team.womenTeamMemberDetails.length === 0) &&
-                                    React.createElement(
-                                        'div',
-                                        { className: 'text-sm text-gray-500 italic p-2' },
-                                        'Žiadni členovia realizačného tímu'
-                                    )
-                                ) : React.createElement(
-                                    'div',
-                                    { className: 'text-sm text-gray-500 italic p-2' },
-                                    'Nedostupné'
-                                )
-                            ),
-                            
-                            // Hráči - UPRAVENÉ: odstránené max-h a overflow-y
-                            React.createElement(
-                                'div',
-                                null,
-                                React.createElement(
-                                    'h4',
-                                    { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
-                                    React.createElement('i', { className: 'fa-solid fa-users text-xs text-gray-500' }),
-                                    `Hráči (${homeTeamDetails?.team.playerDetails?.length || 0})`
-                                ),
-                                
-                                homeTeamDetails ? React.createElement(
-                                    'div',
-                                    { className: 'space-y-1' }, // Odstránené max-h-60 a overflow-y-auto
-                                    homeTeamDetails.team.playerDetails && homeTeamDetails.team.playerDetails.length > 0 ? 
-                                        [...homeTeamDetails.team.playerDetails]
-                                            .sort((a, b) => {
-                                                // Zoradenie podľa čísla dresu (ak existuje)
-                                                const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
-                                                const numB = b.jerseyNumber ? parseInt(b.jerseyNumber) || 999 : 999;
-                                                return numA - numB;
-                                            })
-                                            .map((player, idx) => 
-                                                React.createElement(
-                                                    'div',
-                                                    { key: `home-player-${idx}`, className: 'bg-white p-2 rounded border border-gray-200 text-sm' },
-                                                    React.createElement(
-                                                        'div',
-                                                        { className: 'flex items-center gap-2' },
-                                                        React.createElement('i', { className: 'fa-solid fa-shirt text-gray-600 text-xs' }),
-                                                        player.jerseyNumber && React.createElement(
-                                                            'span',
-                                                            { className: 'font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded' },
-                                                            `#${player.jerseyNumber}`
-                                                        ),
-                                                        React.createElement(
-                                                            'span',
-                                                            { className: 'font-medium' },
-                                                            `${player.firstName} ${player.lastName}`
-                                                        ),
-                                                        player.dateOfBirth && React.createElement(
-                                                            'span',
-                                                            { className: 'text-xs text-gray-500' },
-                                                            `(${new Date().getFullYear() - new Date(player.dateOfBirth).getFullYear()} rokov)`
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        : React.createElement(
-                                            'div',
-                                            { className: 'text-sm text-gray-500 italic p-2' },
-                                            'Žiadni hráči'
-                                        )
-                                ) : React.createElement(
-                                    'div',
-                                    { className: 'text-sm text-gray-500 italic p-2' },
-                                    'Nedostupné'
-                                )
-                            )
-                        ),
-                        
-                        // Hosťovský tím - detail
+                            { className: 'flex items-center gap-2' },
+                            React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs' }),
+                            React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`)
+                        )
+                    )
+                ),
+                
+                // Ženy v realizačnom tíme - UPRAVENÉ: odstránené (žena)
+                homeTeamDetails.team.womenTeamMemberDetails && homeTeamDetails.team.womenTeamMemberDetails.length > 0 && 
+                homeTeamDetails.team.womenTeamMemberDetails.map((member, idx) => 
+                    React.createElement(
+                        'div',
+                        { key: `home-women-${idx}`, className: 'bg-white p-2 rounded border border-gray-200 text-sm' },
                         React.createElement(
                             'div',
-                            { className: 'bg-gray-50 rounded-lg p-4 border border-gray-200' },
-                            React.createElement(
-                                'h3',
-                                { className: 'font-bold text-lg text-gray-800 mb-3 text-center border-b border-gray-200 pb-2' },
-                                'HOSTIA - ',
-                                awayTeamName
-                            ),
-                            
-                            // Realizačný tím
+                            { className: 'flex items-center gap-2' },
+                            React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs' }),
+                            React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`)
+                        )
+                    )
+                ),
+                
+                // Ak nie sú žiadni členovia realizačného tímu
+                (!homeTeamDetails.team.menTeamMemberDetails || homeTeamDetails.team.menTeamMemberDetails.length === 0) &&
+                (!homeTeamDetails.team.womenTeamMemberDetails || homeTeamDetails.team.womenTeamMemberDetails.length === 0) &&
+                React.createElement(
+                    'div',
+                    { className: 'text-sm text-gray-500 italic p-2' },
+                    'Žiadni členovia realizačného tímu'
+                )
+            ) : React.createElement(
+                'div',
+                { className: 'text-sm text-gray-500 italic p-2' },
+                'Nedostupné'
+            )
+        ),
+        
+        // Hráči - UPRAVENÉ: namiesto veku zobrazujeme rok narodenia
+        React.createElement(
+            'div',
+            null,
+            React.createElement(
+                'h4',
+                { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
+                React.createElement('i', { className: 'fa-solid fa-users text-xs text-gray-500' }),
+                `Hráči (${homeTeamDetails?.team.playerDetails?.length || 0})`
+            ),
+            
+            homeTeamDetails ? React.createElement(
+                'div',
+                { className: 'space-y-1' },
+                homeTeamDetails.team.playerDetails && homeTeamDetails.team.playerDetails.length > 0 ? 
+                    [...homeTeamDetails.team.playerDetails]
+                        .sort((a, b) => {
+                            // Zoradenie podľa čísla dresu (ak existuje)
+                            const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
+                            const numB = b.jerseyNumber ? parseInt(b.jerseyNumber) || 999 : 999;
+                            return numA - numB;
+                        })
+                        .map((player, idx) => 
                             React.createElement(
                                 'div',
-                                { className: 'mb-4' },
+                                { key: `home-player-${idx}`, className: 'bg-white p-2 rounded border border-gray-200 text-sm' },
                                 React.createElement(
-                                    'h4',
-                                    { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
-                                    React.createElement('i', { className: 'fa-solid fa-user-tie text-xs text-gray-500' }),
-                                    'Realizačný tím'
-                                ),
-                                
-                                awayTeamDetails ? React.createElement(
                                     'div',
-                                    { className: 'space-y-2' },
-                                    
-                                    // Muži v realizačnom tíme
-                                    awayTeamDetails.team.menTeamMemberDetails && awayTeamDetails.team.menTeamMemberDetails.length > 0 && 
-                                    awayTeamDetails.team.menTeamMemberDetails.map((member, idx) => 
-                                        React.createElement(
-                                            'div',
-                                            { key: `away-men-${idx}`, className: 'bg-white p-2 rounded border border-gray-200 text-sm' },
-                                            React.createElement(
-                                                'div',
-                                                { className: 'flex items-center gap-2' },
-                                                React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs' }),
-                                                React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`),
-                                                React.createElement('span', { className: 'text-xs text-gray-500' }, '(muž)')
-                                            )
-                                        )
+                                    { className: 'flex items-center gap-2 flex-wrap' },
+                                    React.createElement('i', { className: 'fa-solid fa-shirt text-gray-600 text-xs' }),
+                                    player.jerseyNumber && React.createElement(
+                                        'span',
+                                        { className: 'font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded' },
+                                        `#${player.jerseyNumber}`
                                     ),
-                                    
-                                    // Ženy v realizačnom tíme
-                                    awayTeamDetails.team.womenTeamMemberDetails && awayTeamDetails.team.womenTeamMemberDetails.length > 0 && 
-                                    awayTeamDetails.team.womenTeamMemberDetails.map((member, idx) => 
-                                        React.createElement(
-                                            'div',
-                                            { key: `away-women-${idx}`, className: 'bg-white p-2 rounded border border-gray-200 text-sm' },
-                                            React.createElement(
-                                                'div',
-                                                { className: 'flex items-center gap-2' },
-                                                React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs' }),
-                                                React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`),
-                                                React.createElement('span', { className: 'text-xs text-gray-500' }, '(žena)')
-                                            )
-                                        )
-                                    ),
-                                    
-                                    // Ak nie sú žiadni členovia realizačného tímu
-                                    (!awayTeamDetails.team.menTeamMemberDetails || awayTeamDetails.team.menTeamMemberDetails.length === 0) &&
-                                    (!awayTeamDetails.team.womenTeamMemberDetails || awayTeamDetails.team.womenTeamMemberDetails.length === 0) &&
                                     React.createElement(
-                                        'div',
-                                        { className: 'text-sm text-gray-500 italic p-2' },
-                                        'Žiadni členovia realizačného tímu'
+                                        'span',
+                                        { className: 'font-medium' },
+                                        `${player.firstName} ${player.lastName}`
+                                    ),
+                                    player.dateOfBirth && React.createElement(
+                                        'span',
+                                        { className: 'text-xs text-gray-500' },
+                                        `(${new Date(player.dateOfBirth).getFullYear()})`
                                     )
-                                ) : React.createElement(
-                                    'div',
-                                    { className: 'text-sm text-gray-500 italic p-2' },
-                                    'Nedostupné'
-                                )
-                            ),
-                            
-                            // Hráči - UPRAVENÉ: odstránené max-h a overflow-y
-                            React.createElement(
-                                'div',
-                                null,
-                                React.createElement(
-                                    'h4',
-                                    { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
-                                    React.createElement('i', { className: 'fa-solid fa-users text-xs text-gray-500' }),
-                                    `Hráči (${awayTeamDetails?.team.playerDetails?.length || 0})`
-                                ),
-                                
-                                awayTeamDetails ? React.createElement(
-                                    'div',
-                                    { className: 'space-y-1' }, // Odstránené max-h-60 a overflow-y-auto
-                                    awayTeamDetails.team.playerDetails && awayTeamDetails.team.playerDetails.length > 0 ? 
-                                        [...awayTeamDetails.team.playerDetails]
-                                            .sort((a, b) => {
-                                                // Zoradenie podľa čísla dresu (ak existuje)
-                                                const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
-                                                const numB = b.jerseyNumber ? parseInt(b.jerseyNumber) || 999 : 999;
-                                                return numA - numB;
-                                            })
-                                            .map((player, idx) => 
-                                                React.createElement(
-                                                    'div',
-                                                    { key: `away-player-${idx}`, className: 'bg-white p-2 rounded border border-gray-200 text-sm' },
-                                                    React.createElement(
-                                                        'div',
-                                                        { className: 'flex items-center gap-2' },
-                                                        React.createElement('i', { className: 'fa-solid fa-shirt text-gray-600 text-xs' }),
-                                                        player.jerseyNumber && React.createElement(
-                                                            'span',
-                                                            { className: 'font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded' },
-                                                            `#${player.jerseyNumber}`
-                                                        ),
-                                                        React.createElement(
-                                                            'span',
-                                                            { className: 'font-medium' },
-                                                            `${player.firstName} ${player.lastName}`
-                                                        ),
-                                                        player.dateOfBirth && React.createElement(
-                                                            'span',
-                                                            { className: 'text-xs text-gray-500' },
-                                                            `(${new Date().getFullYear() - new Date(player.dateOfBirth).getFullYear()} rokov)`
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        : React.createElement(
-                                            'div',
-                                            { className: 'text-sm text-gray-500 italic p-2' },
-                                            'Žiadni hráči'
-                                        )
-                                ) : React.createElement(
-                                    'div',
-                                    { className: 'text-sm text-gray-500 italic p-2' },
-                                    'Nedostupné'
                                 )
                             )
                         )
-                    ),
+                    : React.createElement(
+                        'div',
+                        { className: 'text-sm text-gray-500 italic p-2' },
+                        'Žiadni hráči'
+                    )
+            ) : React.createElement(
+                'div',
+                { className: 'text-sm text-gray-500 italic p-2' },
+                'Nedostupné'
+            )
+        )
+    ),
+    
+    // Hosťovský tím - detail
+    React.createElement(
+        'div',
+        { className: 'bg-gray-50 rounded-lg p-4 border border-gray-200' },
+        React.createElement(
+            'h3',
+            { className: 'font-bold text-lg text-gray-800 mb-3 text-center border-b border-gray-200 pb-2' },
+            'HOSTIA - ',
+            awayTeamName
+        ),
+        
+        // Realizačný tím - UPRAVENÉ: odstránené zobrazenie pohlavia
+        React.createElement(
+            'div',
+            { className: 'mb-4' },
+            React.createElement(
+                'h4',
+                { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
+                React.createElement('i', { className: 'fa-solid fa-user-tie text-xs text-gray-500' }),
+                'Realizačný tím'
+            ),
+            
+            awayTeamDetails ? React.createElement(
+                'div',
+                { className: 'space-y-2' },
+                
+                // Muži v realizačnom tíme - UPRAVENÉ: odstránené (muž)
+                awayTeamDetails.team.menTeamMemberDetails && awayTeamDetails.team.menTeamMemberDetails.length > 0 && 
+                awayTeamDetails.team.menTeamMemberDetails.map((member, idx) => 
+                    React.createElement(
+                        'div',
+                        { key: `away-men-${idx}`, className: 'bg-white p-2 rounded border border-gray-200 text-sm' },
+                        React.createElement(
+                            'div',
+                            { className: 'flex items-center gap-2' },
+                            React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs' }),
+                            React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`)
+                        )
+                    )
+                ),
+                
+                // Ženy v realizačnom tíme - UPRAVENÉ: odstránené (žena)
+                awayTeamDetails.team.womenTeamMemberDetails && awayTeamDetails.team.womenTeamMemberDetails.length > 0 && 
+                awayTeamDetails.team.womenTeamMemberDetails.map((member, idx) => 
+                    React.createElement(
+                        'div',
+                        { key: `away-women-${idx}`, className: 'bg-white p-2 rounded border border-gray-200 text-sm' },
+                        React.createElement(
+                            'div',
+                            { className: 'flex items-center gap-2' },
+                            React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs' }),
+                            React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`)
+                        )
+                    )
+                ),
+                
+                // Ak nie sú žiadni členovia realizačného tímu
+                (!awayTeamDetails.team.menTeamMemberDetails || awayTeamDetails.team.menTeamMemberDetails.length === 0) &&
+                (!awayTeamDetails.team.womenTeamMemberDetails || awayTeamDetails.team.womenTeamMemberDetails.length === 0) &&
+                React.createElement(
+                    'div',
+                    { className: 'text-sm text-gray-500 italic p-2' },
+                    'Žiadni členovia realizačného tímu'
+                )
+            ) : React.createElement(
+                'div',
+                { className: 'text-sm text-gray-500 italic p-2' },
+                'Nedostupné'
+            )
+        ),
+        
+        // Hráči - UPRAVENÉ: namiesto veku zobrazujeme rok narodenia
+        React.createElement(
+            'div',
+            null,
+            React.createElement(
+                'h4',
+                { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
+                React.createElement('i', { className: 'fa-solid fa-users text-xs text-gray-500' }),
+                `Hráči (${awayTeamDetails?.team.playerDetails?.length || 0})`
+            ),
+            
+            awayTeamDetails ? React.createElement(
+                'div',
+                { className: 'space-y-1' },
+                awayTeamDetails.team.playerDetails && awayTeamDetails.team.playerDetails.length > 0 ? 
+                    [...awayTeamDetails.team.playerDetails]
+                        .sort((a, b) => {
+                            // Zoradenie podľa čísla dresu (ak existuje)
+                            const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
+                            const numB = b.jerseyNumber ? parseInt(b.jerseyNumber) || 999 : 999;
+                            return numA - numB;
+                        })
+                        .map((player, idx) => 
+                            React.createElement(
+                                'div',
+                                { key: `away-player-${idx}`, className: 'bg-white p-2 rounded border border-gray-200 text-sm' },
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex items-center gap-2 flex-wrap' },
+                                    React.createElement('i', { className: 'fa-solid fa-shirt text-gray-600 text-xs' }),
+                                    player.jerseyNumber && React.createElement(
+                                        'span',
+                                        { className: 'font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded' },
+                                        `#${player.jerseyNumber}`
+                                    ),
+                                    React.createElement(
+                                        'span',
+                                        { className: 'font-medium' },
+                                        `${player.firstName} ${player.lastName}`
+                                    ),
+                                    player.dateOfBirth && React.createElement(
+                                        'span',
+                                        { className: 'text-xs text-gray-500' },
+                                        `(${new Date(player.dateOfBirth).getFullYear()})`
+                                    )
+                                )
+                            )
+                        )
+                    : React.createElement(
+                        'div',
+                        { className: 'text-sm text-gray-500 italic p-2' },
+                        'Žiadni hráči'
+                    )
+            ) : React.createElement(
+                'div',
+                { className: 'text-sm text-gray-500 italic p-2' },
+                'Nedostupné'
+            )
+        )
+    )
+),
                     
                     // Informácia o pozícii v zozname
                     React.createElement(
