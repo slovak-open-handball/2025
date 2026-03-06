@@ -180,6 +180,11 @@ const matchesHallApp = ({ userProfileData }) => {
     const [timerInterval, setTimerInterval] = useState(null);
 
     const formatMatchTime = (seconds) => {
+        // Ochrana proti nečíselným hodnotám
+        if (typeof seconds !== 'number' || isNaN(seconds) || seconds < 0) {
+            return '00:00';
+        }
+        
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
@@ -353,27 +358,36 @@ const matchesHallApp = ({ userProfileData }) => {
 
     // Inicializácia času pri výbere zápasu
     useEffect(() => {
+        console.log('Inicializácia času pre zápas:', selectedMatch);
+    
         if (selectedMatch && selectedMatch.startedAt) {
             // Ak zápas už beží, vypočítame aktuálny čas
             const now = Timestamp.now();
             const startedAt = selectedMatch.startedAt;
+            console.log('startedAt:', startedAt, 'now:', now);
+            
             const elapsedSeconds = Math.floor((now.seconds - startedAt.seconds));
-        
+            console.log('elapsedSeconds:', elapsedSeconds);
+            
             // Ak je zápas pozastavený, použijeme pausedAt na výpočet
             if (selectedMatch.status === 'paused' && selectedMatch.pausedAt) {
                 const pausedAt = selectedMatch.pausedAt;
                 const elapsedUntilPause = Math.floor((pausedAt.seconds - startedAt.seconds));
+                console.log('elapsedUntilPause:', elapsedUntilPause);
                 setMatchTime(elapsedUntilPause);
             } else {
                 setMatchTime(elapsedSeconds);
             }
         } else {
+            console.log('Žiadny startedAt, nastavujem 0');
             setMatchTime(0);
         }
     }, [selectedMatch]);
 
     // Timer pre priebeh zápasu
     useEffect(() => {
+        console.log('Timer useEffect - stav:', selectedMatch?.status, 'matchTime:', matchTime);
+        
         // Vymažeme existujúci interval
         if (timerInterval) {
             clearInterval(timerInterval);
@@ -385,16 +399,20 @@ const matchesHallApp = ({ userProfileData }) => {
         
         // Spustíme nový interval len ak je zápas v priebehu
         if (selectedMatch && selectedMatch.status === 'in-progress' && selectedMatch.startedAt && currentCategory) {
+            console.log('Spúšťam timer pre zápas v priebehu');
+            
             const interval = setInterval(() => {
                 const now = Timestamp.now();
                 const startedAt = selectedMatch.startedAt;
                 const elapsedSeconds = Math.floor((now.seconds - startedAt.seconds));
                 
+                console.log('Timer tick - elapsedSeconds:', elapsedSeconds);
                 setMatchTime(elapsedSeconds);
                 
                 // Automatické zastavenie pri dosiahnutí maxima podľa kategórie
                 const totalPeriodSeconds = (currentCategory.periodDuration || 20) * 60; // prevod na sekundy
                 if (elapsedSeconds >= totalPeriodSeconds && selectedMatch.status === 'in-progress') {
+                    console.log('Dosiahnutý max čas, zastavujem');
                     // Zastavíme čas
                     stopMatchTimer(selectedMatch.id);
                     window.showGlobalNotification(`Koniec ${selectedMatch.currentPeriod}. periódy`, 'info');
@@ -411,7 +429,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 clearInterval(timerInterval);
             }
         };
-    }, [selectedMatch, selectedMatch?.status, selectedMatch?.startedAt, categories]); // Pridáme categories do závislostí
+    }, [selectedMatch, selectedMatch?.status, selectedMatch?.startedAt, categories]);
 
     // Načítanie názvu haly
     useEffect(() => {
@@ -981,10 +999,13 @@ const matchesHallApp = ({ userProfileData }) => {
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const loadedMatches = [];
             snapshot.forEach((doc) => {
+                const data = doc.data();
+                console.log('Načítaný zápas:', data); // Pre ladenie
+                
                 loadedMatches.push({
                     id: doc.id,
-                    ...doc.data(),
-                    currentPeriod: doc.data().currentPeriod || 1
+                    ...data,
+                    currentPeriod: data.currentPeriod || 1
                 });
                 if (selectedMatch) {
                     setMatchPaused(selectedMatch.status === 'paused');
@@ -1503,7 +1524,7 @@ const matchesHallApp = ({ userProfileData }) => {
                             React.createElement(
                                 'div',
                                 { className: 'text-3xl font-mono font-bold' },
-                                formatMatchTime(matchTime)
+                                formatMatchTime(matchTime || 0) // Fallback na 0 ak je matchTime undefined
                             ),
                             React.createElement(
                                 'div',
