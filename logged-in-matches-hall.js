@@ -728,14 +728,14 @@ const matchesHallApp = ({ userProfileData }) => {
                 }
             });
             
-            // Zoradenie od najstaršej po najnovšiu (vzostupne podľa času)
+            // Zoradenie od najnovšej po najstaršiu (zostupne podľa času)
             loadedEvents.sort((a, b) => {
-                // Najprv podľa minúty
+                // Najprv podľa minúty (zostupne)
                 if (a.minute !== b.minute) {
-                    return (a.minute || 0) - (b.minute || 0);
+                    return (b.minute || 0) - (a.minute || 0);
                 }
-                // Potom podľa sekundy
-                return (a.second || 0) - (b.second || 0);
+                // Potom podľa sekundy (zostupne)
+                return (b.second || 0) - (a.second || 0);
             });
             
             setMatchEvents(loadedEvents);
