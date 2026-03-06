@@ -1572,18 +1572,6 @@ const matchesHallApp = ({ userProfileData }) => {
                             'div',
                             { className: 'text-center mb-4 p-3 bg-white rounded-lg border border-gray-200' },
                             React.createElement('div', { className: 'text-xs text-gray-500 mb-1' }, 'Priebeh času'),
-                            // DEBUG: Zobraziť surovú hodnotu
-                            React.createElement(
-                                'div',
-                                { className: 'text-xs text-red-500 mb-1' },
-                                `Debug: matchTime = ${matchTime}`
-                            ),
-                            // DEBUG2: Zobraziť hodnotu z React stavu priamo
-                            React.createElement(
-                                'div',
-                                { className: 'text-xs text-blue-500 mb-1' },
-                                `React state: ${JSON.stringify({ matchTime })}`
-                            ),
                             React.createElement(
                                 'div',
                                 { className: 'text-3xl font-mono font-bold' },
