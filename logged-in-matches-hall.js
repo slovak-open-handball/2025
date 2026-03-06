@@ -232,16 +232,38 @@ const matchesHallApp = ({ userProfileData }) => {
             window.showGlobalNotification('Chyba pri pozastavovaní časovača', 'error');
         }
     };
-
+    
     const resumeMatchTimer = async (matchId) => {
         if (!window.db || !matchId) return;
     
         try {
             const matchRef = doc(window.db, 'matches', matchId);
-            await updateDoc(matchRef, {
-                status: 'in-progress',
-                pausedAt: null
-            });
+            
+            // Pri obnovení potrebujeme upraviť startedAt, aby zohľadňoval čas strávený počas prestávky
+            if (selectedMatch && selectedMatch.pausedAt && selectedMatch.startedAt) {
+                const now = Timestamp.now();
+                const pausedAt = selectedMatch.pausedAt;
+                const startedAt = selectedMatch.startedAt;
+                
+                // Čas, ktorý uplynul do pozastavenia
+                const elapsedBeforePause = pausedAt.seconds - startedAt.seconds;
+                
+                // Nový startedAt nastavíme tak, aby elapsedSeconds od nového startedAt do now
+                // bol rovný elapsedBeforePause (čiže čas pokračuje od bodu pozastavenia)
+                const newStartedAtSeconds = now.seconds - elapsedBeforePause;
+                
+                await updateDoc(matchRef, {
+                    status: 'in-progress',
+                    pausedAt: null,
+                    startedAt: new Timestamp(newStartedAtSeconds, 0)
+                });
+            } else {
+                await updateDoc(matchRef, {
+                    status: 'in-progress',
+                    pausedAt: null
+                });
+            }
+            
             setMatchPaused(false);
             window.showGlobalNotification('Čas zápasu obnovený', 'success');
         } catch (error) {
@@ -362,13 +384,8 @@ const matchesHallApp = ({ userProfileData }) => {
         console.log('Inicializácia času pre zápas:', selectedMatch);
     
         if (selectedMatch && selectedMatch.startedAt) {
-            // Ak zápas už beží, vypočítame aktuálny čas
             const now = Timestamp.now();
             const startedAt = selectedMatch.startedAt;
-            console.log('startedAt:', startedAt, 'now:', now);
-            
-            const elapsedSeconds = Math.floor((now.seconds - startedAt.seconds));
-            console.log('elapsedSeconds:', elapsedSeconds);
             
             // Ak je zápas pozastavený, použijeme pausedAt na výpočet
             if (selectedMatch.status === 'paused' && selectedMatch.pausedAt) {
@@ -377,13 +394,15 @@ const matchesHallApp = ({ userProfileData }) => {
                 console.log('elapsedUntilPause:', elapsedUntilPause);
                 setMatchTime(elapsedUntilPause);
             } else {
+                const elapsedSeconds = Math.floor((now.seconds - startedAt.seconds));
+                console.log('elapsedSeconds:', elapsedSeconds);
                 setMatchTime(elapsedSeconds);
             }
         } else {
             console.log('Žiadny startedAt, nastavujem 0');
             setMatchTime(0);
         }
-    }, [selectedMatch]); // ZÁVISLOSŤ LEN NA selectedMatch
+    }, [selectedMatch]);
 
     // Sledovanie zmien matchTime
     useEffect(() => {
