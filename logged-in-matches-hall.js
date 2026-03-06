@@ -45,15 +45,16 @@ const getLocalDateStr = (date) => {
     return `${year}-${month}-${day}`;
 };
 
-// Funkcia na získanie názvu tímu podľa identifikátora
+// Funkcia na získanie názvu tímu podľa identifikátora - POUŽÍVAME ROVNAKÚ AKO V DRUHOM KÓDE
 const getTeamNameByIdentifier = (identifier, teamData) => {
     if (!identifier) return 'Neznámy tím';
     
     // Parsujeme identifikátor v tvare "kategória skupinaorder" (napr. "U10 A1")
+    // Rozdelíme podľa medzier - bude to mať 2 časti: [kategória, skupinaorder]
     const parts = identifier.split(' ');
     
     if (parts.length < 2) {
-        return identifier;
+        return identifier; // Fallback na identifikátor
     }
     
     // Posledná časť je skupina + order (napr. "A1")
@@ -62,6 +63,7 @@ const getTeamNameByIdentifier = (identifier, teamData) => {
     const category = parts.join(' ');
     
     // Rozdelíme groupAndOrder na groupName a order
+    // Order je číselná časť na konci, groupName je zvyšok
     let groupName = '';
     let order = '';
     
@@ -81,6 +83,7 @@ const getTeamNameByIdentifier = (identifier, teamData) => {
     
     // Hľadáme v teamData
     if (teamData && teamData.allTeams && teamData.allTeams.length > 0) {
+        // Pripravíme si groupName s "skupina " pre vyhľadávanie
         const groupNameWithPrefix = `skupina ${groupName}`;
         
         const team = teamData.allTeams.find(t => 
@@ -94,8 +97,23 @@ const getTeamNameByIdentifier = (identifier, teamData) => {
         }
     }
     
-    // Fallback - vrátime identifikátor
-    return identifier;
+    // Skúsime v __teamManagerData
+    if (window.__teamManagerData?.allTeams) {
+        const groupNameWithPrefix = `skupina ${groupName}`;
+        
+        const team = window.__teamManagerData.allTeams.find(t => 
+            t.category === category && 
+            (t.groupName === groupNameWithPrefix || t.groupName === groupName) &&
+            t.order?.toString() === order
+        );
+        
+        if (team) {
+            return team.teamName;
+        }
+    }
+    
+    // Fallback - vrátime identifikátor v čitateľnej forme
+    return `${category} ${groupName}${order}`;
 };
 
 /**
@@ -356,11 +374,12 @@ const matchesHallApp = ({ userProfileData }) => {
                             )
                         ),
 
-                        // Zoznam zápasov pre tento deň
+                        // Zoznam zápasov pre tento deň - TERAZ ZOBRAZUJEME NÁZVY TÍMOV NAMIESTO ID
                         React.createElement(
                             'div',
                             { className: 'divide-y divide-gray-100' },
                             dayGroup.matches.map((match) => {
+                                // Použijeme funkciu getTeamNameByIdentifier na získanie názvov tímov
                                 const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier, teamData);
                                 const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier, teamData);
                                 const category = categories.find(c => c.name === match.categoryName);
@@ -380,7 +399,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement('span', { className: 'font-mono font-medium' }, formatTime(match.scheduledTime))
                                         ),
                                         
-                                        // VS
+                                        // VS - TERAZ ZOBRAZUJEME NÁZVY TÍMOV
                                         React.createElement(
                                             'div',
                                             { className: 'flex items-center gap-3 flex-1' },
