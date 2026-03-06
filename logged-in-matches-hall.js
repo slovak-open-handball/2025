@@ -616,110 +616,103 @@ const matchesHallApp = ({ userProfileData }) => {
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
         
-        // Parsujeme identifikátor v tvare "kategória skupinaorder" (napr. "U10 D F1")
+        // Parsujeme identifikátor v tvare "kategória skupinaorder" (napr. "U12 D F4")
         const parts = identifier.split(' ');
         
         if (parts.length < 2) {
             return identifier; // Fallback na identifikátor
         }
         
-        // Posledná časť je skupina + order (napr. "F1")
+        // Posledná časť je skupina + order (napr. "F4")
         const groupAndOrder = parts.pop();
-        // Zvyšok je kategória (môže byť viacslovná, napr. "U10 D")
+        // Zvyšok je kategória (môže byť viacslovná, napr. "U12 D")
         const category = parts.join(' ');
         
         // Rozdelíme groupAndOrder na groupName a order
         // Order je číselná časť na konci, groupName je zvyšok
-        let groupName = '';
+        let groupLetter = '';
         let order = '';
         
         for (let i = 0; i < groupAndOrder.length; i++) {
             const char = groupAndOrder[i];
             if (char >= '0' && char <= '9') {
                 order = groupAndOrder.substring(i);
-                groupName = groupAndOrder.substring(0, i);
+                groupLetter = groupAndOrder.substring(0, i);
                 break;
             }
         }
         
         if (!order) {
             order = '?';
-            groupName = groupAndOrder;
+            groupLetter = groupAndOrder;
         }
         
         // Vytvoríme názov skupiny v tvare "skupina X" (napr. "F" -> "skupina F")
-        const fullGroupName = `skupina ${groupName}`;
+        const fullGroupName = `skupina ${groupLetter}`;
         const orderNum = parseInt(order, 10);
         
-        // Pre superstructure tímy - hľadáme podľa kategórie a skupiny+poradia
-        // V superstructure tímoch je názov vo formáte "Kategória ČísloPísmeno" (napr. "U10 D 1A")
-        if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
-            // Získame všetky superstructure tímy v tejto kategórii
-            const categoryTeams = superstructureTeams[category] || [];
-            
-            // Hľadáme tím, ktorý je v rovnakej skupine (fullGroupName) a má rovnaké poradie (orderNum)
-            // V superstructure tímoch je názov vo formáte "Kategória ČísloPísmeno" (napr. "U10 D 1A")
-            // Musíme extrahovať číslo a písmeno z názvu tímu
-            for (const team of categoryTeams) {
-                if (team.groupName !== fullGroupName) continue;
-                
-                // Z názvu tímu extrahujeme číslo a písmeno
-                // Názov je vo formáte "Kategória ČísloPísmeno" (napr. "U10 D 1A")
-                const teamNameParts = team.teamName.split(' ');
-                if (teamNameParts.length < 2) continue;
-                
-                const teamNumberAndLetter = teamNameParts[teamNameParts.length - 1]; // napr. "1A"
-                
-                // Extrahujeme číslo a písmeno z "1A"
-                let teamNumber = '';
-                let teamLetter = '';
-                
-                for (let i = 0; i < teamNumberAndLetter.length; i++) {
-                    const char = teamNumberAndLetter[i];
-                    if (char >= '0' && char <= '9') {
-                        teamNumber += char;
-                    } else {
-                        teamLetter = teamNumberAndLetter.substring(i);
-                        break;
-                    }
-                }
-                
-                const teamNum = parseInt(teamNumber, 10);
-                
-                // Ak sa zhoduje číslo a písmeno (písmeno v skupine), našli sme tím
-                if (teamNum === orderNum && teamLetter === groupName) {
-//                    console.log(`  Nájdený superstructure tím: ${team.teamName}`);
-                    return team.teamName;
-                }
-            }
-        }
+        console.log(`Hľadám tím: Kategória: ${category}, Skupina: ${fullGroupName}, Poradie: ${orderNum}`);
         
         // Hľadáme v users (načítaných používateľoch)
         if (users && users.length > 0) {
-            // Prejdeme všetkých používateľov
             for (const user of users) {
                 if (!user.teams) continue;
                 
-                // Prejdeme všetky kategórie používateľa
                 const userTeams = user.teams[category];
                 if (!userTeams || !Array.isArray(userTeams)) continue;
                 
-                // Nájdeme tím v tejto kategórii so správnou skupinou a poradím
                 const team = userTeams.find(t => 
                     t.groupName === fullGroupName && 
                     t.order === orderNum
                 );
                 
                 if (team) {
-//                    console.log(`  Nájdený používateľský tím: ${team.teamName} (používateľ: ${user.email})`);
+                    console.log(`  Nájdený používateľský tím: ${team.teamName} (používateľ: ${user.email})`);
                     return team.teamName;
                 }
             }
         }
         
-        // Fallback - vrátime identifikátor v čitateľnej forme
-//        console.log(`  Tím NENájdený, používam fallback`);
-        return `${category} ${groupName}${order}`;
+        // Pre superstructure tímy - hľadáme podľa kategórie a skupiny+poradia
+        if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
+            const categoryTeams = superstructureTeams[category] || [];
+            
+            console.log(`  Hľadám v superstructure tímoch, kategória ${category} má ${categoryTeams.length} tímov`);
+            
+            // V superstructure tímoch je názov vo formáte "Kategória ČísloPísmeno" (napr. "U12 D 2B")
+            // Potrebujeme nájsť tím, ktorý je v skupine fullGroupName a má order = orderNum
+            // Ale v superstructure tímoch order nie je priamo poradie, ale je to order v rámci skupiny
+            
+            // Najprv získame všetky tímy v tejto skupine
+            const teamsInGroup = categoryTeams.filter(t => t.groupName === fullGroupName);
+            
+            console.log(`    V skupine ${fullGroupName} je ${teamsInGroup.length} tímov`);
+            
+            // Zoradíme ich podľa poradia
+            const sortedTeams = [...teamsInGroup].sort((a, b) => {
+                const orderA = a.order !== null && a.order !== undefined ? a.order : Infinity;
+                const orderB = b.order !== null && b.order !== undefined ? b.order : Infinity;
+                return orderA - orderB;
+            });
+            
+            // Vypíšeme všetky tímy v skupine pre debug
+            sortedTeams.forEach((t, idx) => {
+                console.log(`      ${idx+1}. ${t.teamName} (order: ${t.order})`);
+            });
+            
+            // Hľadáme tím s týmto poradím
+            if (orderNum <= sortedTeams.length && orderNum >= 1) {
+                const foundTeam = sortedTeams[orderNum - 1];
+                console.log(`    Nájdený superstructure tím na pozícii ${orderNum}: ${foundTeam.teamName}`);
+                return foundTeam.teamName;
+            } else {
+                console.log(`    Poradie ${orderNum} je mimo rozsahu (1-${sortedTeams.length})`);
+            }
+        }
+        
+        // Fallback
+        console.log(`  Tím NENájdený, používam fallback`);
+        return `${category} ${groupLetter}${order}`;
     };
 
     // Zoradenie dní podľa dátumu
