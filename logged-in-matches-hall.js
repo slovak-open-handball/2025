@@ -202,79 +202,92 @@ const matchesHallApp = ({ userProfileData }) => {
 //        console.log('=========================================');
     };
 
-    // FUNKCIA PRE VYPISOVANIE VŠETKÝCH POUŽÍVATEĽOV V PREHĽADNEJ TABUĽKE
+    // FUNKCIA PRE VYPISOVANIE VŠETKÝCH TÍMOV POUŽÍVATEĽOV V JEDNEJ PREHĽADNEJ TABUĽKE
     const logAllUsers = (usersList) => {
         if (!usersList || usersList.length === 0) {
             console.log('Žiadni používatelia nie sú k dispozícii');
             return;
         }
         
-        console.log('=== VŠETCI POUŽÍVATELIA Z KOLEKCIE USERS ===');
-        console.log(`Celkový počet používateľov: ${usersList.length}`);
-        console.log('');
+        console.log('=== VŠETKY TÍMY POUŽÍVATEĽOV ZORADENÉ PODĽA KATEGÓRIE A SKUPINY ===');
         
-        // Pre každého používateľa vypíšeme jeho tímy
-        usersList.forEach((user, index) => {
-            console.log(`Používateľ #${index + 1}: ${user.email || 'Neznámy email'} (ID: ${user.id})`);
-            console.log(`  Rola: ${user.role || 'Nezadaná'} | Schválený: ${user.approved ? 'Áno' : 'Nie'}`);
+        // Vytvoríme centrálnu štruktúru pre všetky tímy
+        const allTeamsByCategory = {};
+        let totalTeams = 0;
+        
+        // Prejdeme všetkých používateľov a ich tímy
+        usersList.forEach((user) => {
+            if (!user.teams || Object.keys(user.teams).length === 0) return;
             
-            if (user.teams && Object.keys(user.teams).length > 0) {
-                console.log(`  Tímy používateľa:`);
+            Object.entries(user.teams).forEach(([categoryName, teamArray]) => {
+                if (!Array.isArray(teamArray) || teamArray.length === 0) return;
                 
-                // Získame všetky kategórie a zoradíme ich podľa abecedy
-                const categories = Object.keys(user.teams).sort((a, b) => a.localeCompare(b));
+                // Inicializujeme kategóriu, ak ešte neexistuje
+                if (!allTeamsByCategory[categoryName]) {
+                    allTeamsByCategory[categoryName] = {};
+                }
                 
-                categories.forEach(categoryName => {
-                    const teamArray = user.teams[categoryName] || [];
+                teamArray.forEach(team => {
+                    const groupName = team.groupName || 'Bez skupiny';
                     
-                    if (teamArray.length > 0) {
-                        console.log(`    Kategória: ${categoryName}`);
-                        
-                        // Zoskupíme tímy podľa skupiny
-                        const teamsByGroup = {};
-                        
-                        teamArray.forEach(team => {
-                            const groupName = team.groupName || 'Bez skupiny';
-                            if (!teamsByGroup[groupName]) {
-                                teamsByGroup[groupName] = [];
-                            }
-                            teamsByGroup[groupName].push(team);
-                        });
-                        
-                        // Zoradíme skupiny podľa abecedy
-                        const sortedGroups = Object.keys(teamsByGroup).sort((a, b) => {
-                            // "Bez skupiny" dáme na koniec
-                            if (a === 'Bez skupiny') return 1;
-                            if (b === 'Bez skupiny') return -1;
-                            return a.localeCompare(b);
-                        });
-                        
-                        sortedGroups.forEach(groupName => {
-                            const teamsInGroup = teamsByGroup[groupName];
-                            
-                            // Zoradíme tímy v skupine podľa poradia
-                            const sortedTeams = [...teamsInGroup].sort((a, b) => {
-                                const orderA = a.order !== null && a.order !== undefined ? a.order : Infinity;
-                                const orderB = b.order !== null && b.order !== undefined ? b.order : Infinity;
-                                return orderA - orderB;
-                            });
-                            
-                            sortedTeams.forEach(team => {
-                                const groupText = groupName !== 'Bez skupiny' ? `, skupina: ${groupName}` : '';
-                                const orderText = team.order !== null && team.order !== undefined ? `, poradie: ${team.order}` : '';
-                                console.log(`      - ${team.teamName}${groupText}${orderText}`);
-                            });
-                        });
+                    // Inicializujeme skupinu, ak ešte neexistuje
+                    if (!allTeamsByCategory[categoryName][groupName]) {
+                        allTeamsByCategory[categoryName][groupName] = [];
                     }
+                    
+                    // Pridáme tím s informáciou o používateľovi
+                    allTeamsByCategory[categoryName][groupName].push({
+                        teamName: team.teamName,
+                        order: team.order,
+                        userEmail: user.email || 'Neznámy email',
+                        userId: user.id
+                    });
+                    totalTeams++;
                 });
-            } else {
-                console.log(`  Žiadne tímy`);
-            }
-            
-            console.log('  ---');
+            });
         });
         
-        console.log('===========================================');
+        console.log(`Celkový počet tímov naprieč všetkými používateľmi: ${totalTeams}`);
+        console.log('');
+        
+        // Zoradíme kategórie podľa abecedy
+        const sortedCategories = Object.keys(allTeamsByCategory).sort((a, b) => a.localeCompare(b));
+        
+        // Prejdeme všetky kategórie
+        sortedCategories.forEach(categoryName => {
+            console.log(`\nKategória: ${categoryName}`);
+            
+            const groups = allTeamsByCategory[categoryName];
+            
+            // Zoradíme skupiny - "Bez skupiny" dáme na koniec
+            const sortedGroups = Object.keys(groups).sort((a, b) => {
+                if (a === 'Bez skupiny') return 1;
+                if (b === 'Bez skupiny') return -1;
+                return a.localeCompare(b);
+            });
+            
+            // Prejdeme všetky skupiny v kategórii
+            sortedGroups.forEach(groupName => {
+                console.log(`  Skupina: ${groupName}`);
+                
+                const teamsInGroup = groups[groupName];
+                
+                // Zoradíme tímy podľa poradia
+                const sortedTeams = [...teamsInGroup].sort((a, b) => {
+                    const orderA = a.order !== null && a.order !== undefined ? a.order : Infinity;
+                    const orderB = b.order !== null && b.order !== undefined ? b.order : Infinity;
+                    return orderA - orderB;
+                });
+                
+                // Vypíšeme každý tím
+                sortedTeams.forEach(team => {
+                    const orderText = team.order !== null && team.order !== undefined ? `, poradie: ${team.order}` : '';
+                    console.log(`    - ${team.teamName}${orderText} (používateľ: ${team.userEmail})`);
+                });
+            });
+        });
+        
+        console.log('\n===========================================');
     };
 
     // Načítanie kategórií z databázy
