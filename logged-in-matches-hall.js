@@ -1039,6 +1039,15 @@ const matchesHallApp = ({ userProfileData }) => {
                                             )
                                         ),
                                         
+                                        // Skupina alebo typ zápasu
+                                        React.createElement(
+                                            'span',
+                                            { 
+                                                className: `px-3 py-1 text-xs font-medium rounded-full ${groupOrTypeClass}`,
+                                            },
+                                            groupOrTypeText
+                                        ),
+
                                         // Kategória (ak existuje)
                                         category && React.createElement(
                                             'span',
@@ -1050,15 +1059,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 }
                                             },
                                             category.name
-                                        ),
-                                        
-                                        // Skupina alebo typ zápasu
-                                        React.createElement(
-                                            'span',
-                                            { 
-                                                className: `px-3 py-1 text-xs font-medium rounded-full ${groupOrTypeClass}`,
-                                            },
-                                            groupOrTypeText
                                         )
                                     )
                                 );
