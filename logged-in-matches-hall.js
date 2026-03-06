@@ -742,6 +742,7 @@ const matchesHallApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, [selectedMatch]);    
     
+    // V addMatchEvent funkcii upravte ukladanie času:
     const addMatchEvent = async () => {
         if (!selectedMatch || !window.db || !eventType || !eventTeam) {
             window.showGlobalNotification('Vyberte typ udalosti a tím', 'error');
@@ -769,11 +770,21 @@ const matchesHallApp = ({ userProfileData }) => {
         try {
             const eventsRef = collection(window.db, 'matchEvents');
             
+            // Výpočet minúty a sekundy z celkového času v sekundách
+            const totalSeconds = matchTime;
+            const minute = Math.floor(totalSeconds / 60) + 1; // +1 lebo minúty sa počítajú od 1
+            const second = totalSeconds % 60;
+            
+            // Formátovaný čas pre zobrazenie MM:SS
+            const formattedTime = `${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`;
+            
             const eventData = {
                 matchId: selectedMatch.id,
                 type: eventType,
                 team: eventTeam,
-                minute: Math.floor(matchTime / 60) + 1, // +1 lebo minúty sa počítajú od 1
+                minute: minute,
+                second: second, // Pridáme sekundu
+                formattedTime: formattedTime, // Pridáme formátovaný čas pre ľahšie zobrazenie
                 timestamp: Timestamp.now(),
                 createdBy: userProfileData?.email || 'unknown',
                 createdByUid: userProfileData?.uid || null
@@ -799,7 +810,7 @@ const matchesHallApp = ({ userProfileData }) => {
     
             await addDoc(eventsRef, eventData);
             
-            window.showGlobalNotification('Udalosť bola pridaná', 'success');
+            window.showGlobalNotification(`Udalosť bola pridaná v čase ${formattedTime}`, 'success');
             
             // Reset po pridaní
             setSelectedPlayerForEvent(null);
@@ -2241,7 +2252,9 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { className: 'flex items-center gap-3' },
-                                                React.createElement('span', { className: `font-mono text-xs ${eventColor}` }, `${event.minute}'`),
+                                                React.createElement('span', { className: `font-mono text-xs ${eventColor}` }, 
+                                                    `${event.minute}:${event.second?.toString().padStart(2, '0') || '00'}'`
+                                                )
                                                 React.createElement('i', { className: `fa-solid ${eventIcon} ${eventColor} text-xs` }),
                                                 React.createElement('span', { className: 'text-gray-700' }, eventText),
                                                 React.createElement('span', { className: 'text-xs text-gray-400' }, event.team === 'home' ? '(D)' : '(H)')
