@@ -728,8 +728,15 @@ const matchesHallApp = ({ userProfileData }) => {
                 }
             });
             
-            // Zoradenie podľa minúty
-            loadedEvents.sort((a, b) => (a.minute || 0) - (b.minute || 0));
+            // Zoradenie od najstaršej po najnovšiu (vzostupne podľa času)
+            loadedEvents.sort((a, b) => {
+                // Najprv podľa minúty
+                if (a.minute !== b.minute) {
+                    return (a.minute || 0) - (b.minute || 0);
+                }
+                // Potom podľa sekundy
+                return (a.second || 0) - (b.second || 0);
+            });
             
             setMatchEvents(loadedEvents);
             setMatchScore({ home: homeScore, away: awayScore });
@@ -740,7 +747,7 @@ const matchesHallApp = ({ userProfileData }) => {
         });
     
         return () => unsubscribe();
-    }, [selectedMatch]);    
+    }, [selectedMatch]);
     
     // V addMatchEvent funkcii upravte ukladanie času:
     const addMatchEvent = async () => {
@@ -772,7 +779,7 @@ const matchesHallApp = ({ userProfileData }) => {
             
             // Výpočet minúty a sekundy z celkového času v sekundách
             const totalSeconds = matchTime;
-            const minute = Math.floor(totalSeconds / 60) + 1; // +1 lebo minúty sa počítajú od 1
+            const minute = Math.floor(totalSeconds / 60); // +1 lebo minúty sa počítajú od 1
             const second = totalSeconds % 60;
             
             // Formátovaný čas pre zobrazenie MM:SS
@@ -2049,7 +2056,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 )
                             ),
                             
-                            // Zoznam udalostí
+                            // Zoznam udalostí - nahraďte existujúcu časť
                             React.createElement(
                                 'div',
                                 { className: 'bg-gray-50 rounded-lg p-4 border border-gray-200' },
@@ -2067,8 +2074,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     'Zatiaľ žiadne udalosti'
                                 ) : React.createElement(
                                     'div',
-                                    { className: 'space-y-2 max-h-60 overflow-y-auto' },
-                                    // V zozname udalostí, približne riadok 2400
+                                    { className: 'space-y-2' }, // Odstránené max-h-60 a overflow-y-auto
                                     matchEvents.map((event) => {
                                         const playerName = event.playerRef ? getPlayerNameFromRef(event.playerRef) : '';
                                         
@@ -2124,7 +2130,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 { className: 'flex items-center gap-3' },
                                                 React.createElement('span', { className: `font-mono text-xs ${eventColor}` }, 
                                                     `${event.minute}:${event.second?.toString().padStart(2, '0') || '00'}'`
-                                                ), // <-- Chýbala čiarka
+                                                ),
                                                 React.createElement('i', { className: `fa-solid ${eventIcon} ${eventColor} text-xs` }),
                                                 React.createElement('span', { className: 'text-gray-700' }, eventText),
                                                 React.createElement('span', { className: 'text-xs text-gray-400' }, event.team === 'home' ? '(D)' : '(H)')
