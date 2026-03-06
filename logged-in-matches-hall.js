@@ -880,7 +880,12 @@ const matchesHallApp = ({ userProfileData }) => {
                         'div',
                         { className: 'text-center mb-8 p-4 bg-blue-50 rounded-lg' },
                         React.createElement('div', { className: 'text-lg font-semibold text-gray-700' }, matchDate),
-                        React.createElement('div', { className: 'text-2xl font-bold text-blue-600 mt-1' }, matchTime)
+                        React.createElement(
+                            'div', 
+                            { className: 'text-2xl font-bold text-blue-600 mt-1 flex items-center justify-center gap-1' },
+                            matchTime,
+                            React.createElement('span', { className: 'text-base font-normal text-blue-500' }, 'hod.')
+                        )
                     ),
                     
                     // Tímy
