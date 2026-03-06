@@ -179,6 +179,9 @@ const matchesHallApp = ({ userProfileData }) => {
     const [matchTime, setMatchTime] = useState(0); // čas v sekundách
     const [timerInterval, setTimerInterval] = useState(null);
 
+    const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+    const [eventToDelete, setEventToDelete] = useState(null);
+
     const formatMatchTime = (seconds) => {
         // Ochrana proti nečíselným hodnotám
         if (typeof seconds !== 'number' || isNaN(seconds) || seconds < 0) {
@@ -842,13 +845,20 @@ const matchesHallApp = ({ userProfileData }) => {
     
     const deleteMatchEvent = async (eventId) => {
         if (!window.db || !eventId) return;
-        
-        if (!window.confirm('Naozaj chcete zmazať túto udalosť?')) return;
-        
+    
+        // Namiesto window.confirm otvoríme modálne okno
+        setEventToDelete(eventId);
+        setConfirmModalOpen(true);
+    };
+
+    const confirmDeleteEvent = async () => {
+        if (!eventToDelete) return;
+    
         try {
-            const eventRef = doc(window.db, 'matchEvents', eventId);
+            const eventRef = doc(window.db, 'matchEvents', eventToDelete);
             await deleteDoc(eventRef);
             window.showGlobalNotification('Udalosť bola zmazaná', 'success');
+            setEventToDelete(null);
         } catch (error) {
             console.error('Chyba pri mazaní udalosti:', error);
             window.showGlobalNotification('Chyba pri mazaní udalosti', 'error');
@@ -2449,6 +2459,16 @@ const matchesHallApp = ({ userProfileData }) => {
                 },
                 homeTeamDetails: homeTeamDetails,
                 awayTeamDetails: awayTeamDetails
+            }),
+            React.createElement(ConfirmModal, {
+                isOpen: confirmModalOpen,
+                onClose: () => {
+                    setConfirmModalOpen(false);
+                    setEventToDelete(null);
+                },
+                onConfirm: confirmDeleteEvent,
+                title: 'Zmazanie udalosti',
+                message: 'Naozaj chcete zmazať túto udalosť? Táto akcia je nenávratná.'
             })
         );
     }
@@ -2623,7 +2643,68 @@ const matchesHallApp = ({ userProfileData }) => {
     );
 };
 
-// 🔴 NOVÉ MODÁLNE OKNÁ - PRIDAŤ SEM (pred handleDataUpdateAndRender)
+// Komponent pre potvrdzovacie modálne okno
+const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message }) => {
+    if (!isOpen) return null;
+
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[130]',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) onClose();
+            }
+        },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
+            
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center mb-4' },
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, title || 'Potvrdenie akcie'),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'text-gray-500 hover:text-gray-700'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-times text-xl' })
+                )
+            ),
+
+            React.createElement(
+                'p',
+                { className: 'text-gray-600 mb-6' },
+                message || 'Naozaj chcete vykonať túto akciu?'
+            ),
+
+            React.createElement(
+                'div',
+                { className: 'flex justify-end gap-3' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
+                    },
+                    'Zrušiť'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => {
+                            onConfirm();
+                            onClose();
+                        },
+                        className: 'px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors'
+                    },
+                    'Zmazať'
+                )
+            )
+        )
+    );
+};
 
 // Komponent pre modálne okno výberu hráča
 const PlayerSelectModal = ({ isOpen, onClose, onSelect, players, staff, teamName }) => {
