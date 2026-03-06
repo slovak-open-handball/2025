@@ -1845,10 +1845,10 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         key: `home-player-${idx}`, 
                                                         className: 'bg-white p-2 rounded border border-gray-200 text-sm group relative hover:bg-blue-50 transition-colors cursor-pointer',
                                                         onClick: () => {
-                                                            // Ak je vybratý typ udalosti, uložíme hráča a pridáme udalosť
-                                                            if (eventType && eventTeam === 'home') {
+                                                            // ✅ UPRAVENÉ: Pridaný setEventTeam('home')
+                                                            if (eventType) {
+                                                                setEventTeam('home'); // Nastavíme tím podľa toho, na ktorého hráča sa kliklo
                                                                 setSelectedPlayerForEvent(playerIdentifier);
-                                                                // Automaticky pridáme udalosť
                                                                 setTimeout(() => addMatchEvent(), 100);
                                                             }
                                                         }
@@ -1874,7 +1874,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         ),
                                                         
                                                         // Zobraziť indikátor, že je možné kliknúť (ak je vybratý typ udalosti)
-                                                        eventType && eventTeam === 'home' && React.createElement(
+                                                        eventType && React.createElement(
                                                             'span',
                                                             { className: 'ml-2 text-xs text-green-600 opacity-0 group-hover:opacity-100 transition-opacity' },
                                                             `➕ ${eventType === 'goal' ? 'gól' : eventType === 'yellow' ? 'žltá' : eventType === 'red' ? 'červená' : eventType === 'blue' ? 'modrá' : eventType === 'exclusion' ? 'vylúčenie' : '7m'}`
@@ -1921,7 +1921,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 )
                             ),
                             
-                            // Ovládacie tlačidlá pre adminov a hall users
+                            // Ovládacie tlačidlá pre adminov a hall users - JEDNOTNÉ pre oba tímy
                             (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && React.createElement(
                                 'div',
                                 { className: 'flex flex-wrap gap-2 justify-center mb-4' },
@@ -1929,254 +1929,123 @@ const matchesHallApp = ({ userProfileData }) => {
                                     'button',
                                     {
                                         className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-                                            eventType === 'goal' && eventTeam === 'home' 
+                                            eventType === 'goal' 
                                                 ? 'bg-green-700 text-white ring-2 ring-green-300' 
                                                 : 'bg-green-600 hover:bg-green-700 text-white'
                                         }`,
                                         onClick: () => {
-                                            // Ak je už vybratý rovnaký typ a tím, zrušíme výber
-                                            if (eventType === 'goal' && eventTeam === 'home') {
+                                            // Ak je už vybratý rovnaký typ, zrušíme výber, inak nastavíme
+                                            if (eventType === 'goal') {
                                                 setEventType(null);
                                                 setEventTeam(null);
                                             } else {
                                                 setEventType('goal');
-                                                setEventTeam('home');
+                                                // eventTeam sa nastaví až pri kliknutí na hráča
                                             }
                                         }
                                     },
                                     React.createElement('i', { className: 'fa-solid fa-futbol' }),
-                                    'Gól (D)'
+                                    'Gól'
                                 ),
                                 React.createElement(
                                     'button',
                                     {
                                         className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-                                            eventType === 'goal' && eventTeam === 'away' 
-                                                ? 'bg-green-700 text-white ring-2 ring-green-300' 
-                                                : 'bg-green-600 hover:bg-green-700 text-white'
-                                        }`,
-                                        onClick: () => {
-                                            if (eventType === 'goal' && eventTeam === 'away') {
-                                                setEventType(null);
-                                                setEventTeam(null);
-                                            } else {
-                                                setEventType('goal');
-                                                setEventTeam('away');
-                                            }
-                                        }
-                                    },
-                                    React.createElement('i', { className: 'fa-solid fa-futbol' }),
-                                    'Gól (H)'
-                                ),
-                                React.createElement(
-                                    'button',
-                                    {
-                                        className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-                                            eventType === 'penalty' && eventTeam === 'home' 
+                                            eventType === 'penalty' 
                                                 ? 'bg-blue-700 text-white ring-2 ring-blue-300' 
                                                 : 'bg-blue-600 hover:bg-blue-700 text-white'
                                         }`,
                                         onClick: () => {
-                                            if (eventType === 'penalty' && eventTeam === 'home') {
+                                            if (eventType === 'penalty') {
                                                 setEventType(null);
                                                 setEventTeam(null);
                                             } else {
                                                 setEventType('penalty');
-                                                setEventTeam('home');
                                             }
                                         }
                                     },
                                     React.createElement('i', { className: 'fa-solid fa-circle-dot' }),
-                                    '7m (D)'
+                                    '7m'
                                 ),
                                 React.createElement(
                                     'button',
                                     {
                                         className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-                                            eventType === 'penalty' && eventTeam === 'away' 
-                                                ? 'bg-blue-700 text-white ring-2 ring-blue-300' 
-                                                : 'bg-blue-600 hover:bg-blue-700 text-white'
-                                        }`,
-                                        onClick: () => {
-                                            if (eventType === 'penalty' && eventTeam === 'away') {
-                                                setEventType(null);
-                                                setEventTeam(null);
-                                            } else {
-                                                setEventType('penalty');
-                                                setEventTeam('away');
-                                            }
-                                        }
-                                    },
-                                    React.createElement('i', { className: 'fa-solid fa-circle-dot' }),
-                                    '7m (H)'
-                                ),
-                                React.createElement(
-                                    'button',
-                                    {
-                                        className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-                                            eventType === 'yellow' && eventTeam === 'home' 
+                                            eventType === 'yellow' 
                                                 ? 'bg-yellow-700 text-white ring-2 ring-yellow-300' 
                                                 : 'bg-yellow-600 hover:bg-yellow-700 text-white'
                                         }`,
                                         onClick: () => {
-                                            if (eventType === 'yellow' && eventTeam === 'home') {
+                                            if (eventType === 'yellow') {
                                                 setEventType(null);
                                                 setEventTeam(null);
                                             } else {
                                                 setEventType('yellow');
-                                                setEventTeam('home');
                                             }
                                         }
                                     },
                                     React.createElement('i', { className: 'fa-solid fa-square' }),
-                                    'ŽK (D)'
+                                    'ŽK'
                                 ),
                                 React.createElement(
                                     'button',
                                     {
                                         className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-                                            eventType === 'yellow' && eventTeam === 'away' 
-                                                ? 'bg-yellow-700 text-white ring-2 ring-yellow-300' 
-                                                : 'bg-yellow-600 hover:bg-yellow-700 text-white'
-                                        }`,
-                                        onClick: () => {
-                                            if (eventType === 'yellow' && eventTeam === 'away') {
-                                                setEventType(null);
-                                                setEventTeam(null);
-                                            } else {
-                                                setEventType('yellow');
-                                                setEventTeam('away');
-                                            }
-                                        }
-                                    },
-                                    React.createElement('i', { className: 'fa-solid fa-square' }),
-                                    'ŽK (H)'
-                                ),
-                                React.createElement(
-                                    'button',
-                                    {
-                                        className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-                                            eventType === 'red' && eventTeam === 'home' 
+                                            eventType === 'red' 
                                                 ? 'bg-red-700 text-white ring-2 ring-red-300' 
                                                 : 'bg-red-600 hover:bg-red-700 text-white'
                                         }`,
                                         onClick: () => {
-                                            if (eventType === 'red' && eventTeam === 'home') {
+                                            if (eventType === 'red') {
                                                 setEventType(null);
                                                 setEventTeam(null);
                                             } else {
                                                 setEventType('red');
-                                                setEventTeam('home');
                                             }
                                         }
                                     },
                                     React.createElement('i', { className: 'fa-solid fa-square' }),
-                                    'ČK (D)'
+                                    'ČK'
                                 ),
                                 React.createElement(
                                     'button',
                                     {
                                         className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-                                            eventType === 'red' && eventTeam === 'away' 
-                                                ? 'bg-red-700 text-white ring-2 ring-red-300' 
-                                                : 'bg-red-600 hover:bg-red-700 text-white'
-                                        }`,
-                                        onClick: () => {
-                                            if (eventType === 'red' && eventTeam === 'away') {
-                                                setEventType(null);
-                                                setEventTeam(null);
-                                            } else {
-                                                setEventType('red');
-                                                setEventTeam('away');
-                                            }
-                                        }
-                                    },
-                                    React.createElement('i', { className: 'fa-solid fa-square' }),
-                                    'ČK (H)'
-                                ),
-                                React.createElement(
-                                    'button',
-                                    {
-                                        className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-                                            eventType === 'blue' && eventTeam === 'home' 
+                                            eventType === 'blue' 
                                                 ? 'bg-blue-900 text-white ring-2 ring-blue-300' 
                                                 : 'bg-blue-800 hover:bg-blue-900 text-white'
                                         }`,
                                         onClick: () => {
-                                            if (eventType === 'blue' && eventTeam === 'home') {
+                                            if (eventType === 'blue') {
                                                 setEventType(null);
                                                 setEventTeam(null);
                                             } else {
                                                 setEventType('blue');
-                                                setEventTeam('home');
                                             }
                                         }
                                     },
                                     React.createElement('i', { className: 'fa-solid fa-square' }),
-                                    'MK (D)'
+                                    'MK'
                                 ),
                                 React.createElement(
                                     'button',
                                     {
                                         className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-                                            eventType === 'blue' && eventTeam === 'away' 
-                                                ? 'bg-blue-900 text-white ring-2 ring-blue-300' 
-                                                : 'bg-blue-800 hover:bg-blue-900 text-white'
-                                        }`,
-                                        onClick: () => {
-                                            if (eventType === 'blue' && eventTeam === 'away') {
-                                                setEventType(null);
-                                                setEventTeam(null);
-                                            } else {
-                                                setEventType('blue');
-                                                setEventTeam('away');
-                                            }
-                                        }
-                                    },
-                                    React.createElement('i', { className: 'fa-solid fa-square' }),
-                                    'MK (H)'
-                                ),
-                                React.createElement(
-                                    'button',
-                                    {
-                                        className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-                                            eventType === 'exclusion' && eventTeam === 'home' 
+                                            eventType === 'exclusion' 
                                                 ? 'bg-orange-700 text-white ring-2 ring-orange-300' 
                                                 : 'bg-orange-600 hover:bg-orange-700 text-white'
                                         }`,
                                         onClick: () => {
-                                            if (eventType === 'exclusion' && eventTeam === 'home') {
+                                            if (eventType === 'exclusion') {
                                                 setEventType(null);
                                                 setEventTeam(null);
                                             } else {
                                                 setEventType('exclusion');
-                                                setEventTeam('home');
                                             }
                                         }
                                     },
                                     React.createElement('i', { className: 'fa-solid fa-user-slash' }),
-                                    'Vylúč. (D)'
-                                ),
-                                React.createElement(
-                                    'button',
-                                    {
-                                        className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-                                            eventType === 'exclusion' && eventTeam === 'away' 
-                                                ? 'bg-orange-700 text-white ring-2 ring-orange-300' 
-                                                : 'bg-orange-600 hover:bg-orange-700 text-white'
-                                        }`,
-                                        onClick: () => {
-                                            if (eventType === 'exclusion' && eventTeam === 'away') {
-                                                setEventType(null);
-                                                setEventTeam(null);
-                                            } else {
-                                                setEventType('exclusion');
-                                                setEventTeam('away');
-                                            }
-                                        }
-                                    },
-                                    React.createElement('i', { className: 'fa-solid fa-user-slash' }),
-                                    'Vylúč. (H)'
+                                    'Vylúčenie'
                                 )
                             ),
                             
