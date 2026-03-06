@@ -384,6 +384,11 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     }, [selectedMatch]);
 
+    // Sledovanie zmien matchTime
+    useEffect(() => {
+        console.log('matchTime sa zmenil na:', matchTime, 'formátovaný:', formatMatchTime(matchTime));
+    }, [matchTime]);
+
     // Timer pre priebeh zápasu
     useEffect(() => {
         console.log('Timer useEffect - stav:', selectedMatch?.status, 'matchTime:', matchTime);
@@ -407,7 +412,12 @@ const matchesHallApp = ({ userProfileData }) => {
                 const elapsedSeconds = Math.floor((now.seconds - startedAt.seconds));
                 
                 console.log('Timer tick - elapsedSeconds:', elapsedSeconds);
-                setMatchTime(elapsedSeconds);
+                
+                // OVERENIE: Nastavujeme matchTime?
+                setMatchTime(prevTime => {
+                    console.log('Nastavujem matchTime z', prevTime, 'na', elapsedSeconds);
+                    return elapsedSeconds;
+                });
                 
                 // Automatické zastavenie pri dosiahnutí maxima podľa kategórie
                 const totalPeriodSeconds = (currentCategory.periodDuration || 20) * 60; // prevod na sekundy
@@ -1516,37 +1526,21 @@ const matchesHallApp = ({ userProfileData }) => {
                             )
                         ),
                         
-                        // PRIEBEH ČASU (nový prvok)
+                        // PRIEBEH ČASU (nový prvok) - S DEBUG VÝPISOM
                         (selectedMatch.status === 'in-progress' || selectedMatch.status === 'paused') && category && React.createElement(
                             'div',
                             { className: 'text-center mb-4 p-3 bg-white rounded-lg border border-gray-200' },
                             React.createElement('div', { className: 'text-xs text-gray-500 mb-1' }, 'Priebeh času'),
+                            // DEBUG: Zobraziť surovú hodnotu
+                            React.createElement(
+                                'div',
+                                { className: 'text-xs text-red-500 mb-1' },
+                                `Debug: matchTime = ${matchTime}`
+                            ),
                             React.createElement(
                                 'div',
                                 { className: 'text-3xl font-mono font-bold' },
-                                formatMatchTime(matchTime || 0) // Fallback na 0 ak je matchTime undefined
-                            ),
-                            React.createElement(
-                                'div',
-                                { className: 'text-xs text-gray-500 mt-1' },
-                                `z celkových ${category.periodDuration} minút`
-                            ),
-                            
-                            // Vizuálny progress bar
-                            React.createElement(
-                                'div',
-                                { className: 'w-full bg-gray-200 rounded-full h-2.5 mt-2' },
-                                React.createElement(
-                                    'div',
-                                    {
-                                        className: `h-2.5 rounded-full transition-all duration-1000 ${
-                                            matchTime >= (category.periodDuration * 60) ? 'bg-red-600' : 'bg-blue-600'
-                                        }`,
-                                        style: {
-                                            width: `${Math.min(100, (matchTime / (category.periodDuration * 60)) * 100)}%`
-                                        }
-                                    }
-                                )
+                                formatMatchTime(matchTime || 0)
                             )
                         ),
                         
