@@ -48,7 +48,41 @@ window.showGlobalNotification = (message, type = 'success') => {
 
 const matcheshallApp = ({ userProfileData }) => {
     // Extrahujeme hallId z userProfileData
-    const hallId = userProfileData?.hallId || 'Žiadne hallId';
+    const hallId = userProfileData?.hallId;
+    const [hallName, setHallName] = useState(null);
+    const [loading, setLoading] = useState(true);
+    
+    useEffect(() => {
+        const fetchHallName = async () => {
+            if (!hallId || !window.db) {
+                setHallName('Žiadna priradená hala');
+                setLoading(false);
+                return;
+            }
+            
+            try {
+                // Najprv skúsime nájsť miesto podľa ID (ak je hallId priamo ID miesta)
+                const placeRef = doc(window.db, 'places', hallId);
+                const placeSnap = await getDoc(placeRef);
+                
+                if (placeSnap.exists()) {
+                    const placeData = placeSnap.data();
+                    setHallName(placeData.name || 'Neznámy názov haly');
+                } else {
+                    // Ak sa nepodarilo nájsť podľa ID, skúsime vyhľadať podľa názvu
+                    // Toto je fallback pre prípad, že hallId je starý formát (názov)
+                    setHallName(hallId);
+                }
+            } catch (error) {
+                console.error("Chyba pri načítaní názvu haly:", error);
+                setHallName(hallId || 'Chyba načítania');
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        fetchHallName();
+    }, [hallId]);
     
     return React.createElement(
         'div',
@@ -60,11 +94,16 @@ const matcheshallApp = ({ userProfileData }) => {
                 'div',
                 { className: `flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl` },
                 React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Zápasy'),
-                // Pridávame zobrazenie hallId pod nadpisom
+                // Zobrazenie názvu haly pod nadpisom
                 React.createElement(
                     'div',
                     { className: 'mt-2 text-lg text-gray-600' },
-                    `Hall ID: ${hallId}`
+                    loading 
+                        ? React.createElement('div', { className: 'flex items-center justify-center' },
+                            React.createElement('div', { className: 'animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500 mr-2' }),
+                            'Načítavam názov haly...'
+                          )
+                        : `Hala: ${hallName}`
                 )
             )
         )
