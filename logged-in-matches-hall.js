@@ -464,147 +464,147 @@ const matchesHallApp = ({ userProfileData }) => {
         return () => unsubscribeUsers();
     }, []); // Prázdne pole závislostí - spustí sa raz pri načítaní
 
-// Načítanie zápasov pre túto halu
-useEffect(() => {
-    if (!window.db || !hallId) {
-        setLoading(false);
-        return;
-    }
-
-    const matchesRef = collection(window.db, 'matches');
-    const q = query(matchesRef, where("hallId", "==", hallId));
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        const loadedMatches = [];
-        snapshot.forEach((doc) => {
-            loadedMatches.push({
-                id: doc.id,
-                ...doc.data()
-            });
-        });
-        
-        // Zoradíme podľa času
-        loadedMatches.sort((a, b) => {
-            if (!a.scheduledTime) return 1;
-            if (!b.scheduledTime) return -1;
-            return a.scheduledTime.toDate() - b.scheduledTime.toDate();
-        });
-        
-        setMatches(loadedMatches);
-        
-        // Zoskupenie podľa dňa
-        const grouped = {};
-        loadedMatches.forEach(match => {
-            if (match.scheduledTime) {
-                const date = match.scheduledTime.toDate();
-                const dateStr = getLocalDateStr(date);
-                
-                if (!grouped[dateStr]) {
-                    grouped[dateStr] = {
-                        date: date,
-                        dateStr: dateStr,
-                        matches: []
-                    };
-                }
-                grouped[dateStr].matches.push(match);
-            }
-        });
-        
-        setGroupedMatches(grouped);
-        setLoading(false);
-                    
-        // VÝPIS KAŽDÉHO ZÁPASU DO KONZOLY S PODROBNÝMI NASTAVENIAMI KATEGÓRIE
-        console.log('=== VŠETKY ZÁPASY V TEJTO HALE S NASTAVENIAMI KATEGÓRIE ===');
-        loadedMatches.forEach((match, index) => {
-            const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
-            const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
-            const matchTime = match.scheduledTime ? formatTime(match.scheduledTime) : 'neurčený';
-            const matchDate = match.scheduledTime ? formatDateWithDay(match.scheduledTime.toDate()) : 'neurčený';
-            const categoryName = match.categoryName || 'Neznáma kategória';
-            
-            // Nájdeme kategóriu podľa názvu
-            const category = categories.find(c => c.name === match.categoryName);
-            
-            console.log(`Zápas #${index + 1}:`);
-            console.log(`  ID: ${match.id}`);
-            console.log(`  Dátum: ${matchDate}`);
-            console.log(`  Čas: ${matchTime}`);
-            console.log(`  Kategória: ${categoryName}`);
-            console.log(`  Skupina: ${match.groupName || 'neurčená'}`);
-            console.log(`  Domáci: ${homeTeamName} (${match.homeTeamIdentifier})`);
-            console.log(`  Hostia: ${awayTeamName} (${match.awayTeamIdentifier})`);
-            console.log(`  Status: ${match.status || 'neurčený'}`);
-            if (match.isPlacementMatch) {
-                console.log(`  Typ: Zápas o ${match.placementRank}. miesto`);
-            }
-            
-            // VÝPIS NASTAVENÍ KATEGÓRIE
-            if (category) {
-                console.log(`  --- NASTAVENIA KATEGÓRIE ${category.name} ---`);
-                console.log(`  • Maximálny počet tímov: ${category.maxTeams ?? 12}`);
-                console.log(`  • Maximálny počet hráčov v tíme: ${category.maxPlayers ?? 12}`);
-                console.log(`  • Maximálny počet členov RT: ${category.maxImplementationTeam ?? 3}`);
-                console.log(`  • Počet periód: ${category.periods ?? 2}`);
-                console.log(`  • Trvanie periódy: ${category.periodDuration ?? 20} min`);
-                console.log(`  • Prestávka medzi periódami: ${category.breakDuration ?? 2} min`);
-                console.log(`  • Prestávka medzi zápasmi: ${category.matchBreak ?? 5} min`);
-                console.log(`  • Farba pre rozlosovanie: ${category.drawColor ?? '#3B82F6'}`);
-                console.log(`  • Farba pre dopravu: ${category.transportColor ?? '#10B981'}`);
-                console.log(`  • Počet timeoutov: ${category.timeoutCount ?? 2}`);
-                console.log(`  • Trvanie timeoutu: ${category.timeoutDuration ?? 1} min`);
-                console.log(`  • Čas vylúčenia: ${category.exclusionTime ?? 2} min`);
-                
-                // Dátumy narodenia
-                if (category.dateFrom || category.dateTo) {
-                    console.log(`  • Dátum narodenia od: ${category.dateFrom ? category.dateFrom : 'neurčený'} ${category.dateFromActive ? '(aktívny)' : '(neaktívny)'}`);
-                    console.log(`  • Dátum narodenia do: ${category.dateTo ? category.dateTo : 'neurčený'} ${category.dateToActive ? '(aktívny)' : '(neaktívny)'}`);
-                }
-                
-                // Výpočet celkového času zápasu
-                const periods = category.periods ?? 2;
-                const periodDuration = category.periodDuration ?? 20;
-                const breakDuration = category.breakDuration ?? 2;
-                const matchBreak = category.matchBreak ?? 5;
-                
-                const playingTime = periods * periodDuration;
-                const breaksBetweenPeriods = (periods - 1) * breakDuration;
-                const totalTimeWithMatchBreak = playingTime + breaksBetweenPeriods + matchBreak;
-                
-                console.log(`  • Čistý hrací čas: ${playingTime} min`);
-                console.log(`  • Prestávky v zápase: ${breaksBetweenPeriods} min`);
-                console.log(`  • Celkový čas s prestávkou: ${totalTimeWithMatchBreak} min`);
-            } else {
-                console.log(`  • Nastavenia kategórie nie sú k dispozícii`);
-            }
-            
-            console.log('---');
-        });
-        console.log(`Celkový počet zápasov: ${loadedMatches.length}`);
-        console.log('===========================================');
-        
-        // Skontrolujeme URL parametre pre domácich a hostí
-        const homeIdentifierFromUrl = getUrlParameter('domaci');
-        const awayIdentifierFromUrl = getUrlParameter('hostia');
-        
-        if (homeIdentifierFromUrl && awayIdentifierFromUrl && !selectedMatch) {
-            // Hľadáme zápas, ktorý má oba identifikátory
-            const matchFromUrl = loadedMatches.find(m => 
-                m.homeTeamIdentifier === homeIdentifierFromUrl && 
-                m.awayTeamIdentifier === awayIdentifierFromUrl
-            );
-            
-            if (matchFromUrl) {
-                setSelectedMatch(matchFromUrl);
-            }
+    // Načítanie zápasov pre túto halu
+    useEffect(() => {
+        if (!window.db || !hallId) {
+            setLoading(false);
+            return;
         }
+    
+        const matchesRef = collection(window.db, 'matches');
+        const q = query(matchesRef, where("hallId", "==", hallId));
         
-    }, (error) => {
-        console.error("Chyba pri načítaní zápasov:", error);
-        setLoading(false);
-    });
-
-    return () => unsubscribe();
-}, [hallId]);
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const loadedMatches = [];
+            snapshot.forEach((doc) => {
+                loadedMatches.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+            
+            // Zoradíme podľa času
+            loadedMatches.sort((a, b) => {
+                if (!a.scheduledTime) return 1;
+                if (!b.scheduledTime) return -1;
+                return a.scheduledTime.toDate() - b.scheduledTime.toDate();
+            });
+            
+            setMatches(loadedMatches);
+            
+            // Zoskupenie podľa dňa
+            const grouped = {};
+            loadedMatches.forEach(match => {
+                if (match.scheduledTime) {
+                    const date = match.scheduledTime.toDate();
+                    const dateStr = getLocalDateStr(date);
+                    
+                    if (!grouped[dateStr]) {
+                        grouped[dateStr] = {
+                            date: date,
+                            dateStr: dateStr,
+                            matches: []
+                        };
+                    }
+                    grouped[dateStr].matches.push(match);
+                }
+            });
+            
+            setGroupedMatches(grouped);
+            setLoading(false);
+                        
+            // VÝPIS KAŽDÉHO ZÁPASU DO KONZOLY S PODROBNÝMI NASTAVENIAMI KATEGÓRIE
+            console.log('=== VŠETKY ZÁPASY V TEJTO HALE S NASTAVENIAMI KATEGÓRIE ===');
+            loadedMatches.forEach((match, index) => {
+                const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
+                const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
+                const matchTime = match.scheduledTime ? formatTime(match.scheduledTime) : 'neurčený';
+                const matchDate = match.scheduledTime ? formatDateWithDay(match.scheduledTime.toDate()) : 'neurčený';
+                const categoryName = match.categoryName || 'Neznáma kategória';
+                
+                // Nájdeme kategóriu podľa názvu
+                const category = categories.find(c => c.name === match.categoryName);
+                
+                console.log(`Zápas #${index + 1}:`);
+                console.log(`  ID: ${match.id}`);
+                console.log(`  Dátum: ${matchDate}`);
+                console.log(`  Čas: ${matchTime}`);
+                console.log(`  Kategória: ${categoryName}`);
+                console.log(`  Skupina: ${match.groupName || 'neurčená'}`);
+                console.log(`  Domáci: ${homeTeamName} (${match.homeTeamIdentifier})`);
+                console.log(`  Hostia: ${awayTeamName} (${match.awayTeamIdentifier})`);
+                console.log(`  Status: ${match.status || 'neurčený'}`);
+                if (match.isPlacementMatch) {
+                    console.log(`  Typ: Zápas o ${match.placementRank}. miesto`);
+                }
+                
+                // VÝPIS NASTAVENÍ KATEGÓRIE
+                if (category) {
+                    console.log(`  --- NASTAVENIA KATEGÓRIE ${category.name} ---`);
+                    console.log(`  • Maximálny počet tímov: ${category.maxTeams ?? 12}`);
+                    console.log(`  • Maximálny počet hráčov v tíme: ${category.maxPlayers ?? 12}`);
+                    console.log(`  • Maximálny počet členov RT: ${category.maxImplementationTeam ?? 3}`);
+                    console.log(`  • Počet periód: ${category.periods ?? 2}`);
+                    console.log(`  • Trvanie periódy: ${category.periodDuration ?? 20} min`);
+                    console.log(`  • Prestávka medzi periódami: ${category.breakDuration ?? 2} min`);
+                    console.log(`  • Prestávka medzi zápasmi: ${category.matchBreak ?? 5} min`);
+                    console.log(`  • Farba pre rozlosovanie: ${category.drawColor ?? '#3B82F6'}`);
+                    console.log(`  • Farba pre dopravu: ${category.transportColor ?? '#10B981'}`);
+                    console.log(`  • Počet timeoutov: ${category.timeoutCount ?? 2}`);
+                    console.log(`  • Trvanie timeoutu: ${category.timeoutDuration ?? 1} min`);
+                    console.log(`  • Čas vylúčenia: ${category.exclusionTime ?? 2} min`);
+                    
+                    // Dátumy narodenia
+                    if (category.dateFrom || category.dateTo) {
+                        console.log(`  • Dátum narodenia od: ${category.dateFrom ? category.dateFrom : 'neurčený'} ${category.dateFromActive ? '(aktívny)' : '(neaktívny)'}`);
+                        console.log(`  • Dátum narodenia do: ${category.dateTo ? category.dateTo : 'neurčený'} ${category.dateToActive ? '(aktívny)' : '(neaktívny)'}`);
+                    }
+                    
+                    // Výpočet celkového času zápasu
+                    const periods = category.periods ?? 2;
+                    const periodDuration = category.periodDuration ?? 20;
+                    const breakDuration = category.breakDuration ?? 2;
+                    const matchBreak = category.matchBreak ?? 5;
+                    
+                    const playingTime = periods * periodDuration;
+                    const breaksBetweenPeriods = (periods - 1) * breakDuration;
+                    const totalTimeWithMatchBreak = playingTime + breaksBetweenPeriods + matchBreak;
+                    
+                    console.log(`  • Čistý hrací čas: ${playingTime} min`);
+                    console.log(`  • Prestávky v zápase: ${breaksBetweenPeriods} min`);
+                    console.log(`  • Celkový čas s prestávkou: ${totalTimeWithMatchBreak} min`);
+                } else {
+                    console.log(`  • Nastavenia kategórie nie sú k dispozícii`);
+                }
+                
+                console.log('---');
+            });
+            console.log(`Celkový počet zápasov: ${loadedMatches.length}`);
+            console.log('===========================================');
+            
+            // Skontrolujeme URL parametre pre domácich a hostí
+            const homeIdentifierFromUrl = getUrlParameter('domaci');
+            const awayIdentifierFromUrl = getUrlParameter('hostia');
+            
+            if (homeIdentifierFromUrl && awayIdentifierFromUrl && !selectedMatch) {
+                // Hľadáme zápas, ktorý má oba identifikátory
+                const matchFromUrl = loadedMatches.find(m => 
+                    m.homeTeamIdentifier === homeIdentifierFromUrl && 
+                    m.awayTeamIdentifier === awayIdentifierFromUrl
+                );
+                
+                if (matchFromUrl) {
+                    setSelectedMatch(matchFromUrl);
+                }
+            }
+            
+        }, (error) => {
+            console.error("Chyba pri načítaní zápasov:", error);
+            setLoading(false);
+        });
+    
+        return () => unsubscribe();
+    }, [hallId]);
 
     // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA - TERAZ POUŽÍVA DÁTA Z USERS AJ SUPERSTRUCTURE
     const getTeamNameByIdentifier = (identifier) => {
