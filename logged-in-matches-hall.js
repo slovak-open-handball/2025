@@ -749,27 +749,36 @@ const matchesHallApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, [selectedMatch]);
     
-    // V addMatchEvent funkcii upravte ukladanie času:
-    const addMatchEvent = async () => {
-        if (!selectedMatch || !window.db || !eventType || !eventTeam) {
+    // Upravte addMatchEvent funkciu - nahraďte existujúcu
+
+    const addMatchEvent = async (localEventType, localEventTeam, localEventSubType, localPlayer) => {
+        if (!selectedMatch || !window.db) return;
+        
+        // Použijeme lokálne parametre alebo stavové premenné
+        const type = localEventType || eventType;
+        const team = localEventTeam || eventTeam;
+        const subType = localEventSubType || eventSubType;
+        const player = localPlayer || selectedPlayerForEvent;
+        
+        if (!type || !team) {
             window.showGlobalNotification('Vyberte typ udalosti a tím', 'error');
             return;
         }
     
         // Pre penalty potrebujeme aj subType
-        if (eventType === 'penalty' && !eventSubType) {
+        if (type === 'penalty' && !subType) {
             window.showGlobalNotification('Vyberte typ penalty (premenená/nepremenená)', 'error');
             return;
         }
-
+    
         // Pre gól a vylúčenie potrebujeme vybraného hráča
-        if ((eventType === 'goal' || eventType === 'exclusion') && !selectedPlayerForEvent) {
+        if ((type === 'goal' || type === 'exclusion') && !player) {
             window.showGlobalNotification('Vyberte hráča', 'error');
             return;
         }
         
-        // Pre penalty potrebujeme vybraného hráča (aj keď je nepremenený, potrebujeme vedieť kto hádzal)
-        if (eventType === 'penalty' && !selectedPlayerForEvent) {
+        // Pre penalty potrebujeme vybraného hráča
+        if (type === 'penalty' && !player) {
             window.showGlobalNotification('Vyberte hráča pre 7m hod', 'error');
             return;
         }
@@ -779,7 +788,7 @@ const matchesHallApp = ({ userProfileData }) => {
             
             // Výpočet minúty a sekundy z celkového času v sekundách
             const totalSeconds = matchTime;
-            const minute = Math.floor(totalSeconds / 60); // +1 lebo minúty sa počítajú od 1
+            const minute = Math.floor(totalSeconds / 60);
             const second = totalSeconds % 60;
             
             // Formátovaný čas pre zobrazenie MM:SS
@@ -787,32 +796,32 @@ const matchesHallApp = ({ userProfileData }) => {
             
             const eventData = {
                 matchId: selectedMatch.id,
-                type: eventType,
-                team: eventTeam,
+                type: type,
+                team: team,
                 minute: minute,
-                second: second, // Pridáme sekundu
-                formattedTime: formattedTime, // Pridáme formátovaný čas pre ľahšie zobrazenie
+                second: second,
+                formattedTime: formattedTime,
                 timestamp: Timestamp.now(),
                 createdBy: userProfileData?.email || 'unknown',
                 createdByUid: userProfileData?.uid || null
             };
     
             // Pridanie referencie na hráča
-            if (selectedPlayerForEvent) {
+            if (player) {
                 eventData.playerRef = {
-                    userId: selectedPlayerForEvent.userId,
-                    teamIdentifier: selectedPlayerForEvent.teamIdentifier,
-                    playerId: selectedPlayerForEvent.playerId
+                    userId: player.userId,
+                    teamIdentifier: player.teamIdentifier,
+                    playerId: player.playerId
                 };
                 
-                if (eventType === 'yellow' || eventType === 'red' || eventType === 'blue' || eventType === 'exclusion') {
-                    eventData.cardType = eventType === 'exclusion' ? 'exclusion' : eventType;
+                if (type === 'yellow' || type === 'red' || type === 'blue' || type === 'exclusion') {
+                    eventData.cardType = type === 'exclusion' ? 'exclusion' : type;
                 }
             }
     
             // Pre penalty ukladáme subType
-            if (eventType === 'penalty') {
-                eventData.subType = eventSubType;
+            if (type === 'penalty') {
+                eventData.subType = subType;
             }
     
             await addDoc(eventsRef, eventData);
@@ -1851,30 +1860,21 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     { 
                                                         key: `home-player-${idx}`, 
                                                         className: 'bg-white p-2 rounded border border-gray-200 text-sm group relative hover:bg-blue-50 transition-colors cursor-pointer',
+                                                        // Pre domáci tím
                                                         onClick: () => {
                                                             if (eventType) {
                                                                 if (eventType === 'penalty') {
                                                                     // Režim 7m bez gólu = nepremenený
-                                                                    setEventTeam('home');
-                                                                    setSelectedPlayerForEvent(playerIdentifier);
-                                                                    setEventSubType('missed');
-                                                                    setTimeout(() => addMatchEvent(), 50);
+                                                                    addMatchEvent('penalty', 'home', 'missed', playerIdentifier);
                                                                 } else if (eventType === 'goal' && eventSubType === 'scored') {
                                                                     // Režim 7m + gól = premenený
-                                                                    setEventTeam('home');
-                                                                    setSelectedPlayerForEvent(playerIdentifier);
-                                                                    // eventSubType už je 'scored' z tlačidla gól
-                                                                    setTimeout(() => addMatchEvent(), 50);
+                                                                    addMatchEvent('penalty', 'home', 'scored', playerIdentifier);
                                                                 } else if (eventType === 'goal') {
                                                                     // Normálny gól
-                                                                    setEventTeam('home');
-                                                                    setSelectedPlayerForEvent(playerIdentifier);
-                                                                    setTimeout(() => addMatchEvent(), 50);
+                                                                    addMatchEvent('goal', 'home', null, playerIdentifier);
                                                                 } else {
                                                                     // Ostatné udalosti
-                                                                    setEventTeam('home');
-                                                                    setSelectedPlayerForEvent(playerIdentifier);
-                                                                    setTimeout(() => addMatchEvent(), 50);
+                                                                    addMatchEvent(eventType, 'home', null, playerIdentifier);
                                                                 }
                                                             }
                                                         }
@@ -2359,30 +2359,21 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     { 
                                                         key: `away-player-${idx}`, 
                                                         className: 'bg-white p-2 rounded border border-gray-200 text-sm group relative hover:bg-blue-50 transition-colors cursor-pointer',
+                                                        // Pre hostujuci tím
                                                         onClick: () => {
                                                             if (eventType) {
                                                                 if (eventType === 'penalty') {
                                                                     // Režim 7m bez gólu = nepremenený
-                                                                    setEventTeam('away');
-                                                                    setSelectedPlayerForEvent(playerIdentifier);
-                                                                    setEventSubType('missed');
-                                                                    setTimeout(() => addMatchEvent(), 50);
+                                                                    addMatchEvent('penalty', 'away', 'missed', playerIdentifier);
                                                                 } else if (eventType === 'goal' && eventSubType === 'scored') {
                                                                     // Režim 7m + gól = premenený
-                                                                    setEventTeam('away');
-                                                                    setSelectedPlayerForEvent(playerIdentifier);
-                                                                    // eventSubType už je 'scored' z tlačidla gól
-                                                                    setTimeout(() => addMatchEvent(), 50);
+                                                                    addMatchEvent('penalty', 'away', 'scored', playerIdentifier);
                                                                 } else if (eventType === 'goal') {
                                                                     // Normálny gól
-                                                                    setEventTeam('away');
-                                                                    setSelectedPlayerForEvent(playerIdentifier);
-                                                                    setTimeout(() => addMatchEvent(), 50);
+                                                                    addMatchEvent('goal', 'away', null, playerIdentifier);
                                                                 } else {
                                                                     // Ostatné udalosti
-                                                                    setEventTeam('away');
-                                                                    setSelectedPlayerForEvent(playerIdentifier);
-                                                                    setTimeout(() => addMatchEvent(), 50);
+                                                                    addMatchEvent(eventType, 'away', null, playerIdentifier);
                                                                 }
                                                             }
                                                         }
