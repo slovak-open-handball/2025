@@ -522,20 +522,20 @@ const matchesHallApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, [hallId]);
 
-    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA - UPRAVENÁ PRE FORMÁT "skupina X"
+    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA - TERAZ POUŽÍVA DÁTA Z USERS
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
         
-        // Parsujeme identifikátor v tvare "kategória skupinaorder" (napr. "U10 A1")
+        // Parsujeme identifikátor v tvare "kategória skupinaorder" (napr. "U12 D E4")
         const parts = identifier.split(' ');
         
         if (parts.length < 2) {
             return identifier; // Fallback na identifikátor
         }
         
-        // Posledná časť je skupina + order (napr. "A1")
+        // Posledná časť je skupina + order (napr. "E4")
         const groupAndOrder = parts.pop();
-        // Zvyšok je kategória (môže byť viacslovná)
+        // Zvyšok je kategória (môže byť viacslovná, napr. "U12 D")
         const category = parts.join(' ');
         
         // Rozdelíme groupAndOrder na groupName a order
@@ -557,37 +557,50 @@ const matchesHallApp = ({ userProfileData }) => {
             groupName = groupAndOrder;
         }
         
-        // Vytvoríme názov skupiny v tvare "skupina X" (napr. "A" -> "skupina A")
+        // Vytvoríme názov skupiny v tvare "skupina X" (napr. "E" -> "skupina E")
         const fullGroupName = `skupina ${groupName}`;
+        const orderNum = parseInt(order, 10);
         
-        // Hľadáme v teamData
-        if (teamData.allTeams && teamData.allTeams.length > 0) {
-            const team = teamData.allTeams.find(t => 
-                t.category === category && 
-                t.groupName === fullGroupName && // Používame fullGroupName
-                t.order?.toString() === order
-            );
-            
-            if (team) {
-                return team.teamName;
+        console.log(`Hľadám tím: Kategória: ${category}, Skupina: ${fullGroupName}, Poradie: ${orderNum}`);
+        
+        // Hľadáme v users (načítaných používateľoch)
+        if (users && users.length > 0) {
+            // Prejdeme všetkých používateľov
+            for (const user of users) {
+                if (!user.teams) continue;
+                
+                // Prejdeme všetky kategórie používateľa
+                const userTeams = user.teams[category];
+                if (!userTeams || !Array.isArray(userTeams)) continue;
+                
+                // Nájdeme tím v tejto kategórii so správnou skupinou a poradím
+                const team = userTeams.find(t => 
+                    t.groupName === fullGroupName && 
+                    t.order === orderNum
+                );
+                
+                if (team) {
+                    console.log(`  Nájdený tím: ${team.teamName} (používateľ: ${user.email})`);
+                    return team.teamName;
+                }
             }
         }
         
-        // Skúsime v __teamManagerData
-        if (window.__teamManagerData?.allTeams) {
-            const team = window.__teamManagerData.allTeams.find(t => 
+        // Fallback - skúsime ešte v teamData (pôvodný spôsob)
+        if (teamData.allTeams && teamData.allTeams.length > 0) {
+            const team = teamData.allTeams.find(t => 
                 t.category === category && 
-                t.groupName === fullGroupName && // Používame fullGroupName
+                t.groupName === fullGroupName && 
                 t.order?.toString() === order
             );
             
             if (team) {
-                setTeamData(window.__teamManagerData); // Aktualizujeme teamData
                 return team.teamName;
             }
         }
         
         // Fallback - vrátime identifikátor v čitateľnej forme
+        console.log(`  Tím NENájdený, používam fallback`);
         return `${category} ${groupName}${order}`;
     };
 
