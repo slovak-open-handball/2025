@@ -358,7 +358,7 @@ const matchesHallApp = ({ userProfileData }) => {
             const now = Timestamp.now();
             const startedAt = selectedMatch.startedAt;
             const elapsedSeconds = Math.floor((now.seconds - startedAt.seconds));
-            
+        
             // Ak je zápas pozastavený, použijeme pausedAt na výpočet
             if (selectedMatch.status === 'paused' && selectedMatch.pausedAt) {
                 const pausedAt = selectedMatch.pausedAt;
@@ -380,8 +380,11 @@ const matchesHallApp = ({ userProfileData }) => {
             setTimerInterval(null);
         }
         
+        // Získame kategóriu pre aktuálny zápas
+        const currentCategory = selectedMatch ? categories.find(c => c.name === selectedMatch.categoryName) : null;
+        
         // Spustíme nový interval len ak je zápas v priebehu
-        if (selectedMatch && selectedMatch.status === 'in-progress' && selectedMatch.startedAt) {
+        if (selectedMatch && selectedMatch.status === 'in-progress' && selectedMatch.startedAt && currentCategory) {
             const interval = setInterval(() => {
                 const now = Timestamp.now();
                 const startedAt = selectedMatch.startedAt;
@@ -390,13 +393,11 @@ const matchesHallApp = ({ userProfileData }) => {
                 setMatchTime(elapsedSeconds);
                 
                 // Automatické zastavenie pri dosiahnutí maxima podľa kategórie
-                if (category) {
-                    const totalPeriodSeconds = (category.periodDuration || 20) * 60; // prevod na sekundy
-                    if (elapsedSeconds >= totalPeriodSeconds && selectedMatch.status === 'in-progress') {
-                        // Zastavíme čas
-                        stopMatchTimer(selectedMatch.id);
-                        window.showGlobalNotification(`Koniec ${selectedMatch.currentPeriod}. periódy`, 'info');
-                    }
+                const totalPeriodSeconds = (currentCategory.periodDuration || 20) * 60; // prevod na sekundy
+                if (elapsedSeconds >= totalPeriodSeconds && selectedMatch.status === 'in-progress') {
+                    // Zastavíme čas
+                    stopMatchTimer(selectedMatch.id);
+                    window.showGlobalNotification(`Koniec ${selectedMatch.currentPeriod}. periódy`, 'info');
                 }
             }, 1000);
             
@@ -410,7 +411,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 clearInterval(timerInterval);
             }
         };
-    }, [selectedMatch, selectedMatch?.status, selectedMatch?.startedAt, category]);
+    }, [selectedMatch, selectedMatch?.status, selectedMatch?.startedAt, categories]); // Pridáme categories do závislostí
 
     // Načítanie názvu haly
     useEffect(() => {
