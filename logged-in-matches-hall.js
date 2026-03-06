@@ -560,31 +560,60 @@ const matchesHallApp = ({ userProfileData }) => {
                 // Nájdeme kategóriu podľa názvu
                 const category = categories.find(c => c.name === match.categoryName);
                 
+                console.log(`Zápas #${index + 1}:`);
+                console.log(`  ID: ${match.id}`);
+                console.log(`  Dátum: ${matchDate}`);
+                console.log(`  Čas: ${matchTime}`);
+                console.log(`  Kategória: ${categoryName}`);
+                console.log(`  Skupina: ${match.groupName || 'neurčená'}`);
+                console.log(`  Domáci: ${homeTeamName} (${match.homeTeamIdentifier})`);
+                console.log(`  Hostia: ${awayTeamName} (${match.awayTeamIdentifier})`);
+                console.log(`  Status: ${match.status || 'neurčený'}`);
+                if (match.isPlacementMatch) {
+                    console.log(`  Typ: Zápas o ${match.placementRank}. miesto`);
+                }
+                
                 // VÝPIS NASTAVENÍ KATEGÓRIE
                 if (category) {
                     console.log(`  --- NASTAVENIA KATEGÓRIE ${category.name} ---`);
-                    console.log(`  • Počet periód: ${category.periods ?? 2}`);
-                    console.log(`  • Trvanie periódy: ${category.periodDuration ?? 20} min`);
-                    console.log(`  • Prestávka medzi periódami: ${category.breakDuration ?? 2} min`);
-                    console.log(`  • Prestávka medzi zápasmi: ${category.matchBreak ?? 5} min`);
-                    console.log(`  • Farba pre rozlosovanie: ${category.drawColor ?? '#3B82F6'}`);
-                    console.log(`  • Počet timeoutov: ${category.timeoutCount ?? 2}`);
-                    console.log(`  • Trvanie timeoutu: ${category.timeoutDuration ?? 1} min`);
-                    console.log(`  • Čas vylúčenia: ${category.exclusionTime ?? 2} min`);
+                    console.log(`  • Maximálny počet tímov: ${category.maxTeams ?? 'neuvedené'}`);
+                    console.log(`  • Maximálny počet hráčov v tíme: ${category.maxPlayers ?? 'neuvedené'}`);
+                    console.log(`  • Maximálny počet členov RT: ${category.maxImplementationTeam ?? 'neuvedené'}`);
+                    console.log(`  • Počet periód: ${category.periods ?? 'neuvedené'}`);
+                    console.log(`  • Trvanie periódy: ${category.periodDuration ?? 'neuvedené'} min`);
+                    console.log(`  • Prestávka medzi periódami: ${category.breakDuration ?? 'neuvedené'} min`);
+                    console.log(`  • Prestávka medzi zápasmi: ${category.matchBreak ?? 'neuvedené'} min`);
+                    console.log(`  • Farba pre rozlosovanie: ${category.drawColor ?? 'neuvedené'}`);
+                    console.log(`  • Farba pre dopravu: ${category.transportColor ?? 'neuvedené'}`);
                     
                     // Výpočet celkového času zápasu
-                    const periods = category.periods ?? 2;
-                    const periodDuration = category.periodDuration ?? 20;
-                    const breakDuration = category.breakDuration ?? 2;
-                    const matchBreak = category.matchBreak ?? 5;
+                    const periods = category.periods ?? 0;
+                    const periodDuration = category.periodDuration ?? 0;
+                    const breakDuration = category.breakDuration ?? 0;
+                    const matchBreak = category.matchBreak ?? 0;
                     
+                    // Jednotlivé časti
                     const playingTime = periods * periodDuration;
                     const breaksBetweenPeriods = (periods - 1) * breakDuration;
-                    const totalTimeWithMatchBreak = playingTime + breaksBetweenPeriods + matchBreak;
+                    const totalMatchTime = playingTime + breaksBetweenPeriods; // Celkový čas bez prestávky medzi zápasmi
+                    const totalTimeWithMatchBreak = totalMatchTime + matchBreak; // Celkový čas s prestávkou medzi zápasmi
                     
-                    console.log(`  • Čistý hrací čas: ${playingTime} min`);
-                    console.log(`  • Prestávky v zápase: ${breaksBetweenPeriods} min`);
-                    console.log(`  • Celkový čas s prestávkou: ${totalTimeWithMatchBreak} min`);
+                    console.log(`  `);
+                    console.log(`  --- ROZPIS ČASU ZÁPASU ---`);
+                    console.log(`  • 1. polčas: ${periodDuration} min`);
+                    console.log(`  • Prestávka: ${breakDuration} min`);
+                    console.log(`  • 2. polčas: ${periodDuration} min`);
+                    console.log(`  `);
+                    console.log(`  • Čistý hrací čas: ${playingTime} min (${periods} × ${periodDuration} min)`);
+                    console.log(`  • Celkový čas zápasu (s prestávkou): ${totalMatchTime} min (${playingTime} + ${breaksBetweenPeriods})`);
+                    console.log(`  • Prestávka medzi zápasmi: ${matchBreak} min`);
+                    console.log(`  • Celkový čas s prestávkou medzi zápasmi: ${totalTimeWithMatchBreak} min (${totalMatchTime} + ${matchBreak})`);
+                    console.log(`  `);
+                    console.log(`  --- ČASOVÝ ROZPIS V MINÚTACH ---`);
+                    console.log(`  • 0 - ${periodDuration}: 1. polčas`);
+                    console.log(`  • ${periodDuration} - ${periodDuration + breakDuration}: Prestávka`);
+                    console.log(`  • ${periodDuration + breakDuration} - ${totalMatchTime}: 2. polčas`);
+                    console.log(`  • ${totalMatchTime} - ${totalTimeWithMatchBreak}: Prestávka medzi zápasmi`);
                 }
                 
                 console.log('---');
