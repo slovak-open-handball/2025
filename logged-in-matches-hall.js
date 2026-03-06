@@ -1339,7 +1339,7 @@ const matchesHallApp = ({ userProfileData }) => {
         const homeTeamDetails = getTeamDetails(selectedMatch.homeTeamIdentifier);
         const awayTeamDetails = getTeamDetails(selectedMatch.awayTeamIdentifier);
         const matchDate = selectedMatch.scheduledTime ? formatDateWithDay(selectedMatch.scheduledTime.toDate()) : 'neurčený';
-        const matchTime = selectedMatch.scheduledTime ? formatTime(selectedMatch.scheduledTime) : '--:--';
+        const matchStartTime = selectedMatch.scheduledTime ? formatTime(selectedMatch.scheduledTime) : '--:--';
         const category = categories.find(c => c.name === selectedMatch.categoryName);
         
         // Zistenie, či má zápas typ (finále, semifinále, o umiestnenie)
@@ -1448,7 +1448,7 @@ const matchesHallApp = ({ userProfileData }) => {
                         React.createElement(
                             'div', 
                             { className: 'text-2xl font-bold text-blue-600 mt-1 flex items-center justify-center gap-1' },
-                            `${matchTime} hod.`
+                            `${matchStartTime} hod.`
                         )
                     ),
                     
