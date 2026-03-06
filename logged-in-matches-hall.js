@@ -1736,14 +1736,19 @@ const matchesHallApp = ({ userProfileData }) => {
                                             isStaff: true
                                         };
                                         
+                                        // Pre domácich trénerov (muži)
                                         return React.createElement(
                                             'div',
                                             { 
                                                 key: `home-men-${idx}`, 
                                                 className: 'bg-white p-2 rounded border border-gray-200 text-sm group relative hover:bg-blue-50 transition-colors cursor-pointer',
                                                 onClick: () => {
-                                                    // ✅ UPRAVENÉ: Povolené všetky typy udalostí pre trénerov
                                                     if (eventType) {
+                                                        // Nedovolíme gól alebo 7m pre trénerov
+                                                        if (eventType === 'goal' || eventType === 'penalty') {
+                                                            window.showGlobalNotification('Gól a 7m hod môžu byť priradené len hráčom', 'error');
+                                                            return;
+                                                        }
                                                         setEventTeam('home');
                                                         setSelectedPlayerForEvent(staffIdentifier);
                                                         setTimeout(() => addMatchEvent(), 50);
@@ -1757,27 +1762,20 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`)
                                             )
                                         );
-                                    }),
-                                                                        
-                                    // Ženy v realizačnom tíme
-                                    homeTeamDetails.team.womenTeamMemberDetails && homeTeamDetails.team.womenTeamMemberDetails.length > 0 && 
-                                    homeTeamDetails.team.womenTeamMemberDetails.map((member, idx) => {
-                                        const staffIdentifier = {
-                                            userId: homeTeamDetails.userId,
-                                            teamIdentifier: selectedMatch.homeTeamIdentifier,
-                                            playerId: `staff-women-${idx}`,
-                                            displayName: `${member.firstName} ${member.lastName} (trénerka)`,
-                                            isStaff: true
-                                        };
                                         
+                                        // Pre domácich trénerov (ženy)
                                         return React.createElement(
                                             'div',
                                             { 
                                                 key: `home-women-${idx}`, 
                                                 className: 'bg-white p-2 rounded border border-gray-200 text-sm group relative hover:bg-blue-50 transition-colors cursor-pointer',
                                                 onClick: () => {
-                                                    // ✅ UPRAVENÉ: Povolené všetky typy udalostí pre trénerky
                                                     if (eventType) {
+                                                        // Nedovolíme gól alebo 7m pre trénerov
+                                                        if (eventType === 'goal' || eventType === 'penalty') {
+                                                            window.showGlobalNotification('Gól a 7m hod môžu byť priradené len hráčom', 'error');
+                                                            return;
+                                                        }
                                                         setEventTeam('home');
                                                         setSelectedPlayerForEvent(staffIdentifier);
                                                         setTimeout(() => addMatchEvent(), 50);
@@ -1792,7 +1790,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             )
                                         );
                                     }),
-                                    
+                                                                            
                                     // Ak nie sú žiadni členovia realizačného tímu
                                     (!homeTeamDetails.team.menTeamMemberDetails || homeTeamDetails.team.menTeamMemberDetails.length === 0) &&
                                     (!homeTeamDetails.team.womenTeamMemberDetails || homeTeamDetails.team.womenTeamMemberDetails.length === 0) &&
@@ -2183,14 +2181,19 @@ const matchesHallApp = ({ userProfileData }) => {
                                             isStaff: true
                                         };
                                         
+                                        // Pre hosťovských trénerov (muži)
                                         return React.createElement(
                                             'div',
                                             { 
                                                 key: `away-men-${idx}`, 
                                                 className: 'bg-white p-2 rounded border border-gray-200 text-sm group relative hover:bg-blue-50 transition-colors cursor-pointer',
                                                 onClick: () => {
-                                                    // ✅ UPRAVENÉ: Povolené všetky typy udalostí pre trénerov
                                                     if (eventType) {
+                                                        // Nedovolíme gól alebo 7m pre trénerov
+                                                        if (eventType === 'goal' || eventType === 'penalty') {
+                                                            window.showGlobalNotification('Gól a 7m hod môžu byť priradené len hráčom', 'error');
+                                                            return;
+                                                        }
                                                         setEventTeam('away');
                                                         setSelectedPlayerForEvent(staffIdentifier);
                                                         setTimeout(() => addMatchEvent(), 50);
@@ -2204,27 +2207,20 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`)
                                             )
                                         );
-                                    }),
-                                                                        
-                                    // Ženy v realizačnom tíme
-                                    awayTeamDetails.team.womenTeamMemberDetails && awayTeamDetails.team.womenTeamMemberDetails.length > 0 && 
-                                    awayTeamDetails.team.womenTeamMemberDetails.map((member, idx) => {
-                                        const staffIdentifier = {
-                                            userId: awayTeamDetails.userId,
-                                            teamIdentifier: selectedMatch.awayTeamIdentifier,
-                                            playerId: `staff-women-${idx}`,
-                                            displayName: `${member.firstName} ${member.lastName} (trénerka)`,
-                                            isStaff: true
-                                        };
                                         
+                                        // Pre hosťovských trénerov (ženy)
                                         return React.createElement(
                                             'div',
                                             { 
                                                 key: `away-women-${idx}`, 
                                                 className: 'bg-white p-2 rounded border border-gray-200 text-sm group relative hover:bg-blue-50 transition-colors cursor-pointer',
                                                 onClick: () => {
-                                                    // ✅ UPRAVENÉ: Povolené všetky typy udalostí pre trénerky
                                                     if (eventType) {
+                                                        // Nedovolíme gól alebo 7m pre trénerov
+                                                        if (eventType === 'goal' || eventType === 'penalty') {
+                                                            window.showGlobalNotification('Gól a 7m hod môžu byť priradené len hráčom', 'error');
+                                                            return;
+                                                        }
                                                         setEventTeam('away');
                                                         setSelectedPlayerForEvent(staffIdentifier);
                                                         setTimeout(() => addMatchEvent(), 50);
