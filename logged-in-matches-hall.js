@@ -2471,12 +2471,12 @@ const matchesHallApp = ({ userProfileData }) => {
                         )
                     ),
                     
-                    // Informácia o pozícii v zozname
-                    React.createElement(
-                        'div',
-                        { className: 'text-center text-xs text-gray-400 mt-6' },
-                        `${currentIndex + 1} / ${sortedMatchesForNavigation.length}`
-                    )
+//                    // Informácia o pozícii v zozname
+//                    React.createElement(
+//                        'div',
+//                        { className: 'text-center text-xs text-gray-400 mt-6' },
+//                        `${currentIndex + 1} / ${sortedMatchesForNavigation.length}`
+//                    )
                 )
             )
         );
