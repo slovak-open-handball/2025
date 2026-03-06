@@ -202,7 +202,7 @@ const matchesHallApp = ({ userProfileData }) => {
         console.log('=========================================');
     };
 
-    // FUNKCIA PRE VYPISOVANIE VŠETKÝCH POUŽÍVATEĽOV
+    // FUNKCIA PRE VYPISOVANIE VŠETKÝCH POUŽÍVATEĽOV V PREHĽADNEJ TABUĽKE
     const logAllUsers = (usersList) => {
         if (!usersList || usersList.length === 0) {
             console.log('Žiadni používatelia nie sú k dispozícii');
@@ -211,26 +211,59 @@ const matchesHallApp = ({ userProfileData }) => {
         
         console.log('=== VŠETCI POUŽÍVATELIA Z KOLEKCIE USERS ===');
         console.log(`Celkový počet používateľov: ${usersList.length}`);
+        console.log('');
         
+        // Pre každého používateľa vypíšeme jeho tímy
         usersList.forEach((user, index) => {
-            console.log(`\nPoužívateľ #${index + 1}:`);
-            console.log(`  ID: ${user.id}`);
-            console.log(`  Email: ${user.email || 'Nezadaný'}`);
-            console.log(`  Meno: ${user.displayName || 'Nezadané'}`);
-            console.log(`  Rola: ${user.role || 'Nezadaná'}`);
-            console.log(`  Schválený: ${user.approved ? 'Áno' : 'Nie'}`);
-            console.log(`  Dátum registrácie: ${user.createdAt ? new Date(user.createdAt.seconds * 1000).toLocaleString('sk-SK') : 'Neznámy'}`);
+            console.log(`Používateľ #${index + 1}: ${user.email || 'Neznámy email'} (ID: ${user.id})`);
+            console.log(`  Rola: ${user.role || 'Nezadaná'} | Schválený: ${user.approved ? 'Áno' : 'Nie'}`);
             
-            // Vypíšeme tímy používateľa
-            if (user.teams) {
-                console.log(`  Tímy:`);
-                Object.entries(user.teams).forEach(([categoryName, teamArray]) => {
-                    if (Array.isArray(teamArray) && teamArray.length > 0) {
+            if (user.teams && Object.keys(user.teams).length > 0) {
+                console.log(`  Tímy používateľa:`);
+                
+                // Získame všetky kategórie a zoradíme ich podľa abecedy
+                const categories = Object.keys(user.teams).sort((a, b) => a.localeCompare(b));
+                
+                categories.forEach(categoryName => {
+                    const teamArray = user.teams[categoryName] || [];
+                    
+                    if (teamArray.length > 0) {
                         console.log(`    Kategória: ${categoryName}`);
+                        
+                        // Zoskupíme tímy podľa skupiny
+                        const teamsByGroup = {};
+                        
                         teamArray.forEach(team => {
-                            const groupText = team.groupName ? `, skupina: ${team.groupName}` : ', bez skupiny';
-                            const orderText = team.order ? `, poradie: ${team.order}` : '';
-                            console.log(`      - ${team.teamName}${groupText}${orderText}`);
+                            const groupName = team.groupName || 'Bez skupiny';
+                            if (!teamsByGroup[groupName]) {
+                                teamsByGroup[groupName] = [];
+                            }
+                            teamsByGroup[groupName].push(team);
+                        });
+                        
+                        // Zoradíme skupiny podľa abecedy
+                        const sortedGroups = Object.keys(teamsByGroup).sort((a, b) => {
+                            // "Bez skupiny" dáme na koniec
+                            if (a === 'Bez skupiny') return 1;
+                            if (b === 'Bez skupiny') return -1;
+                            return a.localeCompare(b);
+                        });
+                        
+                        sortedGroups.forEach(groupName => {
+                            const teamsInGroup = teamsByGroup[groupName];
+                            
+                            // Zoradíme tímy v skupine podľa poradia
+                            const sortedTeams = [...teamsInGroup].sort((a, b) => {
+                                const orderA = a.order !== null && a.order !== undefined ? a.order : Infinity;
+                                const orderB = b.order !== null && b.order !== undefined ? b.order : Infinity;
+                                return orderA - orderB;
+                            });
+                            
+                            sortedTeams.forEach(team => {
+                                const groupText = groupName !== 'Bez skupiny' ? `, skupina: ${groupName}` : '';
+                                const orderText = team.order !== null && team.order !== undefined ? `, poradie: ${team.order}` : '';
+                                console.log(`      - ${team.teamName}${groupText}${orderText}`);
+                            });
                         });
                     }
                 });
