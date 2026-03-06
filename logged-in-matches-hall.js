@@ -2058,20 +2058,17 @@ const matchesHallApp = ({ userProfileData }) => {
                                     matchEvents.map((event) => {
                                         const playerName = event.playerRef ? getPlayerNameFromRef(event.playerRef) : '';
                                         
-                                        let eventIcon = '';
-                                        let eventColor = '';
                                         let eventDisplay = '';
+                                        let eventColor = '';
                                         
                                         switch (event.type) {
                                             case 'goal':
-                                                eventIcon = 'fa-futbol';
                                                 eventColor = 'text-green-600';
-                                                eventDisplay = React.createElement('i', { className: `fa-solid ${eventIcon} ${eventColor} text-sm` });
+                                                eventDisplay = React.createElement('i', { className: `fa-solid fa-futbol ${eventColor} text-sm` });
                                                 break;
                                             case 'penalty':
-                                                eventIcon = 'fa-circle-dot';
                                                 eventColor = event.subType === 'scored' ? 'text-green-600' : 'text-red-600';
-                                                eventDisplay = React.createElement('i', { className: `fa-solid ${eventIcon} ${eventColor} text-sm` });
+                                                eventDisplay = React.createElement('i', { className: `fa-solid fa-circle-dot ${eventColor} text-sm` });
                                                 break;
                                             case 'yellow':
                                                 eventDisplay = React.createElement(
@@ -2099,9 +2096,8 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 );
                                                 break;
                                             default:
-                                                eventIcon = 'fa-clock';
                                                 eventColor = 'text-gray-600';
-                                                eventDisplay = React.createElement('i', { className: `fa-solid ${eventIcon} ${eventColor} text-sm` });
+                                                eventDisplay = React.createElement('i', { className: `fa-solid fa-clock ${eventColor} text-sm` });
                                         }
                                         
                                         // Vytvoríme grid s 3 stĺpcami
@@ -2123,11 +2119,11 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 )
                                             ),
                                             
-                                            // Stredný stĺpec - vždy čas (už žiadny iný text)
+                                            // Stredný stĺpec - vždy čas
                                             React.createElement(
                                                 'div',
                                                 { className: 'text-center' },
-                                                React.createElement('span', { className: `font-mono text-xs ${eventColor}` }, 
+                                                React.createElement('span', { className: `font-mono text-xs ${eventColor || 'text-gray-600'}` }, 
                                                     `${event.minute}:${event.second?.toString().padStart(2, '0') || '00'}`
                                                 )
                                             ),
