@@ -1736,7 +1736,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                             isStaff: true
                                         };
                                         
-                                        // Pre domácich trénerov (muži)
                                         return React.createElement(
                                             'div',
                                             { 
@@ -1762,8 +1761,19 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`)
                                             )
                                         );
+                                    }),
+                                    
+                                    // Ženy v realizačnom tíme
+                                    homeTeamDetails.team.womenTeamMemberDetails && homeTeamDetails.team.womenTeamMemberDetails.length > 0 && 
+                                    homeTeamDetails.team.womenTeamMemberDetails.map((member, idx) => {
+                                        const staffIdentifier = {
+                                            userId: homeTeamDetails.userId,
+                                            teamIdentifier: selectedMatch.homeTeamIdentifier,
+                                            playerId: `staff-women-${idx}`,
+                                            displayName: `${member.firstName} ${member.lastName} (trénerka)`,
+                                            isStaff: true
+                                        };
                                         
-                                        // Pre domácich trénerov (ženy)
                                         return React.createElement(
                                             'div',
                                             { 
@@ -1790,7 +1800,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             )
                                         );
                                     }),
-                                                                            
+                                    
                                     // Ak nie sú žiadni členovia realizačného tímu
                                     (!homeTeamDetails.team.menTeamMemberDetails || homeTeamDetails.team.menTeamMemberDetails.length === 0) &&
                                     (!homeTeamDetails.team.womenTeamMemberDetails || homeTeamDetails.team.womenTeamMemberDetails.length === 0) &&
@@ -2185,7 +2195,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                             isStaff: true
                                         };
                                         
-                                        // Pre hosťovských trénerov (muži)
                                         return React.createElement(
                                             'div',
                                             { 
@@ -2211,8 +2220,19 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`)
                                             )
                                         );
+                                    }),
+                                    
+                                    // Ženy v realizačnom tíme
+                                    awayTeamDetails.team.womenTeamMemberDetails && awayTeamDetails.team.womenTeamMemberDetails.length > 0 && 
+                                    awayTeamDetails.team.womenTeamMemberDetails.map((member, idx) => {
+                                        const staffIdentifier = {
+                                            userId: awayTeamDetails.userId,
+                                            teamIdentifier: selectedMatch.awayTeamIdentifier,
+                                            playerId: `staff-women-${idx}`,
+                                            displayName: `${member.firstName} ${member.lastName} (trénerka)`,
+                                            isStaff: true
+                                        };
                                         
-                                        // Pre hosťovských trénerov (ženy)
                                         return React.createElement(
                                             'div',
                                             { 
@@ -2253,81 +2273,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     { className: 'text-sm text-gray-500 italic p-2' },
                                     'Nedostupné'
                                 )
-                            ),
-                            
-                            // Hráči hosťovského tímu
-                            React.createElement(
-                                'div',
-                                null,
-                                React.createElement(
-                                    'h4',
-                                    { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
-                                    React.createElement('i', { className: 'fa-solid fa-users text-xs text-gray-500' }),
-                                    `Hráči (${awayTeamDetails?.team.playerDetails?.length || 0})`
-                                ),
-                                
-                                awayTeamDetails ? React.createElement(
-                                    'div',
-                                    { className: 'space-y-1' },
-                                    // Hráči hosťovského tímu
-                                    awayTeamDetails.team.playerDetails && awayTeamDetails.team.playerDetails.length > 0 ? 
-                                        [...awayTeamDetails.team.playerDetails]
-                                            .sort((a, b) => {
-                                                const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
-                                                const numB = b.jerseyNumber ? parseInt(b.jerseyNumber) || 999 : 999;
-                                                return numA - numB;
-                                            })
-                                            .map((player, idx) => {
-                                                const playerIdentifier = {
-                                                    userId: awayTeamDetails.userId,
-                                                    teamIdentifier: selectedMatch.awayTeamIdentifier,
-                                                    playerId: player.id || `${player.firstName} ${player.lastName}`,
-                                                    displayName: `${player.firstName} ${player.lastName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`
-                                                };
-                                                
-                                                return React.createElement(
-                                                    'div',
-                                                    { 
-                                                        key: `away-player-${idx}`, 
-                                                        className: 'bg-white p-2 rounded border border-gray-200 text-sm group relative hover:bg-blue-50 transition-colors cursor-pointer',
-                                                        onClick: () => {
-                                                            // ✅ UPRAVENÉ: Pridaný setEventTeam('away')
-                                                            if (eventType) {
-                                                                setEventTeam('away');
-                                                                setSelectedPlayerForEvent(playerIdentifier);
-                                                                setTimeout(() => addMatchEvent(), 50);
-                                                            }
-                                                        }
-                                                    },
-                                                    React.createElement(
-                                                        'div',
-                                                        { className: 'flex items-center gap-2 flex-wrap' },
-                                                        React.createElement('i', { className: 'fa-solid fa-shirt text-gray-600 text-xs' }),
-                                                        player.jerseyNumber && React.createElement(
-                                                            'span',
-                                                            { className: 'font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded' },
-                                                            `${player.jerseyNumber}`
-                                                        ),
-                                                        React.createElement(
-                                                            'span',
-                                                            { className: 'font-medium' },
-                                                            `${player.firstName} ${player.lastName}`
-                                                        )
-                                                    )
-                                                );
-                                            })
-                                        : React.createElement(
-                                            'div',
-                                            { className: 'text-sm text-gray-500 italic p-2' },
-                                            'Žiadni hráči'
-                                        )
-                                ) : React.createElement(
-                                    'div',
-                                    { className: 'text-sm text-gray-500 italic p-2' },
-                                    'Nedostupné'
-                                )
                             )
-                        )
                     ),
                     
                     // Informácia o pozícii v zozname
