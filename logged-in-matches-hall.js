@@ -855,7 +855,7 @@ const matchesHallApp = ({ userProfileData }) => {
                         )
                     ),
                     
-                    // Kategória a skupina/typ zápasu
+                    // Kategória a typ zápasu/skupina - UPRAVENÉ PODĽA POŽIADAVKY
                     React.createElement(
                         'div',
                         { className: 'grid grid-cols-2 gap-4 mb-6' },
@@ -866,8 +866,8 @@ const matchesHallApp = ({ userProfileData }) => {
                             React.createElement('div', { className: 'font-medium' }, selectedMatch.categoryName || 'neurčená')
                         ),
                         
-                        // Ak má zápas typ (finále, semifinále, o umiestnenie) a nemá skupinu, zobrazíme typ namiesto skupiny
-                        hasMatchType && !selectedMatch.groupName ? React.createElement(
+                        // Ak má zápas typ, zobrazíme TYP ZÁPASU (aj keď má skupinu, skupina sa ignoruje)
+                        hasMatchType ? React.createElement(
                             'div',
                             { className: 'bg-purple-50 p-3 rounded-lg text-center' },
                             React.createElement('div', { className: 'text-xs text-purple-500 mb-1' }, 'Typ zápasu'),
@@ -880,22 +880,6 @@ const matchesHallApp = ({ userProfileData }) => {
                             React.createElement('div', { className: 'text-xs text-gray-500 mb-1' }, 'Skupina'),
                             React.createElement('div', { className: 'font-medium' }, selectedMatch.groupName || 'neurčená')
                         )
-                    ),
-                    
-                    // Typ zápasu (ak je o umiestnenie a zároveň má skupinu - zobrazíme dodatočne)
-                    selectedMatch.isPlacementMatch && selectedMatch.groupName && React.createElement(
-                        'div',
-                        { className: 'bg-amber-50 p-3 rounded-lg text-center mb-6' },
-                        React.createElement('div', { className: 'text-xs text-amber-600 mb-1' }, 'Typ zápasu'),
-                        React.createElement('div', { className: 'font-medium text-amber-700' }, `Zápas o ${selectedMatch.placementRank}. miesto`)
-                    ),
-                    
-                    // Typ zápasu (ak má matchType a zároveň má skupinu - zobrazíme dodatočne)
-                    selectedMatch.matchType && !selectedMatch.isPlacementMatch && selectedMatch.groupName && React.createElement(
-                        'div',
-                        { className: 'bg-blue-50 p-3 rounded-lg text-center mb-6' },
-                        React.createElement('div', { className: 'text-xs text-blue-600 mb-1' }, 'Typ zápasu'),
-                        React.createElement('div', { className: 'font-medium text-blue-700' }, selectedMatch.matchType)
                     ),
                     
                     // Status
