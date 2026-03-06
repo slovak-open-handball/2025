@@ -1544,6 +1544,12 @@ const matchesHallApp = ({ userProfileData }) => {
                                 { className: 'text-xs text-red-500 mb-1' },
                                 `Debug: matchTime = ${matchTime}`
                             ),
+                            // DEBUG2: Zobraziť hodnotu z React stavu priamo
+                            React.createElement(
+                                'div',
+                                { className: 'text-xs text-blue-500 mb-1' },
+                                `React state: ${JSON.stringify({ matchTime })}`
+                            ),
                             React.createElement(
                                 'div',
                                 { className: 'text-3xl font-mono font-bold' },
