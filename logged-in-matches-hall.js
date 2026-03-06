@@ -1670,7 +1670,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 )
                             ),
                             
-                            // Reset čas (vždy zobrazený)
+                            // Reset zápasu (vždy zobrazený)
                             React.createElement(
                                 'button',
                                 {
@@ -1678,7 +1678,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     onClick: () => resetMatchTimer(selectedMatch.id)
                                 },
                                 React.createElement('i', { className: 'fa-solid fa-rotate-right' }),
-                                'Reset čas'
+                                'Reset zápasu'
                             ),
                             
                             // Ukončiť zápas (zobrazí sa len pre neukončené zápasy)
