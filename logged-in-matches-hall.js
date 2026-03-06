@@ -572,12 +572,6 @@ const matchesHallApp = ({ userProfileData }) => {
                     console.log(`  • Trvanie timeoutu: ${category.timeoutDuration ?? 1} min`);
                     console.log(`  • Čas vylúčenia: ${category.exclusionTime ?? 2} min`);
                     
-                    // Dátumy narodenia
-                    if (category.dateFrom || category.dateTo) {
-                        console.log(`  • Dátum narodenia od: ${category.dateFrom ? category.dateFrom : 'neurčený'} ${category.dateFromActive ? '(aktívny)' : '(neaktívny)'}`);
-                        console.log(`  • Dátum narodenia do: ${category.dateTo ? category.dateTo : 'neurčený'} ${category.dateToActive ? '(aktívny)' : '(neaktívny)'}`);
-                    }
-                    
                     // Výpočet celkového času zápasu
                     const periods = category.periods ?? 2;
                     const periodDuration = category.periodDuration ?? 20;
@@ -591,8 +585,6 @@ const matchesHallApp = ({ userProfileData }) => {
                     console.log(`  • Čistý hrací čas: ${playingTime} min`);
                     console.log(`  • Prestávky v zápase: ${breaksBetweenPeriods} min`);
                     console.log(`  • Celkový čas s prestávkou: ${totalTimeWithMatchBreak} min`);
-                } else {
-                    console.log(`  • Nastavenia kategórie nie sú k dispozícii`);
                 }
                 
                 console.log('---');
