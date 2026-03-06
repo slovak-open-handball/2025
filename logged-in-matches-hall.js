@@ -47,6 +47,9 @@ window.showGlobalNotification = (message, type = 'success') => {
 };
 
 const matcheshallApp = ({ userProfileData }) => {
+    // Extrahujeme hallId z userProfileData
+    const hallId = userProfileData?.hallId || 'Žiadne hallId';
+    
     return React.createElement(
         'div',
         { className: 'flex-grow flex justify-center items-center' },
@@ -56,18 +59,23 @@ const matcheshallApp = ({ userProfileData }) => {
             React.createElement(
                 'div',
                 { className: `flex flex-col items-center justify-center mb-6 p-4 -mx-8 -mt-8 rounded-t-xl` },
-                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Zápasy')
+                React.createElement('h2', { className: 'text-3xl font-bold tracking-tight text-center' }, 'Zápasy'),
+                // Pridávame zobrazenie hallId pod nadpisom
+                React.createElement(
+                    'div',
+                    { className: 'mt-2 text-lg text-gray-600' },
+                    `Hall ID: ${hallId}`
+                )
             )
         )
     );
 };
 
-
-// Premenná na sledovanie, či bol poslucháč už nastavený
+// Premenná na sledovanie, či bol poslúcháč už nastavený
 let isEmailSyncListenerSetup = false;
 
 /**
- * Táto funkcia je poslucháčom udalosti 'globalDataUpdated'.
+ * Táto funkcia je poslúcháčom udalosti 'globalDataUpdated'.
  * Akonáhle sa dáta používateľa načítajú, vykreslí aplikáciu MyDataApp.
  */
 const handleDataUpdateAndRender = (event) => {
@@ -75,10 +83,10 @@ const handleDataUpdateAndRender = (event) => {
     const rootElement = document.getElementById('root');
 
     if (userProfileData) {
-        // Ak sa dáta načítali, nastavíme poslucháča na synchronizáciu e-mailu, ak ešte nebol nastavený
+        // Ak sa dáta načítali, nastavíme poslúcháča na synchronizáciu e-mailu, ak ešte nebol nastavený
         // Používame window.auth a window.db, ktoré by mali byť nastavené pri načítaní aplikácie.
         if (window.auth && window.db && !isEmailSyncListenerSetup) {
-            console.log("logged-in-matches-hall.js: Nastavujem poslucháča na synchronizáciu e-mailu.");
+            console.log("logged-in-matches-hall.js: Nastavujem poslúcháča na synchronizáciu e-mailu.");
             
             onAuthStateChanged(window.auth, async (user) => {
                 if (user) {
@@ -116,7 +124,7 @@ const handleDataUpdateAndRender = (event) => {
                     }
                 }
             });
-            isEmailSyncListenerSetup = true; // Označíme, že poslucháč je nastavený
+            isEmailSyncListenerSetup = true; // Označíme, že poslúcháč je nastavený
         }
 
         if (rootElement && typeof ReactDOM !== 'undefined' && typeof React !== 'undefined') {
@@ -142,11 +150,11 @@ const handleDataUpdateAndRender = (event) => {
     }
 };
 
-// Zaregistrujeme poslucháča udalosti 'globalDataUpdated'.
-console.log("logged-in-matches-hall.js: Registrujem poslucháča pre 'globalDataUpdated'.");
+// Zaregistrujeme poslúcháča udalosti 'globalDataUpdated'.
+console.log("logged-in-matches-hall.js: Registrujem poslúcháča pre 'globalDataUpdated'.");
 window.addEventListener('globalDataUpdated', handleDataUpdateAndRender);
 
-// Aby sme predišli premeškaniu udalosti, ak sa načíta skôr, ako sa tento poslucháč zaregistruje,
+// Aby sme predišli premeškaniu udalosti, ak sa načíta skôr, ako sa tento poslúcháč zaregistruje,
 // skontrolujeme, či sú dáta už dostupné.
 console.log("logged-in-matches-hall.js: Kontrolujem, či existujú globálne dáta.");
 if (window.globalUserProfileData) {
