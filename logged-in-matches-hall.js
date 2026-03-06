@@ -406,9 +406,13 @@ const matchesHallApp = ({ userProfileData }) => {
         if (selectedMatch && selectedMatch.status === 'in-progress' && selectedMatch.startedAt && currentCategory) {
             console.log('Spúšťam timer pre zápas v priebehu');
             
+            // Uložíme startedAt do premennej mimo interval
+            const startedAt = selectedMatch.startedAt;
+            const matchId = selectedMatch.id;
+            const currentPeriod = selectedMatch.currentPeriod;
+            
             const interval = setInterval(() => {
                 const now = Timestamp.now();
-                const startedAt = selectedMatch.startedAt;
                 
                 // Ak je zápas pozastavený, čas nebeží
                 if (selectedMatch.status === 'paused') {
@@ -423,11 +427,11 @@ const matchesHallApp = ({ userProfileData }) => {
                 
                 // Automatické zastavenie pri dosiahnutí maxima podľa kategórie
                 const totalPeriodSeconds = (currentCategory.periodDuration || 20) * 60; // prevod na sekundy
-                if (elapsedSeconds >= totalPeriodSeconds && selectedMatch.status === 'in-progress') {
+                if (elapsedSeconds >= totalPeriodSeconds) {
                     console.log('Dosiahnutý max čas, zastavujem');
                     // Zastavíme čas
-                    stopMatchTimer(selectedMatch.id);
-                    window.showGlobalNotification(`Koniec ${selectedMatch.currentPeriod}. periódy`, 'info');
+                    stopMatchTimer(matchId);
+                    window.showGlobalNotification(`Koniec ${currentPeriod}. periódy`, 'info');
                 }
             }, 1000);
             
