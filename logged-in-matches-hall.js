@@ -587,22 +587,22 @@ const matchesHallApp = ({ userProfileData }) => {
                 const matchDate = match.scheduledTime ? formatDateWithDay(match.scheduledTime.toDate()) : 'neurčený';
                 const categoryName = match.categoryName || 'Neznáma kategória';
                 
-//                console.log(`Zápas #${index + 1}:`);
-//                console.log(`  ID: ${match.id}`);
-//                console.log(`  Dátum: ${matchDate}`);
-//                console.log(`  Čas: ${matchTime}`);
-//                console.log(`  Kategória: ${categoryName}`);
-//                console.log(`  Skupina: ${match.groupName || 'neurčená'}`);
-//                console.log(`  Domáci: ${homeTeamName} (${match.homeTeamIdentifier})`);
-//                console.log(`  Hosť: ${awayTeamName} (${match.awayTeamIdentifier})`);
-//                console.log(`  Status: ${match.status || 'neurčený'}`);
-//                if (match.isPlacementMatch) {
-//                    console.log(`  Typ: Zápas o ${match.placementRank}. miesto`);
-//                }
-//                console.log('---');
+                console.log(`Zápas #${index + 1}:`);
+                console.log(`  ID: ${match.id}`);
+                console.log(`  Dátum: ${matchDate}`);
+                console.log(`  Čas: ${matchTime}`);
+                console.log(`  Kategória: ${categoryName}`);
+                console.log(`  Skupina: ${match.groupName || 'neurčená'}`);
+                console.log(`  Domáci: ${homeTeamName} (${match.homeTeamIdentifier})`);
+                console.log(`  Hosť: ${awayTeamName} (${match.awayTeamIdentifier})`);
+                console.log(`  Status: ${match.status || 'neurčený'}`);
+                if (match.isPlacementMatch) {
+                    console.log(`  Typ: Zápas o ${match.placementRank}. miesto`);
+                }
+                console.log('---');
             });
-//            console.log(`Celkový počet zápasov: ${loadedMatches.length}`);
-//            console.log('=================================');
+            console.log(`Celkový počet zápasov: ${loadedMatches.length}`);
+            console.log('=================================');
             
         }, (error) => {
             console.error("Chyba pri načítaní zápasov:", error);
@@ -688,7 +688,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 
                 // Ak sa zhoduje číslo a písmeno (písmeno v skupine), našli sme tím
                 if (teamNum === orderNum && teamLetter === groupName) {
-    //                console.log(`  Nájdený superstructure tím: ${team.teamName}`);
+//                    console.log(`  Nájdený superstructure tím: ${team.teamName}`);
                     return team.teamName;
                 }
             }
@@ -711,14 +711,14 @@ const matchesHallApp = ({ userProfileData }) => {
                 );
                 
                 if (team) {
-    //                console.log(`  Nájdený používateľský tím: ${team.teamName} (používateľ: ${user.email})`);
+//                    console.log(`  Nájdený používateľský tím: ${team.teamName} (používateľ: ${user.email})`);
                     return team.teamName;
                 }
             }
         }
         
         // Fallback - vrátime identifikátor v čitateľnej forme
-    //    console.log(`  Tím NENájdený, používam fallback`);
+//        console.log(`  Tím NENájdený, používam fallback`);
         return `${category} ${groupName}${order}`;
     };
 
