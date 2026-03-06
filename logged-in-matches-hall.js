@@ -49,7 +49,7 @@ window.showGlobalNotification = (message, type = 'success') => {
 const matcheshallApp = ({ userProfileData }) => {
     // Extrahujeme hallId z userProfileData
     const hallId = userProfileData?.hallId;
-    const [hallName, setHallName] = useState(null);
+    const [hallName, setHallName] = useState();
     
     useEffect(() => {
         const fetchHallName = async () => {
