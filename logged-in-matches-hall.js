@@ -2198,20 +2198,9 @@ const matchesHallApp = ({ userProfileData }) => {
                                 ) : React.createElement(
                                     'div',
                                     { 
-                                        className: 'grid grid-cols-[1fr_40px_60px_auto_60px_60px_auto_40px_1fr] gap-1',
+                                        className: 'grid grid-cols-[1fr_20px_50px_30px_60px_30px_50px_20px_1fr] gap-1',
                                         style: { alignItems: 'center' }
                                     },
-                                    
-                                    // Hlavička tabuľky
-                                    React.createElement('div', { key: 'header-1', className: 'text-xs text-gray-400 font-medium p-2 text-right' }, 'Domáci'),
-                                    React.createElement('div', { key: 'header-2', className: 'text-xs text-gray-400 font-medium p-2' }, 'Č.'),
-                                    React.createElement('div', { key: 'header-3', className: 'text-xs text-gray-400 font-medium p-2 text-center' }, 'Stav'),
-                                    React.createElement('div', { key: 'header-4', className: 'text-xs text-gray-400 font-medium p-2' }, ''),
-                                    React.createElement('div', { key: 'header-5', className: 'text-xs text-gray-400 font-medium p-2 text-center' }, 'Čas'),
-                                    React.createElement('div', { key: 'header-6', className: 'text-xs text-gray-400 font-medium p-2' }, ''),
-                                    React.createElement('div', { key: 'header-7', className: 'text-xs text-gray-400 font-medium p-2 text-center' }, 'Stav'),
-                                    React.createElement('div', { key: 'header-8', className: 'text-xs text-gray-400 font-medium p-2' }, 'Č.'),
-                                    React.createElement('div', { key: 'header-9', className: 'text-xs text-gray-400 font-medium p-2 text-left' }, 'Hostia'),
                                     
                                     // Dátové riadky
                                     matchEvents.map((event) => {
