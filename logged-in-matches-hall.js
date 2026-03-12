@@ -2254,7 +2254,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             'div',
                                             {
                                                 key: event.id,
-                                                className: 'grid grid-cols-[30px_80px_auto_50px_auto_80px_30px] gap-1 p-2 bg-white rounded-lg border border-gray-200 text-sm group items-center'
+                                                className: 'grid grid-cols-[40px_1fr_auto_60px_auto_1fr_40px] gap-1 p-2 bg-white rounded-lg border border-gray-200 text-sm group items-center'
                                             },
                                             // 1. stĺpec - Číslo dresu domáci (len pre domácich hráčov)
                                             React.createElement(
