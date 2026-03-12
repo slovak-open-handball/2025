@@ -2342,9 +2342,17 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { key: `${event.id}-col5`, className: 'text-center relative p-2 group' },
+                                                // Čas - schová sa len pri hoveri a len pre prvú udalosť
                                                 React.createElement(
                                                     'span',
-                                                    { className: 'font-mono text-xs text-gray-800 group-hover:hidden' }, 
+                                                    { 
+                                                        className: `font-mono text-xs text-gray-800 ${
+                                                            (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && 
+                                                            matchEvents.length > 0 && event.id === matchEvents[0].id 
+                                                                ? 'group-hover:hidden' 
+                                                                : ''
+                                                        }` 
+                                                    },
                                                     `${event.minute}:${event.second?.toString().padStart(2, '0') || '00'}`
                                                 ),
                                                 // Kôš sa zobrazí len pre prvú udalosť v zozname (najnovšiu)
