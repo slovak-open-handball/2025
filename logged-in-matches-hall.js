@@ -2161,7 +2161,24 @@ const matchesHallApp = ({ userProfileData }) => {
                                     'Zatiaľ žiadne udalosti'
                                 ) : React.createElement(
                                     'div',
-                                    { className: 'space-y-2' },
+                                    { 
+                                        className: 'grid grid-cols-[40px_1fr_auto_60px_auto_1fr_40px] gap-1',
+                                        style={{ alignItems: 'center' }}
+                                    },
+                                    // Hlavička tabuľky (voliteľná)
+                                    React.createElement(
+                                        React.Fragment,
+                                        null,
+                                        React.createElement('div', { className: 'text-xs text-gray-400 font-medium p-2' }, 'Č.'),
+                                        React.createElement('div', { className: 'text-xs text-gray-400 font-medium p-2 text-right' }, 'Domáci'),
+                                        React.createElement('div', { className: 'text-xs text-gray-400 font-medium p-2' }, ''),
+                                        React.createElement('div', { className: 'text-xs text-gray-400 font-medium p-2 text-center' }, 'Čas'),
+                                        React.createElement('div', { className: 'text-xs text-gray-400 font-medium p-2' }, ''),
+                                        React.createElement('div', { className: 'text-xs text-gray-400 font-medium p-2 text-left' }, 'Hostia'),
+                                        React.createElement('div', { className: 'text-xs text-gray-400 font-medium p-2' }, 'Č.')
+                                    ),
+                                    
+                                    // Dátové riadky
                                     matchEvents.map((event) => {
                                         const playerName = event.playerRef ? getPlayerNameFromRef(event.playerRef) : '';
                                         
@@ -2251,15 +2268,12 @@ const matchesHallApp = ({ userProfileData }) => {
                                         const isStaff = event.playerRef?.playerId?.startsWith('staff-');
                                         
                                         return React.createElement(
-                                            'div',
-                                            {
-                                                key: event.id,
-                                                className: 'grid grid-cols-[40px_1fr_auto_60px_auto_1fr_40px] gap-1 p-2 bg-white rounded-lg border border-gray-200 text-sm group items-center'
-                                            },
-                                            // 1. stĺpec - Číslo dresu domáci (len pre domácich hráčov)
+                                            React.Fragment,
+                                            { key: event.id },
+                                            // 1. stĺpec - Číslo dresu domáci
                                             React.createElement(
                                                 'div',
-                                                { className: 'text-right pr-1' },
+                                                { className: 'flex justify-end items-center p-2' },
                                                 event.team === 'home' && !isStaff && jerseyNumber && React.createElement(
                                                     'span',
                                                     { className: 'inline-block w-6 h-6 bg-gray-100 rounded-full text-xs font-bold text-gray-700 flex items-center justify-center' },
@@ -2267,10 +2281,10 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 )
                                             ),
                                             
-                                            // 2. stĺpec - Meno priezvisko domáci (len pre domácich)
+                                            // 2. stĺpec - Meno priezvisko domáci
                                             React.createElement(
                                                 'div',
-                                                { className: 'flex flex-col leading-tight text-right pr-1' },
+                                                { className: 'flex flex-col leading-tight text-right p-2' },
                                                 event.team === 'home' && React.createElement(
                                                     React.Fragment,
                                                     null,
@@ -2279,24 +2293,22 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 )
                                             ),
                                             
-                                            // 3. stĺpec - Ikona udalosti domáci (len pre domácich)
+                                            // 3. stĺpec - Ikona udalosti domáci
                                             React.createElement(
                                                 'div',
-                                                { className: 'flex justify-end' },
+                                                { className: 'flex justify-center items-center p-2' },
                                                 event.team === 'home' && eventIcon
                                             ),
                                             
-                                            // 4. stĺpec - Čas (v strede) s košom pri hoveri
+                                            // 4. stĺpec - Čas s košom pri hoveri
                                             React.createElement(
                                                 'div',
-                                                { className: 'text-center relative' },
-                                                // Čas - normálne viditeľný
+                                                { className: 'text-center relative p-2 group' },
                                                 React.createElement(
                                                     'span',
                                                     { className: 'font-mono text-xs text-gray-800 group-hover:hidden' }, 
                                                     `${event.minute}:${event.second?.toString().padStart(2, '0') || '00'}`
                                                 ),
-                                                // Kôš - viditeľný len pri hoveri
                                                 (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && React.createElement(
                                                     'button',
                                                     {
@@ -2307,17 +2319,17 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 )
                                             ),
                                             
-                                            // 5. stĺpec - Ikona udalosti hostia (len pre hostí)
+                                            // 5. stĺpec - Ikona udalosti hostia
                                             React.createElement(
                                                 'div',
-                                                { className: 'flex justify-start' },
+                                                { className: 'flex justify-center items-center p-2' },
                                                 event.team === 'away' && eventIcon
                                             ),
                                             
-                                            // 6. stĺpec - Meno priezvisko hostia (len pre hostí)
+                                            // 6. stĺpec - Meno priezvisko hostia
                                             React.createElement(
                                                 'div',
-                                                { className: 'flex flex-col leading-tight text-left pl-1' },
+                                                { className: 'flex flex-col leading-tight text-left p-2' },
                                                 event.team === 'away' && React.createElement(
                                                     React.Fragment,
                                                     null,
@@ -2326,10 +2338,10 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 )
                                             ),
                                             
-                                            // 7. stĺpec - Číslo dresu hostia (len pre hostí hráčov)
+                                            // 7. stĺpec - Číslo dresu hostia
                                             React.createElement(
                                                 'div',
-                                                { className: 'flex justify-end pr-1' },
+                                                { className: 'flex justify-start items-center p-2' },
                                                 event.team === 'away' && !isStaff && jerseyNumber && React.createElement(
                                                     'span',
                                                     { className: 'inline-block w-6 h-6 bg-gray-100 rounded-full text-xs font-bold text-gray-700 flex items-center justify-center' },
