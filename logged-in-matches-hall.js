@@ -2326,7 +2326,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 { key: `${event.id}-col3`, className: 'text-center p-2' },
                                                 (event.type === 'goal' || (event.type === 'penalty' && event.subType === 'scored')) && event.team === 'home' && React.createElement(
                                                     'span',
-                                                    { className: 'text-xs font-mono bg-blue-100 px-2 py-1 rounded' },
+                                                    { className: 'text-xs font-mono px-2 py-1 rounded' },
                                                     `${scoreAfter.home}:${scoreAfter.away}`
                                                 )
                                             ),
@@ -2370,7 +2370,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 { key: `${event.id}-col7`, className: 'text-center p-2' },
                                                 (event.type === 'goal' || (event.type === 'penalty' && event.subType === 'scored')) && event.team === 'away' && React.createElement(
                                                     'span',
-                                                    { className: 'text-xs font-mono bg-purple-100 px-2 py-1 rounded' },
+                                                    { className: 'text-xs font-mono px-2 py-1 rounded' },
                                                     `${scoreAfter.home}:${scoreAfter.away}`
                                                 )
                                             ),
