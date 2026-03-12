@@ -2329,7 +2329,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             // 7. stĺpec - Číslo dresu hostia (len pre hostí hráčov)
                                             React.createElement(
                                                 'div',
-                                                { className: 'text-left ml-1' },
+                                                { className: 'text-right pr-1' },
                                                 event.team === 'away' && !isStaff && jerseyNumber && React.createElement(
                                                     'span',
                                                     { className: 'inline-block w-6 h-6 bg-gray-100 rounded-full text-xs font-bold text-gray-700 flex items-center justify-center' },
