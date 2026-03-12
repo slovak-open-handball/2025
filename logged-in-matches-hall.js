@@ -2165,7 +2165,45 @@ const matchesHallApp = ({ userProfileData }) => {
                                     matchEvents.map((event) => {
                                         const playerName = event.playerRef ? getPlayerNameFromRef(event.playerRef) : '';
                                         
-                                        let eventDisplay = '';
+                                        // Získanie čísla dresu pre hráča
+                                        let jerseyNumber = '';
+                                        if (event.playerRef && !event.playerRef.playerId?.startsWith('staff-')) {
+                                            const user = users.find(u => u.id === event.playerRef.userId);
+                                            if (user) {
+                                                const parts = event.playerRef.teamIdentifier.split(' ');
+                                                const groupAndOrder = parts.pop();
+                                                const category = parts.join(' ');
+                                                
+                                                let groupLetter = '';
+                                                let order = '';
+                                                for (let i = 0; i < groupAndOrder.length; i++) {
+                                                    const char = groupAndOrder[i];
+                                                    if (char >= '0' && char <= '9') {
+                                                        order = groupAndOrder.substring(i);
+                                                        groupLetter = groupAndOrder.substring(0, i);
+                                                        break;
+                                                    }
+                                                }
+                                                
+                                                const fullGroupName = `skupina ${groupLetter}`;
+                                                const orderNum = parseInt(order, 10);
+                                                
+                                                const userTeams = user.teams?.[category];
+                                                if (userTeams && Array.isArray(userTeams)) {
+                                                    const team = userTeams.find(t => t.groupName === fullGroupName && t.order === orderNum);
+                                                    if (team && team.playerDetails) {
+                                                        const player = team.playerDetails.find(p => 
+                                                            p.id === event.playerRef.playerId || 
+                                                            (p.firstName + ' ' + p.lastName) === event.playerRef.playerId
+                                                        );
+                                                        if (player && player.jerseyNumber) {
+                                                            jerseyNumber = player.jerseyNumber;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        
                                         let eventIcon = '';
                                         
                                         switch (event.type) {
@@ -2209,16 +2247,30 @@ const matchesHallApp = ({ userProfileData }) => {
                                         const firstName = nameParts[0] || '';
                                         const lastName = nameParts.slice(1).join(' ') || '';
                                         
+                                        // Zistenie, či ide o člena realizačného tímu
+                                        const isStaff = event.playerRef?.playerId?.startsWith('staff-');
+                                        
                                         return React.createElement(
                                             'div',
                                             {
                                                 key: event.id,
-                                                className: 'grid grid-cols-5 gap-2 p-2 bg-white rounded-lg border border-gray-200 text-sm group items-center'
+                                                className: 'grid grid-cols-7 gap-1 p-2 bg-white rounded-lg border border-gray-200 text-sm group items-center'
                                             },
-                                            // 1. stĺpec - Meno priezvisko domáci (len pre domácich)
+                                            // 1. stĺpec - Číslo dresu domáci (len pre domácich hráčov)
                                             React.createElement(
                                                 'div',
-                                                { className: 'flex flex-col leading-tight text-right pr-2' },
+                                                { className: 'text-right pr-1' },
+                                                event.team === 'home' && !isStaff && jerseyNumber && React.createElement(
+                                                    'span',
+                                                    { className: 'inline-block w-6 h-6 bg-gray-100 rounded-full text-xs font-bold text-gray-700 flex items-center justify-center' },
+                                                    jerseyNumber
+                                                )
+                                            ),
+                                            
+                                            // 2. stĺpec - Meno priezvisko domáci (len pre domácich)
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex flex-col leading-tight text-right pr-1' },
                                                 event.team === 'home' && React.createElement(
                                                     React.Fragment,
                                                     null,
@@ -2227,14 +2279,14 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 )
                                             ),
                                             
-                                            // 2. stĺpec - Ikona udalosti domáci (len pre domácich)
+                                            // 3. stĺpec - Ikona udalosti domáci (len pre domácich)
                                             React.createElement(
                                                 'div',
                                                 { className: 'flex justify-end' },
                                                 event.team === 'home' && eventIcon
                                             ),
                                             
-                                            // 3. stĺpec - Čas (v strede) s košom pri hoveri
+                                            // 4. stĺpec - Čas (v strede) s košom pri hoveri
                                             React.createElement(
                                                 'div',
                                                 { className: 'text-center relative' },
@@ -2255,22 +2307,33 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 )
                                             ),
                                             
-                                            // 4. stĺpec - Ikona udalosti hostia (len pre hostí)
+                                            // 5. stĺpec - Ikona udalosti hostia (len pre hostí)
                                             React.createElement(
                                                 'div',
                                                 { className: 'flex justify-start' },
                                                 event.team === 'away' && eventIcon
                                             ),
                                             
-                                            // 5. stĺpec - Meno priezvisko hostia (len pre hostí)
+                                            // 6. stĺpec - Meno priezvisko hostia (len pre hostí)
                                             React.createElement(
                                                 'div',
-                                                { className: 'flex flex-col leading-tight text-left pl-2' },
+                                                { className: 'flex flex-col leading-tight text-left pl-1' },
                                                 event.team === 'away' && React.createElement(
                                                     React.Fragment,
                                                     null,
                                                     React.createElement('span', { className: 'text-gray-700 text-xs font-medium' }, firstName),
                                                     lastName && React.createElement('span', { className: 'text-gray-700 text-xs' }, lastName)
+                                                )
+                                            ),
+                                            
+                                            // 7. stĺpec - Číslo dresu hostia (len pre hostí hráčov)
+                                            React.createElement(
+                                                'div',
+                                                { className: 'text-left pl-1' },
+                                                event.team === 'away' && !isStaff && jerseyNumber && React.createElement(
+                                                    'span',
+                                                    { className: 'inline-block w-6 h-6 bg-gray-100 rounded-full text-xs font-bold text-gray-700 flex items-center justify-center' },
+                                                    jerseyNumber
                                                 )
                                             )
                                         );
