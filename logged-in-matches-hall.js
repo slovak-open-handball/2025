@@ -2166,69 +2166,75 @@ const matchesHallApp = ({ userProfileData }) => {
                                         const playerName = event.playerRef ? getPlayerNameFromRef(event.playerRef) : '';
                                         
                                         let eventDisplay = '';
+                                        let eventIcon = '';
                                         
                                         switch (event.type) {
                                             case 'goal':
-                                                eventDisplay = React.createElement('i', { className: 'fa-solid fa-futbol text-black text-sm' });
+                                                eventIcon = React.createElement('i', { className: 'fa-solid fa-futbol text-black text-sm' });
                                                 break;
                                             case 'penalty':
-                                                eventDisplay = React.createElement('i', { className: `fa-solid fa-futbol ${event.subType === 'scored' ? 'text-green-600' : 'text-red-600'} text-sm` });
+                                                eventIcon = React.createElement('i', { className: `fa-solid fa-futbol ${event.subType === 'scored' ? 'text-green-600' : 'text-red-600'} text-sm` });
                                                 break;
                                             case 'yellow':
-                                                eventDisplay = React.createElement(
+                                                eventIcon = React.createElement(
                                                     'div',
                                                     { className: 'w-4 h-5 bg-yellow-400 rounded-sm' }
                                                 );
                                                 break;
                                             case 'red':
-                                                eventDisplay = React.createElement(
+                                                eventIcon = React.createElement(
                                                     'div',
                                                     { className: 'w-4 h-5 bg-red-600 rounded-sm' }
                                                 );
                                                 break;
                                             case 'blue':
-                                                eventDisplay = React.createElement(
+                                                eventIcon = React.createElement(
                                                     'div',
                                                     { className: 'w-4 h-5 bg-blue-600 rounded-sm' }
                                                 );
                                                 break;
                                             case 'exclusion':
-                                                eventDisplay = React.createElement(
+                                                eventIcon = React.createElement(
                                                     'span',
                                                     { className: 'font-bold text-orange-600' },
                                                     '2\''
                                                 );
                                                 break;
                                             default:
-                                                eventDisplay = React.createElement('i', { className: 'fa-solid fa-clock text-gray-600 text-sm' });
+                                                eventIcon = React.createElement('i', { className: 'fa-solid fa-clock text-gray-600 text-sm' });
                                         }
                                         
-                                        // V časti matchEvents.map - nahraďte existujúci return
-
+                                        // Rozdelenie mena na krstné meno a priezvisko
+                                        const nameParts = playerName.split(' ');
+                                        const firstName = nameParts[0] || '';
+                                        const lastName = nameParts.slice(1).join(' ') || '';
+                                        
                                         return React.createElement(
                                             'div',
                                             {
                                                 key: event.id,
-                                                className: 'grid grid-cols-3 gap-2 p-2 bg-white rounded-lg border border-gray-200 text-sm group items-center'
+                                                className: 'grid grid-cols-5 gap-2 p-2 bg-white rounded-lg border border-gray-200 text-sm group items-center'
                                             },
-                                            // Ľavý stĺpec - pre domácich
+                                            // 1. stĺpec - Meno priezvisko domáci (len pre domácich)
                                             React.createElement(
                                                 'div',
-                                                { className: 'flex items-center gap-2' },
+                                                { className: 'flex flex-col leading-tight text-right pr-2' },
                                                 event.team === 'home' && React.createElement(
                                                     React.Fragment,
                                                     null,
-                                                    eventDisplay,
-                                                    React.createElement(
-                                                        'div',
-                                                        { className: 'flex flex-col leading-tight' },
-                                                        React.createElement('span', { className: 'text-gray-700 text-xs' }, playerName.split(' ')[0]), // Krstné meno
-                                                        playerName.includes(' ') && React.createElement('span', { className: 'text-gray-700 text-xs' }, playerName.split(' ').slice(1).join(' ')) // Priezvisko (zvyšok)
-                                                    )
+                                                    React.createElement('span', { className: 'text-gray-700 text-xs font-medium' }, firstName),
+                                                    lastName && React.createElement('span', { className: 'text-gray-700 text-xs' }, lastName)
                                                 )
                                             ),
                                             
-                                            // Stredný stĺpec - vždy čas, pri hoveri sa zmení na kôš
+                                            // 2. stĺpec - Ikona udalosti domáci (len pre domácich)
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex justify-end' },
+                                                event.team === 'home' && eventIcon
+                                            ),
+                                            
+                                            // 3. stĺpec - Čas (v strede) s košom pri hoveri
                                             React.createElement(
                                                 'div',
                                                 { className: 'text-center relative' },
@@ -2249,20 +2255,22 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 )
                                             ),
                                             
-                                            // Pravý stĺpec - pre hostí
+                                            // 4. stĺpec - Ikona udalosti hostia (len pre hostí)
                                             React.createElement(
                                                 'div',
-                                                { className: 'flex items-center justify-end gap-2' },
+                                                { className: 'flex justify-start' },
+                                                event.team === 'away' && eventIcon
+                                            ),
+                                            
+                                            // 5. stĺpec - Meno priezvisko hostia (len pre hostí)
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex flex-col leading-tight text-left pl-2' },
                                                 event.team === 'away' && React.createElement(
                                                     React.Fragment,
                                                     null,
-                                                    React.createElement(
-                                                        'div',
-                                                        { className: 'flex flex-col leading-tight text-right' },
-                                                        React.createElement('span', { className: 'text-gray-700 text-xs' }, playerName.split(' ')[0]), // Krstné meno
-                                                        playerName.includes(' ') && React.createElement('span', { className: 'text-gray-700 text-xs' }, playerName.split(' ').slice(1).join(' ')) // Priezvisko (zvyšok)
-                                                    ),
-                                                    eventDisplay
+                                                    React.createElement('span', { className: 'text-gray-700 text-xs font-medium' }, firstName),
+                                                    lastName && React.createElement('span', { className: 'text-gray-700 text-xs' }, lastName)
                                                 )
                                             )
                                         );
