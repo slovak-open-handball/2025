@@ -2338,7 +2338,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 (event.type === 'goal' || (event.type === 'penalty' && event.subType === 'scored')) && event.team === 'home' && React.createElement(
                                                     'span',
                                                     { className: 'text-xs font-mono bg-blue-100 px-2 py-1 rounded' },
-                                                    `${scoreBefore.home}:${scoreBefore.away} → ${scoreAfter.home}:${scoreAfter.away}`
+                                                    `${scoreAfter.home}:${scoreAfter.away}`
                                                 )
                                             ),
                                             
@@ -2382,7 +2382,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 (event.type === 'goal' || (event.type === 'penalty' && event.subType === 'scored')) && event.team === 'away' && React.createElement(
                                                     'span',
                                                     { className: 'text-xs font-mono bg-purple-100 px-2 py-1 rounded' },
-                                                    `${scoreBefore.home}:${scoreBefore.away} → ${scoreAfter.home}:${scoreAfter.away}`
+                                                    `${scoreAfter.home}:${scoreAfter.away}`
                                                 )
                                             ),
                                             
