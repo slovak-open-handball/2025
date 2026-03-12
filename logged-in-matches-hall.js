@@ -2165,14 +2165,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                         className: 'grid grid-cols-[40px_1fr_auto_60px_auto_1fr_40px] gap-1',
                                         style: { alignItems: 'center' }
                                     },
-                                    // Hlavička tabuľky - každý element má key
-                                    React.createElement('div', { key: 'header-1', className: 'text-xs text-gray-400 font-medium p-2' }, ''),
-                                    React.createElement('div', { key: 'header-2', className: 'text-xs text-gray-400 font-medium p-2 text-right' }, ''),
-                                    React.createElement('div', { key: 'header-3', className: 'text-xs text-gray-400 font-medium p-2' }, ''),
-                                    React.createElement('div', { key: 'header-4', className: 'text-xs text-gray-400 font-medium p-2 text-center' }, ''),
-                                    React.createElement('div', { key: 'header-5', className: 'text-xs text-gray-400 font-medium p-2' }, ''),
-                                    React.createElement('div', { key: 'header-6', className: 'text-xs text-gray-400 font-medium p-2 text-left' }, ''),
-                                    React.createElement('div', { key: 'header-7', className: 'text-xs text-gray-400 font-medium p-2' }, ''),
                                     
                                     // Dátové riadky
                                     matchEvents.map((event) => {
