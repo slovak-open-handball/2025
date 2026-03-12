@@ -2338,7 +2338,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 event.team === 'home' && eventIcon
                                             ),
                                             
-                                            // 5. stĺpec - Čas s košom pri hoveri
+                                            // 5. stĺpec - Čas s košom pri hoveri (len pre prvú udalosť)
                                             React.createElement(
                                                 'div',
                                                 { key: `${event.id}-col5`, className: 'text-center relative p-2 group' },
@@ -2347,7 +2347,9 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     { className: 'font-mono text-xs text-gray-800 group-hover:hidden' }, 
                                                     `${event.minute}:${event.second?.toString().padStart(2, '0') || '00'}`
                                                 ),
-                                                (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && React.createElement(
+                                                // Kôš sa zobrazí len pre prvú udalosť v zozname (najnovšiu)
+                                                (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && 
+                                                matchEvents.length > 0 && event.id === matchEvents[0].id && React.createElement(
                                                     'button',
                                                     {
                                                         className: 'hidden group-hover:inline-block text-red-500 hover:text-red-700',
