@@ -26,14 +26,14 @@ const formatDateWithDay = (date) => {
 };
 
 const formatTime = (timestamp) => {
-    if (!timestamp) return '--:--';
+    if (!timestamp) return '-- : --';
     try {
         const date = timestamp.toDate();
         const hours = date.getHours().toString().padStart(2, '0');
         const minutes = date.getMinutes().toString().padStart(2, '0');
         return `${hours}:${minutes}`;
     } catch (e) {
-        return '--:--';
+        return '-- : --';
     }
 };
 
@@ -1941,7 +1941,7 @@ const matchesHallApp = ({ userProfileData }) => {
         const homeTeamDetails = getTeamDetails(selectedMatch.homeTeamIdentifier);
         const awayTeamDetails = getTeamDetails(selectedMatch.awayTeamIdentifier);
         const matchDate = selectedMatch.scheduledTime ? formatDateWithDay(selectedMatch.scheduledTime.toDate()) : 'neurčený';
-        const matchStartTime = selectedMatch.scheduledTime ? formatTime(selectedMatch.scheduledTime) : '--:--';
+        const matchStartTime = selectedMatch.scheduledTime ? formatTime(selectedMatch.scheduledTime) : '-- : --';
         const category = categories.find(c => c.name === selectedMatch.categoryName);
 
         // 🔴 UPRAVENÁ FUNKCIA: addMatchEvent - používa createPlayerReference
@@ -3610,13 +3610,13 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     React.createElement(
                                                         'span',
                                                         { className: 'font-mono font-bold text-blue-600 text-sm' },
-                                                        `${liveMatchData[match.id].homeScore}:${liveMatchData[match.id].awayScore}`
+                                                        `${liveMatchData[match.id].homeScore} : ${liveMatchData[match.id].awayScore}`
                                                     )
                                                 ) :
                                                 React.createElement(
                                                     'span',
                                                     { className: 'text-xs font-bold text-gray-400 px-2' },
-                                                    '--:--'
+                                                    '-- : --'
                                                 ),
                                             
                                             React.createElement(
