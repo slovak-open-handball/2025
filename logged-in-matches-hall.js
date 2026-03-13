@@ -3667,7 +3667,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     'div',
                                                     { 
                                                         className: 'flex items-center justify-center gap-2 px-3 py-1 min-w-[100px]',
-                                                        title: `Aktuálny čas: ${formatMatchTime(liveMatchData[match.id].time)}`
                                                     },
                                                     React.createElement(
                                                         'span',
