@@ -105,6 +105,7 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
+// 🔴 UPRAVENÁ FUNKCIA: getPlayersForTeam - pridanie indexu
 const getPlayersForTeam = (teamDetails) => {
     if (!teamDetails || !teamDetails.team || !teamDetails.team.playerDetails) return [];
     
@@ -113,10 +114,13 @@ const getPlayersForTeam = (teamDetails) => {
         userId: teamDetails.userId,
         teamIdentifier: teamDetails.team.id || `${teamDetails.team.category} ${teamDetails.team.groupName?.replace('skupina ', '')}${teamDetails.team.order}`,
         playerId: player.id || `${player.firstName} ${player.lastName}`,
-        displayName: `${player.firstName} ${player.lastName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`
+        displayName: `${player.firstName} ${player.lastName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`,
+        index: index, // PRIDANÉ: index hráča v poli
+        isStaff: false
     }));
 };
 
+// 🔴 UPRAVENÁ FUNKCIA: getStaffForTeam - pridanie indexu a typu
 const getStaffForTeam = (teamDetails) => {
     if (!teamDetails || !teamDetails.team) return [];
     
@@ -130,7 +134,9 @@ const getStaffForTeam = (teamDetails) => {
                 teamIdentifier: teamDetails.team.id || `${teamDetails.team.category} ${teamDetails.team.groupName?.replace('skupina ', '')}${teamDetails.team.order}`,
                 playerId: `staff-men-${index}`,
                 displayName: `${member.firstName} ${member.lastName} (tréner)`,
-                isStaff: true
+                isStaff: true,
+                staffType: 'men', // PRIDANÉ: typ člena RT
+                staffIndex: index // PRIDANÉ: index v poli
             });
         });
     }
@@ -143,12 +149,43 @@ const getStaffForTeam = (teamDetails) => {
                 teamIdentifier: teamDetails.team.id || `${teamDetails.team.category} ${teamDetails.team.groupName?.replace('skupina ', '')}${teamDetails.team.order}`,
                 playerId: `staff-women-${index}`,
                 displayName: `${member.firstName} ${member.lastName} (trénerka)`,
-                isStaff: true
-        });
+                isStaff: true,
+                staffType: 'women', // PRIDANÉ: typ člena RT
+                staffIndex: index // PRIDANÉ: index v poli
+            });
         });
     }
     
     return staff;
+};
+
+// 🔴 NOVÁ FUNKCIA: createPlayerReference - vytvorenie referencie bez mien
+const createPlayerReference = (teamDetails, teamIdentifier, player, isStaff = false, staffType = null, staffIndex = null) => {
+    if (!teamDetails || !teamIdentifier || !player) return null;
+    
+    if (isStaff) {
+        // Pre člena realizačného tímu ukladáme:
+        // - userId: ID používateľa
+        // - teamIdentifier: identifikátor tímu
+        // - staffType: 'men' alebo 'women'
+        // - staffIndex: index v poli
+        return {
+            userId: teamDetails.userId,
+            teamIdentifier: teamIdentifier,
+            staffType: staffType,
+            staffIndex: staffIndex !== null ? staffIndex : player.staffIndex
+        };
+    } else {
+        // Pre hráča ukladáme:
+        // - userId: ID používateľa
+        // - teamIdentifier: identifikátor tímu
+        // - playerIndex: index v poli playerDetails
+        return {
+            userId: teamDetails.userId,
+            teamIdentifier: teamIdentifier,
+            playerIndex: player.index
+        };
+    }
 };
 
 const matchesHallApp = ({ userProfileData }) => {
@@ -779,8 +816,7 @@ const matchesHallApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, [selectedMatch]);
     
-    // Upravte addMatchEvent funkciu - nahraďte existujúcu
-
+    // 🔴 UPRAVENÁ FUNKCIA: addMatchEvent - používa createPlayerReference
     const addMatchEvent = async (localEventType, localEventTeam, localEventSubType, localPlayer) => {
         if (!selectedMatch || !window.db) return;
         
@@ -860,13 +896,37 @@ const matchesHallApp = ({ userProfileData }) => {
                 }
             };
     
-            // Pridanie referencie na hráča
+            // 🔴 ZMENENÉ: Pridanie referencie na hráča pomocou createPlayerReference
             if (player) {
-                eventData.playerRef = {
-                    userId: player.userId,
-                    teamIdentifier: player.teamIdentifier,
-                    playerId: player.playerId
-                };
+                // Získame detail tímu podľa identifikátora
+                const teamDetails = team === 'home' ? homeTeamDetails : awayTeamDetails;
+                const teamIdentifier = team === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
+                
+                let playerRef = null;
+                
+                if (player.isStaff) {
+                    // Pre člena realizačného tímu
+                    playerRef = createPlayerReference(
+                        teamDetails, 
+                        teamIdentifier, 
+                        player, 
+                        true, 
+                        player.staffType, 
+                        player.staffIndex
+                    );
+                } else {
+                    // Pre hráča
+                    playerRef = createPlayerReference(
+                        teamDetails, 
+                        teamIdentifier, 
+                        player, 
+                        false
+                    );
+                }
+                
+                if (playerRef) {
+                    eventData.playerRef = playerRef;
+                }
                 
                 if (type === 'yellow' || type === 'red' || type === 'blue' || type === 'exclusion') {
                     eventData.cardType = type === 'exclusion' ? 'exclusion' : type;
@@ -916,69 +976,38 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     };
     
-    // Upravte funkciu getPlayerNameFromRef pre členov RT
-
+    // 🔴 UPRAVENÁ FUNKCIA: getPlayerNameFromRef - používa referencie bez mien
     const getPlayerNameFromRef = (playerRef) => {
-        if (!playerRef || !playerRef.userId || !playerRef.teamIdentifier) return 'Neznámy hráč';
+        if (!playerRef || !playerRef.userId) return 'Neznámy hráč';
         
         const user = users.find(u => u.id === playerRef.userId);
         if (!user) return 'Neznámy hráč';
         
         // Kontrola, či ide o člena realizačného tímu (staff)
-        if (playerRef.playerId && playerRef.playerId.startsWith('staff-')) {
+        if (playerRef.staffType && playerRef.staffIndex !== undefined) {
             // Získame detail tímu podľa identifikátora
             const teamDetails = getTeamDetails(playerRef.teamIdentifier);
             if (!teamDetails) return 'Neznámy člen RT';
             
-            // Rozdelíme playerId na typ a index (napr. "staff-men-0" -> ["staff", "men", "0"])
-            const parts = playerRef.playerId.split('-');
-            if (parts.length >= 3) {
-                const staffType = parts[1]; // 'men' alebo 'women'
-                const staffIndex = parseInt(parts[2], 10);
-                
-                if (staffType === 'men' && teamDetails.team.menTeamMemberDetails && 
-                    teamDetails.team.menTeamMemberDetails[staffIndex]) {
-                    const member = teamDetails.team.menTeamMemberDetails[staffIndex];
-                    return `${member.firstName} ${member.lastName}`; // Odstránené (tréner)
-                } else if (staffType === 'women' && teamDetails.team.womenTeamMemberDetails && 
-                           teamDetails.team.womenTeamMemberDetails[staffIndex]) {
-                    const member = teamDetails.team.womenTeamMemberDetails[staffIndex];
-                    return `${member.firstName} ${member.lastName}`; // Odstránené (trénerka)
-                }
+            if (playerRef.staffType === 'men' && teamDetails.team.menTeamMemberDetails && 
+                teamDetails.team.menTeamMemberDetails[playerRef.staffIndex]) {
+                const member = teamDetails.team.menTeamMemberDetails[playerRef.staffIndex];
+                return `${member.firstName} ${member.lastName}`;
+            } else if (playerRef.staffType === 'women' && teamDetails.team.womenTeamMemberDetails && 
+                       teamDetails.team.womenTeamMemberDetails[playerRef.staffIndex]) {
+                const member = teamDetails.team.womenTeamMemberDetails[playerRef.staffIndex];
+                return `${member.firstName} ${member.lastName}`;
             }
             return 'Neznámy člen RT';
         }
         
-        // Pôvodná logika pre hráčov
-        const parts = playerRef.teamIdentifier.split(' ');
-        const groupAndOrder = parts.pop();
-        const category = parts.join(' ');
-        
-        let groupLetter = '';
-        let order = '';
-        for (let i = 0; i < groupAndOrder.length; i++) {
-            const char = groupAndOrder[i];
-            if (char >= '0' && char <= '9') {
-                order = groupAndOrder.substring(i);
-                groupLetter = groupAndOrder.substring(0, i);
-                break;
-            }
-        }
-        
-        const fullGroupName = `skupina ${groupLetter}`;
-        const orderNum = parseInt(order, 10);
-        
-        const userTeams = user.teams?.[category];
-        if (!userTeams || !Array.isArray(userTeams)) return 'Neznámy hráč';
-        
-        const team = userTeams.find(t => t.groupName === fullGroupName && t.order === orderNum);
-        if (!team) return 'Neznámy hráč';
-        
-        if (playerRef.playerId && team.playerDetails) {
-            const player = team.playerDetails.find(p => 
-                p.id === playerRef.playerId || 
-                (p.firstName + ' ' + p.lastName) === playerRef.playerId
-            );
+        // Pre hráča
+        if (playerRef.playerIndex !== undefined) {
+            // Získame detail tímu podľa identifikátora
+            const teamDetails = getTeamDetails(playerRef.teamIdentifier);
+            if (!teamDetails || !teamDetails.team.playerDetails) return 'Neznámy hráč';
+            
+            const player = teamDetails.team.playerDetails[playerRef.playerIndex];
             if (player) {
                 return `${player.firstName} ${player.lastName}`;
             }
@@ -1826,12 +1855,14 @@ const matchesHallApp = ({ userProfileData }) => {
                                     // Muži v realizačnom tíme
                                     homeTeamDetails.team.menTeamMemberDetails && homeTeamDetails.team.menTeamMemberDetails.length > 0 && 
                                     homeTeamDetails.team.menTeamMemberDetails.map((member, idx) => {
+                                        // 🔴 ZMENENÉ: Vytvoríme identifikátor pre člena RT s indexom
                                         const staffIdentifier = {
                                             userId: homeTeamDetails.userId,
                                             teamIdentifier: selectedMatch.homeTeamIdentifier,
-                                            playerId: `staff-men-${idx}`,
                                             displayName: `${member.firstName} ${member.lastName} (tréner)`,
-                                            isStaff: true
+                                            isStaff: true,
+                                            staffType: 'men',
+                                            staffIndex: idx
                                         };
                                         
                                         return React.createElement(
@@ -1862,12 +1893,14 @@ const matchesHallApp = ({ userProfileData }) => {
                                     // Ženy v realizačnom tíme
                                     homeTeamDetails.team.womenTeamMemberDetails && homeTeamDetails.team.womenTeamMemberDetails.length > 0 && 
                                     homeTeamDetails.team.womenTeamMemberDetails.map((member, idx) => {
+                                        // 🔴 ZMENENÉ: Vytvoríme identifikátor pre členku RT s indexom
                                         const staffIdentifier = {
                                             userId: homeTeamDetails.userId,
                                             teamIdentifier: selectedMatch.homeTeamIdentifier,
-                                            playerId: `staff-women-${idx}`,
                                             displayName: `${member.firstName} ${member.lastName} (trénerka)`,
-                                            isStaff: true
+                                            isStaff: true,
+                                            staffType: 'women',
+                                            staffIndex: idx
                                         };
                                         
                                         return React.createElement(
@@ -1932,12 +1965,13 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 return numA - numB;
                                             })
                                             .map((player, idx) => {
-                                                // Vytvoríme identifikátor hráča
+                                                // 🔴 ZMENENÉ: Vytvoríme identifikátor hráča s indexom
                                                 const playerIdentifier = {
                                                     userId: homeTeamDetails.userId,
                                                     teamIdentifier: selectedMatch.homeTeamIdentifier,
-                                                    playerId: player.id || `${player.firstName} ${player.lastName}`,
-                                                    displayName: `${player.firstName} ${player.lastName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`
+                                                    displayName: `${player.firstName} ${player.lastName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`,
+                                                    index: idx, // PRIDANÉ: index hráča
+                                                    isStaff: false
                                                 };
                                                 
                                                 return React.createElement(
@@ -2208,7 +2242,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                         
                                         // Získanie čísla dresu pre hráča
                                         let jerseyNumber = '';
-                                        if (event.playerRef && !event.playerRef.playerId?.startsWith('staff-')) {
+                                        if (event.playerRef && !event.playerRef.staffType) {
                                             const user = users.find(u => u.id === event.playerRef.userId);
                                             if (user) {
                                                 const parts = event.playerRef.teamIdentifier.split(' ');
@@ -2232,11 +2266,8 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 const userTeams = user.teams?.[category];
                                                 if (userTeams && Array.isArray(userTeams)) {
                                                     const team = userTeams.find(t => t.groupName === fullGroupName && t.order === orderNum);
-                                                    if (team && team.playerDetails) {
-                                                        const player = team.playerDetails.find(p => 
-                                                            p.id === event.playerRef.playerId || 
-                                                            (p.firstName + ' ' + p.lastName) === event.playerRef.playerId
-                                                        );
+                                                    if (team && team.playerDetails && event.playerRef.playerIndex !== undefined) {
+                                                        const player = team.playerDetails[event.playerRef.playerIndex];
                                                         if (player && player.jerseyNumber) {
                                                             jerseyNumber = player.jerseyNumber;
                                                         }
@@ -2289,7 +2320,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                         const lastName = nameParts.slice(1).join(' ') || '';
                                         
                                         // Zistenie, či ide o člena realizačného tímu
-                                        const isStaff = event.playerRef?.playerId?.startsWith('staff-');
+                                        const isStaff = event.playerRef?.staffType ? true : false;
                                         
                                         // Získanie stavu (ak existuje)
                                         const scoreBefore = event.scoreBefore || { home: 0, away: 0 };
@@ -2441,12 +2472,14 @@ const matchesHallApp = ({ userProfileData }) => {
                                     // Muži v realizačnom tíme
                                     awayTeamDetails.team.menTeamMemberDetails && awayTeamDetails.team.menTeamMemberDetails.length > 0 && 
                                     awayTeamDetails.team.menTeamMemberDetails.map((member, idx) => {
+                                        // 🔴 ZMENENÉ: Vytvoríme identifikátor pre člena RT s indexom
                                         const staffIdentifier = {
                                             userId: awayTeamDetails.userId,
                                             teamIdentifier: selectedMatch.awayTeamIdentifier,
-                                            playerId: `staff-men-${idx}`,
                                             displayName: `${member.firstName} ${member.lastName} (tréner)`,
-                                            isStaff: true
+                                            isStaff: true,
+                                            staffType: 'men',
+                                            staffIndex: idx
                                         };
                                         
                                         return React.createElement(
@@ -2477,12 +2510,14 @@ const matchesHallApp = ({ userProfileData }) => {
                                     // Ženy v realizačnom tíme
                                     awayTeamDetails.team.womenTeamMemberDetails && awayTeamDetails.team.womenTeamMemberDetails.length > 0 && 
                                     awayTeamDetails.team.womenTeamMemberDetails.map((member, idx) => {
+                                        // 🔴 ZMENENÉ: Vytvoríme identifikátor pre členku RT s indexom
                                         const staffIdentifier = {
                                             userId: awayTeamDetails.userId,
                                             teamIdentifier: selectedMatch.awayTeamIdentifier,
-                                            playerId: `staff-women-${idx}`,
                                             displayName: `${member.firstName} ${member.lastName} (trénerka)`,
-                                            isStaff: true
+                                            isStaff: true,
+                                            staffType: 'women',
+                                            staffIndex: idx
                                         };
                                         
                                         return React.createElement(
@@ -2548,11 +2583,13 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 return numA - numB;
                                             })
                                             .map((player, idx) => {
+                                                // 🔴 ZMENENÉ: Vytvoríme identifikátor hráča s indexom
                                                 const playerIdentifier = {
                                                     userId: awayTeamDetails.userId,
                                                     teamIdentifier: selectedMatch.awayTeamIdentifier,
-                                                    playerId: player.id || `${player.firstName} ${player.lastName}`,
-                                                    displayName: `${player.firstName} ${player.lastName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`
+                                                    displayName: `${player.firstName} ${player.lastName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`,
+                                                    index: idx, // PRIDANÉ: index hráča
+                                                    isStaff: false
                                                 };
                                                 
                                                 return React.createElement(
