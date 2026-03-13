@@ -440,6 +440,15 @@ const matchesHallApp = ({ userProfileData }) => {
         setManualTimeOffset(prev => {
             const newValue = prev + 60;
             console.log('addMinute - po: manualTimeOffset =', newValue);
+            
+            // OKAMŽITÁ AKTUALIZÁCIA ČASU
+            if (selectedMatch && selectedMatch.startedAt) {
+                const now = Timestamp.now();
+                const startedAt = selectedMatch.startedAt;
+                const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
+                setMatchTime(baseSeconds + newValue);
+            }
+            
             return newValue;
         });
     };
@@ -449,6 +458,15 @@ const matchesHallApp = ({ userProfileData }) => {
         setManualTimeOffset(prev => {
             const newValue = Math.max(-matchTime, prev - 60);
             console.log('subtractMinute - po: manualTimeOffset =', newValue);
+            
+            // OKAMŽITÁ AKTUALIZÁCIA ČASU
+            if (selectedMatch && selectedMatch.startedAt) {
+                const now = Timestamp.now();
+                const startedAt = selectedMatch.startedAt;
+                const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
+                setMatchTime(baseSeconds + newValue);
+            }
+            
             return newValue;
         });
     };
@@ -458,6 +476,15 @@ const matchesHallApp = ({ userProfileData }) => {
         setManualTimeOffset(prev => {
             const newValue = prev + 1;
             console.log('addSecond - po: manualTimeOffset =', newValue);
+            
+            // OKAMŽITÁ AKTUALIZÁCIA ČASU
+            if (selectedMatch && selectedMatch.startedAt) {
+                const now = Timestamp.now();
+                const startedAt = selectedMatch.startedAt;
+                const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
+                setMatchTime(baseSeconds + newValue);
+            }
+            
             return newValue;
         });
     };
@@ -467,6 +494,15 @@ const matchesHallApp = ({ userProfileData }) => {
         setManualTimeOffset(prev => {
             const newValue = Math.max(-matchTime, prev - 1);
             console.log('subtractSecond - po: manualTimeOffset =', newValue);
+            
+            // OKAMŽITÁ AKTUALIZÁCIA ČASU
+            if (selectedMatch && selectedMatch.startedAt) {
+                const now = Timestamp.now();
+                const startedAt = selectedMatch.startedAt;
+                const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
+                setMatchTime(baseSeconds + newValue);
+            }
+            
             return newValue;
         });
     };
