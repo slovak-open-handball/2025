@@ -3660,7 +3660,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 className: 'inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-700',
                                                 title: 'Zápas práve prebieha'
                                             },
-                                            React.createElement('i', { className: 'fa-solid fa-play text-yellow-600 text-xs' })
+                                            React.createElement('i', { className: 'fa-solid fa-play text-yellow-600 text-xs' }),
                                             'Detail'
                                         )
                                     )
