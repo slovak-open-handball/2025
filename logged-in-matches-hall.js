@@ -214,6 +214,7 @@ const matchesHallApp = ({ userProfileData }) => {
     const [matchPaused, setMatchPaused] = useState(false);
     const [matchTime, setMatchTime] = useState(0); // čas v sekundách
     const [timerInterval, setTimerInterval] = useState(null);
+    const [manualTimeOffset, setManualTimeOffset] = useState(0); 
 
     const [confirmModalOpen, setConfirmModalOpen] = useState(false);
     const [eventToDelete, setEventToDelete] = useState(null);
@@ -354,6 +355,7 @@ const matchesHallApp = ({ userProfileData }) => {
             
             // Vynulujeme čas
             setMatchTime(0);
+            setManualTimeOffset(0); // PRIDAŤ TENTO RIADOK
             
             // Zastavíme interval
             if (timerInterval) {
@@ -434,19 +436,19 @@ const matchesHallApp = ({ userProfileData }) => {
 
     // Funkcie pre manuálne ovládanie času
     const addMinute = () => {
-        setMatchTime(prev => prev + 60);
+        setManualTimeOffset(prev => prev + 60);
     };
 
     const subtractMinute = () => {
-        setMatchTime(prev => Math.max(0, prev - 60));
+        setManualTimeOffset(prev => Math.max(-matchTime, prev - 60));
     };
-    
+
     const addSecond = () => {
-        setMatchTime(prev => prev + 1);
+        setManualTimeOffset(prev => prev + 1);
     };
     
     const subtractSecond = () => {
-        setMatchTime(prev => Math.max(0, prev - 1));
+        setManualTimeOffset(prev => Math.max(-matchTime, prev - 1));
     };
 
     // Inicializácia času pri výbere zápasu
@@ -463,10 +465,12 @@ const matchesHallApp = ({ userProfileData }) => {
                 const elapsedUntilPause = Math.floor((pausedAt.seconds - startedAt.seconds));
                 console.log('elapsedUntilPause:', elapsedUntilPause);
                 setMatchTime(elapsedUntilPause);
+                setManualTimeOffset(0); // RESET manuálneho posunu
             } else {
-                const elapsedSeconds = Math.floor((now.seconds - startedAt.seconds));
+                const elapsedSeconds = Math.floor((now.seconds - startedAt.seconds)) + manualTimeOffset;
                 console.log('elapsedSeconds:', elapsedSeconds);
                 setMatchTime(elapsedSeconds);
+                setManualTimeOffset(0); // RESET manuálneho posunu
             }
         } else {
             console.log('Žiadny startedAt, nastavujem 0');
@@ -525,10 +529,11 @@ const matchesHallApp = ({ userProfileData }) => {
                     return;
                 }
                 
-                const elapsedSeconds = Math.floor((now.seconds - startedAt.seconds));
+                const elapsedSeconds = Math.floor((now.seconds - startedAt.seconds)) + manualTimeOffset;
                 
                 // OVERENIE: Priamo nastavujeme matchTime
                 setMatchTime(elapsedSeconds);
+                setManualTimeOffset(0); // RESET manuálneho posunu
                 
                 // Automatické zastavenie pri dosiahnutí konca aktuálnej periódy
                 if (elapsedSeconds >= totalElapsedForCurrentPeriod) {
