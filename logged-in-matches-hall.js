@@ -1286,38 +1286,38 @@ const matchesHallApp = ({ userProfileData }) => {
                     const totalMatchTime = playingTime + breaksBetweenPeriods;
                     const totalTimeWithMatchBreak = totalMatchTime + matchBreak;
                     
-//                    console.log(`\n  ⏱️ ROZPIS ČASU ZÁPASU:`);
-//                    for (let i = 1; i <= periods; i++) {
-//                        console.log(`  • ${i}. polčas: ${periodDuration} min`);
-//                        if (i < periods) {
-//                            console.log(`  • Prestávka: ${breakDuration} min`);
-//                        }
-//                    }
+                    console.log(`\n  ⏱️ ROZPIS ČASU ZÁPASU:`);
+                    for (let i = 1; i <= periods; i++) {
+                        console.log(`  • ${i}. polčas: ${periodDuration} min`);
+                        if (i < periods) {
+                            console.log(`  • Prestávka: ${breakDuration} min`);
+                        }
+                    }
                     
-//                    console.log(`\n  ⏱️ SÚHRN ČASU:`);
-//                    console.log(`  • Čistý hrací čas: ${playingTime} min (${periods} × ${periodDuration} min)`);
-//                    if (periods > 1) {
-//                        console.log(`  • Celkový čas prestávok v zápase: ${breaksBetweenPeriods} min`);
-//                        console.log(`  • Celkový čas zápasu (s prestávkami): ${totalMatchTime} min`);
-//                    }
-//                    console.log(`  • Prestávka medzi zápasmi: ${matchBreak} min`);
-//                    console.log(`  • Celkový čas s prestávkou medzi zápasmi: ${totalTimeWithMatchBreak} min`);
+                    console.log(`\n  ⏱️ SÚHRN ČASU:`);
+                    console.log(`  • Čistý hrací čas: ${playingTime} min (${periods} × ${periodDuration} min)`);
+                    if (periods > 1) {
+                        console.log(`  • Celkový čas prestávok v zápase: ${breaksBetweenPeriods} min`);
+                        console.log(`  • Celkový čas zápasu (s prestávkami): ${totalMatchTime} min`);
+                    }
+                    console.log(`  • Prestávka medzi zápasmi: ${matchBreak} min`);
+                    console.log(`  • Celkový čas s prestávkou medzi zápasmi: ${totalTimeWithMatchBreak} min`);
                     
-//                    if (periods === 2) {
-//                        console.log(`\n  📊 ČASOVÝ ROZPIS V MINÚTACH:`);
-//                        console.log(`  • 0 - ${periodDuration}: 1. polčas`);
-//                        console.log(`  • ${periodDuration} - ${periodDuration + breakDuration}: Prestávka`);
-//                        console.log(`  • ${periodDuration + breakDuration} - ${totalMatchTime}: 2. polčas`);
-//                        console.log(`  • ${totalMatchTime} - ${totalTimeWithMatchBreak}: Prestávka medzi zápasmi`);
-//                    }
-//                } else {
-//                    console.log(`\n  ⚠️ Nastavenia kategórie nie sú k dispozícii`);
-//                }
+                    if (periods === 2) {
+                        console.log(`\n  📊 ČASOVÝ ROZPIS V MINÚTACH:`);
+                        console.log(`  • 0 - ${periodDuration}: 1. polčas`);
+                        console.log(`  • ${periodDuration} - ${periodDuration + breakDuration}: Prestávka`);
+                        console.log(`  • ${periodDuration + breakDuration} - ${totalMatchTime}: 2. polčas`);
+                        console.log(`  • ${totalMatchTime} - ${totalTimeWithMatchBreak}: Prestávka medzi zápasmi`);
+                    }
+                } else {
+                    console.log(`\n  ⚠️ Nastavenia kategórie nie sú k dispozícii`);
+                }
                 
-//                console.log('─'.repeat(50));
+                console.log('─'.repeat(50));
             });
-//            console.log(`\n📊 Celkový počet zápasov: ${matches.length}`);
-//            console.log('='.repeat(60));
+            console.log(`\n📊 Celkový počet zápasov: ${matches.length}`);
+            console.log('='.repeat(60));
         }
     }, [matches, categories]); // Tento useEffect sa spustí vždy, keď sa zmenia matches ALEBO categories
 
