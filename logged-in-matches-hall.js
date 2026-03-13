@@ -3661,7 +3661,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 title: 'Zápas práve prebieha'
                                             },
                                             React.createElement('i', { className: 'fa-solid fa-play text-yellow-600 text-xs' })
-                                            'Prebieha'
+                                            'Detail'
                                         )
                                     )
                                 );
