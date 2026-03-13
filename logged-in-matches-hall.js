@@ -517,8 +517,11 @@ const matchesHallApp = ({ userProfileData }) => {
         const periodDuration = (currentCategory.periodDuration || 20) * 60;
         const currentPeriod = selectedMatch?.currentPeriod || 1;
         
-        // Skontrolujeme, či pridanie minúty nepresiahne koniec aktuálnej periódy
-        const elapsedInPeriod = matchTime % periodDuration;
+        // Vypočítame, koľko sekúnd uplynulo od začiatku aktuálnej periódy
+        const periodStartTime = (currentPeriod - 1) * periodDuration;
+        const elapsedInPeriod = matchTime - periodStartTime;
+        
+        // Skontrolujeme, či po pridaní minúty nepresiahneme koniec periódy
         if (elapsedInPeriod + 60 > periodDuration) {
             const remainingSeconds = periodDuration - elapsedInPeriod;
             const remainingMinutes = Math.floor(remainingSeconds / 60);
@@ -564,7 +567,7 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     };
     
-    // ZJEDNODUŠENÁ FUNKCIA: subtractMinute
+    // UPRAVENÁ FUNKCIA: subtractMinute
     const subtractMinute = () => {
         // Získame kategóriu pre aktuálny zápas
         const currentCategory = selectedMatch ? categories.find(c => c.name === selectedMatch.categoryName) : null;
@@ -574,14 +577,19 @@ const matchesHallApp = ({ userProfileData }) => {
             return;
         }
         
+        const periodDuration = (currentCategory.periodDuration || 20) * 60;
         const currentPeriod = selectedMatch?.currentPeriod || 1;
         
-        // Skontrolujeme, či odčítanie minúty neklesne pod 0
-        if (matchTime < 60) {
-            if (matchTime === 0) {
-                window.showGlobalNotification('Nie je možné odčítať minútu - čas je 0', 'error');
+        // Vypočítame, koľko sekúnd uplynulo od začiatku aktuálnej periódy
+        const periodStartTime = (currentPeriod - 1) * periodDuration;
+        const elapsedInPeriod = matchTime - periodStartTime;
+        
+        // Skontrolujeme, či po odčítaní minúty neklesneme pod začiatok aktuálnej periódy
+        if (elapsedInPeriod < 60) {
+            if (elapsedInPeriod === 0) {
+                window.showGlobalNotification(`Nie je možné odčítať minútu - sme na začiatku ${currentPeriod}. periódy`, 'error');
             } else {
-                window.showGlobalNotification(`Nie je možné odčítať celú minútu - aktuálny čas je ${formatMatchTime(matchTime)}`, 'error');
+                window.showGlobalNotification(`Nie je možné odčítať celú minútu - od začiatku ${currentPeriod}. periódy uplynulo len ${formatMatchTime(elapsedInPeriod)}`, 'error');
             }
             return;
         }
@@ -621,7 +629,7 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     };
     
-    // ZJEDNODUŠENÁ FUNKCIA: addSecond
+    // UPRAVENÁ FUNKCIA: addSecond
     const addSecond = () => {
         // Získame kategóriu pre aktuálny zápas
         const currentCategory = selectedMatch ? categories.find(c => c.name === selectedMatch.categoryName) : null;
@@ -634,8 +642,11 @@ const matchesHallApp = ({ userProfileData }) => {
         const periodDuration = (currentCategory.periodDuration || 20) * 60;
         const currentPeriod = selectedMatch?.currentPeriod || 1;
         
-        // Skontrolujeme, či pridanie sekundy nepresiahne koniec aktuálnej periódy
-        const elapsedInPeriod = matchTime % periodDuration;
+        // Vypočítame, koľko sekúnd uplynulo od začiatku aktuálnej periódy
+        const periodStartTime = (currentPeriod - 1) * periodDuration;
+        const elapsedInPeriod = matchTime - periodStartTime;
+        
+        // Skontrolujeme, či po pridaní sekundy nepresiahneme koniec periódy
         if (elapsedInPeriod + 1 > periodDuration) {
             const remainingSeconds = periodDuration - elapsedInPeriod;
             window.showGlobalNotification(`Nie je možné pridať sekundu - do konca ${currentPeriod}. periódy zostáva už len ${remainingSeconds} sekúnd`, 'error');
@@ -677,7 +688,7 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     };
     
-    // ZJEDNODUŠENÁ FUNKCIA: subtractSecond
+    // UPRAVENÁ FUNKCIA: subtractSecond
     const subtractSecond = () => {
         // Získame kategóriu pre aktuálny zápas
         const currentCategory = selectedMatch ? categories.find(c => c.name === selectedMatch.categoryName) : null;
@@ -687,9 +698,16 @@ const matchesHallApp = ({ userProfileData }) => {
             return;
         }
         
-        // Skontrolujeme, či odčítanie sekundy neklesne pod 0
-        if (matchTime < 1) {
-            window.showGlobalNotification('Nie je možné odčítať sekundu - čas je 0', 'error');
+        const periodDuration = (currentCategory.periodDuration || 20) * 60;
+        const currentPeriod = selectedMatch?.currentPeriod || 1;
+        
+        // Vypočítame, koľko sekúnd uplynulo od začiatku aktuálnej periódy
+        const periodStartTime = (currentPeriod - 1) * periodDuration;
+        const elapsedInPeriod = matchTime - periodStartTime;
+        
+        // Skontrolujeme, či po odčítaní sekundy neklesneme pod začiatok aktuálnej periódy
+        if (elapsedInPeriod < 1) {
+            window.showGlobalNotification(`Nie je možné odčítať sekundu - sme na začiatku ${currentPeriod}. periódy`, 'error');
             return;
         }
         
