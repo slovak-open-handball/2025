@@ -766,18 +766,42 @@ const matchesHallApp = ({ userProfileData }) => {
         return elapsedInPeriod < periodDuration;
     };
 
+    // UPRAVENÉ FUNKCIE PRE KONTROLU POVOLENIA TLAČIDIEL PRE PERIÓDU
     const isDecreasePeriodAllowed = () => {
         if (!selectedMatch) return false;
+        
         const currentPeriod = selectedMatch.currentPeriod || 1;
-        return currentPeriod > 1;
-    };
-
-    const isIncreasePeriodAllowed = () => {
-        if (!selectedMatch) return false;
+        if (currentPeriod <= 1) return false; // Už sme v prvej perióde
+        
         const currentCategory = categories.find(c => c.name === selectedMatch.categoryName);
         if (!currentCategory) return false;
+        
+        const periodDuration = (currentCategory.periodDuration || 20) * 60;
+        const periodStartTime = (currentPeriod - 1) * periodDuration;
+        const elapsedInPeriod = matchTime - periodStartTime;
+        
+        // Povolené len ak sme na začiatku aktuálnej periódy (elapsedInPeriod === 0)
+        // ALEBO na konci predchádzajúcej periódy (čo je vlastne začiatok aktuálnej)
+        return elapsedInPeriod === 0;
+    };
+    
+    const isIncreasePeriodAllowed = () => {
+        if (!selectedMatch) return false;
+        
+        const currentCategory = categories.find(c => c.name === selectedMatch.categoryName);
+        if (!currentCategory) return false;
+        
         const currentPeriod = selectedMatch.currentPeriod || 1;
-        return currentPeriod < (currentCategory.periods || 2);
+        const maxPeriods = currentCategory.periods || 2;
+        
+        if (currentPeriod >= maxPeriods) return false; // Už sme v poslednej perióde
+        
+        const periodDuration = (currentCategory.periodDuration || 20) * 60;
+        const periodStartTime = (currentPeriod - 1) * periodDuration;
+        const elapsedInPeriod = matchTime - periodStartTime;
+        
+        // Povolené len ak sme na konci aktuálnej periódy (elapsedInPeriod === periodDuration)
+        return elapsedInPeriod === periodDuration;
     };
 
     const isAddMinuteAllowed = () => {
