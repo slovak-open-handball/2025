@@ -3616,7 +3616,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 React.createElement(
                                                     'span',
                                                     { className: 'text-xs font-bold text-gray-400 px-2' },
-                                                    'VS'
+                                                    '--:-- (--:--)'
                                                 ),
                                             
                                             React.createElement(
