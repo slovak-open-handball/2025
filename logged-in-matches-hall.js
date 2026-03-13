@@ -784,24 +784,11 @@ const matchesHallApp = ({ userProfileData }) => {
             
             // Dĺžka jednej periódy v sekundách
             const periodDurationSeconds = (currentCategory.periodDuration || 20) * 60;
-            // Dĺžka prestávky medzi periódami v sekundách
-            const breakDurationSeconds = (currentCategory.breakDuration || 2) * 60;
             
-            // Vypočítame, v akej fáze sa zápas nachádza
-            // Pre 1. periódu: 0 - periodDurationSeconds
-            // Prestávka po 1. perióde: periodDurationSeconds - periodDurationSeconds + breakDurationSeconds
-            // Pre 2. periódu: periodDurationSeconds + breakDurationSeconds - 2*periodDurationSeconds + breakDurationSeconds
-            // atď.
+            // Čas, kedy má skončiť aktuálna perióda (koniec čistého hracieho času pre túto periódu)
+            const endOfCurrentPeriod = currentPeriod * periodDurationSeconds;
             
-            // Celkový čas do konca aktuálnej periódy (vrátane prestávok)
-            // Pre aktuálnu periódu currentPeriod:
-            // - Predchádzajúce periódy: (currentPeriod - 1) * periodDurationSeconds
-            // - Prestávky medzi periódami: (currentPeriod - 1) * breakDurationSeconds
-            // - Aktuálna perióda: periodDurationSeconds
-            const totalElapsedForCurrentPeriod = (currentPeriod - 1) * (periodDurationSeconds + breakDurationSeconds) + periodDurationSeconds;
-            
-            console.log(`Perióda ${currentPeriod}/${currentCategory.periods}, dĺžka periódy: ${periodDurationSeconds}s, prestávka: ${breakDurationSeconds}s`);
-            console.log(`Celkový čas do konca ${currentPeriod}. periódy: ${totalElapsedForCurrentPeriod}s`);
+            console.log(`Perióda ${currentPeriod}/${currentCategory.periods}, koniec periódy: ${endOfCurrentPeriod}s`);
             
             const interval = setInterval(() => {
                 const now = Timestamp.now();
@@ -813,19 +800,19 @@ const matchesHallApp = ({ userProfileData }) => {
                 
                 const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
                 const elapsedSeconds = baseSeconds + manualTimeOffset;
-
-//                console.log('Timer: baseSeconds =', baseSeconds, 'manualTimeOffset =', manualTimeOffset, 'elapsedSeconds =', elapsedSeconds);
+    
+    //                console.log('Timer: baseSeconds =', baseSeconds, 'manualTimeOffset =', manualTimeOffset, 'elapsedSeconds =', elapsedSeconds);
                 
                 // OVERENIE: Priamo nastavujeme matchTime
                 setMatchTime(elapsedSeconds);
                 
-                // Automatické zastavenie pri dosiahnutí konca aktuálnej periódy
-                if (elapsedSeconds >= totalElapsedForCurrentPeriod) {
-                    console.log(`Dosiahnutý koniec ${currentPeriod}. periódy, elapsedSeconds: ${elapsedSeconds} >= ${totalElapsedForCurrentPeriod}`);
+                // Automatické zastavenie pri dosiahnutí KONCA AKTUÁLNEJ PERIÓDY (čistý hrací čas)
+                if (elapsedSeconds >= endOfCurrentPeriod) {
+                    console.log(`Dosiahnutý koniec ${currentPeriod}. periódy, elapsedSeconds: ${elapsedSeconds} >= ${endOfCurrentPeriod}`);
                     
                     // Ak to nie je posledná perióda
                     if (currentPeriod < currentCategory.periods) {
-                        console.log(`Koniec ${currentPeriod}. periódy, začína prestávka`);
+                        console.log(`Koniec ${currentPeriod}. periódy - prestávka`);
                         
                         // Zastavíme časovač (prestávka)
                         stopMatchTimer(matchId);
