@@ -689,6 +689,13 @@ const matchesHallApp = ({ userProfileData }) => {
         // Konvertujeme na celkový čas
         const newTotalTime = convertCleanToTotalTime(newCleanTime, currentPeriod, currentCategory);
         
+        // Skontrolujeme, či sa nový čas nachádza v hracom čase (nie v prestávke)
+        const newTimeInfo = getMatchTimeInfo(newTotalTime, currentPeriod, currentCategory);
+        if (!newTimeInfo.isInPlayingTime) {
+            window.showGlobalNotification('Nie je možné pridať čas - dostali by ste sa do prestávky', 'error');
+            return;
+        }
+        
         // Vypočítame nový offset
         let newOffset;
         if (selectedMatch) {
@@ -721,7 +728,7 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     };
     
-    // UPRAVENÁ FUNKCIA: subtractMinute - pracuje s čistým hracím časom
+    // UPRAVENÁ FUNKCIA: subtractMinute
     const subtractMinute = () => {
         // Získame kategóriu pre aktuálny zápas
         const currentCategory = selectedMatch ? categories.find(c => c.name === selectedMatch.categoryName) : null;
@@ -768,6 +775,13 @@ const matchesHallApp = ({ userProfileData }) => {
         // Konvertujeme na celkový čas
         const newTotalTime = convertCleanToTotalTime(newCleanTime, currentPeriod, currentCategory);
         
+        // Skontrolujeme, či sa nový čas nachádza v hracom čase (nie v prestávke)
+        const newTimeInfo = getMatchTimeInfo(newTotalTime, currentPeriod, currentCategory);
+        if (!newTimeInfo.isInPlayingTime) {
+            window.showGlobalNotification('Nie je možné odpočítať čas - dostali by ste sa do prestávky', 'error');
+            return;
+        }
+        
         // Vypočítame nový offset
         let newOffset;
         if (selectedMatch) {
@@ -800,7 +814,7 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     };
     
-    // UPRAVENÁ FUNKCIA: addSecond - pracuje s čistým hracím časom
+    // UPRAVENÁ FUNKCIA: addSecond
     const addSecond = () => {
         // Získame kategóriu pre aktuálny zápas
         const currentCategory = selectedMatch ? categories.find(c => c.name === selectedMatch.categoryName) : null;
@@ -839,6 +853,13 @@ const matchesHallApp = ({ userProfileData }) => {
         // Konvertujeme na celkový čas
         const newTotalTime = convertCleanToTotalTime(newCleanTime, currentPeriod, currentCategory);
         
+        // Skontrolujeme, či sa nový čas nachádza v hracom čase (nie v prestávke)
+        const newTimeInfo = getMatchTimeInfo(newTotalTime, currentPeriod, currentCategory);
+        if (!newTimeInfo.isInPlayingTime) {
+            window.showGlobalNotification('Nie je možné pridať čas - dostali by ste sa do prestávky', 'error');
+            return;
+        }
+        
         // Vypočítame nový offset
         let newOffset;
         if (selectedMatch) {
@@ -871,7 +892,7 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     };
     
-    // UPRAVENÁ FUNKCIA: subtractSecond - pracuje s čistým hracím časom
+    // UPRAVENÁ FUNKCIA: subtractSecond
     const subtractSecond = () => {
         // Získame kategóriu pre aktuálny zápas
         const currentCategory = selectedMatch ? categories.find(c => c.name === selectedMatch.categoryName) : null;
@@ -911,6 +932,13 @@ const matchesHallApp = ({ userProfileData }) => {
         
         // Konvertujeme na celkový čas
         const newTotalTime = convertCleanToTotalTime(newCleanTime, currentPeriod, currentCategory);
+        
+        // Skontrolujeme, či sa nový čas nachádza v hracom čase (nie v prestávke)
+        const newTimeInfo = getMatchTimeInfo(newTotalTime, currentPeriod, currentCategory);
+        if (!newTimeInfo.isInPlayingTime) {
+            window.showGlobalNotification('Nie je možné odpočítať čas - dostali by ste sa do prestávky', 'error');
+            return;
+        }
         
         // Vypočítame nový offset
         let newOffset;
