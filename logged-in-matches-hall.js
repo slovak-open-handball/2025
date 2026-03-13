@@ -1018,23 +1018,23 @@ const matchesHallApp = ({ userProfileData }) => {
                     setCategories(categoriesList);
                     
                     // Voliteľný výpis do konzoly pre ladenie
-                    console.log('=== NAČÍTANÉ KATEGÓRIE S NASTAVENIAMI ===');
-                    categoriesList.forEach((cat, index) => {
-                        console.log(`Kategória #${index + 1}:`, {
-                            id: cat.id,
-                            name: cat.name,
-                            maxTeams: cat.maxTeams,
-                            maxPlayers: cat.maxPlayers,
-                            maxImplementationTeam: cat.maxImplementationTeam,
-                            periods: cat.periods,
-                            periodDuration: cat.periodDuration,
-                            breakDuration: cat.breakDuration,
-                            matchBreak: cat.matchBreak,
-                            drawColor: cat.drawColor,
-                            transportColor: cat.transportColor
-                        });
-                    });
-                    console.log('=========================================');
+//                    console.log('=== NAČÍTANÉ KATEGÓRIE S NASTAVENIAMI ===');
+//                    categoriesList.forEach((cat, index) => {
+//                        console.log(`Kategória #${index + 1}:`, {
+//                            id: cat.id,
+//                            name: cat.name,
+//                            maxTeams: cat.maxTeams,
+//                            maxPlayers: cat.maxPlayers,
+//                            maxImplementationTeam: cat.maxImplementationTeam,
+//                            periods: cat.periods,
+//                            periodDuration: cat.periodDuration,
+//                            breakDuration: cat.breakDuration,
+//                            matchBreak: cat.matchBreak,
+//                            drawColor: cat.drawColor,
+//                            transportColor: cat.transportColor
+//                        });
+//                    });
+//                    console.log('=========================================');
                     
                 } else {
                     console.log("Neboli nájdené žiadne kategórie");
@@ -1165,7 +1165,7 @@ const matchesHallApp = ({ userProfileData }) => {
             const loadedMatches = [];
             snapshot.forEach((doc) => {
                 const data = doc.data();
-                console.log('Načítaný zápas:', data); // Pre ladenie
+//                console.log('Načítaný zápas:', data); // Pre ladenie
                 
                 loadedMatches.push({
                     id: doc.id,
