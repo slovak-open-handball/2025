@@ -746,6 +746,20 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     };
 
+    const isDecreasePeriodAllowed = () => {
+        if (!selectedMatch) return false;
+        const currentPeriod = selectedMatch.currentPeriod || 1;
+        return currentPeriod > 1;
+    };
+
+    const isIncreasePeriodAllowed = () => {
+        if (!selectedMatch) return false;
+        const currentCategory = categories.find(c => c.name === selectedMatch.categoryName);
+        if (!currentCategory) return false;
+        const currentPeriod = selectedMatch.currentPeriod || 1;
+        return currentPeriod < (currentCategory.periods || 2);
+    };
+
     const isAddMinuteAllowed = () => {
         if (!selectedMatch) return false;
         
@@ -2229,32 +2243,44 @@ const matchesHallApp = ({ userProfileData }) => {
                                 )
                             ),
                             
-                            // Perióda + / Perióda - (ak má kategória viac ako 1 periódu)
+                            // Perióda +/- (ak má kategória viac ako 1 periódu)
                             category && category.periods > 1 && React.createElement(
-                                React.Fragment,
-                                null,
+                                'div',
+                                { className: 'flex items-center gap-1 bg-gray-100 rounded-lg p-1' },
+                                // Tlačidlo pre zníženie periódy
                                 React.createElement(
                                     'button',
                                     {
-                                        className: 'px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
-                                        onClick: () => decreasePeriod(selectedMatch.id)
+                                        className: `w-8 h-8 rounded flex items-center justify-center text-sm font-bold transition-colors ${
+                                            isDecreasePeriodAllowed()
+                                                ? 'bg-blue-500 hover:bg-blue-600 text-white' 
+                                                : 'bg-white text-blue-500 border-2 border-blue-500 cursor-not-allowed'
+                                        }`,
+                                        onClick: isDecreasePeriodAllowed() ? () => decreasePeriod(selectedMatch.id) : undefined,
+                                        disabled: !isDecreasePeriodAllowed(),
+                                        title: isDecreasePeriodAllowed() ? 'Znížiť periódu' : 'Prvá perióda'
                                     },
-                                    React.createElement('i', { className: 'fa-solid fa-minus' }),
-                                    'Perióda'
+                                    React.createElement('i', { className: 'fa-solid fa-minus' })
                                 ),
                                 React.createElement(
-                                    'div',
-                                    { className: 'px-4 py-2 bg-gray-100 rounded-lg text-sm font-medium' },
-                                    `Perióda: ${selectedMatch.currentPeriod || 1} / ${category.periods}`
+                                    'span',
+                                    { className: 'px-2 text-sm font-medium text-gray-700' },
+                                    `${selectedMatch.currentPeriod || 1} / ${category.periods}`
                                 ),
+                                // Tlačidlo pre zvýšenie periódy
                                 React.createElement(
                                     'button',
                                     {
-                                        className: 'px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
-                                        onClick: () => increasePeriod(selectedMatch.id, category.periods)
+                                        className: `w-8 h-8 rounded flex items-center justify-center text-sm font-bold transition-colors ${
+                                            isIncreasePeriodAllowed()
+                                                ? 'bg-blue-500 hover:bg-blue-600 text-white' 
+                                                : 'bg-white text-blue-500 border-2 border-blue-500 cursor-not-allowed'
+                                        }`,
+                                        onClick: isIncreasePeriodAllowed() ? () => increasePeriod(selectedMatch.id, category.periods) : undefined,
+                                        disabled: !isIncreasePeriodAllowed(),
+                                        title: isIncreasePeriodAllowed() ? 'Zvýšiť periódu' : 'Posledná perióda'
                                     },
-                                    React.createElement('i', { className: 'fa-solid fa-plus' }),
-                                    'Perióda'
+                                    React.createElement('i', { className: 'fa-solid fa-plus' })
                                 )
                             ),
                             
