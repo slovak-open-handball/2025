@@ -531,7 +531,7 @@ const matchesHallApp = ({ userProfileData }) => {
     // Inicializácia času pri výbere zápasu
     useEffect(() => {
         console.log('Inicializácia času pre zápas:', selectedMatch);
-
+    
         if (selectedMatch && selectedMatch.startedAt) {
             const now = Timestamp.now();
             const startedAt = selectedMatch.startedAt;
@@ -541,17 +541,17 @@ const matchesHallApp = ({ userProfileData }) => {
                 const elapsedUntilPause = Math.floor((pausedAt.seconds - startedAt.seconds));
                 console.log('elapsedUntilPause:', elapsedUntilPause);
                 setMatchTime(elapsedUntilPause);
-                setManualTimeOffset(0); // RESET manuálneho posunu
+                // NERESETUJEME manualTimeOffset - používame ten z databázy
             } else {
                 const elapsedSeconds = Math.floor((now.seconds - startedAt.seconds));
                 console.log('elapsedSeconds:', elapsedSeconds);
                 setMatchTime(elapsedSeconds);
-                setManualTimeOffset(0); // RESET manuálneho posunu
+                // NERESETUJEME manualTimeOffset - používame ten z databázy
             }
         } else {
             console.log('Žiadny startedAt, nastavujem 0');
             setMatchTime(0);
-            setManualTimeOffset(0);
+            // NERESETUJEME manualTimeOffset - ten ostáva podľa databázy
         }
     }, [selectedMatch]);
 
