@@ -436,19 +436,39 @@ const matchesHallApp = ({ userProfileData }) => {
 
     // Funkcie pre manuálne ovládanie času
     const addMinute = () => {
-        setManualTimeOffset(prev => prev + 60);
+        console.log('addMinute - pred: manualTimeOffset =', manualTimeOffset);
+        setManualTimeOffset(prev => {
+            const newValue = prev + 60;
+            console.log('addMinute - po: manualTimeOffset =', newValue);
+            return newValue;
+        });
     };
-
+    
     const subtractMinute = () => {
-        setManualTimeOffset(prev => Math.max(-matchTime, prev - 60));
+        console.log('subtractMinute - pred: manualTimeOffset =', manualTimeOffset);
+        setManualTimeOffset(prev => {
+            const newValue = Math.max(-matchTime, prev - 60);
+            console.log('subtractMinute - po: manualTimeOffset =', newValue);
+            return newValue;
+        });
     };
-
+    
     const addSecond = () => {
-        setManualTimeOffset(prev => prev + 1);
+        console.log('addSecond - pred: manualTimeOffset =', manualTimeOffset);
+        setManualTimeOffset(prev => {
+            const newValue = prev + 1;
+            console.log('addSecond - po: manualTimeOffset =', newValue);
+            return newValue;
+        });
     };
     
     const subtractSecond = () => {
-        setManualTimeOffset(prev => Math.max(-matchTime, prev - 1));
+        console.log('subtractSecond - pred: manualTimeOffset =', manualTimeOffset);
+        setManualTimeOffset(prev => {
+            const newValue = Math.max(-matchTime, prev - 1);
+            console.log('subtractSecond - po: manualTimeOffset =', newValue);
+            return newValue;
+        });
     };
 
     // Inicializácia času pri výbere zápasu
@@ -531,6 +551,8 @@ const matchesHallApp = ({ userProfileData }) => {
                 
                 const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
                 const elapsedSeconds = baseSeconds + manualTimeOffset;
+
+                console.log('Timer: baseSeconds =', baseSeconds, 'manualTimeOffset =', manualTimeOffset, 'elapsedSeconds =', elapsedSeconds);
                 
                 // OVERENIE: Priamo nastavujeme matchTime
                 setMatchTime(elapsedSeconds);
