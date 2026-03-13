@@ -3649,13 +3649,21 @@ const matchesHallApp = ({ userProfileData }) => {
                                         ),
                                         
                                         // Žltá šípka pre prebiehajúce zápasy (voliteľné - môžete ponechať alebo odstrániť)
-                                        isMatchInProgress && React.createElement(
+                                        React.createElement(
                                             'span',
                                             { 
-                                                className: 'inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-700',
-                                                title: 'Zápas práve prebieha'
+                                                className: `inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full min-w-[70px] ${
+                                                    isMatchInProgress 
+                                                        ? 'bg-yellow-100 text-yellow-700' 
+                                                        : 'bg-white text-gray-400 border border-gray-200'
+                                                }`,
+                                                title: isMatchInProgress ? 'Zápas práve prebieha' : ''
                                             },
-                                            React.createElement('i', { className: 'fa-solid fa-play text-yellow-600 text-xs' }),
+                                            React.createElement('i', { 
+                                                className: `fa-solid fa-play text-xs ${
+                                                    isMatchInProgress ? 'text-yellow-600' : 'text-gray-300'
+                                                }` 
+                                            }),
                                             'Detail'
                                         )
                                     )
