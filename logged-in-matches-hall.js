@@ -484,8 +484,15 @@ const matchesHallApp = ({ userProfileData }) => {
     const subtractMinute = () => {
         console.log('subtractMinute - pred: manualTimeOffset =', manualTimeOffset, 'matchTime =', matchTime);
         
-        // Vypočítame nový čas (nesmie klesnúť pod 0)
-        const newTime = Math.max(0, matchTime - 60);
+        // Skontrolujeme, či je dostatočný čas na odčítanie minúty
+        if (matchTime < 60) {
+            console.log('subtractMinute - nie je dostatok času na odčítanie minúty');
+            window.showGlobalNotification('Nie je možné odčítať minútu - menej ako 60 sekúnd', 'error');
+            return;
+        }
+        
+        // Vypočítame nový čas
+        const newTime = matchTime - 60;
         
         // Vypočítame nový offset podľa stavu zápasu
         let newOffset;
