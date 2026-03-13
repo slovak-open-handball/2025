@@ -3610,13 +3610,13 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     React.createElement(
                                                         'span',
                                                         { className: 'font-mono font-bold text-blue-600 text-sm' },
-                                                        `${liveMatchData[match.id].homeScore} : ${liveMatchData[match.id].awayScore}`
+                                                        `${liveMatchData[match.id].homeScore}:${liveMatchData[match.id].awayScore}`
                                                     )
                                                 ) :
                                                 React.createElement(
                                                     'span',
                                                     { className: 'text-xs font-bold text-gray-400 px-2' },
-                                                    '--:-- (--:--)'
+                                                    '--:--'
                                                 ),
                                             
                                             React.createElement(
