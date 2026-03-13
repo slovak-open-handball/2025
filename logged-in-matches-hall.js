@@ -3675,17 +3675,17 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         `${liveMatchData[match.id].homeScore} : ${liveMatchData[match.id].awayScore}`
                                                     )
                                                 ) :
-                                                match.status === 'completed' ?
+                                                match.status === 'completed' && completedMatchData[match.id] ?
                                                     React.createElement(
                                                         'div',
                                                         { 
                                                             className: 'flex items-center justify-center gap-2 px-3 py-1 min-w-[100px]',
-                                                            title: 'Zápas je ukončený'
+                                                            title: 'Konečný výsledok'
                                                         },
                                                         React.createElement(
                                                             'span',
                                                             { className: 'font-mono font-bold text-green-600 text-sm' },
-                                                            `${match.homeScore || 0} : ${match.awayScore || 0}`
+                                                            `${completedMatchData[match.id].homeScore} : ${completedMatchData[match.id].awayScore}`
                                                         )
                                                     ) :
                                                     React.createElement(
