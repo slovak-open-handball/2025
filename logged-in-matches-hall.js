@@ -350,7 +350,8 @@ const matchesHallApp = ({ userProfileData }) => {
                 startedAt: null,
                 endedAt: null,
                 pausedAt: null,
-                currentPeriod: 1
+                currentPeriod: 1,
+                manualTimeOffset: 0
             });
             
             // Vynulujeme čas
@@ -437,74 +438,94 @@ const matchesHallApp = ({ userProfileData }) => {
     // Funkcie pre manuálne ovládanie času
     const addMinute = () => {
         console.log('addMinute - pred: manualTimeOffset =', manualTimeOffset);
-        setManualTimeOffset(prev => {
-            const newValue = prev + 60;
-            console.log('addMinute - po: manualTimeOffset =', newValue);
-            
-            // OKAMŽITÁ AKTUALIZÁCIA ČASU
-            if (selectedMatch && selectedMatch.startedAt) {
-                const now = Timestamp.now();
-                const startedAt = selectedMatch.startedAt;
-                const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
-                setMatchTime(baseSeconds + newValue);
-            }
-            
-            return newValue;
-        });
+        const newValue = manualTimeOffset + 60;
+        
+        // Uložíme do databázy
+        if (selectedMatch && window.db) {
+            const matchRef = doc(window.db, 'matches', selectedMatch.id);
+            updateDoc(matchRef, {
+                manualTimeOffset: newValue
+            }).catch(error => console.error('Chyba pri ukladaní offsetu:', error));
+        }
+        
+        setManualTimeOffset(newValue);
+        
+        // OKAMŽITÁ AKTUALIZÁCIA ČASU
+        if (selectedMatch && selectedMatch.startedAt) {
+            const now = Timestamp.now();
+            const startedAt = selectedMatch.startedAt;
+            const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
+            setMatchTime(baseSeconds + newValue);
+        }
     };
     
     const subtractMinute = () => {
         console.log('subtractMinute - pred: manualTimeOffset =', manualTimeOffset);
-        setManualTimeOffset(prev => {
-            const newValue = Math.max(-matchTime, prev - 60);
-            console.log('subtractMinute - po: manualTimeOffset =', newValue);
-            
-            // OKAMŽITÁ AKTUALIZÁCIA ČASU
-            if (selectedMatch && selectedMatch.startedAt) {
-                const now = Timestamp.now();
-                const startedAt = selectedMatch.startedAt;
-                const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
-                setMatchTime(baseSeconds + newValue);
-            }
-            
-            return newValue;
-        });
+        const newValue = Math.max(-matchTime, manualTimeOffset - 60);
+        
+        // Uložíme do databázy
+        if (selectedMatch && window.db) {
+            const matchRef = doc(window.db, 'matches', selectedMatch.id);
+            updateDoc(matchRef, {
+                manualTimeOffset: newValue
+            }).catch(error => console.error('Chyba pri ukladaní offsetu:', error));
+        }
+        
+        setManualTimeOffset(newValue);
+        
+        // OKAMŽITÁ AKTUALIZÁCIA ČASU
+        if (selectedMatch && selectedMatch.startedAt) {
+            const now = Timestamp.now();
+            const startedAt = selectedMatch.startedAt;
+            const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
+            setMatchTime(baseSeconds + newValue);
+        }
     };
     
     const addSecond = () => {
         console.log('addSecond - pred: manualTimeOffset =', manualTimeOffset);
-        setManualTimeOffset(prev => {
-            const newValue = prev + 1;
-            console.log('addSecond - po: manualTimeOffset =', newValue);
-            
-            // OKAMŽITÁ AKTUALIZÁCIA ČASU
-            if (selectedMatch && selectedMatch.startedAt) {
-                const now = Timestamp.now();
-                const startedAt = selectedMatch.startedAt;
-                const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
-                setMatchTime(baseSeconds + newValue);
-            }
-            
-            return newValue;
-        });
+        const newValue = manualTimeOffset + 1;
+        
+        // Uložíme do databázy
+        if (selectedMatch && window.db) {
+            const matchRef = doc(window.db, 'matches', selectedMatch.id);
+            updateDoc(matchRef, {
+                manualTimeOffset: newValue
+            }).catch(error => console.error('Chyba pri ukladaní offsetu:', error));
+        }
+        
+        setManualTimeOffset(newValue);
+        
+        // OKAMŽITÁ AKTUALIZÁCIA ČASU
+        if (selectedMatch && selectedMatch.startedAt) {
+            const now = Timestamp.now();
+            const startedAt = selectedMatch.startedAt;
+            const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
+            setMatchTime(baseSeconds + newValue);
+        }
     };
     
     const subtractSecond = () => {
         console.log('subtractSecond - pred: manualTimeOffset =', manualTimeOffset);
-        setManualTimeOffset(prev => {
-            const newValue = Math.max(-matchTime, prev - 1);
-            console.log('subtractSecond - po: manualTimeOffset =', newValue);
-            
-            // OKAMŽITÁ AKTUALIZÁCIA ČASU
-            if (selectedMatch && selectedMatch.startedAt) {
-                const now = Timestamp.now();
-                const startedAt = selectedMatch.startedAt;
-                const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
-                setMatchTime(baseSeconds + newValue);
-            }
-            
-            return newValue;
-        });
+        const newValue = Math.max(-matchTime, manualTimeOffset - 1);
+        
+        // Uložíme do databázy
+        if (selectedMatch && window.db) {
+            const matchRef = doc(window.db, 'matches', selectedMatch.id);
+            updateDoc(matchRef, {
+                manualTimeOffset: newValue
+            }).catch(error => console.error('Chyba pri ukladaní offsetu:', error));
+        }
+        
+        setManualTimeOffset(newValue);
+        
+        // OKAMŽITÁ AKTUALIZÁCIA ČASU
+        if (selectedMatch && selectedMatch.startedAt) {
+            const now = Timestamp.now();
+            const startedAt = selectedMatch.startedAt;
+            const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
+            setMatchTime(baseSeconds + newValue);
+        }
     };
 
     // Inicializácia času pri výbere zápasu
@@ -1149,7 +1170,8 @@ const matchesHallApp = ({ userProfileData }) => {
                 loadedMatches.push({
                     id: doc.id,
                     ...data,
-                    currentPeriod: data.currentPeriod || 1
+                    currentPeriod: data.currentPeriod || 1,
+                    manualTimeOffset: data.manualTimeOffset || 0
                 });
                 if (selectedMatch) {
                     setMatchPaused(selectedMatch.status === 'paused');
@@ -1199,6 +1221,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 
                 if (matchFromUrl) {
                     setSelectedMatch(matchFromUrl);
+                    setManualTimeOffset(matchFromUrl.manualTimeOffset || 0);
                 }
             }
             
@@ -1451,6 +1474,7 @@ const matchesHallApp = ({ userProfileData }) => {
     // FUNKCIA PRE VÝBER ZÁPASU
      const selectMatch = (match) => {
         setSelectedMatch(match);
+        setManualTimeOffset(match.manualTimeOffset || 0);
         updateUrlParameters(match.homeTeamIdentifier, match.awayTeamIdentifier);
     };
 
