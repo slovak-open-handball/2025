@@ -588,7 +588,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
                 const elapsedSeconds = baseSeconds + manualTimeOffset;
 
-                console.log('Timer: baseSeconds =', baseSeconds, 'manualTimeOffset =', manualTimeOffset, 'elapsedSeconds =', elapsedSeconds);
+//                console.log('Timer: baseSeconds =', baseSeconds, 'manualTimeOffset =', manualTimeOffset, 'elapsedSeconds =', elapsedSeconds);
                 
                 // OVERENIE: Priamo nastavujeme matchTime
                 setMatchTime(elapsedSeconds);
