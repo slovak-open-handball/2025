@@ -558,12 +558,14 @@ const matchesHallApp = ({ userProfileData }) => {
                 const pausedAt = selectedMatch.pausedAt;
                 const elapsedUntilPause = Math.floor((pausedAt.seconds - startedAt.seconds));
                 console.log('elapsedUntilPause:', elapsedUntilPause);
-                setMatchTime(elapsedUntilPause);
+                // PRI POZASTAVENÍ pripočítame manualTimeOffset
+                setMatchTime(elapsedUntilPause + (selectedMatch.manualTimeOffset || 0));
                 // NERESETUJEME manualTimeOffset - používame ten z databázy
             } else {
                 const elapsedSeconds = Math.floor((now.seconds - startedAt.seconds));
                 console.log('elapsedSeconds:', elapsedSeconds);
-                setMatchTime(elapsedSeconds);
+                // PRI PREBIEHAJÚCOM ZÁPASE pripočítame manualTimeOffset
+                setMatchTime(elapsedSeconds + (selectedMatch.manualTimeOffset || 0));
                 // NERESETUJEME manualTimeOffset - používame ten z databázy
             }
         } else {
