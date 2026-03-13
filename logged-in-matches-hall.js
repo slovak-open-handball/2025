@@ -745,7 +745,71 @@ const matchesHallApp = ({ userProfileData }) => {
             setManualTimeOffset(newOffset);
         }
     };
+
+    const isAddMinuteAllowed = () => {
+        if (!selectedMatch) return false;
         
+        const currentCategory = categories.find(c => c.name === selectedMatch.categoryName);
+        if (!currentCategory) return false;
+        
+        const periodDuration = (currentCategory.periodDuration || 20) * 60;
+        const currentPeriod = selectedMatch?.currentPeriod || 1;
+        
+        const periodStartTime = (currentPeriod - 1) * periodDuration;
+        const elapsedInPeriod = matchTime - periodStartTime;
+        
+        // Povolené, ak po pridaní minúty nepresiahneme koniec periódy
+        return elapsedInPeriod + 60 <= periodDuration;
+    };
+    
+    const isSubtractMinuteAllowed = () => {
+        if (!selectedMatch) return false;
+        
+        const currentCategory = categories.find(c => c.name === selectedMatch.categoryName);
+        if (!currentCategory) return false;
+        
+        const periodDuration = (currentCategory.periodDuration || 20) * 60;
+        const currentPeriod = selectedMatch?.currentPeriod || 1;
+        
+        const periodStartTime = (currentPeriod - 1) * periodDuration;
+        const elapsedInPeriod = matchTime - periodStartTime;
+        
+        // Povolené, ak po odčítaní minúty neklesneme pod začiatok periódy
+        return elapsedInPeriod >= 60;
+    };
+    
+    const isAddSecondAllowed = () => {
+        if (!selectedMatch) return false;
+        
+        const currentCategory = categories.find(c => c.name === selectedMatch.categoryName);
+        if (!currentCategory) return false;
+        
+        const periodDuration = (currentCategory.periodDuration || 20) * 60;
+        const currentPeriod = selectedMatch?.currentPeriod || 1;
+        
+        const periodStartTime = (currentPeriod - 1) * periodDuration;
+        const elapsedInPeriod = matchTime - periodStartTime;
+        
+        // Povolené, ak po pridaní sekundy nepresiahneme koniec periódy
+        return elapsedInPeriod + 1 <= periodDuration;
+    };
+    
+    const isSubtractSecondAllowed = () => {
+        if (!selectedMatch) return false;
+        
+        const currentCategory = categories.find(c => c.name === selectedMatch.categoryName);
+        if (!currentCategory) return false;
+        
+        const periodDuration = (currentCategory.periodDuration || 20) * 60;
+        const currentPeriod = selectedMatch?.currentPeriod || 1;
+        
+        const periodStartTime = (currentPeriod - 1) * periodDuration;
+        const elapsedInPeriod = matchTime - periodStartTime;
+        
+        // Povolené, ak po odčítaní sekundy neklesneme pod začiatok periódy
+        return elapsedInPeriod >= 1;
+    };
+            
     // UPRAVENÝ useEffect pre timer - automatické zastavenie na konci periódy
     useEffect(() => {
         console.log('Timer useEffect - stav:', selectedMatch?.status, 'matchTime:', matchTime);
@@ -2088,12 +2152,18 @@ const matchesHallApp = ({ userProfileData }) => {
                             React.createElement(
                                 'div',
                                 { className: 'flex items-center gap-1 bg-gray-100 rounded-lg p-1' },
+                                // Tlačidlo pre odčítanie minúty
                                 React.createElement(
                                     'button',
                                     {
-                                        className: 'w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center justify-center text-sm font-bold transition-colors',
-                                        onClick: subtractMinute,
-                                        title: 'Odčítať minútu'
+                                        className: `w-8 h-8 rounded flex items-center justify-center text-sm font-bold transition-colors ${
+                                            isSubtractMinuteAllowed()
+                                                ? 'bg-blue-500 hover:bg-blue-600 text-white' 
+                                                : 'bg-white text-blue-500 border-2 border-blue-500 cursor-not-allowed'
+                                        }`,
+                                        onClick: isSubtractMinuteAllowed() ? subtractMinute : undefined,
+                                        disabled: !isSubtractMinuteAllowed(),
+                                        title: isSubtractMinuteAllowed() ? 'Odčítať minútu' : 'Nie je možné odčítať minútu - sme na začiatku periódy'
                                     },
                                     React.createElement('i', { className: 'fa-solid fa-minus' })
                                 ),
@@ -2102,12 +2172,18 @@ const matchesHallApp = ({ userProfileData }) => {
                                     { className: 'px-2 text-sm font-medium text-gray-700' },
                                     'min'
                                 ),
+                                // Tlačidlo pre pridanie minúty
                                 React.createElement(
                                     'button',
                                     {
-                                        className: 'w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center justify-center text-sm font-bold transition-colors',
-                                        onClick: addMinute,
-                                        title: 'Pridať minútu'
+                                        className: `w-8 h-8 rounded flex items-center justify-center text-sm font-bold transition-colors ${
+                                            isAddMinuteAllowed()
+                                                ? 'bg-blue-500 hover:bg-blue-600 text-white' 
+                                                : 'bg-white text-blue-500 border-2 border-blue-500 cursor-not-allowed'
+                                        }`,
+                                        onClick: isAddMinuteAllowed() ? addMinute : undefined,
+                                        disabled: !isAddMinuteAllowed(),
+                                        title: isAddMinuteAllowed() ? 'Pridať minútu' : 'Nie je možné pridať minútu - koniec periódy'
                                     },
                                     React.createElement('i', { className: 'fa-solid fa-plus' })
                                 )
@@ -2116,12 +2192,18 @@ const matchesHallApp = ({ userProfileData }) => {
                             React.createElement(
                                 'div',
                                 { className: 'flex items-center gap-1 bg-gray-100 rounded-lg p-1' },
+                                // Tlačidlo pre odčítanie sekundy
                                 React.createElement(
                                     'button',
                                     {
-                                        className: 'w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center justify-center text-sm font-bold transition-colors',
-                                        onClick: subtractSecond,
-                                        title: 'Odčítať sekundu'
+                                        className: `w-8 h-8 rounded flex items-center justify-center text-sm font-bold transition-colors ${
+                                            isSubtractSecondAllowed()
+                                                ? 'bg-blue-500 hover:bg-blue-600 text-white' 
+                                                : 'bg-white text-blue-500 border-2 border-blue-500 cursor-not-allowed'
+                                        }`,
+                                        onClick: isSubtractSecondAllowed() ? subtractSecond : undefined,
+                                        disabled: !isSubtractSecondAllowed(),
+                                        title: isSubtractSecondAllowed() ? 'Odčítať sekundu' : 'Nie je možné odčítať sekundu - sme na začiatku periódy'
                                     },
                                     React.createElement('i', { className: 'fa-solid fa-minus' })
                                 ),
@@ -2130,12 +2212,18 @@ const matchesHallApp = ({ userProfileData }) => {
                                     { className: 'px-2 text-sm font-medium text-gray-700' },
                                     'sec'
                                 ),
+                                // Tlačidlo pre pridanie sekundy
                                 React.createElement(
                                     'button',
                                     {
-                                        className: 'w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center justify-center text-sm font-bold transition-colors',
-                                        onClick: addSecond,
-                                        title: 'Pridať sekundu'
+                                        className: `w-8 h-8 rounded flex items-center justify-center text-sm font-bold transition-colors ${
+                                            isAddSecondAllowed()
+                                                ? 'bg-blue-500 hover:bg-blue-600 text-white' 
+                                                : 'bg-white text-blue-500 border-2 border-blue-500 cursor-not-allowed'
+                                        }`,
+                                        onClick: isAddSecondAllowed() ? addSecond : undefined,
+                                        disabled: !isAddSecondAllowed(),
+                                        title: isAddSecondAllowed() ? 'Pridať sekundu' : 'Nie je možné pridať sekundu - koniec periódy'
                                     },
                                     React.createElement('i', { className: 'fa-solid fa-plus' })
                                 )
