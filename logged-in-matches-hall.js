@@ -3611,11 +3611,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         'span',
                                                         { className: 'font-mono font-bold text-blue-600 text-sm' },
                                                         `${liveMatchData[match.id].homeScore} : ${liveMatchData[match.id].awayScore}`
-                                                    ),
-                                                    React.createElement(
-                                                        'span',
-                                                        { className: 'font-mono text-xs text-gray-500' },
-                                                        `(${formatMatchTime(liveMatchData[match.id].time)})`
                                                     )
                                                 ) :
                                                 React.createElement(
