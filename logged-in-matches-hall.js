@@ -746,22 +746,25 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     };
 
-    // NOVÁ FUNKCIA PRE KONTROLU POVOLENIA TLAČIDLA POKRAČOVAŤ
+    // UPRAVENÁ FUNKCIA PRE KONTROLU POVOLENIA TLAČIDLA POKRAČOVAŤ
     const isResumeAllowed = () => {
         if (!selectedMatch) return false;
-        
+    
+        // Ak je zápas ukončený, tlačidlo nie je povolené
+        if (selectedMatch.status === 'completed') return false;
+    
         // Kontrola, či je zápas v stave 'paused'
         if (selectedMatch.status !== 'paused') return false;
-        
+    
         const currentCategory = categories.find(c => c.name === selectedMatch.categoryName);
         if (!currentCategory) return false;
-        
+    
         const periodDuration = (currentCategory.periodDuration || 20) * 60;
         const currentPeriod = selectedMatch?.currentPeriod || 1;
-        
+    
         const periodStartTime = (currentPeriod - 1) * periodDuration;
         const elapsedInPeriod = matchTime - periodStartTime;
-        
+    
         // Povolené, ak nie sme na konci periódy (ak by po pridaní 1 sekundy nepresiahli koniec)
         return elapsedInPeriod < periodDuration;
     };
@@ -807,12 +810,15 @@ const matchesHallApp = ({ userProfileData }) => {
     const isAddMinuteAllowed = () => {
         if (!selectedMatch) return false;
         
+        // Ak je zápas ukončený, tlačidlo nie je povolené
+        if (selectedMatch.status === 'completed') return false;
+        
         const currentCategory = categories.find(c => c.name === selectedMatch.categoryName);
         if (!currentCategory) return false;
         
         const periodDuration = (currentCategory.periodDuration || 20) * 60;
         const currentPeriod = selectedMatch?.currentPeriod || 1;
-        
+    
         const periodStartTime = (currentPeriod - 1) * periodDuration;
         const elapsedInPeriod = matchTime - periodStartTime;
         
@@ -822,10 +828,13 @@ const matchesHallApp = ({ userProfileData }) => {
     
     const isSubtractMinuteAllowed = () => {
         if (!selectedMatch) return false;
-        
+    
+        // Ak je zápas ukončený, tlačidlo nie je povolené
+        if (selectedMatch.status === 'completed') return false;
+    
         const currentCategory = categories.find(c => c.name === selectedMatch.categoryName);
         if (!currentCategory) return false;
-        
+    
         const periodDuration = (currentCategory.periodDuration || 20) * 60;
         const currentPeriod = selectedMatch?.currentPeriod || 1;
         
@@ -838,13 +847,16 @@ const matchesHallApp = ({ userProfileData }) => {
     
     const isAddSecondAllowed = () => {
         if (!selectedMatch) return false;
+    
+        // Ak je zápas ukončený, tlačidlo nie je povolené
+        if (selectedMatch.status === 'completed') return false;
         
         const currentCategory = categories.find(c => c.name === selectedMatch.categoryName);
         if (!currentCategory) return false;
         
         const periodDuration = (currentCategory.periodDuration || 20) * 60;
         const currentPeriod = selectedMatch?.currentPeriod || 1;
-        
+    
         const periodStartTime = (currentPeriod - 1) * periodDuration;
         const elapsedInPeriod = matchTime - periodStartTime;
         
@@ -854,6 +866,9 @@ const matchesHallApp = ({ userProfileData }) => {
     
     const isSubtractSecondAllowed = () => {
         if (!selectedMatch) return false;
+    
+        // Ak je zápas ukončený, tlačidlo nie je povolené
+        if (selectedMatch.status === 'completed') return false;
         
         const currentCategory = categories.find(c => c.name === selectedMatch.categoryName);
         if (!currentCategory) return false;
@@ -866,6 +881,13 @@ const matchesHallApp = ({ userProfileData }) => {
         
         // Povolené, ak po odčítaní sekundy neklesneme pod začiatok periódy
         return elapsedInPeriod >= 1;
+    };
+
+    const isStartTimerAllowed = () => {
+        if (!selectedMatch) return false;
+    
+        // Povolené len pre zápasy v stave 'scheduled' (Naplánované)
+        return selectedMatch.status === 'scheduled';
     };
             
     // UPRAVENÝ useEffect pre timer - automatické zastavenie na konci periódy
@@ -2197,7 +2219,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                         }`,
                                         onClick: isResumeAllowed() ? () => resumeMatchTimer(selectedMatch.id) : undefined,
                                         disabled: !isResumeAllowed(),
-                                        title: isResumeAllowed() ? 'Pokračovať v zápase' : 'Nie je možné pokračovať - koniec periódy'
+                                        title: isResumeAllowed() ? 'Pokračovať v zápase' : selectedMatch.status === 'completed' ? 'Zápas je ukončený' : 'Nie je možné pokračovať - koniec periódy'
                                     },
                                     React.createElement('i', { className: 'fa-solid fa-play' }),
                                     'Pokračovať'
@@ -2205,8 +2227,14 @@ const matchesHallApp = ({ userProfileData }) => {
                                 React.createElement(
                                     'button',
                                     {
-                                        className: 'px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
-                                        onClick: () => startMatchTimer(selectedMatch.id)
+                                        className: `px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                                            isStartTimerAllowed()
+                                                ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                                : 'bg-white text-green-600 border-2 border-green-600 cursor-not-allowed'
+                                        }`,
+                                        onClick: isStartTimerAllowed() ? () => startMatchTimer(selectedMatch.id) : undefined,
+                                        disabled: !isStartTimerAllowed(),
+                                        title: isStartTimerAllowed() ? 'Spustiť čas zápasu' : 'Zápas už prebieha alebo je ukončený'
                                     },
                                     React.createElement('i', { className: 'fa-solid fa-play' }),
                                     'Čas štart'
