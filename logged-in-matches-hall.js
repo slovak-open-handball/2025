@@ -437,112 +437,182 @@ const matchesHallApp = ({ userProfileData }) => {
 
     // Funkcie pre manuálne ovládanie času
     const addMinute = () => {
-        console.log('addMinute - pred: manualTimeOffset =', manualTimeOffset);
-        const newValue = manualTimeOffset + 60;
+        console.log('addMinute - pred: manualTimeOffset =', manualTimeOffset, 'matchTime =', matchTime);
         
-        // Uložíme do databázy
-        if (selectedMatch && window.db) {
-            const matchRef = doc(window.db, 'matches', selectedMatch.id);
-            updateDoc(matchRef, {
-                manualTimeOffset: newValue
-            }).catch(error => console.error('Chyba pri ukladaní offsetu:', error));
-        }
+        // Vypočítame nový čas
+        const newTime = matchTime + 60;
         
-        setManualTimeOffset(newValue);
-        
-        // OKAMŽITÁ AKTUALIZÁCIA ČASU
+        // Vypočítame nový offset podľa stavu zápasu
+        let newOffset;
         if (selectedMatch) {
-            if (selectedMatch.status === 'paused') {
-                // Pre pozastavený zápas použijeme aktuálny matchTime + nový offset
-                setMatchTime(matchTime + 60);
+            if (selectedMatch.status === 'paused' && selectedMatch.pausedAt && selectedMatch.startedAt) {
+                // Pre pozastavený zápas: offset = nový čas - (pausedAt - startedAt)
+                const pausedAt = selectedMatch.pausedAt;
+                const startedAt = selectedMatch.startedAt;
+                const baseSeconds = Math.floor((pausedAt.seconds - startedAt.seconds));
+                newOffset = newTime - baseSeconds;
+                console.log('addMinute - paused: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
             } else if (selectedMatch.startedAt) {
-                // Pre prebiehajúci zápas použijeme aktuálny čas
+                // Pre prebiehajúci zápas: offset = nový čas - aktuálny čas od štartu
                 const now = Timestamp.now();
                 const startedAt = selectedMatch.startedAt;
                 const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
-                setMatchTime(baseSeconds + newValue);
+                newOffset = newTime - baseSeconds;
+                console.log('addMinute - in-progress: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
             }
+        }
+        
+        console.log('addMinute - nový čas =', newTime, 'nový offset =', newOffset);
+        
+        // Uložíme do databázy
+        if (selectedMatch && window.db && newOffset !== undefined) {
+            const matchRef = doc(window.db, 'matches', selectedMatch.id);
+            updateDoc(matchRef, {
+                manualTimeOffset: newOffset
+            }).then(() => {
+                console.log('addMinute - offset uložený do databázy:', newOffset);
+            }).catch(error => console.error('Chyba pri ukladaní offsetu:', error));
+        }
+        
+        // Aktualizujeme stavy
+        setMatchTime(newTime);
+        if (newOffset !== undefined) {
+            setManualTimeOffset(newOffset);
         }
     };
     
     const subtractMinute = () => {
-        console.log('subtractMinute - pred: manualTimeOffset =', manualTimeOffset);
-        const newValue = Math.max(-matchTime, manualTimeOffset - 60);
+        console.log('subtractMinute - pred: manualTimeOffset =', manualTimeOffset, 'matchTime =', matchTime);
         
-        // Uložíme do databázy
-        if (selectedMatch && window.db) {
-            const matchRef = doc(window.db, 'matches', selectedMatch.id);
-            updateDoc(matchRef, {
-                manualTimeOffset: newValue
-            }).catch(error => console.error('Chyba pri ukladaní offsetu:', error));
-        }
+        // Vypočítame nový čas (nesmie klesnúť pod 0)
+        const newTime = Math.max(0, matchTime - 60);
         
-        setManualTimeOffset(newValue);
-        
-        // OKAMŽITÁ AKTUALIZÁCIA ČASU
+        // Vypočítame nový offset podľa stavu zápasu
+        let newOffset;
         if (selectedMatch) {
-            if (selectedMatch.status === 'paused') {
-                setMatchTime(Math.max(0, matchTime - 60));
+            if (selectedMatch.status === 'paused' && selectedMatch.pausedAt && selectedMatch.startedAt) {
+                // Pre pozastavený zápas: offset = nový čas - (pausedAt - startedAt)
+                const pausedAt = selectedMatch.pausedAt;
+                const startedAt = selectedMatch.startedAt;
+                const baseSeconds = Math.floor((pausedAt.seconds - startedAt.seconds));
+                newOffset = newTime - baseSeconds;
+                console.log('subtractMinute - paused: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
             } else if (selectedMatch.startedAt) {
+                // Pre prebiehajúci zápas: offset = nový čas - aktuálny čas od štartu
                 const now = Timestamp.now();
                 const startedAt = selectedMatch.startedAt;
                 const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
-                setMatchTime(baseSeconds + newValue);
+                newOffset = newTime - baseSeconds;
+                console.log('subtractMinute - in-progress: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
             }
+        }
+        
+        console.log('subtractMinute - nový čas =', newTime, 'nový offset =', newOffset);
+        
+        // Uložíme do databázy
+        if (selectedMatch && window.db && newOffset !== undefined) {
+            const matchRef = doc(window.db, 'matches', selectedMatch.id);
+            updateDoc(matchRef, {
+                manualTimeOffset: newOffset
+            }).then(() => {
+                console.log('subtractMinute - offset uložený do databázy:', newOffset);
+            }).catch(error => console.error('Chyba pri ukladaní offsetu:', error));
+        }
+        
+        // Aktualizujeme stavy
+        setMatchTime(newTime);
+        if (newOffset !== undefined) {
+            setManualTimeOffset(newOffset);
         }
     };
     
     const addSecond = () => {
-        console.log('addSecond - pred: manualTimeOffset =', manualTimeOffset);
-        const newValue = manualTimeOffset + 1;
+        console.log('addSecond - pred: manualTimeOffset =', manualTimeOffset, 'matchTime =', matchTime);
         
-        // Uložíme do databázy
-        if (selectedMatch && window.db) {
-            const matchRef = doc(window.db, 'matches', selectedMatch.id);
-            updateDoc(matchRef, {
-                manualTimeOffset: newValue
-            }).catch(error => console.error('Chyba pri ukladaní offsetu:', error));
-        }
+        // Vypočítame nový čas
+        const newTime = matchTime + 1;
         
-        setManualTimeOffset(newValue);
-        
-        // OKAMŽITÁ AKTUALIZÁCIA ČASU
+        // Vypočítame nový offset podľa stavu zápasu
+        let newOffset;
         if (selectedMatch) {
-            if (selectedMatch.status === 'paused') {
-                setMatchTime(matchTime + 1);
+            if (selectedMatch.status === 'paused' && selectedMatch.pausedAt && selectedMatch.startedAt) {
+                // Pre pozastavený zápas: offset = nový čas - (pausedAt - startedAt)
+                const pausedAt = selectedMatch.pausedAt;
+                const startedAt = selectedMatch.startedAt;
+                const baseSeconds = Math.floor((pausedAt.seconds - startedAt.seconds));
+                newOffset = newTime - baseSeconds;
+                console.log('addSecond - paused: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
             } else if (selectedMatch.startedAt) {
+                // Pre prebiehajúci zápas: offset = nový čas - aktuálny čas od štartu
                 const now = Timestamp.now();
                 const startedAt = selectedMatch.startedAt;
                 const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
-                setMatchTime(baseSeconds + newValue);
+                newOffset = newTime - baseSeconds;
+                console.log('addSecond - in-progress: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
             }
+        }
+        
+        console.log('addSecond - nový čas =', newTime, 'nový offset =', newOffset);
+        
+        // Uložíme do databázy
+        if (selectedMatch && window.db && newOffset !== undefined) {
+            const matchRef = doc(window.db, 'matches', selectedMatch.id);
+            updateDoc(matchRef, {
+                manualTimeOffset: newOffset
+            }).then(() => {
+                console.log('addSecond - offset uložený do databázy:', newOffset);
+            }).catch(error => console.error('Chyba pri ukladaní offsetu:', error));
+        }
+        
+        // Aktualizujeme stavy
+        setMatchTime(newTime);
+        if (newOffset !== undefined) {
+            setManualTimeOffset(newOffset);
         }
     };
     
     const subtractSecond = () => {
-        console.log('subtractSecond - pred: manualTimeOffset =', manualTimeOffset);
-        const newValue = Math.max(-matchTime, manualTimeOffset - 1);
+        console.log('subtractSecond - pred: manualTimeOffset =', manualTimeOffset, 'matchTime =', matchTime);
         
-        // Uložíme do databázy
-        if (selectedMatch && window.db) {
-            const matchRef = doc(window.db, 'matches', selectedMatch.id);
-            updateDoc(matchRef, {
-                manualTimeOffset: newValue
-            }).catch(error => console.error('Chyba pri ukladaní offsetu:', error));
-        }
+        // Vypočítame nový čas (nesmie klesnúť pod 0)
+        const newTime = Math.max(0, matchTime - 1);
         
-        setManualTimeOffset(newValue);
-        
-        // OKAMŽITÁ AKTUALIZÁCIA ČASU
+        // Vypočítame nový offset podľa stavu zápasu
+        let newOffset;
         if (selectedMatch) {
-            if (selectedMatch.status === 'paused') {
-                setMatchTime(Math.max(0, matchTime - 1));
+            if (selectedMatch.status === 'paused' && selectedMatch.pausedAt && selectedMatch.startedAt) {
+                // Pre pozastavený zápas: offset = nový čas - (pausedAt - startedAt)
+                const pausedAt = selectedMatch.pausedAt;
+                const startedAt = selectedMatch.startedAt;
+                const baseSeconds = Math.floor((pausedAt.seconds - startedAt.seconds));
+                newOffset = newTime - baseSeconds;
+                console.log('subtractSecond - paused: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
             } else if (selectedMatch.startedAt) {
+                // Pre prebiehajúci zápas: offset = nový čas - aktuálny čas od štartu
                 const now = Timestamp.now();
                 const startedAt = selectedMatch.startedAt;
                 const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
-                setMatchTime(baseSeconds + newValue);
+                newOffset = newTime - baseSeconds;
+                console.log('subtractSecond - in-progress: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
             }
+        }
+        
+        console.log('subtractSecond - nový čas =', newTime, 'nový offset =', newOffset);
+        
+        // Uložíme do databázy
+        if (selectedMatch && window.db && newOffset !== undefined) {
+            const matchRef = doc(window.db, 'matches', selectedMatch.id);
+            updateDoc(matchRef, {
+                manualTimeOffset: newOffset
+            }).then(() => {
+                console.log('subtractSecond - offset uložený do databázy:', newOffset);
+            }).catch(error => console.error('Chyba pri ukladaní offsetu:', error));
+        }
+        
+        // Aktualizujeme stavy
+        setMatchTime(newTime);
+        if (newOffset !== undefined) {
+            setManualTimeOffset(newOffset);
         }
     };
 
