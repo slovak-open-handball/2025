@@ -432,6 +432,23 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     };
 
+    // Funkcie pre manuálne ovládanie času
+    const addMinute = () => {
+        setMatchTime(prev => prev + 60);
+    };
+
+    const subtractMinute = () => {
+        setMatchTime(prev => Math.max(0, prev - 60));
+    };
+    
+    const addSecond = () => {
+        setMatchTime(prev => prev + 1);
+    };
+    
+    const subtractSecond = () => {
+        setMatchTime(prev => Math.max(0, prev - 1));
+    };
+
     // Inicializácia času pri výbere zápasu
     useEffect(() => {
         console.log('Inicializácia času pre zápas:', selectedMatch);
@@ -1766,6 +1783,63 @@ const matchesHallApp = ({ userProfileData }) => {
                                     React.createElement('i', { className: 'fa-solid fa-play' }),
                                     'Čas štart'
                                 ),
+                            
+                            // NOVÉ: Manuálne ovládanie času
+                            React.createElement(
+                                'div',
+                                { className: 'flex items-center gap-1 bg-gray-100 rounded-lg p-1' },
+                                React.createElement(
+                                    'button',
+                                    {
+                                        className: 'w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center justify-center text-sm font-bold transition-colors',
+                                        onClick: subtractMinute,
+                                        title: 'Odčítať minútu'
+                                    },
+                                    React.createElement('i', { className: 'fa-solid fa-minus' })
+                                ),
+                                React.createElement(
+                                    'span',
+                                    { className: 'px-2 text-sm font-medium text-gray-700' },
+                                    'min'
+                                ),
+                                React.createElement(
+                                    'button',
+                                    {
+                                        className: 'w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center justify-center text-sm font-bold transition-colors',
+                                        onClick: addMinute,
+                                        title: 'Pridať minútu'
+                                    },
+                                    React.createElement('i', { className: 'fa-solid fa-plus' })
+                                )
+                            ),
+                            
+                            React.createElement(
+                                'div',
+                                { className: 'flex items-center gap-1 bg-gray-100 rounded-lg p-1' },
+                                React.createElement(
+                                    'button',
+                                    {
+                                        className: 'w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center justify-center text-sm font-bold transition-colors',
+                                        onClick: subtractSecond,
+                                        title: 'Odčítať sekundu'
+                                    },
+                                    React.createElement('i', { className: 'fa-solid fa-minus' })
+                                ),
+                                React.createElement(
+                                    'span',
+                                    { className: 'px-2 text-sm font-medium text-gray-700' },
+                                    'sec'
+                                ),
+                                React.createElement(
+                                    'button',
+                                    {
+                                        className: 'w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center justify-center text-sm font-bold transition-colors',
+                                        onClick: addSecond,
+                                        title: 'Pridať sekundu'
+                                    },
+                                    React.createElement('i', { className: 'fa-solid fa-plus' })
+                                )
+                            ),
                             
                             // Perióda + / Perióda - (ak má kategória viac ako 1 periódu)
                             category && category.periods > 1 && React.createElement(
