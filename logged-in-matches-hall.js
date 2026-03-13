@@ -452,11 +452,9 @@ const matchesHallApp = ({ userProfileData }) => {
         
         // OKAMŽITÁ AKTUALIZÁCIA ČASU
         if (selectedMatch) {
-            if (selectedMatch.status === 'paused' && selectedMatch.pausedAt) {
-                // Pre pozastavený zápas použijeme pausedAt
-                const pausedAt = selectedMatch.pausedAt;
-                const baseSeconds = Math.floor((pausedAt.seconds - selectedMatch.startedAt.seconds));
-                setMatchTime(baseSeconds + newValue);
+            if (selectedMatch.status === 'paused') {
+                // Pre pozastavený zápas použijeme aktuálny matchTime + nový offset
+                setMatchTime(matchTime + 60);
             } else if (selectedMatch.startedAt) {
                 // Pre prebiehajúci zápas použijeme aktuálny čas
                 const now = Timestamp.now();
@@ -483,10 +481,8 @@ const matchesHallApp = ({ userProfileData }) => {
         
         // OKAMŽITÁ AKTUALIZÁCIA ČASU
         if (selectedMatch) {
-            if (selectedMatch.status === 'paused' && selectedMatch.pausedAt) {
-                const pausedAt = selectedMatch.pausedAt;
-                const baseSeconds = Math.floor((pausedAt.seconds - selectedMatch.startedAt.seconds));
-                setMatchTime(baseSeconds + newValue);
+            if (selectedMatch.status === 'paused') {
+                setMatchTime(Math.max(0, matchTime - 60));
             } else if (selectedMatch.startedAt) {
                 const now = Timestamp.now();
                 const startedAt = selectedMatch.startedAt;
@@ -512,10 +508,8 @@ const matchesHallApp = ({ userProfileData }) => {
         
         // OKAMŽITÁ AKTUALIZÁCIA ČASU
         if (selectedMatch) {
-            if (selectedMatch.status === 'paused' && selectedMatch.pausedAt) {
-                const pausedAt = selectedMatch.pausedAt;
-                const baseSeconds = Math.floor((pausedAt.seconds - selectedMatch.startedAt.seconds));
-                setMatchTime(baseSeconds + newValue);
+            if (selectedMatch.status === 'paused') {
+                setMatchTime(matchTime + 1);
             } else if (selectedMatch.startedAt) {
                 const now = Timestamp.now();
                 const startedAt = selectedMatch.startedAt;
@@ -541,10 +535,8 @@ const matchesHallApp = ({ userProfileData }) => {
         
         // OKAMŽITÁ AKTUALIZÁCIA ČASU
         if (selectedMatch) {
-            if (selectedMatch.status === 'paused' && selectedMatch.pausedAt) {
-                const pausedAt = selectedMatch.pausedAt;
-                const baseSeconds = Math.floor((pausedAt.seconds - selectedMatch.startedAt.seconds));
-                setMatchTime(baseSeconds + newValue);
+            if (selectedMatch.status === 'paused') {
+                setMatchTime(Math.max(0, matchTime - 1));
             } else if (selectedMatch.startedAt) {
                 const now = Timestamp.now();
                 const startedAt = selectedMatch.startedAt;
