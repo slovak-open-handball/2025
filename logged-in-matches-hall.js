@@ -509,11 +509,39 @@ const matchesHallApp = ({ userProfileData }) => {
     };
     
     const subtractMinute = () => {
-//        console.log('subtractMinute - pred: manualTimeOffset =', manualTimeOffset, 'matchTime =', matchTime);
+    //        console.log('subtractMinute - pred: manualTimeOffset =', manualTimeOffset, 'matchTime =', matchTime);
+        
+        // Získame kategóriu pre aktuálny zápas
+        const currentCategory = selectedMatch ? categories.find(c => c.name === selectedMatch.categoryName) : null;
+        
+        if (!currentCategory) {
+            window.showGlobalNotification('Nie je možné určiť kategóriu zápasu', 'error');
+            return;
+        }
+        
+        // Dĺžka jednej periódy v sekundách
+        const periodDurationSeconds = (currentCategory.periodDuration || 20) * 60;
+        const breakDurationSeconds = (currentCategory.breakDuration || 2) * 60;
+        const currentPeriod = selectedMatch?.currentPeriod || 1;
+        
+        // Začiatočný čas aktuálnej periódy
+        const startTimeForCurrentPeriod = (currentPeriod - 1) * (periodDurationSeconds + breakDurationSeconds);
+        
+        // Skontrolujeme, či odčítanie minúty neklesne pod začiatok periódy
+        if (matchTime - 60 < startTimeForCurrentPeriod) {
+            const minAllowedTime = startTimeForCurrentPeriod;
+            const remainingSeconds = matchTime - minAllowedTime;
+            const remainingMinutes = Math.floor(remainingSeconds / 60);
+            const remainingSecs = remainingSeconds % 60;
+            
+            let message = `Nie je možné odčítať celú minútu - na začiatok ${currentPeriod}. periódy zostáva len ${remainingMinutes}:${remainingSecs.toString().padStart(2, '0')}`;
+            window.showGlobalNotification(message, 'error');
+            return;
+        }
         
         // Skontrolujeme, či je dostatočný čas na odčítanie minúty
         if (matchTime < 60) {
-//            console.log('subtractMinute - nie je dostatok času na odčítanie minúty');
+    //            console.log('subtractMinute - nie je dostatok času na odčítanie minúty');
             window.showGlobalNotification('Nie je možné odčítať minútu - menej ako 60 sekúnd', 'error');
             return;
         }
@@ -530,18 +558,18 @@ const matchesHallApp = ({ userProfileData }) => {
                 const startedAt = selectedMatch.startedAt;
                 const baseSeconds = Math.floor((pausedAt.seconds - startedAt.seconds));
                 newOffset = newTime - baseSeconds;
-//                console.log('subtractMinute - paused: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
+    //                console.log('subtractMinute - paused: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
             } else if (selectedMatch.startedAt) {
                 // Pre prebiehajúci zápas: offset = nový čas - aktuálny čas od štartu
                 const now = Timestamp.now();
                 const startedAt = selectedMatch.startedAt;
                 const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
                 newOffset = newTime - baseSeconds;
-//                console.log('subtractMinute - in-progress: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
+    //                console.log('subtractMinute - in-progress: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
             }
         }
         
-//        console.log('subtractMinute - nový čas =', newTime, 'nový offset =', newOffset);
+    //        console.log('subtractMinute - nový čas =', newTime, 'nový offset =', newOffset);
         
         // Uložíme do databázy
         if (selectedMatch && window.db && newOffset !== undefined) {
@@ -549,7 +577,7 @@ const matchesHallApp = ({ userProfileData }) => {
             updateDoc(matchRef, {
                 manualTimeOffset: newOffset
             }).then(() => {
-//                console.log('subtractMinute - offset uložený do databázy:', newOffset);
+    //                console.log('subtractMinute - offset uložený do databázy:', newOffset);
             }).catch(error => console.error('Chyba pri ukladaní offsetu:', error));
         }
         
@@ -629,11 +657,34 @@ const matchesHallApp = ({ userProfileData }) => {
     };
     
     const subtractSecond = () => {
-//        console.log('subtractSecond - pred: manualTimeOffset =', manualTimeOffset, 'matchTime =', matchTime);
+    //        console.log('subtractSecond - pred: manualTimeOffset =', manualTimeOffset, 'matchTime =', matchTime);
+        
+        // Získame kategóriu pre aktuálny zápas
+        const currentCategory = selectedMatch ? categories.find(c => c.name === selectedMatch.categoryName) : null;
+        
+        if (!currentCategory) {
+            window.showGlobalNotification('Nie je možné určiť kategóriu zápasu', 'error');
+            return;
+        }
+        
+        // Dĺžka jednej periódy v sekundách
+        const periodDurationSeconds = (currentCategory.periodDuration || 20) * 60;
+        const breakDurationSeconds = (currentCategory.breakDuration || 2) * 60;
+        const currentPeriod = selectedMatch?.currentPeriod || 1;
+        
+        // Začiatočný čas aktuálnej periódy
+        const startTimeForCurrentPeriod = (currentPeriod - 1) * (periodDurationSeconds + breakDurationSeconds);
+        
+        // Skontrolujeme, či odčítanie sekundy neklesne pod začiatok periódy
+        if (matchTime - 1 < startTimeForCurrentPeriod) {
+            const minAllowedTime = startTimeForCurrentPeriod;
+            window.showGlobalNotification(`Nie je možné odčítať sekundu - na začiatok ${currentPeriod}. periódy zostáva už len ${matchTime - minAllowedTime} sekúnd`, 'error');
+            return;
+        }
         
         // Skontrolujeme, či je dostatočný čas na odčítanie sekundy
         if (matchTime < 1) {
-//            console.log('subtractSecond - nie je dostatok času na odčítanie sekundy');
+    //            console.log('subtractSecond - nie je dostatok času na odčítanie sekundy');
             window.showGlobalNotification('Nie je možné odčítať sekundu - čas je 0', 'error');
             return;
         }
@@ -650,18 +701,18 @@ const matchesHallApp = ({ userProfileData }) => {
                 const startedAt = selectedMatch.startedAt;
                 const baseSeconds = Math.floor((pausedAt.seconds - startedAt.seconds));
                 newOffset = newTime - baseSeconds;
-//                console.log('subtractSecond - paused: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
+    //                console.log('subtractSecond - paused: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
             } else if (selectedMatch.startedAt) {
                 // Pre prebiehajúci zápas: offset = nový čas - aktuálny čas od štartu
                 const now = Timestamp.now();
                 const startedAt = selectedMatch.startedAt;
                 const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
                 newOffset = newTime - baseSeconds;
-//                console.log('subtractSecond - in-progress: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
+    //                console.log('subtractSecond - in-progress: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
             }
         }
         
-//        console.log('subtractSecond - nový čas =', newTime, 'nový offset =', newOffset);
+    //        console.log('subtractSecond - nový čas =', newTime, 'nový offset =', newOffset);
         
         // Uložíme do databázy
         if (selectedMatch && window.db && newOffset !== undefined) {
