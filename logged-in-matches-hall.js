@@ -815,144 +815,6 @@ const matchesHallApp = ({ userProfileData }) => {
         return () => unsubscribe();
     }, [selectedMatch]);
     
-    // 🔴 UPRAVENÁ FUNKCIA: addMatchEvent - používa createPlayerReference
-    const addMatchEvent = async (localEventType, localEventTeam, localEventSubType, localPlayer) => {
-        if (!selectedMatch || !window.db) return;
-        
-        // Použijeme lokálne parametre alebo stavové premenné
-        const type = localEventType || eventType;
-        const team = localEventTeam || eventTeam;
-        const subType = localEventSubType || eventSubType;
-        const player = localPlayer || selectedPlayerForEvent;
-        
-        if (!type || !team) {
-            window.showGlobalNotification('Vyberte typ udalosti a tím', 'error');
-            return;
-        }
-    
-        // Pre penalty potrebujeme aj subType
-        if (type === 'penalty' && !subType) {
-            window.showGlobalNotification('Vyberte typ penalty (premenená/nepremenená)', 'error');
-            return;
-        }
-    
-        // Pre gól a vylúčenie potrebujeme vybraného hráča
-        if ((type === 'goal' || type === 'exclusion') && !player) {
-            window.showGlobalNotification('Vyberte hráča', 'error');
-            return;
-        }
-        
-        // Pre penalty potrebujeme vybraného hráča
-        if (type === 'penalty' && !player) {
-            window.showGlobalNotification('Vyberte hráča pre 7m hod', 'error');
-            return;
-        }
-    
-        try {
-            const eventsRef = collection(window.db, 'matchEvents');
-            
-            // Výpočet minúty a sekundy z celkového času v sekundách
-            const totalSeconds = matchTime;
-            const minute = Math.floor(totalSeconds / 60);
-            const second = totalSeconds % 60;
-            
-            // Formátovaný čas pre zobrazenie MM:SS
-            const formattedTime = `${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`;
-            
-            // Výpočet stavu pred gólom
-            let homeScoreBefore = matchScore.home;
-            let awayScoreBefore = matchScore.away;
-            let homeScoreAfter = matchScore.home;
-            let awayScoreAfter = matchScore.away;
-            
-            // Ak ide o gól alebo premenenú penaltu, aktualizujeme skóre
-            if ((type === 'goal') || (type === 'penalty' && subType === 'scored')) {
-                if (team === 'home') {
-                    homeScoreAfter = homeScoreBefore + 1;
-                } else if (team === 'away') {
-                    awayScoreAfter = awayScoreBefore + 1;
-                }
-            }
-            
-            const eventData = {
-                matchId: selectedMatch.id,
-                type: type,
-                team: team,
-                minute: minute,
-                second: second,
-                formattedTime: formattedTime,
-                timestamp: Timestamp.now(),
-                createdBy: userProfileData?.email || 'unknown',
-                createdByUid: userProfileData?.uid || null,
-                // Uloženie stavu
-                scoreBefore: {
-                    home: homeScoreBefore,
-                    away: awayScoreBefore
-                },
-                scoreAfter: {
-                    home: homeScoreAfter,
-                    away: awayScoreAfter
-                }
-            };
-    
-            // 🔴 ZMENENÉ: Pridanie referencie na hráča pomocou createPlayerReference
-            if (player) {
-                // Získame detail tímu podľa identifikátora
-                const teamDetails = team === 'home' ? homeTeamDetails : awayTeamDetails;
-                const teamIdentifier = team === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
-                
-                let playerRef = null;
-                
-                if (player.isStaff) {
-                    // Pre člena realizačného tímu
-                    playerRef = createPlayerReference(
-                        teamDetails, 
-                        teamIdentifier, 
-                        player, 
-                        true, 
-                        player.staffType, 
-                        player.staffIndex
-                    );
-                } else {
-                    // Pre hráča
-                    playerRef = createPlayerReference(
-                        teamDetails, 
-                        teamIdentifier, 
-                        player, 
-                        false
-                    );
-                }
-                
-                if (playerRef) {
-                    eventData.playerRef = playerRef;
-                }
-                
-                if (type === 'yellow' || type === 'red' || type === 'blue' || type === 'exclusion') {
-                    eventData.cardType = type === 'exclusion' ? 'exclusion' : type;
-                }
-            }
-    
-            // Pre penalty ukladáme subType
-            if (type === 'penalty') {
-                eventData.subType = subType;
-            }
-    
-            await addDoc(eventsRef, eventData);
-            
-            window.showGlobalNotification(`Udalosť bola pridaná v čase ${formattedTime}`, 'success');
-            
-            // Reset po pridaní
-            setSelectedPlayerForEvent(null);
-            setEventType(null);
-            setEventTeam(null);
-            setEventSubType(null);
-            
-        } catch (error) {
-            console.error('Chyba pri pridávaní udalosti:', error);
-            window.showGlobalNotification('Chyba pri ukladaní udalosti', 'error');
-        }
-    };
-    
     const deleteMatchEvent = async (eventId) => {
         if (!window.db || !eventId) return;
     
@@ -1526,6 +1388,144 @@ const matchesHallApp = ({ userProfileData }) => {
         const matchDate = selectedMatch.scheduledTime ? formatDateWithDay(selectedMatch.scheduledTime.toDate()) : 'neurčený';
         const matchStartTime = selectedMatch.scheduledTime ? formatTime(selectedMatch.scheduledTime) : '--:--';
         const category = categories.find(c => c.name === selectedMatch.categoryName);
+
+        // 🔴 UPRAVENÁ FUNKCIA: addMatchEvent - používa createPlayerReference
+        const addMatchEvent = async (localEventType, localEventTeam, localEventSubType, localPlayer) => {
+            if (!selectedMatch || !window.db) return;
+            
+            // Použijeme lokálne parametre alebo stavové premenné
+            const type = localEventType || eventType;
+            const team = localEventTeam || eventTeam;
+            const subType = localEventSubType || eventSubType;
+            const player = localPlayer || selectedPlayerForEvent;
+            
+            if (!type || !team) {
+                window.showGlobalNotification('Vyberte typ udalosti a tím', 'error');
+                return;
+            }
+        
+            // Pre penalty potrebujeme aj subType
+            if (type === 'penalty' && !subType) {
+                window.showGlobalNotification('Vyberte typ penalty (premenená/nepremenená)', 'error');
+                return;
+            }
+        
+            // Pre gól a vylúčenie potrebujeme vybraného hráča
+            if ((type === 'goal' || type === 'exclusion') && !player) {
+                window.showGlobalNotification('Vyberte hráča', 'error');
+                return;
+            }
+            
+            // Pre penalty potrebujeme vybraného hráča
+            if (type === 'penalty' && !player) {
+                window.showGlobalNotification('Vyberte hráča pre 7m hod', 'error');
+                return;
+            }
+        
+            try {
+                const eventsRef = collection(window.db, 'matchEvents');
+                
+                // Výpočet minúty a sekundy z celkového času v sekundách
+                const totalSeconds = matchTime;
+                const minute = Math.floor(totalSeconds / 60);
+                const second = totalSeconds % 60;
+                
+                // Formátovaný čas pre zobrazenie MM:SS
+                const formattedTime = `${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`;
+                
+                // Výpočet stavu pred gólom
+                let homeScoreBefore = matchScore.home;
+                let awayScoreBefore = matchScore.away;
+                let homeScoreAfter = matchScore.home;
+                let awayScoreAfter = matchScore.away;
+                
+                // Ak ide o gól alebo premenenú penaltu, aktualizujeme skóre
+                if ((type === 'goal') || (type === 'penalty' && subType === 'scored')) {
+                    if (team === 'home') {
+                        homeScoreAfter = homeScoreBefore + 1;
+                    } else if (team === 'away') {
+                        awayScoreAfter = awayScoreBefore + 1;
+                    }
+                }
+                
+                const eventData = {
+                    matchId: selectedMatch.id,
+                    type: type,
+                    team: team,
+                    minute: minute,
+                    second: second,
+                    formattedTime: formattedTime,
+                    timestamp: Timestamp.now(),
+                    createdBy: userProfileData?.email || 'unknown',
+                    createdByUid: userProfileData?.uid || null,
+                    // Uloženie stavu
+                    scoreBefore: {
+                        home: homeScoreBefore,
+                        away: awayScoreBefore
+                    },
+                    scoreAfter: {
+                        home: homeScoreAfter,
+                        away: awayScoreAfter
+                    }
+                };
+        
+                // 🔴 ZMENENÉ: Pridanie referencie na hráča pomocou createPlayerReference
+                if (player) {
+                    // Získame detail tímu podľa identifikátora
+                    const teamDetails = team === 'home' ? homeTeamDetails : awayTeamDetails;
+                    const teamIdentifier = team === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
+                    
+                    let playerRef = null;
+                    
+                    if (player.isStaff) {
+                        // Pre člena realizačného tímu
+                        playerRef = createPlayerReference(
+                            teamDetails, 
+                            teamIdentifier, 
+                            player, 
+                            true, 
+                            player.staffType, 
+                            player.staffIndex
+                        );
+                    } else {
+                        // Pre hráča
+                        playerRef = createPlayerReference(
+                            teamDetails, 
+                            teamIdentifier, 
+                            player, 
+                            false
+                        );
+                    }
+                    
+                    if (playerRef) {
+                        eventData.playerRef = playerRef;
+                    }
+                    
+                    if (type === 'yellow' || type === 'red' || type === 'blue' || type === 'exclusion') {
+                        eventData.cardType = type === 'exclusion' ? 'exclusion' : type;
+                    }
+                }
+        
+                // Pre penalty ukladáme subType
+                if (type === 'penalty') {
+                    eventData.subType = subType;
+                }
+        
+                await addDoc(eventsRef, eventData);
+                
+                window.showGlobalNotification(`Udalosť bola pridaná v čase ${formattedTime}`, 'success');
+                
+                // Reset po pridaní
+                setSelectedPlayerForEvent(null);
+                setEventType(null);
+                setEventTeam(null);
+                setEventSubType(null);
+                
+            } catch (error) {
+                console.error('Chyba pri pridávaní udalosti:', error);
+                window.showGlobalNotification('Chyba pri ukladaní udalosti', 'error');
+            }
+        };
         
         // Zistenie, či má zápas typ (finále, semifinále, o umiestnenie)
         const hasMatchType = selectedMatch.isPlacementMatch || selectedMatch.matchType;
