@@ -226,6 +226,8 @@ const matchesHallApp = ({ userProfileData }) => {
     const [endMatchModalOpen, setEndMatchModalOpen] = useState(false);
     const [endMatchId, setEndMatchId] = useState(null);
 
+    const [liveMatchData, setLiveMatchData] = useState({});
+
     const formatMatchTime = (seconds) => {
         // Ochrana proti nečíselným hodnotám
         if (typeof seconds !== 'number' || isNaN(seconds) || seconds < 0) {
@@ -904,6 +906,83 @@ const matchesHallApp = ({ userProfileData }) => {
         // Povolené len pre zápasy v stave 'scheduled' (Naplánované)
         return selectedMatch.status === 'scheduled';
     };
+
+    // NOVÝ useEffect PRE SLEDOVANIE ŽIVÝCH ZÁPASOV
+    useEffect(() => {
+        if (!window.db || matches.length === 0) return;
+    
+        // Filtrujeme prebiehajúce zápasy
+        const liveMatches = matches.filter(m => m.status === 'in-progress' || m.status === 'paused');
+        
+        if (liveMatches.length === 0) {
+            setLiveMatchData({});
+            return;
+        }
+    
+        // Pre každý živý zápas načítame udalosti
+        const unsubscribes = liveMatches.map(match => {
+            const eventsRef = collection(window.db, 'matchEvents');
+            const q = query(eventsRef, where("matchId", "==", match.id));
+            
+            return onSnapshot(q, (snapshot) => {
+                let homeScore = 0;
+                let awayScore = 0;
+                let lastEventTime = null;
+                let matchTime = 0;
+                
+                // Získame všetky udalosti a vypočítame skóre
+                const events = [];
+                snapshot.forEach((doc) => {
+                    const event = { id: doc.id, ...doc.data() };
+                    events.push(event);
+                    
+                    // Výpočet skóre
+                    if (event.type === 'goal' || (event.type === 'penalty' && event.subType === 'scored')) {
+                        if (event.team === 'home') homeScore++;
+                        else if (event.team === 'away') awayScore++;
+                    }
+                    
+                    // Získame najnovší čas udalosti
+                    if (event.minute !== undefined && event.second !== undefined) {
+                        const eventTimeInSeconds = event.minute * 60 + (event.second || 0);
+                        if (eventTimeInSeconds > matchTime) {
+                            matchTime = eventTimeInSeconds;
+                        }
+                    }
+                });
+                
+                // Ak máme startedAt, použijeme ho na výpočet aktuálneho času
+                if (match.startedAt) {
+                    const now = Timestamp.now();
+                    const startedAt = match.startedAt;
+                    
+                    if (match.status === 'paused' && match.pausedAt) {
+                        // Ak je pozastavené, čas je rozdiel medzi štartom a pozastavením + offset
+                        matchTime = Math.floor((match.pausedAt.seconds - startedAt.seconds)) + (match.manualTimeOffset || 0);
+                    } else {
+                        // Ak beží, čas je aktuálny rozdiel + offset
+                        matchTime = Math.floor((now.seconds - startedAt.seconds)) + (match.manualTimeOffset || 0);
+                    }
+                }
+                
+                setLiveMatchData(prev => ({
+                    ...prev,
+                    [match.id]: {
+                        time: matchTime,
+                        homeScore,
+                        awayScore,
+                        status: match.status
+                    }
+                }));
+            }, (error) => {
+                // Ticho ignorujeme chyby
+            });
+        });
+    
+        return () => {
+            unsubscribes.forEach(unsubscribe => unsubscribe());
+        };
+    }, [matches]);
             
     // UPRAVENÝ useEffect pre timer - automatické zastavenie na konci periódy
     useEffect(() => {
@@ -3490,6 +3569,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 // Zistenie, či je zápas v stave, ktorý nie je "Naplánované" ani "Odohrané"
                                 const isMatchInProgress = match.status === 'in-progress' || match.status === 'paused';
                                 
+                                // V časti s mapovaním zápasov (dayGroup.matches.map)
                                 return React.createElement(
                                     'div',
                                     { 
@@ -3509,7 +3589,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement('span', { className: 'font-mono font-medium' }, formatTime(match.scheduledTime))
                                         ),
                                         
-                                        // VS - ZOBRAZUJEME NÁZVY TÍMOV
+                                        // VS alebo aktuálny čas/skóre
                                         React.createElement(
                                             'div',
                                             { className: 'flex items-center gap-3 flex-1' },
@@ -3518,7 +3598,32 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 { className: 'font-medium text-gray-800 text-right flex-1' },
                                                 homeTeamName
                                             ),
-                                            React.createElement('span', { className: 'text-xs font-bold text-gray-400 px-2' }, 'VS'),
+                                            
+                                            // Zobrazenie stavu zápasu
+                                            liveMatchData[match.id] ? 
+                                                React.createElement(
+                                                    'div',
+                                                    { 
+                                                        className: 'flex items-center justify-center gap-2 px-3 py-1 min-w-[100px]',
+                                                        title: `Aktuálny čas: ${formatMatchTime(liveMatchData[match.id].time)}`
+                                                    },
+                                                    React.createElement(
+                                                        'span',
+                                                        { className: 'font-mono font-bold text-blue-600 text-sm' },
+                                                        `${liveMatchData[match.id].homeScore} : ${liveMatchData[match.id].awayScore}`
+                                                    ),
+                                                    React.createElement(
+                                                        'span',
+                                                        { className: 'font-mono text-xs text-gray-500' },
+                                                        `(${formatMatchTime(liveMatchData[match.id].time)})`
+                                                    )
+                                                ) :
+                                                React.createElement(
+                                                    'span',
+                                                    { className: 'text-xs font-bold text-gray-400 px-2' },
+                                                    'VS'
+                                                ),
+                                            
                                             React.createElement(
                                                 'span',
                                                 { className: 'font-medium text-gray-800 flex-1' },
@@ -3534,7 +3639,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             },
                                             groupOrTypeText
                                         ),
-            
+                                
                                         // Kategória (ak existuje)
                                         category && React.createElement(
                                             'span',
@@ -3548,14 +3653,14 @@ const matchesHallApp = ({ userProfileData }) => {
                                             category.name
                                         ),
                                         
-                                        // NOVÝ STĹPEC: Zelená šípka pre prebiehajúce zápasy
+                                        // Žltá šípka pre prebiehajúce zápasy (voliteľné - môžete ponechať alebo odstrániť)
                                         isMatchInProgress && React.createElement(
                                             'span',
                                             { 
                                                 className: 'inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-700',
                                                 title: 'Zápas práve prebieha'
                                             },
-                                            React.createElement('i', { className: 'fa-solid fa-play text-yellow-600 text-xs' }),
+                                            React.createElement('i', { className: 'fa-solid fa-play text-yellow-600 text-xs' })
                                             'Prebieha'
                                         )
                                     )
