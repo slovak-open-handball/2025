@@ -261,29 +261,10 @@ const matchesHallApp = ({ userProfileData }) => {
         try {
             const matchRef = doc(window.db, 'matches', matchId);
             
-            // Pred zastavením zistíme, či sme v prestávke alebo v hracom čase
-            const currentCategory = categories.find(c => c.name === selectedMatch?.categoryName);
-            if (currentCategory) {
-                const timeInfo = getMatchTimeInfo(matchTime, selectedMatch?.currentPeriod || 1, currentCategory);
-                
-                // Ak sme v prestávke, neukladáme pausedAt (čas sa nezvyšoval)
-                if (timeInfo.isInBreak) {
-                    await updateDoc(matchRef, {
-                        status: 'paused'
-                        // pausedAt neukladáme, lebo čas sa počas prestávky nezvyšoval
-                    });
-                } else {
-                    await updateDoc(matchRef, {
-                        status: 'paused',
-                        pausedAt: Timestamp.now()
-                    });
-                }
-            } else {
-                await updateDoc(matchRef, {
-                    status: 'paused',
-                    pausedAt: Timestamp.now()
-                });
-            }
+            await updateDoc(matchRef, {
+                status: 'paused',
+                pausedAt: Timestamp.now()
+            });
         
             // Zastavíme interval
             if (timerInterval) {
@@ -305,54 +286,23 @@ const matchesHallApp = ({ userProfileData }) => {
         try {
             const matchRef = doc(window.db, 'matches', matchId);
             
-            // Pri obnovení potrebujeme zistiť, či sme boli pozastavení počas prestávky alebo hracieho času
-            if (selectedMatch) {
+            if (selectedMatch && selectedMatch.pausedAt && selectedMatch.startedAt) {
                 const now = Timestamp.now();
+                const pausedAt = selectedMatch.pausedAt;
+                const startedAt = selectedMatch.startedAt;
                 
-                if (selectedMatch.pausedAt && selectedMatch.startedAt) {
-                    const pausedAt = selectedMatch.pausedAt;
-                    const startedAt = selectedMatch.startedAt;
-                    
-                    // Čas, ktorý uplynul do pozastavenia
-                    const elapsedBeforePause = pausedAt.seconds - startedAt.seconds;
-                    
-                    // Zistíme, či sme boli v prestávke
-                    const currentCategory = categories.find(c => c.name === selectedMatch.categoryName);
-                    if (currentCategory) {
-                        const timeInfoAtPause = getMatchTimeInfo(elapsedBeforePause + (selectedMatch.manualTimeOffset || 0), 
-                                                                 selectedMatch.currentPeriod || 1, 
-                                                                 currentCategory);
-                        
-                        if (timeInfoAtPause.isInBreak) {
-                            // Ak sme boli v prestávke, startedAt nemeníme
-                            await updateDoc(matchRef, {
-                                status: 'in-progress',
-                                pausedAt: null
-                            });
-                        } else {
-                            // Ak sme boli v hracom čase, upravíme startedAt
-                            const newStartedAtSeconds = now.seconds - elapsedBeforePause;
-                            await updateDoc(matchRef, {
-                                status: 'in-progress',
-                                pausedAt: null,
-                                startedAt: new Timestamp(newStartedAtSeconds, 0)
-                            });
-                        }
-                    } else {
-                        // Ak nemáme kategóriu, použijeme pôvodnú logiku
-                        const newStartedAtSeconds = now.seconds - elapsedBeforePause;
-                        await updateDoc(matchRef, {
-                            status: 'in-progress',
-                            pausedAt: null,
-                            startedAt: new Timestamp(newStartedAtSeconds, 0)
-                        });
-                    }
-                } else {
-                    await updateDoc(matchRef, {
-                        status: 'in-progress',
-                        pausedAt: null
-                    });
-                }
+                // Čas, ktorý uplynul do pozastavenia
+                const elapsedBeforePause = pausedAt.seconds - startedAt.seconds;
+                
+                // Nový startedAt nastavíme tak, aby elapsedSeconds od nového startedAt do now
+                // bol rovný elapsedBeforePause
+                const newStartedAtSeconds = now.seconds - elapsedBeforePause;
+                
+                await updateDoc(matchRef, {
+                    status: 'in-progress',
+                    pausedAt: null,
+                    startedAt: new Timestamp(newStartedAtSeconds, 0)
+                });
             } else {
                 await updateDoc(matchRef, {
                     status: 'in-progress',
@@ -486,137 +436,44 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     };
 
-    // UPRAVENÁ FUNKCIA: getMatchTimeInfo - vracia informácie o čase
+    // ZJEDNODUŠENÁ FUNKCIA: getMatchTimeInfo - bez prestávok
     const getMatchTimeInfo = (totalSeconds, currentPeriod, category) => {
         if (!category) return { 
-            cleanTime: 0, 
-            period: 1, 
-            elapsedInPeriod: 0, 
-            isInPlayingTime: false, 
-            isInBreak: false,
+            cleanTime: totalSeconds, 
+            period: currentPeriod || 1, 
+            elapsedInPeriod: totalSeconds, 
+            isInPlayingTime: true,
             totalTime: totalSeconds
         };
         
         const periodDuration = (category.periodDuration || 20) * 60;
-        const breakDuration = (category.breakDuration || 2) * 60;
         const periods = category.periods || 2;
         
-        let remainingSeconds = totalSeconds;
-        let currentPeriod_ = 1;
-        let elapsedInPeriod_ = 0;
-        let isInPlayingTime_ = false;
-        let isInBreak_ = false;
-        let cleanTime_ = 0;
+        // Jednoduchý výpočet - žiadne prestávky    let currentPeriod_ = Math.floor(totalSeconds / periodDuration) + 1;
+        if (currentPeriod_ > periods) currentPeriod_ = periods;
         
-        for (let i = 1; i <= periods; i++) {
-            // Hrací čas i-tej periódy
-            if (remainingSeconds >= periodDuration) {
-                // Prešli sme celú periódu
-                cleanTime_ += periodDuration;
-                remainingSeconds -= periodDuration;
-                elapsedInPeriod_ = periodDuration;
-                
-                // Ak to nie je posledná perióda, odpočítame prestávku
-                if (i < periods) {
-                    if (remainingSeconds >= breakDuration) {
-                        remainingSeconds -= breakDuration;
-                        // Po prestávke začíname ďalšiu periódu
-                        currentPeriod_ = i + 1;
-                        elapsedInPeriod_ = 0;
-                    } else {
-                        // Sme v prestávke
-                        isInBreak_ = true;
-                        currentPeriod_ = i;
-                        elapsedInPeriod_ = periodDuration + remainingSeconds;
-                        break;
-                    }
-                } else {
-                    // Sme po poslednej perióde
-                    currentPeriod_ = i;
-                    elapsedInPeriod_ = periodDuration;
-                    break;
-                }
-            } else {
-                // Sme v hracom čase i-tej periódy
-                cleanTime_ += remainingSeconds;
-                isInPlayingTime_ = true;
-                currentPeriod_ = i;
-                elapsedInPeriod_ = remainingSeconds;
-                break;
-            }
+        let elapsedInPeriod_ = totalSeconds % periodDuration;
+        if (currentPeriod_ > periods) {
+            elapsedInPeriod_ = periodDuration;
         }
         
         return {
-            cleanTime: cleanTime_,
+            cleanTime: totalSeconds,
             period: currentPeriod_,
             elapsedInPeriod: elapsedInPeriod_,
-            isInPlayingTime: isInPlayingTime_,
-            isInBreak: isInBreak_,
+            isInPlayingTime: true, // Vždy true, lebo nemáme prestávky
             totalTime: totalSeconds
         };
     };
 
-    // NOVÁ FUNKCIA: Konverzia čistého hracieho času na celkový čas
+    // ZJEDNODUŠENÁ FUNKCIA: Konverzia (už nie je potrebná, ale ponecháme pre kompatibilitu)
     const convertCleanToTotalTime = (cleanSeconds, currentPeriod, category) => {
-        if (!category) return cleanSeconds;
-        
-        const periodDuration = (category.periodDuration || 20) * 60;
-        const breakDuration = (category.breakDuration || 2) * 60;
-        
-        let totalSeconds = 0;
-        let remainingClean = cleanSeconds;
-        let period = 1;
-        
-        while (remainingClean > 0 && period <= currentPeriod) {
-            // Pridáme hrací čas aktuálnej periódy
-            const playingInThisPeriod = Math.min(remainingClean, periodDuration);
-            totalSeconds += playingInThisPeriod;
-            remainingClean -= playingInThisPeriod;
-            
-            // Ak sme dokončili periódu a nie je to posledná, pridáme prestávku
-            if (remainingClean > 0 && period < currentPeriod) {
-                totalSeconds += breakDuration;
-            }
-            
-            period++;
-        }
-        
-        // Ak sme ešte nedosiahli aktuálnu periódu, pridáme zostávajúce periódy a prestávky
-        while (period <= currentPeriod) {
-            totalSeconds += periodDuration;
-            if (period < currentPeriod) {
-                totalSeconds += breakDuration;
-            }
-            period++;
-        }
-        
-        return totalSeconds;
+        return cleanSeconds; // Celkový čas = čistý čas
     };
     
-    // NOVÁ FUNKCIA: Konverzia celkového času na čistý hrací čas
+    // ZJEDNODUŠENÁ FUNKCIA: Konverzia (už nie je potrebná, ale ponecháme pre kompatibilitu)
     const convertTotalToCleanTime = (totalSeconds, category) => {
-        if (!category) return totalSeconds;
-        
-        const periodDuration = (category.periodDuration || 20) * 60;
-        const breakDuration = (category.breakDuration || 2) * 60;
-        
-        let cleanTime = 0;
-        let remainingSeconds = totalSeconds;
-        
-        while (remainingSeconds > 0) {
-            // Pridáme hrací čas aktuálnej periódy (maximálne periodDuration)
-            const playingSegment = Math.min(remainingSeconds, periodDuration);
-            cleanTime += playingSegment;
-            remainingSeconds -= playingSegment;
-            
-            // Ak ešte zostáva čas, odpočítame prestávku (ale nepridávame ju do cleanTime)
-            if (remainingSeconds > 0) {
-                const breakSegment = Math.min(remainingSeconds, breakDuration);
-                remainingSeconds -= breakSegment;
-            }
-        }
-        
-        return cleanTime;
+        return totalSeconds; // Čistý čas = celkový čas
     };
     
     // NOVÁ FUNKCIA: Výpočet čistého hracieho času (bez prestávok)
@@ -647,6 +504,7 @@ const matchesHallApp = ({ userProfileData }) => {
         return cleanTime;
     };
 
+    // ZJEDNODUŠENÁ FUNKCIA: addMinute
     const addMinute = () => {
         // Získame kategóriu pre aktuálny zápas
         const currentCategory = selectedMatch ? categories.find(c => c.name === selectedMatch.categoryName) : null;
@@ -659,42 +517,20 @@ const matchesHallApp = ({ userProfileData }) => {
         const periodDuration = (currentCategory.periodDuration || 20) * 60;
         const currentPeriod = selectedMatch?.currentPeriod || 1;
         
-        // Získame informácie o aktuálnom čase
-        const timeInfo = getMatchTimeInfo(matchTime, currentPeriod, currentCategory);
-        
-        // Povolíme úpravu len počas hracieho času
-        if (!timeInfo.isInPlayingTime) {
-            if (timeInfo.isInBreak) {
-                window.showGlobalNotification('Nie je možné pridať čas počas prestávky', 'error');
-            } else {
-                window.showGlobalNotification('Nie je možné pridať čas mimo hracej plochy', 'error');
-            }
-            return;
-        }
-        
         // Skontrolujeme, či pridanie minúty nepresiahne koniec aktuálnej periódy
-        if (timeInfo.elapsedInPeriod + 60 > periodDuration) {
-            const remainingSeconds = periodDuration - timeInfo.elapsedInPeriod;
+        const elapsedInPeriod = matchTime % periodDuration;
+        if (elapsedInPeriod + 60 > periodDuration) {
+            const remainingSeconds = periodDuration - elapsedInPeriod;
             const remainingMinutes = Math.floor(remainingSeconds / 60);
             const remainingSecs = remainingSeconds % 60;
             
-            let message = `Nie je možné pridať celú minútu - do konca ${timeInfo.period}. periódy zostáva len ${remainingMinutes}:${remainingSecs.toString().padStart(2, '0')}`;
+            let message = `Nie je možné pridať celú minútu - do konca ${currentPeriod}. periódy zostáva len ${remainingMinutes}:${remainingSecs.toString().padStart(2, '0')}`;
             window.showGlobalNotification(message, 'error');
             return;
         }
         
-        // Vypočítame nový čistý čas (pripočítame 60 sekúnd)
-        const newCleanTime = timeInfo.cleanTime + 60;
-        
-        // Konvertujeme na celkový čas
-        const newTotalTime = convertCleanToTotalTime(newCleanTime, currentPeriod, currentCategory);
-        
-        // Skontrolujeme, či sa nový čas nachádza v hracom čase (nie v prestávke)
-        const newTimeInfo = getMatchTimeInfo(newTotalTime, currentPeriod, currentCategory);
-        if (!newTimeInfo.isInPlayingTime) {
-            window.showGlobalNotification('Nie je možné pridať čas - dostali by ste sa do prestávky', 'error');
-            return;
-        }
+        // Vypočítame nový čas
+        const newTotalTime = matchTime + 60;
         
         // Vypočítame nový offset
         let newOffset;
@@ -722,13 +558,13 @@ const matchesHallApp = ({ userProfileData }) => {
         
         // Aktualizujeme stavy
         setMatchTime(newTotalTime);
-        setCleanPlayingTime(newCleanTime);
+        setCleanPlayingTime(newTotalTime);
         if (newOffset !== undefined) {
             setManualTimeOffset(newOffset);
         }
     };
     
-    // UPRAVENÁ FUNKCIA: subtractMinute
+    // ZJEDNODUŠENÁ FUNKCIA: subtractMinute
     const subtractMinute = () => {
         // Získame kategóriu pre aktuálny zápas
         const currentCategory = selectedMatch ? categories.find(c => c.name === selectedMatch.categoryName) : null;
@@ -738,49 +574,20 @@ const matchesHallApp = ({ userProfileData }) => {
             return;
         }
         
-        const periodDuration = (currentCategory.periodDuration || 20) * 60;
         const currentPeriod = selectedMatch?.currentPeriod || 1;
         
-        // Získame informácie o aktuálnom čase
-        const timeInfo = getMatchTimeInfo(matchTime, currentPeriod, currentCategory);
-        
-        // Povolíme úpravu len počas hracieho času
-        if (!timeInfo.isInPlayingTime) {
-            if (timeInfo.isInBreak) {
-                window.showGlobalNotification('Nie je možné odpočítať čas počas prestávky', 'error');
+        // Skontrolujeme, či odčítanie minúty neklesne pod 0
+        if (matchTime < 60) {
+            if (matchTime === 0) {
+                window.showGlobalNotification('Nie je možné odčítať minútu - čas je 0', 'error');
             } else {
-                window.showGlobalNotification('Nie je možné odpočítať čas mimo hracej plochy', 'error');
+                window.showGlobalNotification(`Nie je možné odčítať celú minútu - aktuálny čas je ${formatMatchTime(matchTime)}`, 'error');
             }
             return;
         }
         
-        // Skontrolujeme, či odčítanie minúty neklesne pod začiatok aktuálnej periódy
-        if (timeInfo.elapsedInPeriod < 60) {
-            const remainingSeconds = timeInfo.elapsedInPeriod;
-            const remainingMinutes = Math.floor(remainingSeconds / 60);
-            const remainingSecs = remainingSeconds % 60;
-            
-            if (remainingSeconds === 0) {
-                window.showGlobalNotification(`Nie je možné odčítať minútu - ste presne na začiatku ${timeInfo.period}. periódy`, 'error');
-            } else {
-                let message = `Nie je možné odčítať celú minútu - od začiatku ${timeInfo.period}. periódy uplynulo len ${remainingMinutes}:${remainingSecs.toString().padStart(2, '0')}`;
-                window.showGlobalNotification(message, 'error');
-            }
-            return;
-        }
-        
-        // Vypočítame nový čistý čas (odpočítame 60 sekúnd)
-        const newCleanTime = timeInfo.cleanTime - 60;
-        
-        // Konvertujeme na celkový čas
-        const newTotalTime = convertCleanToTotalTime(newCleanTime, currentPeriod, currentCategory);
-        
-        // Skontrolujeme, či sa nový čas nachádza v hracom čase (nie v prestávke)
-        const newTimeInfo = getMatchTimeInfo(newTotalTime, currentPeriod, currentCategory);
-        if (!newTimeInfo.isInPlayingTime) {
-            window.showGlobalNotification('Nie je možné odpočítať čas - dostali by ste sa do prestávky', 'error');
-            return;
-        }
+        // Vypočítame nový čas
+        const newTotalTime = matchTime - 60;
         
         // Vypočítame nový offset
         let newOffset;
@@ -808,13 +615,13 @@ const matchesHallApp = ({ userProfileData }) => {
         
         // Aktualizujeme stavy
         setMatchTime(newTotalTime);
-        setCleanPlayingTime(newCleanTime);
+        setCleanPlayingTime(newTotalTime);
         if (newOffset !== undefined) {
             setManualTimeOffset(newOffset);
         }
     };
     
-    // UPRAVENÁ FUNKCIA: addSecond
+    // ZJEDNODUŠENÁ FUNKCIA: addSecond
     const addSecond = () => {
         // Získame kategóriu pre aktuálny zápas
         const currentCategory = selectedMatch ? categories.find(c => c.name === selectedMatch.categoryName) : null;
@@ -827,38 +634,16 @@ const matchesHallApp = ({ userProfileData }) => {
         const periodDuration = (currentCategory.periodDuration || 20) * 60;
         const currentPeriod = selectedMatch?.currentPeriod || 1;
         
-        // Získame informácie o aktuálnom čase
-        const timeInfo = getMatchTimeInfo(matchTime, currentPeriod, currentCategory);
-        
-        // Povolíme úpravu len počas hracieho času
-        if (!timeInfo.isInPlayingTime) {
-            if (timeInfo.isInBreak) {
-                window.showGlobalNotification('Nie je možné pridať čas počas prestávky', 'error');
-            } else {
-                window.showGlobalNotification('Nie je možné pridať čas mimo hracej plochy', 'error');
-            }
-            return;
-        }
-        
         // Skontrolujeme, či pridanie sekundy nepresiahne koniec aktuálnej periódy
-        if (timeInfo.elapsedInPeriod + 1 > periodDuration) {
-            const remainingSeconds = periodDuration - timeInfo.elapsedInPeriod;
-            window.showGlobalNotification(`Nie je možné pridať sekundu - do konca ${timeInfo.period}. periódy zostáva už len ${remainingSeconds} sekúnd`, 'error');
+        const elapsedInPeriod = matchTime % periodDuration;
+        if (elapsedInPeriod + 1 > periodDuration) {
+            const remainingSeconds = periodDuration - elapsedInPeriod;
+            window.showGlobalNotification(`Nie je možné pridať sekundu - do konca ${currentPeriod}. periódy zostáva už len ${remainingSeconds} sekúnd`, 'error');
             return;
         }
         
-        // Vypočítame nový čistý čas (pripočítame 1 sekundu)
-        const newCleanTime = timeInfo.cleanTime + 1;
-        
-        // Konvertujeme na celkový čas
-        const newTotalTime = convertCleanToTotalTime(newCleanTime, currentPeriod, currentCategory);
-        
-        // Skontrolujeme, či sa nový čas nachádza v hracom čase (nie v prestávke)
-        const newTimeInfo = getMatchTimeInfo(newTotalTime, currentPeriod, currentCategory);
-        if (!newTimeInfo.isInPlayingTime) {
-            window.showGlobalNotification('Nie je možné pridať čas - dostali by ste sa do prestávky', 'error');
-            return;
-        }
+        // Vypočítame nový čas
+        const newTotalTime = matchTime + 1;
         
         // Vypočítame nový offset
         let newOffset;
@@ -886,13 +671,13 @@ const matchesHallApp = ({ userProfileData }) => {
         
         // Aktualizujeme stavy
         setMatchTime(newTotalTime);
-        setCleanPlayingTime(newCleanTime);
+        setCleanPlayingTime(newTotalTime);
         if (newOffset !== undefined) {
             setManualTimeOffset(newOffset);
         }
     };
     
-    // UPRAVENÁ FUNKCIA: subtractSecond
+    // ZJEDNODUŠENÁ FUNKCIA: subtractSecond
     const subtractSecond = () => {
         // Získame kategóriu pre aktuálny zápas
         const currentCategory = selectedMatch ? categories.find(c => c.name === selectedMatch.categoryName) : null;
@@ -902,43 +687,14 @@ const matchesHallApp = ({ userProfileData }) => {
             return;
         }
         
-        const currentPeriod = selectedMatch?.currentPeriod || 1;
-        
-        // Získame informácie o aktuálnom čase
-        const timeInfo = getMatchTimeInfo(matchTime, currentPeriod, currentCategory);
-        
-        // Povolíme úpravu len počas hracieho času
-        if (!timeInfo.isInPlayingTime) {
-            if (timeInfo.isInBreak) {
-                window.showGlobalNotification('Nie je možné odpočítať čas počas prestávky', 'error');
-            } else {
-                window.showGlobalNotification('Nie je možné odpočítať čas mimo hracej plochy', 'error');
-            }
+        // Skontrolujeme, či odčítanie sekundy neklesne pod 0
+        if (matchTime < 1) {
+            window.showGlobalNotification('Nie je možné odčítať sekundu - čas je 0', 'error');
             return;
         }
         
-        // Skontrolujeme, či odčítanie sekundy neklesne pod začiatok aktuálnej periódy
-        if (timeInfo.elapsedInPeriod < 1) {
-            if (timeInfo.elapsedInPeriod === 0) {
-                window.showGlobalNotification(`Nie je možné odčítať sekundu - ste presne na začiatku ${timeInfo.period}. periódy`, 'error');
-            } else {
-                window.showGlobalNotification(`Nie je možné odčítať sekundu - od začiatku ${timeInfo.period}. periódy uplynulo len ${timeInfo.elapsedInPeriod} sekúnd`, 'error');
-            }
-            return;
-        }
-        
-        // Vypočítame nový čistý čas (odpočítame 1 sekundu)
-        const newCleanTime = timeInfo.cleanTime - 1;
-        
-        // Konvertujeme na celkový čas
-        const newTotalTime = convertCleanToTotalTime(newCleanTime, currentPeriod, currentCategory);
-        
-        // Skontrolujeme, či sa nový čas nachádza v hracom čase (nie v prestávke)
-        const newTimeInfo = getMatchTimeInfo(newTotalTime, currentPeriod, currentCategory);
-        if (!newTimeInfo.isInPlayingTime) {
-            window.showGlobalNotification('Nie je možné odpočítať čas - dostali by ste sa do prestávky', 'error');
-            return;
-        }
+        // Vypočítame nový čas
+        const newTotalTime = matchTime - 1;
         
         // Vypočítame nový offset
         let newOffset;
@@ -966,7 +722,7 @@ const matchesHallApp = ({ userProfileData }) => {
         
         // Aktualizujeme stavy
         setMatchTime(newTotalTime);
-        setCleanPlayingTime(newCleanTime);
+        setCleanPlayingTime(newTotalTime);
         if (newOffset !== undefined) {
             setManualTimeOffset(newOffset);
         }
@@ -995,7 +751,7 @@ const matchesHallApp = ({ userProfileData }) => {
             
             // Dĺžka jednej periódy v sekundách
             const periodDurationSeconds = (currentCategory.periodDuration || 20) * 60;
-            const breakDurationSeconds = (currentCategory.breakDuration || 2) * 60;
+            const periods = currentCategory.periods || 2;
             
             const interval = setInterval(() => {
                 const now = Timestamp.now();
@@ -1008,37 +764,19 @@ const matchesHallApp = ({ userProfileData }) => {
                 const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
                 const elapsedSeconds = baseSeconds + manualTimeOffset;
                 
-                // Získame informácie o aktuálnom čase
-                const timeInfo = getMatchTimeInfo(elapsedSeconds, currentPeriod, currentCategory);
-                
-                // Aktualizujeme celkový čas
+                // Aktualizujeme čas
                 setMatchTime(elapsedSeconds);
+                setCleanPlayingTime(elapsedSeconds);
                 
-                // Aktualizujeme čistý hrací čas pre zobrazenie
-                setCleanPlayingTime(timeInfo.cleanTime);
+                // Kontrola konca zápasu (všetky periódy)
+                const totalMatchTime = periods * periodDurationSeconds;
                 
-                // Ak sme v prestávke, timer beží ďalej (prestávka sa počíta do celkového času)
-                // Ale kontrolujeme, či sme neprekročili koniec periódy + prestávky
-                
-                // Kontrola konca aktuálnej periódy (v celkovom čase)
-                const endOfCurrentPeriodTotal = currentPeriod * periodDurationSeconds + (currentPeriod - 1) * breakDurationSeconds;
-                
-                if (elapsedSeconds >= endOfCurrentPeriodTotal) {
-                    console.log(`Dosiahnutý koniec ${currentPeriod}. periódy (celkový čas), elapsedSeconds: ${elapsedSeconds} >= ${endOfCurrentPeriodTotal}`);
+                if (elapsedSeconds >= totalMatchTime) {
+                    console.log('Dosiahnutý koniec zápasu');
                     
-                    // Ak to nie je posledná perióda
-                    if (currentPeriod < currentCategory.periods) {
-                        console.log(`Koniec ${currentPeriod}. periódy - prestávka`);
-                        
-                        // Zastavíme časovač (prestávka)
-                        stopMatchTimer(matchId);
-                        window.showGlobalNotification(`Koniec ${currentPeriod}. periódy - prestávka ${currentCategory.breakDuration} min`, 'info');
-                    } else {
-                        // Ak je to posledná perióda, ukončíme zápas
-                        console.log('Posledná perióda, ukončujem zápas');
-                        stopMatchTimer(matchId);
-                        window.showGlobalNotification(`Koniec zápasu`, 'info');
-                    }
+                    // Ukončíme zápas
+                    stopMatchTimer(matchId);
+                    window.showGlobalNotification('Koniec zápasu', 'info');
                 }
             }, 1000);
             
@@ -1069,7 +807,7 @@ const matchesHallApp = ({ userProfileData }) => {
     // UPRAVENÝ useEffect pre inicializáciu času
     useEffect(() => {
         console.log('Inicializácia času pre zápas:', selectedMatch);
-    
+
         if (selectedMatch && selectedMatch.startedAt) {
             const now = Timestamp.now();
             const startedAt = selectedMatch.startedAt;
@@ -1085,32 +823,8 @@ const matchesHallApp = ({ userProfileData }) => {
             
             const totalTime = baseTime + (selectedMatch.manualTimeOffset || 0);
             
-            // Získame informácie o aktuálnom čase
-            const currentCategory = categories.find(c => c.name === selectedMatch.categoryName);
-            if (currentCategory) {
-                const timeInfo = getMatchTimeInfo(totalTime, selectedMatch.currentPeriod || 1, currentCategory);
-                
-                // Ak sme v prestávke, nastavíme celkový čas na koniec periódy
-                if (timeInfo.isInBreak) {
-                    const periodDuration = (currentCategory.periodDuration || 20) * 60;
-                    const breakDuration = (currentCategory.breakDuration || 2) * 60;
-                    const endOfPeriodTime = timeInfo.period * periodDuration + (timeInfo.period - 1) * breakDuration;
-                    setMatchTime(endOfPeriodTime);
-                    
-                    // Vypočítame čistý čas pre zobrazenie
-                    const cleanTime = convertTotalToCleanTime(endOfPeriodTime, currentCategory);
-                    setCleanPlayingTime(cleanTime);
-                } else {
-                    setMatchTime(totalTime);
-                    
-                    // Vypočítame čistý čas pre zobrazenie
-                    const cleanTime = convertTotalToCleanTime(totalTime, currentCategory);
-                    setCleanPlayingTime(cleanTime);
-                }
-            } else {
-                setMatchTime(totalTime);
-                setCleanPlayingTime(totalTime);
-            }
+            setMatchTime(totalTime);
+            setCleanPlayingTime(totalTime);
             
         } else {
             console.log('Žiadny startedAt, nastavujem 0');
@@ -1136,18 +850,13 @@ const matchesHallApp = ({ userProfileData }) => {
         if (selectedMatch && selectedMatch.status === 'in-progress' && selectedMatch.startedAt && currentCategory) {
             console.log('Spúšťam timer pre zápas v priebehu');
             
-            // Uložíme startedAt do premennej mimo interval
             const startedAt = selectedMatch.startedAt;
             const matchId = selectedMatch.id;
             let currentPeriod = selectedMatch.currentPeriod || 1;
             
             // Dĺžka jednej periódy v sekundách
             const periodDurationSeconds = (currentCategory.periodDuration || 20) * 60;
-            
-            // Čas, kedy má skončiť aktuálna perióda (koniec čistého hracieho času pre túto periódu)
-            const endOfCurrentPeriod = currentPeriod * periodDurationSeconds;
-            
-            console.log(`Perióda ${currentPeriod}/${currentCategory.periods}, koniec periódy: ${endOfCurrentPeriod}s`);
+            const periods = currentCategory.periods || 2;
             
             const interval = setInterval(() => {
                 const now = Timestamp.now();
@@ -1159,32 +868,20 @@ const matchesHallApp = ({ userProfileData }) => {
                 
                 const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
                 const elapsedSeconds = baseSeconds + manualTimeOffset;
-    
-    //                console.log('Timer: baseSeconds =', baseSeconds, 'manualTimeOffset =', manualTimeOffset, 'elapsedSeconds =', elapsedSeconds);
                 
-                // OVERENIE: Priamo nastavujeme matchTime
+                // Aktualizujeme čas
                 setMatchTime(elapsedSeconds);
+                setCleanPlayingTime(elapsedSeconds);
                 
-                // Automatické zastavenie pri dosiahnutí KONCA AKTUÁLNEJ PERIÓDY (čistý hrací čas)
-                if (elapsedSeconds >= endOfCurrentPeriod) {
-                    console.log(`Dosiahnutý koniec ${currentPeriod}. periódy, elapsedSeconds: ${elapsedSeconds} >= ${endOfCurrentPeriod}`);
+                // Kontrola konca zápasu (všetky periódy)
+                const totalMatchTime = periods * periodDurationSeconds;
+                
+                if (elapsedSeconds >= totalMatchTime) {
+                    console.log('Dosiahnutý koniec zápasu');
                     
-                    // Ak to nie je posledná perióda
-                    if (currentPeriod < currentCategory.periods) {
-                        console.log(`Koniec ${currentPeriod}. periódy - prestávka`);
-                        
-                        // Zastavíme časovač (prestávka)
-                        stopMatchTimer(matchId);
-                        window.showGlobalNotification(`Koniec ${currentPeriod}. periódy - prestávka ${currentCategory.breakDuration} min`, 'info');
-                        
-                        // Počkáme na manuálne spustenie ďalšej periódy
-                        // increasePeriod sa zavolá manuálne cez tlačidlo "Perióda +"
-                    } else {
-                        // Ak je to posledná perióda, ukončíme zápas
-                        console.log('Posledná perióda, ukončujem zápas');
-                        stopMatchTimer(matchId);
-                        window.showGlobalNotification(`Koniec zápasu`, 'info');
-                    }
+                    // Ukončíme zápas
+                    stopMatchTimer(matchId);
+                    window.showGlobalNotification('Koniec zápasu', 'info');
                 }
             }, 1000);
             
