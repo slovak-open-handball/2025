@@ -250,7 +250,7 @@ const matchesHallApp = ({ userProfileData }) => {
             });
             window.showGlobalNotification('Čas zápasu spustený', 'success');
         } catch (error) {
-            console.error('Chyba pri spúšťaní časovača:', error);
+//            console.error('Chyba pri spúšťaní časovača:', error);
             window.showGlobalNotification('Chyba pri spúšťaní časovača', 'error');
         }
     };
@@ -275,7 +275,7 @@ const matchesHallApp = ({ userProfileData }) => {
             setMatchPaused(true);
             window.showGlobalNotification('Čas zápasu pozastavený', 'success');
         } catch (error) {
-            console.error('Chyba pri pozastavovaní časovača:', error);
+//            console.error('Chyba pri pozastavovaní časovača:', error);
             window.showGlobalNotification('Chyba pri pozastavovaní časovača', 'error');
         }
     };
@@ -313,7 +313,7 @@ const matchesHallApp = ({ userProfileData }) => {
             setMatchPaused(false);
             window.showGlobalNotification('Čas zápasu obnovený', 'success');
         } catch (error) {
-            console.error('Chyba pri obnovovaní časovača:', error);
+//            console.error('Chyba pri obnovovaní časovača:', error);
             window.showGlobalNotification('Chyba pri obnovovaní časovača', 'error');
         }
     };
@@ -334,7 +334,7 @@ const matchesHallApp = ({ userProfileData }) => {
             });
             window.showGlobalNotification('Zápas bol ukončený', 'success');
         } catch (error) {
-            console.error('Chyba pri ukončovaní zápasu:', error);
+//            console.error('Chyba pri ukončovaní zápasu:', error);
             window.showGlobalNotification('Chyba pri ukončovaní zápasu', 'error');
         }
     };
@@ -383,7 +383,7 @@ const matchesHallApp = ({ userProfileData }) => {
             setMatchPaused(false);
             window.showGlobalNotification('Čas zápasu resetovaný', 'success');
         } catch (error) {
-            console.error('Chyba pri resetovaní časovača:', error);
+//            console.error('Chyba pri resetovaní časovača:', error);
             window.showGlobalNotification('Chyba pri resetovaní časovača', 'error');
         }
     };
@@ -410,7 +410,7 @@ const matchesHallApp = ({ userProfileData }) => {
             });
             window.showGlobalNotification(`Perióda zmenená na ${currentPeriod + 1}`, 'success');
         } catch (error) {
-            console.error('Chyba pri zvyšovaní periódy:', error);
+//            console.error('Chyba pri zvyšovaní periódy:', error);
             window.showGlobalNotification('Chyba pri zmene periódy', 'error');
         }
     };
@@ -431,7 +431,7 @@ const matchesHallApp = ({ userProfileData }) => {
             });
             window.showGlobalNotification(`Perióda zmenená na ${currentPeriod - 1}`, 'success');
         } catch (error) {
-            console.error('Chyba pri znižovaní periódy:', error);
+//            console.error('Chyba pri znižovaní periódy:', error);
             window.showGlobalNotification('Chyba pri zmene periódy', 'error');
         }
     };
@@ -556,7 +556,9 @@ const matchesHallApp = ({ userProfileData }) => {
             const matchRef = doc(window.db, 'matches', selectedMatch.id);
             updateDoc(matchRef, {
                 manualTimeOffset: newOffset
-            }).catch(error => console.error('Chyba pri ukladaní offsetu:', error));
+            }).catch(error => {
+//                console.error('Chyba pri ukladaní offsetu:', error)
+            });
         }
         
         // Aktualizujeme stavy
@@ -618,7 +620,9 @@ const matchesHallApp = ({ userProfileData }) => {
             const matchRef = doc(window.db, 'matches', selectedMatch.id);
             updateDoc(matchRef, {
                 manualTimeOffset: newOffset
-            }).catch(error => console.error('Chyba pri ukladaní offsetu:', error));
+            }).catch(error => {
+//                 console.error('Chyba pri ukladaní offsetu:', error)
+            });
         }
         
         // Aktualizujeme stavy
@@ -677,7 +681,9 @@ const matchesHallApp = ({ userProfileData }) => {
             const matchRef = doc(window.db, 'matches', selectedMatch.id);
             updateDoc(matchRef, {
                 manualTimeOffset: newOffset
-            }).catch(error => console.error('Chyba pri ukladaní offsetu:', error));
+            }).catch(error => {
+//                console.error('Chyba pri ukladaní offsetu:', error)
+            });
         }
         
         // Aktualizujeme stavy
@@ -735,7 +741,9 @@ const matchesHallApp = ({ userProfileData }) => {
             const matchRef = doc(window.db, 'matches', selectedMatch.id);
             updateDoc(matchRef, {
                 manualTimeOffset: newOffset
-            }).catch(error => console.error('Chyba pri ukladaní offsetu:', error));
+            }).catch(error => {
+//                console.error('Chyba pri ukladaní offsetu:', error)
+            });
         }
         
         // Aktualizujeme stavy
@@ -899,7 +907,7 @@ const matchesHallApp = ({ userProfileData }) => {
             
     // UPRAVENÝ useEffect pre timer - automatické zastavenie na konci periódy
     useEffect(() => {
-        console.log('Timer useEffect - stav:', selectedMatch?.status, 'matchTime:', matchTime);
+//        console.log('Timer useEffect - stav:', selectedMatch?.status, 'matchTime:', matchTime);
         
         // Vymažeme existujúci interval
         if (timerInterval) {
@@ -912,7 +920,7 @@ const matchesHallApp = ({ userProfileData }) => {
         
         // Spustíme nový interval len ak je zápas v priebehu
         if (selectedMatch && selectedMatch.status === 'in-progress' && selectedMatch.startedAt && currentCategory) {
-            console.log('Spúšťam timer pre zápas v priebehu');
+//            console.log('Spúšťam timer pre zápas v priebehu');
             
             const startedAt = selectedMatch.startedAt;
             const matchId = selectedMatch.id;
@@ -925,7 +933,7 @@ const matchesHallApp = ({ userProfileData }) => {
             // Vypočítame koniec aktuálnej periódy (v sekundách)
             const endOfCurrentPeriod = currentPeriod * periodDurationSeconds;
             
-            console.log(`Perióda ${currentPeriod}/${periods}, koniec periódy: ${formatMatchTime(endOfCurrentPeriod)}`);
+//            console.log(`Perióda ${currentPeriod}/${periods}, koniec periódy: ${formatMatchTime(endOfCurrentPeriod)}`);
             
             const interval = setInterval(() => {
                 const now = Timestamp.now();
@@ -944,7 +952,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 
                 // Kontrola konca aktuálnej periódy
                 if (elapsedSeconds >= endOfCurrentPeriod) {
-                    console.log(`Dosiahnutý koniec ${currentPeriod}. periódy: ${formatMatchTime(elapsedSeconds)} >= ${formatMatchTime(endOfCurrentPeriod)}`);
+//                    console.log(`Dosiahnutý koniec ${currentPeriod}. periódy: ${formatMatchTime(elapsedSeconds)} >= ${formatMatchTime(endOfCurrentPeriod)}`);
                     
                     // Ak to nie je posledná perióda
                     if (currentPeriod < periods) {
@@ -953,7 +961,7 @@ const matchesHallApp = ({ userProfileData }) => {
                         window.showGlobalNotification(`Koniec ${currentPeriod}. periódy`, 'info');
                     } else {
                         // Ak je to posledná perióda, ukončíme zápas
-                        console.log('Posledná perióda, ukončujem zápas');
+//                        console.log('Posledná perióda, ukončujem zápas');
                         stopMatchTimer(matchId);
                         window.showGlobalNotification('Koniec zápasu', 'info');
                     }
@@ -986,7 +994,7 @@ const matchesHallApp = ({ userProfileData }) => {
 
     // UPRAVENÝ useEffect pre inicializáciu času
     useEffect(() => {
-        console.log('Inicializácia času pre zápas:', selectedMatch);
+//        console.log('Inicializácia času pre zápas:', selectedMatch);
 
         if (selectedMatch && selectedMatch.startedAt) {
             const now = Timestamp.now();
@@ -1007,7 +1015,7 @@ const matchesHallApp = ({ userProfileData }) => {
             setCleanPlayingTime(totalTime);
             
         } else {
-            console.log('Žiadny startedAt, nastavujem 0');
+//            console.log('Žiadny startedAt, nastavujem 0');
             setMatchTime(0);
             setCleanPlayingTime(0);
         }
@@ -1033,7 +1041,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     setHallName(hallId);
                 }
             } catch (error) {
-                console.error("Chyba pri načítaní názvu haly:", error);
+//                console.error("Chyba pri načítaní názvu haly:", error);
                 setHallName(hallId || 'Chyba načítania');
             }
         };
@@ -1273,7 +1281,7 @@ const matchesHallApp = ({ userProfileData }) => {
             setMatchScore({ home: homeScore, away: awayScore });
             setLoadingEvents(false);
         }, (error) => {
-            console.error("Chyba pri načítaní udalostí zápasu:", error);
+//            console.error("Chyba pri načítaní udalostí zápasu:", error);
             setLoadingEvents(false);
         });
     
@@ -1297,7 +1305,7 @@ const matchesHallApp = ({ userProfileData }) => {
             window.showGlobalNotification('Udalosť bola zmazaná', 'success');
             setEventToDelete(null);
         } catch (error) {
-            console.error('Chyba pri mazaní udalosti:', error);
+//            console.error('Chyba pri mazaní udalosti:', error);
             window.showGlobalNotification('Chyba pri mazaní udalosti', 'error');
         }
     };
@@ -1401,11 +1409,11 @@ const matchesHallApp = ({ userProfileData }) => {
 //                    console.log('=========================================');
                     
                 } else {
-                    console.log("Neboli nájdené žiadne kategórie");
+//                    console.log("Neboli nájdené žiadne kategórie");
                     setCategories([]);
                 }
             } catch (error) {
-                console.error("Chyba pri načítaní kategórií:", error);
+//                console.error("Chyba pri načítaní kategórií:", error);
             }
         };
         
@@ -1439,7 +1447,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     setGroupsByCategory({});
                 }
             } catch (error) {
-                console.error('Chyba pri načítaní skupín:', error);
+//                console.error('Chyba pri načítaní skupín:', error);
                 setGroupsByCategory({});
             }
         };
@@ -1453,7 +1461,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 setGroupsByCategory(groupsData);
             }
         }, (error) => {
-            console.error('Chyba pri real-time sledovaní skupín:', error);
+//            console.error('Chyba pri real-time sledovaní skupín:', error);
         });
         
         return () => unsubscribeGroups();
@@ -1474,7 +1482,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 setSuperstructureTeams({});
             }
         }, (error) => {
-            console.error('Chyba pri načítaní superstructure tímov:', error);
+//            console.error('Chyba pri načítaní superstructure tímov:', error);
             setSuperstructureTeams({});
         });
 
@@ -1509,7 +1517,7 @@ const matchesHallApp = ({ userProfileData }) => {
             logAllUsers(usersList);
             
         }, (error) => {
-            console.error('Chyba pri načítaní používateľov:', error);
+//            console.error('Chyba pri načítaní používateľov:', error);
         });
 
         return () => unsubscribeUsers();
@@ -1590,7 +1598,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
             
         }, (error) => {
-            console.error("Chyba pri načítaní zápasov:", error);
+//            console.error("Chyba pri načítaní zápasov:", error);
             setLoading(false);
         });
     
@@ -1601,7 +1609,7 @@ const matchesHallApp = ({ userProfileData }) => {
     useEffect(() => {
         // Spustí sa až keď sú obe dáta načítané
         if (matches.length > 0 && categories.length > 0) {
-            console.log('=== VŠETKY ZÁPASY V TEJTO HALE S NASTAVENIAMI KATEGÓRIE ===');
+//            console.log('=== VŠETKY ZÁPASY V TEJTO HALE S NASTAVENIAMI KATEGÓRIE ===');
             matches.forEach((match, index) => {
                 const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
                 const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
@@ -1990,7 +1998,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 setEventSubType(null);
                 
             } catch (error) {
-                console.error('Chyba pri pridávaní udalosti:', error);
+//                console.error('Chyba pri pridávaní udalosti:', error);
                 window.showGlobalNotification('Chyba pri ukladaní udalosti', 'error');
             }
         };
@@ -3783,7 +3791,7 @@ const handleDataUpdateAndRender = (event) => {
                             }
                         }
                     } catch (error) {
-                        console.error("Chyba pri synchronizácii e-mailu:", error);
+//                        console.error("Chyba pri synchronizácii e-mailu:", error);
                         window.showGlobalNotification('Nastala chyba pri synchronizácii e-mailovej adresy.', 'error');
                     }
                 }
