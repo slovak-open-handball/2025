@@ -3140,17 +3140,24 @@ const matchesHallApp = ({ userProfileData }) => {
                                             'div',
                                             { 
                                                 key: `away-men-${idx}`, 
-                                                className: 'bg-white p-2 rounded border border-gray-200 text-sm group relative hover:bg-blue-50 transition-colors cursor-pointer',
-                                                onClick: () => {
-                                                    if (eventType) {
-                                                        // Nedovolíme gól alebo 7m pre trénerov
-                                                        if (eventType === 'goal' || eventType === 'penalty') {
-                                                            window.showGlobalNotification('Gól a 7m hod môžu byť priradené len hráčom', 'error');
-                                                            return;
+                                                className: `bg-white p-2 rounded border border-gray-200 text-sm group relative transition-colors ${
+                                                    isMatchActionAllowed() ? 'hover:bg-blue-50 cursor-pointer' : 'cursor-not-allowed opacity-60'
+                                                }`,
+                                                onClick: isMatchActionAllowed() 
+                                                    ? () => {
+                                                        if (eventType) {
+                                                            // Nedovolíme gól alebo 7m pre trénerov
+                                                            if (eventType === 'goal' || eventType === 'penalty') {
+                                                                window.showGlobalNotification('Gól a 7m hod môžu byť priradené len hráčom', 'error');
+                                                                return;
+                                                            }
+                                                            addMatchEvent(eventType, 'away', null, staffIdentifier);
                                                         }
-                                                        addMatchEvent(eventType, 'away', null, staffIdentifier);
                                                     }
-                                                }
+                                                    : undefined,
+                                                title: !isMatchActionAllowed() 
+                                                    ? (selectedMatch?.status === 'scheduled' ? 'Zápas ešte nezačal' : 'Zápas je ukončený')
+                                                    : ''
                                             },
                                             React.createElement(
                                                 'div',
@@ -3178,17 +3185,24 @@ const matchesHallApp = ({ userProfileData }) => {
                                             'div',
                                             { 
                                                 key: `away-women-${idx}`, 
-                                                className: 'bg-white p-2 rounded border border-gray-200 text-sm group relative hover:bg-blue-50 transition-colors cursor-pointer',
-                                                onClick: () => {
-                                                    if (eventType) {
-                                                        // Nedovolíme gól alebo 7m pre trénerov
-                                                        if (eventType === 'goal' || eventType === 'penalty') {
-                                                            window.showGlobalNotification('Gól a 7m hod môžu byť priradené len hráčom', 'error');
-                                                            return;
+                                                className: `bg-white p-2 rounded border border-gray-200 text-sm group relative transition-colors ${
+                                                    isMatchActionAllowed() ? 'hover:bg-blue-50 cursor-pointer' : 'cursor-not-allowed opacity-60'
+                                                }`,
+                                                onClick: isMatchActionAllowed() 
+                                                    ? () => {
+                                                        if (eventType) {
+                                                            // Nedovolíme gól alebo 7m pre trénerov
+                                                            if (eventType === 'goal' || eventType === 'penalty') {
+                                                                window.showGlobalNotification('Gól a 7m hod môžu byť priradené len hráčom', 'error');
+                                                                return;
+                                                            }
+                                                            addMatchEvent(eventType, 'away', null, staffIdentifier);
                                                         }
-                                                        addMatchEvent(eventType, 'away', null, staffIdentifier);
                                                     }
-                                                }
+                                                    : undefined,
+                                                title: !isMatchActionAllowed() 
+                                                    ? (selectedMatch?.status === 'scheduled' ? 'Zápas ešte nezačal' : 'Zápas je ukončený')
+                                                    : ''
                                             },
                                             React.createElement(
                                                 'div',
@@ -3250,28 +3264,34 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     'div',
                                                     { 
                                                         key: `away-player-${idx}`, 
-                                                        className: 'bg-white p-2 rounded border border-gray-200 text-sm group relative hover:bg-blue-50 transition-colors cursor-pointer',
-                                                        // Pre hosťovský tím - nahraďte onClick handler
-                                                        onClick: () => {
-                                                            if (eventType) {
-                                                                if (eventType === 'penalty') {
-                                                                    // Skontrolujeme, či je aktívny premenený 7m (cez eventSubType)
-                                                                    if (eventSubType === 'scored') {
-                                                                        // Premenený 7m
-                                                                        addMatchEvent('penalty', 'away', 'scored', playerIdentifier);
+                                                        className: `bg-white p-2 rounded border border-gray-200 text-sm group relative transition-colors ${
+                                                            isMatchActionAllowed() ? 'hover:bg-blue-50 cursor-pointer' : 'cursor-not-allowed opacity-60'
+                                                        }`,
+                                                        onClick: isMatchActionAllowed()
+                                                            ? () => {
+                                                                if (eventType) {
+                                                                    if (eventType === 'penalty') {
+                                                                        // Skontrolujeme, či je aktívny premenený 7m (cez eventSubType)
+                                                                        if (eventSubType === 'scored') {
+                                                                            // Premenený 7m
+                                                                            addMatchEvent('penalty', 'away', 'scored', playerIdentifier);
+                                                                        } else {
+                                                                            // Nepremenený 7m (štandardne)
+                                                                            addMatchEvent('penalty', 'away', 'missed', playerIdentifier);
+                                                                        }
+                                                                    } else if (eventType === 'goal') {
+                                                                        // Normálny gól
+                                                                        addMatchEvent('goal', 'away', null, playerIdentifier);
                                                                     } else {
-                                                                        // Nepremenený 7m (štandardne)
-                                                                        addMatchEvent('penalty', 'away', 'missed', playerIdentifier);
+                                                                        // Ostatné udalosti (karty, vylúčenia)
+                                                                        addMatchEvent(eventType, 'away', null, playerIdentifier);
                                                                     }
-                                                                } else if (eventType === 'goal') {
-                                                                    // Normálny gól
-                                                                    addMatchEvent('goal', 'away', null, playerIdentifier);
-                                                                } else {
-                                                                    // Ostatné udalosti (karty, vylúčenia)
-                                                                    addMatchEvent(eventType, 'away', null, playerIdentifier);
                                                                 }
                                                             }
-                                                        }
+                                                            : undefined,
+                                                        title: !isMatchActionAllowed() 
+                                                            ? (selectedMatch?.status === 'scheduled' ? 'Zápas ešte nezačal' : 'Zápas je ukončený')
+                                                            : ''
                                                     },
                                                     React.createElement(
                                                         'div',
