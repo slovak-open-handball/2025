@@ -745,26 +745,6 @@ const matchesHallApp = ({ userProfileData }) => {
             setManualTimeOffset(newOffset);
         }
     };
-    
-    // NOVÁ FUNKCIA PRE KONTROLU POVOLENIA TLAČIDLA POKRAČOVAŤ
-    const isResumeAllowed = () => {
-        if (!selectedMatch) return false;
-        
-        // Kontrola, či je zápas v stave 'paused'
-        if (selectedMatch.status !== 'paused') return false;
-        
-        const currentCategory = categories.find(c => c.name === selectedMatch.categoryName);
-        if (!currentCategory) return false;
-        
-        const periodDuration = (currentCategory.periodDuration || 20) * 60;
-        const currentPeriod = selectedMatch?.currentPeriod || 1;
-        
-        const periodStartTime = (currentPeriod - 1) * periodDuration;
-        const elapsedInPeriod = matchTime - periodStartTime;
-        
-        // Povolené, ak nie sme na konci periódy (ak by po pridaní 1 sekundy nepresiahli koniec)
-        return elapsedInPeriod < periodDuration;
-    };
 
     const isDecreasePeriodAllowed = () => {
         if (!selectedMatch) return false;
@@ -2145,42 +2125,42 @@ const matchesHallApp = ({ userProfileData }) => {
                             )
                         ),
                         
-                        // Čas štart / Čas stop / Pokračovať
-                        selectedMatch.status === 'in-progress' ? 
-                            React.createElement(
-                                'button',
-                                {
-                                    className: 'px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
-                                    onClick: () => stopMatchTimer(selectedMatch.id)
-                                },
-                                React.createElement('i', { className: 'fa-solid fa-pause' }),
-                                'Čas stop'
-                            ) :
-                            selectedMatch.status === 'paused' ?
-                            React.createElement(
-                                'button',
-                                {
-                                    className: `px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                                        isResumeAllowed()
-                                            ? 'bg-green-600 hover:bg-green-700 text-white' 
-                                            : 'bg-white text-green-600 border-2 border-green-600 cursor-not-allowed'
-                                    }`,
-                                    onClick: isResumeAllowed() ? () => resumeMatchTimer(selectedMatch.id) : undefined,
-                                    disabled: !isResumeAllowed(),
-                                    title: isResumeAllowed() ? 'Pokračovať v zápase' : 'Nie je možné pokračovať - koniec periódy'
-                                },
-                                React.createElement('i', { className: 'fa-solid fa-play' }),
-                                'Pokračovať'
-                            ) :
-                            React.createElement(
-                                'button',
-                                {
-                                    className: 'px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
-                                    onClick: () => startMatchTimer(selectedMatch.id)
-                                },
-                                React.createElement('i', { className: 'fa-solid fa-play' }),
-                                'Čas štart'
-                            ),
+                        // Ovládacie prvky pre adminov a hall users (ZOBRAZENÉ VŽDY)
+                        (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && 
+                        React.createElement(
+                            'div',
+                            { className: 'flex flex-wrap items-center justify-center gap-3 pt-2 border-t border-gray-200' },
+                            
+                            // Čas štart / Čas stop / Pokračovať
+                            selectedMatch.status === 'in-progress' ? 
+                                React.createElement(
+                                    'button',
+                                    {
+                                        className: 'px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
+                                        onClick: () => stopMatchTimer(selectedMatch.id)
+                                    },
+                                    React.createElement('i', { className: 'fa-solid fa-pause' }),
+                                    'Čas stop'
+                                ) :
+                                selectedMatch.status === 'paused' ?
+                                React.createElement(
+                                    'button',
+                                    {
+                                        className: 'px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
+                                        onClick: () => resumeMatchTimer(selectedMatch.id)
+                                    },
+                                    React.createElement('i', { className: 'fa-solid fa-play' }),
+                                    'Pokračovať'
+                                ) :
+                                React.createElement(
+                                    'button',
+                                    {
+                                        className: 'px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
+                                        onClick: () => startMatchTimer(selectedMatch.id)
+                                    },
+                                    React.createElement('i', { className: 'fa-solid fa-play' }),
+                                    'Čas štart'
+                                ),
                             
                             // NOVÉ: Manuálne ovládanie času
                             React.createElement(
