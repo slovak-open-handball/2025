@@ -454,12 +454,11 @@ const matchesHallApp = ({ userProfileData }) => {
     // Inicializácia času pri výbere zápasu
     useEffect(() => {
         console.log('Inicializácia času pre zápas:', selectedMatch);
-    
+
         if (selectedMatch && selectedMatch.startedAt) {
             const now = Timestamp.now();
             const startedAt = selectedMatch.startedAt;
             
-            // Ak je zápas pozastavený, použijeme pausedAt na výpočet
             if (selectedMatch.status === 'paused' && selectedMatch.pausedAt) {
                 const pausedAt = selectedMatch.pausedAt;
                 const elapsedUntilPause = Math.floor((pausedAt.seconds - startedAt.seconds));
@@ -467,7 +466,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 setMatchTime(elapsedUntilPause);
                 setManualTimeOffset(0); // RESET manuálneho posunu
             } else {
-                const elapsedSeconds = Math.floor((now.seconds - startedAt.seconds)) + manualTimeOffset;
+                const elapsedSeconds = Math.floor((now.seconds - startedAt.seconds));
                 console.log('elapsedSeconds:', elapsedSeconds);
                 setMatchTime(elapsedSeconds);
                 setManualTimeOffset(0); // RESET manuálneho posunu
@@ -475,6 +474,7 @@ const matchesHallApp = ({ userProfileData }) => {
         } else {
             console.log('Žiadny startedAt, nastavujem 0');
             setMatchTime(0);
+            setManualTimeOffset(0);
         }
     }, [selectedMatch]);
 
@@ -529,11 +529,11 @@ const matchesHallApp = ({ userProfileData }) => {
                     return;
                 }
                 
-                const elapsedSeconds = Math.floor((now.seconds - startedAt.seconds)) + manualTimeOffset;
+                const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
+                const elapsedSeconds = baseSeconds + manualTimeOffset;
                 
                 // OVERENIE: Priamo nastavujeme matchTime
                 setMatchTime(elapsedSeconds);
-                setManualTimeOffset(0); // RESET manuálneho posunu
                 
                 // Automatické zastavenie pri dosiahnutí konca aktuálnej periódy
                 if (elapsedSeconds >= totalElapsedForCurrentPeriod) {
