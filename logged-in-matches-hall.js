@@ -227,6 +227,7 @@ const matchesHallApp = ({ userProfileData }) => {
     const [endMatchId, setEndMatchId] = useState(null);
 
     const [liveMatchData, setLiveMatchData] = useState({});
+    const [completedMatchData, setCompletedMatchData] = useState({});
 
     const formatMatchTime = (seconds) => {
         // Ochrana proti nečíselným hodnotám
@@ -906,6 +907,67 @@ const matchesHallApp = ({ userProfileData }) => {
         // Povolené len pre zápasy v stave 'scheduled' (Naplánované)
         return selectedMatch.status === 'scheduled';
     };
+
+    // NOVÝ useEffect PRE SLEDOVANIE UKONČENÝCH ZÁPASOV
+    useEffect(() => {
+        if (!window.db || matches.length === 0) return;
+    
+        // Filtrujeme ukončené zápasy
+        const completedMatches = matches.filter(m => m.status === 'completed');
+        
+        if (completedMatches.length === 0) {
+            setCompletedMatchData({});
+            return;
+        }
+    
+        // Pre každý ukončený zápas načítame udalosti (stačí raz, nie onSnapshot)
+        const fetchCompletedMatches = async () => {
+            const newData = {};
+            
+            for (const match of completedMatches) {
+                try {
+                    const eventsRef = collection(window.db, 'matchEvents');
+                    const q = query(eventsRef, where("matchId", "==", match.id));
+                    const querySnapshot = await getDocs(q);
+                    
+                    let homeScore = 0;
+                    let awayScore = 0;
+                    let matchTime = 0;
+                    
+                    querySnapshot.forEach((doc) => {
+                        const event = doc.data();
+                        
+                        // Výpočet skóre
+                        if (event.type === 'goal' || (event.type === 'penalty' && event.subType === 'scored')) {
+                            if (event.team === 'home') homeScore++;
+                            else if (event.team === 'away') awayScore++;
+                        }
+                        
+                        // Získame najvyšší čas udalosti (koniec zápasu)
+                        if (event.minute !== undefined && event.second !== undefined) {
+                            const eventTimeInSeconds = event.minute * 60 + (event.second || 0);
+                            if (eventTimeInSeconds > matchTime) {
+                                matchTime = eventTimeInSeconds;
+                            }
+                        }
+                    });
+                    
+                    newData[match.id] = {
+                        time: matchTime,
+                        homeScore,
+                        awayScore,
+                        status: 'completed'
+                    };
+                } catch (error) {
+                    // Ticho ignorujeme chyby
+                }
+            }
+            
+            setCompletedMatchData(newData);
+        };
+        
+        fetchCompletedMatches();
+    }, [matches]); // Spustí sa pri zmene matches
 
     // NOVÝ useEffect PRE SLEDOVANIE ŽIVÝCH ZÁPASOV
     useEffect(() => {
