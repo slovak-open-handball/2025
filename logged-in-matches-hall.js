@@ -437,7 +437,7 @@ const matchesHallApp = ({ userProfileData }) => {
 
     // Funkcie pre manuálne ovládanie času
     const addMinute = () => {
-        console.log('addMinute - pred: manualTimeOffset =', manualTimeOffset, 'matchTime =', matchTime);
+//        console.log('addMinute - pred: manualTimeOffset =', manualTimeOffset, 'matchTime =', matchTime);
         
         // Vypočítame nový čas
         const newTime = matchTime + 60;
@@ -451,18 +451,18 @@ const matchesHallApp = ({ userProfileData }) => {
                 const startedAt = selectedMatch.startedAt;
                 const baseSeconds = Math.floor((pausedAt.seconds - startedAt.seconds));
                 newOffset = newTime - baseSeconds;
-                console.log('addMinute - paused: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
+//                console.log('addMinute - paused: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
             } else if (selectedMatch.startedAt) {
                 // Pre prebiehajúci zápas: offset = nový čas - aktuálny čas od štartu
                 const now = Timestamp.now();
                 const startedAt = selectedMatch.startedAt;
                 const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
                 newOffset = newTime - baseSeconds;
-                console.log('addMinute - in-progress: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
+//                console.log('addMinute - in-progress: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
             }
         }
         
-        console.log('addMinute - nový čas =', newTime, 'nový offset =', newOffset);
+//        console.log('addMinute - nový čas =', newTime, 'nový offset =', newOffset);
         
         // Uložíme do databázy
         if (selectedMatch && window.db && newOffset !== undefined) {
@@ -470,7 +470,7 @@ const matchesHallApp = ({ userProfileData }) => {
             updateDoc(matchRef, {
                 manualTimeOffset: newOffset
             }).then(() => {
-                console.log('addMinute - offset uložený do databázy:', newOffset);
+//                console.log('addMinute - offset uložený do databázy:', newOffset);
             }).catch(error => console.error('Chyba pri ukladaní offsetu:', error));
         }
         
@@ -482,11 +482,11 @@ const matchesHallApp = ({ userProfileData }) => {
     };
     
     const subtractMinute = () => {
-        console.log('subtractMinute - pred: manualTimeOffset =', manualTimeOffset, 'matchTime =', matchTime);
+//        console.log('subtractMinute - pred: manualTimeOffset =', manualTimeOffset, 'matchTime =', matchTime);
         
         // Skontrolujeme, či je dostatočný čas na odčítanie minúty
         if (matchTime < 60) {
-            console.log('subtractMinute - nie je dostatok času na odčítanie minúty');
+//            console.log('subtractMinute - nie je dostatok času na odčítanie minúty');
             window.showGlobalNotification('Nie je možné odčítať minútu - menej ako 60 sekúnd', 'error');
             return;
         }
@@ -503,18 +503,18 @@ const matchesHallApp = ({ userProfileData }) => {
                 const startedAt = selectedMatch.startedAt;
                 const baseSeconds = Math.floor((pausedAt.seconds - startedAt.seconds));
                 newOffset = newTime - baseSeconds;
-                console.log('subtractMinute - paused: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
+//                console.log('subtractMinute - paused: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
             } else if (selectedMatch.startedAt) {
                 // Pre prebiehajúci zápas: offset = nový čas - aktuálny čas od štartu
                 const now = Timestamp.now();
                 const startedAt = selectedMatch.startedAt;
                 const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
                 newOffset = newTime - baseSeconds;
-                console.log('subtractMinute - in-progress: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
+//                console.log('subtractMinute - in-progress: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
             }
         }
         
-        console.log('subtractMinute - nový čas =', newTime, 'nový offset =', newOffset);
+//        console.log('subtractMinute - nový čas =', newTime, 'nový offset =', newOffset);
         
         // Uložíme do databázy
         if (selectedMatch && window.db && newOffset !== undefined) {
@@ -522,7 +522,7 @@ const matchesHallApp = ({ userProfileData }) => {
             updateDoc(matchRef, {
                 manualTimeOffset: newOffset
             }).then(() => {
-                console.log('subtractMinute - offset uložený do databázy:', newOffset);
+//                console.log('subtractMinute - offset uložený do databázy:', newOffset);
             }).catch(error => console.error('Chyba pri ukladaní offsetu:', error));
         }
         
@@ -534,7 +534,7 @@ const matchesHallApp = ({ userProfileData }) => {
     };
     
     const addSecond = () => {
-        console.log('addSecond - pred: manualTimeOffset =', manualTimeOffset, 'matchTime =', matchTime);
+//        console.log('addSecond - pred: manualTimeOffset =', manualTimeOffset, 'matchTime =', matchTime);
         
         // Vypočítame nový čas
         const newTime = matchTime + 1;
@@ -548,14 +548,14 @@ const matchesHallApp = ({ userProfileData }) => {
                 const startedAt = selectedMatch.startedAt;
                 const baseSeconds = Math.floor((pausedAt.seconds - startedAt.seconds));
                 newOffset = newTime - baseSeconds;
-                console.log('addSecond - paused: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
+//                console.log('addSecond - paused: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
             } else if (selectedMatch.startedAt) {
                 // Pre prebiehajúci zápas: offset = nový čas - aktuálny čas od štartu
                 const now = Timestamp.now();
                 const startedAt = selectedMatch.startedAt;
                 const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
                 newOffset = newTime - baseSeconds;
-                console.log('addSecond - in-progress: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
+//                console.log('addSecond - in-progress: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
             }
         }
         
@@ -579,10 +579,17 @@ const matchesHallApp = ({ userProfileData }) => {
     };
     
     const subtractSecond = () => {
-        console.log('subtractSecond - pred: manualTimeOffset =', manualTimeOffset, 'matchTime =', matchTime);
+//        console.log('subtractSecond - pred: manualTimeOffset =', manualTimeOffset, 'matchTime =', matchTime);
         
-        // Vypočítame nový čas (nesmie klesnúť pod 0)
-        const newTime = Math.max(0, matchTime - 1);
+        // Skontrolujeme, či je dostatočný čas na odčítanie sekundy
+        if (matchTime < 1) {
+//            console.log('subtractSecond - nie je dostatok času na odčítanie sekundy');
+            window.showGlobalNotification('Nie je možné odčítať sekundu - čas je 0', 'error');
+            return;
+        }
+        
+        // Vypočítame nový čas
+        const newTime = matchTime - 1;
         
         // Vypočítame nový offset podľa stavu zápasu
         let newOffset;
@@ -593,18 +600,18 @@ const matchesHallApp = ({ userProfileData }) => {
                 const startedAt = selectedMatch.startedAt;
                 const baseSeconds = Math.floor((pausedAt.seconds - startedAt.seconds));
                 newOffset = newTime - baseSeconds;
-                console.log('subtractSecond - paused: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
+//                console.log('subtractSecond - paused: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
             } else if (selectedMatch.startedAt) {
                 // Pre prebiehajúci zápas: offset = nový čas - aktuálny čas od štartu
                 const now = Timestamp.now();
                 const startedAt = selectedMatch.startedAt;
                 const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
                 newOffset = newTime - baseSeconds;
-                console.log('subtractSecond - in-progress: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
+//                console.log('subtractSecond - in-progress: baseSeconds =', baseSeconds, 'newOffset =', newOffset);
             }
         }
         
-        console.log('subtractSecond - nový čas =', newTime, 'nový offset =', newOffset);
+//        console.log('subtractSecond - nový čas =', newTime, 'nový offset =', newOffset);
         
         // Uložíme do databázy
         if (selectedMatch && window.db && newOffset !== undefined) {
