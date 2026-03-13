@@ -3613,11 +3613,29 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         `${liveMatchData[match.id].homeScore} : ${liveMatchData[match.id].awayScore}`
                                                     )
                                                 ) :
-                                                React.createElement(
-                                                    'span',
-                                                    { className: 'text-xs font-bold text-gray-400 px-2' },
-                                                    '-- : --'
-                                                ),
+                                                match.status === 'completed' ?
+                                                    React.createElement(
+                                                        'div',
+                                                        { 
+                                                            className: 'flex items-center justify-center gap-2 px-3 py-1 min-w-[100px]',
+                                                            title: 'Zápas je ukončený'
+                                                        },
+                                                        React.createElement(
+                                                            'span',
+                                                            { className: 'font-mono font-bold text-green-600 text-sm' },
+                                                            `${match.homeScore || 0} : ${match.awayScore || 0}`
+                                                        ),
+                                                        React.createElement(
+                                                            'span',
+                                                            { className: 'font-mono text-xs text-gray-500' },
+                                                            `(${match.matchTime ? formatMatchTime(match.matchTime) : '--:--'})`
+                                                        )
+                                                    ) :
+                                                    React.createElement(
+                                                        'span',
+                                                        { className: 'text-xs font-bold text-gray-400 px-2' },
+                                                        '-- : --'
+                                                    ),
                                             
                                             React.createElement(
                                                 'span',
