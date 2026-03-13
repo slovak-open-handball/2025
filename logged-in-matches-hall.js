@@ -3451,7 +3451,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 )
                             )
                         ),
-    
+            
                         // Zoznam zápasov pre tento deň
                         React.createElement(
                             'div',
@@ -3486,6 +3486,9 @@ const matchesHallApp = ({ userProfileData }) => {
                                     groupOrTypeText = '—';
                                     groupOrTypeClass = 'bg-gray-100 text-gray-500';
                                 }
+            
+                                // Zistenie, či je zápas v stave, ktorý nie je "Naplánované" ani "Odohrané"
+                                const isMatchInProgress = match.status === 'in-progress' || match.status === 'paused';
                                 
                                 return React.createElement(
                                     'div',
@@ -3531,7 +3534,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             },
                                             groupOrTypeText
                                         ),
-
+            
                                         // Kategória (ak existuje)
                                         category && React.createElement(
                                             'span',
@@ -3543,6 +3546,17 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 }
                                             },
                                             category.name
+                                        ),
+                                        
+                                        // NOVÝ STĹPEC: Zelená šípka pre prebiehajúce zápasy
+                                        isMatchInProgress && React.createElement(
+                                            'span',
+                                            { 
+                                                className: 'inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700',
+                                                title: 'Zápas práve prebieha'
+                                            },
+                                            React.createElement('i', { className: 'fa-solid fa-play text-green-600 text-xs' }),
+                                            'Prebieha'
                                         )
                                     )
                                 );
