@@ -392,73 +392,10 @@ const matchesHallApp = ({ userProfileData }) => {
             window.showGlobalNotification('Chyba pri zmene periódy', 'error');
         }
     };
-
-    // ZJEDNODUŠENÁ FUNKCIA: getMatchTimeInfo - bez prestávok
-    const getMatchTimeInfo = (totalSeconds, currentPeriod, category) => {
-        if (!category) return { 
-            cleanTime: totalSeconds, 
-            period: currentPeriod || 1, 
-            elapsedInPeriod: totalSeconds, 
-            isInPlayingTime: true,
-            totalTime: totalSeconds
-        };
-        
-        const periodDuration = (category.periodDuration || 20) * 60;
-        const periods = category.periods || 2;
-        
-        // Jednoduchý výpočet - žiadne prestávky    let currentPeriod_ = Math.floor(totalSeconds / periodDuration) + 1;
-        if (currentPeriod_ > periods) currentPeriod_ = periods;
-        
-        let elapsedInPeriod_ = totalSeconds % periodDuration;
-        if (currentPeriod_ > periods) {
-            elapsedInPeriod_ = periodDuration;
-        }
-        
-        return {
-            cleanTime: totalSeconds,
-            period: currentPeriod_,
-            elapsedInPeriod: elapsedInPeriod_,
-            isInPlayingTime: true, // Vždy true, lebo nemáme prestávky
-            totalTime: totalSeconds
-        };
-    };
-
-    // ZJEDNODUŠENÁ FUNKCIA: Konverzia (už nie je potrebná, ale ponecháme pre kompatibilitu)
-    const convertCleanToTotalTime = (cleanSeconds, currentPeriod, category) => {
-        return cleanSeconds; // Celkový čas = čistý čas
-    };
     
     // ZJEDNODUŠENÁ FUNKCIA: Konverzia (už nie je potrebná, ale ponecháme pre kompatibilitu)
     const convertTotalToCleanTime = (totalSeconds, category) => {
         return totalSeconds; // Čistý čas = celkový čas
-    };
-    
-    // NOVÁ FUNKCIA: Výpočet čistého hracieho času (bez prestávok)
-    const getCleanPlayingTime = (totalSeconds, category) => {
-        if (!category) return totalSeconds;
-        
-        const periodDuration = (category.periodDuration || 20) * 60;
-        const breakDuration = (category.breakDuration || 2) * 60;
-        
-        let cleanTime = 0;
-        let remainingSeconds = totalSeconds;
-        
-        while (remainingSeconds > 0) {
-            // Pridáme hrací čas aktuálnej periódy (maximálne periodDuration)
-            const playingSegment = Math.min(remainingSeconds, periodDuration);
-            cleanTime += playingSegment;
-            remainingSeconds -= playingSegment;
-            
-            // Ak ešte zostáva čas a nie je to posledná perióda, odpočítame prestávku
-            if (remainingSeconds > 0) {
-                // Odpočítame prestávku (ale nepridávame ju do cleanTime)
-                const breakSegment = Math.min(remainingSeconds, breakDuration);
-                remainingSeconds -= breakSegment;
-                // breakSegment sa nepridáva do cleanTime
-            }
-        }
-        
-        return cleanTime;
     };
 
     // ZJEDNODUŠENÁ FUNKCIA: addMinute
@@ -1448,10 +1385,6 @@ const matchesHallApp = ({ userProfileData }) => {
             });
             
             setUsers(usersList);
-            
-            // VYPÍŠEME VŠETKÝCH POUŽÍVATEĽOV
-            logAllUsers(usersList);
-            
         }, (error) => {
 //            console.error('Chyba pri načítaní používateľov:', error);
         });
