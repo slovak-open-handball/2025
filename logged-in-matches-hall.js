@@ -3676,26 +3676,25 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 event.team === 'home' && eventIcon
                                             ),
                                             
-                                            // 5. stĺpec - Čas s košom a ceruzkou pri hoveri (len pre prvú udalosť)
+                                            // 5. stĺpec - Čas s košom a ceruzkou pri hoveri (pre všetky riadky)
                                             React.createElement(
                                                 'div',
                                                 { key: `${event.id}-col5`, className: 'text-center relative p-2 group' },
-                                                // Čas - schová sa len pri hoveri a len pre prvú udalosť
+                                                // Čas - schová sa len pri hoveri (pre všetky riadky)
                                                 React.createElement(
                                                     'span',
                                                     { 
                                                         className: `font-mono text-xs text-gray-800 ${
                                                             (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && 
-                                                            matchEvents.length > 0 && event.id === matchEvents[0].id && selectedMatch?.status !== 'completed' && editingEventId !== event.id
+                                                            selectedMatch?.status !== 'completed' && editingEventId !== event.id
                                                                 ? 'group-hover:hidden' 
                                                                 : ''
                                                         }` 
                                                     },
                                                     `${event.minute}:${event.second?.toString().padStart(2, '0') || '00'}`
                                                 ),
-                                                // Ikony sa zobrazia len pre prvú udalosť v zozname (najnovšiu) a len ak zápas nie je ukončený a nie je v editácii
+                                                // Ikony sa zobrazia pre každý riadok, len ak zápas nie je ukončený a nie je v editácii
                                                 (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && 
-                                                matchEvents.length > 0 && event.id === matchEvents[0].id && 
                                                 selectedMatch?.status !== 'completed' && editingEventId !== event.id && React.createElement(
                                                     'div',
                                                     { className: 'hidden group-hover:flex items-center justify-center gap-2' },
