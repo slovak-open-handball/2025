@@ -2797,6 +2797,8 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 ? 'bg-white text-green-600 border-green-600 cursor-not-allowed opacity-50'
                                                 : eventType === 'goal' && eventSubType === null
                                                     ? 'bg-green-600 text-white border-green-600' 
+                                                    : eventType === 'penalty' && eventSubType === 'scored'
+                                                    ? 'bg-green-600 text-white border-green-600' // Premenený 7m má zelené podfarbenie
                                                     : 'bg-white text-green-600 border-green-600 hover:bg-green-50'
                                         }`,
                                         onClick: isMatchActionAllowed() 
@@ -2808,6 +2810,13 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     setEventTeam(null);
                                                     setSelectedPlayerForEvent(null);
                                                 } 
+                                                // Ak je aktívny premenený 7m, vypneme ho
+                                                else if (eventType === 'penalty' && eventSubType === 'scored') {
+                                                    setEventType(null);
+                                                    setEventTeam(null);
+                                                    setEventSubType(null);
+                                                    setSelectedPlayerForEvent(null);
+                                                }
                                                 // Ak je aktívny normálny gól, vypneme ho
                                                 else if (eventType === 'goal' && eventSubType === null) {
                                                     setEventType(null);
@@ -2832,34 +2841,44 @@ const matchesHallApp = ({ userProfileData }) => {
                                     React.createElement('i', { className: `fa-solid fa-futbol ${
                                         !isMatchActionAllowed()
                                             ? 'text-green-600'
-                                            : eventType === 'goal' && eventSubType === null
+                                            : (eventType === 'goal' && eventSubType === null) || (eventType === 'penalty' && eventSubType === 'scored')
                                                 ? 'text-white' 
                                                 : 'text-green-600'
                                     }` }),
                                     'Gól'
                                 ),
                                 
-                                // Tlačidlo 7m (premenený aj nepremenený)
+                                // Tlačidlo 7m (nepremenený)
                                 React.createElement(
                                     'button',
                                     {
                                         className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 border-2 ${
                                             !isMatchActionAllowed()
                                                 ? 'bg-white text-blue-600 border-blue-600 cursor-not-allowed opacity-50'
-                                                : eventType === 'penalty' && (eventSubType === 'missed' || eventSubType === 'scored')
+                                                : eventType === 'penalty' && eventSubType === 'missed'
                                                     ? 'bg-blue-600 text-white border-blue-600' 
+                                                    : eventType === 'penalty' && eventSubType === 'scored'
+                                                    ? 'bg-white text-blue-600 border-blue-600 hover:bg-blue-50' // Stále modré, keď je premenený
                                                     : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-50'
                                         }`,
                                         onClick: isMatchActionAllowed()
                                             ? () => {
-                                                // Ak je aktívny akýkoľvek 7m, vypneme ho
-                                                if (eventType === 'penalty') {
+                                                // Ak je aktívny nepremenený 7m, vypneme ho
+                                                if (eventType === 'penalty' && eventSubType === 'missed') {
                                                     setEventType(null);
                                                     setEventTeam(null);
                                                     setEventSubType(null);
                                                     setSelectedPlayerForEvent(null);
-                                                } else {
-                                                    // Inak nastavíme nepremenený 7m (štandard)
+                                                }
+                                                // Ak je aktívny premenený 7m, prepneme na nepremenený
+                                                else if (eventType === 'penalty' && eventSubType === 'scored') {
+                                                    setEventType('penalty');
+                                                    setEventSubType('missed');
+                                                    setEventTeam(null);
+                                                    setSelectedPlayerForEvent(null);
+                                                }
+                                                // Inak nastavíme nepremenený 7m
+                                                else {
                                                     setEventType('penalty');
                                                     setEventSubType('missed');
                                                     setEventTeam(null);
@@ -2875,7 +2894,9 @@ const matchesHallApp = ({ userProfileData }) => {
                                     React.createElement('i', { className: `fa-solid fa-circle-dot ${
                                         !isMatchActionAllowed()
                                             ? 'text-blue-600'
-                                            : eventType === 'penalty' ? 'text-white' : 'text-blue-600'
+                                            : eventType === 'penalty' && eventSubType === 'missed' 
+                                            ? 'text-white' 
+                                            : 'text-blue-600'
                                     }` }),
                                     '7m'
                                 ),
