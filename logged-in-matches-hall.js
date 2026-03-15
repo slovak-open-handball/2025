@@ -4,11 +4,6 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/fi
 
 const { useState, useEffect } = React;
 
-// Ikony pre typy miest (pre prípadné použitie)
-const typeIcons = {
-    sportova_hala: { icon: 'fa-futbol', color: '#dc2626' },
-};
-
 // Funkcia na formátovanie dátumu s dňom v týždni
 const getDayName = (date) => {
     const days = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
@@ -880,7 +875,6 @@ const matchesHallApp = ({ userProfileData }) => {
             return onSnapshot(q, (snapshot) => {
                 let homeScore = 0;
                 let awayScore = 0;
-                let lastEventTime = null;
                 let matchTime = 0;
                 
                 // Získame všetky udalosti a vypočítame skóre
@@ -1081,25 +1075,6 @@ const matchesHallApp = ({ userProfileData }) => {
         fetchHallName();
     }, [hallId]);
 
-    // Načítanie tímov z teamManager
-    useEffect(() => {
-        if (window.teamManager) {
-            if (window.__teamManagerData) {
-                setTeamData(window.__teamManagerData);
-            }
-            
-            const unsubscribe = window.teamManager.subscribe((data) => {
-                setTeamData(data);
-            });
-            
-            return () => {
-                if (unsubscribe) unsubscribe();
-            };
-        } else if (window.__teamManagerData) {
-            setTeamData(window.__teamManagerData);
-        }
-    }, []);
-
     // 🔴 NOVÝ useEffect PRE NAČÍTANIE UDALOSTÍ ZÁPASU - PRIDAŤ SEM
     useEffect(() => {
         if (!selectedMatch || !window.db) return;
@@ -1293,74 +1268,6 @@ const matchesHallApp = ({ userProfileData }) => {
         
         loadCategorySettings();
     }, []); // Prázdne pole - spustí sa len raz
-
-    // Načítanie skupín z databázy
-    useEffect(() => {
-        if (!window.db) return;
-
-        const loadGroups = async () => {
-            try {
-                const groupsRef = doc(window.db, 'settings', 'groups');
-                const groupsSnap = await getDoc(groupsRef);
-                
-                if (groupsSnap.exists()) {
-                    const groupsData = groupsSnap.data();
-                    setGroupsByCategory(groupsData);
-                                        
-                    // Pre každú kategóriu vypíšeme jej skupiny
-                    Object.entries(groupsData).forEach(([categoryId, groups], catIndex) => {
-                        // Nájdeme názov kategórie podľa ID
-                        const category = categories.find(c => c.id === categoryId);
-                        const categoryName = category ? category.name : `Neznáma kategória (ID: ${categoryId})`;
-                                            
-                        // Rozdelíme skupiny podľa typu
-                        const basicGroups = groups.filter(g => g.type === 'základná skupina');
-                        const superGroups = groups.filter(g => g.type === 'nadstavbová skupina');
-                    });                                        
-                } else {
-                    setGroupsByCategory({});
-                }
-            } catch (error) {
-//                console.error('Chyba pri načítaní skupín:', error);
-                setGroupsByCategory({});
-            }
-        };
-        
-        loadGroups();
-        
-        // Môžeme pridať aj real-time listener pre skupiny
-        const unsubscribeGroups = onSnapshot(doc(window.db, 'settings', 'groups'), (docSnap) => {
-            if (docSnap.exists()) {
-                const groupsData = docSnap.data();
-                setGroupsByCategory(groupsData);
-            }
-        }, (error) => {
-//            console.error('Chyba pri real-time sledovaní skupín:', error);
-        });
-        
-        return () => unsubscribeGroups();
-    }, [categories]);
-
-    // NOVÝ LISTENER: Načítanie superstructure tímov z kolekcie settings/superstructureGroups
-    useEffect(() => {
-        if (!window.db) return;
-
-        const superstructureDocRef = doc(window.db, 'settings', 'superstructureGroups');
-        
-        const unsubscribeSuperstructure = onSnapshot(superstructureDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                setSuperstructureTeams(data);
-            } else {
-                setSuperstructureTeams({});
-            }
-        }, (error) => {
-//            console.error('Chyba pri načítaní superstructure tímov:', error);
-            setSuperstructureTeams({});
-        });
-
-        return () => unsubscribeSuperstructure();
-    }, []);
 
     // NOVÝ LISTENER: Načítanie všetkých používateľov z kolekcie users
     useEffect(() => {
