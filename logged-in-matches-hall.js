@@ -2334,7 +2334,127 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         };    
 
-        // 🔴 UPRAVENÁ FUNKCIA: addMatchEvent - používa createPlayerReference
+        // Pridajte novú funkciu pre aktualizáciu zvýraznenej udalosti
+        const updateHighlightedEvent = async (newType, newTeam, newSubType, newPlayer) => {
+            if (!highlightedEventId || !window.db) {
+                // Ak nie je zvýraznený žiadny riadok, správame sa štandardne - pridáme novú udalosť
+                addMatchEvent(newType, newTeam, newSubType, newPlayer);
+                return;
+            }
+            
+            try {
+                const eventRef = doc(window.db, 'matchEvents', highlightedEventId);
+                
+                // Získame aktuálnu udalosť
+                const eventSnap = await getDoc(eventRef);
+                if (!eventSnap.exists()) {
+                    window.showGlobalNotification('Udalosť neexistuje', 'error');
+                    return;
+                }
+                
+                const currentEvent = eventSnap.data();
+                
+                // Výpočet nového stavu
+                let homeScoreAfter = matchScore.home;
+                let awayScoreAfter = matchScore.away;
+                
+                // Odstránime starý vplyv na skóre (ak to bola gólová udalosť)
+                if (currentEvent.type === 'goal' || (currentEvent.type === 'penalty' && currentEvent.subType === 'scored')) {
+                    if (currentEvent.team === 'home') {
+                        homeScoreAfter--;
+                    } else if (currentEvent.team === 'away') {
+                        awayScoreAfter--;
+                    }
+                }
+                
+                // Pridáme nový vplyv na skóre (ak je to gólová udalosť)
+                if (newType === 'goal' || (newType === 'penalty' && newSubType === 'scored')) {
+                    if (newTeam === 'home') {
+                        homeScoreAfter++;
+                    } else if (newTeam === 'away') {
+                        awayScoreAfter++;
+                    }
+                }
+                
+                // Aktuálny čas v sekundách
+                const totalSeconds = matchTime;
+                const minute = Math.floor(totalSeconds / 60);
+                const second = totalSeconds % 60;
+                
+                const eventData = {
+                    type: newType,
+                    team: newTeam,
+                    minute: minute,
+                    second: second,
+                    formattedTime: `${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`,
+                    editedAt: Timestamp.now(),
+                    editedBy: userProfileData?.email || 'unknown',
+                    // Uložíme nový stav
+                    scoreBefore: {
+                        home: matchScore.home,
+                        away: matchScore.away
+                    },
+                    scoreAfter: {
+                        home: homeScoreAfter,
+                        away: awayScoreAfter
+                    }
+                };
+                
+                if (newType === 'penalty') {
+                    eventData.subType = newSubType;
+                } else {
+                    eventData.subType = null;
+                }
+                
+                if (newPlayer) {
+                    const teamDetails = newTeam === 'home' ? homeTeamDetails : awayTeamDetails;
+                    const teamIdentifier = newTeam === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
+                    
+                    let playerRef = null;
+                    
+                    if (newPlayer.isStaff) {
+                        playerRef = createPlayerReference(
+                            teamDetails,
+                            teamIdentifier,
+                            newPlayer,
+                            true,
+                            newPlayer.staffType,
+                            newPlayer.staffIndex
+                        );
+                    } else {
+                        playerRef = createPlayerReference(
+                            teamDetails,
+                            teamIdentifier,
+                            newPlayer,
+                            false
+                        );
+                    }
+                    
+                    if (playerRef) {
+                        eventData.playerRef = playerRef;
+                    }
+                    
+                    if (newType === 'yellow' || newType === 'red' || newType === 'blue' || newType === 'exclusion') {
+                        eventData.cardType = newType === 'exclusion' ? 'exclusion' : newType;
+                    }
+                } else {
+                    eventData.playerRef = null;
+                }
+                
+                await updateDoc(eventRef, eventData);
+                
+                window.showGlobalNotification('Udalosť bola aktualizovaná', 'success');
+                
+                // Zrušíme zvýraznenie po úspešnej aktualizácii
+                setHighlightedEventId(null);
+                
+            } catch (error) {
+                console.error('Chyba pri aktualizácii udalosti:', error);
+                window.showGlobalNotification('Chyba pri aktualizácii udalosti', 'error');
+            }
+        };
+
+        // Upravte funkciu addMatchEvent, aby používala updateHighlightedEvent ak je zvýraznený riadok
         const addMatchEvent = async (localEventType, localEventTeam, localEventSubType, localPlayer) => {
             if (!selectedMatch || !window.db) return;
             
@@ -2366,7 +2486,14 @@ const matchesHallApp = ({ userProfileData }) => {
                 window.showGlobalNotification('Vyberte hráča pre 7m hod', 'error');
                 return;
             }
-        
+            
+            // Ak je zvýraznený riadok, aktualizujeme ho namiesto pridania nového
+            if (highlightedEventId) {
+                await updateHighlightedEvent(type, team, subType, player);
+                return;
+            }
+            
+            // Inak pokračujeme s pôvodnou logikou pre pridanie novej udalosti
             try {
                 const eventsRef = collection(window.db, 'matchEvents');
                 
@@ -2414,7 +2541,6 @@ const matchesHallApp = ({ userProfileData }) => {
                     }
                 };
         
-                // 🔴 ZMENENÉ: Pridanie referencie na hráča pomocou createPlayerReference
                 if (player) {
                     // Získame detail tímu podľa identifikátora
                     const teamDetails = team === 'home' ? homeTeamDetails : awayTeamDetails;
@@ -2467,7 +2593,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 setEventSubType(null);
                 
             } catch (error) {
-//                console.error('Chyba pri pridávaní udalosti:', error);
+                console.error('Chyba pri pridávaní udalosti:', error);
                 window.showGlobalNotification('Chyba pri ukladaní udalosti', 'error');
             }
         };
@@ -3047,6 +3173,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                 if (eventType) {
                                                                     if (eventType === 'penalty') {
                                                                         if (eventSubType === 'scored') {
+                                                                            // Ak je zvýraznený riadok, aktualizujeme ho, inak pridáme nový
                                                                             addMatchEvent('penalty', 'home', 'scored', playerIdentifier);
                                                                         } else {
                                                                             addMatchEvent('penalty', 'home', 'missed', playerIdentifier);
@@ -3146,8 +3273,10 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     setEventTeam(null);
                                                     setEventSubType(null);
                                                 } else if (eventType === 'penalty') {
-                                                    setEventType('penalty');
-                                                    setEventSubType('scored');
+                                                    // Prepneme na gól - nastavíme typ a ak je zvýraznený riadok, použijeme update
+                                                    setEventType('goal');
+                                                    setEventSubType(null);
+                                                    // Ak je zvýraznený riadok, môžeme ho rovno aktualizovať? Radšej počkáme na kliknutie na hráča
                                                 } else {
                                                     setEventType('goal');
                                                     setEventSubType(null);
