@@ -5,11 +5,22 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/fi
 // Pridanie štýlov pre zvýraznenie riadkov
 const style = document.createElement('style');
 style.textContent = `
+    /* Zrušíme pôvodné štýly */
     .row-highlighted > div {
-        position: relative;
+        position: static;
     }
     
     .row-highlighted > div::before {
+        display: none;
+    }
+    
+    /* Nové orámovanie pre celý riadok */
+    .row-highlighted {
+        position: relative;
+        outline: none !important;
+    }
+    
+    .row-highlighted::before {
         content: '';
         position: absolute;
         top: 0;
@@ -17,13 +28,22 @@ style.textContent = `
         right: 0;
         bottom: 0;
         border: 2px solid #3B82F6;
-        border-radius: 4px;
+        border-radius: 8px;
         pointer-events: none;
-        z-index: 1;
+        z-index: 10;
+        margin: -2px;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
     }
     
-    .row-highlighted > div {
-        background-color: transparent !important;
+    /* Zabezpečíme, že riadok má relatívnu pozíciu pre orámovanie */
+    .grid {
+        position: relative;
+    }
+    
+    /* Upravíme pozíciu pre kontajner riadkov */
+    .grid > .contents {
+        display: contents;
+        position: relative;
     }
 `;
 document.head.appendChild(style);
