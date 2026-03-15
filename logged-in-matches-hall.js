@@ -247,6 +247,18 @@ const matchesHallApp = ({ userProfileData }) => {
     const [editMinute, setEditMinute] = useState('');
     const [editSecond, setEditSecond] = useState('');
 
+    const [highlightedEventId, setHighlightedEventId] = useState(null);
+
+    const highlightEventRow = (eventId) => {
+        // Ak je už rovnaký riadok zvýraznený, zrušíme zvýraznenie
+        if (highlightedEventId === eventId) {
+            setHighlightedEventId(null);
+        } else {
+            // Inak nastavíme nový zvýraznený riadok
+            setHighlightedEventId(eventId);
+        }
+    };
+
     const startInlineEdit = (event) => {
         setEditingEventId(event.id);
         setEditType(event.type);
@@ -3356,7 +3368,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     },
                                     
                                     matchEvents.map((event) => {
-                                        const isEditing = editingEventId === event.id;
+                                         const isHighlighted = highlightedEventId === event.id;
                                         const playerName = event.playerRef ? getPlayerNameFromRef(event.playerRef) : '';
                                         
                                         // Získanie čísla dresu pre hráča
@@ -3635,140 +3647,167 @@ const matchesHallApp = ({ userProfileData }) => {
                                         
                                         // Normálne zobrazenie (needitovaný riadok)
                                         return [
-                                            // 1. stĺpec - Meno priezvisko domáci
-                                            React.createElement(
-                                                'div',
-                                                { key: `${event.id}-col1`, className: 'flex flex-col leading-tight text-right p-2' },
-                                                event.team === 'home' && React.createElement(
-                                                    React.Fragment,
-                                                    null,
-                                                    React.createElement('span', { className: 'text-gray-700 text-xs font-medium' }, firstName),
-                                                    lastName && React.createElement('span', { className: 'text-gray-700 text-xs' }, lastName)
-                                                )
-                                            ),
-                                    
-                                            // 2. stĺpec - Číslo dresu domáci
-                                            React.createElement(
-                                                'div',
-                                                { key: `${event.id}-col2`, className: 'flex justify-end items-center p-2' },
-                                                event.team === 'home' && !isStaff && jerseyNumber && React.createElement(
-                                                    'span',
-                                                    { className: 'inline-block w-6 h-6 bg-gray-100 rounded-full text-xs font-bold text-gray-700 flex items-center justify-center' },
-                                                    jerseyNumber
-                                                )
-                                            ),
-                                            
-                                            // 3. stĺpec - Stav pred/po pre domácich (ak ide o gól)
-                                            React.createElement(
-                                                'div',
-                                                { key: `${event.id}-col3`, className: 'text-center p-2' },
-                                                (event.type === 'goal' || (event.type === 'penalty' && event.subType === 'scored')) && event.team === 'home' && React.createElement(
-                                                    'span',
-                                                    { className: 'inline-block px-2 py-1 rounded-full text-xs font-bold text-gray-700' },
-                                                    `${scoreAfter.home}:${scoreAfter.away}`
-                                                )
-                                            ),
-                                            
-                                            // 4. stĺpec - Ikona udalosti domáci
-                                            React.createElement(
-                                                'div',
-                                                { key: `${event.id}-col4`, className: 'flex justify-center items-center p-2' },
-                                                event.team === 'home' && eventIcon
-                                            ),
-                                            
-                                            // 5. stĺpec - Čas s košom a ceruzkou pri hoveri (pre všetky riadky)
-                                            React.createElement(
-                                                'div',
-                                                { key: `${event.id}-col5`, className: 'text-center relative p-2 group' },
-                                                // Čas - schová sa len pri hoveri (pre všetky riadky)
+                                                // 1. stĺpec - Meno priezvisko domáci
                                                 React.createElement(
-                                                    'span',
-                                                    { 
-                                                        className: `font-mono text-xs text-gray-800 ${
-                                                            (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && 
-                                                            selectedMatch?.status !== 'completed' && editingEventId !== event.id
-                                                                ? 'group-hover:hidden' 
-                                                                : ''
-                                                        }` 
-                                                    },
-                                                    `${event.minute}:${event.second?.toString().padStart(2, '0') || '00'}`
-                                                ),
-                                                // Ikony sa zobrazia pre každý riadok, len ak zápas nie je ukončený a nie je v editácii
-                                                (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && 
-                                                selectedMatch?.status !== 'completed' && editingEventId !== event.id && React.createElement(
                                                     'div',
-                                                    { className: 'hidden group-hover:flex items-center justify-center gap-2' },
-                                                    // Ceruzka pre úpravu - teraz spúšťa inline edit
+                                                    { 
+                                                        key: `${event.id}-col1`, 
+                                                        className: `flex flex-col leading-tight text-right p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
+                                                    },
+                                                    event.team === 'home' && React.createElement(
+                                                        React.Fragment,
+                                                        null,
+                                                        React.createElement('span', { className: 'text-gray-700 text-xs font-medium' }, firstName),
+                                                        lastName && React.createElement('span', { className: 'text-gray-700 text-xs' }, lastName)
+                                                    )
+                                                ),
+                                        
+                                                // 2. stĺpec - Číslo dresu domáci
+                                                React.createElement(
+                                                    'div',
+                                                    { 
+                                                        key: `${event.id}-col2`, 
+                                                        className: `flex justify-end items-center p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
+                                                    },
+                                                    event.team === 'home' && !isStaff && jerseyNumber && React.createElement(
+                                                        'span',
+                                                        { className: 'inline-block w-6 h-6 bg-gray-100 rounded-full text-xs font-bold text-gray-700 flex items-center justify-center' },
+                                                        jerseyNumber
+                                                    )
+                                                ),
+                                                
+                                                // 3. stĺpec - Stav pred/po pre domácich (ak ide o gól)
+                                                React.createElement(
+                                                    'div',
+                                                    { 
+                                                        key: `${event.id}-col3`, 
+                                                        className: `text-center p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
+                                                    },
+                                                    (event.type === 'goal' || (event.type === 'penalty' && event.subType === 'scored')) && event.team === 'home' && React.createElement(
+                                                        'span',
+                                                        { className: 'inline-block px-2 py-1 rounded-full text-xs font-bold text-gray-700' },
+                                                        `${scoreAfter.home}:${scoreAfter.away}`
+                                                    )
+                                                ),
+                                                
+                                                // 4. stĺpec - Ikona udalosti domáci
+                                                React.createElement(
+                                                    'div',
+                                                    { 
+                                                        key: `${event.id}-col4`, 
+                                                        className: `flex justify-center items-center p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
+                                                    },
+                                                    event.team === 'home' && eventIcon
+                                                ),
+                                                
+                                                // 5. stĺpec - Čas s košom a ceruzkou pri hoveri (pre všetky riadky)
+                                                React.createElement(
+                                                    'div',
+                                                    { 
+                                                        key: `${event.id}-col5`, 
+                                                        className: `text-center relative p-2 group ${isHighlighted ? 'bg-blue-100' : ''}` 
+                                                    },
+                                                    // Čas - schová sa len pri hoveri (pre všetky riadky)
                                                     React.createElement(
-                                                        'button',
-                                                        {
-                                                            className: 'text-blue-500 hover:text-blue-700',
-                                                            onClick: (e) => {
-                                                                e.stopPropagation();
-                                                                startInlineEdit(event);
-                                                            },
-                                                            title: 'Upraviť udalosť'
+                                                        'span',
+                                                        { 
+                                                            className: `font-mono text-xs text-gray-800 ${
+                                                                (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && 
+                                                                selectedMatch?.status !== 'completed'
+                                                                    ? 'group-hover:hidden' 
+                                                                    : ''
+                                                            }` 
                                                         },
-                                                        React.createElement('i', { className: 'fa-solid fa-pencil text-xs' })
+                                                        `${event.minute}:${event.second?.toString().padStart(2, '0') || '00'}`
                                                     ),
-                                                    // Kôš pre zmazanie
-                                                    React.createElement(
-                                                        'button',
-                                                        {
-                                                            className: 'text-red-500 hover:text-red-700',
-                                                            onClick: (e) => {
-                                                                e.stopPropagation();
-                                                                deleteMatchEvent(event.id);
+                                                    // Ikony sa zobrazia pre každý riadok, len ak zápas nie je ukončený
+                                                    (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && 
+                                                    selectedMatch?.status !== 'completed' && React.createElement(
+                                                        'div',
+                                                        { className: 'hidden group-hover:flex items-center justify-center gap-2' },
+                                                        // Ceruzka pre zvýraznenie riadku
+                                                        React.createElement(
+                                                            'button',
+                                                            {
+                                                                className: `text-blue-500 hover:text-blue-700 ${isHighlighted ? 'opacity-100' : ''}`,
+                                                                onClick: (e) => {
+                                                                    e.stopPropagation();
+                                                                    highlightEventRow(event.id);
+                                                                },
+                                                                title: isHighlighted ? 'Zrušiť zvýraznenie' : 'Zvýrazniť riadok'
                                                             },
-                                                            title: 'Zmazať udalosť'
-                                                        },
-                                                        React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                                            React.createElement('i', { className: 'fa-solid fa-pencil text-xs' })
+                                                        ),
+                                                        // Kôš pre zmazanie
+                                                        React.createElement(
+                                                            'button',
+                                                            {
+                                                                className: 'text-red-500 hover:text-red-700',
+                                                                onClick: (e) => {
+                                                                    e.stopPropagation();
+                                                                    deleteMatchEvent(event.id);
+                                                                },
+                                                                title: 'Zmazať udalosť'
+                                                            },
+                                                            React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                                        )
+                                                    )
+                                                ),
+                                                
+                                                // 6. stĺpec - Ikona udalosti hostia
+                                                React.createElement(
+                                                    'div',
+                                                    { 
+                                                        key: `${event.id}-col6`, 
+                                                        className: `flex justify-center items-center p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
+                                                    },
+                                                    event.team === 'away' && eventIcon
+                                                ),
+                                                
+                                                // 7. stĺpec - Stav pred/po pre hostí (ak ide o gól)
+                                                React.createElement(
+                                                    'div',
+                                                    { 
+                                                        key: `${event.id}-col7`, 
+                                                        className: `text-center p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
+                                                    },
+                                                    (event.type === 'goal' || (event.type === 'penalty' && event.subType === 'scored')) && event.team === 'away' && React.createElement(
+                                                        'span',
+                                                        { className: 'inline-block px-2 py-1 rounded-full text-xs font-bold text-gray-700' }, 
+                                                        `${scoreAfter.home}:${scoreAfter.away}`
+                                                    )
+                                                ),
+                                                
+                                                // 8. stĺpec - Číslo dresu hostia
+                                                React.createElement(
+                                                    'div',
+                                                    { 
+                                                        key: `${event.id}-col8`, 
+                                                        className: `flex justify-start items-center p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
+                                                    },
+                                                    event.team === 'away' && !isStaff && jerseyNumber && React.createElement(
+                                                        'span',
+                                                        { className: 'inline-block w-6 h-6 bg-gray-100 rounded-full text-xs font-bold text-gray-700 flex items-center justify-center' },
+                                                        jerseyNumber
+                                                    )
+                                                ),
+                                                
+                                                // 9. stĺpec - Meno priezvisko hostia
+                                                React.createElement(
+                                                    'div',
+                                                    { 
+                                                        key: `${event.id}-col9`, 
+                                                        className: `flex flex-col leading-tight text-left p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
+                                                    },
+                                                    event.team === 'away' && React.createElement(
+                                                        React.Fragment,
+                                                        null,
+                                                        React.createElement('span', { className: 'text-gray-700 text-xs font-medium' }, firstName),
+                                                        lastName && React.createElement('span', { className: 'text-gray-700 text-xs' }, lastName)
                                                     )
                                                 )
-                                            ),
-                                            
-                                            // 6. stĺpec - Ikona udalosti hostia
-                                            React.createElement(
-                                                'div',
-                                                { key: `${event.id}-col6`, className: 'flex justify-center items-center p-2' },
-                                                event.team === 'away' && eventIcon
-                                            ),
-                                            
-                                            // 7. stĺpec - Stav pred/po pre hostí (ak ide o gól)
-                                            React.createElement(
-                                                'div',
-                                                { key: `${event.id}-col7`, className: 'text-center p-2' },
-                                                (event.type === 'goal' || (event.type === 'penalty' && event.subType === 'scored')) && event.team === 'away' && React.createElement(
-                                                    'span',
-                                                    { className: 'inline-block px-2 py-1 rounded-full text-xs font-bold text-gray-700' }, 
-                                                    `${scoreAfter.home}:${scoreAfter.away}`
-                                                )
-                                            ),
-                                            
-                                            // 8. stĺpec - Číslo dresu hostia
-                                            React.createElement(
-                                                'div',
-                                                { key: `${event.id}-col8`, className: 'flex justify-start items-center p-2' },
-                                                event.team === 'away' && !isStaff && jerseyNumber && React.createElement(
-                                                    'span',
-                                                    { className: 'inline-block w-6 h-6 bg-gray-100 rounded-full text-xs font-bold text-gray-700 flex items-center justify-center' },
-                                                    jerseyNumber
-                                                )
-                                            ),
-                                            
-                                            // 9. stĺpec - Meno priezvisko hostia
-                                            React.createElement(
-                                                'div',
-                                                { key: `${event.id}-col9`, className: 'flex flex-col leading-tight text-left p-2' },
-                                                event.team === 'away' && React.createElement(
-                                                    React.Fragment,
-                                                    null,
-                                                    React.createElement('span', { className: 'text-gray-700 text-xs font-medium' }, firstName),
-                                                    lastName && React.createElement('span', { className: 'text-gray-700 text-xs' }, lastName)
-                                                )
-                                            )
-                                        ];
-                                    }).flat()
+                                            ];
+                                        }).flat()
                                 )
                             )
                         ),
