@@ -2964,13 +2964,17 @@ const matchesHallApp = ({ userProfileData }) => {
                                         const scoreBefore = event.scoreBefore || { home: 0, away: 0 };
                                         const scoreAfter = event.scoreAfter || { home: 0, away: 0 };
                                         
-                                        // Normálne zobrazenie (už žiadna podmienka pre isEditing)
-                                        return [
+                                        // Vytvoríme riadok ako wrapper s triedou pre zvýraznenie celého riadku
+                                        return React.createElement(
+                                            'div',
+                                            { 
+                                                key: event.id,
+                                                className: `contents ${isHighlighted ? 'row-highlighted' : ''}`
+                                            },
                                             // 1. stĺpec - Meno priezvisko domáci
                                             React.createElement(
                                                 'div',
                                                 { 
-                                                    key: `${event.id}-col1`, 
                                                     className: `flex flex-col leading-tight text-right p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
                                                 },
                                                 event.team === 'home' && React.createElement(
@@ -2985,7 +2989,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { 
-                                                    key: `${event.id}-col2`, 
                                                     className: `flex justify-end items-center p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
                                                 },
                                                 event.team === 'home' && !isStaff && jerseyNumber && React.createElement(
@@ -2999,7 +3002,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { 
-                                                    key: `${event.id}-col3`, 
                                                     className: `text-center p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
                                                 },
                                                 (event.type === 'goal' || (event.type === 'penalty' && event.subType === 'scored')) && event.team === 'home' && React.createElement(
@@ -3013,7 +3015,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { 
-                                                    key: `${event.id}-col4`, 
                                                     className: `flex justify-center items-center p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
                                                 },
                                                 event.team === 'home' && eventIcon
@@ -3023,7 +3024,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { 
-                                                    key: `${event.id}-col5`, 
                                                     className: `text-center relative p-2 group ${isHighlighted ? 'bg-blue-100' : ''}` 
                                                 },
                                                 // Čas - schová sa len pri hoveri (pre všetky riadky)
@@ -3077,7 +3077,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { 
-                                                    key: `${event.id}-col6`, 
                                                     className: `flex justify-center items-center p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
                                                 },
                                                 event.team === 'away' && eventIcon
@@ -3087,7 +3086,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { 
-                                                    key: `${event.id}-col7`, 
                                                     className: `text-center p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
                                                 },
                                                 (event.type === 'goal' || (event.type === 'penalty' && event.subType === 'scored')) && event.team === 'away' && React.createElement(
@@ -3101,7 +3099,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { 
-                                                    key: `${event.id}-col8`, 
                                                     className: `flex justify-start items-center p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
                                                 },
                                                 event.team === 'away' && !isStaff && jerseyNumber && React.createElement(
@@ -3115,7 +3112,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { 
-                                                    key: `${event.id}-col9`, 
                                                     className: `flex flex-col leading-tight text-left p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
                                                 },
                                                 event.team === 'away' && React.createElement(
@@ -3125,8 +3121,8 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     lastName && React.createElement('span', { className: 'text-gray-700 text-xs' }, lastName)
                                                 )
                                             )
-                                        ];
-                                    }).flat()
+                                        );
+                                    })
                                 )
                             )
                         ),
