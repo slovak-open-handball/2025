@@ -360,6 +360,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
             
             await updateDoc(eventRef, eventData);
+            await recalculateScores();
             
             window.showGlobalNotification('Udalosť bola upravená', 'success');
             cancelInlineEdit();
@@ -1621,6 +1622,7 @@ const matchesHallApp = ({ userProfileData }) => {
         try {
             const eventRef = doc(window.db, 'matchEvents', eventToDelete);
             await deleteDoc(eventRef);
+            await recalculateScores();
             window.showGlobalNotification('Udalosť bola zmazaná', 'success');
             setEventToDelete(null);
         } catch (error) {
@@ -2235,6 +2237,69 @@ const matchesHallApp = ({ userProfileData }) => {
             return players;
         };
 
+        // Pridajte túto funkciu do časti if (selectedMatch) { ... }
+        const recalculateScores = async () => {
+            if (!selectedMatch || !window.db) return;
+            
+            try {
+                // Získame všetky udalosti pre tento zápas zoradené chronologicky
+                const eventsRef = collection(window.db, 'matchEvents');
+                const q = query(
+                    eventsRef, 
+                    where("matchId", "==", selectedMatch.id),
+                    orderBy("minute", "asc"),
+                    orderBy("second", "asc")
+                );
+                
+                const querySnapshot = await getDocs(q);
+                const events = [];
+                querySnapshot.forEach((doc) => {
+                    events.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // Prepočítame skóre pre každú udalosť
+                let homeScore = 0;
+                let awayScore = 0;
+                const updatePromises = [];
+                
+                for (const event of events) {
+                    const scoreBefore = { home: homeScore, away: awayScore };
+                    
+                    // Aktualizujeme skóre podľa typu udalosti
+                    if (event.type === 'goal' || (event.type === 'penalty' && event.subType === 'scored')) {
+                        if (event.team === 'home') {
+                            homeScore++;
+                        } else if (event.team === 'away') {
+                            awayScore++;
+                        }
+                    }
+                    
+                    const scoreAfter = { home: homeScore, away: awayScore };
+                    
+                    // Ak sa skóre zmenilo, aktualizujeme udalosť
+                    if (JSON.stringify(event.scoreBefore) !== JSON.stringify(scoreBefore) || 
+                        JSON.stringify(event.scoreAfter) !== JSON.stringify(scoreAfter)) {
+                        
+                        const eventRef = doc(window.db, 'matchEvents', event.id);
+                        updatePromises.push(
+                            updateDoc(eventRef, {
+                                scoreBefore: scoreBefore,
+                                scoreAfter: scoreAfter
+                            })
+                        );
+                    }
+                }
+                
+                // Vykonáme všetky aktualizácie
+                if (updatePromises.length > 0) {
+                    await Promise.all(updatePromises);
+                }
+                
+            } catch (error) {
+                console.error('Chyba pri prepočítavaní skóre:', error);
+            }
+        };
+
         // Pridajte funkciu pre uloženie upravenej udalosti
         const saveEditedEvent = async (editedData) => {
             if (!eventToEdit || !window.db) return;
@@ -2323,6 +2388,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 }
                 
                 await updateDoc(eventRef, eventData);
+                await recalculateScores();
                 
                 window.showGlobalNotification('Udalosť bola upravená', 'success');
                 setEditModalOpen(false);
@@ -2442,6 +2508,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 }
                 
                 await updateDoc(eventRef, eventData);
+                await recalculateScores();
                 
                 window.showGlobalNotification('Udalosť bola aktualizovaná', 'success');
                 
@@ -2589,6 +2656,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 }
         
                 await addDoc(eventsRef, eventData);
+                await recalculateScores();
                 
                 window.showGlobalNotification(`Udalosť bola pridaná v čase ${formattedTime}`, 'success');
                 
