@@ -3182,16 +3182,17 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     { 
                                                         className: `font-mono text-xs text-gray-800 ${
                                                             (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && 
-                                                            matchEvents.length > 0 && event.id === matchEvents[0].id 
+                                                            matchEvents.length > 0 && event.id === matchEvents[0].id && selectedMatch?.status !== 'completed'
                                                                 ? 'group-hover:hidden' 
                                                                 : ''
                                                         }` 
                                                     },
                                                     `${event.minute}:${event.second?.toString().padStart(2, '0') || '00'}`
                                                 ),
-                                                // Kôš sa zobrazí len pre prvú udalosť v zozname (najnovšiu)
+                                                // Kôš sa zobrazí len pre prvú udalosť v zozname (najnovšiu) a len ak zápas nie je ukončený
                                                 (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && 
-                                                matchEvents.length > 0 && event.id === matchEvents[0].id && React.createElement(
+                                                matchEvents.length > 0 && event.id === matchEvents[0].id && 
+                                                selectedMatch?.status !== 'completed' && React.createElement(
                                                     'button',
                                                     {
                                                         className: 'hidden group-hover:inline-block text-red-500 hover:text-red-700',
