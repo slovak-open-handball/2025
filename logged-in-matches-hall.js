@@ -1841,7 +1841,10 @@ const matchesHallApp = ({ userProfileData }) => {
                 // Získame aktuálnu udalosť
                 const eventSnap = await getDoc(eventRef);
                 if (!eventSnap.exists()) {
-                    window.showGlobalNotification('Udalosť neexistuje', 'error');
+                    window.showGlobalNotification('Zvýraznená udalosť už neexistuje', 'error');
+                    setHighlightedEventId(null);
+                    // Skúsime pridať novú udalosť
+                    addMatchEvent(newType, newTeam, newSubType, newPlayer);
                     return;
                 }
                 
@@ -1941,8 +1944,8 @@ const matchesHallApp = ({ userProfileData }) => {
                 
                 // Zrušíme zvýraznenie po úspešnej aktualizácii
                 setHighlightedEventId(null);
-
-                // 🔴 PRIDANÉ: Resetujeme stavy tlačidiel
+        
+                // Resetujeme stavy tlačidiel
                 setSelectedPlayerForEvent(null);
                 setEventType(null);
                 setEventTeam(null);
@@ -1987,10 +1990,34 @@ const matchesHallApp = ({ userProfileData }) => {
                 return;
             }
             
-            // Ak je zvýraznený riadok, aktualizujeme ho namiesto pridania nového
+            // Ak je zvýraznený riadok, najprv skontrolujeme, či sa typ udalosti zhoduje
             if (highlightedEventId) {
-                await updateHighlightedEvent(type, team, subType, player);
-                return;
+                try {
+                    // Získame aktuálnu zvýraznenú udalosť
+                    const eventRef = doc(window.db, 'matchEvents', highlightedEventId);
+                    const eventSnap = await getDoc(eventRef);
+                    
+                    if (eventSnap.exists()) {
+                        const currentEvent = eventSnap.data();
+                        
+                        // Skontrolujeme, či sa typ udalosti zhoduje
+                        // Ak sa nezhoduje, zrušíme zvýraznenie a pridáme novú udalosť
+                        if (currentEvent.type !== type) {
+                            setHighlightedEventId(null);
+                            // Pokračujeme s pridávaním novej udalosti
+                        } else {
+                            // Typ sa zhoduje, aktualizujeme existujúcu udalosť
+                            await updateHighlightedEvent(type, team, subType, player);
+                            return;
+                        }
+                    } else {
+                        // Udalosť neexistuje, zrušíme zvýraznenie
+                        setHighlightedEventId(null);
+                    }
+                } catch (error) {
+                    console.error('Chyba pri kontrole zvýraznenej udalosti:', error);
+                    setHighlightedEventId(null);
+                }
             }
             
             // Inak pokračujeme s pôvodnou logikou pre pridanie novej udalosti
