@@ -5,17 +5,25 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/fi
 // Pridanie štýlov pre zvýraznenie riadkov
 const style = document.createElement('style');
 style.textContent = `
-    .row-highlighted {
-        outline: 2px solid #3B82F6;
-        outline-offset: -1px;
-        border-radius: 4px;
+    .row-highlighted > div {
         position: relative;
-        z-index: 5;
     }
     
-    /* Zabezpečíme, že obsah vo vnútri zostane čitateľný */
+    .row-highlighted > div::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border: 2px solid #3B82F6;
+        border-radius: 4px;
+        pointer-events: none;
+        z-index: 1;
+    }
+    
     .row-highlighted > div {
-        background-color: rgba(59, 130, 246, 0.05);
+        background-color: transparent !important;
     }
 `;
 document.head.appendChild(style);
