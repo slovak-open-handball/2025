@@ -368,57 +368,6 @@ const matchesHallApp = ({ userProfileData }) => {
         setEditSecond('');
     };
     
-    // Funkcia pre získanie zoznamu hráčov pre výber (pre inline edit)
-    const getTeamPlayersForEdit = (teamSide) => {
-        const teamDetails = teamSide === 'home' ? homeTeamDetails : awayTeamDetails;
-        if (!teamDetails) return [];
-        
-        const players = [];
-        
-        if (teamDetails.team.playerDetails) {
-            teamDetails.team.playerDetails.forEach((player, idx) => {
-                players.push({
-                    ...player,
-                    userId: teamDetails.userId,
-                    teamIdentifier: teamSide === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier,
-                    displayName: `${player.firstName} ${player.lastName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`,
-                    index: idx,
-                    isStaff: false
-                });
-            });
-        }
-        
-        if (teamDetails.team.menTeamMemberDetails) {
-            teamDetails.team.menTeamMemberDetails.forEach((member, idx) => {
-                players.push({
-                    ...member,
-                    userId: teamDetails.userId,
-                    teamIdentifier: teamSide === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier,
-                    displayName: `${member.firstName} ${member.lastName} (tréner)`,
-                    isStaff: true,
-                    staffType: 'men',
-                    staffIndex: idx
-                });
-            });
-        }
-        
-        if (teamDetails.team.womenTeamMemberDetails) {
-            teamDetails.team.womenTeamMemberDetails.forEach((member, idx) => {
-                players.push({
-                    ...member,
-                    userId: teamDetails.userId,
-                    teamIdentifier: teamSide === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier,
-                    displayName: `${member.firstName} ${member.lastName} (trénerka)`,
-                    isStaff: true,
-                    staffType: 'women',
-                    staffIndex: idx
-                });
-            });
-        }
-        
-        return players;
-    };
-    
     const openEditEventModal = (event) => {
         setEventToEdit(event);
         setEditEventType(event.type);
@@ -2222,6 +2171,57 @@ const matchesHallApp = ({ userProfileData }) => {
         const matchDate = selectedMatch.scheduledTime ? formatDateWithDay(selectedMatch.scheduledTime.toDate()) : 'neurčený';
         const matchStartTime = selectedMatch.scheduledTime ? formatTime(selectedMatch.scheduledTime) : '-- : --';
         const category = categories.find(c => c.name === selectedMatch.categoryName);
+
+        // Funkcia pre získanie zoznamu hráčov pre výber (pre inline edit)
+        const getTeamPlayersForEdit = (teamSide) => {
+            const teamDetails = teamSide === 'home' ? homeTeamDetails : awayTeamDetails;
+            if (!teamDetails) return [];
+            
+            const players = [];
+            
+            if (teamDetails.team.playerDetails) {
+                teamDetails.team.playerDetails.forEach((player, idx) => {
+                    players.push({
+                        ...player,
+                        userId: teamDetails.userId,
+                        teamIdentifier: teamSide === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier,
+                        displayName: `${player.firstName} ${player.lastName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`,
+                        index: idx,
+                        isStaff: false
+                    });
+                });
+            }
+            
+            if (teamDetails.team.menTeamMemberDetails) {
+                teamDetails.team.menTeamMemberDetails.forEach((member, idx) => {
+                    players.push({
+                        ...member,
+                        userId: teamDetails.userId,
+                        teamIdentifier: teamSide === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier,
+                        displayName: `${member.firstName} ${member.lastName} (tréner)`,
+                        isStaff: true,
+                        staffType: 'men',
+                        staffIndex: idx
+                    });
+                });
+            }
+            
+            if (teamDetails.team.womenTeamMemberDetails) {
+                teamDetails.team.womenTeamMemberDetails.forEach((member, idx) => {
+                    players.push({
+                        ...member,
+                        userId: teamDetails.userId,
+                        teamIdentifier: teamSide === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier,
+                        displayName: `${member.firstName} ${member.lastName} (trénerka)`,
+                        isStaff: true,
+                        staffType: 'women',
+                        staffIndex: idx
+                    });
+                });
+            }
+            
+            return players;
+        };
 
         // Pridajte funkciu pre uloženie upravenej udalosti
         const saveEditedEvent = async (editedData) => {
