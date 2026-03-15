@@ -2447,6 +2447,12 @@ const matchesHallApp = ({ userProfileData }) => {
                 
                 // Zrušíme zvýraznenie po úspešnej aktualizácii
                 setHighlightedEventId(null);
+
+                // 🔴 PRIDANÉ: Resetujeme stavy tlačidiel
+                setSelectedPlayerForEvent(null);
+                setEventType(null);
+                setEventTeam(null);
+                setEventSubType(null);
                 
             } catch (error) {
                 console.error('Chyba pri aktualizácii udalosti:', error);
