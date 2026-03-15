@@ -2039,7 +2039,15 @@ const matchesHallApp = ({ userProfileData }) => {
                 let awayScoreAfter = matchScore.away;
                 
                 // Ak ide o gól alebo premenenú penaltu, aktualizujeme skóre
-                if ((type === 'goal') || (type === 'penalty' && subType === 'scored')) {
+                if (type === 'goal') {
+                    // Normálny gól
+                    if (team === 'home') {
+                        homeScoreAfter = homeScoreBefore + 1;
+                    } else if (team === 'away') {
+                        awayScoreAfter = awayScoreBefore + 1;
+                    }
+                } else if (type === 'penalty' && subType === 'scored') {
+                    // Premenený 7m
                     if (team === 'home') {
                         homeScoreAfter = homeScoreBefore + 1;
                     } else if (team === 'away') {
@@ -2699,16 +2707,17 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         onClick: isMatchActionAllowed()
                                                             ? () => {
                                                                 if (eventType) {
-                                                                    if (eventType === 'penalty') {
-                                                                        if (eventSubType === 'scored') {
-                                                                            // Ak je zvýraznený riadok, aktualizujeme ho, inak pridáme nový
-                                                                            addMatchEvent('penalty', 'home', 'scored', playerIdentifier);
-                                                                        } else {
-                                                                            addMatchEvent('penalty', 'home', 'missed', playerIdentifier);
-                                                                        }
-                                                                    } else if (eventType === 'goal') {
+                                                                    if (eventType === 'goal' && eventSubType === null) {
+                                                                        // Normálny gól
                                                                         addMatchEvent('goal', 'home', null, playerIdentifier);
+                                                                    } else if (eventType === 'penalty' && eventSubType === 'missed') {
+                                                                        // Nepremenený 7m
+                                                                        addMatchEvent('penalty', 'home', 'missed', playerIdentifier);
+                                                                    } else if (eventType === 'penalty') {
+                                                                        // Toto by sa nemalo stať, ale pre istotu
+                                                                        addMatchEvent('penalty', 'home', 'missed', playerIdentifier);
                                                                     } else {
+                                                                        // Ostatné udalosti
                                                                         addMatchEvent(eventType, 'home', null, playerIdentifier);
                                                                     }
                                                                 }
@@ -2779,35 +2788,32 @@ const matchesHallApp = ({ userProfileData }) => {
                                 'div',
                                 { className: 'flex flex-wrap gap-2 justify-center mb-4' },
                                 
-                                // Tlačidlo GÓL
+                                // Tlačidlo GÓL (normálny gól)
                                 React.createElement(
                                     'button',
                                     {
                                         className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 border-2 ${
                                             !isMatchActionAllowed()
-                                                ? 'bg-white text-green-600 border-green-600 cursor-not-allowed'
-                                                : eventType === 'goal' && eventSubType !== 'scored' 
+                                                ? 'bg-white text-green-600 border-green-600 cursor-not-allowed opacity-50'
+                                                : eventType === 'goal' && eventSubType === null
                                                     ? 'bg-green-600 text-white border-green-600' 
-                                                    : eventType === 'goal' && eventSubType === 'scored'
-                                                    ? 'bg-green-600 text-white border-green-600'
-                                                    : eventType === 'penalty' && eventSubType === 'scored'
-                                                    ? 'bg-green-600 text-white border-green-600'
                                                     : 'bg-white text-green-600 border-green-600 hover:bg-green-50'
                                         }`,
                                         onClick: isMatchActionAllowed() 
                                             ? () => {
-                                                if (eventType === 'goal') {
+                                                // Ak je aktívny 7m, tak ho vypneme a nastavíme normálny gól
+                                                if (eventType === 'goal' && eventSubType === null) {
+                                                    // Už je aktívny normálny gól - vypneme ho
                                                     setEventType(null);
                                                     setEventTeam(null);
                                                     setEventSubType(null);
-                                                } else if (eventType === 'penalty') {
-                                                    // Prepneme na gól - nastavíme typ a ak je zvýraznený riadok, použijeme update
-                                                    setEventType('goal');
-                                                    setEventSubType(null);
-                                                    // Ak je zvýraznený riadok, môžeme ho rovno aktualizovať? Radšej počkáme na kliknutie na hráča
+                                                    setSelectedPlayerForEvent(null);
                                                 } else {
+                                                    // Inak nastavíme normálny gól
                                                     setEventType('goal');
                                                     setEventSubType(null);
+                                                    setEventTeam(null);
+                                                    setSelectedPlayerForEvent(null);
                                                 }
                                             }
                                             : undefined,
@@ -2819,34 +2825,37 @@ const matchesHallApp = ({ userProfileData }) => {
                                     React.createElement('i', { className: `fa-solid fa-futbol ${
                                         !isMatchActionAllowed()
                                             ? 'text-green-600'
-                                            : (eventType === 'goal') || (eventType === 'penalty' && eventSubType === 'scored') 
+                                            : eventType === 'goal' && eventSubType === null
                                                 ? 'text-white' 
                                                 : 'text-green-600'
                                     }` }),
                                     'Gól'
                                 ),
                                 
-                                // Tlačidlo 7m
+                                // Tlačidlo 7m (nepremenený)
                                 React.createElement(
                                     'button',
                                     {
                                         className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 border-2 ${
                                             !isMatchActionAllowed()
-                                                ? 'bg-white text-blue-600 border-blue-600 cursor-not-allowed'
-                                                : eventType === 'penalty' 
+                                                ? 'bg-white text-blue-600 border-blue-600 cursor-not-allowed opacity-50'
+                                                : eventType === 'penalty' && eventSubType === 'missed'
                                                     ? 'bg-blue-600 text-white border-blue-600' 
                                                     : 'bg-white text-blue-600 border-blue-600 hover:bg-blue-50'
                                         }`,
                                         onClick: isMatchActionAllowed()
                                             ? () => {
-                                                if (eventType === 'penalty') {
+                                                // Ak je aktívny 7m (nepremenený), tak ho vypneme
+                                                if (eventType === 'penalty' && eventSubType === 'missed') {
                                                     setEventType(null);
                                                     setEventTeam(null);
                                                     setEventSubType(null);
                                                     setSelectedPlayerForEvent(null);
                                                 } else {
+                                                    // Inak nastavíme nepremenený 7m
                                                     setEventType('penalty');
                                                     setEventSubType('missed');
+                                                    setEventTeam(null);
                                                     setSelectedPlayerForEvent(null);
                                                 }
                                             }
@@ -2859,7 +2868,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     React.createElement('i', { className: `fa-solid fa-circle-dot ${
                                         !isMatchActionAllowed()
                                             ? 'text-blue-600'
-                                            : eventType === 'penalty' ? 'text-white' : 'text-blue-600'
+                                            : eventType === 'penalty' && eventSubType === 'missed' ? 'text-white' : 'text-blue-600'
                                     }` }),
                                     '7m'
                                 ),
@@ -2870,7 +2879,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     {
                                         className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 border-2 ${
                                             !isMatchActionAllowed()
-                                                ? 'bg-white text-yellow-600 border-yellow-500 cursor-not-allowed'
+                                                ? 'bg-white text-yellow-600 border-yellow-500 cursor-not-allowed opacity-50'
                                                 : eventType === 'yellow' 
                                                     ? 'bg-yellow-500 text-white border-yellow-500' 
                                                     : 'bg-white text-yellow-600 border-yellow-500 hover:bg-yellow-50'
@@ -2882,6 +2891,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     setEventTeam(null);
                                                 } else {
                                                     setEventType('yellow');
+                                                    setEventSubType(null);
                                                 }
                                             }
                                             : undefined,
@@ -2904,7 +2914,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     {
                                         className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 border-2 ${
                                             !isMatchActionAllowed()
-                                                ? 'bg-white text-red-600 border-red-600 cursor-not-allowed'
+                                                ? 'bg-white text-red-600 border-red-600 cursor-not-allowed opacity-50'
                                                 : eventType === 'red' 
                                                     ? 'bg-red-600 text-white border-red-600' 
                                                     : 'bg-white text-red-600 border-red-600 hover:bg-red-50'
@@ -2916,6 +2926,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     setEventTeam(null);
                                                 } else {
                                                     setEventType('red');
+                                                    setEventSubType(null);
                                                 }
                                             }
                                             : undefined,
@@ -2938,7 +2949,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     {
                                         className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 border-2 ${
                                             !isMatchActionAllowed()
-                                                ? 'bg-white text-blue-800 border-blue-800 cursor-not-allowed'
+                                                ? 'bg-white text-blue-800 border-blue-800 cursor-not-allowed opacity-50'
                                                 : eventType === 'blue' 
                                                     ? 'bg-blue-800 text-white border-blue-800' 
                                                     : 'bg-white text-blue-800 border-blue-800 hover:bg-blue-100'
@@ -2950,6 +2961,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     setEventTeam(null);
                                                 } else {
                                                     setEventType('blue');
+                                                    setEventSubType(null);
                                                 }
                                             }
                                             : undefined,
@@ -2972,7 +2984,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     {
                                         className: `px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 border-2 ${
                                             !isMatchActionAllowed()
-                                                ? 'bg-white text-orange-600 border-orange-600 cursor-not-allowed'
+                                                ? 'bg-white text-orange-600 border-orange-600 cursor-not-allowed opacity-50'
                                                 : eventType === 'exclusion' 
                                                     ? 'bg-orange-600 text-white border-orange-600' 
                                                     : 'bg-white text-orange-600 border-orange-600 hover:bg-orange-50'
@@ -2984,6 +2996,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     setEventTeam(null);
                                                 } else {
                                                     setEventType('exclusion');
+                                                    setEventSubType(null);
                                                 }
                                             }
                                             : undefined,
@@ -3446,20 +3459,17 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         onClick: isMatchActionAllowed()
                                                             ? () => {
                                                                 if (eventType) {
-                                                                    if (eventType === 'penalty') {
-                                                                        // Skontrolujeme, či je aktívny premenený 7m (cez eventSubType)
-                                                                        if (eventSubType === 'scored') {
-                                                                            // Premenený 7m
-                                                                            addMatchEvent('penalty', 'away', 'scored', playerIdentifier);
-                                                                        } else {
-                                                                            // Nepremenený 7m (štandardne)
-                                                                            addMatchEvent('penalty', 'away', 'missed', playerIdentifier);
-                                                                        }
-                                                                    } else if (eventType === 'goal') {
+                                                                    if (eventType === 'goal' && eventSubType === null) {
                                                                         // Normálny gól
                                                                         addMatchEvent('goal', 'away', null, playerIdentifier);
+                                                                    } else if (eventType === 'penalty' && eventSubType === 'missed') {
+                                                                        // Nepremenený 7m
+                                                                        addMatchEvent('penalty', 'away', 'missed', playerIdentifier);
+                                                                    } else if (eventType === 'penalty') {
+                                                                        // Toto by sa nemalo stať, ale pre istotu
+                                                                        addMatchEvent('penalty', 'away', 'missed', playerIdentifier);
                                                                     } else {
-                                                                        // Ostatné udalosti (karty, vylúčenia)
+                                                                        // Ostatné udalosti
                                                                         addMatchEvent(eventType, 'away', null, playerIdentifier);
                                                                     }
                                                                 }
