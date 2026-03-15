@@ -1148,13 +1148,90 @@ const matchesHallApp = ({ userProfileData }) => {
         if (!eventToDelete) return;
     
         try {
-            const eventRef = doc(window.db, 'matchEvents', eventToDelete);
-            await deleteDoc(eventRef);
-            await recalculateScores();
+            // Najprv získame zmazanú udalosť, aby sme zistili, o aký typ išlo a ktorý tím
+            const deletedEventRef = doc(window.db, 'matchEvents', eventToDelete);
+            const deletedEventSnap = await getDoc(deletedEventRef);
+            
+            if (!deletedEventSnap.exists()) {
+                window.showGlobalNotification('Udalosť neexistuje', 'error');
+                return;
+            }
+            
+            const deletedEvent = deletedEventSnap.data();
+            
+            // Zmažeme udalosť
+            await deleteDoc(deletedEventRef);
+            
+            // Ak ide o gól alebo premenenú penaltu, musíme prepočítať skóre pre nasledujúce udalosti
+            if (deletedEvent.type === 'goal' || (deletedEvent.type === 'penalty' && deletedEvent.subType === 'scored')) {
+                
+                // Získame všetky udalosti pre tento zápas, ktoré nasledujú po zmazanej udalosti
+                const eventsRef = collection(window.db, 'matchEvents');
+                const q = query(
+                    eventsRef, 
+                    where("matchId", "==", selectedMatch.id),
+                    orderBy("minute", "asc"),
+                    orderBy("second", "asc")
+                );
+                
+                const querySnapshot = await getDocs(q);
+                const events = [];
+                querySnapshot.forEach((doc) => {
+                    events.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // Nájdeme index zmazanej udalosti v zoradenom zozname
+                // (potrebujeme vedieť, kde presne bola)
+                // Použijeme čas na porovnanie, ale pozor - môže byť viac udalostí v rovnakom čase
+                const deletedEventTime = (deletedEvent.minute || 0) * 60 + (deletedEvent.second || 0);
+                
+                // Prepočítame skóre od začiatku
+                let homeScore = 0;
+                let awayScore = 0;
+                const updatePromises = [];
+                
+                // Prejdeme všetky udalosti v chronologickom poradí
+                for (const event of events) {
+                    // Uložíme skóre pred udalosťou
+                    const scoreBefore = { home: homeScore, away: awayScore };
+                    
+                    // Aktualizujeme skóre podľa typu udalosti (ak to nie je zmazaná udalosť)
+                    if (event.id !== eventToDelete) {
+                        if (event.type === 'goal' || (event.type === 'penalty' && event.subType === 'scored')) {
+                            if (event.team === 'home') {
+                                homeScore++;
+                            } else if (event.team === 'away') {
+                                awayScore++;
+                            }
+                        }
+                    }
+                    
+                    const scoreAfter = { home: homeScore, away: awayScore };
+                    
+                    // Ak sa skóre pred/po zmenilo, aktualizujeme udalosť
+                    if (JSON.stringify(event.scoreBefore) !== JSON.stringify(scoreBefore) || 
+                        JSON.stringify(event.scoreAfter) !== JSON.stringify(scoreAfter)) {
+                        
+                        const eventRef = doc(window.db, 'matchEvents', event.id);
+                        updatePromises.push(
+                            updateDoc(eventRef, {
+                                scoreBefore: scoreBefore,
+                                scoreAfter: scoreAfter
+                            })
+                        );
+                    }
+                }
+                
+                // Vykonáme všetky aktualizácie
+                if (updatePromises.length > 0) {
+                    await Promise.all(updatePromises);
+                }
+            }
+            
             window.showGlobalNotification('Udalosť bola zmazaná', 'success');
             setEventToDelete(null);
         } catch (error) {
-//            console.error('Chyba pri mazaní udalosti:', error);
+            console.error('Chyba pri mazaní udalosti:', error);
             window.showGlobalNotification('Chyba pri mazaní udalosti', 'error');
         }
     };
