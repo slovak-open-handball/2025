@@ -2,6 +2,32 @@
 import { doc, getDoc, onSnapshot, updateDoc, addDoc, deleteDoc, collection, Timestamp, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
+// Pridanie štýlov pre zvýraznenie riadkov
+const style = document.createElement('style');
+style.textContent = `
+    .row-highlighted > div {
+        position: relative;
+    }
+    
+    .row-highlighted > div::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border: 2px solid #3B82F6;
+        border-radius: 4px;
+        pointer-events: none;
+        z-index: 1;
+    }
+    
+    .row-highlighted > div {
+        background-color: transparent !important;
+    }
+`;
+document.head.appendChild(style);
+
 const { useState, useEffect } = React;
 
 // Funkcia na formátovanie dátumu s dňom v týždni
