@@ -265,105 +265,6 @@ const matchesHallApp = ({ userProfileData }) => {
         
         setEditModalOpen(true);
     };
-    
-    // Pridajte funkciu pre uloženie upravenej udalosti
-    const saveEditedEvent = async (editedData) => {
-        if (!eventToEdit || !window.db) return;
-        
-        if (!editEventType || !editEventTeam) {
-            window.showGlobalNotification('Vyberte typ udalosti a tím', 'error');
-            return;
-        }
-        
-        if ((editEventType === 'goal' || editEventType === 'exclusion' || editEventType === 'penalty') && !editEventPlayer) {
-            window.showGlobalNotification('Vyberte hráča', 'error');
-            return;
-        }
-        
-        if (editEventType === 'penalty' && !editEventSubType) {
-            window.showGlobalNotification('Vyberte typ penalty (premenená/nepremenená)', 'error');
-            return;
-        }
-        
-        const minute = parseInt(editEventMinute) || 0;
-        const second = parseInt(editEventSecond) || 0;
-        
-        try {
-            const eventRef = doc(window.db, 'matchEvents', eventToEdit.id);
-            
-            // Výpočet stavu pred a po
-            let homeScoreBefore = matchScore.home;
-            let awayScoreBefore = matchScore.away;
-            let homeScoreAfter = matchScore.home;
-            let awayScoreAfter = matchScore.away;
-            
-            // Pre zjednodušenie použijeme aktuálne skóre
-            // V reálnej aplikácii by ste mali prepočítať skóre od začiatku
-            
-            const eventData = {
-                type: editEventType,
-                team: editEventTeam,
-                minute: minute,
-                second: second,
-                formattedTime: `${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`,
-                editedAt: Timestamp.now(),
-                editedBy: userProfileData?.email || 'unknown'
-            };
-            
-            if (editEventType === 'penalty') {
-                eventData.subType = editEventSubType;
-            } else {
-                // Odstránime subType ak nie je penalty
-                eventData.subType = null;
-            }
-            
-            // Pridanie referencie na hráča
-            if (editEventPlayer) {
-                const teamDetails = editEventTeam === 'home' ? homeTeamDetails : awayTeamDetails;
-                const teamIdentifier = editEventTeam === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
-                
-                let playerRef = null;
-                
-                if (editEventPlayer.isStaff) {
-                    playerRef = createPlayerReference(
-                        teamDetails,
-                        teamIdentifier,
-                        editEventPlayer,
-                        true,
-                        editEventPlayer.staffType,
-                        editEventPlayer.staffIndex
-                    );
-                } else {
-                    playerRef = createPlayerReference(
-                        teamDetails,
-                        teamIdentifier,
-                        editEventPlayer,
-                        false
-                    );
-                }
-                
-                if (playerRef) {
-                    eventData.playerRef = playerRef;
-                }
-                
-                if (editEventType === 'yellow' || editEventType === 'red' || editEventType === 'blue' || editEventType === 'exclusion') {
-                    eventData.cardType = editEventType === 'exclusion' ? 'exclusion' : editEventType;
-                }
-            } else {
-                eventData.playerRef = null;
-            }
-            
-            await updateDoc(eventRef, eventData);
-            
-            window.showGlobalNotification('Udalosť bola upravená', 'success');
-            setEditModalOpen(false);
-            setEventToEdit(null);
-            
-        } catch (error) {
-            console.error('Chyba pri úprave udalosti:', error);
-            window.showGlobalNotification('Chyba pri úprave udalosti', 'error');
-        }
-    };    
 
     const formatMatchTime = (seconds) => {
         // Ochrana proti nečíselným hodnotám
@@ -2141,6 +2042,105 @@ const matchesHallApp = ({ userProfileData }) => {
         const matchDate = selectedMatch.scheduledTime ? formatDateWithDay(selectedMatch.scheduledTime.toDate()) : 'neurčený';
         const matchStartTime = selectedMatch.scheduledTime ? formatTime(selectedMatch.scheduledTime) : '-- : --';
         const category = categories.find(c => c.name === selectedMatch.categoryName);
+
+        // Pridajte funkciu pre uloženie upravenej udalosti
+        const saveEditedEvent = async (editedData) => {
+            if (!eventToEdit || !window.db) return;
+        
+            if (!editEventType || !editEventTeam) {
+                window.showGlobalNotification('Vyberte typ udalosti a tím', 'error');
+                return;
+            }
+            
+            if ((editEventType === 'goal' || editEventType === 'exclusion' || editEventType === 'penalty') && !editEventPlayer) {
+                window.showGlobalNotification('Vyberte hráča', 'error');
+                return;
+            }
+            
+            if (editEventType === 'penalty' && !editEventSubType) {
+                window.showGlobalNotification('Vyberte typ penalty (premenená/nepremenená)', 'error');
+                return;
+            }
+            
+            const minute = parseInt(editEventMinute) || 0;
+            const second = parseInt(editEventSecond) || 0;
+            
+            try {
+                const eventRef = doc(window.db, 'matchEvents', eventToEdit.id);
+                
+                // Výpočet stavu pred a po
+                let homeScoreBefore = matchScore.home;
+                let awayScoreBefore = matchScore.away;
+                let homeScoreAfter = matchScore.home;
+                let awayScoreAfter = matchScore.away;
+                
+                // Pre zjednodušenie použijeme aktuálne skóre
+                // V reálnej aplikácii by ste mali prepočítať skóre od začiatku
+                
+                const eventData = {
+                    type: editEventType,
+                    team: editEventTeam,
+                    minute: minute,
+                    second: second,
+                    formattedTime: `${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`,
+                    editedAt: Timestamp.now(),
+                    editedBy: userProfileData?.email || 'unknown'
+                };
+                
+                if (editEventType === 'penalty') {
+                    eventData.subType = editEventSubType;
+                } else {
+                    // Odstránime subType ak nie je penalty
+                    eventData.subType = null;
+                }
+                
+                // Pridanie referencie na hráča
+                if (editEventPlayer) {
+                    const teamDetails = editEventTeam === 'home' ? homeTeamDetails : awayTeamDetails;
+                    const teamIdentifier = editEventTeam === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
+                    
+                    let playerRef = null;
+                    
+                    if (editEventPlayer.isStaff) {
+                        playerRef = createPlayerReference(
+                            teamDetails,
+                            teamIdentifier,
+                            editEventPlayer,
+                            true,
+                            editEventPlayer.staffType,
+                            editEventPlayer.staffIndex
+                        );
+                    } else {
+                        playerRef = createPlayerReference(
+                            teamDetails,
+                            teamIdentifier,
+                            editEventPlayer,
+                            false
+                        );
+                    }
+                    
+                    if (playerRef) {
+                        eventData.playerRef = playerRef;
+                    }
+                    
+                    if (editEventType === 'yellow' || editEventType === 'red' || editEventType === 'blue' || editEventType === 'exclusion') {
+                        eventData.cardType = editEventType === 'exclusion' ? 'exclusion' : editEventType;
+                    }
+                } else {
+                    eventData.playerRef = null;
+                }
+                
+                await updateDoc(eventRef, eventData);
+                
+                window.showGlobalNotification('Udalosť bola upravená', 'success');
+                setEditModalOpen(false);
+                setEventToEdit(null);
+                
+            } catch (error) {
+                console.error('Chyba pri úprave udalosti:', error);
+                window.showGlobalNotification('Chyba pri úprave udalosti', 'error');
+            }
+        };    
 
         // 🔴 UPRAVENÁ FUNKCIA: addMatchEvent - používa createPlayerReference
         const addMatchEvent = async (localEventType, localEventTeam, localEventSubType, localPlayer) => {
