@@ -2992,10 +2992,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     'Zatiaľ žiadne udalosti'
                                 ) : React.createElement(
                                     'div',
-                                    { 
-                                        className: 'grid grid-cols-[1fr_20px_50px_30px_60px_30px_50px_20px_1fr] gap-1',
-                                        style: { alignItems: 'center' }
-                                    },
+                                    { className: 'space-y-1' },
                                     
                                     matchEvents.map((event) => {
                                         const isHighlighted = highlightedEventId === event.id;
@@ -3092,13 +3089,13 @@ const matchesHallApp = ({ userProfileData }) => {
                                             'div',
                                             { 
                                                 key: event.id,
-                                                className: `contents ${isHighlighted ? 'row-highlighted' : ''}`
+                                                className: `grid grid-cols-[1fr_20px_50px_30px_60px_30px_50px_20px_1fr] gap-1 hover:bg-blue-50 transition-colors relative ${isHighlighted ? 'row-highlighted' : ''}`,
                                             },
                                             // 1. stĺpec - Meno priezvisko domáci
                                             React.createElement(
                                                 'div',
                                                 { 
-                                                    className: `flex flex-col leading-tight text-right p-2` 
+                                                    className: `flex flex-col leading-tight text-right p-2`
                                                 },
                                                 event.team === 'home' && React.createElement(
                                                     React.Fragment,
