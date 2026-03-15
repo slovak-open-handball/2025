@@ -1528,7 +1528,7 @@ const matchesHallApp = ({ userProfileData }) => {
         }
         
         // Pre superstructure tímy - hľadáme podľa kategórie a skupiny+poradia
-        if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
+        if (typeof superstructureTeams !== 'undefined' && superstructureTeams && Object.keys(superstructureTeams).length > 0) {
             const categoryTeams = superstructureTeams[category] || [];
                         
             const teamsInGroup = categoryTeams.filter(t => t.groupName === fullGroupName);
