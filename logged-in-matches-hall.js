@@ -238,7 +238,187 @@ const matchesHallApp = ({ userProfileData }) => {
     const [editEventPlayer, setEditEventPlayer] = useState(null);
     const [editEventMinute, setEditEventMinute] = useState('');
     const [editEventSecond, setEditEventSecond] = useState('');
+    
+    const [editingEventId, setEditingEventId] = useState(null);
+    const [editType, setEditType] = useState(null);
+    const [editSubType, setEditSubType] = useState(null);
+    const [editTeam, setEditTeam] = useState(null);
+    const [editPlayer, setEditPlayer] = useState(null);
+    const [editMinute, setEditMinute] = useState('');
+    const [editSecond, setEditSecond] = useState('');
 
+    const startInlineEdit = (event) => {
+        setEditingEventId(event.id);
+        setEditType(event.type);
+        setEditSubType(event.subType || null);
+        setEditTeam(event.team);
+        setEditMinute(event.minute?.toString() || '');
+        setEditSecond(event.second?.toString() || '');
+        
+        // Nájdeme hráča podľa referencie
+        if (event.playerRef) {
+            const playerObj = {
+                userId: event.playerRef.userId,
+                teamIdentifier: event.playerRef.teamIdentifier,
+                isStaff: event.playerRef.staffType ? true : false,
+                staffType: event.playerRef.staffType,
+                staffIndex: event.playerRef.staffIndex,
+                index: event.playerRef.playerIndex
+            };
+            setEditPlayer(playerObj);
+        } else {
+            setEditPlayer(null);
+        }
+    };
+    
+    // Funkcia pre uloženie inline editácie
+    const saveInlineEdit = async (eventId) => {
+        if (!window.db || !eventId) return;
+        
+        if (!editType || !editTeam) {
+            window.showGlobalNotification('Vyberte typ udalosti a tím', 'error');
+            return;
+        }
+        
+        if ((editType === 'goal' || editType === 'exclusion' || editType === 'penalty') && !editPlayer) {
+            window.showGlobalNotification('Vyberte hráča', 'error');
+            return;
+        }
+        
+        if (editType === 'penalty' && !editSubType) {
+            window.showGlobalNotification('Vyberte typ penalty (premenená/nepremenená)', 'error');
+            return;
+        }
+        
+        const minute = parseInt(editMinute) || 0;
+        const second = parseInt(editSecond) || 0;
+        
+        try {
+            const eventRef = doc(window.db, 'matchEvents', eventId);
+            
+            const eventData = {
+                type: editType,
+                team: editTeam,
+                minute: minute,
+                second: second,
+                formattedTime: `${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`,
+                editedAt: Timestamp.now(),
+                editedBy: userProfileData?.email || 'unknown'
+            };
+            
+            if (editType === 'penalty') {
+                eventData.subType = editSubType;
+            } else {
+                eventData.subType = null;
+            }
+            
+            if (editPlayer) {
+                const teamDetails = editTeam === 'home' ? homeTeamDetails : awayTeamDetails;
+                const teamIdentifier = editTeam === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
+                
+                let playerRef = null;
+                
+                if (editPlayer.isStaff) {
+                    playerRef = createPlayerReference(
+                        teamDetails,
+                        teamIdentifier,
+                        editPlayer,
+                        true,
+                        editPlayer.staffType,
+                        editPlayer.staffIndex
+                    );
+                } else {
+                    playerRef = createPlayerReference(
+                        teamDetails,
+                        teamIdentifier,
+                        editPlayer,
+                        false
+                    );
+                }
+                
+                if (playerRef) {
+                    eventData.playerRef = playerRef;
+                }
+                
+                if (editType === 'yellow' || editType === 'red' || editType === 'blue' || editType === 'exclusion') {
+                    eventData.cardType = editType === 'exclusion' ? 'exclusion' : editType;
+                }
+            } else {
+                eventData.playerRef = null;
+            }
+            
+            await updateDoc(eventRef, eventData);
+            
+            window.showGlobalNotification('Udalosť bola upravená', 'success');
+            cancelInlineEdit();
+            
+        } catch (error) {
+            console.error('Chyba pri úprave udalosti:', error);
+            window.showGlobalNotification('Chyba pri úprave udalosti', 'error');
+        }
+    };
+    
+    const cancelInlineEdit = () => {
+        setEditingEventId(null);
+        setEditType(null);
+        setEditSubType(null);
+        setEditTeam(null);
+        setEditPlayer(null);
+        setEditMinute('');
+        setEditSecond('');
+    };
+    
+    // Funkcia pre získanie zoznamu hráčov pre výber (pre inline edit)
+    const getTeamPlayersForEdit = (teamSide) => {
+        const teamDetails = teamSide === 'home' ? homeTeamDetails : awayTeamDetails;
+        if (!teamDetails) return [];
+        
+        const players = [];
+        
+        if (teamDetails.team.playerDetails) {
+            teamDetails.team.playerDetails.forEach((player, idx) => {
+                players.push({
+                    ...player,
+                    userId: teamDetails.userId,
+                    teamIdentifier: teamSide === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier,
+                    displayName: `${player.firstName} ${player.lastName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`,
+                    index: idx,
+                    isStaff: false
+                });
+            });
+        }
+        
+        if (teamDetails.team.menTeamMemberDetails) {
+            teamDetails.team.menTeamMemberDetails.forEach((member, idx) => {
+                players.push({
+                    ...member,
+                    userId: teamDetails.userId,
+                    teamIdentifier: teamSide === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier,
+                    displayName: `${member.firstName} ${member.lastName} (tréner)`,
+                    isStaff: true,
+                    staffType: 'men',
+                    staffIndex: idx
+                });
+            });
+        }
+        
+        if (teamDetails.team.womenTeamMemberDetails) {
+            teamDetails.team.womenTeamMemberDetails.forEach((member, idx) => {
+                players.push({
+                    ...member,
+                    userId: teamDetails.userId,
+                    teamIdentifier: teamSide === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier,
+                    displayName: `${member.firstName} ${member.lastName} (trénerka)`,
+                    isStaff: true,
+                    staffType: 'women',
+                    staffIndex: idx
+                });
+            });
+        }
+        
+        return players;
+    };
+    
     const openEditEventModal = (event) => {
         setEventToEdit(event);
         setEditEventType(event.type);
@@ -3175,8 +3355,8 @@ const matchesHallApp = ({ userProfileData }) => {
                                         style: { alignItems: 'center' }
                                     },
                                     
-                                    // Dátové riadky
                                     matchEvents.map((event) => {
+                                        const isEditing = editingEventId === event.id;
                                         const playerName = event.playerRef ? getPlayerNameFromRef(event.playerRef) : '';
                                         
                                         // Získanie čísla dresu pre hráča
@@ -3265,7 +3445,195 @@ const matchesHallApp = ({ userProfileData }) => {
                                         const scoreBefore = event.scoreBefore || { home: 0, away: 0 };
                                         const scoreAfter = event.scoreAfter || { home: 0, away: 0 };
                                         
-                                        // Vrátime 9 elementov pre každý riadok
+                                        // Pre editovaný riadok zobrazíme iný obsah
+                                        if (isEditing) {
+                                            const players = getTeamPlayersForEdit(editTeam || event.team);
+                                            
+                                            return React.createElement(
+                                                'div',
+                                                { 
+                                                    key: event.id,
+                                                    className: 'grid grid-cols-[1fr_20px_50px_30px_60px_30px_50px_20px_1fr] gap-1 bg-blue-50 p-2 rounded-lg border-2 border-blue-300 my-1',
+                                                    style: { alignItems: 'center' }
+                                                },
+                                                
+                                                // 1. stĺpec - Výber tímu
+                                                React.createElement(
+                                                    'div',
+                                                    { key: `${event.id}-edit-col1`, className: 'col-span-2 flex items-center gap-2' },
+                                                    React.createElement(
+                                                        'select',
+                                                        {
+                                                            value: editTeam || event.team,
+                                                            onChange: (e) => {
+                                                                setEditTeam(e.target.value);
+                                                                setEditPlayer(null);
+                                                            },
+                                                            className: 'w-full p-1 text-xs border border-gray-300 rounded'
+                                                        },
+                                                        React.createElement('option', { value: 'home' }, 'DOM'),
+                                                        React.createElement('option', { value: 'away' }, 'HOS')
+                                                    )
+                                                ),
+                                                
+                                                // 2. stĺpec - Výber hráča
+                                                React.createElement(
+                                                    'div',
+                                                    { key: `${event.id}-edit-col2`, className: 'col-span-2' },
+                                                    React.createElement(
+                                                        'select',
+                                                        {
+                                                            value: editPlayer ? 
+                                                                (editPlayer.isStaff ? 
+                                                                    `staff-${editPlayer.staffType}-${editPlayer.staffIndex}` : 
+                                                                    `player-${editPlayer.index}`) 
+                                                                : '',
+                                                            onChange: (e) => {
+                                                                const value = e.target.value;
+                                                                if (!value) {
+                                                                    setEditPlayer(null);
+                                                                    return;
+                                                                }
+                                                                
+                                                                if (value.startsWith('staff-')) {
+                                                                    const parts = value.split('-');
+                                                                    const staffType = parts[1];
+                                                                    const staffIndex = parseInt(parts[2]);
+                                                                    const player = players.find(p => p.isStaff && p.staffType === staffType && p.staffIndex === staffIndex);
+                                                                    setEditPlayer(player || null);
+                                                                } else {
+                                                                    const index = parseInt(value.replace('player-', ''));
+                                                                    const player = players.find(p => !p.isStaff && p.index === index);
+                                                                    setEditPlayer(player || null);
+                                                                }
+                                                            },
+                                                            className: 'w-full p-1 text-xs border border-gray-300 rounded'
+                                                        },
+                                                        React.createElement('option', { value: '' }, '-- Hráč --'),
+                                                        players.map((player) => {
+                                                            const key = player.isStaff ? 
+                                                                `staff-${player.staffType}-${player.staffIndex}` : 
+                                                                `player-${player.index}`;
+                                                            return React.createElement(
+                                                                'option',
+                                                                { key: key, value: key },
+                                                                player.isStaff ? 
+                                                                    `${player.firstName} ${player.lastName} (T)` : 
+                                                                    `${player.firstName} ${player.lastName}${player.jerseyNumber ? ` #${player.jerseyNumber}` : ''}`
+                                                            );
+                                                        })
+                                                    )
+                                                ),
+                                                
+                                                // 3. stĺpec - Typ udalosti
+                                                React.createElement(
+                                                    'div',
+                                                    { key: `${event.id}-edit-col3`, className: 'col-span-2' },
+                                                    React.createElement(
+                                                        'select',
+                                                        {
+                                                            value: editType || event.type,
+                                                            onChange: (e) => {
+                                                                const newType = e.target.value;
+                                                                setEditType(newType);
+                                                                if (newType !== 'penalty') {
+                                                                    setEditSubType(null);
+                                                                } else if (!editSubType) {
+                                                                    setEditSubType('missed');
+                                                                }
+                                                            },
+                                                            className: 'w-full p-1 text-xs border border-gray-300 rounded'
+                                                        },
+                                                        React.createElement('option', { value: 'goal' }, 'Gól'),
+                                                        React.createElement('option', { value: 'penalty' }, '7m'),
+                                                        React.createElement('option', { value: 'yellow' }, 'ŽK'),
+                                                        React.createElement('option', { value: 'red' }, 'ČK'),
+                                                        React.createElement('option', { value: 'blue' }, 'MK'),
+                                                        React.createElement('option', { value: 'exclusion' }, 'Vyl')
+                                                    )
+                                                ),
+                                                
+                                                // 4. stĺpec - SubType pre penalty
+                                                editType === 'penalty' && React.createElement(
+                                                    'div',
+                                                    { key: `${event.id}-edit-col4`, className: 'col-span-1' },
+                                                    React.createElement(
+                                                        'select',
+                                                        {
+                                                            value: editSubType || 'missed',
+                                                            onChange: (e) => setEditSubType(e.target.value),
+                                                            className: 'w-full p-1 text-xs border border-gray-300 rounded'
+                                                        },
+                                                        React.createElement('option', { value: 'scored' }, '+'),
+                                                        React.createElement('option', { value: 'missed' }, '-')
+                                                    )
+                                                ),
+                                                
+                                                // 5. stĺpec - Čas
+                                                React.createElement(
+                                                    'div',
+                                                    { key: `${event.id}-edit-col5`, className: 'col-span-1 flex gap-1' },
+                                                    React.createElement(
+                                                        'input',
+                                                        {
+                                                            type: 'number',
+                                                            min: '0',
+                                                            max: '99',
+                                                            value: editMinute,
+                                                            onChange: (e) => setEditMinute(e.target.value),
+                                                            className: 'w-10 p-1 text-xs border border-gray-300 rounded text-center',
+                                                            placeholder: 'mm'
+                                                        }
+                                                    ),
+                                                    React.createElement(
+                                                        'span',
+                                                        { className: 'text-xs' },
+                                                        ':'
+                                                    ),
+                                                    React.createElement(
+                                                        'input',
+                                                        {
+                                                            type: 'number',
+                                                            min: '0',
+                                                            max: '59',
+                                                            value: editSecond,
+                                                            onChange: (e) => setEditSecond(e.target.value),
+                                                            className: 'w-10 p-1 text-xs border border-gray-300 rounded text-center',
+                                                            placeholder: 'ss'
+                                                        }
+                                                    )
+                                                ),
+                                                
+                                                // 6. stĺpec - Tlačidlá
+                                                React.createElement(
+                                                    'div',
+                                                    { key: `${event.id}-edit-col6`, className: 'col-span-1 flex gap-1' },
+                                                    React.createElement(
+                                                        'button',
+                                                        {
+                                                            onClick: () => saveInlineEdit(event.id),
+                                                            className: 'text-green-600 hover:text-green-800',
+                                                            title: 'Uložiť'
+                                                        },
+                                                        React.createElement('i', { className: 'fa-solid fa-check text-xs' })
+                                                    ),
+                                                    React.createElement(
+                                                        'button',
+                                                        {
+                                                            onClick: cancelInlineEdit,
+                                                            className: 'text-red-600 hover:text-red-800',
+                                                            title: 'Zrušiť'
+                                                        },
+                                                        React.createElement('i', { className: 'fa-solid fa-times text-xs' })
+                                                    )
+                                                ),
+                                                
+                                                // Prázdne stĺpce pre zachovanie štruktúry
+                                                React.createElement('div', { key: `${event.id}-edit-col7`, className: 'col-span-3' })
+                                            );
+                                        }
+                                        
+                                        // Normálne zobrazenie (needitovaný riadok)
                                         return [
                                             // 1. stĺpec - Meno priezvisko domáci
                                             React.createElement(
@@ -3278,7 +3646,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     lastName && React.createElement('span', { className: 'text-gray-700 text-xs' }, lastName)
                                                 )
                                             ),
-                            
+                                    
                                             // 2. stĺpec - Číslo dresu domáci
                                             React.createElement(
                                                 'div',
@@ -3318,27 +3686,27 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     { 
                                                         className: `font-mono text-xs text-gray-800 ${
                                                             (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && 
-                                                            matchEvents.length > 0 && event.id === matchEvents[0].id && selectedMatch?.status !== 'completed'
+                                                            matchEvents.length > 0 && event.id === matchEvents[0].id && selectedMatch?.status !== 'completed' && editingEventId !== event.id
                                                                 ? 'group-hover:hidden' 
                                                                 : ''
                                                         }` 
                                                     },
                                                     `${event.minute}:${event.second?.toString().padStart(2, '0') || '00'}`
                                                 ),
-                                                // Ikony sa zobrazia len pre prvú udalosť v zozname (najnovšiu) a len ak zápas nie je ukončený
+                                                // Ikony sa zobrazia len pre prvú udalosť v zozname (najnovšiu) a len ak zápas nie je ukončený a nie je v editácii
                                                 (userProfileData?.role === 'admin' || userProfileData?.role === 'hall') && 
                                                 matchEvents.length > 0 && event.id === matchEvents[0].id && 
-                                                selectedMatch?.status !== 'completed' && React.createElement(
+                                                selectedMatch?.status !== 'completed' && editingEventId !== event.id && React.createElement(
                                                     'div',
                                                     { className: 'hidden group-hover:flex items-center justify-center gap-2' },
-                                                    // Ceruzka pre úpravu
+                                                    // Ceruzka pre úpravu - teraz spúšťa inline edit
                                                     React.createElement(
                                                         'button',
                                                         {
                                                             className: 'text-blue-500 hover:text-blue-700',
                                                             onClick: (e) => {
                                                                 e.stopPropagation();
-                                                                openEditEventModal(event);
+                                                                startInlineEdit(event);
                                                             },
                                                             title: 'Upraviť udalosť'
                                                         },
@@ -3401,7 +3769,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 )
                                             )
                                         ];
-                                    }).flat() // flat() pre zjednotenie poľa polí do jedného poľa
+                                    }).flat()
                                 )
                             )
                         ),
