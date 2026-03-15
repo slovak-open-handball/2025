@@ -3052,7 +3052,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { 
-                                                    className: `flex flex-col leading-tight text-right p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
+                                                    className: `flex flex-col leading-tight text-right p-2` 
                                                 },
                                                 event.team === 'home' && React.createElement(
                                                     React.Fragment,
@@ -3066,7 +3066,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { 
-                                                    className: `flex justify-end items-center p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
+                                                    className: `flex justify-end items-center p-2` 
                                                 },
                                                 event.team === 'home' && !isStaff && jerseyNumber && React.createElement(
                                                     'span',
@@ -3079,7 +3079,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { 
-                                                    className: `text-center p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
+                                                    className: `text-center p-2` 
                                                 },
                                                 (event.type === 'goal' || (event.type === 'penalty' && event.subType === 'scored')) && event.team === 'home' && React.createElement(
                                                     'span',
@@ -3092,7 +3092,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { 
-                                                    className: `flex justify-center items-center p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
+                                                    className: `flex justify-center items-center p-2` 
                                                 },
                                                 event.team === 'home' && eventIcon
                                             ),
@@ -3101,7 +3101,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { 
-                                                    className: `text-center relative p-2 group ${isHighlighted ? 'bg-blue-100' : ''}` 
+                                                    className: `text-center relative p-2 group` 
                                                 },
                                                 // Čas - schová sa len pri hoveri (pre všetky riadky)
                                                 React.createElement(
@@ -3154,7 +3154,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { 
-                                                    className: `flex justify-center items-center p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
+                                                    className: `flex justify-center items-center p-2` 
                                                 },
                                                 event.team === 'away' && eventIcon
                                             ),
@@ -3163,7 +3163,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { 
-                                                    className: `text-center p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
+                                                    className: `text-center p-2` 
                                                 },
                                                 (event.type === 'goal' || (event.type === 'penalty' && event.subType === 'scored')) && event.team === 'away' && React.createElement(
                                                     'span',
@@ -3176,7 +3176,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { 
-                                                    className: `flex justify-start items-center p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
+                                                    className: `flex justify-start items-center p-2` 
                                                 },
                                                 event.team === 'away' && !isStaff && jerseyNumber && React.createElement(
                                                     'span',
@@ -3189,7 +3189,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { 
-                                                    className: `flex flex-col leading-tight text-left p-2 ${isHighlighted ? 'bg-blue-100' : ''}` 
+                                                    className: `flex flex-col leading-tight text-left p-2` 
                                                 },
                                                 event.team === 'away' && React.createElement(
                                                     React.Fragment,
