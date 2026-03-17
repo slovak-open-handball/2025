@@ -2799,7 +2799,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         null,
                                                         React.createElement(
                                                             'div',
-                                                            { className: 'col-span-7 flex items-center gap-2 truncate' },
+                                                            { className: 'col-span-8 flex items-center gap-2 truncate' },
                                                             React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
                                                             React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
                                                         ),
@@ -2824,7 +2824,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                 // MK
                                                                 React.createElement(
                                                                     'div',
-                                                                    { className: 'col-span-2 text-center font-bold text-blue-800' },
+                                                                    { className: 'col-span-1 text-center font-bold text-blue-800' },
                                                                     stats.blueCards
                                                                 ),
                                                                 // Vylúčenia
@@ -2921,7 +2921,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         null,
                                                         React.createElement(
                                                             'div',
-                                                            { className: 'col-span-7 flex items-center gap-2 truncate' },
+                                                            { className: 'col-span-8 flex items-center gap-2 truncate' },
                                                             React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs flex-shrink-0' }),
                                                             React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
                                                         ),
@@ -2946,7 +2946,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                 // MK
                                                                 React.createElement(
                                                                     'div',
-                                                                    { className: 'col-span-2 text-center font-bold text-blue-800' },
+                                                                    { className: 'col-span-1 text-center font-bold text-blue-800' },
                                                                     stats.blueCards
                                                                 ),
                                                                 // Vylúčenia
@@ -3852,7 +3852,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                 // MK
                                                                 React.createElement(
                                                                     'div',
-                                                                    { className: 'col-span-2 text-center font-bold text-blue-800' },
+                                                                    { className: 'col-span-1 text-center font-bold text-blue-800' },
                                                                     stats.blueCards
                                                                 ),
                                                                 // Vylúčenia
@@ -3975,7 +3975,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                 // MK
                                                                 React.createElement(
                                                                     'div',
-                                                                    { className: 'col-span-2 text-center font-bold text-blue-800' },
+                                                                    { className: 'col-span-1 text-center font-bold text-blue-800' },
                                                                     stats.blueCards
                                                                 ),
                                                                 // Vylúčenia
