@@ -2745,11 +2745,11 @@ const matchesHallApp = ({ userProfileData }) => {
                                         showPlayerStats && React.createElement(
                                             'div',
                                             { className: 'grid grid-cols-12 gap-1 mb-2 px-2 text-xs font-semibold text-gray-600 bg-gray-100 py-2 rounded' },
-                                            React.createElement('div', { className: 'col-span-5 text-left' }, 'Meno'),
-                                            React.createElement('div', { className: 'col-span-2 text-center' }, 'ŽK'),
-                                            React.createElement('div', { className: 'col-span-2 text-center' }, 'ČK'),
+                                            React.createElement('div', { className: 'col-span-8 text-left' }, 'Meno'),
+                                            React.createElement('div', { className: 'col-span-1 text-center' }, 'ŽK'),
+                                            React.createElement('div', { className: 'col-span-1 text-center' }, 'ČK'),
                                             React.createElement('div', { className: 'col-span-1 text-center' }, 'MK'),
-                                            React.createElement('div', { className: 'col-span-2 text-center' }, '2\'')
+                                            React.createElement('div', { className: 'col-span-1 text-center' }, '2\'')
                                         ),
                                         homeTeamDetails.team.menTeamMemberDetails.map((member, idx) => {
                                             // 🔴 ZMENENÉ: Vytvoríme identifikátor pre člena RT s indexom
@@ -2867,11 +2867,11 @@ const matchesHallApp = ({ userProfileData }) => {
                                         showPlayerStats && homeTeamDetails.team.menTeamMemberDetails?.length === 0 && React.createElement(
                                             'div',
                                             { className: 'grid grid-cols-12 gap-1 mb-2 px-2 text-xs font-semibold text-gray-600 bg-gray-100 py-2 rounded' },
-                                            React.createElement('div', { className: 'col-span-5 text-left' }, 'Meno'),
-                                            React.createElement('div', { className: 'col-span-2 text-center' }, 'ŽK'),
-                                            React.createElement('div', { className: 'col-span-2 text-center' }, 'ČK'),
+                                            React.createElement('div', { className: 'col-span-8 text-left' }, 'Meno'),
+                                            React.createElement('div', { className: 'col-span-1 text-center' }, 'ŽK'),
+                                            React.createElement('div', { className: 'col-span-1 text-center' }, 'ČK'),
                                             React.createElement('div', { className: 'col-span-1 text-center' }, 'MK'),
-                                            React.createElement('div', { className: 'col-span-2 text-center' }, '2\'')
+                                            React.createElement('div', { className: 'col-span-1 text-center' }, '2\'')
                                         ),
                                         homeTeamDetails.team.womenTeamMemberDetails.map((member, idx) => {
                                             // 🔴 ZMENENÉ: Vytvoríme identifikátor pre členku RT s indexom
@@ -3772,11 +3772,11 @@ const matchesHallApp = ({ userProfileData }) => {
                                         showPlayerStats && React.createElement(
                                             'div',
                                             { className: 'grid grid-cols-12 gap-1 mb-2 px-2 text-xs font-semibold text-gray-600 bg-gray-100 py-2 rounded' },
-                                            React.createElement('div', { className: 'col-span-5 text-left' }, 'Meno'),
-                                            React.createElement('div', { className: 'col-span-2 text-center' }, 'ŽK'),
-                                            React.createElement('div', { className: 'col-span-2 text-center' }, 'ČK'),
+                                            React.createElement('div', { className: 'col-span-8 text-left' }, 'Meno'),
+                                            React.createElement('div', { className: 'col-span-1 text-center' }, 'ŽK'),
+                                            React.createElement('div', { className: 'col-span-1 text-center' }, 'ČK'),
                                             React.createElement('div', { className: 'col-span-1 text-center' }, 'MK'),
-                                            React.createElement('div', { className: 'col-span-2 text-center' }, '2\'')
+                                            React.createElement('div', { className: 'col-span-1 text-center' }, '2\'')
                                         ),
                                         awayTeamDetails.team.menTeamMemberDetails.map((member, idx) => {
                                             // 🔴 ZMENENÉ: Vytvoríme identifikátor pre člena RT s indexom
@@ -3895,11 +3895,11 @@ const matchesHallApp = ({ userProfileData }) => {
                                         showPlayerStats && awayTeamDetails.team.menTeamMemberDetails?.length === 0 && React.createElement(
                                             'div',
                                             { className: 'grid grid-cols-12 gap-1 mb-2 px-2 text-xs font-semibold text-gray-600 bg-gray-100 py-2 rounded' },
-                                            React.createElement('div', { className: 'col-span-5 text-left' }, 'Meno'),
-                                            React.createElement('div', { className: 'col-span-2 text-center' }, 'ŽK'),
-                                            React.createElement('div', { className: 'col-span-2 text-center' }, 'ČK'),
+                                            React.createElement('div', { className: 'col-span-8 text-left' }, 'Meno'),
+                                            React.createElement('div', { className: 'col-span-1 text-center' }, 'ŽK'),
+                                            React.createElement('div', { className: 'col-span-1 text-center' }, 'ČK'),
                                             React.createElement('div', { className: 'col-span-1 text-center' }, 'MK'),
-                                            React.createElement('div', { className: 'col-span-2 text-center' }, '2\'')
+                                            React.createElement('div', { className: 'col-span-1 text-center' }, '2\'')
                                         ),
                                         awayTeamDetails.team.womenTeamMemberDetails.map((member, idx) => {
                                             // 🔴 ZMENENÉ: Vytvoríme identifikátor pre členku RT s indexom
