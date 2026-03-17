@@ -350,13 +350,14 @@ const matchesHallApp = ({ userProfileData }) => {
                 React.createElement('div', { className: 'col-span-2 text-center' }, '2\'')
             ),
             
-            // Pre realizačný tím - 4 stĺpce (žiadne góly a 7m)
+            // Pre realizačný tím - 5 stĺpcov (vrátane MK)
             showForStaff && React.createElement(
                 React.Fragment,
                 null,
-                React.createElement('div', { className: 'col-span-6 text-left' }, 'Meno'),
+                React.createElement('div', { className: 'col-span-5 text-left' }, 'Meno'),
                 React.createElement('div', { className: 'col-span-2 text-center' }, 'ŽK'),
                 React.createElement('div', { className: 'col-span-2 text-center' }, 'ČK'),
+                React.createElement('div', { className: 'col-span-1 text-center' }, 'MK'),
                 React.createElement('div', { className: 'col-span-2 text-center' }, '2\'')
             )
         );
@@ -2735,7 +2736,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     'div',
                                     { className: 'space-y-2' },
                                     
-                                    // V časti s mužmi v realizačnom tíme (približne riadok 3920)
+                                    // V časti s mužmi v realizačnom tíme pre domáci tím
                                     homeTeamDetails.team.menTeamMemberDetails && homeTeamDetails.team.menTeamMemberDetails.length > 0 && 
                                     React.createElement(
                                         React.Fragment,
@@ -2744,9 +2745,10 @@ const matchesHallApp = ({ userProfileData }) => {
                                         showPlayerStats && React.createElement(
                                             'div',
                                             { className: 'grid grid-cols-12 gap-1 mb-2 px-2 text-xs font-semibold text-gray-600 bg-gray-100 py-2 rounded' },
-                                            React.createElement('div', { className: 'col-span-6 text-left' }, 'Meno'),
+                                            React.createElement('div', { className: 'col-span-5 text-left' }, 'Meno'),
                                             React.createElement('div', { className: 'col-span-2 text-center' }, 'ŽK'),
                                             React.createElement('div', { className: 'col-span-2 text-center' }, 'ČK'),
+                                            React.createElement('div', { className: 'col-span-1 text-center' }, 'MK'),
                                             React.createElement('div', { className: 'col-span-2 text-center' }, '2\'')
                                         ),
                                         homeTeamDetails.team.menTeamMemberDetails.map((member, idx) => {
@@ -2788,12 +2790,12 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 // Meno
                                                 React.createElement(
                                                     'div',
-                                                    { className: 'col-span-6 flex items-center gap-2 truncate' },
+                                                    { className: 'col-span-5 flex items-center gap-2 truncate' },
                                                     React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
                                                     React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
                                                 ),
                                                 
-                                                // Štatistiky pre realizačný tím (len karty)
+                                                // Štatistiky pre realizačný tím (vrátane MK)
                                                 showPlayerStats ? (
                                                     stats ? (
                                                         React.createElement(
@@ -2811,6 +2813,12 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                 { className: 'col-span-2 text-center font-bold text-red-600' },
                                                                 stats.redCards
                                                             ),
+                                                            // MK
+                                                            React.createElement(
+                                                                'div',
+                                                                { className: 'col-span-1 text-center font-bold text-blue-800' },
+                                                                stats.blueCards
+                                                            ),
                                                             // Vylúčenia
                                                             React.createElement(
                                                                 'div',
@@ -2824,6 +2832,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             null,
                                                             React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
                                                             React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
+                                                            React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
                                                             React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0')
                                                         )
                                                     )
@@ -2833,6 +2842,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         null,
                                                         React.createElement('div', { className: 'col-span-2' }),
                                                         React.createElement('div', { className: 'col-span-2' }),
+                                                        React.createElement('div', { className: 'col-span-1' }),
                                                         React.createElement('div', { className: 'col-span-2' })
                                                     )
                                                 )
@@ -2849,9 +2859,10 @@ const matchesHallApp = ({ userProfileData }) => {
                                         showPlayerStats && homeTeamDetails.team.menTeamMemberDetails?.length === 0 && React.createElement(
                                             'div',
                                             { className: 'grid grid-cols-12 gap-1 mb-2 px-2 text-xs font-semibold text-gray-600 bg-gray-100 py-2 rounded' },
-                                            React.createElement('div', { className: 'col-span-6 text-left' }, 'Meno'),
+                                            React.createElement('div', { className: 'col-span-5 text-left' }, 'Meno'),
                                             React.createElement('div', { className: 'col-span-2 text-center' }, 'ŽK'),
                                             React.createElement('div', { className: 'col-span-2 text-center' }, 'ČK'),
+                                            React.createElement('div', { className: 'col-span-1 text-center' }, 'MK'),
                                             React.createElement('div', { className: 'col-span-2 text-center' }, '2\'')
                                         ),
                                         homeTeamDetails.team.womenTeamMemberDetails.map((member, idx) => {
@@ -2893,12 +2904,12 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 // Meno
                                                 React.createElement(
                                                     'div',
-                                                    { className: 'col-span-6 flex items-center gap-2 truncate' },
+                                                    { className: 'col-span-5 flex items-center gap-2 truncate' },
                                                     React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs flex-shrink-0' }),
                                                     React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
                                                 ),
                                                 
-                                                // Štatistiky pre realizačný tím (len karty)
+                                                // Štatistiky pre realizačný tím (vrátane MK)
                                                 showPlayerStats ? (
                                                     stats ? (
                                                         React.createElement(
@@ -2916,6 +2927,12 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                 { className: 'col-span-2 text-center font-bold text-red-600' },
                                                                 stats.redCards
                                                             ),
+                                                            // MK
+                                                            React.createElement(
+                                                                'div',
+                                                                { className: 'col-span-1 text-center font-bold text-blue-800' },
+                                                                stats.blueCards
+                                                            ),
                                                             // Vylúčenia
                                                             React.createElement(
                                                                 'div',
@@ -2929,6 +2946,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             null,
                                                             React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
                                                             React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
+                                                            React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
                                                             React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0')
                                                         )
                                                     )
@@ -2938,6 +2956,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         null,
                                                         React.createElement('div', { className: 'col-span-2' }),
                                                         React.createElement('div', { className: 'col-span-2' }),
+                                                        React.createElement('div', { className: 'col-span-1' }),
                                                         React.createElement('div', { className: 'col-span-2' })
                                                     )
                                                 )
@@ -3723,9 +3742,10 @@ const matchesHallApp = ({ userProfileData }) => {
                                         showPlayerStats && React.createElement(
                                             'div',
                                             { className: 'grid grid-cols-12 gap-1 mb-2 px-2 text-xs font-semibold text-gray-600 bg-gray-100 py-2 rounded' },
-                                            React.createElement('div', { className: 'col-span-6 text-left' }, 'Meno'),
+                                            React.createElement('div', { className: 'col-span-5 text-left' }, 'Meno'),
                                             React.createElement('div', { className: 'col-span-2 text-center' }, 'ŽK'),
                                             React.createElement('div', { className: 'col-span-2 text-center' }, 'ČK'),
+                                            React.createElement('div', { className: 'col-span-1 text-center' }, 'MK'),
                                             React.createElement('div', { className: 'col-span-2 text-center' }, '2\'')
                                         ),
                                         awayTeamDetails.team.menTeamMemberDetails.map((member, idx) => {
@@ -3768,12 +3788,12 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 // Meno
                                                 React.createElement(
                                                     'div',
-                                                    { className: 'col-span-6 flex items-center gap-2 truncate' },
+                                                    { className: 'col-span-5 flex items-center gap-2 truncate' },
                                                     React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
                                                     React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
                                                 ),
                                                 
-                                                // Štatistiky pre realizačný tím (len karty)
+                                                // Štatistiky pre realizačný tím (vrátane MK)
                                                 showPlayerStats ? (
                                                     stats ? (
                                                         React.createElement(
@@ -3791,6 +3811,12 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                 { className: 'col-span-2 text-center font-bold text-red-600' },
                                                                 stats.redCards
                                                             ),
+                                                            // MK
+                                                            React.createElement(
+                                                                'div',
+                                                                { className: 'col-span-1 text-center font-bold text-blue-800' },
+                                                                stats.blueCards
+                                                            ),
                                                             // Vylúčenia
                                                             React.createElement(
                                                                 'div',
@@ -3804,6 +3830,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             null,
                                                             React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
                                                             React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
+                                                            React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
                                                             React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0')
                                                         )
                                                     )
@@ -3813,6 +3840,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         null,
                                                         React.createElement('div', { className: 'col-span-2' }),
                                                         React.createElement('div', { className: 'col-span-2' }),
+                                                        React.createElement('div', { className: 'col-span-1' }),
                                                         React.createElement('div', { className: 'col-span-2' })
                                                     )
                                                 )
@@ -3829,9 +3857,10 @@ const matchesHallApp = ({ userProfileData }) => {
                                         showPlayerStats && awayTeamDetails.team.menTeamMemberDetails?.length === 0 && React.createElement(
                                             'div',
                                             { className: 'grid grid-cols-12 gap-1 mb-2 px-2 text-xs font-semibold text-gray-600 bg-gray-100 py-2 rounded' },
-                                            React.createElement('div', { className: 'col-span-6 text-left' }, 'Meno'),
+                                            React.createElement('div', { className: 'col-span-5 text-left' }, 'Meno'),
                                             React.createElement('div', { className: 'col-span-2 text-center' }, 'ŽK'),
                                             React.createElement('div', { className: 'col-span-2 text-center' }, 'ČK'),
+                                            React.createElement('div', { className: 'col-span-1 text-center' }, 'MK'),
                                             React.createElement('div', { className: 'col-span-2 text-center' }, '2\'')
                                         ),
                                         awayTeamDetails.team.womenTeamMemberDetails.map((member, idx) => {
@@ -3874,12 +3903,12 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 // Meno
                                                 React.createElement(
                                                     'div',
-                                                    { className: 'col-span-6 flex items-center gap-2 truncate' },
+                                                    { className: 'col-span-5 flex items-center gap-2 truncate' },
                                                     React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs flex-shrink-0' }),
                                                     React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
                                                 ),
                                                 
-                                                // Štatistiky pre realizačný tím (len karty)
+                                                // Štatistiky pre realizačný tím (vrátane MK)
                                                 showPlayerStats ? (
                                                     stats ? (
                                                         React.createElement(
@@ -3897,6 +3926,12 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                 { className: 'col-span-2 text-center font-bold text-red-600' },
                                                                 stats.redCards
                                                             ),
+                                                            // MK
+                                                            React.createElement(
+                                                                'div',
+                                                                { className: 'col-span-1 text-center font-bold text-blue-800' },
+                                                                stats.blueCards
+                                                            ),
                                                             // Vylúčenia
                                                             React.createElement(
                                                                 'div',
@@ -3910,6 +3945,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             null,
                                                             React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
                                                             React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
+                                                            React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
                                                             React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0')
                                                         )
                                                     )
@@ -3919,6 +3955,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         null,
                                                         React.createElement('div', { className: 'col-span-2' }),
                                                         React.createElement('div', { className: 'col-span-2' }),
+                                                        React.createElement('div', { className: 'col-span-1' }),
                                                         React.createElement('div', { className: 'col-span-2' })
                                                     )
                                                 )
