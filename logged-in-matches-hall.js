@@ -4165,7 +4165,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                     React.Fragment,
                                                                     null,
                                                                     React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
-                                                                    React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0/0'),
+                                                                    React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0/0'),
                                                                     React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
                                                                     React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
                                                                     React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
