@@ -341,24 +341,24 @@ const matchesHallApp = ({ userProfileData }) => {
             showForPlayers && React.createElement(
                 React.Fragment,
                 null,
-                React.createElement('div', { className: 'col-span-4 text-left' }, 'Meno'),
+                React.createElement('div', { className: 'col-span-5 text-left' }, 'Meno'),
                 React.createElement('div', { className: 'col-span-1 text-center' }, 'G'),
                 React.createElement('div', { className: 'col-span-2 text-center' }, '7m'),
                 React.createElement('div', { className: 'col-span-1 text-center' }, 'ŽK'),
                 React.createElement('div', { className: 'col-span-1 text-center' }, 'ČK'),
                 React.createElement('div', { className: 'col-span-1 text-center' }, 'MK'),
-                React.createElement('div', { className: 'col-span-2 text-center' }, '2\'')
+                React.createElement('div', { className: 'col-span-1 text-center' }, '2\'')
             ),
             
             // Pre realizačný tím - 5 stĺpcov (vrátane MK)
             showForStaff && React.createElement(
                 React.Fragment,
                 null,
-                React.createElement('div', { className: 'col-span-5 text-left' }, 'Meno'),
-                React.createElement('div', { className: 'col-span-2 text-center' }, 'ŽK'),
-                React.createElement('div', { className: 'col-span-2 text-center' }, 'ČK'),
+                React.createElement('div', { className: 'col-span-8 text-left' }, 'Meno'),
+                React.createElement('div', { className: 'col-span-1 text-center' }, 'ŽK'),
+                React.createElement('div', { className: 'col-span-1 text-center' }, 'ČK'),
                 React.createElement('div', { className: 'col-span-1 text-center' }, 'MK'),
-                React.createElement('div', { className: 'col-span-2 text-center' }, '2\'')
+                React.createElement('div', { className: 'col-span-1 text-center' }, '2\'')
             )
         );
     };
