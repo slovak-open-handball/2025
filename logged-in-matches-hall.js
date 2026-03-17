@@ -1461,7 +1461,7 @@ const matchesHallApp = ({ userProfileData }) => {
             } else if (playerRef.staffType === 'women' && teamDetails.team.womenTeamMemberDetails && 
                        teamDetails.team.womenTeamMemberDetails[playerRef.staffIndex]) {
                 const member = teamDetails.team.womenTeamMemberDetails[playerRef.staffIndex];
-                return `${member.firstName} ${member.lastName}`;
+                return `${member.lastName} ${member.firstName}`;
             }
             return 'Neznámy člen RT';
         }
@@ -1474,7 +1474,7 @@ const matchesHallApp = ({ userProfileData }) => {
             
             const player = teamDetails.team.playerDetails[playerRef.playerIndex];
             if (player) {
-                return `${player.firstName} ${player.lastName}`;
+                return `${player.lastName} ${player.firstName} `;
             }
         }
         
