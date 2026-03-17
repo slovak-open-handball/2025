@@ -2799,7 +2799,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         null,
                                                         React.createElement(
                                                             'div',
-                                                            { className: 'col-span-5 flex items-center gap-2 truncate' },
+                                                            { className: 'col-span-7 flex items-center gap-2 truncate' },
                                                             React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
                                                             React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
                                                         ),
@@ -2812,25 +2812,25 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                 // ŽK
                                                                 React.createElement(
                                                                     'div',
-                                                                    { className: 'col-span-2 text-center font-bold text-yellow-600' },
+                                                                    { className: 'col-span-1 text-center font-bold text-yellow-600' },
                                                                     stats.yellowCards
                                                                 ),
                                                                 // ČK
                                                                 React.createElement(
                                                                     'div',
-                                                                    { className: 'col-span-2 text-center font-bold text-red-600' },
+                                                                    { className: 'col-span-1 text-center font-bold text-red-600' },
                                                                     stats.redCards
                                                                 ),
                                                                 // MK
                                                                 React.createElement(
                                                                     'div',
-                                                                    { className: 'col-span-1 text-center font-bold text-blue-800' },
+                                                                    { className: 'col-span-2 text-center font-bold text-blue-800' },
                                                                     stats.blueCards
                                                                 ),
                                                                 // Vylúčenia
                                                                 React.createElement(
                                                                     'div',
-                                                                    { className: 'col-span-2 text-center font-bold text-orange-600' },
+                                                                    { className: 'col-span-1 text-center font-bold text-orange-600' },
                                                                     stats.exclusions
                                                                 )
                                                             )
@@ -2838,10 +2838,10 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             React.createElement(
                                                                 React.Fragment,
                                                                 null,
-                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
-                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
                                                                 React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
-                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0')
+                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
+                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
+                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0')
                                                             )
                                                         )
                                                     )
@@ -2921,7 +2921,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         null,
                                                         React.createElement(
                                                             'div',
-                                                            { className: 'col-span-5 flex items-center gap-2 truncate' },
+                                                            { className: 'col-span-7 flex items-center gap-2 truncate' },
                                                             React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs flex-shrink-0' }),
                                                             React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
                                                         ),
@@ -2934,25 +2934,25 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                 // ŽK
                                                                 React.createElement(
                                                                     'div',
-                                                                    { className: 'col-span-2 text-center font-bold text-yellow-600' },
+                                                                    { className: 'col-span-1 text-center font-bold text-yellow-600' },
                                                                     stats.yellowCards
                                                                 ),
                                                                 // ČK
                                                                 React.createElement(
                                                                     'div',
-                                                                    { className: 'col-span-2 text-center font-bold text-red-600' },
+                                                                    { className: 'col-span-1 text-center font-bold text-red-600' },
                                                                     stats.redCards
                                                                 ),
                                                                 // MK
                                                                 React.createElement(
                                                                     'div',
-                                                                    { className: 'col-span-1 text-center font-bold text-blue-800' },
+                                                                    { className: 'col-span-2 text-center font-bold text-blue-800' },
                                                                     stats.blueCards
                                                                 ),
                                                                 // Vylúčenia
                                                                 React.createElement(
                                                                     'div',
-                                                                    { className: 'col-span-2 text-center font-bold text-orange-600' },
+                                                                    { className: 'col-span-1 text-center font-bold text-orange-600' },
                                                                     stats.exclusions
                                                                 )
                                                             )
@@ -2960,10 +2960,10 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             React.createElement(
                                                                 React.Fragment,
                                                                 null,
-                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
-                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
                                                                 React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
-                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0')
+                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
+                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
+                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0')
                                                             )
                                                         )
                                                     )
@@ -3074,7 +3074,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             null,
                                                             React.createElement(
                                                                 'div',
-                                                                { className: 'col-span-4 flex items-center gap-2 truncate' },
+                                                                { className: 'col-span-5 flex items-center gap-2 truncate' },
                                                                 React.createElement('i', { className: 'fa-solid fa-shirt text-gray-600 text-xs flex-shrink-0' }),
                                                                 player.jerseyNumber && React.createElement(
                                                                     'span',
@@ -3126,7 +3126,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                     // Vylúčenia
                                                                     React.createElement(
                                                                         'div',
-                                                                        { className: 'col-span-2 text-center font-bold text-orange-600' },
+                                                                        { className: 'col-span-1 text-center font-bold text-orange-600' },
                                                                         stats.exclusions
                                                                     )
                                                                 )
@@ -3139,7 +3139,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                     React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
                                                                     React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
                                                                     React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
-                                                                    React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0')
+                                                                    React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0')
                                                                 )
                                                             )
                                                         )
@@ -3840,25 +3840,25 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                 // ŽK
                                                                 React.createElement(
                                                                     'div',
-                                                                    { className: 'col-span-2 text-center font-bold text-yellow-600' },
+                                                                    { className: 'col-span-1 text-center font-bold text-yellow-600' },
                                                                     stats.yellowCards
                                                                 ),
                                                                 // ČK
                                                                 React.createElement(
                                                                     'div',
-                                                                    { className: 'col-span-2 text-center font-bold text-red-600' },
+                                                                    { className: 'col-span-1 text-center font-bold text-red-600' },
                                                                     stats.redCards
                                                                 ),
                                                                 // MK
                                                                 React.createElement(
                                                                     'div',
-                                                                    { className: 'col-span-1 text-center font-bold text-blue-800' },
+                                                                    { className: 'col-span-2 text-center font-bold text-blue-800' },
                                                                     stats.blueCards
                                                                 ),
                                                                 // Vylúčenia
                                                                 React.createElement(
                                                                     'div',
-                                                                    { className: 'col-span-2 text-center font-bold text-orange-600' },
+                                                                    { className: 'col-span-1 text-center font-bold text-orange-600' },
                                                                     stats.exclusions
                                                                 )
                                                             )
@@ -3866,10 +3866,10 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             React.createElement(
                                                                 React.Fragment,
                                                                 null,
-                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
-                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
                                                                 React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
-                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0')
+                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
+                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
+                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0')
                                                             )
                                                         )
                                                     )
@@ -3963,25 +3963,25 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                 // ŽK
                                                                 React.createElement(
                                                                     'div',
-                                                                    { className: 'col-span-2 text-center font-bold text-yellow-600' },
+                                                                    { className: 'col-span-1 text-center font-bold text-yellow-600' },
                                                                     stats.yellowCards
                                                                 ),
                                                                 // ČK
                                                                 React.createElement(
                                                                     'div',
-                                                                    { className: 'col-span-2 text-center font-bold text-red-600' },
+                                                                    { className: 'col-span-1 text-center font-bold text-red-600' },
                                                                     stats.redCards
                                                                 ),
                                                                 // MK
                                                                 React.createElement(
                                                                     'div',
-                                                                    { className: 'col-span-1 text-center font-bold text-blue-800' },
+                                                                    { className: 'col-span-2 text-center font-bold text-blue-800' },
                                                                     stats.blueCards
                                                                 ),
                                                                 // Vylúčenia
                                                                 React.createElement(
                                                                     'div',
-                                                                    { className: 'col-span-2 text-center font-bold text-orange-600' },
+                                                                    { className: 'col-span-1 text-center font-bold text-orange-600' },
                                                                     stats.exclusions
                                                                 )
                                                             )
@@ -3989,10 +3989,10 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             React.createElement(
                                                                 React.Fragment,
                                                                 null,
-                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
-                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
                                                                 React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
-                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0')
+                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
+                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
+                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0')
                                                             )
                                                         )
                                                     )
@@ -4104,7 +4104,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             null,
                                                             React.createElement(
                                                                 'div',
-                                                                { className: 'col-span-4 flex items-center gap-2 truncate' },
+                                                                { className: 'col-span-5 flex items-center gap-2 truncate' },
                                                                 React.createElement('i', { className: 'fa-solid fa-shirt text-gray-600 text-xs flex-shrink-0' }),
                                                                 player.jerseyNumber && React.createElement(
                                                                     'span',
@@ -4156,7 +4156,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                     // Vylúčenia
                                                                     React.createElement(
                                                                         'div',
-                                                                        { className: 'col-span-2 text-center font-bold text-orange-600' },
+                                                                        { className: 'col-span-1 text-center font-bold text-orange-600' },
                                                                         stats.exclusions
                                                                     )
                                                                 )
@@ -4165,11 +4165,11 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                     React.Fragment,
                                                                     null,
                                                                     React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
-                                                                    React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0/0'),
+                                                                    React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0/0'),
                                                                     React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
                                                                     React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
                                                                     React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
-                                                                    React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0')
+                                                                    React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0')
                                                                 )
                                                             )
                                                         )
