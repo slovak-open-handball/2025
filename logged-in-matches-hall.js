@@ -2741,7 +2741,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     React.createElement(
                                         React.Fragment,
                                         null,
-                                        // Hlavička pre realizačný tím
+                                        // Hlavička pre realizačný tím (zobrazí sa len v režime štatistík)
                                         showPlayerStats && React.createElement(
                                             'div',
                                             { className: 'grid grid-cols-12 gap-1 mb-2 px-2 text-xs font-semibold text-gray-600 bg-gray-100 py-2 rounded' },
@@ -2769,7 +2769,11 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 'div',
                                                 { 
                                                     key: `home-men-${idx}`, 
-                                                    className: `grid grid-cols-12 gap-1 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${
+                                                    className: `${
+                                                        showPlayerStats 
+                                                            ? 'grid grid-cols-12 gap-1 p-2 rounded border border-gray-200' 
+                                                            : 'flex items-center gap-2 p-2 rounded border border-gray-200'
+                                                    } text-sm group relative transition-colors ${
                                                         isMatchActionAllowed() ? 'hover:bg-blue-50 cursor-pointer' : 'cursor-not-allowed opacity-60'
                                                     }`,
                                                     onClick: isMatchActionAllowed() 
@@ -2788,62 +2792,66 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         : ''
                                                 },
                                                 // Meno
-                                                React.createElement(
-                                                    'div',
-                                                    { className: 'col-span-5 flex items-center gap-2 truncate' },
-                                                    React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
-                                                    React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
-                                                ),
-                                                
-                                                // Štatistiky pre realizačný tím (vrátane MK)
                                                 showPlayerStats ? (
-                                                    stats ? (
-                                                        React.createElement(
-                                                            React.Fragment,
-                                                            null,
-                                                            // ŽK
-                                                            React.createElement(
-                                                                'div',
-                                                                { className: 'col-span-2 text-center font-bold text-yellow-600' },
-                                                                stats.yellowCards
-                                                            ),
-                                                            // ČK
-                                                            React.createElement(
-                                                                'div',
-                                                                { className: 'col-span-2 text-center font-bold text-red-600' },
-                                                                stats.redCards
-                                                            ),
-                                                            // MK
-                                                            React.createElement(
-                                                                'div',
-                                                                { className: 'col-span-1 text-center font-bold text-blue-800' },
-                                                                stats.blueCards
-                                                            ),
-                                                            // Vylúčenia
-                                                            React.createElement(
-                                                                'div',
-                                                                { className: 'col-span-2 text-center font-bold text-orange-600' },
-                                                                stats.exclusions
-                                                            )
-                                                        )
-                                                    ) : (
-                                                        React.createElement(
-                                                            React.Fragment,
-                                                            null,
-                                                            React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
-                                                            React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
-                                                            React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
-                                                            React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0')
-                                                        )
-                                                    )
-                                                ) : (
+                                                    // Režim štatistík - grid zobrazenie
                                                     React.createElement(
                                                         React.Fragment,
                                                         null,
-                                                        React.createElement('div', { className: 'col-span-2' }),
-                                                        React.createElement('div', { className: 'col-span-2' }),
-                                                        React.createElement('div', { className: 'col-span-1' }),
-                                                        React.createElement('div', { className: 'col-span-2' })
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'col-span-5 flex items-center gap-2 truncate' },
+                                                            React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
+                                                            React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
+                                                        ),
+                                                        
+                                                        // Štatistiky pre realizačný tím (vrátane MK)
+                                                        stats ? (
+                                                            React.createElement(
+                                                                React.Fragment,
+                                                                null,
+                                                                // ŽK
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { className: 'col-span-2 text-center font-bold text-yellow-600' },
+                                                                    stats.yellowCards
+                                                                ),
+                                                                // ČK
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { className: 'col-span-2 text-center font-bold text-red-600' },
+                                                                    stats.redCards
+                                                                ),
+                                                                // MK
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { className: 'col-span-1 text-center font-bold text-blue-800' },
+                                                                    stats.blueCards
+                                                                ),
+                                                                // Vylúčenia
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { className: 'col-span-2 text-center font-bold text-orange-600' },
+                                                                    stats.exclusions
+                                                                )
+                                                            )
+                                                        ) : (
+                                                            React.createElement(
+                                                                React.Fragment,
+                                                                null,
+                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
+                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
+                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
+                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0')
+                                                            )
+                                                        )
+                                                    )
+                                                ) : (
+                                                    // Normálny režim - jednoduché zobrazenie
+                                                    React.createElement(
+                                                        React.Fragment,
+                                                        null,
+                                                        React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
+                                                        React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
                                                     )
                                                 )
                                             );
@@ -2855,7 +2863,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     React.createElement(
                                         React.Fragment,
                                         null,
-                                        // Hlavička pre realizačný tím (zobrazí sa len raz, pred prvou skupinou)
+                                        // Hlavička pre realizačný tím (zobrazí sa len ak neboli muži)
                                         showPlayerStats && homeTeamDetails.team.menTeamMemberDetails?.length === 0 && React.createElement(
                                             'div',
                                             { className: 'grid grid-cols-12 gap-1 mb-2 px-2 text-xs font-semibold text-gray-600 bg-gray-100 py-2 rounded' },
@@ -2883,7 +2891,11 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 'div',
                                                 { 
                                                     key: `home-women-${idx}`, 
-                                                    className: `grid grid-cols-12 gap-1 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${
+                                                    className: `${
+                                                        showPlayerStats 
+                                                            ? 'grid grid-cols-12 gap-1 p-2 rounded border border-gray-200' 
+                                                            : 'flex items-center gap-2 p-2 rounded border border-gray-200'
+                                                    } text-sm group relative transition-colors ${
                                                         isMatchActionAllowed() ? 'hover:bg-blue-50 cursor-pointer' : 'cursor-not-allowed opacity-60'
                                                     }`,
                                                     onClick: isMatchActionAllowed() 
@@ -2902,62 +2914,66 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         : ''
                                                 },
                                                 // Meno
-                                                React.createElement(
-                                                    'div',
-                                                    { className: 'col-span-5 flex items-center gap-2 truncate' },
-                                                    React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs flex-shrink-0' }),
-                                                    React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
-                                                ),
-                                                
-                                                // Štatistiky pre realizačný tím (vrátane MK)
                                                 showPlayerStats ? (
-                                                    stats ? (
-                                                        React.createElement(
-                                                            React.Fragment,
-                                                            null,
-                                                            // ŽK
-                                                            React.createElement(
-                                                                'div',
-                                                                { className: 'col-span-2 text-center font-bold text-yellow-600' },
-                                                                stats.yellowCards
-                                                            ),
-                                                            // ČK
-                                                            React.createElement(
-                                                                'div',
-                                                                { className: 'col-span-2 text-center font-bold text-red-600' },
-                                                                stats.redCards
-                                                            ),
-                                                            // MK
-                                                            React.createElement(
-                                                                'div',
-                                                                { className: 'col-span-1 text-center font-bold text-blue-800' },
-                                                                stats.blueCards
-                                                            ),
-                                                            // Vylúčenia
-                                                            React.createElement(
-                                                                'div',
-                                                                { className: 'col-span-2 text-center font-bold text-orange-600' },
-                                                                stats.exclusions
-                                                            )
-                                                        )
-                                                    ) : (
-                                                        React.createElement(
-                                                            React.Fragment,
-                                                            null,
-                                                            React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
-                                                            React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
-                                                            React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
-                                                            React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0')
-                                                        )
-                                                    )
-                                                ) : (
+                                                    // Režim štatistík - grid zobrazenie
                                                     React.createElement(
                                                         React.Fragment,
                                                         null,
-                                                        React.createElement('div', { className: 'col-span-2' }),
-                                                        React.createElement('div', { className: 'col-span-2' }),
-                                                        React.createElement('div', { className: 'col-span-1' }),
-                                                        React.createElement('div', { className: 'col-span-2' })
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'col-span-5 flex items-center gap-2 truncate' },
+                                                            React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs flex-shrink-0' }),
+                                                            React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
+                                                        ),
+                                                        
+                                                        // Štatistiky pre realizačný tím (vrátane MK)
+                                                        stats ? (
+                                                            React.createElement(
+                                                                React.Fragment,
+                                                                null,
+                                                                // ŽK
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { className: 'col-span-2 text-center font-bold text-yellow-600' },
+                                                                    stats.yellowCards
+                                                                ),
+                                                                // ČK
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { className: 'col-span-2 text-center font-bold text-red-600' },
+                                                                    stats.redCards
+                                                                ),
+                                                                // MK
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { className: 'col-span-1 text-center font-bold text-blue-800' },
+                                                                    stats.blueCards
+                                                                ),
+                                                                // Vylúčenia
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { className: 'col-span-2 text-center font-bold text-orange-600' },
+                                                                    stats.exclusions
+                                                                )
+                                                            )
+                                                        ) : (
+                                                            React.createElement(
+                                                                React.Fragment,
+                                                                null,
+                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
+                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
+                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
+                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0')
+                                                            )
+                                                        )
+                                                    )
+                                                ) : (
+                                                    // Normálny režim - jednoduché zobrazenie
+                                                    React.createElement(
+                                                        React.Fragment,
+                                                        null,
+                                                        React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs flex-shrink-0' }),
+                                                        React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
                                                     )
                                                 )
                                             );
@@ -2990,12 +3006,12 @@ const matchesHallApp = ({ userProfileData }) => {
                                     `Hráči (${homeTeamDetails?.team.playerDetails?.length || 0})`
                                 ),
                                 
-                                // Hlavička tabuľky pre hráčov
-                                React.createElement(StatsTableHeader, { showForPlayers: true, showForStaff: false }),
+                                // Hlavička tabuľky pre hráčov (zobrazí sa len v režime štatistík)
+                                showPlayerStats && React.createElement(StatsTableHeader, { showForPlayers: true, showForStaff: false }),
                                 
                                 homeTeamDetails ? React.createElement(
                                     'div',
-                                    { className: 'space-y-1' },
+                                    { className: showPlayerStats ? 'space-y-1' : 'space-y-1' },
                                     homeTeamDetails.team.playerDetails && homeTeamDetails.team.playerDetails.length > 0 ? 
                                         [...homeTeamDetails.team.playerDetails]
                                             .sort((a, b) => {
@@ -3020,7 +3036,11 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     'div',
                                                     { 
                                                         key: `home-player-${idx}`, 
-                                                        className: `grid grid-cols-12 gap-1 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${
+                                                        className: `${
+                                                            showPlayerStats 
+                                                                ? 'grid grid-cols-12 gap-1 p-2 rounded border border-gray-200' 
+                                                                : 'flex items-center gap-2 p-2 rounded border border-gray-200'
+                                                        } text-sm group relative transition-colors ${
                                                             isMatchActionAllowed() ? 'hover:bg-blue-50 cursor-pointer' : 'cursor-not-allowed opacity-60'
                                                         }`,
                                                         onClick: isMatchActionAllowed()
@@ -3046,89 +3066,99 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             ? (selectedMatch?.status === 'scheduled' ? 'Zápas ešte nezačal' : 'Zápas je ukončený')
                                                             : ''
                                                     },
-                                                    // Meno a číslo dresu
-                                                    React.createElement(
-                                                        'div',
-                                                        { className: 'col-span-4 flex items-center gap-2 truncate' },
-                                                        React.createElement('i', { className: 'fa-solid fa-shirt text-gray-600 text-xs flex-shrink-0' }),
-                                                        player.jerseyNumber && React.createElement(
-                                                            'span',
-                                                            { className: 'font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0' },
-                                                            `${player.jerseyNumber}`
-                                                        ),
-                                                        React.createElement(
-                                                            'span',
-                                                            { className: 'font-medium truncate' },
-                                                            `${player.firstName} ${player.lastName}`
-                                                        )
-                                                    ),
-                                                    
-                                                    // Štatistiky hráča (zobrazia sa len v režime štatistík)
+                                                    // Meno a číslo dresu - vždy zobrazené rovnako
                                                     showPlayerStats ? (
-                                                        stats ? (
-                                                            React.createElement(
-                                                                React.Fragment,
-                                                                null,
-                                                                // Góly
-                                                                React.createElement(
-                                                                    'div',
-                                                                    { className: 'col-span-1 text-center font-bold text-green-600' },
-                                                                    stats.goals + stats.penaltiesScored
-                                                                ),
-                                                                // 7m
-                                                                React.createElement(
-                                                                    'div',
-                                                                    { className: 'col-span-2 text-center font-bold text-blue-600' },
-                                                                    `${stats.penaltiesScored}/${stats.penaltiesScored + stats.penaltiesMissed}`
-                                                                ),
-                                                                // ŽK
-                                                                React.createElement(
-                                                                    'div',
-                                                                    { className: 'col-span-1 text-center font-bold text-yellow-600' },
-                                                                    stats.yellowCards
-                                                                ),
-                                                                // ČK
-                                                                React.createElement(
-                                                                    'div',
-                                                                    { className: 'col-span-1 text-center font-bold text-red-600' },
-                                                                    stats.redCards
-                                                                ),
-                                                                // MK
-                                                                React.createElement(
-                                                                    'div',
-                                                                    { className: 'col-span-1 text-center font-bold text-blue-800' },
-                                                                    stats.blueCards
-                                                                ),
-                                                                // Vylúčenia
-                                                                React.createElement(
-                                                                    'div',
-                                                                    { className: 'col-span-2 text-center font-bold text-orange-600' },
-                                                                    stats.exclusions
-                                                                )
-                                                            )
-                                                        ) : (
-                                                            React.createElement(
-                                                                React.Fragment,
-                                                                null,
-                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
-                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0/0'),
-                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
-                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
-                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
-                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0')
-                                                            )
-                                                        )
-                                                    ) : (
-                                                        // Ak nie sú štatistiky zapnuté, vyplníme prázdne miesta
+                                                        // Režim štatistík - grid zobrazenie
                                                         React.createElement(
                                                             React.Fragment,
                                                             null,
-                                                            React.createElement('div', { className: 'col-span-1' }),
-                                                            React.createElement('div', { className: 'col-span-2' }),
-                                                            React.createElement('div', { className: 'col-span-1' }),
-                                                            React.createElement('div', { className: 'col-span-1' }),
-                                                            React.createElement('div', { className: 'col-span-1' }),
-                                                            React.createElement('div', { className: 'col-span-2' })
+                                                            React.createElement(
+                                                                'div',
+                                                                { className: 'col-span-4 flex items-center gap-2 truncate' },
+                                                                React.createElement('i', { className: 'fa-solid fa-shirt text-gray-600 text-xs flex-shrink-0' }),
+                                                                player.jerseyNumber && React.createElement(
+                                                                    'span',
+                                                                    { className: 'font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0' },
+                                                                    `${player.jerseyNumber}`
+                                                                ),
+                                                                React.createElement(
+                                                                    'span',
+                                                                    { className: 'font-medium truncate' },
+                                                                    `${player.firstName} ${player.lastName}`
+                                                                )
+                                                            ),
+                                                            
+                                                            // Štatistiky hráča (zobrazia sa len v režime štatistík)
+                                                            stats ? (
+                                                                React.createElement(
+                                                                    React.Fragment,
+                                                                    null,
+                                                                    // Góly
+                                                                    React.createElement(
+                                                                        'div',
+                                                                        { className: 'col-span-1 text-center font-bold text-green-600' },
+                                                                        stats.goals + stats.penaltiesScored
+                                                                    ),
+                                                                    // 7m
+                                                                    React.createElement(
+                                                                        'div',
+                                                                        { className: 'col-span-2 text-center font-bold text-blue-600' },
+                                                                        `${stats.penaltiesScored}/${stats.penaltiesScored + stats.penaltiesMissed}`
+                                                                    ),
+                                                                    // ŽK
+                                                                    React.createElement(
+                                                                        'div',
+                                                                        { className: 'col-span-1 text-center font-bold text-yellow-600' },
+                                                                        stats.yellowCards
+                                                                    ),
+                                                                    // ČK
+                                                                    React.createElement(
+                                                                        'div',
+                                                                        { className: 'col-span-1 text-center font-bold text-red-600' },
+                                                                        stats.redCards
+                                                                    ),
+                                                                    // MK
+                                                                    React.createElement(
+                                                                        'div',
+                                                                        { className: 'col-span-1 text-center font-bold text-blue-800' },
+                                                                        stats.blueCards
+                                                                    ),
+                                                                    // Vylúčenia
+                                                                    React.createElement(
+                                                                        'div',
+                                                                        { className: 'col-span-2 text-center font-bold text-orange-600' },
+                                                                        stats.exclusions
+                                                                    )
+                                                                )
+                                                            ) : (
+                                                                React.createElement(
+                                                                    React.Fragment,
+                                                                    null,
+                                                                    React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
+                                                                    React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0/0'),
+                                                                    React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
+                                                                    React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
+                                                                    React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
+                                                                    React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0')
+                                                                )
+                                                            )
+                                                        )
+                                                    ) : (
+                                                        // Normálny režim - jednoduché zobrazenie
+                                                        React.createElement(
+                                                            React.Fragment,
+                                                            null,
+                                                            React.createElement('i', { className: 'fa-solid fa-shirt text-gray-600 text-xs flex-shrink-0' }),
+                                                            player.jerseyNumber && React.createElement(
+                                                                'span',
+                                                                { className: 'font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0' },
+                                                                `${player.jerseyNumber}`
+                                                            ),
+                                                            React.createElement(
+                                                                'span',
+                                                                { className: 'font-medium truncate' },
+                                                                `${player.firstName} ${player.lastName}`
+                                                            )
                                                         )
                                                     )
                                                 );
@@ -3766,7 +3796,11 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 'div',
                                                 { 
                                                     key: `away-men-${idx}`, 
-                                                    className: `grid grid-cols-12 gap-1 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${
+                                                    className: `${
+                                                        showPlayerStats 
+                                                            ? 'grid grid-cols-12 gap-1 p-2 rounded border border-gray-200' 
+                                                            : 'flex items-center gap-2 p-2 rounded border border-gray-200'
+                                                    } text-sm group relative transition-colors ${
                                                         isMatchActionAllowed() ? 'hover:bg-blue-50 cursor-pointer' : 'cursor-not-allowed opacity-60'
                                                     }`,
                                                     onClick: isMatchActionAllowed() 
@@ -3786,62 +3820,66 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         : ''
                                                 },
                                                 // Meno
-                                                React.createElement(
-                                                    'div',
-                                                    { className: 'col-span-5 flex items-center gap-2 truncate' },
-                                                    React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
-                                                    React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
-                                                ),
-                                                
-                                                // Štatistiky pre realizačný tím (vrátane MK)
                                                 showPlayerStats ? (
-                                                    stats ? (
-                                                        React.createElement(
-                                                            React.Fragment,
-                                                            null,
-                                                            // ŽK
-                                                            React.createElement(
-                                                                'div',
-                                                                { className: 'col-span-2 text-center font-bold text-yellow-600' },
-                                                                stats.yellowCards
-                                                            ),
-                                                            // ČK
-                                                            React.createElement(
-                                                                'div',
-                                                                { className: 'col-span-2 text-center font-bold text-red-600' },
-                                                                stats.redCards
-                                                            ),
-                                                            // MK
-                                                            React.createElement(
-                                                                'div',
-                                                                { className: 'col-span-1 text-center font-bold text-blue-800' },
-                                                                stats.blueCards
-                                                            ),
-                                                            // Vylúčenia
-                                                            React.createElement(
-                                                                'div',
-                                                                { className: 'col-span-2 text-center font-bold text-orange-600' },
-                                                                stats.exclusions
-                                                            )
-                                                        )
-                                                    ) : (
-                                                        React.createElement(
-                                                            React.Fragment,
-                                                            null,
-                                                            React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
-                                                            React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
-                                                            React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
-                                                            React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0')
-                                                        )
-                                                    )
-                                                ) : (
+                                                    // Režim štatistík - grid zobrazenie
                                                     React.createElement(
                                                         React.Fragment,
                                                         null,
-                                                        React.createElement('div', { className: 'col-span-2' }),
-                                                        React.createElement('div', { className: 'col-span-2' }),
-                                                        React.createElement('div', { className: 'col-span-1' }),
-                                                        React.createElement('div', { className: 'col-span-2' })
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'col-span-5 flex items-center gap-2 truncate' },
+                                                            React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
+                                                            React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
+                                                        ),
+                                                        
+                                                        // Štatistiky pre realizačný tím (vrátane MK)
+                                                        stats ? (
+                                                            React.createElement(
+                                                                React.Fragment,
+                                                                null,
+                                                                // ŽK
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { className: 'col-span-2 text-center font-bold text-yellow-600' },
+                                                                    stats.yellowCards
+                                                                ),
+                                                                // ČK
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { className: 'col-span-2 text-center font-bold text-red-600' },
+                                                                    stats.redCards
+                                                                ),
+                                                                // MK
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { className: 'col-span-1 text-center font-bold text-blue-800' },
+                                                                    stats.blueCards
+                                                                ),
+                                                                // Vylúčenia
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { className: 'col-span-2 text-center font-bold text-orange-600' },
+                                                                    stats.exclusions
+                                                                )
+                                                            )
+                                                        ) : (
+                                                            React.createElement(
+                                                                React.Fragment,
+                                                                null,
+                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
+                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
+                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
+                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0')
+                                                            )
+                                                        )
+                                                    )
+                                                ) : (
+                                                    // Normálny režim - jednoduché zobrazenie
+                                                    React.createElement(
+                                                        React.Fragment,
+                                                        null,
+                                                        React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
+                                                        React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
                                                     )
                                                 )
                                             );
@@ -3881,7 +3919,11 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 'div',
                                                 { 
                                                     key: `away-women-${idx}`, 
-                                                    className: `grid grid-cols-12 gap-1 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${
+                                                    className: `${
+                                                        showPlayerStats 
+                                                            ? 'grid grid-cols-12 gap-1 p-2 rounded border border-gray-200' 
+                                                            : 'flex items-center gap-2 p-2 rounded border border-gray-200'
+                                                    } text-sm group relative transition-colors ${
                                                         isMatchActionAllowed() ? 'hover:bg-blue-50 cursor-pointer' : 'cursor-not-allowed opacity-60'
                                                     }`,
                                                     onClick: isMatchActionAllowed() 
@@ -3901,62 +3943,66 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         : ''
                                                 },
                                                 // Meno
-                                                React.createElement(
-                                                    'div',
-                                                    { className: 'col-span-5 flex items-center gap-2 truncate' },
-                                                    React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs flex-shrink-0' }),
-                                                    React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
-                                                ),
-                                                
-                                                // Štatistiky pre realizačný tím (vrátane MK)
                                                 showPlayerStats ? (
-                                                    stats ? (
-                                                        React.createElement(
-                                                            React.Fragment,
-                                                            null,
-                                                            // ŽK
-                                                            React.createElement(
-                                                                'div',
-                                                                { className: 'col-span-2 text-center font-bold text-yellow-600' },
-                                                                stats.yellowCards
-                                                            ),
-                                                            // ČK
-                                                            React.createElement(
-                                                                'div',
-                                                                { className: 'col-span-2 text-center font-bold text-red-600' },
-                                                                stats.redCards
-                                                            ),
-                                                            // MK
-                                                            React.createElement(
-                                                                'div',
-                                                                { className: 'col-span-1 text-center font-bold text-blue-800' },
-                                                                stats.blueCards
-                                                            ),
-                                                            // Vylúčenia
-                                                            React.createElement(
-                                                                'div',
-                                                                { className: 'col-span-2 text-center font-bold text-orange-600' },
-                                                                stats.exclusions
-                                                            )
-                                                        )
-                                                    ) : (
-                                                        React.createElement(
-                                                            React.Fragment,
-                                                            null,
-                                                            React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
-                                                            React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
-                                                            React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
-                                                            React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0')
-                                                        )
-                                                    )
-                                                ) : (
+                                                    // Režim štatistík - grid zobrazenie
                                                     React.createElement(
                                                         React.Fragment,
                                                         null,
-                                                        React.createElement('div', { className: 'col-span-2' }),
-                                                        React.createElement('div', { className: 'col-span-2' }),
-                                                        React.createElement('div', { className: 'col-span-1' }),
-                                                        React.createElement('div', { className: 'col-span-2' })
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'col-span-5 flex items-center gap-2 truncate' },
+                                                            React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs flex-shrink-0' }),
+                                                            React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
+                                                        ),
+                                                        
+                                                        // Štatistiky pre realizačný tím (vrátane MK)
+                                                        stats ? (
+                                                            React.createElement(
+                                                                React.Fragment,
+                                                                null,
+                                                                // ŽK
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { className: 'col-span-2 text-center font-bold text-yellow-600' },
+                                                                    stats.yellowCards
+                                                                ),
+                                                                // ČK
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { className: 'col-span-2 text-center font-bold text-red-600' },
+                                                                    stats.redCards
+                                                                ),
+                                                                // MK
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { className: 'col-span-1 text-center font-bold text-blue-800' },
+                                                                    stats.blueCards
+                                                                ),
+                                                                // Vylúčenia
+                                                                React.createElement(
+                                                                    'div',
+                                                                    { className: 'col-span-2 text-center font-bold text-orange-600' },
+                                                                    stats.exclusions
+                                                                )
+                                                            )
+                                                        ) : (
+                                                            React.createElement(
+                                                                React.Fragment,
+                                                                null,
+                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
+                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0'),
+                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
+                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0')
+                                                            )
+                                                        )
+                                                    )
+                                                ) : (
+                                                    // Normálny režim - jednoduché zobrazenie
+                                                    React.createElement(
+                                                        React.Fragment,
+                                                        null,
+                                                        React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs flex-shrink-0' }),
+                                                        React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
                                                     )
                                                 )
                                             );
@@ -3989,12 +4035,12 @@ const matchesHallApp = ({ userProfileData }) => {
                                     `Hráči (${awayTeamDetails?.team.playerDetails?.length || 0})`
                                 ),
                                 
-                                // Hlavička tabuľky pre hráčov
-                                React.createElement(StatsTableHeader, { showForPlayers: true, showForStaff: false }),
+                                // Hlavička tabuľky pre hráčov (zobrazí sa len v režime štatistík)
+                                showPlayerStats && React.createElement(StatsTableHeader, { showForPlayers: true, showForStaff: false }),
                                 
                                 awayTeamDetails ? React.createElement(
                                     'div',
-                                    { className: 'space-y-1' },
+                                    { className: showPlayerStats ? 'space-y-1' : 'space-y-1' },
                                     // Hráči hosťovského tímu
                                     awayTeamDetails.team.playerDetails && awayTeamDetails.team.playerDetails.length > 0 ? 
                                         [...awayTeamDetails.team.playerDetails]
@@ -4020,7 +4066,11 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     'div',
                                                     { 
                                                         key: `away-player-${idx}`, 
-                                                        className: `grid grid-cols-12 gap-1 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${
+                                                        className: `${
+                                                            showPlayerStats 
+                                                                ? 'grid grid-cols-12 gap-1 p-2 rounded border border-gray-200' 
+                                                                : 'flex items-center gap-2 p-2 rounded border border-gray-200'
+                                                        } text-sm group relative transition-colors ${
                                                             isMatchActionAllowed() ? 'hover:bg-blue-50 cursor-pointer' : 'cursor-not-allowed opacity-60'
                                                         }`,
                                                         onClick: isMatchActionAllowed()
@@ -4046,89 +4096,99 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             ? (selectedMatch?.status === 'scheduled' ? 'Zápas ešte nezačal' : 'Zápas je ukončený')
                                                             : ''
                                                     },
-                                                    // Meno a číslo dresu
-                                                    React.createElement(
-                                                        'div',
-                                                        { className: 'col-span-4 flex items-center gap-2 truncate' },
-                                                        React.createElement('i', { className: 'fa-solid fa-shirt text-gray-600 text-xs flex-shrink-0' }),
-                                                        player.jerseyNumber && React.createElement(
-                                                            'span',
-                                                            { className: 'font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0' },
-                                                            `${player.jerseyNumber}`
-                                                        ),
-                                                        React.createElement(
-                                                            'span',
-                                                            { className: 'font-medium truncate' },
-                                                            `${player.firstName} ${player.lastName}`
-                                                        )
-                                                    ),
-                                                    
-                                                    // Štatistiky hráča (zobrazia sa len v režime štatistík)
+                                                    // Meno a číslo dresu - vždy zobrazené rovnako
                                                     showPlayerStats ? (
-                                                        stats ? (
-                                                            React.createElement(
-                                                                React.Fragment,
-                                                                null,
-                                                                // Góly
-                                                                React.createElement(
-                                                                    'div',
-                                                                    { className: 'col-span-1 text-center font-bold text-green-600' },
-                                                                    stats.goals + stats.penaltiesScored
-                                                                ),
-                                                                // 7m
-                                                                React.createElement(
-                                                                    'div',
-                                                                    { className: 'col-span-2 text-center font-bold text-blue-600' },
-                                                                    `${stats.penaltiesScored}/${stats.penaltiesScored + stats.penaltiesMissed}`
-                                                                ),
-                                                                // ŽK
-                                                                React.createElement(
-                                                                    'div',
-                                                                    { className: 'col-span-1 text-center font-bold text-yellow-600' },
-                                                                    stats.yellowCards
-                                                                ),
-                                                                // ČK
-                                                                React.createElement(
-                                                                    'div',
-                                                                    { className: 'col-span-1 text-center font-bold text-red-600' },
-                                                                    stats.redCards
-                                                                ),
-                                                                // MK
-                                                                React.createElement(
-                                                                    'div',
-                                                                    { className: 'col-span-1 text-center font-bold text-blue-800' },
-                                                                    stats.blueCards
-                                                                ),
-                                                                // Vylúčenia
-                                                                React.createElement(
-                                                                    'div',
-                                                                    { className: 'col-span-2 text-center font-bold text-orange-600' },
-                                                                    stats.exclusions
-                                                                )
-                                                            )
-                                                        ) : (
-                                                            React.createElement(
-                                                                React.Fragment,
-                                                                null,
-                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
-                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0/0'),
-                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
-                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
-                                                                React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
-                                                                React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0')
-                                                            )
-                                                        )
-                                                    ) : (
-                                                        // Ak nie sú štatistiky zapnuté, vyplníme prázdne miesta
+                                                        // Režim štatistík - grid zobrazenie
                                                         React.createElement(
                                                             React.Fragment,
                                                             null,
-                                                            React.createElement('div', { className: 'col-span-1' }),
-                                                            React.createElement('div', { className: 'col-span-2' }),
-                                                            React.createElement('div', { className: 'col-span-1' }),
-                                                            React.createElement('div', { className: 'col-span-1' }),
-                                                            React.createElement('div', { className: 'col-span-1' }),
-                                                            React.createElement('div', { className: 'col-span-2' })
+                                                            React.createElement(
+                                                                'div',
+                                                                { className: 'col-span-4 flex items-center gap-2 truncate' },
+                                                                React.createElement('i', { className: 'fa-solid fa-shirt text-gray-600 text-xs flex-shrink-0' }),
+                                                                player.jerseyNumber && React.createElement(
+                                                                    'span',
+                                                                    { className: 'font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0' },
+                                                                    `${player.jerseyNumber}`
+                                                                ),
+                                                                React.createElement(
+                                                                    'span',
+                                                                    { className: 'font-medium truncate' },
+                                                                    `${player.firstName} ${player.lastName}`
+                                                                )
+                                                            ),
+                                                            
+                                                            // Štatistiky hráča (zobrazia sa len v režime štatistík)
+                                                            stats ? (
+                                                                React.createElement(
+                                                                    React.Fragment,
+                                                                    null,
+                                                                    // Góly
+                                                                    React.createElement(
+                                                                        'div',
+                                                                        { className: 'col-span-1 text-center font-bold text-green-600' },
+                                                                        stats.goals + stats.penaltiesScored
+                                                                    ),
+                                                                    // 7m
+                                                                    React.createElement(
+                                                                        'div',
+                                                                        { className: 'col-span-2 text-center font-bold text-blue-600' },
+                                                                        `${stats.penaltiesScored}/${stats.penaltiesScored + stats.penaltiesMissed}`
+                                                                    ),
+                                                                    // ŽK
+                                                                    React.createElement(
+                                                                        'div',
+                                                                        { className: 'col-span-1 text-center font-bold text-yellow-600' },
+                                                                        stats.yellowCards
+                                                                    ),
+                                                                    // ČK
+                                                                    React.createElement(
+                                                                        'div',
+                                                                        { className: 'col-span-1 text-center font-bold text-red-600' },
+                                                                        stats.redCards
+                                                                    ),
+                                                                    // MK
+                                                                    React.createElement(
+                                                                        'div',
+                                                                        { className: 'col-span-1 text-center font-bold text-blue-800' },
+                                                                        stats.blueCards
+                                                                    ),
+                                                                    // Vylúčenia
+                                                                    React.createElement(
+                                                                        'div',
+                                                                        { className: 'col-span-2 text-center font-bold text-orange-600' },
+                                                                        stats.exclusions
+                                                                    )
+                                                                )
+                                                            ) : (
+                                                                React.createElement(
+                                                                    React.Fragment,
+                                                                    null,
+                                                                    React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
+                                                                    React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0/0'),
+                                                                    React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
+                                                                    React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
+                                                                    React.createElement('div', { className: 'col-span-1 text-center text-gray-400' }, '0'),
+                                                                    React.createElement('div', { className: 'col-span-2 text-center text-gray-400' }, '0')
+                                                                )
+                                                            )
+                                                        )
+                                                    ) : (
+                                                        // Normálny režim - jednoduché zobrazenie
+                                                        React.createElement(
+                                                            React.Fragment,
+                                                            null,
+                                                            React.createElement('i', { className: 'fa-solid fa-shirt text-gray-600 text-xs flex-shrink-0' }),
+                                                            player.jerseyNumber && React.createElement(
+                                                                'span',
+                                                                { className: 'font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0' },
+                                                                `${player.jerseyNumber}`
+                                                            ),
+                                                            React.createElement(
+                                                                'span',
+                                                                { className: 'font-medium truncate' },
+                                                                `${player.firstName} ${player.lastName}`
+                                                            )
                                                         )
                                                     )
                                                 );
