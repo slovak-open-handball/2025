@@ -1457,7 +1457,7 @@ const matchesHallApp = ({ userProfileData }) => {
             if (playerRef.staffType === 'men' && teamDetails.team.menTeamMemberDetails && 
                 teamDetails.team.menTeamMemberDetails[playerRef.staffIndex]) {
                 const member = teamDetails.team.menTeamMemberDetails[playerRef.staffIndex];
-                return `${member.firstName} ${member.lastName}`;
+                return `${member.lastName} ${member.firstName}`;
             } else if (playerRef.staffType === 'women' && teamDetails.team.womenTeamMemberDetails && 
                        teamDetails.team.womenTeamMemberDetails[playerRef.staffIndex]) {
                 const member = teamDetails.team.womenTeamMemberDetails[playerRef.staffIndex];
@@ -2756,7 +2756,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             const staffIdentifier = {
                                                 userId: homeTeamDetails.userId,
                                                 teamIdentifier: selectedMatch.homeTeamIdentifier,
-                                                displayName: `${member.firstName} ${member.lastName} (tréner)`,
+                                                displayName: `${member.lastName} ${member.firstName} (tréner)`,
                                                 isStaff: true,
                                                 staffType: 'men',
                                                 staffIndex: idx
@@ -2801,7 +2801,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             'div',
                                                             { className: 'col-span-5 flex items-center gap-2 truncate' },
                                                             React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
-                                                            React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
+                                                            React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
                                                         ),
                                                         
                                                         // Štatistiky pre realizačný tím (vrátane MK)
@@ -2851,7 +2851,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         React.Fragment,
                                                         null,
                                                         React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
-                                                        React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
+                                                        React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
                                                     )
                                                 )
                                             );
@@ -2878,7 +2878,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             const staffIdentifier = {
                                                 userId: homeTeamDetails.userId,
                                                 teamIdentifier: selectedMatch.homeTeamIdentifier,
-                                                displayName: `${member.firstName} ${member.lastName} (trénerka)`,
+                                                displayName: `${member.lastName} ${member.firstName} (trénerka)`,
                                                 isStaff: true,
                                                 staffType: 'women',
                                                 staffIndex: idx
@@ -2923,7 +2923,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             'div',
                                                             { className: 'col-span-5 flex items-center gap-2 truncate' },
                                                             React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs flex-shrink-0' }),
-                                                            React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
+                                                            React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
                                                         ),
                                                         
                                                         // Štatistiky pre realizačný tím (vrátane MK)
@@ -2973,7 +2973,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         React.Fragment,
                                                         null,
                                                         React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs flex-shrink-0' }),
-                                                        React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
+                                                        React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
                                                     )
                                                 )
                                             );
@@ -3024,7 +3024,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 const playerIdentifier = {
                                                     userId: homeTeamDetails.userId,
                                                     teamIdentifier: selectedMatch.homeTeamIdentifier,
-                                                    displayName: `${player.firstName} ${player.lastName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`,
+                                                    displayName: `${player.lastName} ${player.firstName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`,
                                                     index: idx, // PRIDANÉ: index hráča
                                                     isStaff: false
                                                 };
@@ -3084,7 +3084,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                 React.createElement(
                                                                     'span',
                                                                     { className: 'font-medium truncate' },
-                                                                    `${player.firstName} ${player.lastName}`
+                                                                    `${player.lastName} ${player.firstName}`
                                                                 )
                                                             ),
                                                             
@@ -3157,7 +3157,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             React.createElement(
                                                                 'span',
                                                                 { className: 'font-medium truncate' },
-                                                                `${player.firstName} ${player.lastName}`
+                                                                `${player.lastName} ${player.firstName}`
                                                             )
                                                         )
                                                     )
@@ -3783,7 +3783,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             const staffIdentifier = {
                                                 userId: awayTeamDetails.userId,
                                                 teamIdentifier: selectedMatch.awayTeamIdentifier,
-                                                displayName: `${member.firstName} ${member.lastName} (tréner)`,
+                                                displayName: `${member.lastName} ${member.firstName} (tréner)`,
                                                 isStaff: true,
                                                 staffType: 'men',
                                                 staffIndex: idx
@@ -3829,7 +3829,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             'div',
                                                             { className: 'col-span-5 flex items-center gap-2 truncate' },
                                                             React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
-                                                            React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
+                                                            React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
                                                         ),
                                                         
                                                         // Štatistiky pre realizačný tím (vrátane MK)
@@ -3879,7 +3879,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         React.Fragment,
                                                         null,
                                                         React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
-                                                        React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
+                                                        React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
                                                     )
                                                 )
                                             );
@@ -3906,7 +3906,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             const staffIdentifier = {
                                                 userId: awayTeamDetails.userId,
                                                 teamIdentifier: selectedMatch.awayTeamIdentifier,
-                                                displayName: `${member.firstName} ${member.lastName} (trénerka)`,
+                                                displayName: `${member.lastName} ${member.firstName} (trénerka)`,
                                                 isStaff: true,
                                                 staffType: 'women',
                                                 staffIndex: idx
@@ -3952,7 +3952,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             'div',
                                                             { className: 'col-span-5 flex items-center gap-2 truncate' },
                                                             React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs flex-shrink-0' }),
-                                                            React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
+                                                            React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
                                                         ),
                                                         
                                                         // Štatistiky pre realizačný tím (vrátane MK)
@@ -4002,7 +4002,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         React.Fragment,
                                                         null,
                                                         React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs flex-shrink-0' }),
-                                                        React.createElement('span', { className: 'font-medium truncate' }, `${member.firstName} ${member.lastName}`)
+                                                        React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
                                                     )
                                                 )
                                             );
@@ -4054,7 +4054,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 const playerIdentifier = {
                                                     userId: awayTeamDetails.userId,
                                                     teamIdentifier: selectedMatch.awayTeamIdentifier,
-                                                    displayName: `${player.firstName} ${player.lastName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`,
+                                                    displayName: `${player.lastName} ${player.firstName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`,
                                                     index: idx, // PRIDANÉ: index hráča
                                                     isStaff: false
                                                 };
@@ -4114,7 +4114,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                 React.createElement(
                                                                     'span',
                                                                     { className: 'font-medium truncate' },
-                                                                    `${player.firstName} ${player.lastName}`
+                                                                    `${player.lastName} ${player.firstName}`
                                                                 )
                                                             ),
                                                             
@@ -4187,7 +4187,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             React.createElement(
                                                                 'span',
                                                                 { className: 'font-medium truncate' },
-                                                                `${player.firstName} ${player.lastName}`
+                                                                `${player.lastName} ${player.firstName}`
                                                             )
                                                         )
                                                     )
