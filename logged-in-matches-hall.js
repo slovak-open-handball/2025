@@ -314,6 +314,21 @@ const matchesHallApp = ({ userProfileData }) => {
         return stats;
     };
 
+    // Funkcia na získanie štatistík pre konkrétneho hráča
+    const getPlayerStats = (playerIdentifier) => {
+        if (!playerIdentifier || !playerStats) return null;
+        
+        // Vytvoríme kľúč pre hráča
+        let playerKey;
+        if (playerIdentifier.isStaff) {
+            playerKey = `${playerIdentifier.userId}_${playerIdentifier.teamIdentifier}_staff_${playerIdentifier.staffType}_${playerIdentifier.staffIndex}`;
+        } else {
+            playerKey = `${playerIdentifier.userId}_${playerIdentifier.teamIdentifier}_player_${playerIdentifier.index}`;
+        }
+        
+        return playerStats[playerKey] || null;
+    };
+
     const highlightEventRow = (eventId) => {
         // Ak je už rovnaký riadok zvýraznený, zrušíme zvýraznenie
         if (highlightedEventId === eventId) {
@@ -2687,7 +2702,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     'div',
                                     { className: 'space-y-2' },
                                     
-                                    // Muži v realizačnom tíme
+                                    // V časti s mužmi v realizačnom tíme (približne riadok 3920)
                                     homeTeamDetails.team.menTeamMemberDetails && homeTeamDetails.team.menTeamMemberDetails.length > 0 && 
                                     homeTeamDetails.team.menTeamMemberDetails.map((member, idx) => {
                                         // 🔴 ZMENENÉ: Vytvoríme identifikátor pre člena RT s indexom
@@ -2700,13 +2715,16 @@ const matchesHallApp = ({ userProfileData }) => {
                                             staffIndex: idx
                                         };
                                         
+                                        // Získame štatistiky pre tohto člena RT (ak je zapnutý režim štatistík)
+                                        const stats = showPlayerStats ? getPlayerStats(staffIdentifier) : null;
+                                        
                                         return React.createElement(
                                             'div',
                                             { 
                                                 key: `home-men-${idx}`, 
                                                 className: `bg-white p-2 rounded border border-gray-200 text-sm group relative transition-colors ${
                                                     isMatchActionAllowed() ? 'hover:bg-blue-50 cursor-pointer' : 'cursor-not-allowed opacity-60'
-                                                }`,
+                                                } ${showPlayerStats ? 'mb-2' : ''}`,
                                                 onClick: isMatchActionAllowed() 
                                                     ? () => {
                                                         if (eventType) {
@@ -2722,11 +2740,48 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     ? (selectedMatch?.status === 'scheduled' ? 'Zápas ešte nezačal' : 'Zápas je ukončený')
                                                     : ''
                                             },
+                                            // Základné informácie
                                             React.createElement(
                                                 'div',
                                                 { className: 'flex items-center gap-2' },
                                                 React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs' }),
                                                 React.createElement('span', { className: 'font-medium' }, `${member.firstName} ${member.lastName}`)
+                                            ),
+                                            
+                                            // Štatistiky pre realizačný tím (len karty)
+                                            showPlayerStats && stats && React.createElement(
+                                                'div',
+                                                { className: 'mt-2 pt-2 border-t border-gray-100 grid grid-cols-3 gap-1 text-center text-xs' },
+                                                // ŽK
+                                                React.createElement(
+                                                    'div',
+                                                    { className: 'bg-yellow-50 p-1 rounded', title: 'Žlté karty' },
+                                                    React.createElement('div', { className: 'font-bold text-yellow-600' }, stats.yellowCards),
+                                                    React.createElement('div', { className: 'text-[10px] text-gray-500' }, 'ŽK')
+                                                ),
+                                                // ČK
+                                                React.createElement(
+                                                    'div',
+                                                    { className: 'bg-red-50 p-1 rounded', title: 'Červené karty' },
+                                                    React.createElement('div', { className: 'font-bold text-red-600' }, stats.redCards),
+                                                    React.createElement('div', { className: 'text-[10px] text-gray-500' }, 'ČK')
+                                                ),
+                                                // Vylúčenia
+                                                React.createElement(
+                                                    'div',
+                                                    { className: 'bg-orange-50 p-1 rounded', title: 'Vylúčenia (2 minúty)' },
+                                                    React.createElement('div', { className: 'font-bold text-orange-600' }, stats.exclusions),
+                                                    React.createElement('div', { className: 'text-[10px] text-gray-500' }, '2\'')
+                                                )
+                                            ),
+                                            
+                                            // Placeholder pre prázdne štatistiky
+                                            showPlayerStats && !stats && React.createElement(
+                                                'div',
+                                                { className: 'mt-2 pt-2 border-t border-gray-100 grid grid-cols-3 gap-1 text-center text-xs text-gray-400' },
+                                                React.createElement('div', { className: 'p-1' }, '0'),
+                                                React.createElement('div', { className: 'p-1' }, '0'),
+                                                React.createElement('div', { className: 'p-1' }, '0')
                                             )
                                         );
                                     }),
@@ -2821,13 +2876,16 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     isStaff: false
                                                 };
                                                 
+                                                // Získame štatistiky pre tohto hráča (ak je zapnutý režim štatistík)
+                                                const stats = showPlayerStats ? getPlayerStats(playerIdentifier) : null;
+                                                
                                                 return React.createElement(
                                                     'div',
                                                     { 
                                                         key: `home-player-${idx}`, 
                                                         className: `bg-white p-2 rounded border border-gray-200 text-sm group relative transition-colors ${
                                                             isMatchActionAllowed() ? 'hover:bg-blue-50 cursor-pointer' : 'cursor-not-allowed opacity-60'
-                                                        }`,
+                                                        } ${showPlayerStats ? 'mb-2' : ''}`,
                                                         onClick: isMatchActionAllowed()
                                                             ? () => {
                                                                 if (eventType) {
@@ -2851,6 +2909,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             ? (selectedMatch?.status === 'scheduled' ? 'Zápas ešte nezačal' : 'Zápas je ukončený')
                                                             : ''
                                                     },
+                                                    // Základné informácie o hráčovi
                                                     React.createElement(
                                                         'div',
                                                         { className: 'flex items-center gap-2 flex-wrap' },
@@ -2865,6 +2924,58 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             { className: 'font-medium' },
                                                             `${player.firstName} ${player.lastName}`
                                                         )
+                                                    ),
+                                                    
+                                                    // Štatistiky hráča (zobrazia sa len v režime štatistík)
+                                                    showPlayerStats && stats && React.createElement(
+                                                        'div',
+                                                        { className: 'mt-2 pt-2 border-t border-gray-100 grid grid-cols-5 gap-1 text-center text-xs' },
+                                                        // Góly
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'bg-green-50 p-1 rounded', title: 'Góly' },
+                                                            React.createElement('div', { className: 'font-bold text-green-600' }, stats.goals + stats.penaltiesScored),
+                                                            React.createElement('div', { className: 'text-[10px] text-gray-500' }, 'G')
+                                                        ),
+                                                        // 7m
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'bg-blue-50 p-1 rounded', title: '7m hody' },
+                                                            React.createElement('div', { className: 'font-bold text-blue-600' }, `${stats.penaltiesScored}/${stats.penaltiesScored + stats.penaltiesMissed}`),
+                                                            React.createElement('div', { className: 'text-[10px] text-gray-500' }, '7m')
+                                                        ),
+                                                        // ŽK
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'bg-yellow-50 p-1 rounded', title: 'Žlté karty' },
+                                                            React.createElement('div', { className: 'font-bold text-yellow-600' }, stats.yellowCards),
+                                                            React.createElement('div', { className: 'text-[10px] text-gray-500' }, 'ŽK')
+                                                        ),
+                                                        // ČK
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'bg-red-50 p-1 rounded', title: 'Červené karty' },
+                                                            React.createElement('div', { className: 'font-bold text-red-600' }, stats.redCards),
+                                                            React.createElement('div', { className: 'text-[10px] text-gray-500' }, 'ČK')
+                                                        ),
+                                                        // Vylúčenia
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'bg-orange-50 p-1 rounded', title: 'Vylúčenia (2 minúty)' },
+                                                            React.createElement('div', { className: 'font-bold text-orange-600' }, stats.exclusions),
+                                                            React.createElement('div', { className: 'text-[10px] text-gray-500' }, '2\'')
+                                                        )
+                                                    ),
+                                                    
+                                                    // Ak nie sú žiadne štatistiky (alebo hráč nemá udalosti), zobrazíme prázdny placeholder
+                                                    showPlayerStats && !stats && React.createElement(
+                                                        'div',
+                                                        { className: 'mt-2 pt-2 border-t border-gray-100 grid grid-cols-5 gap-1 text-center text-xs text-gray-400' },
+                                                        React.createElement('div', { className: 'p-1' }, '0'),
+                                                        React.createElement('div', { className: 'p-1' }, '0/0'),
+                                                        React.createElement('div', { className: 'p-1' }, '0'),
+                                                        React.createElement('div', { className: 'p-1' }, '0'),
+                                                        React.createElement('div', { className: 'p-1' }, '0')
                                                     )
                                                 );
                                             })
@@ -3605,13 +3716,16 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     isStaff: false
                                                 };
                                                 
+                                                // Získame štatistiky pre tohto hráča (ak je zapnutý režim štatistík)
+                                                const stats = showPlayerStats ? getPlayerStats(playerIdentifier) : null;
+                                                
                                                 return React.createElement(
                                                     'div',
                                                     { 
                                                         key: `away-player-${idx}`, 
                                                         className: `bg-white p-2 rounded border border-gray-200 text-sm group relative transition-colors ${
                                                             isMatchActionAllowed() ? 'hover:bg-blue-50 cursor-pointer' : 'cursor-not-allowed opacity-60'
-                                                        }`,
+                                                        } ${showPlayerStats ? 'mb-2' : ''}`,
                                                         onClick: isMatchActionAllowed()
                                                             ? () => {
                                                                 if (eventType) {
@@ -3635,6 +3749,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             ? (selectedMatch?.status === 'scheduled' ? 'Zápas ešte nezačal' : 'Zápas je ukončený')
                                                             : ''
                                                     },
+                                                    // Základné informácie o hráčovi
                                                     React.createElement(
                                                         'div',
                                                         { className: 'flex items-center gap-2 flex-wrap' },
@@ -3649,6 +3764,58 @@ const matchesHallApp = ({ userProfileData }) => {
                                                             { className: 'font-medium' },
                                                             `${player.firstName} ${player.lastName}`
                                                         )
+                                                    ),
+                                                    
+                                                    // Štatistiky hráča (zobrazia sa len v režime štatistík)
+                                                    showPlayerStats && stats && React.createElement(
+                                                        'div',
+                                                        { className: 'mt-2 pt-2 border-t border-gray-100 grid grid-cols-5 gap-1 text-center text-xs' },
+                                                        // Góly
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'bg-green-50 p-1 rounded', title: 'Góly' },
+                                                            React.createElement('div', { className: 'font-bold text-green-600' }, stats.goals + stats.penaltiesScored),
+                                                            React.createElement('div', { className: 'text-[10px] text-gray-500' }, 'G')
+                                                        ),
+                                                        // 7m
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'bg-blue-50 p-1 rounded', title: '7m hody' },
+                                                            React.createElement('div', { className: 'font-bold text-blue-600' }, `${stats.penaltiesScored}/${stats.penaltiesScored + stats.penaltiesMissed}`),
+                                                            React.createElement('div', { className: 'text-[10px] text-gray-500' }, '7m')
+                                                        ),
+                                                        // ŽK
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'bg-yellow-50 p-1 rounded', title: 'Žlté karty' },
+                                                            React.createElement('div', { className: 'font-bold text-yellow-600' }, stats.yellowCards),
+                                                            React.createElement('div', { className: 'text-[10px] text-gray-500' }, 'ŽK')
+                                                        ),
+                                                        // ČK
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'bg-red-50 p-1 rounded', title: 'Červené karty' },
+                                                            React.createElement('div', { className: 'font-bold text-red-600' }, stats.redCards),
+                                                            React.createElement('div', { className: 'text-[10px] text-gray-500' }, 'ČK')
+                                                        ),
+                                                        // Vylúčenia
+                                                        React.createElement(
+                                                            'div',
+                                                            { className: 'bg-orange-50 p-1 rounded', title: 'Vylúčenia (2 minúty)' },
+                                                            React.createElement('div', { className: 'font-bold text-orange-600' }, stats.exclusions),
+                                                            React.createElement('div', { className: 'text-[10px] text-gray-500' }, '2\'')
+                                                        )
+                                                    ),
+                                                    
+                                                    // Ak nie sú žiadne štatistiky (alebo hráč nemá udalosti), zobrazíme prázdny placeholder
+                                                    showPlayerStats && !stats && React.createElement(
+                                                        'div',
+                                                        { className: 'mt-2 pt-2 border-t border-gray-100 grid grid-cols-5 gap-1 text-center text-xs text-gray-400' },
+                                                        React.createElement('div', { className: 'p-1' }, '0'),
+                                                        React.createElement('div', { className: 'p-1' }, '0/0'),
+                                                        React.createElement('div', { className: 'p-1' }, '0'),
+                                                        React.createElement('div', { className: 'p-1' }, '0'),
+                                                        React.createElement('div', { className: 'p-1' }, '0')
                                                     )
                                                 );
                                             })
