@@ -211,14 +211,107 @@ const matchesHallApp = ({ userProfileData }) => {
 
     const [liveMatchData, setLiveMatchData] = useState({});
     const [completedMatchData, setCompletedMatchData] = useState({});
-
     const [highlightedEventId, setHighlightedEventId] = useState(null);
-
     const [showPlayerStats, setShowPlayerStats] = useState(false);
+    const [playerStats, setPlayerStats] = useState({});
 
     // Funkcia na prepínanie zobrazenia štatistík hráčov
     const togglePlayerStats = () => {
         setShowPlayerStats(!showPlayerStats);
+    };
+
+    // Funkcia na výpočet štatistík hráčov z udalostí zápasu
+    const calculatePlayerStats = (events) => {
+        const stats = {};
+        
+        events.forEach(event => {
+            if (!event.playerRef) return;
+            
+            // Vytvoríme unikátny kľúč pre hráča (userId + teamIdentifier + playerIndex/staffIndex)
+            let playerKey;
+            if (event.playerRef.staffType) {
+                playerKey = `${event.playerRef.userId}_${event.playerRef.teamIdentifier}_staff_${event.playerRef.staffType}_${event.playerRef.staffIndex}`;
+            } else {
+                playerKey = `${event.playerRef.userId}_${event.playerRef.teamIdentifier}_player_${event.playerRef.playerIndex}`;
+            }
+            
+            if (!stats[playerKey]) {
+                // Získame meno hráča
+                const playerName = getPlayerNameFromRef(event.playerRef);
+                
+                // Získame číslo dresu
+                let jerseyNumber = '';
+                if (!event.playerRef.staffType) {
+                    const user = users.find(u => u.id === event.playerRef.userId);
+                    if (user) {
+                        const parts = event.playerRef.teamIdentifier.split(' ');
+                        const groupAndOrder = parts.pop();
+                        const category = parts.join(' ');
+                        
+                        let groupLetter = '';
+                        let order = '';
+                        for (let i = 0; i < groupAndOrder.length; i++) {
+                            const char = groupAndOrder[i];
+                            if (char >= '0' && char <= '9') {
+                                order = groupAndOrder.substring(i);
+                                groupLetter = groupAndOrder.substring(0, i);
+                                break;
+                            }
+                        }
+                        
+                        const fullGroupName = `skupina ${groupLetter}`;
+                        const orderNum = parseInt(order, 10);
+                        
+                        const userTeams = user.teams?.[category];
+                        if (userTeams && Array.isArray(userTeams)) {
+                            const team = userTeams.find(t => t.groupName === fullGroupName && t.order === orderNum);
+                            if (team && team.playerDetails && event.playerRef.playerIndex !== undefined) {
+                                const player = team.playerDetails[event.playerRef.playerIndex];
+                                if (player && player.jerseyNumber) {
+                                    jerseyNumber = player.jerseyNumber;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                stats[playerKey] = {
+                    playerRef: event.playerRef,
+                    playerName: playerName,
+                    jerseyNumber: jerseyNumber,
+                    team: event.team, // 'home' alebo 'away'
+                    isStaff: !!event.playerRef.staffType,
+                    goals: 0,
+                    penaltiesScored: 0,
+                    penaltiesMissed: 0,
+                    yellowCards: 0,
+                    redCards: 0,
+                    blueCards: 0,
+                    exclusions: 0
+                };
+            }
+            
+            // Počítame štatistiky podľa typu udalosti
+            if (event.type === 'goal') {
+                stats[playerKey].goals++;
+            } else if (event.type === 'penalty') {
+                if (event.subType === 'scored') {
+                    stats[playerKey].penaltiesScored++;
+                } else if (event.subType === 'missed') {
+                    stats[playerKey].penaltiesMissed++;
+                }
+            } else if (event.type === 'yellow') {
+                stats[playerKey].yellowCards++;
+            } else if (event.type === 'red') {
+                stats[playerKey].redCards++;
+            } else if (event.type === 'blue') {
+                stats[playerKey].blueCards++;
+            } else if (event.type === 'exclusion') {
+                stats[playerKey].exclusions++;
+            }
+        });
+        
+        return stats;
     };
 
     const highlightEventRow = (eventId) => {
@@ -846,6 +939,16 @@ const matchesHallApp = ({ userProfileData }) => {
         // Povolené len pre zápasy v stave 'scheduled' (Naplánované)
         return selectedMatch.status === 'scheduled';
     };
+
+    // Prepočítanie štatistík hráčov pri zmene udalostí
+    useEffect(() => {
+        if (matchEvents.length > 0) {
+            const stats = calculatePlayerStats(matchEvents);
+            setPlayerStats(stats);
+        } else {
+            setPlayerStats({});
+        }
+    }, [matchEvents]);
 
     // NOVÝ useEffect PRE SLEDOVANIE UKONČENÝCH ZÁPASOV
     useEffect(() => {
