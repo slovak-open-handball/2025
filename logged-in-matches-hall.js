@@ -2698,10 +2698,10 @@ const matchesHallApp = ({ userProfileData }) => {
                                             : 'bg-white text-blue-600 border-2 border-blue-600 hover:bg-blue-50'
                                     }`,
                                     onClick: togglePlayerStats,
-                                    title: showPlayerStats ? 'Skryť štatistiky hráčov' : 'Zobraziť štatistiky hráčov'
+                                    title: showPlayerStats ? 'Skryť štatistiky' : 'Zobraziť štatistiky'
                                 },
                                 React.createElement('i', { className: 'fa-solid fa-chart-simple' }),
-                                'Štatistiky hráčov'
+                                'Štatistiky'
                             )
                         )
                     ),
