@@ -2116,6 +2116,136 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         };
 
+        // Pridajte novú funkciu pre aktualizáciu zvýraznenej udalosti
+        const updateHighlightedEvent = async (newType, newTeam, newSubType, newPlayer) => {
+            if (!highlightedEventId || !window.db) {
+                // Ak nie je zvýraznený žiadny riadok, správame sa štandardne - pridáme novú udalosť
+                addMatchEvent(newType, newTeam, newSubType, newPlayer);
+                return;
+            }
+            
+            try {
+                const eventRef = doc(window.db, 'matchEvents', highlightedEventId);
+                
+                // Získame aktuálnu udalosť
+                const eventSnap = await getDoc(eventRef);
+                if (!eventSnap.exists()) {
+                    window.showGlobalNotification('Zvýraznená udalosť už neexistuje', 'error');
+                    setHighlightedEventId(null);
+                    // Skúsime pridať novú udalosť
+                    addMatchEvent(newType, newTeam, newSubType, newPlayer);
+                    return;
+                }
+                
+                const currentEvent = eventSnap.data();
+                
+                // Výpočet nového stavu skóre
+                let homeScoreAfter = matchScore.home;
+                let awayScoreAfter = matchScore.away;
+                
+                // Odstránime starý vplyv na skóre (ak to bola gólová udalosť)
+                if (currentEvent.type === 'goal' || (currentEvent.type === 'penalty' && currentEvent.subType === 'scored')) {
+                    if (currentEvent.team === 'home') {
+                        homeScoreAfter--;
+                    } else if (currentEvent.team === 'away') {
+                        awayScoreAfter--;
+                    }
+                }
+                
+                // Pridáme nový vplyv na skóre (ak je to gólová udalosť)
+                if (newType === 'goal' || (newType === 'penalty' && newSubType === 'scored')) {
+                    if (newTeam === 'home') {
+                        homeScoreAfter++;
+                    } else if (newTeam === 'away') {
+                        awayScoreAfter++;
+                    }
+                }
+                
+                // Aktuálny čas v sekundách
+                const totalSeconds = matchTime;
+                const minute = Math.floor(totalSeconds / 60);
+                const second = totalSeconds % 60;
+                
+                const eventData = {
+                    type: newType,
+                    team: newTeam,
+                    minute: minute,
+                    second: second,
+                    formattedTime: `${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`,
+                    editedAt: Timestamp.now(),
+                    editedBy: userProfileData?.email || 'unknown',
+                    // Uložíme nový stav
+                    scoreBefore: {
+                        home: matchScore.home,
+                        away: matchScore.away
+                    },
+                    scoreAfter: {
+                        home: homeScoreAfter,
+                        away: awayScoreAfter
+                    }
+                };
+                
+                if (newType === 'penalty') {
+                    eventData.subType = newSubType;
+                } else {
+                    eventData.subType = null;
+                }
+                
+                if (newPlayer) {
+                    const teamDetails = newTeam === 'home' ? homeTeamDetails : awayTeamDetails;
+                    const teamIdentifier = newTeam === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
+                    
+                    let playerRef = null;
+                    
+                    if (newPlayer.isStaff) {
+                        playerRef = createPlayerReference(
+                            teamDetails,
+                            teamIdentifier,
+                            newPlayer,
+                            true,
+                            newPlayer.staffType,
+                            newPlayer.staffIndex
+                        );
+                    } else {
+                        playerRef = createPlayerReference(
+                            teamDetails,
+                            teamIdentifier,
+                            newPlayer,
+                            false
+                        );
+                    }
+                    
+                    if (playerRef) {
+                        eventData.playerRef = playerRef;
+                    }
+                    
+                    if (newType === 'yellow' || newType === 'red' || newType === 'blue' || newType === 'exclusion') {
+                        eventData.cardType = newType === 'exclusion' ? 'exclusion' : newType;
+                    }
+                } else {
+                    eventData.playerRef = null;
+                }
+                
+                await updateDoc(eventRef, eventData);
+                await recalculateScores();
+                
+                window.showGlobalNotification('Udalosť bola aktualizovaná', 'success');
+                
+                // Zrušíme zvýraznenie po úspešnej aktualizácii
+                setHighlightedEventId(null);
+        
+                // Resetujeme stavy tlačidiel
+                setSelectedPlayerForEvent(null);
+                setEventType(null);
+                setEventTeam(null);
+                setEventSubType(null);
+                
+            } catch (error) {
+                console.error('Chyba pri aktualizácii udalosti:', error);
+                window.showGlobalNotification('Chyba pri aktualizácii udalosti', 'error');
+            }
+        };
+
         // Upravte funkciu addMatchEvent, aby používala updateHighlightedEvent ak je zvýraznený riadok
         const addMatchEvent = async (localEventType, localEventTeam, localEventSubType, localPlayer) => {
             if (!selectedMatch || !window.db) return;
@@ -2149,34 +2279,10 @@ const matchesHallApp = ({ userProfileData }) => {
                 return;
             }
             
-            // Ak je zvýraznený riadok, najprv skontrolujeme, či sa typ udalosti zhoduje
+            // AK JE ZVÝRAZNENÝ RIADOK - aktualizujeme existujúcu udalosť
             if (highlightedEventId) {
-                try {
-                    // Získame aktuálnu zvýraznenú udalosť
-                    const eventRef = doc(window.db, 'matchEvents', highlightedEventId);
-                    const eventSnap = await getDoc(eventRef);
-                    
-                    if (eventSnap.exists()) {
-                        const currentEvent = eventSnap.data();
-                        
-                        // Skontrolujeme, či sa typ udalosti zhoduje
-                        // Ak sa nezhoduje, zrušíme zvýraznenie a pridáme novú udalosť
-                        if (currentEvent.type !== type) {
-                            setHighlightedEventId(null);
-                            // Pokračujeme s pridávaním novej udalosti
-                        } else {
-                            // Typ sa zhoduje, aktualizujeme existujúcu udalosť
-                            await updateHighlightedEvent(type, team, subType, player);
-                            return;
-                        }
-                    } else {
-                        // Udalosť neexistuje, zrušíme zvýraznenie
-                        setHighlightedEventId(null);
-                    }
-                } catch (error) {
-                    console.error('Chyba pri kontrole zvýraznenej udalosti:', error);
-                    setHighlightedEventId(null);
-                }
+                await updateHighlightedEvent(type, team, subType, player);
+                return;
             }
             
             // Inak pokračujeme s pôvodnou logikou pre pridanie novej udalosti
