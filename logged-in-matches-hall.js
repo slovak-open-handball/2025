@@ -2998,6 +2998,7 @@ const matchesHallApp = ({ userProfileData }) => {
             
             // Zistíme, či je zápas ukončený
             const isMatchCompleted = selectedMatch?.status === 'completed';
+            const isMatchScheduled = selectedMatch?.status === 'scheduled';
             
             return React.createElement(
                 'div',
