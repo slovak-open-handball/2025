@@ -3689,8 +3689,12 @@ const matchesHallApp = ({ userProfileData }) => {
                                         'div',
                                         { className: 'space-y-2' },
                                         
+                                        // Získame aktívnych členov RT pre domáci tím
+                                        const activeMenStaffHome = homeTeamDetails?.team.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
+                                        const activeWomenStaffHome = homeTeamDetails?.team.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
+
                                         // Muži v realizačnom tíme pre domáci tím
-                                        homeTeamDetails.team.menTeamMemberDetails && homeTeamDetails.team.menTeamMemberDetails.length > 0 && 
+                                        activeMenStaffHome.length > 0 && 
                                         React.createElement(
                                             React.Fragment,
                                             null,
@@ -3777,11 +3781,11 @@ const matchesHallApp = ({ userProfileData }) => {
                                         ),
                                         
                                         // Ženy v realizačnom tíme
-                                        homeTeamDetails.team.womenTeamMemberDetails && homeTeamDetails.team.womenTeamMemberDetails.length > 0 && 
+                                        activeWomenStaffHome.length > 0 && 
                                         React.createElement(
                                             React.Fragment,
                                             null,
-                                            activeWomenStaff.map((member, idx) => {
+                                            activeWomenStaffHome.map((member, idx) => {
                                                 const staffIdentifier = {
                                                     userId: homeTeamDetails.userId,
                                                     teamIdentifier: selectedMatch.homeTeamIdentifier,
@@ -4284,12 +4288,16 @@ const matchesHallApp = ({ userProfileData }) => {
                                         'div',
                                         { className: 'space-y-2' },
                                         
+                                        // Získame aktívnych členov RT pre hosťovský tím
+                                        const activeMenStaffAway = awayTeamDetails?.team.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
+                                        const activeWomenStaffAway = awayTeamDetails?.team.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
+
                                         // Muži v realizačnom tíme pre hosťovský tím (bez štatistík)
-                                        awayTeamDetails.team.menTeamMemberDetails && awayTeamDetails.team.menTeamMemberDetails.length > 0 && 
+                                        activeMenStaffAway.length > 0 && 
                                         React.createElement(
                                             React.Fragment,
                                             null,
-                                            awayTeamDetails.team.menTeamMemberDetails.map((member, idx) => {
+                                            activeMenStaffAway.map((member, idx) => {
                                                 const staffIdentifier = {
                                                     userId: awayTeamDetails.userId,
                                                     teamIdentifier: selectedMatch.awayTeamIdentifier,
@@ -4343,11 +4351,11 @@ const matchesHallApp = ({ userProfileData }) => {
                                         ),
                                         
                                         // Ženy v realizačnom tíme pre hosťovský tím (bez štatistík)
-                                        awayTeamDetails.team.womenTeamMemberDetails && awayTeamDetails.team.womenTeamMemberDetails.length > 0 && 
+                                        activeWomenStaffAway.length > 0 && 
                                         React.createElement(
                                             React.Fragment,
                                             null,
-                                            awayTeamDetails.team.womenTeamMemberDetails.map((member, idx) => {
+                                            activeWomenStaffAway.map((member, idx) => {
                                                 const staffIdentifier = {
                                                     userId: awayTeamDetails.userId,
                                                     teamIdentifier: selectedMatch.awayTeamIdentifier,
@@ -4649,7 +4657,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             ),
                                             
                                             // Muži v realizačnom tíme pre hosťovský tím (so štatistikami)
-                                            awayTeamDetails.team.menTeamMemberDetails && awayTeamDetails.team.menTeamMemberDetails.length > 0 && 
+                                            activeMenStaffAway.length > 0 && 
                                             React.createElement(
                                                 React.Fragment,
                                                 null,
@@ -4714,11 +4722,11 @@ const matchesHallApp = ({ userProfileData }) => {
                                             ),
                                                                                         
                                             // Ženy v realizačnom tíme pre hosťovský tím (so štatistikami)
-                                            awayTeamDetails.team.womenTeamMemberDetails && awayTeamDetails.team.womenTeamMemberDetails.length > 0 && 
+                                            activeWomenStaffAway.length > 0 && 
                                             React.createElement(
                                                 React.Fragment,
                                                 null,
-                                                awayTeamDetails.team.womenTeamMemberDetails.map((member, idx) => {
+                                                activeWomenStaffAway.map((member, idx) => {
                                                     const staffIdentifier = {
                                                         userId: awayTeamDetails.userId,
                                                         teamIdentifier: selectedMatch.awayTeamIdentifier,
