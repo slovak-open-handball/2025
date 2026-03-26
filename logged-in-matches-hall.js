@@ -3188,7 +3188,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     ),
                                     React.createElement(
                                         'span',
-                                        { className: 'font-medium text-gray-500 line-through' },
+                                        { className: 'font-medium text-gray-500' },
                                         `${player.lastName} ${player.firstName}`
                                     )
                                 ),
@@ -3213,7 +3213,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 React.createElement('i', { className: 'fa-solid fa-user text-gray-400 text-xs flex-shrink-0' }),
                                 React.createElement(
                                     'span',
-                                    { className: 'font-medium text-gray-500 line-through' },
+                                    { className: 'font-medium text-gray-500' },
                                     `${member.lastName} ${member.firstName}`
                                 )
                             ),
@@ -3238,7 +3238,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 React.createElement('i', { className: 'fa-solid fa-user text-pink-400 text-xs flex-shrink-0' }),
                                 React.createElement(
                                     'span',
-                                    { className: 'font-medium text-gray-500 line-through' },
+                                    { className: 'font-medium text-gray-500' },
                                     `${member.lastName} ${member.firstName}`
                                 )
                             ),
