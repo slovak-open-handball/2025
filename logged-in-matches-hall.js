@@ -572,6 +572,114 @@ const matchesHallApp = ({ userProfileData }) => {
             window.showGlobalNotification('Chyba pri odstraňovaní hráča', 'error');
         }
     };
+
+    // Funkcia na obnovenie člena RT do súpisky
+    const restoreStaffToRoster = async (member, team, teamDetails, staffType) => {
+        if (!member || !teamDetails || !team || selectedMatch?.status !== 'scheduled') return;
+        
+        try {
+            const userRef = doc(window.db, 'users', teamDetails.userId);
+            const userSnap = await getDoc(userRef);
+            
+            if (!userSnap.exists()) {
+                window.showGlobalNotification('Používateľ neexistuje', 'error');
+                return;
+            }
+            
+            const userData = userSnap.data();
+            const teams = userData.teams || {};
+            const category = selectedMatch.categoryName;
+            
+            const teamIdentifier = team === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
+            const parts = teamIdentifier.split(' ');
+            const groupAndOrder = parts.pop();
+            const categoryName = parts.join(' ');
+            
+            let groupLetter = '';
+            let order = '';
+            for (let i = 0; i < groupAndOrder.length; i++) {
+                const char = groupAndOrder[i];
+                if (char >= '0' && char <= '9') {
+                    order = groupAndOrder.substring(i);
+                    groupLetter = groupAndOrder.substring(0, i);
+                    break;
+                }
+            }
+            
+            const fullGroupName = `skupina ${groupLetter}`;
+            const orderNum = parseInt(order, 10);
+            
+            const userTeams = teams[categoryName] || [];
+            const teamIndex = userTeams.findIndex(t => t.groupName === fullGroupName && t.order === orderNum);
+            
+            if (teamIndex === -1) {
+                window.showGlobalNotification('Tím nebol nájdený', 'error');
+                return;
+            }
+            
+            const updatedTeams = [...userTeams];
+            const teamData = updatedTeams[teamIndex];
+            
+            // Nájdeme člena RT v príslušnom poli podľa údajov
+            const staffArray = staffType === 'men' ? teamData.menTeamMemberDetails : teamData.womenTeamMemberDetails;
+            const staffIndex = staffArray.findIndex(m => 
+                m.firstName === member.firstName && 
+                m.lastName === member.lastName
+            );
+            
+            if (staffIndex !== -1) {
+                // Odstránime označenie pre tento zápas
+                delete staffArray[staffIndex].removedForMatch?.[selectedMatch.id];
+                if (staffArray[staffIndex].removedForMatch && Object.keys(staffArray[staffIndex].removedForMatch).length === 0) {
+                    delete staffArray[staffIndex].removedForMatch;
+                }
+                
+                // Odstránime zo zoznamu odstránených pre tento zápas
+                if (teamData.matchSpecificRemovals && teamData.matchSpecificRemovals[selectedMatch.id]) {
+                    teamData.matchSpecificRemovals[selectedMatch.id].removedStaff = 
+                        teamData.matchSpecificRemovals[selectedMatch.id].removedStaff.filter(
+                            removed => !(removed.firstName === member.firstName && 
+                                       removed.lastName === member.lastName)
+                        );
+                    
+                    // Ak je pole prázdne, odstránime celý záznam pre tento zápas
+                    if (teamData.matchSpecificRemovals[selectedMatch.id].removedPlayers.length === 0 &&
+                        teamData.matchSpecificRemovals[selectedMatch.id].removedStaff.length === 0) {
+                        delete teamData.matchSpecificRemovals[selectedMatch.id];
+                    }
+                    
+                    // Ak je objekt matchSpecificRemovals prázdny, odstránime ho
+                    if (Object.keys(teamData.matchSpecificRemovals).length === 0) {
+                        delete teamData.matchSpecificRemovals;
+                    }
+                }
+                
+                updatedTeams[teamIndex] = teamData;
+                teams[categoryName] = updatedTeams;
+                
+                await updateDoc(userRef, { teams });
+                
+                // AKTUALIZUJEME LOKÁLNY STAV users
+                setUsers(prevUsers => {
+                    return prevUsers.map(user => {
+                        if (user.id === teamDetails.userId) {
+                            return {
+                                ...user,
+                                teams: teams
+                            };
+                        }
+                        return user;
+                    });
+                });
+                
+                window.showGlobalNotification('Člen RT bol obnovený do súpisky', 'success');
+            }
+            
+        } catch (error) {
+            console.error('Chyba pri obnovovaní člena RT:', error);
+            window.showGlobalNotification('Chyba pri obnovovaní člena RT', 'error');
+        }
+    };
     
     // Funkcia na odstránenie člena RT zo súpisky (NOVÁ)
     const removeStaffFromRoster = async () => {
@@ -2860,8 +2968,16 @@ const matchesHallApp = ({ userProfileData }) => {
             // Získame odstránených hráčov pre tento zápas
             const removedPlayersForMatch = teamDetails?.team.matchSpecificRemovals?.[selectedMatch.id]?.removedPlayers || [];
             
-            // Pre kompatibilitu so starším kódom - ak existuje pole removedPlayers, použijeme ho
-            const removedPlayers = removedPlayersForMatch.length > 0 ? removedPlayersForMatch : (teamDetails?.team.removedPlayers || []);
+            // Získame odstránených členov RT pre tento zápas
+            const removedStaffForMatch = teamDetails?.team.matchSpecificRemovals?.[selectedMatch.id]?.removedStaff || [];
+            
+            // Získame aktívnych členov RT (ktorí nie sú odstránení pre tento zápas)
+            const activeMenStaff = teamDetails?.team.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
+            const activeWomenStaff = teamDetails?.team.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
+            
+            // Získame odstránených členov RT pre tento zápas
+            const removedMenStaff = removedStaffForMatch.filter(s => s.staffType === 'men');
+            const removedWomenStaff = removedStaffForMatch.filter(s => s.staffType === 'women');
             
             return React.createElement(
                 'div',
@@ -3004,18 +3120,19 @@ const matchesHallApp = ({ userProfileData }) => {
                 ),
                 
                 // Sekcia Ostatní (odstránení hráči) - zobrazí sa len pri naplánovanom zápase
-                selectedMatch?.status === 'scheduled' && removedPlayers.length > 0 && React.createElement(
+                selectedMatch?.status === 'scheduled' && (removedPlayers.length > 0 || removedMenStaff.length > 0 || removedWomenStaff.length > 0) && React.createElement(
                     'div',
                     { className: 'mt-4 pt-3 border-t border-gray-200' },
                     React.createElement(
                         'h4',
                         { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
                         React.createElement('i', { className: 'fa-solid fa-user-slash text-xs text-gray-500' }),
-                        `Ostatní (${removedPlayers.length})`
+                        `Ostatní (${removedPlayers.length + removedMenStaff.length + removedWomenStaff.length})`
                     ),
                     React.createElement(
                         'div',
                         { className: 'space-y-1' },
+                        // Odstránení hráči
                         [...removedPlayers]
                             .sort((a, b) => {
                                 const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
@@ -3026,7 +3143,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 return React.createElement(
                                     'div',
                                     { 
-                                        key: `${teamType}-removed-${idx}`, 
+                                        key: `${teamType}-removed-player-${idx}`, 
                                         className: 'flex items-center justify-between gap-2 p-2 rounded border border-gray-200 bg-gray-50 text-sm group relative cursor-pointer hover:bg-blue-50',
                                         onClick: () => restorePlayerToRoster(player, teamType, teamDetails)
                                     },
@@ -3050,7 +3167,57 @@ const matchesHallApp = ({ userProfileData }) => {
                                         { className: 'fa-solid fa-undo text-xs text-green-500 opacity-0 group-hover:opacity-100 transition-opacity' }
                                     )
                                 );
-                            })
+                            }),
+                        // Odstránení členovia RT (muži)
+                        removedMenStaff.map((member, idx) => {
+                            return React.createElement(
+                                'div',
+                                { 
+                                    key: `${teamType}-removed-men-${idx}`, 
+                                    className: 'flex items-center justify-between gap-2 p-2 rounded border border-gray-200 bg-gray-50 text-sm group relative cursor-pointer hover:bg-blue-50',
+                                    onClick: () => restoreStaffToRoster(member, teamType, teamDetails, 'men')
+                                },
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex items-center gap-2' },
+                                    React.createElement('i', { className: 'fa-solid fa-user text-gray-400 text-xs flex-shrink-0' }),
+                                    React.createElement(
+                                        'span',
+                                        { className: 'font-medium text-gray-500 line-through' },
+                                        `${member.lastName} ${member.firstName}`
+                                    )
+                                ),
+                                React.createElement(
+                                    'i',
+                                    { className: 'fa-solid fa-undo text-xs text-green-500 opacity-0 group-hover:opacity-100 transition-opacity' }
+                                )
+                            );
+                        }),
+                        // Odstránení členovia RT (ženy)
+                        removedWomenStaff.map((member, idx) => {
+                            return React.createElement(
+                                'div',
+                                { 
+                                    key: `${teamType}-removed-women-${idx}`, 
+                                    className: 'flex items-center justify-between gap-2 p-2 rounded border border-gray-200 bg-gray-50 text-sm group relative cursor-pointer hover:bg-blue-50',
+                                    onClick: () => restoreStaffToRoster(member, teamType, teamDetails, 'women')
+                                },
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex items-center gap-2' },
+                                    React.createElement('i', { className: 'fa-solid fa-user text-pink-400 text-xs flex-shrink-0' }),
+                                    React.createElement(
+                                        'span',
+                                        { className: 'font-medium text-gray-500 line-through' },
+                                        `${member.lastName} ${member.firstName}`
+                                    )
+                                ),
+                                React.createElement(
+                                    'i',
+                                    { className: 'fa-solid fa-undo text-xs text-green-500 opacity-0 group-hover:opacity-100 transition-opacity' }
+                                )
+                            );
+                        })
                     )
                 )
             );
