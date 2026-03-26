@@ -3120,20 +3120,20 @@ const matchesHallApp = ({ userProfileData }) => {
                 ),
                 
                 // Sekcia Ostatní (odstránení hráči) - zobrazí sa len pri naplánovanom zápase
-                selectedMatch?.status === 'scheduled' && (removedPlayers.length > 0 || removedMenStaff.length > 0 || removedWomenStaff.length > 0) && React.createElement(
+                selectedMatch?.status === 'scheduled' && (removedPlayersForMatch.length > 0 || removedMenStaff.length > 0 || removedWomenStaff.length > 0) && React.createElement(
                     'div',
                     { className: 'mt-4 pt-3 border-t border-gray-200' },
                     React.createElement(
                         'h4',
                         { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
                         React.createElement('i', { className: 'fa-solid fa-user-slash text-xs text-gray-500' }),
-                        `Ostatní (${removedPlayers.length + removedMenStaff.length + removedWomenStaff.length})`
+                        `Ostatní (${removedPlayersForMatch.length + removedMenStaff.length + removedWomenStaff.length})`
                     ),
                     React.createElement(
                         'div',
                         { className: 'space-y-1' },
                         // Odstránení hráči
-                        [...removedPlayers]
+                        [...removedPlayersForMatch]
                             .sort((a, b) => {
                                 const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
                                 const numB = b.jerseyNumber ? parseInt(b.jerseyNumber) || 999 : 999;
