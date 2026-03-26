@@ -4707,7 +4707,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     );
                                                 })
                                             ),
-                                                                                        
+                                                                        
                                             // Ženy v realizačnom tíme pre hosťovský tím (so štatistikami)
                                             activeWomenStaffAway.length > 0 && 
                                             React.createElement(
@@ -4833,29 +4833,29 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         // Zistíme, či je zápas ukončený alebo naplánovaný
                                                         const isMatchCompleted = selectedMatch?.status === 'completed';
                                                         const isMatchScheduled = selectedMatch?.status === 'scheduled';
-    
+                                
                                                         let onClickHandler = undefined;
                                                         let cursorClass = '';
-    
+                                
                                                         if (isMatchCompleted) {
                                                             // Ukončený zápas - žiadne kliknutie, vyblednutý vzhľad
                                                             cursorClass = 'opacity-50 cursor-not-allowed';
                                                         } else if (isMatchScheduled) {
                                                             // Naplánovaný zápas - úprava hráča (aj v režime štatistík)
-                                                            onClickHandler = () => openEditPlayerModal(player, teamType, teamDetails, false);
+                                                            onClickHandler = () => openEditPlayerModal(player, 'away', awayTeamDetails, false);
                                                             cursorClass = 'hover:bg-blue-50 cursor-pointer';
                                                         } else if (isMatchActionAllowed()) {
-                                                            // Prebiehajúci zápas - pridanie udalosti
+                                                            // Prebiehajúci zápas - pridanie udalosti (OPRAVENÉ: používame 'away' namiesto teamType)
                                                             onClickHandler = () => {
                                                                 if (eventType) {
                                                                     if (eventType === 'goal' && eventSubType === null) {
-                                                                        addMatchEvent('goal', teamType, null, playerIdentifier);
+                                                                        addMatchEvent('goal', 'away', null, playerIdentifier);
                                                                     } else if (eventType === 'penalty' && eventSubType === 'scored') {
-                                                                        addMatchEvent('penalty', teamType, 'scored', playerIdentifier);
+                                                                        addMatchEvent('penalty', 'away', 'scored', playerIdentifier);
                                                                     } else if (eventType === 'penalty' && eventSubType === 'missed') {
-                                                                        addMatchEvent('penalty', teamType, 'missed', playerIdentifier);
+                                                                        addMatchEvent('penalty', 'away', 'missed', playerIdentifier);
                                                                     } else {
-                                                                        addMatchEvent(eventType, teamType, null, playerIdentifier);
+                                                                        addMatchEvent(eventType, 'away', null, playerIdentifier);
                                                                     }
                                                                 }
                                                             };
