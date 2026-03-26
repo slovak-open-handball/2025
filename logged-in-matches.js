@@ -6187,7 +6187,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         ? 'bg-blue-500 text-white hover:bg-blue-600' 
                                         : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                                 }`,
-                                title: isPinned ? 'Pripnuté - panel je vždy viditeľný' : 'Odopnuté - panel sa zobrazí pri najazdení myšou'
+                                title: isPinned ? 'Pripnuté' : 'Odopnuté'
                             },
                             React.createElement('i', { 
                                 className: `fa-solid ${isPinned ? 'fa-thumbtack' : 'fa-thumbtack'} transition-transform`,
