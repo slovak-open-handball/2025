@@ -3072,7 +3072,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             key: `${teamType}-player-${idx}`, 
                                             className: `grid grid-cols-12 gap-1 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${cursorClass}`,
                                             onClick: onClickHandler,
-                                            title: isMatchCompleted ? 'Zápas je ukončený' : (!isMatchActionAllowed() && selectedMatch?.status !== 'scheduled' ? (selectedMatch?.status === 'scheduled' ? 'Kliknite pre úpravu hráča' : 'Zápas je ukončený') : '')
+                                            title: isMatchCompleted ? 'Zápas je ukončený' : (isMatchScheduled ? 'Kliknite pre úpravu hráča' : '')
                                         },
                                         React.createElement(
                                             'div',
