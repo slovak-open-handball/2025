@@ -2965,7 +2965,7 @@ const matchesHallApp = ({ userProfileData }) => {
         // Získame aktívnych hráčov (ktorí nie sú odstránení pre tento zápas)
         const activePlayers = teamDetails?.team.playerDetails?.filter(p => p && !p.removedForMatch) || [];
         
-        // Získame odstránených hráčov pre tento zápas (OPRAVENÝ NÁZOV)
+        // Získame odstránených hráčov pre tento zápas
         const removedPlayers = teamDetails?.team.matchSpecificRemovals?.[selectedMatch.id]?.removedPlayersForMatch || [];
         
         // Získame odstránených členov RT pre tento zápas
@@ -2986,8 +2986,134 @@ const matchesHallApp = ({ userProfileData }) => {
                 `Hráči (${activePlayers.length})`
             ),
             
-            // Zoznam aktívnych hráčov (táto časť zostáva rovnaká)
-            // ... (zachovajte existujúci kód pre aktívnych hráčov)
+            // Zoznam aktívnych hráčov
+            teamDetails ? React.createElement(
+                'div',
+                { className: showPlayerStats ? 'space-y-1' : 'space-y-1' },
+                activePlayers.length > 0 ? 
+                    [...activePlayers]
+                        .sort((a, b) => {
+                            const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
+                            const numB = b.jerseyNumber ? parseInt(b.jerseyNumber) || 999 : 999;
+                            return numA - numB;
+                        })
+                        .map((player, idx) => {
+                            const playerIdentifier = {
+                                userId: teamDetails.userId,
+                                teamIdentifier: teamType === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier,
+                                displayName: `${player.lastName} ${player.firstName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`,
+                                index: activePlayers.indexOf(player),
+                                isStaff: false
+                            };
+                            
+                            // Štatistiky pre režim zobrazenia štatistík
+                            const stats = showPlayerStats ? getPlayerStats(playerIdentifier) : null;
+                            
+                            // Určenie onClick správania podľa stavu zápasu
+                            let onClickHandler = undefined;
+                            let cursorClass = '';
+                            
+                            if (selectedMatch?.status === 'scheduled') {
+                                // Naplánovaný zápas - úprava hráča
+                                onClickHandler = () => openEditPlayerModal(player, teamType, teamDetails, false);
+                                cursorClass = 'hover:bg-blue-50 cursor-pointer';
+                            } else if (isMatchActionAllowed()) {
+                                // Prebiehajúci zápas - pridanie udalosti
+                                onClickHandler = () => {
+                                    if (eventType) {
+                                        if (eventType === 'goal' && eventSubType === null) {
+                                            addMatchEvent('goal', teamType, null, playerIdentifier);
+                                        } else if (eventType === 'penalty' && eventSubType === 'scored') {
+                                            addMatchEvent('penalty', teamType, 'scored', playerIdentifier);
+                                        } else if (eventType === 'penalty' && eventSubType === 'missed') {
+                                            addMatchEvent('penalty', teamType, 'missed', playerIdentifier);
+                                        } else {
+                                            addMatchEvent(eventType, teamType, null, playerIdentifier);
+                                        }
+                                    }
+                                };
+                                cursorClass = 'hover:bg-blue-50 cursor-pointer';
+                            } else {
+                                cursorClass = 'cursor-not-allowed opacity-60';
+                            }
+                            
+                            // Režim štatistík vs normálny režim
+                            if (showPlayerStats) {
+                                return React.createElement(
+                                    'div',
+                                    { 
+                                        key: `${teamType}-player-${idx}`, 
+                                        className: `grid grid-cols-12 gap-1 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${cursorClass}`,
+                                        onClick: onClickHandler,
+                                        title: !isMatchActionAllowed() && selectedMatch?.status !== 'scheduled'
+                                            ? (selectedMatch?.status === 'scheduled' ? 'Kliknite pre úpravu hráča' : 'Zápas je ukončený')
+                                            : ''
+                                    },
+                                    React.createElement(
+                                        'div',
+                                        { className: 'col-span-5 flex items-center gap-2 truncate' },
+                                        React.createElement('i', { className: 'fa-solid fa-shirt text-gray-600 text-xs flex-shrink-0' }),
+                                        player.jerseyNumber && React.createElement(
+                                            'span',
+                                            { className: 'font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0' },
+                                            `${player.jerseyNumber}`
+                                        ),
+                                        React.createElement(
+                                            'span',
+                                            { className: 'font-medium truncate' },
+                                            `${player.lastName} ${player.firstName}`
+                                        )
+                                    ),
+                                    React.createElement('div', { className: 'col-span-1 text-center font-bold text-green-600' }, (stats?.goals || 0) + (stats?.penaltiesScored || 0)),
+                                    React.createElement('div', { className: 'col-span-2 text-center font-bold text-blue-600' }, `${stats?.penaltiesScored || 0}/${(stats?.penaltiesScored || 0) + (stats?.penaltiesMissed || 0)}`),
+                                    React.createElement('div', { className: 'col-span-1 text-center font-bold text-yellow-600' }, stats?.yellowCards || 0),
+                                    React.createElement('div', { className: 'col-span-1 text-center font-bold text-red-600' }, stats?.redCards || 0),
+                                    React.createElement('div', { className: 'col-span-1 text-center font-bold text-blue-800' }, stats?.blueCards || 0),
+                                    React.createElement('div', { className: 'col-span-1 text-center font-bold text-orange-600' }, stats?.exclusions || 0)
+                                );
+                            } else {
+                                return React.createElement(
+                                    'div',
+                                    { 
+                                        key: `${teamType}-player-${idx}`, 
+                                        className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${cursorClass}`,
+                                        onClick: onClickHandler,
+                                        title: !isMatchActionAllowed() && selectedMatch?.status !== 'scheduled'
+                                            ? (selectedMatch?.status === 'scheduled' ? 'Kliknite pre úpravu hráča' : 'Zápas je ukončený')
+                                            : ''
+                                    },
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex items-center gap-2' },
+                                        React.createElement('i', { className: 'fa-solid fa-shirt text-gray-600 text-xs flex-shrink-0' }),
+                                        player.jerseyNumber && React.createElement(
+                                            'span',
+                                            { className: 'font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0' },
+                                            `${player.jerseyNumber}`
+                                        ),
+                                        React.createElement(
+                                            'span',
+                                            { className: 'font-medium truncate' },
+                                            `${player.lastName} ${player.firstName}`
+                                        )
+                                    ),
+                                    selectedMatch?.status === 'scheduled' && React.createElement(
+                                        'i',
+                                        { className: 'fa-solid fa-pencil text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity' }
+                                    )
+                                );
+                            }
+                        })
+                    : React.createElement(
+                        'div',
+                        { className: 'text-sm text-gray-500 italic p-2' },
+                        'Žiadni hráči'
+                    )
+            ) : React.createElement(
+                'div',
+                { className: 'text-sm text-gray-500 italic p-2' },
+                'Nedostupné'
+            ),
             
             // Sekcia Ostatní (odstránení hráči a členovia RT) - zobrazí sa len pri naplánovanom zápase
             selectedMatch?.status === 'scheduled' && (removedPlayers.length > 0 || removedMenStaff.length > 0 || removedWomenStaff.length > 0) && React.createElement(
