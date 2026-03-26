@@ -5873,7 +5873,7 @@ const handleDataUpdateAndRender = (event) => {
 };
 
 // Funkcia pre výpis ID aktuálneho zápasu do konzoly
-window.getCurrentMatchId = () => {
+window.getCurrentMatchId = async () => {
     // Získame z URL parametrov
     const urlParams = new URLSearchParams(window.location.search);
     const homeIdentifier = urlParams.get('domaci');
@@ -5882,22 +5882,55 @@ window.getCurrentMatchId = () => {
     if (homeIdentifier && awayIdentifier) {
         console.log(`Aktuálny zápas - domáci: ${homeIdentifier}, hostia: ${awayIdentifier}`);
         
-        // Pokúsime sa nájsť zápas v načítaných dátech
+        // Najprv skúsime použiť uložené ID z React stavu
         if (window.currentMatchId) {
             console.log(`ID zápasu: ${window.currentMatchId}`);
             return window.currentMatchId;
         }
         
-        // Skúsime nájsť element s ID zápasu v DOM
-        const matchDetailElement = document.querySelector('[data-match-id]');
-        if (matchDetailElement) {
-            const matchId = matchDetailElement.getAttribute('data-match-id');
-            console.log(`ID zápasu: ${matchId}`);
-            return matchId;
+        // Ak nemáme uložené ID, vyhľadáme ho v databáze
+        if (!window.db) {
+            console.log('Firebase databáza nie je inicializovaná');
+            return null;
         }
         
-        console.log('ID zápasu: nepodarilo sa získať');
-        return null;
+        try {
+            const matchesRef = collection(window.db, 'matches');
+            const q = query(
+                matchesRef, 
+                where("homeTeamIdentifier", "==", homeIdentifier),
+                where("awayTeamIdentifier", "==", awayIdentifier)
+            );
+            
+            const querySnapshot = await getDocs(q);
+            
+            if (querySnapshot.empty) {
+                console.log('Zápas nebol nájdený v databáze');
+                return null;
+            }
+            
+            const matches = [];
+            querySnapshot.forEach((doc) => {
+                matches.push({ id: doc.id, ...doc.data() });
+            });
+            
+            if (matches.length === 1) {
+                const matchId = matches[0].id;
+                console.log(`ID zápasu: ${matchId}`);
+                // Uložíme si ID pre budúce použitie
+                window.currentMatchId = matchId;
+                return matchId;
+            } else {
+                console.log(`Nájdených viacero zápasov (${matches.length}):`);
+                matches.forEach(match => {
+                    console.log(`  - ID: ${match.id}`);
+                });
+                return matches[0]?.id || null;
+            }
+        } catch (error) {
+            console.error('Chyba pri vyhľadávaní zápasu:', error);
+            return null;
+        }
     } else {
         console.log('Žiadny zápas nie je aktuálne zobrazený');
         return null;
