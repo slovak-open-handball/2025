@@ -222,6 +222,7 @@ const matchesHallApp = ({ userProfileData }) => {
     const [editPlayerFirstName, setEditPlayerFirstName] = useState('');
     const [editPlayerLastName, setEditPlayerLastName] = useState('');
     const [editPlayerJerseyNumber, setEditPlayerJerseyNumber] = useState('');
+    const [playerTeamObject, setPlayerTeamObject] = useState(null);
 
     const [editStaffModalOpen, setEditStaffModalOpen] = useState(false);
     const [staffToEdit, setStaffToEdit] = useState(null);
@@ -354,7 +355,7 @@ const matchesHallApp = ({ userProfileData }) => {
         setPlayerTeam(team);
         setPlayerTeamDetails(teamDetails);
         // Uložíme si aj priamo tím pre jednoduchší prístup
-        setPlayerTeamObject(teamDetails.team);
+        setPlayerTeamObject(teamDetails.team);  // <-- toto je správne
         setEditPlayerFirstName(player.firstName || '');
         setEditPlayerLastName(player.lastName || '');
         setEditPlayerJerseyNumber(player.jerseyNumber || '');
