@@ -3593,6 +3593,12 @@ const AddMatchesApp = ({ userProfileData }) => {
     // Pre hasVisibleHalls budeme potrebovať funkciu, ktorá to vypočíta
     const [hasVisibleHalls, setHasVisibleHalls] = useState(false);
 
+    const [isPinned, setIsPinned] = useState(() => {
+        // Načítame stav z localStorage pri inicializácii
+        const saved = localStorage.getItem('filtersPanelPinned');
+        return saved === 'true';
+    });
+
     const getAllUniqueTeamIds = () => {
         const teamIds = new Set();
         
@@ -4342,6 +4348,10 @@ const AddMatchesApp = ({ userProfileData }) => {
         }
         window.location.hash = hash;
     };
+
+    useEffect(() => {
+        localStorage.setItem('filtersPanelPinned', isPinned);
+    }, [isPinned]);
 
     useEffect(() => {
         const checkVisibleHalls = () => {
@@ -6063,7 +6073,7 @@ const AddMatchesApp = ({ userProfileData }) => {
             teams: teamData
         }),
 
-        // Ovládacie prvky - filtre a prepínač (upravené)
+        // Upravený kód pre panel filtrov (nahraďte existujúci panel filtrov týmto)
         React.createElement(
             'div',
             { 
@@ -6071,13 +6081,15 @@ const AddMatchesApp = ({ userProfileData }) => {
                 style: { pointerEvents: 'none' } // Umožní preklikávanie cez priesvitné miesta
             },
             React.createElement(
-                'div',
+                'div', 
                 { 
-                    // Pridáme podmienenú triedu pre vždy viditeľný panel, ak je aktívny filter a nie sú žiadne zápasy
-                    className: `group ${(isFilterActive && !hasVisibleHalls) ? 'always-visible' : ''}`,
+                    // Pridáme triedu 'always-visible' ak je isPinned true
+                    className: `group ${(isPinned || (isFilterActive && !hasVisibleHalls)) ? 'always-visible' : ''}`,
                     style: { pointerEvents: 'auto' }, // Samotné ovládacie prvky sú klikateľné
                     onMouseLeave: (e) => {
-                        // Pôvodná funkcionalita - ale preskočíme ak je always-visible
+                        // Ak je zapnutý pin, neskrývame panel
+                        if (isPinned) return;
+                        
                         const target = e.currentTarget;
                         if (target.classList.contains('always-visible')) return;
                         
@@ -6146,11 +6158,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                 React.createElement(
                     'div',
                     { 
-                        // Ak je always-visible, zobrazíme vždy, inak len pri hover alebo otvorenom dropdown
+                        // Ak je isPinned true, zobrazíme vždy, inak len pri hover alebo otvorenom dropdown
                         className: `flex flex-col gap-2 transition-opacity duration-300 ease-in-out ${
-                            (isFilterActive && !hasVisibleHalls) 
+                            isPinned 
                                 ? 'opacity-100' 
-                                : 'opacity-0 group-hover:opacity-100 group-[.dropdown-open]:opacity-100'
+                                : (isFilterActive && !hasVisibleHalls) 
+                                    ? 'opacity-100' 
+                                    : 'opacity-0 group-hover:opacity-100 group-[.dropdown-open]:opacity-100'
                         }`,
                         style: { 
                             transform: 'translateY(0)',
@@ -6162,6 +6176,24 @@ const AddMatchesApp = ({ userProfileData }) => {
                     React.createElement(
                         'div',
                         { className: 'flex flex-wrap items-center justify-center gap-2 bg-white/95 backdrop-blur-sm p-3 rounded-xl shadow-lg border border-gray-200' },
+                        
+                        // Tlačidlo špendlíka - NOVÉ
+                        React.createElement(
+                            'button',
+                            {
+                                onClick: () => setIsPinned(!isPinned),
+                                className: `px-2 py-1.5 rounded-lg transition-colors ${
+                                    isPinned 
+                                        ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                }`,
+                                title: isPinned ? 'Pripnuté - panel je vždy viditeľný' : 'Odopnuté - panel sa zobrazí pri najazdení myšou'
+                            },
+                            React.createElement('i', { 
+                                className: `fa-solid ${isPinned ? 'fa-thumbtack' : 'fa-thumbtack'} transition-transform`,
+                                style: { transform: isPinned ? 'rotate(-45deg)' : 'none' }
+                            })
+                        ),
                         
                         // Filter Kategória
                         React.createElement(
@@ -6215,7 +6247,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 )
                             )
                         ),
-
+        
                         // Filter ID tímu (nový)
                         React.createElement(
                             'div',
@@ -6313,7 +6345,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                             React.createElement('i', { className: 'fa-solid fa-rotate-left mr-1' }),
                             'Reset'
                         ),
-
+        
                         React.createElement(
                             'button',
                             {
