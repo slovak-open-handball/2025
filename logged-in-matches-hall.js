@@ -5152,9 +5152,10 @@ const matchesHallApp = ({ userProfileData }) => {
                 isOpen: editStaffModalOpen,
                 onClose: () => {
                     setEditStaffModalOpen(false);
-                    setStaffToEdit(null);
+                    vsetStaffToEdit(null);
                 },
                 onSave: saveStaffEdit,
+                onRemove: removeStaffFromRoster,  // PRIDANÉ
                 member: staffToEdit,
                 firstName: editStaffFirstName,
                 lastName: editStaffLastName,
@@ -5405,7 +5406,7 @@ const matchesHallApp = ({ userProfileData }) => {
     );
 };
 
-const EditStaffModal = ({ isOpen, onClose, onSave, member, firstName, lastName, onFirstNameChange, onLastNameChange }) => {
+const EditStaffModal = ({ isOpen, onClose, onSave, onRemove, member, firstName, lastName, onFirstNameChange, onLastNameChange }) => {
     if (!isOpen) return null;
 
     return React.createElement(
@@ -5477,6 +5478,15 @@ const EditStaffModal = ({ isOpen, onClose, onSave, member, firstName, lastName, 
                         className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
                     },
                     'Zrušiť'
+                ),
+                // PRIDANÉ tlačidlo na odstránenie člena RT
+                onRemove && React.createElement(
+                    'button',
+                    {
+                        onClick: onRemove,
+                        className: 'px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors'
+                    },
+                    'Odstrániť zo súpisky'
                 ),
                 React.createElement(
                     'button',
