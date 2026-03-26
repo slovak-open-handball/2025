@@ -4830,28 +4830,32 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         };
                                                         const stats = getPlayerStats(playerIdentifier);
                                                         
-                                                        // Zistíme, či je zápas ukončený
+                                                        // Zistíme, či je zápas ukončený alebo naplánovaný
                                                         const isMatchCompleted = selectedMatch?.status === 'completed';
-                                                        
-                                                        // Určenie onClick správania a kurzora
+                                                        const isMatchScheduled = selectedMatch?.status === 'scheduled';
+    
                                                         let onClickHandler = undefined;
                                                         let cursorClass = '';
-                                                        
+    
                                                         if (isMatchCompleted) {
                                                             // Ukončený zápas - žiadne kliknutie, vyblednutý vzhľad
                                                             cursorClass = 'opacity-50 cursor-not-allowed';
+                                                        } else if (isMatchScheduled) {
+                                                            // Naplánovaný zápas - úprava hráča (aj v režime štatistík)
+                                                            onClickHandler = () => openEditPlayerModal(player, teamType, teamDetails, false);
+                                                            cursorClass = 'hover:bg-blue-50 cursor-pointer';
                                                         } else if (isMatchActionAllowed()) {
                                                             // Prebiehajúci zápas - pridanie udalosti
                                                             onClickHandler = () => {
                                                                 if (eventType) {
                                                                     if (eventType === 'goal' && eventSubType === null) {
-                                                                        addMatchEvent('goal', 'away', null, playerIdentifier);
+                                                                        addMatchEvent('goal', teamType, null, playerIdentifier);
                                                                     } else if (eventType === 'penalty' && eventSubType === 'scored') {
-                                                                        addMatchEvent('penalty', 'away', 'scored', playerIdentifier);
+                                                                        addMatchEvent('penalty', teamType, 'scored', playerIdentifier);
                                                                     } else if (eventType === 'penalty' && eventSubType === 'missed') {
-                                                                        addMatchEvent('penalty', 'away', 'missed', playerIdentifier);
+                                                                        addMatchEvent('penalty', teamType, 'missed', playerIdentifier);
                                                                     } else {
-                                                                        addMatchEvent(eventType, 'away', null, playerIdentifier);
+                                                                        addMatchEvent(eventType, teamType, null, playerIdentifier);
                                                                     }
                                                                 }
                                                             };
@@ -4866,7 +4870,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                 key: `away-player-${idx}`, 
                                                                 className: `grid grid-cols-12 gap-1 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${cursorClass}`,
                                                                 onClick: onClickHandler,
-                                                                title: isMatchCompleted ? 'Zápas je ukončený' : ''
+                                                                title: isMatchCompleted ? 'Zápas je ukončený' : (isMatchScheduled ? 'Kliknite pre úpravu hráča' : '')
                                                             },
                                                             React.createElement('div', { className: 'col-span-5 flex items-center gap-2 truncate' },
                                                                 React.createElement('i', { className: 'fa-solid fa-shirt text-gray-600 text-xs flex-shrink-0' }),
