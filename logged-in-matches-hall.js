@@ -343,6 +343,7 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     };
 
+    // Pri otváraní modálneho okna si uložte aj referenciu na tím
     const openEditPlayerModal = (player, team, teamDetails, isStaff = false) => {
         if (selectedMatch?.status !== 'scheduled') {
             window.showGlobalNotification('Úprava hráčov je možná len pri naplánovaných zápasoch', 'error');
@@ -352,15 +353,17 @@ const matchesHallApp = ({ userProfileData }) => {
         setPlayerToEdit(player);
         setPlayerTeam(team);
         setPlayerTeamDetails(teamDetails);
+        // Uložíme si aj priamo tím pre jednoduchší prístup
+        setPlayerTeamObject(teamDetails.team);
         setEditPlayerFirstName(player.firstName || '');
         setEditPlayerLastName(player.lastName || '');
         setEditPlayerJerseyNumber(player.jerseyNumber || '');
         setEditPlayerModalOpen(true);
     };
     
-    // Funkcia na uloženie úprav hráča
+    // Potom v savePlayerEdit môžete použiť priamo uložený tím
     const savePlayerEdit = async () => {
-        if (!playerToEdit || !playerTeamDetails || !playerTeam) return;
+        if (!playerToEdit || !playerTeamDetails || !playerTeam || !playerTeamObject) return;
         
         try {
             const userRef = doc(window.db, 'users', playerTeamDetails.userId);
@@ -375,64 +378,35 @@ const matchesHallApp = ({ userProfileData }) => {
             const teams = userData.teams || {};
             const category = selectedMatch.categoryName;
             
-            // Nájdeme správny tím podľa identifikátora
-            const teamIdentifier = playerTeam === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
-            const parts = teamIdentifier.split(' ');
-            const groupAndOrder = parts.pop();
-            const categoryName = parts.join(' ');
-            
-            let groupLetter = '';
-            let order = '';
-            for (let i = 0; i < groupAndOrder.length; i++) {
-                const char = groupAndOrder[i];
-                if (char >= '0' && char <= '9') {
-                    order = groupAndOrder.substring(i);
-                    groupLetter = groupAndOrder.substring(0, i);
-                    break;
-                }
-            }
-            
-            const fullGroupName = `skupina ${groupLetter}`;
-            const orderNum = parseInt(order, 10);
-            
-            const userTeams = teams[categoryName] || [];
-            const teamIndex = userTeams.findIndex(t => t.groupName === fullGroupName && t.order === orderNum);
+            // Použijeme uložený tím namiesto parsovania
+            const updatedTeams = [...(teams[category] || [])];
+            const teamIndex = updatedTeams.findIndex(t => t === playerTeamObject);
             
             if (teamIndex === -1) {
                 window.showGlobalNotification('Tím nebol nájdený', 'error');
                 return;
             }
             
-            const updatedTeams = [...userTeams];
             const team = updatedTeams[teamIndex];
-            
-            // Nájdeme index hráča v poli playerDetails
             const playerIndex = team.playerDetails.findIndex(p => p === playerToEdit);
             
             if (playerIndex !== -1) {
-                // Aktualizujeme údaje hráča
-                const updatedPlayer = {
+                team.playerDetails[playerIndex] = {
                     ...team.playerDetails[playerIndex],
                     firstName: editPlayerFirstName,
                     lastName: editPlayerLastName,
                     jerseyNumber: editPlayerJerseyNumber
                 };
                 
-                team.playerDetails[playerIndex] = updatedPlayer;
-                
                 updatedTeams[teamIndex] = team;
-                teams[categoryName] = updatedTeams;
+                teams[category] = updatedTeams;
                 
                 await updateDoc(userRef, { teams });
                 
-                // AKTUALIZUJEME LOKÁLNY STAV users
                 setUsers(prevUsers => {
                     return prevUsers.map(user => {
                         if (user.id === playerTeamDetails.userId) {
-                            return {
-                                ...user,
-                                teams: teams
-                            };
+                            return { ...user, teams: teams };
                         }
                         return user;
                     });
