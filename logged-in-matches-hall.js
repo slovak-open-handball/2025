@@ -2473,6 +2473,7 @@ const matchesHallApp = ({ userProfileData }) => {
         setSelectedMatch(match);
         setManualTimeOffset(match.manualTimeOffset || 0);
         updateUrlParameters(match.homeTeamIdentifier, match.awayTeamIdentifier);
+        window.currentMatchId = match.id; 
     };
 
     // Zoradenie dní podľa dátumu
@@ -5868,6 +5869,38 @@ const handleDataUpdateAndRender = (event) => {
                 )
             );
         }
+    }
+};
+
+// Funkcia pre výpis ID aktuálneho zápasu do konzoly
+window.getCurrentMatchId = () => {
+    // Získame z URL parametrov
+    const urlParams = new URLSearchParams(window.location.search);
+    const homeIdentifier = urlParams.get('domaci');
+    const awayIdentifier = urlParams.get('hostia');
+    
+    if (homeIdentifier && awayIdentifier) {
+        console.log(`Aktuálny zápas - domáci: ${homeIdentifier}, hostia: ${awayIdentifier}`);
+        
+        // Pokúsime sa nájsť zápas v načítaných dátech
+        if (window.currentMatchId) {
+            console.log(`ID zápasu: ${window.currentMatchId}`);
+            return window.currentMatchId;
+        }
+        
+        // Skúsime nájsť element s ID zápasu v DOM
+        const matchDetailElement = document.querySelector('[data-match-id]');
+        if (matchDetailElement) {
+            const matchId = matchDetailElement.getAttribute('data-match-id');
+            console.log(`ID zápasu: ${matchId}`);
+            return matchId;
+        }
+        
+        console.log('ID zápasu: nepodarilo sa získať');
+        return null;
+    } else {
+        console.log('Žiadny zápas nie je aktuálne zobrazený');
+        return null;
     }
 };
 
