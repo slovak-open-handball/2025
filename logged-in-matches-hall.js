@@ -296,44 +296,50 @@ const matchesHallApp = ({ userProfileData }) => {
             const updatedTeams = [...userTeams];
             const team = updatedTeams[teamIndex];
             
-            // Nájdeme index člena v príslušnom poli
+            // Nájdeme index člena v príslušnom poli podľa vlastností (nie podľa referencie)
             let staffArray = editStaffIsMen ? team.menTeamMemberDetails : team.womenTeamMemberDetails;
-            const staffIndex = staffArray.findIndex(m => m === staffToEdit);
+            const staffIndex = staffArray.findIndex(m => 
+                m.firstName === staffToEdit.firstName && 
+                m.lastName === staffToEdit.lastName
+            );
             
-            if (staffIndex !== -1) {
-                // Aktualizujeme údaje člena
-                const updatedStaff = {
-                    ...staffArray[staffIndex],
-                    firstName: editStaffFirstName,
-                    lastName: editStaffLastName
-                };
-                
-                if (editStaffIsMen) {
-                    team.menTeamMemberDetails[staffIndex] = updatedStaff;
-                } else {
-                    team.womenTeamMemberDetails[staffIndex] = updatedStaff;
-                }
-                
-                updatedTeams[teamIndex] = team;
-                teams[categoryName] = updatedTeams;
-                
-                await updateDoc(userRef, { teams });
-                
-                // AKTUALIZUJEME LOKÁLNY STAV users
-                setUsers(prevUsers => {
-                    return prevUsers.map(user => {
-                        if (user.id === staffTeamDetails.userId) {
-                            return {
-                                ...user,
-                                teams: teams
-                            };
-                        }
-                        return user;
-                    });
-                });
-                
-                window.showGlobalNotification('Údaje člena RT boli uložené', 'success');
+            if (staffIndex === -1) {
+                window.showGlobalNotification('Člen RT nebol nájdený v súpiske', 'error');
+                return;
             }
+            
+            // Aktualizujeme údaje člena
+            const updatedStaff = {
+                ...staffArray[staffIndex],
+                firstName: editStaffFirstName,
+                lastName: editStaffLastName
+            };
+            
+            if (editStaffIsMen) {
+                team.menTeamMemberDetails[staffIndex] = updatedStaff;
+            } else {
+                team.womenTeamMemberDetails[staffIndex] = updatedStaff;
+            }
+            
+            updatedTeams[teamIndex] = team;
+            teams[categoryName] = updatedTeams;
+            
+            await updateDoc(userRef, { teams });
+            
+            // AKTUALIZUJEME LOKÁLNY STAV users
+            setUsers(prevUsers => {
+                return prevUsers.map(user => {
+                    if (user.id === staffTeamDetails.userId) {
+                        return {
+                            ...user,
+                            teams: teams
+                        };
+                    }
+                    return user;
+                });
+            });
+            
+            window.showGlobalNotification('Údaje člena RT boli uložené', 'success');
             
             setEditStaffModalOpen(false);
             setStaffToEdit(null);
@@ -362,9 +368,9 @@ const matchesHallApp = ({ userProfileData }) => {
         setEditPlayerModalOpen(true);
     };
     
-    // Potom v savePlayerEdit môžete použiť priamo uložený tím
+    // Funkcia na uloženie úprav hráča
     const savePlayerEdit = async () => {
-        if (!playerToEdit || !playerTeamDetails || !playerTeam || !playerTeamObject) return;
+        if (!playerToEdit || !playerTeamDetails || !playerTeam) return;
         
         try {
             const userRef = doc(window.db, 'users', playerTeamDetails.userId);
@@ -379,7 +385,7 @@ const matchesHallApp = ({ userProfileData }) => {
             const teams = userData.teams || {};
             const category = selectedMatch.categoryName;
             
-            // Nájdeme správny tím podľa identifikátora (namiesto porovnávania referencií)
+            // Nájdeme správny tím podľa identifikátora
             const teamIdentifier = playerTeam === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
             const parts = teamIdentifier.split(' ');
             const groupAndOrder = parts.pop();
@@ -410,8 +416,12 @@ const matchesHallApp = ({ userProfileData }) => {
             const updatedTeams = [...userTeams];
             const team = updatedTeams[teamIndex];
             
-            // Nájdeme index hráča v poli playerDetails
-            const playerIndex = team.playerDetails.findIndex(p => p === playerToEdit);
+            // Nájdeme index hráča v poli playerDetails podľa jeho vlastností (nie podľa referencie)
+            const playerIndex = team.playerDetails.findIndex(p => 
+                p.firstName === playerToEdit.firstName && 
+                p.lastName === playerToEdit.lastName && 
+                p.jerseyNumber === playerToEdit.jerseyNumber
+            );
             
             if (playerIndex === -1) {
                 window.showGlobalNotification('Hráč nebol nájdený v súpiske', 'error');
