@@ -3658,6 +3658,13 @@ const matchesHallApp = ({ userProfileData }) => {
                     React.createElement(
                         'div',
                         { className: `transition-all duration-300` },
+
+                        // Pred podmienkou !showPlayerStats pridajte:
+                        const activeMenStaffHome = homeTeamDetails?.team.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
+                        const activeWomenStaffHome = homeTeamDetails?.team.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
+
+                        const activeMenStaffAway = awayTeamDetails?.team.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
+                        const activeWomenStaffAway = awayTeamDetails?.team.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
                         
                         // Keď nie sú štatistiky - grid so 4 stĺpcami (domáci, priebeh, hosťovský, prázdny)
                         !showPlayerStats ? React.createElement(
@@ -3688,10 +3695,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                     homeTeamDetails ? React.createElement(
                                         'div',
                                         { className: 'space-y-2' },
-                                        
-                                        // Získame aktívnych členov RT pre domáci tím
-                                        const activeMenStaffHome = homeTeamDetails?.team.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
-                                        const activeWomenStaffHome = homeTeamDetails?.team.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
 
                                         // Muži v realizačnom tíme pre domáci tím
                                         activeMenStaffHome.length > 0 && 
@@ -4288,10 +4291,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                         'div',
                                         { className: 'space-y-2' },
                                         
-                                        // Získame aktívnych členov RT pre hosťovský tím
-                                        const activeMenStaffAway = awayTeamDetails?.team.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
-                                        const activeWomenStaffAway = awayTeamDetails?.team.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
-
                                         // Muži v realizačnom tíme pre hosťovský tím (bez štatistík)
                                         activeMenStaffAway.length > 0 && 
                                         React.createElement(
