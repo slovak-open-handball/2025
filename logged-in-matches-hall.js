@@ -317,6 +317,20 @@ const matchesHallApp = ({ userProfileData }) => {
                 teams[categoryName] = updatedTeams;
                 
                 await updateDoc(userRef, { teams });
+                
+                // AKTUALIZUJEME LOKÁLNY STAV users
+                setUsers(prevUsers => {
+                    return prevUsers.map(user => {
+                        if (user.id === staffTeamDetails.userId) {
+                            return {
+                                ...user,
+                                teams: teams
+                            };
+                        }
+                        return user;
+                    });
+                });
+                
                 window.showGlobalNotification('Údaje člena RT boli uložené', 'success');
             }
             
@@ -397,17 +411,33 @@ const matchesHallApp = ({ userProfileData }) => {
             
             if (playerIndex !== -1) {
                 // Aktualizujeme údaje hráča
-                team.playerDetails[playerIndex] = {
+                const updatedPlayer = {
                     ...team.playerDetails[playerIndex],
                     firstName: editPlayerFirstName,
                     lastName: editPlayerLastName,
                     jerseyNumber: editPlayerJerseyNumber
                 };
                 
+                team.playerDetails[playerIndex] = updatedPlayer;
+                
                 updatedTeams[teamIndex] = team;
                 teams[categoryName] = updatedTeams;
                 
                 await updateDoc(userRef, { teams });
+                
+                // AKTUALIZUJEME LOKÁLNY STAV users
+                setUsers(prevUsers => {
+                    return prevUsers.map(user => {
+                        if (user.id === playerTeamDetails.userId) {
+                            return {
+                                ...user,
+                                teams: teams
+                            };
+                        }
+                        return user;
+                    });
+                });
+                
                 window.showGlobalNotification('Údaje hráča boli uložené', 'success');
             }
             
@@ -485,6 +515,20 @@ const matchesHallApp = ({ userProfileData }) => {
                 teams[categoryName] = updatedTeams;
                 
                 await updateDoc(userRef, { teams });
+                
+                // AKTUALIZUJEME LOKÁLNY STAV users
+                setUsers(prevUsers => {
+                    return prevUsers.map(user => {
+                        if (user.id === playerTeamDetails.userId) {
+                            return {
+                                ...user,
+                                teams: teams
+                            };
+                        }
+                        return user;
+                    });
+                });
+                
                 window.showGlobalNotification('Hráč bol odstránený zo súpisky', 'success');
             }
             
