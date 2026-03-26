@@ -525,13 +525,13 @@ const matchesHallApp = ({ userProfileData }) => {
                 
                 if (!team.matchSpecificRemovals[selectedMatch.id]) {
                     team.matchSpecificRemovals[selectedMatch.id] = {
-                        removedPlayers: [],
+                        removedPlayersForMatch: [],
                         removedStaff: []
                     };
                 }
                 
                 // Uložíme hráča s informáciou o zápase
-                team.matchSpecificRemovals[selectedMatch.id].removedPlayers.push({
+                team.matchSpecificRemovals[selectedMatch.id].removedPlayersForMatch.push({
                     ...removedPlayer,
                     removedAt: Timestamp.now(),
                     matchId: selectedMatch.id,
@@ -643,7 +643,7 @@ const matchesHallApp = ({ userProfileData }) => {
                         );
                     
                     // Ak je pole prázdne, odstránime celý záznam pre tento zápas
-                    if (teamData.matchSpecificRemovals[selectedMatch.id].removedPlayers.length === 0 &&
+                    if (teamData.matchSpecificRemovals[selectedMatch.id].removedPlayersForMatch.length === 0 &&
                         teamData.matchSpecificRemovals[selectedMatch.id].removedStaff.length === 0) {
                         delete teamData.matchSpecificRemovals[selectedMatch.id];
                     }
@@ -742,7 +742,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 
                 if (!team.matchSpecificRemovals[selectedMatch.id]) {
                     team.matchSpecificRemovals[selectedMatch.id] = {
-                        removedPlayers: [],
+                        removedPlayersForMatch: [],
                         removedStaff: []
                     };
                 }
@@ -859,15 +859,15 @@ const matchesHallApp = ({ userProfileData }) => {
                 
                 // Odstránime zo zoznamu odstránených pre tento zápas
                 if (teamData.matchSpecificRemovals && teamData.matchSpecificRemovals[selectedMatch.id]) {
-                    teamData.matchSpecificRemovals[selectedMatch.id].removedPlayers = 
-                        teamData.matchSpecificRemovals[selectedMatch.id].removedPlayers.filter(
+                    teamData.matchSpecificRemovals[selectedMatch.id].removedPlayersForMatch = 
+                        teamData.matchSpecificRemovals[selectedMatch.id].removedPlayersForMatch.filter(
                             removed => !(removed.firstName === player.firstName && 
                                        removed.lastName === player.lastName && 
                                        removed.jerseyNumber === player.jerseyNumber)
                         );
                     
                     // Ak je pole prázdne, odstránime celý záznam pre tento zápas
-                    if (teamData.matchSpecificRemovals[selectedMatch.id].removedPlayers.length === 0 &&
+                    if (teamData.matchSpecificRemovals[selectedMatch.id].removedPlayersForMatch.length === 0 &&
                         teamData.matchSpecificRemovals[selectedMatch.id].removedStaff.length === 0) {
                         delete teamData.matchSpecificRemovals[selectedMatch.id];
                     }
@@ -2966,7 +2966,7 @@ const matchesHallApp = ({ userProfileData }) => {
             const activePlayers = teamDetails?.team.playerDetails?.filter(p => p && !p.removedForMatch) || [];
             
             // Získame odstránených hráčov pre tento zápas
-            const removedPlayersForMatch = teamDetails?.team.matchSpecificRemovals?.[selectedMatch.id]?.removedPlayers || [];
+            const removedPlayersForMatchForMatch = teamDetails?.team.matchSpecificRemovals?.[selectedMatch.id]?.removedPlayersForMatch || [];
             
             // Získame odstránených členov RT pre tento zápas
             const removedStaffForMatch = teamDetails?.team.matchSpecificRemovals?.[selectedMatch.id]?.removedStaff || [];
@@ -3120,20 +3120,20 @@ const matchesHallApp = ({ userProfileData }) => {
                 ),
                 
                 // Sekcia Ostatní (odstránení hráči) - zobrazí sa len pri naplánovanom zápase
-                selectedMatch?.status === 'scheduled' && (removedPlayersForMatch.length > 0 || removedMenStaff.length > 0 || removedWomenStaff.length > 0) && React.createElement(
+                selectedMatch?.status === 'scheduled' && (removedPlayersForMatchForMatch.length > 0 || removedMenStaff.length > 0 || removedWomenStaff.length > 0) && React.createElement(
                     'div',
                     { className: 'mt-4 pt-3 border-t border-gray-200' },
                     React.createElement(
                         'h4',
                         { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
                         React.createElement('i', { className: 'fa-solid fa-user-slash text-xs text-gray-500' }),
-                        `Ostatní (${removedPlayersForMatch.length + removedMenStaff.length + removedWomenStaff.length})`
+                        `Ostatní (${removedPlayersForMatchForMatch.length + removedMenStaff.length + removedWomenStaff.length})`
                     ),
                     React.createElement(
                         'div',
                         { className: 'space-y-1' },
                         // Odstránení hráči
-                        [...removedPlayersForMatch]
+                        [...removedPlayersForMatchForMatch]
                             .sort((a, b) => {
                                 const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
                                 const numB = b.jerseyNumber ? parseInt(b.jerseyNumber) || 999 : 999;
