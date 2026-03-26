@@ -468,12 +468,9 @@ const matchesHallApp = ({ userProfileData }) => {
     // Funkcia na odstránenie hráča zo súpisky (UPRAVENÁ)
     const removePlayerFromRoster = async () => {
         if (!playerToEdit || !playerTeamDetails || !playerTeam) {
-            console.log('Chýbajúce dáta:', { playerToEdit, playerTeamDetails, playerTeam });
             return;
         }
-        
-        console.log('Odstraňujem hráča:', playerToEdit);
-        
+                
         try {
             const userRef = doc(window.db, 'users', playerTeamDetails.userId);
             const userSnap = await getDoc(userRef);
@@ -694,12 +691,9 @@ const matchesHallApp = ({ userProfileData }) => {
     // Funkcia na odstránenie člena RT zo súpisky (NOVÁ)
     const removeStaffFromRoster = async () => {
         if (!staffToEdit || !staffTeamDetails || !staffTeam) {
-            console.log('Chýbajúce dáta pre odstránenie RT:', { staffToEdit, staffTeamDetails, staffTeam });
             return;
         }
-        
-        console.log('Odstraňujem člena RT:', staffToEdit);
-        
+                
         try {
             const userRef = doc(window.db, 'users', staffTeamDetails.userId);
             const userSnap = await getDoc(userRef);
@@ -1849,7 +1843,6 @@ const matchesHallApp = ({ userProfileData }) => {
             
     // UPRAVENÝ useEffect pre timer - automatické zastavenie na konci periódy
     useEffect(() => {
-//        console.log('Timer useEffect - stav:', selectedMatch?.status, 'matchTime:', matchTime);
         
         // Vymažeme existujúci interval
         if (timerInterval) {
@@ -1862,7 +1855,6 @@ const matchesHallApp = ({ userProfileData }) => {
         
         // Spustíme nový interval len ak je zápas v priebehu
         if (selectedMatch && selectedMatch.status === 'in-progress' && selectedMatch.startedAt && currentCategory) {
-//            console.log('Spúšťam timer pre zápas v priebehu');
             
             const startedAt = selectedMatch.startedAt;
             const matchId = selectedMatch.id;
@@ -1874,9 +1866,7 @@ const matchesHallApp = ({ userProfileData }) => {
             
             // Vypočítame koniec aktuálnej periódy (v sekundách)
             const endOfCurrentPeriod = currentPeriod * periodDurationSeconds;
-            
-//            console.log(`Perióda ${currentPeriod}/${periods}, koniec periódy: ${formatMatchTime(endOfCurrentPeriod)}`);
-            
+                        
             const interval = setInterval(() => {
                 const now = Timestamp.now();
                 
@@ -1894,7 +1884,6 @@ const matchesHallApp = ({ userProfileData }) => {
                 
                 // Kontrola konca aktuálnej periódy
                 if (elapsedSeconds >= endOfCurrentPeriod) {
-//                    console.log(`Dosiahnutý koniec ${currentPeriod}. periódy: ${formatMatchTime(elapsedSeconds)} >= ${formatMatchTime(endOfCurrentPeriod)}`);
                     
                     // Ak to nie je posledná perióda
                     if (currentPeriod < periods) {
@@ -1903,7 +1892,6 @@ const matchesHallApp = ({ userProfileData }) => {
                         window.showGlobalNotification(`Koniec ${currentPeriod}. periódy`, 'info');
                     } else {
                         // Ak je to posledná perióda, ukončíme zápas
-//                        console.log('Posledná perióda, ukončujem zápas');
                         stopMatchTimer(matchId);
                         window.showGlobalNotification('Koniec zápasu', 'info');
                     }
@@ -1936,7 +1924,6 @@ const matchesHallApp = ({ userProfileData }) => {
 
     // UPRAVENÝ useEffect pre inicializáciu času
     useEffect(() => {
-//        console.log('Inicializácia času pre zápas:', selectedMatch);
 
         if (selectedMatch && selectedMatch.startedAt) {
             const now = Timestamp.now();
