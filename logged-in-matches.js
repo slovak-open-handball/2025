@@ -6191,7 +6191,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                             },
                             React.createElement('i', { 
                                 className: `fa-solid ${isPinned ? 'fa-thumbtack' : 'fa-thumbtack'} transition-transform`,
-                                style: { transform: isPinned ? 'rotate(-45deg)' : 'none' }
+                                style: { transform: isPinned ? 'rotate(-90deg)' : 'none' }
                             })
                         ),
                         
