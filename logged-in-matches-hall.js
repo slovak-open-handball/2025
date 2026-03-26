@@ -215,6 +215,182 @@ const matchesHallApp = ({ userProfileData }) => {
     const [showPlayerStats, setShowPlayerStats] = useState(false);
     const [playerStats, setPlayerStats] = useState({});
 
+    const [editPlayerModalOpen, setEditPlayerModalOpen] = useState(false);
+    const [playerToEdit, setPlayerToEdit] = useState(null);
+    const [playerTeam, setPlayerTeam] = useState(null); // 'home' alebo 'away'
+    const [playerTeamDetails, setPlayerTeamDetails] = useState(null);
+    const [editPlayerFirstName, setEditPlayerFirstName] = useState('');
+    const [editPlayerLastName, setEditPlayerLastName] = useState('');
+    const [editPlayerJerseyNumber, setEditPlayerJerseyNumber] = useState('');
+
+    const openEditPlayerModal = (player, team, teamDetails, isStaff = false) => {
+        if (selectedMatch?.status !== 'scheduled') {
+            window.showGlobalNotification('Úprava hráčov je možná len pri naplánovaných zápasoch', 'error');
+            return;
+        }
+        
+        setPlayerToEdit(player);
+        setPlayerTeam(team);
+        setPlayerTeamDetails(teamDetails);
+        setEditPlayerFirstName(player.firstName || '');
+        setEditPlayerLastName(player.lastName || '');
+        setEditPlayerJerseyNumber(player.jerseyNumber || '');
+        setEditPlayerModalOpen(true);
+    };
+    
+    // Funkcia na uloženie úprav hráča
+    const savePlayerEdit = async () => {
+        if (!playerToEdit || !playerTeamDetails || !playerTeam) return;
+        
+        try {
+            const userRef = doc(window.db, 'users', playerTeamDetails.userId);
+            const userSnap = await getDoc(userRef);
+            
+            if (!userSnap.exists()) {
+                window.showGlobalNotification('Používateľ neexistuje', 'error');
+                return;
+            }
+            
+            const userData = userSnap.data();
+            const teams = userData.teams || {};
+            const category = selectedMatch.categoryName;
+            
+            // Nájdeme správny tím podľa identifikátora
+            const teamIdentifier = playerTeam === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
+            const parts = teamIdentifier.split(' ');
+            const groupAndOrder = parts.pop();
+            const categoryName = parts.join(' ');
+            
+            let groupLetter = '';
+            let order = '';
+            for (let i = 0; i < groupAndOrder.length; i++) {
+                const char = groupAndOrder[i];
+                if (char >= '0' && char <= '9') {
+                    order = groupAndOrder.substring(i);
+                    groupLetter = groupAndOrder.substring(0, i);
+                    break;
+                }
+            }
+            
+            const fullGroupName = `skupina ${groupLetter}`;
+            const orderNum = parseInt(order, 10);
+            
+            const userTeams = teams[categoryName] || [];
+            const teamIndex = userTeams.findIndex(t => t.groupName === fullGroupName && t.order === orderNum);
+            
+            if (teamIndex === -1) {
+                window.showGlobalNotification('Tím nebol nájdený', 'error');
+                return;
+            }
+            
+            const updatedTeams = [...userTeams];
+            const team = updatedTeams[teamIndex];
+            
+            // Nájdeme index hráča v poli playerDetails
+            const playerIndex = team.playerDetails.findIndex(p => p === playerToEdit);
+            
+            if (playerIndex !== -1) {
+                // Aktualizujeme údaje hráča
+                team.playerDetails[playerIndex] = {
+                    ...team.playerDetails[playerIndex],
+                    firstName: editPlayerFirstName,
+                    lastName: editPlayerLastName,
+                    jerseyNumber: editPlayerJerseyNumber
+                };
+                
+                updatedTeams[teamIndex] = team;
+                teams[categoryName] = updatedTeams;
+                
+                await updateDoc(userRef, { teams });
+                window.showGlobalNotification('Údaje hráča boli uložené', 'success');
+            }
+            
+            setEditPlayerModalOpen(false);
+            setPlayerToEdit(null);
+            
+        } catch (error) {
+            console.error('Chyba pri ukladaní údajov hráča:', error);
+            window.showGlobalNotification('Chyba pri ukladaní údajov hráča', 'error');
+        }
+    };
+    
+    // Funkcia na odstránenie hráča zo súpisky
+    const removePlayerFromRoster = async () => {
+        if (!playerToEdit || !playerTeamDetails || !playerTeam) return;
+        
+        try {
+            const userRef = doc(window.db, 'users', playerTeamDetails.userId);
+            const userSnap = await getDoc(userRef);
+            
+            if (!userSnap.exists()) {
+                window.showGlobalNotification('Používateľ neexistuje', 'error');
+                return;
+            }
+            
+            const userData = userSnap.data();
+            const teams = userData.teams || {};
+            const category = selectedMatch.categoryName;
+            
+            const teamIdentifier = playerTeam === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
+            const parts = teamIdentifier.split(' ');
+            const groupAndOrder = parts.pop();
+            const categoryName = parts.join(' ');
+            
+            let groupLetter = '';
+            let order = '';
+            for (let i = 0; i < groupAndOrder.length; i++) {
+                const char = groupAndOrder[i];
+                if (char >= '0' && char <= '9') {
+                    order = groupAndOrder.substring(i);
+                    groupLetter = groupAndOrder.substring(0, i);
+                    break;
+                }
+            }
+            
+            const fullGroupName = `skupina ${groupLetter}`;
+            const orderNum = parseInt(order, 10);
+            
+            const userTeams = teams[categoryName] || [];
+            const teamIndex = userTeams.findIndex(t => t.groupName === fullGroupName && t.order === orderNum);
+            
+            if (teamIndex === -1) {
+                window.showGlobalNotification('Tím nebol nájdený', 'error');
+                return;
+            }
+            
+            const updatedTeams = [...userTeams];
+            const team = updatedTeams[teamIndex];
+            
+            // Nájdeme index hráča v poli playerDetails
+            const playerIndex = team.playerDetails.findIndex(p => p === playerToEdit);
+            
+            if (playerIndex !== -1) {
+                // Odstránime hráča z poľa playerDetails
+                const removedPlayer = team.playerDetails[playerIndex];
+                team.playerDetails.splice(playerIndex, 1);
+                
+                // Pridáme hráča do poľa removedPlayers
+                if (!team.removedPlayers) {
+                    team.removedPlayers = [];
+                }
+                team.removedPlayers.push(removedPlayer);
+                
+                updatedTeams[teamIndex] = team;
+                teams[categoryName] = updatedTeams;
+                
+                await updateDoc(userRef, { teams });
+                window.showGlobalNotification('Hráč bol odstránený zo súpisky', 'success');
+            }
+            
+            setEditPlayerModalOpen(false);
+            setPlayerToEdit(null);
+            
+        } catch (error) {
+            console.error('Chyba pri odstraňovaní hráča:', error);
+            window.showGlobalNotification('Chyba pri odstraňovaní hráča', 'error');
+        }
+    };
+
     // Funkcia na prepínanie zobrazenia štatistík hráčov
     const togglePlayerStats = () => {
         setShowPlayerStats(!showPlayerStats);
@@ -2268,6 +2444,205 @@ const matchesHallApp = ({ userProfileData }) => {
                 window.showGlobalNotification('Chyba pri ukladaní udalosti', 'error');
             }
         };
+
+        // FUNKCIA PRE VYKRESLENIE HRÁČOV PRE TÍM
+        const renderPlayersSection = (teamDetails, teamType, teamName) => {
+            // Získame aktívnych a odstránených hráčov
+            const activePlayers = teamDetails?.team.playerDetails?.filter(p => p && !p.removed) || [];
+            const removedPlayers = teamDetails?.team.removedPlayers || [];
+            
+            return React.createElement(
+                'div',
+                null,
+                // Nadpis sekcie Hráči
+                React.createElement(
+                    'h4',
+                    { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
+                    React.createElement('i', { className: 'fa-solid fa-users text-xs text-gray-500' }),
+                    `Hráči (${activePlayers.length})`
+                ),
+                
+                // Zoznam aktívnych hráčov
+                teamDetails ? React.createElement(
+                    'div',
+                    { className: showPlayerStats ? 'space-y-1' : 'space-y-1' },
+                    activePlayers.length > 0 ? 
+                        [...activePlayers]
+                            .sort((a, b) => {
+                                const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
+                                const numB = b.jerseyNumber ? parseInt(b.jerseyNumber) || 999 : 999;
+                                return numA - numB;
+                            })
+                            .map((player, idx) => {
+                                const playerIdentifier = {
+                                    userId: teamDetails.userId,
+                                    teamIdentifier: teamType === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier,
+                                    displayName: `${player.lastName} ${player.firstName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`,
+                                    index: activePlayers.indexOf(player),
+                                    isStaff: false
+                                };
+                                
+                                // Štatistiky pre režim zobrazenia štatistík
+                                const stats = showPlayerStats ? getPlayerStats(playerIdentifier) : null;
+                                
+                                // Určenie onClick správania podľa stavu zápasu
+                                let onClickHandler = undefined;
+                                let cursorClass = '';
+                                
+                                if (selectedMatch?.status === 'scheduled') {
+                                    // Naplánovaný zápas - úprava hráča
+                                    onClickHandler = () => openEditPlayerModal(player, teamType, teamDetails, false);
+                                    cursorClass = 'hover:bg-blue-50 cursor-pointer';
+                                } else if (isMatchActionAllowed()) {
+                                    // Prebiehajúci zápas - pridanie udalosti
+                                    onClickHandler = () => {
+                                        if (eventType) {
+                                            if (eventType === 'goal' && eventSubType === null) {
+                                                addMatchEvent('goal', teamType, null, playerIdentifier);
+                                            } else if (eventType === 'penalty' && eventSubType === 'scored') {
+                                                addMatchEvent('penalty', teamType, 'scored', playerIdentifier);
+                                            } else if (eventType === 'penalty' && eventSubType === 'missed') {
+                                                addMatchEvent('penalty', teamType, 'missed', playerIdentifier);
+                                            } else {
+                                                addMatchEvent(eventType, teamType, null, playerIdentifier);
+                                            }
+                                        }
+                                    };
+                                    cursorClass = 'hover:bg-blue-50 cursor-pointer';
+                                } else {
+                                    cursorClass = 'cursor-not-allowed opacity-60';
+                                }
+                                
+                                // Režim štatistík vs normálny režim
+                                if (showPlayerStats) {
+                                    return React.createElement(
+                                        'div',
+                                        { 
+                                            key: `${teamType}-player-${idx}`, 
+                                            className: `grid grid-cols-12 gap-1 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${cursorClass}`,
+                                            onClick: onClickHandler,
+                                            title: !isMatchActionAllowed() && selectedMatch?.status !== 'scheduled'
+                                                ? (selectedMatch?.status === 'scheduled' ? 'Kliknite pre úpravu hráča' : 'Zápas je ukončený')
+                                                : ''
+                                        },
+                                        React.createElement(
+                                            'div',
+                                            { className: 'col-span-5 flex items-center gap-2 truncate' },
+                                            React.createElement('i', { className: 'fa-solid fa-shirt text-gray-600 text-xs flex-shrink-0' }),
+                                            player.jerseyNumber && React.createElement(
+                                                'span',
+                                                { className: 'font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0' },
+                                                `${player.jerseyNumber}`
+                                            ),
+                                            React.createElement(
+                                                'span',
+                                                { className: 'font-medium truncate' },
+                                                `${player.lastName} ${player.firstName}`
+                                            )
+                                        ),
+                                        React.createElement('div', { className: 'col-span-1 text-center font-bold text-green-600' }, (stats?.goals || 0) + (stats?.penaltiesScored || 0)),
+                                        React.createElement('div', { className: 'col-span-2 text-center font-bold text-blue-600' }, `${stats?.penaltiesScored || 0}/${(stats?.penaltiesScored || 0) + (stats?.penaltiesMissed || 0)}`),
+                                        React.createElement('div', { className: 'col-span-1 text-center font-bold text-yellow-600' }, stats?.yellowCards || 0),
+                                        React.createElement('div', { className: 'col-span-1 text-center font-bold text-red-600' }, stats?.redCards || 0),
+                                        React.createElement('div', { className: 'col-span-1 text-center font-bold text-blue-800' }, stats?.blueCards || 0),
+                                        React.createElement('div', { className: 'col-span-1 text-center font-bold text-orange-600' }, stats?.exclusions || 0)
+                                    );
+                                } else {
+                                    return React.createElement(
+                                        'div',
+                                        { 
+                                            key: `${teamType}-player-${idx}`, 
+                                            className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${cursorClass}`,
+                                            onClick: onClickHandler,
+                                            title: !isMatchActionAllowed() && selectedMatch?.status !== 'scheduled'
+                                                ? (selectedMatch?.status === 'scheduled' ? 'Kliknite pre úpravu hráča' : 'Zápas je ukončený')
+                                                : ''
+                                        },
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex items-center gap-2' },
+                                            React.createElement('i', { className: 'fa-solid fa-shirt text-gray-600 text-xs flex-shrink-0' }),
+                                            player.jerseyNumber && React.createElement(
+                                                'span',
+                                                { className: 'font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0' },
+                                                `${player.jerseyNumber}`
+                                            ),
+                                            React.createElement(
+                                                'span',
+                                                { className: 'font-medium truncate' },
+                                                `${player.lastName} ${player.firstName}`
+                                            )
+                                        ),
+                                        selectedMatch?.status === 'scheduled' && React.createElement(
+                                            'i',
+                                            { className: 'fa-solid fa-pencil text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity' }
+                                        )
+                                    );
+                                }
+                            })
+                        : React.createElement(
+                            'div',
+                            { className: 'text-sm text-gray-500 italic p-2' },
+                            'Žiadni hráči'
+                        )
+                ) : React.createElement(
+                    'div',
+                    { className: 'text-sm text-gray-500 italic p-2' },
+                    'Nedostupné'
+                ),
+                
+                // Sekcia Ostatní (odstránení hráči) - zobrazí sa len pri naplánovanom zápase
+                selectedMatch?.status === 'scheduled' && removedPlayers.length > 0 && React.createElement(
+                    'div',
+                    { className: 'mt-4 pt-3 border-t border-gray-200' },
+                    React.createElement(
+                        'h4',
+                        { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
+                        React.createElement('i', { className: 'fa-solid fa-user-slash text-xs text-gray-500' }),
+                        `Ostatní (${removedPlayers.length})`
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'space-y-1' },
+                        [...removedPlayers]
+                            .sort((a, b) => {
+                                const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
+                                const numB = b.jerseyNumber ? parseInt(b.jerseyNumber) || 999 : 999;
+                                return numA - numB;
+                            })
+                            .map((player, idx) => {
+                                return React.createElement(
+                                    'div',
+                                    { 
+                                        key: `${teamType}-removed-${idx}`, 
+                                        className: 'flex items-center justify-between gap-2 p-2 rounded border border-gray-200 bg-gray-50 text-sm group relative cursor-pointer hover:bg-blue-50',
+                                        onClick: () => openEditPlayerModal(player, teamType, teamDetails, false)
+                                    },
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex items-center gap-2' },
+                                        React.createElement('i', { className: 'fa-solid fa-shirt text-gray-400 text-xs flex-shrink-0' }),
+                                        player.jerseyNumber && React.createElement(
+                                            'span',
+                                            { className: 'font-bold text-gray-500 text-xs bg-gray-200 px-1.5 py-0.5 rounded flex-shrink-0' },
+                                            `${player.jerseyNumber}`
+                                        ),
+                                        React.createElement(
+                                            'span',
+                                            { className: 'font-medium text-gray-500 line-through' },
+                                            `${player.lastName} ${player.firstName}`
+                                        )
+                                    ),
+                                    React.createElement(
+                                        'i',
+                                        { className: 'fa-solid fa-undo text-xs text-green-500 opacity-0 group-hover:opacity-100 transition-opacity' }
+                                    )
+                                );
+                            })
+                    )
+                )
+            );
+        };
         
         // Zistenie, či má zápas typ (finále, semifinále, o umiestnenie)
         const hasMatchType = selectedMatch.isPlacementMatch || selectedMatch.matchType;
@@ -2801,81 +3176,147 @@ const matchesHallApp = ({ userProfileData }) => {
                                     )
                                 ),
                                 
-                                // Hráči pre domáci tím
-                                React.createElement(
-                                    'div',
-                                    null,
-                                    React.createElement(
-                                        'h4',
-                                        { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
-                                        React.createElement('i', { className: 'fa-solid fa-users text-xs text-gray-500' }),
-                                        `Hráči (${homeTeamDetails?.team.playerDetails?.length || 0})`
-                                    ),
-                                    
-                                    homeTeamDetails ? React.createElement(
-                                        'div',
-                                        { className: 'space-y-1' },
-                                        homeTeamDetails.team.playerDetails && homeTeamDetails.team.playerDetails.length > 0 ? 
-                                            [...homeTeamDetails.team.playerDetails]
-                                                .sort((a, b) => {
-                                                    const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
-                                                    const numB = b.jerseyNumber ? parseInt(b.jerseyNumber) || 999 : 999;
-                                                    return numA - numB;
-                                                })
-                                                .map((player, idx) => {
-                                                    const playerIdentifier = {
-                                                        userId: homeTeamDetails.userId,
-                                                        teamIdentifier: selectedMatch.homeTeamIdentifier,
-                                                        displayName: `${player.lastName} ${player.firstName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`,
-                                                        index: idx,
-                                                        isStaff: false
-                                                    };
-                                                    
-                                                    return React.createElement(
-                                                        'div',
-                                                        { 
-                                                            key: `home-player-${idx}`, 
-                                                            className: 'flex items-center gap-2 p-2 rounded border border-gray-200 text-sm group relative transition-colors hover:bg-blue-50 cursor-pointer',
-                                                            onClick: isMatchActionAllowed()
-                                                                ? () => {
-                                                                    if (eventType) {
-                                                                        if (eventType === 'goal' && eventSubType === null) {
-                                                                            addMatchEvent('goal', 'home', null, playerIdentifier);
-                                                                        } else if (eventType === 'penalty' && eventSubType === 'scored') {
-                                                                            addMatchEvent('penalty', 'home', 'scored', playerIdentifier);
-                                                                        } else if (eventType === 'penalty' && eventSubType === 'missed') {
-                                                                            addMatchEvent('penalty', 'home', 'missed', playerIdentifier);
-                                                                        } else {
-                                                                            addMatchEvent(eventType, 'home', null, playerIdentifier);
-                                                                        }
-                                                                    }
-                                                                }
-                                                                : undefined
-                                                        },
-                                                        React.createElement('i', { className: 'fa-solid fa-shirt text-gray-600 text-xs flex-shrink-0' }),
-                                                        player.jerseyNumber && React.createElement(
-                                                            'span',
-                                                            { className: 'font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0' },
-                                                            `${player.jerseyNumber}`
-                                                        ),
-                                                        React.createElement(
-                                                            'span',
-                                                            { className: 'font-medium truncate' },
-                                                            `${player.lastName} ${player.firstName}`
-                                                        )
-                                                    );
-                                                })
-                                            : React.createElement(
-                                                'div',
-                                                { className: 'text-sm text-gray-500 italic p-2' },
-                                                'Žiadni hráči'
-                                            )
-                                    ) : React.createElement(
-                                        'div',
-                                        { className: 'text-sm text-gray-500 italic p-2' },
-                                        'Nedostupné'
-                                    )
-                                )
+                               const activePlayers = homeTeamDetails?.team.playerDetails?.filter(p => p && !p.removed) || [];
+                               const removedPlayers = homeTeamDetails?.team.removedPlayers || [];
+                               
+                               // Zobrazenie aktívnych hráčov
+                               React.createElement(
+                                   'div',
+                                   null,
+                                   React.createElement(
+                                       'h4',
+                                       { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
+                                       React.createElement('i', { className: 'fa-solid fa-users text-xs text-gray-500' }),
+                                       `Hráči (${activePlayers.length})`
+                                   ),
+                                   
+                                   homeTeamDetails ? React.createElement(
+                                       'div',
+                                       { className: showPlayerStats ? 'space-y-1' : 'space-y-1' },
+                                       activePlayers.length > 0 ? 
+                                           [...activePlayers]
+                                               .sort((a, b) => {
+                                                   const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
+                                                   const numB = b.jerseyNumber ? parseInt(b.jerseyNumber) || 999 : 999;
+                                                   return numA - numB;
+                                               })
+                                               .map((player, idx) => {
+                                                   const playerIdentifier = {
+                                                       userId: homeTeamDetails.userId,
+                                                       teamIdentifier: selectedMatch.homeTeamIdentifier,
+                                                       displayName: `${player.lastName} ${player.firstName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`,
+                                                       index: activePlayers.indexOf(player),
+                                                       isStaff: false
+                                                   };
+                                                   
+                                                   return React.createElement(
+                                                       'div',
+                                                       { 
+                                                           key: `home-player-${idx}`, 
+                                                           className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${
+                                                               selectedMatch?.status === 'scheduled' ? 'hover:bg-blue-50 cursor-pointer' : ''
+                                                           }`,
+                                                           onClick: selectedMatch?.status === 'scheduled' 
+                                                               ? () => openEditPlayerModal(player, 'home', homeTeamDetails, false)
+                                                               : (isMatchActionAllowed()
+                                                                   ? () => {
+                                                                       if (eventType) {
+                                                                           if (eventType === 'goal' && eventSubType === null) {
+                                                                               addMatchEvent('goal', 'home', null, playerIdentifier);
+                                                                           } else if (eventType === 'penalty' && eventSubType === 'scored') {
+                                                                               addMatchEvent('penalty', 'home', 'scored', playerIdentifier);
+                                                                           } else if (eventType === 'penalty' && eventSubType === 'missed') {
+                                                                               addMatchEvent('penalty', 'home', 'missed', playerIdentifier);
+                                                                           } else {
+                                                                               addMatchEvent(eventType, 'home', null, playerIdentifier);
+                                                                           }
+                                                                       }
+                                                                   }
+                                                                   : undefined)
+                                                       },
+                                                       React.createElement(
+                                                           'div',
+                                                           { className: 'flex items-center gap-2' },
+                                                           React.createElement('i', { className: 'fa-solid fa-shirt text-gray-600 text-xs flex-shrink-0' }),
+                                                           player.jerseyNumber && React.createElement(
+                                                               'span',
+                                                               { className: 'font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0' },
+                                                               `${player.jerseyNumber}`
+                                                           ),
+                                                           React.createElement(
+                                                               'span',
+                                                               { className: 'font-medium truncate' },
+                                                               `${player.lastName} ${player.firstName}`
+                                                           )
+                                                       ),
+                                                       selectedMatch?.status === 'scheduled' && React.createElement(
+                                                           'i',
+                                                           { className: 'fa-solid fa-pencil text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity' }
+                                                       )
+                                                   );
+                                               })
+                                           : React.createElement(
+                                               'div',
+                                               { className: 'text-sm text-gray-500 italic p-2' },
+                                               'Žiadni hráči'
+                                           )
+                                   ) : React.createElement(
+                                       'div',
+                                       { className: 'text-sm text-gray-500 italic p-2' },
+                                       'Nedostupné'
+                                   )
+                               ),
+                               
+                               // Zobrazenie odstránených hráčov (len ak existujú a zápas je naplánovaný)
+                               selectedMatch?.status === 'scheduled' && removedPlayers.length > 0 && React.createElement(
+                                   'div',
+                                   { className: 'mt-4 pt-3 border-t border-gray-200' },
+                                   React.createElement(
+                                       'h4',
+                                       { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
+                                       React.createElement('i', { className: 'fa-solid fa-user-slash text-xs text-gray-500' }),
+                                       `Ostatní (${removedPlayers.length})`
+                                   ),
+                                   React.createElement(
+                                       'div',
+                                       { className: 'space-y-1' },
+                                       [...removedPlayers]
+                                           .sort((a, b) => {
+                                               const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
+                                               const numB = b.jerseyNumber ? parseInt(b.jerseyNumber) || 999 : 999;
+                                               return numA - numB;
+                                           })
+                                           .map((player, idx) => {
+                                               return React.createElement(
+                                                   'div',
+                                                   { 
+                                                       key: `home-removed-${idx}`, 
+                                                       className: 'flex items-center justify-between gap-2 p-2 rounded border border-gray-200 bg-gray-50 text-sm group relative cursor-pointer hover:bg-blue-50',
+                                                       onClick: () => openEditPlayerModal(player, 'home', homeTeamDetails, false)
+                                                   },
+                                                   React.createElement(
+                                                       'div',
+                                                       { className: 'flex items-center gap-2' },
+                                                       React.createElement('i', { className: 'fa-solid fa-shirt text-gray-400 text-xs flex-shrink-0' }),
+                                                       player.jerseyNumber && React.createElement(
+                                                           'span',
+                                                           { className: 'font-bold text-gray-500 text-xs bg-gray-200 px-1.5 py-0.5 rounded flex-shrink-0' },
+                                                           `${player.jerseyNumber}`
+                                                       ),
+                                                       React.createElement(
+                                                           'span',
+                                                           { className: 'font-medium text-gray-500 line-through' },
+                                                           `${player.lastName} ${player.firstName}`
+                                                       )
+                                                   ),
+                                                   React.createElement(
+                                                       'i',
+                                                       { className: 'fa-solid fa-undo text-xs text-green-500 opacity-0 group-hover:opacity-100 transition-opacity' }
+                                                   )
+                                               );
+                                           })
+                                   )
+                               )
                             ),
                             
                             // Box s priebehom zápasu (medzi tímami)
@@ -3421,80 +3862,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 ),
                                 
                                 // Hráči hosťovského tímu
-                                React.createElement(
-                                    'div',
-                                    null,
-                                    React.createElement(
-                                        'h4',
-                                        { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
-                                        React.createElement('i', { className: 'fa-solid fa-users text-xs text-gray-500' }),
-                                        `Hráči (${awayTeamDetails?.team.playerDetails?.length || 0})`
-                                    ),
-                                    
-                                    awayTeamDetails ? React.createElement(
-                                        'div',
-                                        { className: 'space-y-1' },
-                                        awayTeamDetails.team.playerDetails && awayTeamDetails.team.playerDetails.length > 0 ? 
-                                            [...awayTeamDetails.team.playerDetails]
-                                                .sort((a, b) => {
-                                                    const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
-                                                    const numB = b.jerseyNumber ? parseInt(b.jerseyNumber) || 999 : 999;
-                                                    return numA - numB;
-                                                })
-                                                .map((player, idx) => {
-                                                    const playerIdentifier = {
-                                                        userId: awayTeamDetails.userId,
-                                                        teamIdentifier: selectedMatch.awayTeamIdentifier,
-                                                        displayName: `${player.lastName} ${player.firstName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`,
-                                                        index: idx,
-                                                        isStaff: false
-                                                    };
-                                                    
-                                                    return React.createElement(
-                                                        'div',
-                                                        { 
-                                                            key: `away-player-${idx}`, 
-                                                            className: 'flex items-center gap-2 p-2 rounded border border-gray-200 text-sm group relative transition-colors hover:bg-blue-50 cursor-pointer',
-                                                            onClick: isMatchActionAllowed()
-                                                                ? () => {
-                                                                    if (eventType) {
-                                                                        if (eventType === 'goal' && eventSubType === null) {
-                                                                            addMatchEvent('goal', 'away', null, playerIdentifier);
-                                                                        } else if (eventType === 'penalty' && eventSubType === 'scored') {
-                                                                            addMatchEvent('penalty', 'away', 'scored', playerIdentifier);
-                                                                        } else if (eventType === 'penalty' && eventSubType === 'missed') {
-                                                                            addMatchEvent('penalty', 'away', 'missed', playerIdentifier);
-                                                                        } else {
-                                                                            addMatchEvent(eventType, 'away', null, playerIdentifier);
-                                                                        }
-                                                                    }
-                                                                }
-                                                                : undefined
-                                                        },
-                                                        React.createElement('i', { className: 'fa-solid fa-shirt text-gray-600 text-xs flex-shrink-0' }),
-                                                        player.jerseyNumber && React.createElement(
-                                                            'span',
-                                                            { className: 'font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0' },
-                                                            `${player.jerseyNumber}`
-                                                        ),
-                                                        React.createElement(
-                                                            'span',
-                                                            { className: 'font-medium truncate' },
-                                                            `${player.lastName} ${player.firstName}`
-                                                        )
-                                                    );
-                                                })
-                                            : React.createElement(
-                                                'div',
-                                                { className: 'text-sm text-gray-500 italic p-2' },
-                                                'Žiadni hráči'
-                                            )
-                                    ) : React.createElement(
-                                        'div',
-                                        { className: 'text-sm text-gray-500 italic p-2' },
-                                        'Nedostupné'
-                                    )
-                                )
+                                renderPlayersSection(awayTeamDetails, 'away', awayTeamName)
                             ),
                             
                             // Prázdny stĺpec pre zarovnanie
@@ -3639,93 +4007,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     ),
                                     
                                     // Hráči pre domáci tím so štatistikami
-                                    React.createElement(
-                                        'div',
-                                        null,
-                                        React.createElement(
-                                            'h4',
-                                            { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
-                                            React.createElement('i', { className: 'fa-solid fa-users text-xs text-gray-500' }),
-                                            `Hráči (${homeTeamDetails?.team.playerDetails?.length || 0})`
-                                        ),
-                                        
-                                        React.createElement(
-                                            'div',
-                                            { className: 'grid grid-cols-12 gap-1 mb-2 px-2 text-xs font-semibold text-gray-600 bg-gray-100 py-2 rounded' },
-                                            React.createElement('div', { className: 'col-span-5 text-left' }, 'Meno'),
-                                            React.createElement('div', { className: 'col-span-1 text-center' }, 'G'),
-                                            React.createElement('div', { className: 'col-span-2 text-center' }, '7m'),
-                                            React.createElement('div', { className: 'col-span-1 text-center' }, 'ŽK'),
-                                            React.createElement('div', { className: 'col-span-1 text-center' }, 'ČK'),
-                                            React.createElement('div', { className: 'col-span-1 text-center' }, 'MK'),
-                                            React.createElement('div', { className: 'col-span-1 text-center' }, '2\'')
-                                        ),
-                                        
-                                        homeTeamDetails ? React.createElement(
-                                            'div',
-                                            { className: 'space-y-1' },
-                                            homeTeamDetails.team.playerDetails && homeTeamDetails.team.playerDetails.length > 0 ? 
-                                                [...homeTeamDetails.team.playerDetails]
-                                                    .sort((a, b) => {
-                                                        const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
-                                                        const numB = b.jerseyNumber ? parseInt(b.jerseyNumber) || 999 : 999;
-                                                        return numA - numB;
-                                                    })
-                                                    .map((player, idx) => {
-                                                        const playerIdentifier = {
-                                                            userId: homeTeamDetails.userId,
-                                                            teamIdentifier: selectedMatch.homeTeamIdentifier,
-                                                            displayName: `${player.lastName} ${player.firstName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`,
-                                                            index: idx,
-                                                            isStaff: false
-                                                        };
-                                                        const stats = getPlayerStats(playerIdentifier);
-                                                        
-                                                        return React.createElement(
-                                                            'div',
-                                                            { 
-                                                                key: `home-player-${idx}`, 
-                                                                className: 'grid grid-cols-12 gap-1 p-2 rounded border border-gray-200 text-sm group relative transition-colors hover:bg-blue-50 cursor-pointer',
-                                                                onClick: isMatchActionAllowed()
-                                                                    ? () => {
-                                                                        if (eventType) {
-                                                                            if (eventType === 'goal' && eventSubType === null) {
-                                                                                addMatchEvent('goal', 'home', null, playerIdentifier);
-                                                                            } else if (eventType === 'penalty' && eventSubType === 'scored') {
-                                                                                addMatchEvent('penalty', 'home', 'scored', playerIdentifier);
-                                                                            } else if (eventType === 'penalty' && eventSubType === 'missed') {
-                                                                                addMatchEvent('penalty', 'home', 'missed', playerIdentifier);
-                                                                            } else {
-                                                                                addMatchEvent(eventType, 'home', null, playerIdentifier);
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                    : undefined
-                                                            },
-                                                            React.createElement('div', { className: 'col-span-5 flex items-center gap-2 truncate' },
-                                                                React.createElement('i', { className: 'fa-solid fa-shirt text-gray-600 text-xs flex-shrink-0' }),
-                                                                player.jerseyNumber && React.createElement('span', { className: 'font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0' }, `${player.jerseyNumber}`),
-                                                                React.createElement('span', { className: 'font-medium truncate' }, `${player.lastName} ${player.firstName}`)
-                                                            ),
-                                                            React.createElement('div', { className: 'col-span-1 text-center font-bold text-green-600' }, (stats?.goals || 0) + (stats?.penaltiesScored || 0)),
-                                                            React.createElement('div', { className: 'col-span-2 text-center font-bold text-blue-600' }, `${stats?.penaltiesScored || 0}/${(stats?.penaltiesScored || 0) + (stats?.penaltiesMissed || 0)}`),
-                                                            React.createElement('div', { className: 'col-span-1 text-center font-bold text-yellow-600' }, stats?.yellowCards || 0),
-                                                            React.createElement('div', { className: 'col-span-1 text-center font-bold text-red-600' }, stats?.redCards || 0),
-                                                            React.createElement('div', { className: 'col-span-1 text-center font-bold text-blue-800' }, stats?.blueCards || 0),
-                                                            React.createElement('div', { className: 'col-span-1 text-center font-bold text-orange-600' }, stats?.exclusions || 0)
-                                                        );
-                                                    })
-                                                : React.createElement(
-                                                    'div',
-                                                    { className: 'text-sm text-gray-500 italic p-2' },
-                                                    'Žiadni hráči'
-                                                )
-                                        ) : React.createElement(
-                                            'div',
-                                            { className: 'text-sm text-gray-500 italic p-2' },
-                                            'Nedostupné'
-                                        )
-                                    )
+                                    renderPlayersSection(homeTeamDetails, 'home', homeTeamName)
                                 ),
                                 
                                 // Hosťovský tím - detail so štatistikami
@@ -4419,6 +4701,22 @@ const matchesHallApp = ({ userProfileData }) => {
                 },
                 title: 'Ukončenie zápasu',
                 message: 'Naozaj chcete ukončiť tento zápas? Po ukončení zápasu už nebude možné pridávať ďalšie udalosti.'
+            }),
+            React.createElement(EditPlayerModal, {
+                isOpen: editPlayerModalOpen,
+                onClose: () => {
+                    setEditPlayerModalOpen(false);
+                    setPlayerToEdit(null);
+                },
+                onSave: savePlayerEdit,
+                onRemove: removePlayerFromRoster,
+                player: playerToEdit,
+                firstName: editPlayerFirstName,
+                lastName: editPlayerLastName,
+                jerseyNumber: editPlayerJerseyNumber,
+                onFirstNameChange: setEditPlayerFirstName,
+                onLastNameChange: setEditPlayerLastName,
+                onJerseyNumberChange: setEditPlayerJerseyNumber
             })
         );
     }
@@ -4642,6 +4940,114 @@ const matchesHallApp = ({ userProfileData }) => {
                             })
                         )
                     )
+                )
+            )
+        )
+    );
+};
+
+const EditPlayerModal = ({ isOpen, onClose, onSave, onRemove, player, firstName, lastName, jerseyNumber, onFirstNameChange, onLastNameChange, onJerseyNumberChange }) => {
+    if (!isOpen) return null;
+
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[160]',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) onClose();
+            }
+        },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
+            
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center mb-4' },
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 'Úprava hráča'),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'text-gray-500 hover:text-gray-700'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-times text-xl' })
+                )
+            ),
+
+            React.createElement(
+                'div',
+                { className: 'space-y-4 mb-6' },
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Meno'),
+                    React.createElement(
+                        'input',
+                        {
+                            type: 'text',
+                            value: firstName,
+                            onChange: (e) => onFirstNameChange(e.target.value),
+                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
+                        }
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Priezvisko'),
+                    React.createElement(
+                        'input',
+                        {
+                            type: 'text',
+                            value: lastName,
+                            onChange: (e) => onLastNameChange(e.target.value),
+                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
+                        }
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    null,
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Číslo dresu'),
+                    React.createElement(
+                        'input',
+                        {
+                            type: 'text',
+                            value: jerseyNumber,
+                            onChange: (e) => onJerseyNumberChange(e.target.value),
+                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
+                        }
+                    )
+                )
+            ),
+
+            React.createElement(
+                'div',
+                { className: 'flex justify-end gap-3' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
+                    },
+                    'Zrušiť'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onRemove,
+                        className: 'px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors'
+                    },
+                    'Odstrániť zo súpisky'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onSave,
+                        className: 'px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors'
+                    },
+                    'Uložiť'
                 )
             )
         )
