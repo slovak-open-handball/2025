@@ -2992,9 +2992,16 @@ const matchesHallApp = ({ userProfileData }) => {
         // Získame odstránených členov RT pre tento zápas
         const removedStaff = teamDetails?.team.matchSpecificRemovals?.[selectedMatch.id]?.removedStaff || [];
         
+        // Získame AKTÍVNYCH členov RT (ktorí NIE sú odstránení pre tento zápas)
+        const activeMenStaff = teamDetails?.team.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
+        const activeWomenStaff = teamDetails?.team.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
+        
         // Získame odstránených členov RT podľa typu
         const removedMenStaff = removedStaff.filter(s => s.staffType === 'men');
         const removedWomenStaff = removedStaff.filter(s => s.staffType === 'women');
+        
+        // Celkový počet odstránených
+        const totalRemoved = removedPlayers.length + removedMenStaff.length + removedWomenStaff.length;
         
         return React.createElement(
             'div',
@@ -3136,15 +3143,15 @@ const matchesHallApp = ({ userProfileData }) => {
                 'Nedostupné'
             ),
             
-            // Sekcia Ostatní (odstránení hráči a členovia RT) - zobrazí sa len pri naplánovanom zápase
-            selectedMatch?.status === 'scheduled' && (removedPlayers.length > 0 || removedMenStaff.length > 0 || removedWomenStaff.length > 0) && React.createElement(
+            // SEKcia Ostatní - zobrazí sa len pri naplánovanom zápase a ak je nejaký odstránený
+            selectedMatch?.status === 'scheduled' && totalRemoved > 0 && React.createElement(
                 'div',
                 { className: 'mt-4 pt-3 border-t border-gray-200' },
                 React.createElement(
                     'h4',
                     { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
                     React.createElement('i', { className: 'fa-solid fa-user-slash text-xs text-gray-500' }),
-                    `Ostatní (${removedPlayers.length + removedMenStaff.length + removedWomenStaff.length})`
+                    `Ostatní (${totalRemoved})`
                 ),
                 React.createElement(
                     'div',
@@ -3687,7 +3694,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                         React.createElement(
                                             React.Fragment,
                                             null,
-                                            homeTeamDetails.team.menTeamMemberDetails.map((member, idx) => {
+                                            activeMenStaff.map((member, idx) => {
                                                 const staffIdentifier = {
                                                     userId: homeTeamDetails.userId,
                                                     teamIdentifier: selectedMatch.homeTeamIdentifier,
@@ -3774,7 +3781,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                         React.createElement(
                                             React.Fragment,
                                             null,
-                                            homeTeamDetails.team.womenTeamMemberDetails.map((member, idx) => {
+                                            activeWomenStaff.map((member, idx) => {
                                                 const staffIdentifier = {
                                                     userId: homeTeamDetails.userId,
                                                     teamIdentifier: selectedMatch.homeTeamIdentifier,
@@ -4463,7 +4470,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 React.Fragment,
                                                 null,
-                                                homeTeamDetails.team.menTeamMemberDetails.map((member, idx) => {
+                                                activeMenStaff.map((member, idx) => {
                                                     const staffIdentifier = {
                                                         userId: homeTeamDetails.userId,
                                                         teamIdentifier: selectedMatch.homeTeamIdentifier,
@@ -4528,7 +4535,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 React.Fragment,
                                                 null,
-                                                homeTeamDetails.team.womenTeamMemberDetails.map((member, idx) => {
+                                                activeWomenStaff.map((member, idx) => {
                                                     const staffIdentifier = {
                                                         userId: homeTeamDetails.userId,
                                                         teamIdentifier: selectedMatch.homeTeamIdentifier,
