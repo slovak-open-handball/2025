@@ -450,7 +450,7 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     };
     
-    // Funkcia na odstránenie hráča zo súpisky
+    // Funkcia na odstránenie hráča zo súpisky (UPRAVENÁ)
     const removePlayerFromRoster = async () => {
         if (!playerToEdit || !playerTeamDetails || !playerTeam) return;
         
@@ -501,15 +501,32 @@ const matchesHallApp = ({ userProfileData }) => {
             const playerIndex = team.playerDetails.findIndex(p => p === playerToEdit);
             
             if (playerIndex !== -1) {
-                // Odstránime hráča z poľa playerDetails
-                const removedPlayer = team.playerDetails[playerIndex];
-                team.playerDetails.splice(playerIndex, 1);
+                const removedPlayer = { ...team.playerDetails[playerIndex] };
                 
-                // Pridáme hráča do poľa removedPlayers
-                if (!team.removedPlayers) {
-                    team.removedPlayers = [];
+                // PRIDANÉ: Uložíme informáciu o odstránení pre konkrétny zápas
+                if (!team.matchSpecificRemovals) {
+                    team.matchSpecificRemovals = {};
                 }
-                team.removedPlayers.push(removedPlayer);
+                
+                if (!team.matchSpecificRemovals[selectedMatch.id]) {
+                    team.matchSpecificRemovals[selectedMatch.id] = {
+                        removedPlayers: [],
+                        removedStaff: []
+                    };
+                }
+                
+                // Uložíme hráča s informáciou o zápase
+                team.matchSpecificRemovals[selectedMatch.id].removedPlayers.push({
+                    ...removedPlayer,
+                    removedAt: Timestamp.now(),
+                    matchId: selectedMatch.id,
+                    team: playerTeam
+                });
+                
+                // Odstránime hráča z aktívneho zoznamu pre tento zápas
+                // DÔLEŽITÉ: Hráč zostáva v pôvodnom poli playerDetails, ale získame referenciu na pôvodný objekt
+                // Namiesto odstránenia ho len označíme ako "removedForMatch"
+                team.playerDetails[playerIndex].removedForMatch = selectedMatch.id;
                 
                 updatedTeams[teamIndex] = team;
                 teams[categoryName] = updatedTeams;
@@ -529,7 +546,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     });
                 });
                 
-                window.showGlobalNotification('Hráč bol odstránený zo súpisky', 'success');
+                window.showGlobalNotification('Hráč bol odstránený zo súpisky pre tento zápas', 'success');
             }
             
             setEditPlayerModalOpen(false);
@@ -538,6 +555,230 @@ const matchesHallApp = ({ userProfileData }) => {
         } catch (error) {
             console.error('Chyba pri odstraňovaní hráča:', error);
             window.showGlobalNotification('Chyba pri odstraňovaní hráča', 'error');
+        }
+    };
+    
+    // Funkcia na odstránenie člena RT zo súpisky (NOVÁ)
+    const removeStaffFromRoster = async () => {
+        if (!staffToEdit || !staffTeamDetails || !staffTeam) return;
+        
+        try {
+            const userRef = doc(window.db, 'users', staffTeamDetails.userId);
+            const userSnap = await getDoc(userRef);
+            
+            if (!userSnap.exists()) {
+                window.showGlobalNotification('Používateľ neexistuje', 'error');
+                return;
+            }
+            
+            const userData = userSnap.data();
+            const teams = userData.teams || {};
+            const category = selectedMatch.categoryName;
+            
+            const teamIdentifier = staffTeam === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
+            const parts = teamIdentifier.split(' ');
+            const groupAndOrder = parts.pop();
+            const categoryName = parts.join(' ');
+            
+            let groupLetter = '';
+            let order = '';
+            for (let i = 0; i < groupAndOrder.length; i++) {
+                const char = groupAndOrder[i];
+                if (char >= '0' && char <= '9') {
+                    order = groupAndOrder.substring(i);
+                    groupLetter = groupAndOrder.substring(0, i);
+                    break;
+                }
+            }
+            
+            const fullGroupName = `skupina ${groupLetter}`;
+            const orderNum = parseInt(order, 10);
+            
+            const userTeams = teams[categoryName] || [];
+            const teamIndex = userTeams.findIndex(t => t.groupName === fullGroupName && t.order === orderNum);
+            
+            if (teamIndex === -1) {
+                window.showGlobalNotification('Tím nebol nájdený', 'error');
+                return;
+            }
+            
+            const updatedTeams = [...userTeams];
+            const team = updatedTeams[teamIndex];
+            
+            // Nájdeme index člena RT v príslušnom poli
+            const staffArray = editStaffIsMen ? team.menTeamMemberDetails : team.womenTeamMemberDetails;
+            const staffIndex = staffArray.findIndex(m => m === staffToEdit);
+            
+            if (staffIndex !== -1) {
+                const removedStaff = { ...staffArray[staffIndex] };
+                
+                // PRIDANÉ: Uložíme informáciu o odstránení pre konkrétny zápas
+                if (!team.matchSpecificRemovals) {
+                    team.matchSpecificRemovals = {};
+                }
+                
+                if (!team.matchSpecificRemovals[selectedMatch.id]) {
+                    team.matchSpecificRemovals[selectedMatch.id] = {
+                        removedPlayers: [],
+                        removedStaff: []
+                    };
+                }
+                
+                // Uložíme člena RT s informáciou o zápase
+                team.matchSpecificRemovals[selectedMatch.id].removedStaff.push({
+                    ...removedStaff,
+                    removedAt: Timestamp.now(),
+                    matchId: selectedMatch.id,
+                    team: staffTeam,
+                    staffType: editStaffIsMen ? 'men' : 'women'
+                });
+                
+                // Označíme člena RT ako odstráneného pre tento zápas
+                if (editStaffIsMen) {
+                    if (!team.menTeamMemberDetails[staffIndex].removedForMatch) {
+                        team.menTeamMemberDetails[staffIndex].removedForMatch = {};
+                    }
+                    team.menTeamMemberDetails[staffIndex].removedForMatch[selectedMatch.id] = true;
+                } else {
+                    if (!team.womenTeamMemberDetails[staffIndex].removedForMatch) {
+                        team.womenTeamMemberDetails[staffIndex].removedForMatch = {};
+                    }
+                    team.womenTeamMemberDetails[staffIndex].removedForMatch[selectedMatch.id] = true;
+                }
+                
+                updatedTeams[teamIndex] = team;
+                teams[categoryName] = updatedTeams;
+                
+                await updateDoc(userRef, { teams });
+                
+                // AKTUALIZUJEME LOKÁLNY STAV users
+                setUsers(prevUsers => {
+                    return prevUsers.map(user => {
+                        if (user.id === staffTeamDetails.userId) {
+                            return {
+                                ...user,
+                                teams: teams
+                            };
+                        }
+                        return user;
+                    });
+                });
+                
+                window.showGlobalNotification('Člen RT bol odstránený zo súpisky pre tento zápas', 'success');
+            }
+            
+            setEditStaffModalOpen(false);
+            setStaffToEdit(null);
+            
+        } catch (error) {
+            console.error('Chyba pri odstraňovaní člena RT:', error);
+            window.showGlobalNotification('Chyba pri odstraňovaní člena RT', 'error');
+        }
+    };
+    
+    // Funkcia na obnovenie hráča do súpisky (NOVÁ)
+    const restorePlayerToRoster = async (player, team, teamDetails) => {
+        if (!player || !teamDetails || !team || selectedMatch?.status !== 'scheduled') return;
+        
+        try {
+            const userRef = doc(window.db, 'users', teamDetails.userId);
+            const userSnap = await getDoc(userRef);
+            
+            if (!userSnap.exists()) {
+                window.showGlobalNotification('Používateľ neexistuje', 'error');
+                return;
+            }
+            
+            const userData = userSnap.data();
+            const teams = userData.teams || {};
+            const category = selectedMatch.categoryName;
+            
+            const teamIdentifier = team === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
+            const parts = teamIdentifier.split(' ');
+            const groupAndOrder = parts.pop();
+            const categoryName = parts.join(' ');
+            
+            let groupLetter = '';
+            let order = '';
+            for (let i = 0; i < groupAndOrder.length; i++) {
+                const char = groupAndOrder[i];
+                if (char >= '0' && char <= '9') {
+                    order = groupAndOrder.substring(i);
+                    groupLetter = groupAndOrder.substring(0, i);
+                    break;
+                }
+            }
+            
+            const fullGroupName = `skupina ${groupLetter}`;
+            const orderNum = parseInt(order, 10);
+            
+            const userTeams = teams[categoryName] || [];
+            const teamIndex = userTeams.findIndex(t => t.groupName === fullGroupName && t.order === orderNum);
+            
+            if (teamIndex === -1) {
+                window.showGlobalNotification('Tím nebol nájdený', 'error');
+                return;
+            }
+            
+            const updatedTeams = [...userTeams];
+            const teamData = updatedTeams[teamIndex];
+            
+            // Nájdeme hráča v poli playerDetails podľa jeho ID
+            const playerIndex = teamData.playerDetails.findIndex(p => 
+                p.firstName === player.firstName && 
+                p.lastName === player.lastName && 
+                p.jerseyNumber === player.jerseyNumber
+            );
+            
+            if (playerIndex !== -1) {
+                // Odstránime označenie pre tento zápas
+                delete teamData.playerDetails[playerIndex].removedForMatch;
+                
+                // Odstránime zo zoznamu odstránených pre tento zápas
+                if (teamData.matchSpecificRemovals && teamData.matchSpecificRemovals[selectedMatch.id]) {
+                    teamData.matchSpecificRemovals[selectedMatch.id].removedPlayers = 
+                        teamData.matchSpecificRemovals[selectedMatch.id].removedPlayers.filter(
+                            removed => !(removed.firstName === player.firstName && 
+                                       removed.lastName === player.lastName && 
+                                       removed.jerseyNumber === player.jerseyNumber)
+                        );
+                    
+                    // Ak je pole prázdne, odstránime celý záznam pre tento zápas
+                    if (teamData.matchSpecificRemovals[selectedMatch.id].removedPlayers.length === 0 &&
+                        teamData.matchSpecificRemovals[selectedMatch.id].removedStaff.length === 0) {
+                        delete teamData.matchSpecificRemovals[selectedMatch.id];
+                    }
+                    
+                    // Ak je objekt matchSpecificRemovals prázdny, odstránime ho
+                    if (Object.keys(teamData.matchSpecificRemovals).length === 0) {
+                        delete teamData.matchSpecificRemovals;
+                    }
+                }
+                
+                updatedTeams[teamIndex] = teamData;
+                teams[categoryName] = updatedTeams;
+                
+                await updateDoc(userRef, { teams });
+                
+                // AKTUALIZUJEME LOKÁLNY STAV users
+                setUsers(prevUsers => {
+                    return prevUsers.map(user => {
+                        if (user.id === teamDetails.userId) {
+                            return {
+                                ...user,
+                                teams: teams
+                            };
+                        }
+                        return user;
+                    });
+                });
+                
+                window.showGlobalNotification('Hráč bol obnovený do súpisky', 'success');
+            }
+            
+        } catch (error) {
+            console.error('Chyba pri obnovovaní hráča:', error);
+            window.showGlobalNotification('Chyba pri obnovovaní hráča', 'error');
         }
     };
 
@@ -2595,11 +2836,16 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         };
 
-        // FUNKCIA PRE VYKRESLENIE HRÁČOV PRE TÍM
+        // UPRAVENÁ FUNKCIA PRE ZOBRAZENIE HRÁČOV - berie do úvahy match-specific removals
         const renderPlayersSection = (teamDetails, teamType, teamName) => {
-            // Získame aktívnych a odstránených hráčov
-            const activePlayers = teamDetails?.team.playerDetails?.filter(p => p && !p.removed) || [];
-            const removedPlayers = teamDetails?.team.removedPlayers || [];
+            // Získame aktívnych hráčov (ktorí nie sú odstránení pre tento zápas)
+            const activePlayers = teamDetails?.team.playerDetails?.filter(p => p && !p.removedForMatch) || [];
+            
+            // Získame odstránených hráčov pre tento zápas
+            const removedPlayersForMatch = teamDetails?.team.matchSpecificRemovals?.[selectedMatch.id]?.removedPlayers || [];
+            
+            // Pre kompatibilitu so starším kódom - ak existuje pole removedPlayers, použijeme ho
+            const removedPlayers = removedPlayersForMatch.length > 0 ? removedPlayersForMatch : (teamDetails?.team.removedPlayers || []);
             
             return React.createElement(
                 'div',
@@ -2766,7 +3012,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     { 
                                         key: `${teamType}-removed-${idx}`, 
                                         className: 'flex items-center justify-between gap-2 p-2 rounded border border-gray-200 bg-gray-50 text-sm group relative cursor-pointer hover:bg-blue-50',
-                                        onClick: () => openEditPlayerModal(player, teamType, teamDetails, false)
+                                        onClick: () => restorePlayerToRoster(player, teamType, teamDetails)
                                     },
                                     React.createElement(
                                         'div',
