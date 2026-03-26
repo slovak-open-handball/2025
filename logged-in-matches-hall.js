@@ -5128,7 +5128,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 isOpen: editStaffModalOpen,
                 onClose: () => {
                     setEditStaffModalOpen(false);
-                    vsetStaffToEdit(null);
+                    setStaffToEdit(null);
                 },
                 onSave: saveStaffEdit,
                 onRemove: removeStaffFromRoster,  // PRIDANÉ
