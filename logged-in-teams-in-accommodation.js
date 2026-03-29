@@ -1853,7 +1853,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                                     React.createElement(
                                                         'div',
                                                         { className: 'text-sm text-red-600 mt-1 font-medium whitespace-nowrap' },
-                                                        `Nedostatočná kapacita pre tím (${selectedTeam?.peopleWithAccommodation || 0} osôb s ubytovaním)`
+                                                        `Nedostatočná kapacita pre tím (${selectedTeam?.peopleWithAccommodation || 0} osôb)`
                                                     )
                                                 )
                                             )
