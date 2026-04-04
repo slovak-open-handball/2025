@@ -1069,6 +1069,9 @@ function extractIdentifiersFromText(text) {
     return uniqueIdentifiers;
 }
 
+let groupStabilityCheck = new Map(); // Ukladá timeouty pre každú skupinu
+let lastGroupMatchCount = new Map(); // Ukladá posledný počet zápasov pre každú skupinu
+
 function isGroupReadyForReplacement(category, groupLetter) {
     const cleanCategory = cleanCategoryName(category);
     const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
@@ -1081,37 +1084,22 @@ function isGroupReadyForReplacement(category, groupLetter) {
         return false;
     }
     
-    // 🔴 DÔLEŽITÉ: Získame VŠETKY zápasy z databázy (nielen z matchesData)
-    // Najprv zistíme, koľko tímov je v skupine (podľa unikátnych identifikátorov)
-    const allMatchesFromDb = window.matchTracker?.getGroupMatches?.(cleanCategory, fullGroupName) || [];
-    const uniqueTeams = new Set();
-    allMatchesFromDb.forEach(match => {
-        uniqueTeams.add(match.homeTeamIdentifier);
-        uniqueTeams.add(match.awayTeamIdentifier);
-    });
-    const numberOfTeams = uniqueTeams.size;
+    const totalMatches = groupTable.totalMatches || 0;
+    const completedMatches = groupTable.completedCount || 0;
+    const completionPercentage = totalMatches > 0 ? (completedMatches / totalMatches * 100) : 0;
     
-    // Očakávaný počet zápasov v skupine (každý s každým raz)
-    const expectedTotalMatches = (numberOfTeams * (numberOfTeams - 1)) / 2;
-    
-    // Skutočný počet ODOHRANÝCH zápasov
-    const completedMatchesList = allMatchesFromDb.filter(m => m.status === 'completed');
-    const actualCompletedMatches = completedMatchesList.length;
-    
-    // 🔴 KRITÉRIUM 1: Všetky očakávané zápasy musia byť v databáze A odohrané
-    if (allMatchesFromDb.length !== expectedTotalMatches) {
-        console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Čakám na vytvorenie všetkých zápasov. Očakávam ${expectedTotalMatches}, mám ${allMatchesFromDb.length}`);
+    // 2. Podmienka 1: Všetky zápasy musia byť odohrané (100%)
+    if (completionPercentage < 100) {
+        console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Len ${completedMatches}/${totalMatches} (${completionPercentage}%) odohraných → NIE JE PRIpravená`);
         return false;
     }
     
-    if (actualCompletedMatches !== expectedTotalMatches) {
-        console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Odohraných ${actualCompletedMatches}/${expectedTotalMatches} zápasov → NIE JE PRIpravená`);
-        return false;
-    }
-    
-    console.log(`✅ [${cleanCategory} - ${fullGroupName}] 100% zápasov odohraných (${actualCompletedMatches}/${expectedTotalMatches})`);
+    console.log(`✅ [${cleanCategory} - ${fullGroupName}] 100% zápasov odohraných (${completedMatches}/${totalMatches})`);
     
     // 3. Podmienka 2: Všetky zápasy musia mať načítané udalosti (events)
+    const allGroupMatches = window.matchTracker?.getGroupMatches?.(cleanCategory, fullGroupName) || [];
+    const completedMatchesList = allGroupMatches.filter(m => m.status === 'completed');
+    
     let allEventsLoaded = true;
     for (const match of completedMatchesList) {
         const events = window.matchTracker?.getEvents?.(match.id) || [];
@@ -1136,25 +1124,70 @@ function isGroupReadyForReplacement(category, groupLetter) {
     console.log(`✅ [${cleanCategory} - ${fullGroupName}] Všetky udalosti načítané`);
     
     // 4. Dodatočná kontrola: Žiadny zápas by nemal byť v stave 'in-progress' alebo 'paused'
-    const hasInProgressMatches = allMatchesFromDb.some(m => m.status === 'in-progress' || m.status === 'paused');
+    const hasInProgressMatches = allGroupMatches.some(m => m.status === 'in-progress' || m.status === 'paused');
     if (hasInProgressMatches) {
         console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Sú tam zápasy, ktoré ešte prebiehajú → NIE JE PRIpravenÁ`);
         return false;
     }
     
-    // Všetky podmienky splnené - skupina je pripravená
+    // 🔴 5. KONTROLA STABILITY: Počkáme, či sa počet zápasov už nemení
     const groupKey = `${cleanCategory}|${groupLetter.toUpperCase()}`;
-    processedGroups.set(groupKey, {
-        isReady: true,
-        percentage: 100,
-        lastCheck: Date.now(),
-        totalMatches: expectedTotalMatches,
-        completedMatches: actualCompletedMatches,
-        allEventsLoaded: true
-    });
+    const currentMatchCount = totalMatches;
+    const lastCount = lastGroupMatchCount.get(groupKey);
     
-    console.log(`🎉 [${cleanCategory} - ${fullGroupName}] KOMPLETNE PRIPRAVENÁ NA NAHRADENIE! (${actualCompletedMatches}/${expectedTotalMatches} zápasov, ${numberOfTeams} tímov)`);
-    return true;
+    // Ak sa počet zápasov zmenil, resetujeme timeout
+    if (lastCount !== currentMatchCount) {
+        lastGroupMatchCount.set(groupKey, currentMatchCount);
+        
+        // Zrušíme existujúci timeout pre túto skupinu
+        if (groupStabilityCheck.has(groupKey)) {
+            clearTimeout(groupStabilityCheck.get(groupKey));
+            console.log(`🔄 [${cleanCategory} - ${fullGroupName}] Počet zápasov sa zmenil (${lastCount} → ${currentMatchCount}), resetujem čakanie...`);
+        }
+        
+        // Nastavíme nový timeout (5 sekúnd bez zmeny = stabilné)
+        const timeout = setTimeout(() => {
+            console.log(`✅ [${cleanCategory} - ${fullGroupName}] Počet zápasov je stabilný (${currentMatchCount}), skupina je pripravená!`);
+            
+            // Uložíme do processedGroups
+            processedGroups.set(groupKey, {
+                isReady: true,
+                percentage: 100,
+                lastCheck: Date.now(),
+                totalMatches: totalMatches,
+                completedMatches: completedMatches,
+                allEventsLoaded: true
+            });
+            
+            groupStabilityCheck.delete(groupKey);
+            
+            // Spustíme nahradenie pre túto skupinu
+            const allText = document.body.innerText;
+            const identifiers = extractIdentifiersFromText(allText);
+            const readyForThisGroup = identifiers.filter(id => 
+                id.category === cleanCategory && id.groupLetter === groupLetter.toUpperCase()
+            );
+            
+            if (readyForThisGroup.length > 0) {
+                console.log(`🎉 Spúšťam nahradenie pre skupinu ${fullGroupName}...`);
+                performPartialReplacement(readyForThisGroup);
+            }
+        }, 5000); // 5 sekúnd bez zmeny
+        
+        groupStabilityCheck.set(groupKey, timeout);
+        console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Čakám na stabilitu (aktuálne ${currentMatchCount} zápasov)...`);
+        return false;
+    }
+    
+    // Ak už máme stabilný počet a skupina je v processedGroups
+    if (processedGroups.has(groupKey) && processedGroups.get(groupKey).isReady) {
+        console.log(`✅ [${cleanCategory} - ${fullGroupName}] Skupina je už pripravená (stabilná)`);
+        return true;
+    }
+    
+    // Čakáme na stabilitu
+    console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Čakám na stabilitu počtu zápasov...`);
+    return false;
 }
 
 function getCurrentScoreFromEvents(events) {
