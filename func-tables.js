@@ -404,7 +404,7 @@
         
         // Informácia o priebehu skupiny
         console.log(`📊 Stav skupiny: ${table.completedCount} / ${table.totalMatches} zápasov odohraných (${table.progressPercent}%)`);
-        console.log(`👥 Počet tímov: ${table.teamsCount} | Možných zápasov: ${table.totalPossibleMatches}`);
+        console.log(`👥 Počet tímov: ${table.teamsCount}`);
         console.log('-'.repeat(120));
         
         console.log(' '.padEnd(4) + 'TÍM'.padEnd(30) + 'Z'.padEnd(5) + 'V'.padEnd(5) + 'R'.padEnd(5) + 'P'.padEnd(5) + 'Skóre'.padEnd(12) + '+/-'.padEnd(6) + 'Body');
