@@ -6092,7 +6092,7 @@ const ResetMatchModal = ({ isOpen, onClose, onConfirm, onConfirmWithDelete, titl
                         },
                         className: 'px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors'
                     },
-                    'Reset zápasu a vymazať udalosti'
+                    'Reset zápasu a\u00A0vymazať udalosti'
                 )
             )
         )
