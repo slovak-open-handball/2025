@@ -81,7 +81,7 @@ floatingBoxStyle.textContent = `
         font-weight: 600;
         font-size: 14px;
         color: #374151;
-        max-width: 150px;
+        max-width: 180px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -91,7 +91,7 @@ floatingBoxStyle.textContent = `
         font-weight: 700;
         font-size: 24px;
         color: #1f2937;
-        min-width: 60px;
+        min-width: 30px;
         text-align: center;
     }
     
