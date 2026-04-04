@@ -211,12 +211,12 @@
         
         if (!table) return;
         
-        console.log('\n' + '='.repeat(100));
+        console.log('\n' + '='.repeat(110));
         console.log(`📊 TABUĽKA SKUPINY: ${table.category} - ${table.group}`);
-        console.log('='.repeat(100));
-        console.log(' '.padEnd(4) + 'TÍM'.padEnd(30) + 'Z'.padEnd(5) + 'V'.padEnd(5) + 'R'.padEnd(5) + 'P'.padEnd(5) + 'Skóre'.padEnd(12) + 'Body');
-        console.log('-'.repeat(100));
-        
+        console.log('='.repeat(110));
+        console.log(' '.padEnd(4) + 'TÍM'.padEnd(30) + 'Z'.padEnd(5) + 'V'.padEnd(5) + 'R'.padEnd(5) + 'P'.padEnd(5) + 'Skóre'.padEnd(12) + '+/-'.padEnd(6) + 'Body');
+        console.log('-'.repeat(110));
+    
         table.teams.forEach((team, index) => {
             const position = (index + 1).toString().padEnd(4);
             const name = team.name.substring(0, 28).padEnd(30);
@@ -225,14 +225,21 @@
             const draws = team.draws.toString().padEnd(5);
             const losses = team.losses.toString().padEnd(5);
             const score = `${team.goalsFor}:${team.goalsAgainst}`.padEnd(12);
+            const goalDiff = team.goalDifference.toString().padEnd(6);
             const points = team.points.toString().padEnd(4);
+        
+            // Farbenie rozdielu skóre (zelená pre kladný, červená pre záporný)
+            let diffDisplay = goalDiff;
+            if (team.goalDifference > 0) {
+                diffDisplay = `+${team.goalDifference}`.padEnd(6);
+            }
             
-            console.log(`${position}${name}${played}${wins}${draws}${losses}${score}${points}`);
+            console.log(`${position}${name}${played}${wins}${draws}${losses}${score}${diffDisplay}${points}`);
         });
         
-        console.log('='.repeat(100));
+        console.log('='.repeat(110));
         console.log(`📋 Počet odohraných zápasov v skupine: ${table.matches.length}`);
-        console.log('='.repeat(100) + '\n');
+        console.log('='.repeat(110) + '\n');
     }
     
     // Funkcia na výpis všetkých tabuliek skupín
