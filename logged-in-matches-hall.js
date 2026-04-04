@@ -332,6 +332,8 @@ const matchesHallApp = ({ userProfileData }) => {
 
     const [teamManagerReady, setTeamManagerReady] = useState(false);
 
+    const [superstructureTeams, setSuperstructureTeams] = useState({});
+
     // Funkcia na otvorenie modálneho okna pre úpravu člena realizačného tímu
     const openEditStaffModal = (member, team, teamDetails, staffType, staffIndex) => {
         if (selectedMatch?.status !== 'scheduled') {
@@ -1793,6 +1795,19 @@ const matchesHallApp = ({ userProfileData }) => {
     };
 
     useEffect(() => {
+        if (!window.db) return;
+    
+        const superstructureDocRef = doc(window.db, 'settings', 'superstructureGroups');
+        const unsubscribe = onSnapshot(superstructureDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setSuperstructureTeams(docSnap.data());
+            }
+        });
+        
+        return () => unsubscribe();
+    }, []);
+
+    useEffect(() => {
         // Skontrolujeme, či už je teamManager dostupný
         if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
             setTeamManagerReady(true);
@@ -2689,8 +2704,8 @@ const matchesHallApp = ({ userProfileData }) => {
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
         
-        // 1. Najprv skúsime použiť window.superstructureTeams (ak je už načítaný)
-        if (window.superstructureTeams && Object.keys(window.superstructureTeams).length > 0) {
+        // 1. Skúsime superstructureTeams zo stavu
+        if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
             const parts = identifier.split(' ');
             if (parts.length >= 2) {
                 const groupAndOrder = parts.pop();
@@ -2711,7 +2726,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     const fullGroupName = `skupina ${groupLetter}`;
                     const orderNum = parseInt(order, 10);
                     
-                    const categoryTeams = window.superstructureTeams[category];
+                    const categoryTeams = superstructureTeams[category];
                     if (categoryTeams && Array.isArray(categoryTeams)) {
                         const team = categoryTeams.find(t => 
                             t.groupName === fullGroupName && 
