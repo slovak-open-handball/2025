@@ -1,7 +1,7 @@
 (function() {
     'use strict';
     
-    console.log('=== SPÚŠŤAM SLEDOVANIE ZÁPASOV (MÓD: LEN UKONČENÉ) ===');
+    console.log('=== SPÚŠŤAM SLEDOVANIE ZÁPASOV (MÓD: TABUĽKA SKUPÍN) ===');
     
     let unsubscribeMatches = null;
     let unsubscribeEvents = {};
@@ -35,13 +35,11 @@
             return { home: 0, away: 0 };
         }
         
-        // Zoradíme udalosti chronologicky
         const sortedEvents = [...events].sort((a, b) => {
             if (a.minute !== b.minute) return (a.minute || 0) - (b.minute || 0);
             return (a.second || 0) - (b.second || 0);
         });
         
-        // Posledná udalosť má konečné skóre
         const lastEvent = sortedEvents[sortedEvents.length - 1];
         
         if (lastEvent.scoreAfter) {
@@ -51,7 +49,6 @@
             };
         }
         
-        // Fallback - prepočítame z udalostí
         let homeScore = 0;
         let awayScore = 0;
         
@@ -68,42 +65,19 @@
         return { home: homeScore, away: awayScore };
     }
     
-    // Funkcia na získanie konečného času zápasu
-    function getMatchEndTime(events) {
-        if (!events || events.length === 0) return 0;
-        
-        let maxTime = 0;
-        events.forEach(event => {
-            const eventTime = (event.minute || 0) * 60 + (event.second || 0);
-            if (eventTime > maxTime) maxTime = eventTime;
-        });
-        return maxTime;
-    }
-    
     // Funkcia na získanie podrobného detailu zápasu
     function getMatchDetails(matchId) {
         const match = matchesData[matchId];
-        if (!match) {
+        if (!match || match.status !== 'completed') {
             return null;
         }
         
         const events = eventsData[matchId] || [];
         const { home: homeScore, away: awayScore } = getCurrentScore(events);
-        const endTime = getMatchEndTime(events);
         const matchDate = match.scheduledTime ? match.scheduledTime.toDate() : null;
         
-        // Získanie názvov tímov a ich ID
         const homeTeamName = window.teamManager?.getTeamNameByDisplayIdSync?.(match.homeTeamIdentifier) || match.homeTeamIdentifier;
         const awayTeamName = window.teamManager?.getTeamNameByDisplayIdSync?.(match.awayTeamIdentifier) || match.awayTeamIdentifier;
-        
-        // Zoradenie udalostí chronologicky
-        const sortedEvents = [...events].sort((a, b) => {
-            if (a.minute !== b.minute) return (a.minute || 0) - (b.minute || 0);
-            return (a.second || 0) - (b.second || 0);
-        });
-        
-        // Získanie gólov
-        const goals = events.filter(e => e.type === 'goal' || (e.type === 'penalty' && e.subType === 'scored'));
         
         return {
             id: match.id,
@@ -113,22 +87,191 @@
             awayTeamName: awayTeamName,
             homeScore: homeScore,
             awayScore: awayScore,
-            status: match.status,
             category: match.categoryName || 'neurčená',
             group: match.groupName || 'neurčená',
             date: matchDate,
-            dateStr: matchDate ? matchDate.toLocaleDateString('sk-SK') : 'neurčený',
-            timeStr: matchDate ? matchDate.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }) : '--:--',
-            endTime: endTime,
-            eventsCount: events.length,
-            events: sortedEvents,
-            goals: goals
+            dateStr: matchDate ? matchDate.toLocaleDateString('sk-SK') : 'neurčený'
         };
     }
     
-    // Funkcia na výpis iba odohraných zápasov (completed)
+    // Funkcia na získanie všetkých odohraných zápasov
+    function getCompletedMatches() {
+        return Object.values(matchesData).filter(m => m.status === 'completed');
+    }
+    
+    // Funkcia na vytvorenie tabuľky skupiny z odohratých zápasov
+    function createGroupTable(categoryName, groupName) {
+        const completedMatches = getCompletedMatches();
+        
+        // Filtrujeme zápasy pre danú kategóriu a skupinu
+        const groupMatches = completedMatches.filter(match => 
+            match.categoryName === categoryName && match.groupName === groupName
+        );
+        
+        if (groupMatches.length === 0) {
+            console.log(`Žiadne odohrané zápasy pre skupinu ${groupName} v kategórii ${categoryName}`);
+            return null;
+        }
+        
+        // Získame všetky tímy v skupine
+        const teamsInGroup = [];
+        
+        // Prejdeme všetky zápasy a zozbierame tímy
+        groupMatches.forEach(match => {
+            const homeTeam = {
+                id: match.homeTeamIdentifier,
+                name: window.teamManager?.getTeamNameByDisplayIdSync?.(match.homeTeamIdentifier) || match.homeTeamIdentifier,
+                played: 0,
+                wins: 0,
+                draws: 0,
+                losses: 0,
+                goalsFor: 0,
+                goalsAgainst: 0,
+                points: 0
+            };
+            
+            const awayTeam = {
+                id: match.awayTeamIdentifier,
+                name: window.teamManager?.getTeamNameByDisplayIdSync?.(match.awayTeamIdentifier) || match.awayTeamIdentifier,
+                played: 0,
+                wins: 0,
+                draws: 0,
+                losses: 0,
+                goalsFor: 0,
+                goalsAgainst: 0,
+                points: 0
+            };
+            
+            if (!teamsInGroup.find(t => t.id === homeTeam.id)) {
+                teamsInGroup.push(homeTeam);
+            }
+            if (!teamsInGroup.find(t => t.id === awayTeam.id)) {
+                teamsInGroup.push(awayTeam);
+            }
+        });
+        
+        // Spracujeme výsledky zápasov
+        groupMatches.forEach(match => {
+            const events = eventsData[match.id] || [];
+            const { home: homeScore, away: awayScore } = getCurrentScore(events);
+            
+            const homeTeamStats = teamsInGroup.find(t => t.id === match.homeTeamIdentifier);
+            const awayTeamStats = teamsInGroup.find(t => t.id === match.awayTeamIdentifier);
+            
+            if (homeTeamStats && awayTeamStats) {
+                homeTeamStats.played++;
+                awayTeamStats.played++;
+                
+                homeTeamStats.goalsFor += homeScore;
+                homeTeamStats.goalsAgainst += awayScore;
+                awayTeamStats.goalsFor += awayScore;
+                awayTeamStats.goalsAgainst += homeScore;
+                
+                if (homeScore > awayScore) {
+                    homeTeamStats.wins++;
+                    homeTeamStats.points += 3;
+                    awayTeamStats.losses++;
+                } else if (awayScore > homeScore) {
+                    awayTeamStats.wins++;
+                    awayTeamStats.points += 3;
+                    homeTeamStats.losses++;
+                } else {
+                    homeTeamStats.draws++;
+                    homeTeamStats.points += 1;
+                    awayTeamStats.draws++;
+                    awayTeamStats.points += 1;
+                }
+            }
+        });
+        
+        // Vypočítame rozdiel skóre
+        teamsInGroup.forEach(team => {
+            team.goalDifference = team.goalsFor - team.goalsAgainst;
+        });
+        
+        // Zoradenie tímov v tabuľke
+        const sortedTeams = [...teamsInGroup].sort((a, b) => {
+            if (a.points !== b.points) return b.points - a.points;
+            if (a.goalDifference !== b.goalDifference) return b.goalDifference - a.goalDifference;
+            if (a.goalsFor !== b.goalsFor) return b.goalsFor - a.goalsFor;
+            return a.name.localeCompare(b.name);
+        });
+        
+        return {
+            category: categoryName,
+            group: groupName,
+            teams: sortedTeams,
+            matches: groupMatches
+        };
+    }
+    
+    // Funkcia na výpis tabuľky skupiny
+    function printGroupTable(categoryName, groupName) {
+        const table = createGroupTable(categoryName, groupName);
+        
+        if (!table) return;
+        
+        console.log('\n' + '='.repeat(100));
+        console.log(`📊 TABUĽKA SKUPINY: ${table.category} - ${table.group}`);
+        console.log('='.repeat(100));
+        console.log(' '.padEnd(4) + 'TÍM'.padEnd(30) + 'Z'.padEnd(5) + 'V'.padEnd(5) + 'R'.padEnd(5) + 'P'.padEnd(5) + 'Skóre'.padEnd(12) + 'Body');
+        console.log('-'.repeat(100));
+        
+        table.teams.forEach((team, index) => {
+            const position = (index + 1).toString().padEnd(4);
+            const name = team.name.substring(0, 28).padEnd(30);
+            const played = team.played.toString().padEnd(5);
+            const wins = team.wins.toString().padEnd(5);
+            const draws = team.draws.toString().padEnd(5);
+            const losses = team.losses.toString().padEnd(5);
+            const score = `${team.goalsFor}:${team.goalsAgainst}`.padEnd(12);
+            const points = team.points.toString().padEnd(4);
+            
+            console.log(`${position}${name}${played}${wins}${draws}${losses}${score}${points}`);
+        });
+        
+        console.log('='.repeat(100));
+        console.log(`📋 Počet odohraných zápasov v skupine: ${table.matches.length}`);
+        console.log('='.repeat(100) + '\n');
+    }
+    
+    // Funkcia na výpis všetkých tabuliek skupín
+    function printAllGroupTables() {
+        const completedMatches = getCompletedMatches();
+        
+        if (completedMatches.length === 0) {
+            console.log('Žiadne odohrané zápasy');
+            return;
+        }
+        
+        // Získame unikátne kombinácie kategória + skupina
+        const uniqueGroups = new Set();
+        completedMatches.forEach(match => {
+            if (match.categoryName && match.groupName) {
+                uniqueGroups.add(`${match.categoryName}|${match.groupName}`);
+            }
+        });
+        
+        if (uniqueGroups.size === 0) {
+            console.log('Nenašli sa žiadne skupiny s odohranými zápasmi');
+            return;
+        }
+        
+        console.log('\n' + '='.repeat(100));
+        console.log(`📊 VŠETKY TABUĽKY SKUPÍN (${uniqueGroups.size} skupín)`);
+        console.log('='.repeat(100));
+        
+        const sortedGroups = Array.from(uniqueGroups).sort();
+        
+        sortedGroups.forEach(groupKey => {
+            const [category, group] = groupKey.split('|');
+            printGroupTable(category, group);
+        });
+    }
+    
+    // Funkcia na výpis všetkých odohraných zápasov
     function printCompletedMatches() {
-        const completedMatches = Object.values(matchesData).filter(m => m.status === 'completed');
+        const completedMatches = getCompletedMatches();
         
         if (completedMatches.length === 0) {
             console.log('Žiadne odohrané zápasy');
@@ -139,7 +282,6 @@
         console.log(`✅ ODOHRANÉ ZÁPASY (${completedMatches.length}) - ${new Date().toLocaleTimeString()}`);
         console.log('='.repeat(90));
         
-        // Zoradenie podľa dátumu (najnovšie na začiatok)
         const sortedMatches = [...completedMatches].sort((a, b) => {
             if (!a.scheduledTime && !b.scheduledTime) return 0;
             if (!a.scheduledTime) return 1;
@@ -152,7 +294,7 @@
             if (!details) return;
             
             console.log(`\n${index + 1}. 🏁 ${details.homeTeamName} vs ${details.awayTeamName}`);
-            console.log(`   📅 ${details.dateStr} ${details.timeStr}`);
+            console.log(`   📅 ${details.dateStr}`);
             console.log(`   🏷️ Kategória: ${details.category}`);
             console.log(`   👥 Skupina: ${details.group}`);
             console.log(`   🥅 Konečné skóre: ${details.homeScore} : ${details.awayScore}`);
@@ -160,58 +302,7 @@
             console.log(`   🆔 Hostia ID: ${details.awayTeamId}`);
         });
         
-        console.log('\n' + '='.repeat(90));
-        
-        // Štatistika odohraných zápasov podľa kategórií
-        const categoryStats = {};
-        completedMatches.forEach(match => {
-            const category = match.categoryName || 'Bez kategórie';
-            if (!categoryStats[category]) {
-                categoryStats[category] = { count: 0, totalGoals: 0 };
-            }
-            categoryStats[category].count++;
-            
-            const events = eventsData[match.id] || [];
-            const { home: homeScore, away: awayScore } = getCurrentScore(events);
-            categoryStats[category].totalGoals += homeScore + awayScore;
-        });
-        
-        console.log('\n📊 ŠTATISTIKA ODOHRANÝCH ZÁPASOV PODĽA KATEGÓRIÍ:');
-        Object.entries(categoryStats).forEach(([category, stats]) => {
-            const avgGoals = (stats.totalGoals / stats.count).toFixed(1);
-            console.log(`   • ${category}: ${stats.count} zápasov, priemer ${avgGoals} gólov na zápas`);
-        });
-        console.log('='.repeat(90) + '\n');
-    }
-    
-    // Funkcia na výpis detailu konkrétneho odohraného zápasu
-    function printMatchDetails(matchId) {
-        const details = getMatchDetails(matchId);
-        
-        if (!details) {
-            console.log(`Zápas s ID "${matchId}" nebol nájdený alebo nie je odohraný`);
-            return;
-        }
-        
-        console.log('\n' + '='.repeat(80));
-        console.log(`📋 DETAIL ZÁPASU: ${details.homeTeamName} vs ${details.awayTeamName}`);
-        console.log('='.repeat(80));
-        console.log(`🆔 ID zápasu: ${details.id}`);
-        console.log(`📅 Dátum: ${details.dateStr} ${details.timeStr}`);
-        console.log(`🏷️ Kategória: ${details.category}`);
-        console.log(`👥 Skupina: ${details.group}`);
-        console.log(`📊 Stav: ${getStatusText(details.status)}`);
-        console.log(`🥅 Konečné skóre: ${details.homeScore} : ${details.awayScore}`);
-        
-        console.log(`\n🆔 Domáci tím:`);
-        console.log(`   • Názov: ${details.homeTeamName}`);
-        console.log(`   • Identifikátor: ${details.homeTeamId}`);
-        
-        console.log(`\n🆔 Hosťovský tím:`);
-        console.log(`   • Názov: ${details.awayTeamName}`);
-        console.log(`   • Identifikátor: ${details.awayTeamId}`);
-        
-        console.log('='.repeat(80) + '\n');
+        console.log('\n' + '='.repeat(90) + '\n');
     }
     
     // Hlavná funkcia na inicializáciu sledovania
@@ -228,7 +319,7 @@
             }
         }
         
-        console.log('✅ Firebase inicializovaný, spúšťam sledovanie ukončených zápasov...');
+        console.log('✅ Firebase inicializovaný, spúšťam sledovanie...');
         
         const { collection, query, where, onSnapshot, getDocs } = window.firebaseModules || 
             await importFirebaseModules();
@@ -238,13 +329,10 @@
             return;
         }
         
-        // Sledovanie všetkých zápasov
         const matchesRef = collection(window.db, 'matches');
         
         unsubscribeMatches = onSnapshot(matchesRef, (snapshot) => {
             console.log(`🔄 Zmena v databáze: ${snapshot.size} zápasov celkom`);
-            
-            let hasChanges = false;
             
             snapshot.docChanges().forEach(change => {
                 const match = { id: change.doc.id, ...change.doc.data() };
@@ -253,19 +341,13 @@
                     console.log(`➕ Pridaný zápas: ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier} (${match.status})`);
                     matchesData[match.id] = match;
                     subscribeToMatchEvents(match.id);
-                    hasChanges = true;
                     
                 } else if (change.type === 'modified') {
                     const oldMatch = matchesData[match.id];
-                    const oldStatus = oldMatch?.status;
                     matchesData[match.id] = match;
                     
-                    if (oldStatus !== match.status) {
-                        console.log(`🔄 Zmena stavu zápasu ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}: ${getStatusText(oldStatus)} → ${getStatusText(match.status)}`);
-                        hasChanges = true;
-                    } else {
-                        console.log(`✏️ Upravený zápas: ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`);
-                        hasChanges = true;
+                    if (oldMatch && oldMatch.status !== match.status) {
+                        console.log(`🔄 Zmena stavu zápasu: ${getStatusText(oldMatch.status)} → ${getStatusText(match.status)}`);
                     }
                     
                 } else if (change.type === 'removed') {
@@ -277,30 +359,25 @@
                         delete unsubscribeEvents[match.id];
                     }
                     delete eventsData[match.id];
-                    hasChanges = true;
                 }
             });
             
-            // Ak nastala akákoľvek zmena, vypíšeme ukončené zápasy
-            if (hasChanges) {
-                printCompletedMatches();
-            }
+            // Po každej zmene vypíšeme tabuľky skupín
+            printAllGroupTables();
             
         }, (error) => {
             console.error('❌ Chyba pri sledovaní zápasov:', error);
         });
         
-        // Načítame existujúce zápasy a ich udalosti
         const matchesSnapshot = await getDocs(matchesRef);
         for (const doc of matchesSnapshot.docs) {
             const matchId = doc.id;
             subscribeToMatchEvents(matchId);
         }
         
-        // Prvé načítanie - vypíšeme ukončené zápasy
         setTimeout(() => {
-            printCompletedMatches();
-        }, 1000);
+            printAllGroupTables();
+        }, 2000);
     }
     
     // Sledovanie udalostí pre konkrétny zápas
@@ -324,7 +401,6 @@
                 events.push({ id: doc.id, ...doc.data() });
             });
             
-            // Zoradíme udalosti podľa času pre správne scoreAfter
             events.sort((a, b) => {
                 if (a.minute !== b.minute) return (a.minute || 0) - (b.minute || 0);
                 return (a.second || 0) - (b.second || 0);
@@ -333,11 +409,10 @@
             const oldEventsCount = eventsData[matchId]?.length || 0;
             eventsData[matchId] = events;
             
-            // Ak pribudli nové udalosti a zápas je ukončený, aktualizujeme výpis
             const match = matchesData[matchId];
             if (match && match.status === 'completed' && events.length !== oldEventsCount) {
-                console.log(`🔄 Aktualizácia udalostí pre ukončený zápas ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`);
-                printCompletedMatches();
+                console.log(`🔄 Aktualizácia udalostí pre zápas ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`);
+                printAllGroupTables();
             }
             
         }, (error) => {
@@ -365,12 +440,11 @@
         }
     }
     
-    // Funkcia na manuálne obnovenie výpisu
+    // Funkcie pre manuálne ovládanie
     function refresh() {
-        printCompletedMatches();
+        printAllGroupTables();
     }
     
-    // Funkcia na zastavenie sledovania
     function stop() {
         if (unsubscribeMatches) {
             unsubscribeMatches();
@@ -394,8 +468,11 @@
         stop: stop,
         refresh: refresh,
         printCompleted: printCompletedMatches,
-        printMatch: printMatchDetails,
+        printGroupTable: printGroupTable,
+        printAllGroupTables: printAllGroupTables,
+        createGroupTable: createGroupTable,
         getMatchDetails: getMatchDetails,
+        getCompletedMatches: getCompletedMatches,
         getMatches: () => matchesData,
         getEvents: (matchId) => eventsData[matchId] || []
     };
@@ -403,10 +480,11 @@
     // Spustenie sledovania
     initializeMatchTracker();
     
-    console.log('📡 MatchTracker inicializovaný v móde "Len ukončené zápasy". Dostupné funkcie:');
-    console.log('   • window.matchTracker.printCompleted() - výpis ukončených zápasov');
-    console.log('   • window.matchTracker.printMatch("ID") - detail konkrétneho zápasu (aj s ID tímov)');
-    console.log('   • window.matchTracker.getMatchDetails("ID") - získanie detailu ako objekt');
+    console.log('📡 MatchTracker inicializovaný. Dostupné funkcie:');
+    console.log('   • window.matchTracker.printAllGroupTables() - výpis všetkých tabuliek skupín');
+    console.log('   • window.matchTracker.printGroupTable("kategória", "skupina") - výpis tabuľky pre konkrétnu skupinu');
+    console.log('   • window.matchTracker.printCompleted() - výpis odohraných zápasov');
+    console.log('   • window.matchTracker.createGroupTable("kategória", "skupina") - získanie tabuľky ako objekt');
     console.log('   • window.matchTracker.refresh() - obnovenie výpisu');
     console.log('   • window.matchTracker.stop() - zastavenie sledovania');
     
