@@ -4215,7 +4215,10 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     eventIcon = React.createElement('i', { className: 'fa-solid fa-futbol text-black text-sm' });
                                                     break;
                                                 case 'penalty':
-                                                    eventIcon = React.createElement('i', { className: `fa-solid fa-futbol ${event.subType === 'scored' ? 'text-green-600' : 'text-red-600'} text-sm` });
+                                                    eventIcon = React.createElement('div', { className: 'flex items-center gap-0.5' },
+                                                        React.createElement('i', { className: `fa-solid fa-futbol ${event.subType === 'scored' ? 'text-green-600' : 'text-red-600'} text-sm` }),
+                                                        React.createElement('span', { className: `text-[10px] font-bold ${event.subType === 'scored' ? 'text-green-600' : 'text-red-600'}` }, '7m')
+                                                    );
                                                     break;
                                                 case 'yellow':
                                                     eventIcon = React.createElement('div', { className: 'w-4 h-5 bg-yellow-400 rounded-sm' });
