@@ -2577,134 +2577,61 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     }, [matches, categories]); // Tento useEffect sa spustí vždy, keď sa zmenia matches ALEBO categories
 
-    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA - POUŽÍVA ROVNAKÚ LOGIKU AKO teamManager
-    const getTeamNameByIdentifier = (identifier) => {
+    // Pomocná funkcia na získanie názvu tímu s čakaním na teamManager
+    const getTeamNameSafe = (identifier) => {
         if (!identifier) return 'Neznámy tím';
         
-        // Najprv skúsime použiť teamManager ak je dostupný (najrýchlejšie)
+        // Ak je teamManager dostupný, použijeme ho
         if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
             const teamName = window.teamManager.getTeamNameByDisplayIdSync(identifier);
             if (teamName) return teamName;
         }
         
-        // Fallback - manuálne vyhľadávanie
-        // Parsujeme identifikátor v tvare "kategória skupinaorder" (napr. "U12 D F4")
-        const parts = identifier.split(' ');
-        
-        if (parts.length < 2) {
-            return identifier;
-        }
-        
-        // Posledná časť je skupina + order (napr. "F4")
-        const groupAndOrder = parts.pop();
-        // Zvyšok je kategória (môže byť viacslovná, napr. "U12 D")
-        const category = parts.join(' ');
-        
-        // Rozdelíme groupAndOrder na groupName a order
-        let groupLetter = '';
-        let order = '';
-        
-        for (let i = 0; i < groupAndOrder.length; i++) {
-            const char = groupAndOrder[i];
-            if (char >= '0' && char <= '9') {
-                order = groupAndOrder.substring(i);
-                groupLetter = groupAndOrder.substring(0, i);
-                break;
-            }
-        }
-        
-        if (!order) {
-            order = '?';
-            groupLetter = groupAndOrder;
-        }
-        
-        // Vytvoríme názov skupiny v tvare "skupina X" (napr. "F" -> "skupina F")
-        const fullGroupName = `skupina ${groupLetter}`;
-        const orderNum = parseInt(order, 10);
-        
-        // 1. Najprv skúsime nájsť tím v používateľoch (user teams)
+        // Fallback - manuálne vyhľadávanie v users (pre user teams)
         if (users && users.length > 0) {
-            for (const user of users) {
-                if (!user.teams) continue;
+            const parts = identifier.split(' ');
+            if (parts.length >= 2) {
+                const groupAndOrder = parts.pop();
+                const category = parts.join(' ');
                 
-                const userTeams = user.teams[category];
-                if (!userTeams || !Array.isArray(userTeams)) continue;
+                let groupLetter = '';
+                let order = '';
+                for (let i = 0; i < groupAndOrder.length; i++) {
+                    const char = groupAndOrder[i];
+                    if (char >= '0' && char <= '9') {
+                        order = groupAndOrder.substring(i);
+                        groupLetter = groupAndOrder.substring(0, i);
+                        break;
+                    }
+                }
                 
-                const team = userTeams.find(t => 
-                    t.groupName === fullGroupName && 
-                    t.order === orderNum
-                );
+                const fullGroupName = `skupina ${groupLetter}`;
+                const orderNum = parseInt(order, 10);
                 
-                if (team && team.teamName) {                                        
-                    return team.teamName;
+                for (const user of users) {
+                    if (!user.teams) continue;
+                    const userTeams = user.teams[category];
+                    if (!userTeams || !Array.isArray(userTeams)) continue;
+                    
+                    const team = userTeams.find(t => 
+                        t.groupName === fullGroupName && 
+                        t.order === orderNum
+                    );
+                    
+                    if (team && team.teamName) {
+                        return team.teamName;
+                    }
                 }
             }
         }
         
-        // 2. Potom skúsime superstructure tímy - ROVNAKÁ LOGIKA AKO V teamManager
-        // Získame superstructure dáta (buď z window.superstructureTeams alebo z window.__teamManagerData)
-        let superstructureData = null;
-        
-        if (window.__teamManagerData?.superstructureTeams) {
-            superstructureData = window.__teamManagerData.superstructureTeams;
-        } else if (window.superstructureTeams) {
-            superstructureData = window.superstructureTeams;
-        }
-        
-        if (superstructureData && Object.keys(superstructureData).length > 0) {
-            // Hľadáme v superstructure tímoch
-            for (const [catName, teamsArray] of Object.entries(superstructureData)) {
-                // Porovnanie kategórie (môže byť case-insensitive alebo s medzerami)
-                if (catName !== category) continue;
-                
-                if (!Array.isArray(teamsArray)) continue;
-                
-                // Hľadáme tím podľa skupiny a poradia
-                const team = teamsArray.find(t => 
-                    t.groupName === fullGroupName && 
-                    t.order === orderNum
-                );
-                
-                if (team && team.teamName) {
-                    return team.teamName;
-                }
-                
-                // Alternatívne vyhľadávanie - priamo podľa order (pre prípad, že skupina nie je uvedená)
-                const teamByOrder = teamsArray.find(t => t.order === orderNum);
-                if (teamByOrder && teamByOrder.teamName) {
-                    return teamByOrder.teamName;
-                }
-            }
-        }
-        
-        // 3. Skúsime použiť window.__teamManagerData.allTeams (najspoľahlivejšie)
-        if (window.__teamManagerData?.allTeams && window.__teamManagerData.allTeams.length > 0) {
-            // Vytvoríme displayId rovnakým spôsobom ako v teamManager
-            const cleanGroup = groupLetter; // už máme extrahované
-            
-            // Hľadáme tím, ktorý by pasoval
-            for (const team of window.__teamManagerData.allTeams) {
-                // Skontrolujeme kategóriu
-                if (team.category !== category) continue;
-                
-                // Skontrolujeme skupinu (ak existuje)
-                let teamGroupName = team.groupName || '';
-                // Odstránime prefix "skupina " ak existuje
-                teamGroupName = teamGroupName.replace(/^skupina\s+/i, '');
-                
-                if (teamGroupName !== groupLetter) continue;
-                
-                // Skontrolujeme poradie
-                if (team.order !== orderNum) continue;
-                
-                if (team.teamName) {
-                    return team.teamName;
-                }
-            }
-        }
-        
-        // Fallback - vrátime identifikátor
-        return `${category} ${groupLetter}${order}`;
+        // Ak nič nenašlo, vrátime pôvodný identifikátor
+        return identifier;
+    };
+
+    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA - POUŽÍVA ROVNAKÚ LOGIKU AKO teamManager
+    const getTeamNameByIdentifier = (identifier) => {
+        return getTeamNameSafe(identifier);
     };
 
     // FUNKCIA NA ZÍSKANIE KOMPLETNÝCH INFORMÁCIÍ O TÍME
