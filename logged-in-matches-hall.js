@@ -4080,7 +4080,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { className: 'text-xs text-gray-500' },
-                                                'Aktuálne skóre'
+                                                selectedMatch?.status === 'completed' ? 'Konečný výsledok' : 'Aktuálne skóre'
                                             )
                                         ),
                                         
@@ -5049,7 +5049,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { className: 'text-xs text-gray-500' },
-                                                'Aktuálne skóre'
+                                                selectedMatch?.status === 'completed' ? 'Konečný výsledok' : 'Aktuálne skóre'
                                             )
                                         ),
                                         
