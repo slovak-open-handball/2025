@@ -53,7 +53,7 @@ const floatingBoxStyle = document.createElement('style');
 floatingBoxStyle.textContent = `
     .floating-score-box {
         position: fixed;
-        top: 30px;
+        top: 50px;
         left: 50%;
         transform: translateX(-50%) translateY(-150px);
         background: white;
@@ -210,7 +210,7 @@ window.showGlobalNotification = (message, type = 'success') => {
     if (!notificationElement) {
         notificationElement = document.createElement('div');
         notificationElement.id = 'global-notification';
-        notificationElement.className = 'fixed top-12 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] opacity-0 transition-opacity duration-300';
+        notificationElement.className = 'fixed top-16 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-xl z-[99999] opacity-0 transition-opacity duration-300';
         document.body.appendChild(notificationElement);
     }
 
