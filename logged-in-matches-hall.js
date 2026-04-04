@@ -3139,7 +3139,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                         ),
                                         isMatchScheduled && React.createElement(
                                             'i',
-                                            { className: 'fa-solid fa-pencil text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity' }
+                                            { className: 'fa-solid fa-pencil text-xs text-gray-400' }
                                         )
                                     );
                                 }
@@ -3223,7 +3223,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     // Ikona obnovenia sa zobrazí len pri naplánovanom zápase
                                     isMatchScheduled && React.createElement(
                                         'i',
-                                        { className: 'fa-solid fa-undo text-xs text-green-500 opacity-0 group-hover:opacity-100 transition-opacity' }
+                                        { className: 'fa-solid fa-undo text-xs text-green-500' }
                                     )
                                 );
                             }),
@@ -3266,7 +3266,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 ),
                                 isMatchScheduled && React.createElement(
                                     'i',
-                                    { className: 'fa-solid fa-undo text-xs text-green-500 opacity-0 group-hover:opacity-100 transition-opacity' }
+                                    { className: 'fa-solid fa-undo text-xs text-green-500' }
                                 )
                             );
                         }),
@@ -3309,7 +3309,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 ),
                                 isMatchScheduled && React.createElement(
                                     'i',
-                                    { className: 'fa-solid fa-undo text-xs text-green-500 opacity-0 group-hover:opacity-100 transition-opacity' }
+                                    { className: 'fa-solid fa-undo text-xs text-green-500' }
                                 )
                             );
                         })
@@ -3840,7 +3840,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         ),
                                                         selectedMatch?.status === 'scheduled' && React.createElement(
                                                             'i',
-                                                            { className: 'fa-solid fa-pencil text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity' }
+                                                            { className: 'fa-solid fa-pencil text-xs text-gray-400' }
                                                         )
                                                     );
                                                 }
