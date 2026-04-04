@@ -1431,45 +1431,6 @@ if (window.matchTracker) {
     window.matchTracker.cleanCategoryName = cleanCategoryName;
 }
 
-function waitForAllData() {
-    return new Promise((resolve) => {
-        if (!window.matchTracker) {
-            setTimeout(() => waitForAllData().then(resolve), 500);
-            return;
-        }
-        
-        const checkInterval = setInterval(() => {
-            const allMatches = window.matchTracker.getAllMatches?.() || [];
-            if (allMatches.length === 0) return;
-            
-            // Skontrolujeme, či všetky skupiny majú 100%
-            let allComplete = true;
-            const groups = new Set();
-            
-            allMatches.forEach(match => {
-                if (match.categoryName && match.groupName) {
-                    groups.add(`${match.categoryName}|${match.groupName}`);
-                }
-            });
-            
-            for (const groupKey of groups) {
-                const [category, group] = groupKey.split('|');
-                const groupTable = window.matchTracker.createGroupTable(category, group);
-                if (!groupTable || groupTable.completionPercentage < 100) {
-                    allComplete = false;
-                    break;
-                }
-            }
-            
-            if (allComplete && groups.size > 0) {
-                clearInterval(checkInterval);
-                console.log('✅ Všetky skupiny sú na 100%!');
-                resolve();
-            }
-        }, 1000);
-    });
-}
-
 // Funkcia na spustenie sledovania - BEZ čakania na všetky skupiny
 async function startTeamNameReplacement() {
     console.log('🚀 Spúšťam automatické nahrádzanie identifikátorov tímov...');
@@ -1480,7 +1441,6 @@ async function startTeamNameReplacement() {
             clearInterval(checkInterval);
             console.log('✅ MatchTracker je pripravený');
             
-            // 🔴 ODSTRÁNENÉ waitForAllData() - nahrádzanie sa spúšťa OKAMŽITE
             const observer = observePageChanges();
             window._teamNameObserver = observer;
             
