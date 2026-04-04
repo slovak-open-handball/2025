@@ -3760,7 +3760,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                         'div',
                                         { className: 'space-y-2' },
 
-                                        // Muži v realizačnom tíme pre domáci tím
+                                        // Muži v realizačnom tíme pre domáci tím (normálny režim)
                                         activeMenStaffHome.length > 0 && 
                                         React.createElement(
                                             React.Fragment,
@@ -3775,10 +3775,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     staffIndex: idx
                                                 };
                                                 
-                                                // Štatistiky pre režim štatistík
-                                                const stats = showPlayerStats ? getPlayerStats(staffIdentifier) : null;
-                                                
-                                                // Určenie onClick správania
                                                 let onClickHandler = undefined;
                                                 let cursorClass = '';
                                                 
@@ -3800,54 +3796,29 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     cursorClass = 'cursor-not-allowed opacity-60';
                                                 }
                                                 
-                                                if (showPlayerStats) {
-                                                    return React.createElement(
+                                                return React.createElement(
+                                                    'div',
+                                                    { 
+                                                        key: `home-men-${idx}`, 
+                                                        className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${cursorClass}`,
+                                                        onClick: onClickHandler,
+                                                        title: selectedMatch?.status === 'scheduled' ? 'Kliknite pre úpravu' : ''
+                                                    },
+                                                    React.createElement(
                                                         'div',
-                                                        { 
-                                                            key: `home-men-${idx}`, 
-                                                            className: `grid grid-cols-12 gap-1 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${cursorClass}`,
-                                                            onClick: onClickHandler,
-                                                            title: selectedMatch?.status === 'scheduled' ? 'Kliknite pre úpravu' : ''
-                                                        },
-                                                        React.createElement('div', { className: 'col-span-8 flex items-center gap-2 truncate' },
-                                                            React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
-                                                            React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
-                                                        ),
-                                                        React.createElement('div', { className: 'col-span-1 text-center font-bold text-yellow-600' }, stats?.yellowCards || 0),
-                                                        React.createElement('div', { className: 'col-span-1 text-center font-bold text-red-600' }, stats?.redCards || 0),
-                                                        React.createElement('div', { className: 'col-span-1 text-center font-bold text-blue-800' }, stats?.blueCards || 0),
-                                                        React.createElement('div', { className: 'col-span-1 text-center font-bold text-orange-600' }, stats?.exclusions || 0),
-                                                        selectedMatch?.status === 'scheduled' && React.createElement(
-                                                            'div',
-                                                            { className: 'col-span-1 text-right' },
-                                                            React.createElement('i', { className: 'fa-solid fa-pencil text-xs text-gray-400' })
-                                                        )
-                                                    );
-                                                } else {
-                                                    return React.createElement(
-                                                        'div',
-                                                        { 
-                                                            key: `home-men-${idx}`, 
-                                                            className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${cursorClass}`,
-                                                            onClick: onClickHandler,
-                                                            title: selectedMatch?.status === 'scheduled' ? 'Kliknite pre úpravu' : ''
-                                                        },
-                                                        React.createElement(
-                                                            'div',
-                                                            { className: 'flex items-center gap-2' },
-                                                            React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
-                                                            React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
-                                                        ),
-                                                        selectedMatch?.status === 'scheduled' && React.createElement(
-                                                            'i',
-                                                            { className: 'fa-solid fa-pencil text-xs text-gray-400' }
-                                                        )
-                                                    );
-                                                }
+                                                        { className: 'flex items-center gap-2' },
+                                                        React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
+                                                        React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
+                                                    ),
+                                                    selectedMatch?.status === 'scheduled' && React.createElement(
+                                                        'i',
+                                                        { className: 'fa-solid fa-pencil text-xs text-gray-400' }
+                                                    )
+                                                );
                                             })
                                         ),
                                         
-                                        // Ženy v realizačnom tíme
+                                        // Ženy v realizačnom tíme pre domáci tím (normálny režim)
                                         activeWomenStaffHome.length > 0 && 
                                         React.createElement(
                                             React.Fragment,
@@ -3862,25 +3833,45 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     staffIndex: idx
                                                 };
                                                 
+                                                let onClickHandler = undefined;
+                                                let cursorClass = '';
+                                                
+                                                if (selectedMatch?.status === 'scheduled') {
+                                                    onClickHandler = () => openEditStaffModal(member, 'home', homeTeamDetails, 'women', idx);
+                                                    cursorClass = 'hover:bg-blue-50 cursor-pointer';
+                                                } else if (isMatchActionAllowed()) {
+                                                    onClickHandler = () => {
+                                                        if (eventType) {
+                                                            if (eventType === 'goal' || eventType === 'penalty') {
+                                                                window.showGlobalNotification('Gól a 7m hod môžu byť priradené len hráčom', 'error');
+                                                                return;
+                                                            }
+                                                            addMatchEvent(eventType, 'home', null, staffIdentifier);
+                                                        }
+                                                    };
+                                                    cursorClass = 'hover:bg-blue-50 cursor-pointer';
+                                                } else {
+                                                    cursorClass = 'cursor-not-allowed opacity-60';
+                                                }
+                                                
                                                 return React.createElement(
                                                     'div',
                                                     { 
                                                         key: `home-women-${idx}`, 
-                                                        className: 'flex items-center gap-2 p-2 rounded border border-gray-200 text-sm group relative transition-colors hover:bg-blue-50 cursor-pointer',
-                                                        onClick: isMatchActionAllowed() 
-                                                            ? () => {
-                                                                if (eventType) {
-                                                                    if (eventType === 'goal' || eventType === 'penalty') {
-                                                                        window.showGlobalNotification('Gól a 7m hod môžu byť priradené len hráčom', 'error');
-                                                                        return;
-                                                                    }
-                                                                    addMatchEvent(eventType, 'home', null, staffIdentifier);
-                                                                }
-                                                            }
-                                                            : undefined
+                                                        className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${cursorClass}`,
+                                                        onClick: onClickHandler,
+                                                        title: selectedMatch?.status === 'scheduled' ? 'Kliknite pre úpravu' : ''
                                                     },
-                                                    React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs flex-shrink-0' }),
-                                                    React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
+                                                    React.createElement(
+                                                        'div',
+                                                        { className: 'flex items-center gap-2' },
+                                                        React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs flex-shrink-0' }),
+                                                        React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
+                                                    ),
+                                                    selectedMatch?.status === 'scheduled' && React.createElement(
+                                                        'i',
+                                                        { className: 'fa-solid fa-pencil text-xs text-gray-400' }
+                                                    )
                                                 );
                                             })
                                         ),
@@ -4358,7 +4349,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                         'div',
                                         { className: 'space-y-2' },
                                         
-                                        // Muži v realizačnom tíme pre hosťovský tím (bez štatistík)
+                                        // Muži v realizačnom tíme pre hosťovský tím (normálny režim)
                                         activeMenStaffAway.length > 0 && 
                                         React.createElement(
                                             React.Fragment,
@@ -4410,13 +4401,13 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     ),
                                                     selectedMatch?.status === 'scheduled' && React.createElement(
                                                         'i',
-                                                        { className: 'fa-solid fa-pencil text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity' }
+                                                        { className: 'fa-solid fa-pencil text-xs text-gray-400' }
                                                     )
                                                 );
                                             })
                                         ),
                                         
-                                        // Ženy v realizačnom tíme pre hosťovský tím (bez štatistík)
+                                        // Ženy v realizačnom tíme pre hosťovský tím (normálny režim)
                                         activeWomenStaffAway.length > 0 && 
                                         React.createElement(
                                             React.Fragment,
@@ -4468,7 +4459,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     ),
                                                     selectedMatch?.status === 'scheduled' && React.createElement(
                                                         'i',
-                                                        { className: 'fa-solid fa-pencil text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity' }
+                                                        { className: 'fa-solid fa-pencil text-xs text-gray-400' }
                                                     )
                                                 );
                                             })
@@ -4539,7 +4530,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 React.createElement('div', { className: 'col-span-1 text-center' }, '2\'')
                                             ),
                                             
-                                            // Muži v realizačnom tíme pre domáci tím (so štatistikami)
+                                            // Muži v realizačnom tíme pre domáci tím (režim štatistík)
                                             activeMenStaffHome.length > 0 && 
                                             React.createElement(
                                                 React.Fragment,
@@ -4604,7 +4595,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 })
                                             ),
                                             
-                                            // Ženy v realizačnom tíme pre domáci tím (so štatistikami)
+                                            // Ženy v realizačnom tíme pre domáci tím (režim štatistík)
                                             activeWomenStaffHome.length > 0 && 
                                             React.createElement(
                                                 React.Fragment,
@@ -4723,7 +4714,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 React.createElement('div', { className: 'col-span-1 text-center' }, '2\'')
                                             ),
                                             
-                                            // Muži v realizačnom tíme pre hosťovský tím (so štatistikami)
+                                            // Muži v realizačnom tíme pre hosťovský tím (režim štatistík)
                                             activeMenStaffAway.length > 0 && 
                                             React.createElement(
                                                 React.Fragment,
@@ -4787,8 +4778,8 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     );
                                                 })
                                             ),
-                                                                
-                                            // Ženy v realizačnom tíme pre hosťovský tím (so štatistikami)
+                                                                                                            
+                                            // Ženy v realizačnom tíme pre hosťovský tím (režim štatistík)
                                             activeWomenStaffAway.length > 0 && 
                                             React.createElement(
                                                 React.Fragment,
