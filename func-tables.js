@@ -804,7 +804,7 @@
 
 
 
-// Funkcia na získanie názvu tímu podľa displayId (napr. "U12 D 1A")
+// Funkcia na získanie názvu tímu podľa displayId z tabuľky skupiny
 function getTeamNameByDisplayId(displayId) {
     if (!displayId) {
         console.log('❌ Nebol zadaný identifikátor tímu');
@@ -847,90 +847,54 @@ function getTeamNameByDisplayId(displayId) {
     
     console.log(`🔍 Hľadám tím: kategória="${category}", skupina="${fullGroupName}", pozícia=${positionNum}`);
     
-    // 1. Skúsime najprv použiť teamManager ak je dostupný
-    if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-        const teamName = window.teamManager.getTeamNameByDisplayIdSync(displayId);
-        if (teamName) {
-            console.log(`✅ Nájdený tím (cez teamManager): ${teamName}`);
-            return teamName;
+    // VYTVORÍME TABUĽKU SKUPINY A VYHĽADÁME V NIEJ
+    const groupTable = window.matchTracker?.createGroupTable(category, fullGroupName);
+    
+    if (groupTable && groupTable.teams && groupTable.teams.length > 0) {
+        // Získame tím na danej pozícii (positionNum je 1-based index v tabuľke)
+        const teamIndex = positionNum - 1;
+        
+        if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
+            const team = groupTable.teams[teamIndex];
+            console.log(`✅ Nájdený tím (z tabuľky skupiny): ${team.name} (pozícia ${positionNum} v skupine ${fullGroupName})`);
+            return team.name;
+        } else {
+            console.log(`❌ V skupine ${fullGroupName} je len ${groupTable.teams.length} tímov, pozícia ${positionNum} neexistuje`);
+            return null;
         }
     }
     
-    // 2. Skúsime vyhľadať v superstructureTeams
-    if (window.superstructureTeams && Object.keys(window.superstructureTeams).length > 0) {
-        const categoryTeams = window.superstructureTeams[category];
-        if (categoryTeams && Array.isArray(categoryTeams)) {
-            const team = categoryTeams.find(t => 
-                t.groupName === fullGroupName && 
-                t.order === positionNum
-            );
-            if (team && team.teamName) {
-                console.log(`✅ Nájdený tím (v superstructureTeams): ${team.teamName}`);
-                return team.teamName;
-            }
-        }
-    }
-    
-    // 3. Skúsime vyhľadať v dátach z matchTracker
+    // FALLBACK: Ak tabuľka neexistuje, skúsime vyhľadať v dátach z matchTracker
     const allMatches = window.matchTracker?.getAllMatches() || [];
     if (allMatches.length > 0) {
-        // Zozbierame všetky unikátne tímy z odohraných zápasov
-        const teamsSet = new Set();
         const teamsMap = new Map();
         
         allMatches.forEach(match => {
-            if (match.categoryName === category) {
-                if (match.homeTeamIdentifier && !teamsSet.has(match.homeTeamIdentifier)) {
-                    teamsSet.add(match.homeTeamIdentifier);
+            if (match.categoryName === category && match.groupName === fullGroupName) {
+                if (match.homeTeamIdentifier && !teamsMap.has(match.homeTeamIdentifier)) {
                     const teamName = window.teamManager?.getTeamNameByDisplayIdSync?.(match.homeTeamIdentifier) || match.homeTeamIdentifier;
                     teamsMap.set(match.homeTeamIdentifier, { name: teamName, identifier: match.homeTeamIdentifier });
                 }
-                if (match.awayTeamIdentifier && !teamsSet.has(match.awayTeamIdentifier)) {
-                    teamsSet.add(match.awayTeamIdentifier);
+                if (match.awayTeamIdentifier && !teamsMap.has(match.awayTeamIdentifier)) {
                     const teamName = window.teamManager?.getTeamNameByDisplayIdSync?.(match.awayTeamIdentifier) || match.awayTeamIdentifier;
                     teamsMap.set(match.awayTeamIdentifier, { name: teamName, identifier: match.awayTeamIdentifier });
                 }
             }
         });
         
-        // Pre každý tím skontrolujeme, či jeho identifikátor zodpovedá hľadanému
-        for (const [identifier, teamInfo] of teamsMap) {
-            const idParts = identifier.split(' ');
-            if (idParts.length >= 2) {
-                const idGroupAndOrder = idParts.pop();
-                const idCategory = idParts.join(' ');
-                
-                let idPosition = '';
-                let idGroupLetter = '';
-                for (let i = 0; i < idGroupAndOrder.length; i++) {
-                    const char = idGroupAndOrder[i];
-                    if (char >= '0' && char <= '9') {
-                        idPosition += char;
-                    } else if (/[A-Za-z]/.test(char)) {
-                        idGroupLetter += char;
-                    }
-                }
-                
-                if (idCategory === category && 
-                    idGroupLetter.toUpperCase() === groupLetter.toUpperCase() && 
-                    parseInt(idPosition, 10) === positionNum) {
-                    console.log(`✅ Nájdený tím (v zápasoch): ${teamInfo.name}`);
-                    return teamInfo.name;
-                }
-            }
-        }
-    }
-    
-    // 4. Skúsime vyhľadať v používateľských tímoch (ak je k dispozícii)
-    if (window.__teamManagerData?.allTeams) {
-        const team = window.__teamManagerData.allTeams.find(t => 
-            t.category === category && 
-            t.groupName === fullGroupName && 
-            t.order === positionNum
-        );
-        if (team && team.teamName) {
-            console.log(`✅ Nájdený tím (v teamManagerData): ${team.teamName}`);
-            return team.teamName;
+        // Zoradíme tímy podľa ich identifikátora (podľa poradia v skupine)
+        const sortedTeams = Array.from(teamsMap.values()).sort((a, b) => {
+            const aIdParts = a.identifier.split(' ');
+            const bIdParts = b.identifier.split(' ');
+            const aOrder = aIdParts.length > 1 ? parseInt(aIdParts[aIdParts.length - 1].match(/\d+/)?.[0] || 999) : 999;
+            const bOrder = bIdParts.length > 1 ? parseInt(bIdParts[bIdParts.length - 1].match(/\d+/)?.[0] || 999) : 999;
+            return aOrder - bOrder;
+        });
+        
+        const teamIndex = positionNum - 1;
+        if (teamIndex >= 0 && teamIndex < sortedTeams.length) {
+            console.log(`✅ Nájdený tím (fallback): ${sortedTeams[teamIndex].name}`);
+            return sortedTeams[teamIndex].name;
         }
     }
     
@@ -953,6 +917,6 @@ if (window.matchTracker) {
     window.getTeamNameByParams = getTeamNameByParams;
 }
 
-console.log('📋 Pridaná funkcia:');
-console.log('   • window.matchTracker.getTeamNameByDisplayId("U12 D 1A") - vypíše názov tímu');
-console.log('   • window.matchTracker.getTeamNameByParams("U12 D", "A", 1) - vypíše názov tímu');
+console.log('📋 Pridaná funkcia (vyhľadávanie z tabuľky skupiny):');
+console.log('   • window.matchTracker.getTeamNameByDisplayId("U12 D 2B") - vypíše názov tímu na 2. mieste v skupine B');
+console.log('   • window.matchTracker.getTeamNameByParams("U12 D", "B", 2) - rovnaký výsledok');
