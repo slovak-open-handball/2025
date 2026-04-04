@@ -3430,10 +3430,8 @@ const matchesHallApp = ({ userProfileData }) => {
                         category && React.createElement(
                             'div',
                             { className: 'mt-2 text-sm text-gray-600 flex items-center justify-center gap-2' },
-                            React.createElement('i', { className: 'fa-solid fa-clock text-blue-500 text-xs' }),
                             React.createElement('span', null, `${category.periods || 2} x ${category.periodDuration || 20} min`),
                             React.createElement('span', { className: 'text-gray-400' }, '•'),
-                            React.createElement('i', { className: 'fa-solid fa-hourglass-half text-blue-500 text-xs' }),
                             React.createElement('span', null, `Prestávka: ${category.breakDuration || 2} min`)
                         )
                     ),                 
