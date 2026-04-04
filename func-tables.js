@@ -7,6 +7,7 @@
     let unsubscribeEvents = {};
     let matchesData = {};
     let eventsData = {};
+    let tableSettings = { sortingConditions: [] }; // Uloženie nastavení poradia
     
     // Funkcia na formátovanie času
     function formatMatchTime(seconds) {
@@ -99,6 +100,103 @@
         return Object.values(matchesData).filter(m => m.status === 'completed');
     }
     
+    // Funkcia na výpočet vzájomného zápasu medzi dvoma tímami
+    function calculateHeadToHead(teamAId, teamBId, groupMatches) {
+        let teamAScore = 0;
+        let teamBScore = 0;
+        let teamAWins = 0;
+        let teamBWins = 0;
+        
+        groupMatches.forEach(match => {
+            if ((match.homeTeamIdentifier === teamAId && match.awayTeamIdentifier === teamBId) ||
+                (match.homeTeamIdentifier === teamBId && match.awayTeamIdentifier === teamAId)) {
+                const events = eventsData[match.id] || [];
+                const { home: homeScore, away: awayScore } = getCurrentScore(events);
+                
+                let teamAGet = 0;
+                let teamBGet = 0;
+                
+                if (match.homeTeamIdentifier === teamAId) {
+                    teamAGet = homeScore;
+                    teamBGet = awayScore;
+                } else {
+                    teamAGet = awayScore;
+                    teamBGet = homeScore;
+                }
+                
+                teamAScore = teamAGet;
+                teamBScore = teamBGet;
+                
+                if (teamAGet > teamBGet) teamAWins++;
+                else if (teamBGet > teamAGet) teamBWins++;
+            }
+        });
+        
+        return { teamAScore, teamBScore, teamAWins, teamBWins };
+    }
+    
+    // Funkcia na porovnanie dvoch tímov podľa nastavených kritérií
+    function compareTeams(teamA, teamB, groupMatches, sortingConditions) {
+        if (!sortingConditions || sortingConditions.length === 0) {
+            // Predvolené porovnanie len podľa bodov
+            if (teamA.points !== teamB.points) return teamB.points - teamA.points;
+            if (teamA.goalDifference !== teamB.goalDifference) return teamB.goalDifference - teamA.goalDifference;
+            if (teamA.goalsFor !== teamB.goalsFor) return teamB.goalsFor - teamA.goalsFor;
+            return teamA.name.localeCompare(teamB.name);
+        }
+        
+        for (const condition of sortingConditions) {
+            const { parameter, direction } = condition;
+            let comparison = 0;
+            
+            switch (parameter) {
+                case 'headToHead':
+                    const { teamAScore, teamBScore, teamAWins, teamBWins } = calculateHeadToHead(teamA.id, teamB.id, groupMatches);
+                    // Najprv podľa výhier vo vzájomných zápasoch
+                    if (teamAWins !== teamBWins) {
+                        comparison = teamBWins - teamAWins;
+                    } else if (teamAScore !== teamBScore) {
+                        // Potom podľa skóre vo vzájomných zápasoch
+                        comparison = teamBScore - teamAScore;
+                    }
+                    break;
+                    
+                case 'scoreDifference':
+                    comparison = (direction === 'desc' ? teamB.goalDifference - teamA.goalDifference : teamA.goalDifference - teamB.goalDifference);
+                    break;
+                    
+                case 'goalsScored':
+                    comparison = (direction === 'desc' ? teamB.goalsFor - teamA.goalsFor : teamA.goalsFor - teamB.goalsFor);
+                    break;
+                    
+                case 'goalsConceded':
+                    comparison = (direction === 'asc' ? teamA.goalsAgainst - teamB.goalsAgainst : teamB.goalsAgainst - teamA.goalsAgainst);
+                    break;
+                    
+                case 'wins':
+                    comparison = (direction === 'desc' ? teamB.wins - teamA.wins : teamA.wins - teamB.wins);
+                    break;
+                    
+                case 'losses':
+                    comparison = (direction === 'asc' ? teamA.losses - teamB.losses : teamB.losses - teamA.losses);
+                    break;
+                    
+                case 'draw':
+                    // Losovanie - vrátime 0, čo znamená, že sa tímy považujú za rovnaké
+                    comparison = 0;
+                    break;
+                    
+                default:
+                    comparison = 0;
+            }
+            
+            if (comparison !== 0) return comparison;
+        }
+        
+        // Ak sú všetky kritériá rovnaké, použijeme abecedné poradie
+        return teamA.name.localeCompare(teamB.name);
+    }
+    
     // Funkcia na vytvorenie tabuľky skupiny z odohratých zápasov
     function createGroupTable(categoryName, groupName) {
         const completedMatches = getCompletedMatches();
@@ -189,12 +287,9 @@
             team.goalDifference = team.goalsFor - team.goalsAgainst;
         });
         
-        // Zoradenie tímov v tabuľke
+        // Zoradenie tímov v tabuľke podľa nastavených kritérií
         const sortedTeams = [...teamsInGroup].sort((a, b) => {
-            if (a.points !== b.points) return b.points - a.points;
-            if (a.goalDifference !== b.goalDifference) return b.goalDifference - a.goalDifference;
-            if (a.goalsFor !== b.goalsFor) return b.goalsFor - a.goalsFor;
-            return a.name.localeCompare(b.name);
+            return compareTeams(a, b, groupMatches, tableSettings.sortingConditions);
         });
         
         return {
@@ -203,6 +298,53 @@
             teams: sortedTeams,
             matches: groupMatches
         };
+    }
+    
+    // Funkcia na načítanie nastavení poradia z Firestore
+    async function loadTableSettings() {
+        if (!window.db) return;
+        
+        try {
+            const { doc, getDoc } = window.firebaseModules || await importFirebaseModules();
+            if (!doc) return;
+            
+            const settingsDocRef = doc(window.db, 'settings', 'table');
+            const settingsDoc = await getDoc(settingsDocRef);
+            
+            if (settingsDoc.exists()) {
+                const data = settingsDoc.data();
+                tableSettings.sortingConditions = data.sortingConditions || [];
+                console.log('📋 Načítané kritériá poradia:', tableSettings.sortingConditions);
+            } else {
+                tableSettings.sortingConditions = [];
+                console.log('📋 Používam predvolené kritériá poradia (len podľa bodov)');
+            }
+        } catch (error) {
+            console.error('❌ Chyba pri načítaní nastavení poradia:', error);
+            tableSettings.sortingConditions = [];
+        }
+    }
+    
+    // Funkcia na sledovanie zmien nastavení poradia v reálnom čase
+    function subscribeToTableSettings() {
+        if (!window.db) return;
+        
+        const { doc, onSnapshot } = window.firebaseModules;
+        if (!doc || !onSnapshot) return;
+        
+        const settingsDocRef = doc(window.db, 'settings', 'table');
+        
+        return onSnapshot(settingsDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                tableSettings.sortingConditions = data.sortingConditions || [];
+                console.log('🔄 Aktualizované kritériá poradia:', tableSettings.sortingConditions);
+                // Po zmene kritérií prepočítame tabuľky
+                printAllGroupTables();
+            }
+        }, (error) => {
+            console.error('❌ Chyba pri sledovaní nastavení poradia:', error);
+        });
     }
     
     // Funkcia na výpis tabuľky skupiny
@@ -225,20 +367,35 @@
             const draws = team.draws.toString().padEnd(5);
             const losses = team.losses.toString().padEnd(5);
             const score = `${team.goalsFor}:${team.goalsAgainst}`.padEnd(12);
-            const goalDiff = team.goalDifference.toString().padEnd(6);
-            const points = team.points.toString().padEnd(4);
-        
-            // Farbenie rozdielu skóre (zelená pre kladný, červená pre záporný)
-            let diffDisplay = goalDiff;
+            let diffDisplay = team.goalDifference.toString().padEnd(6);
             if (team.goalDifference > 0) {
                 diffDisplay = `+${team.goalDifference}`.padEnd(6);
             }
+            const points = team.points.toString().padEnd(4);
             
             console.log(`${position}${name}${played}${wins}${draws}${losses}${score}${diffDisplay}${points}`);
         });
         
         console.log('='.repeat(110));
         console.log(`📋 Počet odohraných zápasov v skupine: ${table.matches.length}`);
+        
+        // Výpis použitých kritérií poradia
+        if (tableSettings.sortingConditions.length > 0) {
+            console.log(`📋 Kritériá poradia: ${tableSettings.sortingConditions.map((c, i) => {
+                const param = c.parameter === 'headToHead' ? 'vzájomný zápas' :
+                             c.parameter === 'scoreDifference' ? '+/-' :
+                             c.parameter === 'goalsScored' ? 'strelené góly' :
+                             c.parameter === 'goalsConceded' ? 'inkasované góly' :
+                             c.parameter === 'wins' ? 'výhry' :
+                             c.parameter === 'losses' ? 'prehry' :
+                             c.parameter === 'draw' ? 'losovanie' : c.parameter;
+                const dir = c.direction === 'asc' ? 'vzostupne' : 'zostupne';
+                return `${i+1}. ${param}${c.parameter !== 'draw' && c.parameter !== 'headToHead' ? ` (${dir})` : ''}`;
+            }).join(', ')}`);
+        } else {
+            console.log(`📋 Kritériá poradia: predvolené (body, +/-, strelené góly, abeceda)`);
+        }
+        
         console.log('='.repeat(110) + '\n');
     }
     
@@ -336,6 +493,12 @@
             return;
         }
         
+        // Načítame nastavenia poradia
+        await loadTableSettings();
+        
+        // Spustíme sledovanie zmien nastavení poradia
+        const unsubscribeSettings = subscribeToTableSettings();
+        
         const matchesRef = collection(window.db, 'matches');
         
         unsubscribeMatches = onSnapshot(matchesRef, (snapshot) => {
@@ -385,6 +548,9 @@
         setTimeout(() => {
             printAllGroupTables();
         }, 2000);
+        
+        // Uložíme unsubscribe pre prípad potreby
+        window.__unsubscribeTableSettings = unsubscribeSettings;
     }
     
     // Sledovanie udalostí pre konkrétny zápas
@@ -463,6 +629,11 @@
         });
         unsubscribeEvents = {};
         
+        if (window.__unsubscribeTableSettings) {
+            window.__unsubscribeTableSettings();
+            window.__unsubscribeTableSettings = null;
+        }
+        
         matchesData = {};
         eventsData = {};
         
@@ -480,6 +651,7 @@
         createGroupTable: createGroupTable,
         getMatchDetails: getMatchDetails,
         getCompletedMatches: getCompletedMatches,
+        getSortingConditions: () => tableSettings.sortingConditions,
         getMatches: () => matchesData,
         getEvents: (matchId) => eventsData[matchId] || []
     };
@@ -492,6 +664,7 @@
     console.log('   • window.matchTracker.printGroupTable("kategória", "skupina") - výpis tabuľky pre konkrétnu skupinu');
     console.log('   • window.matchTracker.printCompleted() - výpis odohraných zápasov');
     console.log('   • window.matchTracker.createGroupTable("kategória", "skupina") - získanie tabuľky ako objekt');
+    console.log('   • window.matchTracker.getSortingConditions() - získanie aktuálnych kritérií poradia');
     console.log('   • window.matchTracker.refresh() - obnovenie výpisu');
     console.log('   • window.matchTracker.stop() - zastavenie sledovania');
     
