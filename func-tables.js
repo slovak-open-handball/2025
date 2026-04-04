@@ -1649,7 +1649,7 @@ if (window.matchTracker) {
 let periodicReplaceInterval = null;
 let periodicReplaceActive = true;
 
-function startPeriodicReplacement(intervalSeconds = 30) {
+function startPeriodicReplacement(intervalSeconds = 1) {
     if (periodicReplaceInterval) {
         clearInterval(periodicReplaceInterval);
     }
@@ -1894,7 +1894,7 @@ async function startTeamNameReplacement() {
             replaceTeamIdentifiersWhenReady();
             
             // 🔴 SPUSTENIE PERIODICKÉHO NAHRÁDZANIA (každých 30 sekúnd)
-            startPeriodicReplacement(30);
+            startPeriodicReplacement(1);
         }
     }, 500);
     
@@ -1903,7 +1903,7 @@ async function startTeamNameReplacement() {
         if (!window.matchTracker) {
             console.log('⚠️ MatchTracker nie je dostupný');
             replaceTeamIdentifiersWhenReady();
-            startPeriodicReplacement(30);
+            startPeriodicReplacement(1);
         }
     }, 10000);
     attachClickHandlersForReplacement();
