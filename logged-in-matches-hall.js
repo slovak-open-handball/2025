@@ -3176,13 +3176,13 @@ const matchesHallApp = ({ userProfileData }) => {
                                     onClickHandler = () => restorePlayerToRoster(player, teamType, teamDetails);
                                     cursorClass = 'cursor-pointer';
                                     hoverClass = 'hover:bg-blue-50';
-                                    titleText = 'Kliknite pre obnovenie do súpisky';
+                                    titleText = '';
                                 } else if (isMatchInProgress || isMatchCompleted) {
                                     // Pri prebiehajúcom alebo ukončenom zápase - žiadne kliknutie, iba zobrazenie
                                     onClickHandler = undefined;
                                     cursorClass = 'cursor-not-allowed';
                                     hoverClass = '';
-                                    titleText = isMatchCompleted ? 'Zápas je ukončený' : 'Nie je možné obnoviť počas prebiehajúceho zápasu';
+                                    titleText = '';
                                 }
                                 
                                 return React.createElement(
@@ -3226,12 +3226,12 @@ const matchesHallApp = ({ userProfileData }) => {
                                 onClickHandler = () => restoreStaffToRoster(member, teamType, teamDetails, 'men');
                                 cursorClass = 'cursor-pointer';
                                 hoverClass = 'hover:bg-blue-50';
-                                titleText = 'Kliknite pre obnovenie do súpisky';
+                                titleText = '';
                             } else if (isMatchInProgress || isMatchCompleted) {
                                 onClickHandler = undefined;
                                 cursorClass = 'cursor-not-allowed';
                                 hoverClass = '';
-                                titleText = isMatchCompleted ? 'Zápas je ukončený' : 'Nie je možné obnoviť počas prebiehajúceho zápasu';
+                                titleText = '';
                             }
                             
                             return React.createElement(
@@ -3269,12 +3269,12 @@ const matchesHallApp = ({ userProfileData }) => {
                                 onClickHandler = () => restoreStaffToRoster(member, teamType, teamDetails, 'women');
                                 cursorClass = 'cursor-pointer';
                                 hoverClass = 'hover:bg-blue-50';
-                                titleText = 'Kliknite pre obnovenie do súpisky';
+                                titleText = '';
                             } else if (isMatchInProgress || isMatchCompleted) {
                                 onClickHandler = undefined;
                                 cursorClass = 'cursor-not-allowed';
                                 hoverClass = '';
-                                titleText = isMatchCompleted ? 'Zápas je ukončený' : 'Nie je možné obnoviť počas prebiehajúceho zápasu';
+                                titleText = '';
                             }
                             
                             return React.createElement(
