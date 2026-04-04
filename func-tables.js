@@ -1009,50 +1009,90 @@ function getTeamInfoByDisplayId(displayId) {
     return null;
 }
 
-// Aktualizujeme funkciu extractIdentifiersFromText, aby správne parsovala identifikátory
+// Aktualizovaná funkcia extractIdentifiersFromText - lepšie filtrovanie
 function extractIdentifiersFromText(text) {
-    // Regulárny výraz na nájdenie identifikátorov - teraz akceptuje aj "VS" v názve kategórie
-    const teamIdPattern = /(?<!\S)([A-Za-z0-9\s]+?)\s+(\d+[A-Za-z])(?!\S)/g;
+    // Regulárny výraz na nájdenie identifikátorov - musí začínať písmenom a obsahovať medzeru pred číslom+písmenom
+    const teamIdPattern = /(?<![A-Za-z0-9])([A-Za-z][A-Za-z0-9\s]*?)\s+(\d+[A-Za-z])(?![A-Za-z0-9])/g;
     const identifiers = [];
     let match;
     
-    teamIdPattern.lastIndex = 0;
-    while ((match = teamIdPattern.exec(text)) !== null) {
-        let categoryPart = match[1].trim();
-        const numberLetter = match[2];
-        
-        // 🔴 ODSTRÁNIME "VS" Z NÁZVU KATEGÓRIE PRE VYHĽADÁVANIE
-        const originalCategory = categoryPart;
-        categoryPart = cleanCategoryName(categoryPart);
-        
-        const identifier = `${categoryPart} ${numberLetter}`;
-        
-        // Extrahujeme pozíciu a písmeno skupiny
-        let position = '';
-        let groupLetter = '';
-        for (let i = 0; i < numberLetter.length; i++) {
-            const char = numberLetter[i];
-            if (char >= '0' && char <= '9') {
-                position += char;
-            } else if (/[A-Za-z]/.test(char)) {
-                groupLetter += char;
+    // Rozdelíme text na riadky a spracujeme každý zvlášť
+    const lines = text.split(/\r?\n/);
+    
+    for (const line of lines) {
+        teamIdPattern.lastIndex = 0;
+        while ((match = teamIdPattern.exec(line)) !== null) {
+            let categoryPart = match[1].trim();
+            const numberLetter = match[2];
+            
+            // Kontrola, či categoryPart neobsahuje nežiaduce slová
+            const unwantedWords = ['zápas', 'udalosti', 'priebeh', 'skupina', 'tím', 'kategória', 'vs', 'VS'];
+            let skip = false;
+            for (const word of unwantedWords) {
+                if (categoryPart.toLowerCase().includes(word.toLowerCase())) {
+                    skip = true;
+                    break;
+                }
             }
+            if (skip) continue;
+            
+            // Kontrola, či categoryPart začína písmenom a číslom (napr. U12, U10)
+            if (!/^[A-Za-z]+\d+/.test(categoryPart) && !/^[A-Za-z]+\s+[A-Za-z]+\d+/.test(categoryPart)) {
+                // Možno je to ešte validný formát (napr. "U12 D")
+                if (!/^[A-Za-z0-9\s]+$/.test(categoryPart)) {
+                    continue;
+                }
+            }
+            
+            // Odstránime "VS" z názvu kategórie
+            const originalCategory = categoryPart;
+            categoryPart = cleanCategoryName(categoryPart);
+            
+            // Kontrola, či po očistení nie je prázdny reťazec
+            if (!categoryPart || categoryPart.length < 2) continue;
+            
+            const identifier = `${categoryPart} ${numberLetter}`;
+            
+            // Extrahujeme pozíciu a písmeno skupiny
+            let position = '';
+            let groupLetter = '';
+            for (let i = 0; i < numberLetter.length; i++) {
+                const char = numberLetter[i];
+                if (char >= '0' && char <= '9') {
+                    position += char;
+                } else if (/[A-Za-z]/.test(char)) {
+                    groupLetter += char;
+                }
+            }
+            
+            if (!position || !groupLetter) continue;
+            
+            identifiers.push({
+                identifier: identifier,
+                originalIdentifier: `${originalCategory} ${numberLetter}`,
+                category: categoryPart,
+                originalCategory: originalCategory,
+                position: parseInt(position, 10),
+                groupLetter: groupLetter.toUpperCase(),
+                fullMatch: match[0],
+                startIndex: match.index,
+                endIndex: match.index + match[0].length
+            });
         }
-        
-        identifiers.push({
-            identifier: identifier,
-            originalIdentifier: `${originalCategory} ${numberLetter}`,
-            category: categoryPart,
-            originalCategory: originalCategory,
-            position: parseInt(position, 10),
-            groupLetter: groupLetter.toUpperCase(),
-            fullMatch: match[0],
-            startIndex: match.index,
-            endIndex: match.index + match[0].length
-        });
     }
     
-    return identifiers;
+    // Odstránime duplicitné identifikátory
+    const uniqueIdentifiers = [];
+    const seen = new Set();
+    for (const id of identifiers) {
+        const key = `${id.category}|${id.groupLetter}|${id.position}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            uniqueIdentifiers.push(id);
+        }
+    }
+    
+    return uniqueIdentifiers;
 }
 
 // Aktualizovaná funkcia isGroupReadyForReplacement - ak skupina nemá žiadne zápasy, považuje sa za pripravenú
@@ -1088,7 +1128,7 @@ function isGroupReadyForReplacement(category, groupLetter) {
     return true;
 }
 
-// Aktualizujeme funkciu performPartialReplacement, aby ukladala pôvodný identifikátor
+// Aktualizovaná funkcia performPartialReplacement
 function performPartialReplacement(identifiersToReplace) {
     console.log(`🔍 Spúšťam čiastočné nahrádzanie (${identifiersToReplace.length} identifikátorov)...`);
     
@@ -1096,122 +1136,57 @@ function performPartialReplacement(identifiersToReplace) {
     let failedCount = 0;
     const failedIdentifiers = [];
     
-    // Získame všetky elementy, ktoré môžu obsahovať identifikátory
-    const targetElements = document.querySelectorAll('.team-name, .font-medium.text-gray-800, .text-xl.font-bold, [class*="team"], [class*="Team"]');
-    
-    if (targetElements.length > 0) {
-        targetElements.forEach(element => {
-            let originalText = element.textContent;
-            let modified = false;
-            let newText = originalText;
-            
-            for (const idInfo of identifiersToReplace) {
-                // Hľadáme pôvodný identifikátor (s "VS" ak bol) aj očistený
-                const regexOriginal = new RegExp(`(?<![A-Za-z0-9])${idInfo.originalIdentifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z0-9])`, 'g');
-                const regexClean = new RegExp(`(?<![A-Za-z0-9])${idInfo.identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z0-9])`, 'g');
-                
-                let teamName = null;
-                let matchedIdentifier = null;
-                
-                // Skúsime najprv pôvodný identifikátor
-                if (regexOriginal.test(originalText)) {
-                    regexOriginal.lastIndex = 0;
-                    teamName = window.matchTracker?.getTeamNameByDisplayId?.(idInfo.identifier);
-                    matchedIdentifier = idInfo.originalIdentifier;
-                } 
-                // Potom očistený
-                else if (regexClean.test(originalText)) {
-                    regexClean.lastIndex = 0;
-                    teamName = window.matchTracker?.getTeamNameByDisplayId?.(idInfo.identifier);
-                    matchedIdentifier = idInfo.identifier;
-                }
-                
-                if (teamName && teamName !== matchedIdentifier) {
-                    // Nahradíme všetky výskyty
-                    const regexToReplace = new RegExp(`(?<![A-Za-z0-9])${matchedIdentifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z0-9])`, 'g');
-                    newText = newText.replace(regexToReplace, teamName);
-                    modified = true;
-                    replacedCount++;
-                    console.log(`✅ Nahradený: "${matchedIdentifier}" → "${teamName}"`);
-                    
-                    // Uložíme pôvodný identifikátor do atribútu
-                    element.setAttribute('data-original-identifier', idInfo.identifier);
-                    element.setAttribute('data-original-category', idInfo.originalCategory);
-                    element.setAttribute('data-team-category', idInfo.category);
-                    element.setAttribute('data-team-position', idInfo.position);
-                    element.setAttribute('data-team-group', idInfo.groupLetter);
-                    element.setAttribute('data-team-name', teamName);
-                } else if (!teamName) {
-                    failedCount++;
-                    failedIdentifiers.push(matchedIdentifier || idInfo.identifier);
-                    console.log(`❌ Nenahradený: "${matchedIdentifier || idInfo.identifier}" (tím nebol nájdený)`);
-                }
-            }
-            
-            if (modified && newText !== originalText) {
-                element.textContent = newText;
-            }
-        });
-    } else {
-        // Fallback pre textové uzly (rovnaká logika)
-        const walker = document.createTreeWalker(
-            document.body,
-            NodeFilter.SHOW_TEXT,
-            {
-                acceptNode: function(node) {
-                    if (node.parentElement.tagName === 'SCRIPT' || 
-                        node.parentElement.tagName === 'STYLE' ||
-                        node.parentElement.tagName === 'CODE') {
-                        return NodeFilter.FILTER_REJECT;
-                    }
-                    return NodeFilter.FILTER_ACCEPT;
-                }
-            }
-        );
+    // Pre každý identifikátor skúsime nájsť zodpovedajúci element
+    for (const idInfo of identifiersToReplace) {
+        let teamName = null;
         
-        const nodesToProcess = [];
-        while (walker.nextNode()) {
-            nodesToProcess.push(walker.currentNode);
+        // Skúsime získať názov tímu
+        teamName = window.matchTracker?.getTeamNameByDisplayId?.(idInfo.identifier);
+        
+        if (!teamName) {
+            // Skúsime aj s pôvodným identifikátorom
+            teamName = window.matchTracker?.getTeamNameByDisplayId?.(idInfo.originalIdentifier);
         }
         
-        nodesToProcess.forEach(node => {
-            let originalText = node.textContent;
-            let modified = false;
-            let newText = originalText;
+        if (teamName && teamName !== idInfo.identifier && teamName !== idInfo.originalIdentifier) {
+            // Hľadáme element, ktorý obsahuje tento identifikátor
+            const escapedIdentifier = idInfo.originalIdentifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const elements = document.querySelectorAll(`*`);
+            let found = false;
             
-            for (const idInfo of identifiersToReplace) {
-                const regexOriginal = new RegExp(`(?<![A-Za-z0-9])${idInfo.originalIdentifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z0-9])`, 'g');
-                const regexClean = new RegExp(`(?<![A-Za-z0-9])${idInfo.identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z0-9])`, 'g');
-                
-                let teamName = null;
-                let matchedIdentifier = null;
-                
-                if (regexOriginal.test(originalText)) {
-                    regexOriginal.lastIndex = 0;
-                    teamName = window.matchTracker?.getTeamNameByDisplayId?.(idInfo.identifier);
-                    matchedIdentifier = idInfo.originalIdentifier;
-                } else if (regexClean.test(originalText)) {
-                    regexClean.lastIndex = 0;
-                    teamName = window.matchTracker?.getTeamNameByDisplayId?.(idInfo.identifier);
-                    matchedIdentifier = idInfo.identifier;
-                }
-                
-                if (teamName && teamName !== matchedIdentifier) {
-                    const regexToReplace = new RegExp(`(?<![A-Za-z0-9])${matchedIdentifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z0-9])`, 'g');
-                    newText = newText.replace(regexToReplace, teamName);
-                    modified = true;
-                    replacedCount++;
-                    console.log(`✅ Nahradený (fallback): "${matchedIdentifier}" → "${teamName}"`);
-                } else if (!teamName) {
-                    failedCount++;
-                    failedIdentifiers.push(matchedIdentifier || idInfo.identifier);
+            for (const element of elements) {
+                if (element.children.length > 0) continue; // Preskočíme elementy s deťmi
+                const text = element.textContent;
+                if (text && text.includes(idInfo.originalIdentifier)) {
+                    const newText = text.replace(new RegExp(escapedIdentifier, 'g'), teamName);
+                    if (newText !== text) {
+                        element.textContent = newText;
+                        found = true;
+                        replacedCount++;
+                        console.log(`✅ Nahradený: "${idInfo.originalIdentifier}" → "${teamName}"`);
+                        
+                        // Uložíme atribúty
+                        element.setAttribute('data-original-identifier', idInfo.identifier);
+                        element.setAttribute('data-original-category', idInfo.originalCategory);
+                        element.setAttribute('data-team-category', idInfo.category);
+                        element.setAttribute('data-team-position', idInfo.position);
+                        element.setAttribute('data-team-group', idInfo.groupLetter);
+                        element.setAttribute('data-team-name', teamName);
+                        break;
+                    }
                 }
             }
             
-            if (modified && newText !== originalText) {
-                node.textContent = newText;
+            if (!found) {
+                failedCount++;
+                failedIdentifiers.push(idInfo.originalIdentifier);
+                console.log(`❌ Nenahradený: "${idInfo.originalIdentifier}" (element nenájdený)`);
             }
-        });
+        } else if (!teamName) {
+            failedCount++;
+            failedIdentifiers.push(idInfo.originalIdentifier);
+            console.log(`❌ Nenahradený: "${idInfo.originalIdentifier}" (tím nebol nájdený)`);
+        }
     }
     
     console.log('\n' + '='.repeat(60));
