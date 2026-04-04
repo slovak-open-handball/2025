@@ -969,13 +969,13 @@ console.log('   • window.matchTracker.getTeamInfoByDisplayId("U12 D 2B") - vr�
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-// Funkcia na nahradenie identifikátorov tímov na stránke (zachováva identifikátory v dátových atribútoch)
+// Funkcia na nahradenie identifikátorov tímov na stránke (zachováva medzery)
 function replaceTeamIdentifiersOnPage() {
     console.log('🔍 Spúšťam vyhľadávanie identifikátorov tímov na stránke...');
     
-    // Regulárny výraz na nájdenie identifikátorov vo formáte:
-    // "U12 D 2B", "U10 CH 1A", "U14 C 3E" atď.
-    const teamIdPattern = /([A-Za-z0-9\s]+?)\s+(\d+[A-Za-z])/g;
+    // Regulárny výraz na nájdenie identifikátorov - zachytáva aj medzeru pred nimi
+    // Používame lookbehind (?<!\S) aby sme nezachytili medzeru
+    const teamIdPattern = /(?<!\S)([A-Za-z0-9\s]+?)\s+(\d+[A-Za-z])(?!\S)/g;
     
     let foundCount = 0;
     let replacedCount = 0;
@@ -983,10 +983,8 @@ function replaceTeamIdentifiersOnPage() {
     const failedIdentifiers = [];
     
     // Získame všetky elementy, ktoré môžu obsahovať identifikátory tímov
-    // Namiesto textových uzlov budeme pracovať priamo s elementmi, ktoré majú triedy ako "team-name", "font-medium" atď.
     const targetElements = document.querySelectorAll('.team-name, .font-medium.text-gray-800, .text-xl.font-bold, [class*="team"], [class*="Team"]');
     
-    // Ak nemáme špecifické elementy, použijeme všetky textové uzly ako fallback
     let elementsToProcess = targetElements.length > 0 ? targetElements : null;
     
     if (elementsToProcess) {
@@ -1045,7 +1043,6 @@ function replaceTeamIdentifiersOnPage() {
             matches.forEach(matchInfo => {
                 foundCount++;
                 
-                // Skúsime získať názov tímu
                 const teamName = window.matchTracker?.getTeamNameByDisplayId?.(matchInfo.identifier);
                 
                 if (teamName && teamName !== matchInfo.identifier) {
@@ -1055,7 +1052,7 @@ function replaceTeamIdentifiersOnPage() {
                     element.setAttribute('data-team-position', matchInfo.position);
                     element.setAttribute('data-team-group', matchInfo.groupLetter);
                     
-                    // Nahradíme identifikátor názvom tímu
+                    // Nahradíme identifikátor názvom tímu (zachováme medzeru pred ním)
                     const before = newHtml.substring(0, matchInfo.startIndex);
                     const after = newHtml.substring(matchInfo.endIndex);
                     newHtml = before + teamName + after;
