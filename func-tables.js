@@ -140,34 +140,6 @@
             console.log(`   ⚽ ${homeTeamName} (${match.homeTeamIdentifier}) vs ${awayTeamName} (${match.awayTeamIdentifier})`);
             console.log(`   📊 Stav: ${getStatusText(match.status)}`);
             console.log(`   🥅 Skóre: ${homeScore} : ${awayScore}`);
-            if (timeDisplay) console.log(`   ${timeDisplay}`);
-            if (match.currentPeriod) console.log(`   🔄 Perióda: ${match.currentPeriod}`);
-            console.log(`   📈 Počet udalostí: ${events.length}`);
-            
-            // Výpis posledných 5 udalostí
-            if (events.length > 0) {
-                const lastEvents = [...events].sort((a, b) => {
-                    if (a.minute !== b.minute) return (b.minute || 0) - (a.minute || 0);
-                    return (b.second || 0) - (a.second || 0);
-                }).slice(0, 5);
-                
-                console.log(`   📋 Posledné udalosti:`);
-                lastEvents.forEach(event => {
-                    const time = `${String(event.minute || 0).padStart(2, '0')}:${String(event.second || 0).padStart(2, '0')}`;
-                    let eventText = '';
-                    switch (event.type) {
-                        case 'goal': eventText = `⚽ GÓL (${event.team === 'home' ? 'domáci' : 'hostia'})`; break;
-                        case 'penalty': eventText = `🎯 7m ${event.subType === 'scored' ? 'PREMENENÁ' : 'NEPREMENENÁ'} (${event.team === 'home' ? 'domáci' : 'hostia'})`; break;
-                        case 'yellow': eventText = `🟨 ŽK (${event.team === 'home' ? 'domáci' : 'hostia'})`; break;
-                        case 'red': eventText = `🟥 ČK (${event.team === 'home' ? 'domáci' : 'hostia'})`; break;
-                        case 'blue': eventText = `🔵 MK (${event.team === 'home' ? 'domáci' : 'hostia'})`; break;
-                        case 'exclusion': eventText = `⏱️ Vylúčenie (${event.team === 'home' ? 'domáci' : 'hostia'})`; break;
-                        default: eventText = event.type;
-                    }
-                    const scoreInfo = event.scoreAfter ? ` (${event.scoreAfter.home}:${event.scoreAfter.away})` : '';
-                    console.log(`      • ${time} - ${eventText}${scoreInfo}`);
-                });
-            }
         });
         
         console.log('\n' + '='.repeat(80));
