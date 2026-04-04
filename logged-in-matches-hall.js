@@ -6444,7 +6444,7 @@ if (window.globalUserProfileData) {
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-// Funkcia na získanie názvu tímu podľa displayId z tabuľky skupiny (LEN pri 100% odohraných zápasov)
+// Funkcia na získanie názvu tímu podľa displayId z tabuľky skupiny (LEN PRI 100% ODOHRANÝCH ZÁPASOCH)
 function getTeamNameByDisplayId(displayId) {
     if (!displayId) {
         console.log('❌ Nebol zadaný identifikátor tímu');
@@ -6487,11 +6487,37 @@ function getTeamNameByDisplayId(displayId) {
     
     console.log(`🔍 Hľadám tím: kategória="${category}", skupina="${fullGroupName}", pozícia=${positionNum}`);
     
-    // VYTVORÍME TABUĽKU SKUPINY A VYHĽADÁME V NIEJ
+    // 1. NAJPRV SKÚSIME VYHĽADAŤ V POUŽÍVATEĽSKÝCH TÍMOCH (user teams)
+    // Získame všetky tímy z používateľov (cez window.users alebo window.__teamManagerData)
+    let userTeamsList = [];
+    
+    // Skúsime získať z window.__teamManagerData (najspoľahlivejšie)
+    if (window.__teamManagerData?.allTeams) {
+        userTeamsList = window.__teamManagerData.allTeams.filter(t => !t.isSuperstructureTeam);
+    } 
+    // Alebo z globálnej premennej ak je dostupná
+    else if (window.allUsersTeams) {
+        userTeamsList = window.allUsersTeams;
+    }
+    
+    if (userTeamsList.length > 0) {
+        // Hľadáme tím podľa kategórie, skupiny a poradia
+        const userTeam = userTeamsList.find(t => 
+            t.category === category && 
+            t.groupName === fullGroupName && 
+            t.order === positionNum
+        );
+        
+        if (userTeam && userTeam.teamName) {
+            console.log(`✅ Nájdený používateľský tím: ${userTeam.teamName}`);
+            return userTeam.teamName;
+        }
+    }
+    
+    // 2. AK NENÁJDENÝ, SKÚSIME SUPERSTRUCTURE TÍMY
     const groupTable = window.matchTracker?.createGroupTable(category, fullGroupName);
     
     if (groupTable && groupTable.teams && groupTable.teams.length > 0) {
-        // SKONTROLUJEME, ČI SÚ VŠETKY ZÁPASY V SKUPINE ODOHRANÉ (100%)
         const totalMatches = groupTable.totalMatches || 0;
         const completedMatches = groupTable.completedCount || 0;
         const completionPercentage = totalMatches > 0 ? (completedMatches / totalMatches * 100) : 0;
@@ -6504,20 +6530,29 @@ function getTeamNameByDisplayId(displayId) {
             return null;
         }
         
-        // Získame tím na danej pozícii (positionNum je 1-based index v tabuľke)
         const teamIndex = positionNum - 1;
-        
         if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
-            const team = groupTable.teams[teamIndex];
-            console.log(`✅ Nájdený tím (z tabuľky skupiny): ${team.name} (pozícia ${positionNum} v skupine ${fullGroupName})`);
-            return team.name;
-        } else {
-            console.log(`❌ V skupine ${fullGroupName} je len ${groupTable.teams.length} tímov, pozícia ${positionNum} neexistuje`);
-            return null;
+            const superstructureTeam = groupTable.teams[teamIndex];
+            
+            // Ak je to superstructure tím, skúsime ešte raz vyhľadať používateľský tím podľa názvu
+            if (superstructureTeam.name && superstructureTeam.name !== displayId) {
+                // Skúsime nájsť používateľský tím s rovnakým názvom
+                const matchingUserTeam = userTeamsList.find(t => 
+                    t.teamName === superstructureTeam.name
+                );
+                
+                if (matchingUserTeam) {
+                    console.log(`✅ Nájdený používateľský tím (podľa názvu): ${matchingUserTeam.teamName}`);
+                    return matchingUserTeam.teamName;
+                }
+                
+                console.log(`✅ Nájdený superstructure tím: ${superstructureTeam.name} (pozícia ${positionNum} v skupine ${fullGroupName})`);
+                return superstructureTeam.name;
+            }
         }
     }
     
-    console.log(`❌ Tabuľka pre skupinu ${fullGroupName} v kategórii ${category} nebola nájdená`);
+    console.log(`❌ Tím nebol nájdený: ${displayId}`);
     return null;
 }
 
