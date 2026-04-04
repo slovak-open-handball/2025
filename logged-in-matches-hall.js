@@ -4215,9 +4215,9 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     eventIcon = React.createElement('i', { className: 'fa-solid fa-futbol text-black text-sm' });
                                                     break;
                                                 case 'penalty':
-                                                    eventIcon = React.createElement('div', { className: 'flex items-center gap-0.5' },
+                                                    eventIcon = React.createElement('div', { className: 'flex flex-col items-center justify-center leading-none' },
                                                         React.createElement('i', { className: `fa-solid fa-futbol ${event.subType === 'scored' ? 'text-green-600' : 'text-red-600'} text-sm` }),
-                                                        React.createElement('span', { className: `text-[10px] font-bold ${event.subType === 'scored' ? 'text-green-600' : 'text-red-600'}` }, '7m')
+                                                        React.createElement('span', { className: `text-[8px] font-bold ${event.subType === 'scored' ? 'text-green-600' : 'text-red-600'} -mt-0.5` }, '7m')
                                                     );
                                                     break;
                                                 case 'yellow':
@@ -5290,9 +5290,9 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     eventIcon = React.createElement('i', { className: 'fa-solid fa-futbol text-black text-sm' });
                                                     break;
                                                 case 'penalty':
-                                                    eventIcon = React.createElement('div', { className: 'flex items-center gap-0.5' },
+                                                    eventIcon = React.createElement('div', { className: 'flex flex-col items-center justify-center leading-none' },
                                                         React.createElement('i', { className: `fa-solid fa-futbol ${event.subType === 'scored' ? 'text-green-600' : 'text-red-600'} text-sm` }),
-                                                        React.createElement('span', { className: `text-[10px] font-bold ${event.subType === 'scored' ? 'text-green-600' : 'text-red-600'}` }, '7m')
+                                                        React.createElement('span', { className: `text-[8px] font-bold ${event.subType === 'scored' ? 'text-green-600' : 'text-red-600'} -mt-0.5` }, '7m')
                                                     );
                                                     break;
                                                 case 'yellow':
