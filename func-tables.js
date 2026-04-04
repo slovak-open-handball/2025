@@ -1840,6 +1840,42 @@ function stopPeriodicReplacement() {
     }
 }
 
+// ** FUNKCIA NA OBSLUHU KLIKNUTÍ NA TLAČIDLÁ **
+function attachClickHandlersForReplacement() {
+    console.log('🖱️ Nastavujem poslúchače na tlačidlá pre opätovné nahrádzanie...');
+    
+    // Funkcia na spustenie nahrádzania po krátkom oneskorení
+    const scheduleReplacement = () => {
+        setTimeout(() => {
+            console.log('🔄 Kliknutie na tlačidlo, spúšťam nahrádzanie...');
+            replaceAllIdentifiersNow();
+        }, 300);
+    };
+    
+    // Sledujeme kliknutia na celom dokumente
+    document.body.addEventListener('click', (event) => {
+        // Hľadáme tlačidlá, ktoré menia view
+        const button = event.target.closest('button');
+        if (button) {
+            const buttonText = button.textContent || '';
+            // Tlačidlá, ktoré menia obsah
+            if (buttonText.includes('Všetky zápasy') || 
+                buttonText.includes('Detail') ||
+                buttonText.includes('Predchádzajúci') ||
+                buttonText.includes('Nasledujúci') ||
+                button.closest('.cursor-pointer')?.getAttribute('onclick')?.includes('selectMatch')) {
+                scheduleReplacement();
+            }
+        }
+        
+        // Kliknutie na div so zápasom (selectMatch)
+        const matchDiv = event.target.closest('[class*="cursor-pointer"]');
+        if (matchDiv && matchDiv.closest('.divide-y')) {
+            scheduleReplacement();
+        }
+    });
+}
+
 // Funkcia na spustenie sledovania - BEZ čakania na všetky skupiny
 async function startTeamNameReplacement() {
     console.log('🚀 Spúšťam automatické nahrádzanie identifikátorov tímov...');
@@ -1870,6 +1906,7 @@ async function startTeamNameReplacement() {
             startPeriodicReplacement(30);
         }
     }, 10000);
+    attachClickHandlersForReplacement();
 }
 
 // Jednorazové spustenie
@@ -2014,3 +2051,5 @@ function addToCache(displayId, teamName) {
 }
 
 window.teamNameReplacer.addToCache = addToCache;
+
+
