@@ -2685,85 +2685,12 @@ const matchesHallApp = ({ userProfileData }) => {
         return identifier;
     };
 
-    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA - POUŽÍVA ROVNAKÚ LOGIKU AKO teamManager
+    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
-    
-        // 1. Skúsime teamManager
-        if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-            const teamName = window.teamManager.getTeamNameByDisplayIdSync(identifier);
-            if (teamName) return teamName;
-        }
         
-        // 2. Skúsime window.__teamManagerData
-        if (window.__teamManagerData?.allTeams) {
-            // Vytvoríme displayId rovnakým spôsobom ako v teamManager
-            const parts = identifier.split(' ');
-            if (parts.length >= 2) {
-                const groupAndOrder = parts.pop();
-                const category = parts.join(' ');
-                
-                let groupLetter = '';
-                let order = '';
-                for (let i = 0; i < groupAndOrder.length; i++) {
-                    const char = groupAndOrder[i];
-                    if (char >= '0' && char <= '9') {
-                        order = groupAndOrder.substring(i);
-                        groupLetter = groupAndOrder.substring(0, i);
-                        break;
-                    }
-                }
-                
-                const team = window.__teamManagerData.allTeams.find(t => 
-                    t.category === category && 
-                    t.groupName === `skupina ${groupLetter}` && 
-                    t.order === parseInt(order, 10)
-                );
-                
-                if (team && team.teamName) return team.teamName;
-            }
-        }
-        
-        // FALLBACK 1: Manuálne vyhľadávanie v používateľoch
-        const parts = identifier.split(' ');
-        if (parts.length >= 2) {
-            const groupAndOrder = parts.pop();
-            const category = parts.join(' ');
-            
-            let groupLetter = '';
-            let order = '';
-            for (let i = 0; i < groupAndOrder.length; i++) {
-                const char = groupAndOrder[i];
-                if (char >= '0' && char <= '9') {
-                    order = groupAndOrder.substring(i);
-                    groupLetter = groupAndOrder.substring(0, i);
-                    break;
-                }
-            }
-            
-            if (order) {
-                const fullGroupName = `skupina ${groupLetter}`;
-                const orderNum = parseInt(order, 10);
-                
-                for (const user of users) {
-                    if (!user.teams) continue;
-                    const userTeams = user.teams[category];
-                    if (!userTeams || !Array.isArray(userTeams)) continue;
-                    
-                    const team = userTeams.find(t => 
-                        t.groupName === fullGroupName && 
-                        t.order === orderNum
-                    );
-                    
-                    if (team && team.teamName) {
-                        return team.teamName;
-                    }
-                }
-            }
-        }
-        
-        // FALLBACK 2: Skúsime superstructureTeams priamo
-        if (window.superstructureTeams) {
+        // 1. Najprv skúsime použiť window.superstructureTeams (ak je už načítaný)
+        if (window.superstructureTeams && Object.keys(window.superstructureTeams).length > 0) {
             const parts = identifier.split(' ');
             if (parts.length >= 2) {
                 const groupAndOrder = parts.pop();
@@ -2798,7 +2725,47 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        // Ak nič nenašlo, vrátime identifikátor
+        // 2. Skúsime vyhľadať v používateľoch (user teams)
+        if (users && users.length > 0) {
+            const parts = identifier.split(' ');
+            if (parts.length >= 2) {
+                const groupAndOrder = parts.pop();
+                const category = parts.join(' ');
+                
+                let groupLetter = '';
+                let order = '';
+                for (let i = 0; i < groupAndOrder.length; i++) {
+                    const char = groupAndOrder[i];
+                    if (char >= '0' && char <= '9') {
+                        order = groupAndOrder.substring(i);
+                        groupLetter = groupAndOrder.substring(0, i);
+                        break;
+                    }
+                }
+                
+                if (order) {
+                    const fullGroupName = `skupina ${groupLetter}`;
+                    const orderNum = parseInt(order, 10);
+                    
+                    for (const user of users) {
+                        if (!user.teams) continue;
+                        const userTeams = user.teams[category];
+                        if (!userTeams || !Array.isArray(userTeams)) continue;
+                        
+                        const team = userTeams.find(t => 
+                            t.groupName === fullGroupName && 
+                            t.order === orderNum
+                        );
+                        
+                        if (team && team.teamName) {
+                            return team.teamName;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 3. Ak nič nenašlo, vrátime identifikátor
         return identifier;
     };
 
