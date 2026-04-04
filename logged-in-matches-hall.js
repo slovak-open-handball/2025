@@ -6673,11 +6673,3 @@ window.showMatchInfo = async () => {
     }
     return details;
 };
-
-
-
-
-
-
-
-
