@@ -6072,17 +6072,6 @@ const ResetMatchModal = ({ isOpen, onClose, onConfirm, onConfirmWithDelete, titl
                     },
                     'Zrušiť'
                 ),
-//                React.createElement(
-//                    'button',
-//                    {
-//                        onClick: () => {
-//                            onConfirm();
-//                            onClose();
-//                        },
-//                        className: 'px-4 py-2 text-white bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors'
-//                    },
-//                    'Len reset'
-//                ),
                 React.createElement(
                     'button',
                     {
