@@ -48,19 +48,19 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// Pridajte tento CSS pre plávajúci box (za existujúce štýly)
+// Nahraďte existujúci floatingBoxStyle týmto:
 const floatingBoxStyle = document.createElement('style');
 floatingBoxStyle.textContent = `
     .floating-score-box {
         position: fixed;
         top: 20px;
         left: 50%;
-        transform: translateX(-50%) translateY(-100px);
+        transform: translateX(-50%) translateY(-150px);
         background: white;
         border-radius: 50px;
         padding: 8px 24px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-        z-index: 1000;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        z-index: 9999;
         display: flex;
         align-items: center;
         gap: 20px;
@@ -68,6 +68,8 @@ floatingBoxStyle.textContent = `
         transition: transform 0.3s ease, opacity 0.3s ease;
         border: 1px solid #e5e7eb;
         pointer-events: none;
+        backdrop-filter: blur(4px);
+        background-color: rgba(255, 255, 255, 0.95);
     }
     
     .floating-score-box.visible {
@@ -1790,18 +1792,35 @@ const matchesHallApp = ({ userProfileData }) => {
 
     useEffect(() => {
         const handleScroll = () => {
-            // Získame pozíciu boxu s priebehom zápasu
-            const matchProgressSection = document.querySelector('.match-progress-section');
+            // Skúsime nájsť element viacerými spôsobmi
+            let matchProgressSection = document.querySelector('.match-progress-section');
+            
+            // Ak nenájde, skúsime nájsť podľa iných selektorov
+            if (!matchProgressSection) {
+                matchProgressSection = document.querySelector('.col-span-2.bg-gray-50.rounded-lg.p-4');
+            }
+            if (!matchProgressSection) {
+                matchProgressSection = document.querySelector('.mt-6.bg-gray-50.rounded-lg.p-4');
+            }
+            
             if (matchProgressSection) {
                 const rect = matchProgressSection.getBoundingClientRect();
+                console.log('Match progress section position:', rect.top); // Pre ladenie
                 // Ak je box s priebehom zápasu mimo viewport (hore), zobrazíme plávajúci box
-                if (rect.top < 0) {
+                if (rect.top < 50) {
                     setShowFloatingScore(true);
+                    console.log('Show floating box: TRUE'); // Pre ladenie
                 } else {
                     setShowFloatingScore(false);
+                    console.log('Show floating box: FALSE'); // Pre ladenie
                 }
+            } else {
+                console.log('Match progress section NOT found');
             }
         };
+        
+        // Spustíme raz pri načítaní
+        setTimeout(handleScroll, 100);
         
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
