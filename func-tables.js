@@ -1069,17 +1069,9 @@ function extractIdentifiersFromText(text) {
     return uniqueIdentifiers;
 }
 
-// ** POSILNENÁ FUNKCIA: isGroupReadyForReplacement **
 function isGroupReadyForReplacement(category, groupLetter) {
     const cleanCategory = cleanCategoryName(category);
     const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
-    
-    // 🔴 DÔLEŽITÉ: Počkáme, kým sú všetky zápasy načítané
-    const allMatches = window.matchTracker?.getAllMatches?.() || [];
-    if (allMatches.length === 0) {
-        console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Zápasy sa ešte načítavajú...`);
-        return false;
-    }
     
     // 1. Skúsime získať tabuľku skupiny
     let groupTable = window.matchTracker?.createGroupTable(cleanCategory, fullGroupName);
@@ -1093,13 +1085,6 @@ function isGroupReadyForReplacement(category, groupLetter) {
     const completedMatches = groupTable.completedCount || 0;
     const completionPercentage = totalMatches > 0 ? (completedMatches / totalMatches * 100) : 0;
     
-    // 🔴 PRIDANÉ: Kontrola, či všetky zápasy v skupine existujú v matchesData
-    const allGroupMatches = window.matchTracker?.getGroupMatches?.(cleanCategory, fullGroupName) || [];
-    if (allGroupMatches.length !== totalMatches) {
-        console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Čakám na načítanie všetkých ${totalMatches} zápasov...`);
-        return false;
-    }
-    
     // 2. Podmienka 1: Všetky zápasy musia byť odohrané (100%)
     if (completionPercentage < 100) {
         console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Len ${completedMatches}/${totalMatches} (${completionPercentage}%) odohraných → NIE JE PRIpravená`);
@@ -1109,6 +1094,7 @@ function isGroupReadyForReplacement(category, groupLetter) {
     console.log(`✅ [${cleanCategory} - ${fullGroupName}] 100% zápasov odohraných (${completedMatches}/${totalMatches})`);
     
     // 3. Podmienka 2: Všetky zápasy musia mať načítané udalosti (events)
+    const allGroupMatches = window.matchTracker?.getGroupMatches?.(cleanCategory, fullGroupName) || [];
     const completedMatchesList = allGroupMatches.filter(m => m.status === 'completed');
     
     let allEventsLoaded = true;
