@@ -1081,22 +1081,37 @@ function isGroupReadyForReplacement(category, groupLetter) {
         return false;
     }
     
-    const totalMatches = groupTable.totalMatches || 0;
-    const completedMatches = groupTable.completedCount || 0;
-    const completionPercentage = totalMatches > 0 ? (completedMatches / totalMatches * 100) : 0;
+    // 🔴 DÔLEŽITÉ: Získame VŠETKY zápasy z databázy (nielen z matchesData)
+    // Najprv zistíme, koľko tímov je v skupine (podľa unikátnych identifikátorov)
+    const allMatchesFromDb = window.matchTracker?.getGroupMatches?.(cleanCategory, fullGroupName) || [];
+    const uniqueTeams = new Set();
+    allMatchesFromDb.forEach(match => {
+        uniqueTeams.add(match.homeTeamIdentifier);
+        uniqueTeams.add(match.awayTeamIdentifier);
+    });
+    const numberOfTeams = uniqueTeams.size;
     
-    // 2. Podmienka 1: Všetky zápasy musia byť odohrané (100%)
-    if (completionPercentage < 100) {
-        console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Len ${completedMatches}/${totalMatches} (${completionPercentage}%) odohraných → NIE JE PRIpravená`);
+    // Očakávaný počet zápasov v skupine (každý s každým raz)
+    const expectedTotalMatches = (numberOfTeams * (numberOfTeams - 1)) / 2;
+    
+    // Skutočný počet ODOHRANÝCH zápasov
+    const completedMatchesList = allMatchesFromDb.filter(m => m.status === 'completed');
+    const actualCompletedMatches = completedMatchesList.length;
+    
+    // 🔴 KRITÉRIUM 1: Všetky očakávané zápasy musia byť v databáze A odohrané
+    if (allMatchesFromDb.length !== expectedTotalMatches) {
+        console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Čakám na vytvorenie všetkých zápasov. Očakávam ${expectedTotalMatches}, mám ${allMatchesFromDb.length}`);
         return false;
     }
     
-    console.log(`✅ [${cleanCategory} - ${fullGroupName}] 100% zápasov odohraných (${completedMatches}/${totalMatches})`);
+    if (actualCompletedMatches !== expectedTotalMatches) {
+        console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Odohraných ${actualCompletedMatches}/${expectedTotalMatches} zápasov → NIE JE PRIpravená`);
+        return false;
+    }
+    
+    console.log(`✅ [${cleanCategory} - ${fullGroupName}] 100% zápasov odohraných (${actualCompletedMatches}/${expectedTotalMatches})`);
     
     // 3. Podmienka 2: Všetky zápasy musia mať načítané udalosti (events)
-    const allGroupMatches = window.matchTracker?.getGroupMatches?.(cleanCategory, fullGroupName) || [];
-    const completedMatchesList = allGroupMatches.filter(m => m.status === 'completed');
-    
     let allEventsLoaded = true;
     for (const match of completedMatchesList) {
         const events = window.matchTracker?.getEvents?.(match.id) || [];
@@ -1121,7 +1136,7 @@ function isGroupReadyForReplacement(category, groupLetter) {
     console.log(`✅ [${cleanCategory} - ${fullGroupName}] Všetky udalosti načítané`);
     
     // 4. Dodatočná kontrola: Žiadny zápas by nemal byť v stave 'in-progress' alebo 'paused'
-    const hasInProgressMatches = allGroupMatches.some(m => m.status === 'in-progress' || m.status === 'paused');
+    const hasInProgressMatches = allMatchesFromDb.some(m => m.status === 'in-progress' || m.status === 'paused');
     if (hasInProgressMatches) {
         console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Sú tam zápasy, ktoré ešte prebiehajú → NIE JE PRIpravenÁ`);
         return false;
@@ -1131,14 +1146,14 @@ function isGroupReadyForReplacement(category, groupLetter) {
     const groupKey = `${cleanCategory}|${groupLetter.toUpperCase()}`;
     processedGroups.set(groupKey, {
         isReady: true,
-        percentage: completionPercentage,
+        percentage: 100,
         lastCheck: Date.now(),
-        totalMatches: totalMatches,
-        completedMatches: completedMatches,
+        totalMatches: expectedTotalMatches,
+        completedMatches: actualCompletedMatches,
         allEventsLoaded: true
     });
     
-    console.log(`🎉 [${cleanCategory} - ${fullGroupName}] KOMPLETNE PRIPRAVENÁ NA NAHRADENIE!`);
+    console.log(`🎉 [${cleanCategory} - ${fullGroupName}] KOMPLETNE PRIPRAVENÁ NA NAHRADENIE! (${actualCompletedMatches}/${expectedTotalMatches} zápasov, ${numberOfTeams} tímov)`);
     return true;
 }
 
