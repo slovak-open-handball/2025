@@ -2594,7 +2594,6 @@ const matchesHallApp = ({ userProfileData }) => {
         const category = parts.join(' ');
         
         // Rozdelíme groupAndOrder na groupName a order
-        // Order je číselná časť na konci, groupName je zvyšok
         let groupLetter = '';
         let order = '';
         
@@ -2615,8 +2614,8 @@ const matchesHallApp = ({ userProfileData }) => {
         // Vytvoríme názov skupiny v tvare "skupina X" (napr. "F" -> "skupina F")
         const fullGroupName = `skupina ${groupLetter}`;
         const orderNum = parseInt(order, 10);
-                
-        // Hľadáme v users (načítaných používateľoch)
+        
+        // Najprv skúsime nájsť tím v používateľoch (user teams)
         if (users && users.length > 0) {
             for (const user of users) {
                 if (!user.teams) continue;
@@ -2635,12 +2634,13 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        // Pre superstructure tímy - hľadáme podľa kategórie a skupiny+poradia
-        if (typeof superstructureTeams !== 'undefined' && superstructureTeams && Object.keys(superstructureTeams).length > 0) {
-            const categoryTeams = superstructureTeams[category] || [];
-                        
+        // 🔴 UPRAVENÉ: Pre superstructure tímy - hľadáme podľa kategórie a skupiny+poradia
+        if (typeof window.superstructureTeams !== 'undefined' && window.superstructureTeams && Object.keys(window.superstructureTeams).length > 0) {
+            const categoryTeams = window.superstructureTeams[category] || [];
+            
+            // Filtrujeme tímy v rovnakej skupine
             const teamsInGroup = categoryTeams.filter(t => t.groupName === fullGroupName);
-                        
+            
             // Zoradíme ich podľa poradia
             const sortedTeams = [...teamsInGroup].sort((a, b) => {
                 const orderA = a.order !== null && a.order !== undefined ? a.order : Infinity;
@@ -2648,11 +2648,23 @@ const matchesHallApp = ({ userProfileData }) => {
                 return orderA - orderB;
             });
             
+            // orderNum je 1-based index v zoradenom zozname
             if (orderNum <= sortedTeams.length && orderNum >= 1) {
                 const foundTeam = sortedTeams[orderNum - 1];
-                return foundTeam.teamName;
+                if (foundTeam && foundTeam.teamName) {
+                    return foundTeam.teamName;
+                }
+            }
+            
+            // Alternatívne vyhľadávanie - priamo podľa order bez ohľadu na skupinu
+            // (pre prípad, že order je unikátny identifikátor)
+            const teamByOrder = categoryTeams.find(t => t.order === orderNum);
+            if (teamByOrder && teamByOrder.teamName) {
+                return teamByOrder.teamName;
             }
         }
+        
+        // Fallback - vrátime identifikátor
         return `${category} ${groupLetter}${order}`;
     };
 
