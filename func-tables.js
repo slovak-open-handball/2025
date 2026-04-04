@@ -1453,67 +1453,32 @@ function waitForAllData() {
             return;
         }
         
-        let lastChangeTime = Date.now();
-        let lastPercentage = -1;
-        let stableCount = 0;
-        const maxStableChecks = 5; // 5 sekúnd bez zmeny = hotovo
-        
         const checkInterval = setInterval(() => {
             const allMatches = window.matchTracker.getAllMatches?.() || [];
             if (allMatches.length === 0) return;
             
-            // Vypočítame aktuálny stav
+            // Skontrolujeme, či všetky skupiny majú 100%
+            let allComplete = true;
             const groups = new Set();
+            
             allMatches.forEach(match => {
                 if (match.categoryName && match.groupName) {
                     groups.add(`${match.categoryName}|${match.groupName}`);
                 }
             });
             
-            let totalMatches = 0;
-            let totalCompletedMatches = 0;
-            
             for (const groupKey of groups) {
                 const [category, group] = groupKey.split('|');
                 const groupTable = window.matchTracker.createGroupTable(category, group);
-                if (groupTable) {
-                    totalMatches += groupTable.totalMatches || 0;
-                    totalCompletedMatches += groupTable.completedCount || 0;
+                if (!groupTable || groupTable.completionPercentage < 100) {
+                    allComplete = false;
+                    break;
                 }
             }
             
-            const percentage = totalMatches > 0 ? (totalCompletedMatches / totalMatches * 100) : 0;
-            
-            // Ak sa percento zmenilo, resetujeme stabilný counter
-            if (percentage !== lastPercentage) {
-                lastPercentage = percentage;
-                lastChangeTime = Date.now();
-                stableCount = 0;
-                console.log(`📊 Stav sa mení: ${percentage.toFixed(1)}%`);
-            } else {
-                stableCount++;
-                console.log(`⏱️ Stabilný stav ${stableCount}/${maxStableChecks} (${percentage.toFixed(1)}%)`);
-            }
-            
-            // Podmienky na ukončenie:
-            // 1. Máme 100% → OK
-            // 2. Alebo 30 sekúnd bez zmeny → timeout
-            // 3. Alebo 5 kontrol bez zmeny (5 sekúnd) pri >= 90% → skoro hotovo
-            const timeSinceLastChange = Date.now() - lastChangeTime;
-            const isAlmostComplete = percentage >= 90 && stableCount >= maxStableChecks;
-            const isTimeout = timeSinceLastChange >= 30000;
-            
-            if (percentage === 100) {
+            if (allComplete && groups.size > 0) {
                 clearInterval(checkInterval);
-                console.log('✅ 100% dokončené!');
-                resolve();
-            } else if (isAlmostComplete) {
-                clearInterval(checkInterval);
-                console.log(`✅ Stav ${percentage.toFixed(1)}% je stabilný, pokračujem...`);
-                resolve();
-            } else if (isTimeout) {
-                clearInterval(checkInterval);
-                console.log(`⚠️ Timeout: Žiadna zmena ${(timeSinceLastChange/1000).toFixed(0)} sekúnd, pokračujem s ${percentage.toFixed(1)}%`);
+                console.log('✅ Všetky skupiny sú na 100%!');
                 resolve();
             }
         }, 1000);
