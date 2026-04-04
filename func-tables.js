@@ -820,8 +820,82 @@ function cleanCategoryName(categoryName) {
     return cleaned;
 }
 
-// ** POSILNENÁ FUNKCIA: getTeamNameByDisplayId **
-function getTeamNameByDisplayId(displayId) {
+// ** LOKÁLNE ÚLOŽISKO PRE NAHRADENÉ IDENTIFIKÁTORY **
+const STORAGE_KEY = 'teamNameReplacer_cache';
+const CACHE_VERSION = '1.0';
+
+// Načítanie cache z localStorage
+function loadReplacementCache() {
+    try {
+        const cached = localStorage.getItem(STORAGE_KEY);
+        if (cached) {
+            const data = JSON.parse(cached);
+            if (data.version === CACHE_VERSION) {
+                console.log(`📦 Načítaná cache z localStorage: ${Object.keys(data.mappings).length} položiek`);
+                return new Map(Object.entries(data.mappings));
+            } else {
+                console.log('🔄 Verzia cache sa líši, vytváram novú...');
+                localStorage.removeItem(STORAGE_KEY);
+            }
+        }
+    } catch (error) {
+        console.error('❌ Chyba pri načítaní cache:', error);
+    }
+    return new Map();
+}
+
+// Uloženie cache do localStorage
+function saveReplacementCache(cacheMap) {
+    try {
+        const data = {
+            version: CACHE_VERSION,
+            mappings: Object.fromEntries(cacheMap),
+            lastUpdated: Date.now()
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        console.log(`💾 Uložená cache do localStorage: ${cacheMap.size} položiek`);
+    } catch (error) {
+        console.error('❌ Chyba pri ukladaní cache:', error);
+    }
+}
+
+// Inicializácia cache
+let replacementCache = loadReplacementCache();
+
+// Funkcia na získanie názvu tímu (najskôr z cache, potom z databázy)
+function getTeamNameWithCache(displayId, category, groupLetter, position) {
+    const cacheKey = `${cleanCategoryName(category)}|${groupLetter.toUpperCase()}|${position}`;
+    
+    // 1. Skúsime nájsť v cache
+    if (replacementCache.has(cacheKey)) {
+        const cached = replacementCache.get(cacheKey);
+        console.log(`💿 POUŽITÉ Z CACHE: "${displayId}" → "${cached.teamName}" (uložené ${new Date(cached.timestamp).toLocaleTimeString()})`);
+        return cached.teamName;
+    }
+    
+    // 2. Nie je v cache - načítame z databázy
+    console.log(`🔄 NAČÍTAM Z DATABÁZY: "${displayId}"`);
+    const teamName = getTeamNameByDisplayIdFromDB(displayId);
+    
+    // 3. Ak sa podarilo načítať, uložíme do cache
+    if (teamName && teamName !== displayId) {
+        replacementCache.set(cacheKey, {
+            teamName: teamName,
+            displayId: displayId,
+            category: category,
+            groupLetter: groupLetter,
+            position: position,
+            timestamp: Date.now()
+        });
+        saveReplacementCache(replacementCache);
+        console.log(`💾 ULOŽENÉ DO CACHE: "${displayId}" → "${teamName}"`);
+    }
+    
+    return teamName;
+}
+
+// Pôvodná funkcia getTeamNameByDisplayId premenovaná na getTeamNameByDisplayIdFromDB
+function getTeamNameByDisplayIdFromDB(displayId) {
     if (!displayId) {
         console.log('❌ Nebol zadaný identifikátor tímu');
         return null;
@@ -861,16 +935,14 @@ function getTeamNameByDisplayId(displayId) {
     const positionNum = parseInt(position, 10);
     const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
     
-    // 🔴 KRITICKÁ KONTROLA: Najprv skontrolujeme, či je skupina pripravená
+    // Kontrola pripravenosti skupiny
     const isReady = isGroupReadyForReplacement(category, groupLetter);
     
     if (!isReady) {
-        console.log(`⛔ [${category} - ${fullGroupName}] Skupina NIE JE pripravená (menej ako 100% alebo chýbajú udalosti)`);
-        console.log(`   Preto NEBUDEM nahrádzať identifikátor: ${displayId}`);
-        return null; // ⚠️ TU SA VRÁTI NULL - ŽIADNE NAHRADENIE
+        console.log(`⛔ [${category} - ${fullGroupName}] Skupina NIE JE pripravená`);
+        return null;
     }
     
-    // Až TERAZ, keď vieme, že skupina je pripravená, pokračujeme
     console.log(`✅ [${category} - ${fullGroupName}] Skupina je pripravená, hľadám tím na pozícii ${positionNum}`);
     
     const groupTable = window.matchTracker?.createGroupTable(category, fullGroupName);
@@ -884,11 +956,96 @@ function getTeamNameByDisplayId(displayId) {
     
     if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
         const team = groupTable.teams[teamIndex];
-        console.log(`🎉 NAHRADZUJEM: "${displayId}" → "${team.name}"`);
+        console.log(`🎉 NAJDENÝ V DB: "${displayId}" → "${team.name}"`);
         return team.name;
     } else {
         console.log(`❌ Pozícia ${positionNum} neexistuje (skupina má ${groupTable.teams.length} tímov)`);
         return null;
+    }
+}
+
+// Prepíšeme pôvodnú getTeamNameByDisplayId na verziu s cache
+function getTeamNameByDisplayId(displayId) {
+    // Parsovanie identifikátora pre získanie kľúča
+    const parts = displayId.trim().split(' ');
+    if (parts.length < 2) return null;
+    
+    const positionAndGroup = parts.pop();
+    let category = parts.join(' ');
+    category = cleanCategoryName(category);
+    
+    let position = '';
+    let groupLetter = '';
+    for (let i = 0; i < positionAndGroup.length; i++) {
+        const char = positionAndGroup[i];
+        if (char >= '0' && char <= '9') {
+            position += char;
+        } else if (/[A-Za-z]/.test(char)) {
+            groupLetter += char;
+        }
+    }
+    
+    if (!position || !groupLetter) return null;
+    const positionNum = parseInt(position, 10);
+    
+    // Použijeme cache
+    return getTeamNameWithCache(displayId, category, groupLetter, positionNum);
+}
+
+// Funkcia na vymazanie cache (napr. pri aktualizácii dát)
+function clearReplacementCache() {
+    replacementCache.clear();
+    localStorage.removeItem(STORAGE_KEY);
+    console.log('🗑️ Cache bola vymazaná');
+}
+
+// Funkcia na zobrazenie obsahu cache
+function showCache() {
+    console.log('\n📦 OBSAH CACHE:');
+    console.log('='.repeat(60));
+    for (const [key, value] of replacementCache.entries()) {
+        console.log(`   ${key}:`);
+        console.log(`      → ${value.teamName}`);
+        console.log(`      📅 Uložené: ${new Date(value.timestamp).toLocaleString()}`);
+    }
+    console.log('='.repeat(60));
+    console.log(`Celkom: ${replacementCache.size} položiek\n`);
+}
+
+// Funkcia na aktualizáciu cache z aktuálneho stavu stránky
+function updateCacheFromPage() {
+    console.log('🔄 Aktualizujem cache z aktuálneho stavu stránky...');
+    const elements = document.querySelectorAll('[data-replaced-100-percent="true"]');
+    let updated = 0;
+    
+    for (const element of elements) {
+        const originalId = element.getAttribute('data-original-identifier');
+        const teamName = element.getAttribute('data-team-name');
+        const category = element.getAttribute('data-team-category');
+        const groupLetter = element.getAttribute('data-team-group');
+        const position = element.getAttribute('data-team-position');
+        
+        if (originalId && teamName && category && groupLetter && position) {
+            const cacheKey = `${category}|${groupLetter}|${position}`;
+            if (!replacementCache.has(cacheKey)) {
+                replacementCache.set(cacheKey, {
+                    teamName: teamName,
+                    displayId: originalId,
+                    category: category,
+                    groupLetter: groupLetter,
+                    position: parseInt(position, 10),
+                    timestamp: Date.now()
+                });
+                updated++;
+            }
+        }
+    }
+    
+    if (updated > 0) {
+        saveReplacementCache(replacementCache);
+        console.log(`✅ Aktualizovaných ${updated} položiek v cache`);
+    } else {
+        console.log('ℹ️ Žiadne nové položky na aktualizáciu');
     }
 }
 
@@ -1609,6 +1766,25 @@ window.teamNameReplacer = {
             }
         }
         return ready;
+    },
+    clearCache: clearReplacementCache,
+    showCache: showCache,
+    updateCacheFromPage: updateCacheFromPage,
+    getCacheSize: () => replacementCache.size,
+    getCacheStats: () => {
+        const stats = {
+            size: replacementCache.size,
+            version: CACHE_VERSION,
+            lastUpdated: null
+        };
+        try {
+            const cached = localStorage.getItem(STORAGE_KEY);
+            if (cached) {
+                const data = JSON.parse(cached);
+                stats.lastUpdated = new Date(data.lastUpdated).toLocaleString();
+            }
+        } catch (e) {}
+        return stats;
     }
 };
 
@@ -1626,3 +1802,42 @@ if (document.readyState === 'loading') {
 } else {
     startTeamNameReplacement();
 }
+
+// Pridanie funkcie na manuálne pridanie do cache
+function addToCache(displayId, teamName) {
+    const parts = displayId.trim().split(' ');
+    if (parts.length < 2) return false;
+    
+    const positionAndGroup = parts.pop();
+    let category = parts.join(' ');
+    category = cleanCategoryName(category);
+    
+    let position = '';
+    let groupLetter = '';
+    for (let i = 0; i < positionAndGroup.length; i++) {
+        const char = positionAndGroup[i];
+        if (char >= '0' && char <= '9') {
+            position += char;
+        } else if (/[A-Za-z]/.test(char)) {
+            groupLetter += char;
+        }
+    }
+    
+    if (!position || !groupLetter) return false;
+    const positionNum = parseInt(position, 10);
+    const cacheKey = `${category}|${groupLetter.toUpperCase()}|${positionNum}`;
+    
+    replacementCache.set(cacheKey, {
+        teamName: teamName,
+        displayId: displayId,
+        category: category,
+        groupLetter: groupLetter.toUpperCase(),
+        position: positionNum,
+        timestamp: Date.now()
+    });
+    saveReplacementCache(replacementCache);
+    console.log(`💾 Manuálne pridané do cache: "${displayId}" → "${teamName}"`);
+    return true;
+}
+
+window.teamNameReplacer.addToCache = addToCache;
