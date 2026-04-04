@@ -2954,10 +2954,10 @@ const matchesHallApp = ({ userProfileData }) => {
             if (!selectedMatch || !window.db) return;
             
             // Použijeme lokálne parametre alebo stavové premenné
-            const type = localEventType || eventType;
-            const team = localEventTeam || eventTeam;
-            const subType = localEventSubType || eventSubType;
-            const player = localPlayer || selectedPlayerForEvent;
+            const type = localEventType;
+            const team = localEventTeam;
+            const subType = localEventSubType;
+            const player = localPlayer;
             
             if (!type || !team) {
                 window.showGlobalNotification('Vyberte typ udalosti a tím', 'error');
@@ -3193,14 +3193,26 @@ const matchesHallApp = ({ userProfileData }) => {
                                     // Prebiehajúci zápas - pridanie udalosti
                                     onClickHandler = () => {
                                         if (eventType) {
-                                            if (eventType === 'goal' && eventSubType === null) {
-                                                addMatchEvent('goal', teamType, null, playerIdentifier);
-                                            } else if (eventType === 'penalty' && eventSubType === 'scored') {
-                                                addMatchEvent('penalty', teamType, 'scored', playerIdentifier);
-                                            } else if (eventType === 'penalty' && eventSubType === 'missed') {
-                                                addMatchEvent('penalty', teamType, 'missed', playerIdentifier);
+                                            // ULOŽÍME SI AKTUALNE HODNOTY DO LOKÁLNYCH PREMENNÝCH
+                                            const currentEventType = eventType;
+                                            const currentEventSubType = eventSubType;
+                                            const currentEventTeam = teamType;
+                                            
+                                            // OKAMŽITE VYMAŽEME VYBRANÚ AKCIU (ešte pred zápisom do DB)
+                                            setEventType(null);
+                                            setEventTeam(null);
+                                            setEventSubType(null);
+                                            setSelectedPlayerForEvent(null);
+        
+                                            // TERAZ VYVOLÁME PRIDANIE UDALOSTI S ULOŽENÝMI HODNOTAMI
+                                            if (currentEventType === 'goal' && currentEventSubType === null) {
+                                                addMatchEvent('goal', currentEventTeam, null, playerIdentifier);
+                                            } else if (currentEventType === 'penalty' && currentEventSubType === 'scored') {
+                                                addMatchEvent('penalty', currentEventTeam, 'scored', playerIdentifier);
+                                            } else if (currentEventType === 'penalty' && currentEventSubType === 'missed') {
+                                                addMatchEvent('penalty', currentEventTeam, 'missed', playerIdentifier);
                                             } else {
-                                                addMatchEvent(eventType, teamType, null, playerIdentifier);
+                                                addMatchEvent(currentEventType, currentEventTeam, null, playerIdentifier);
                                             }
                                         }
                                     };
