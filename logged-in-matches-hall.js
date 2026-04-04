@@ -3431,10 +3431,15 @@ const matchesHallApp = ({ userProfileData }) => {
                             'div',
                             { className: 'mt-2 text-sm text-gray-600 flex items-center justify-center gap-2' },
                             React.createElement('span', null, `${category.periods || 2} x ${category.periodDuration || 20} min`),
-                            React.createElement('span', { className: 'text-gray-400' }, '•'),
-                            React.createElement('span', null, `Prestávka: ${category.breakDuration || 2} min`)
+                            // Zobrazenie prestávky len ak je definovaná a väčšia ako 0
+                            category.breakDuration && category.breakDuration > 0 && React.createElement(
+                                React.Fragment,
+                                null,
+                                React.createElement('span', { className: 'text-gray-400' }, '•'),
+                                React.createElement('span', null, `Prestávka: ${category.breakDuration} min`)
+                            )
                         )
-                    ),                 
+                    ),            
                     
                     // Tímy
                     React.createElement(
