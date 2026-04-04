@@ -1449,7 +1449,22 @@ function performPartialReplacement(identifiersToReplace) {
             if (anyFound) {
                 replacedCount++;
                 replacedIdentifiers.add(replaceKey);
-                console.log(`🎉 Kompletne nahradený identifikátor: "${idInfo.originalIdentifier}" (všetky výskyty)`);
+    
+                // 🔴 PRIDAŤ: Uložiť do cache ak ešte nie je
+                const cacheKey = `${idInfo.category}|${idInfo.groupLetter}|${idInfo.position}`;
+                if (!replacementCache.has(cacheKey)) {
+                    replacementCache.set(cacheKey, {
+                        teamName: teamName,
+                        displayId: idInfo.originalIdentifier,
+                        category: idInfo.category,
+                        groupLetter: idInfo.groupLetter,
+                        position: idInfo.position,
+                        timestamp: Date.now()
+                    });
+                    saveReplacementCache(replacementCache);
+                }
+                
+                console.log(`🎉 Kompletne nahradený identifikátor...`);
             } else {
                 failedCount++;
                 failedIdentifiers.push(idInfo.originalIdentifier);
@@ -1785,7 +1800,8 @@ window.teamNameReplacer = {
             }
         } catch (e) {}
         return stats;
-    }
+    },
+    addToCache: addToCache
 };
 
 console.log('📋 Pridané funkcie pre nahrádzanie identifikátorov:');
