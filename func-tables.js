@@ -1832,31 +1832,6 @@ function replaceTeamIdentifiersWhenReady() {
     }
 }
 
-// Pridanie nových funkcií do exportu
-window.teamNameReplacer = {
-    // ... existujúce funkcie ...
-    
-    // 🔴 NOVÉ FUNKCIE
-    replaceAllNow: replaceAllIdentifiersNow,  // Okamžité nahradenie všetkých pripravených
-    startPeriodic: (intervalSeconds = 30) => {
-        periodicReplaceActive = true;
-        startPeriodicReplacement(intervalSeconds);
-    },
-    stopPeriodic: () => {
-        periodicReplaceActive = false;
-        stopPeriodicReplacement();
-    },
-    setPeriodicInterval: (intervalSeconds) => {
-        if (periodicReplaceInterval) {
-            startPeriodicReplacement(intervalSeconds);
-        } else {
-            startPeriodicReplacement(intervalSeconds);
-        }
-        console.log(`📊 Interval periodického nahrádzania nastavený na ${intervalSeconds} sekúnd`);
-    },
-    isPeriodicActive: () => periodicReplaceInterval !== null && periodicReplaceActive
-};
-
 function stopPeriodicReplacement() {
     if (periodicReplaceInterval) {
         clearInterval(periodicReplaceInterval);
@@ -1917,9 +1892,7 @@ window.teamNameReplacer = {
             clearInterval(window._readyCheckInterval);
             window._readyCheckInterval = null;
         }
-        // 🔴 ZASTAVENIE PERIODICKÉHO NAHRÁDZANIA
         stopPeriodicReplacement();
-        // 🔴 ZASTAVENIE STABILITY CHECKOV
         for (const timeout of groupStabilityCheck.values()) {
             clearTimeout(timeout);
         }
@@ -1966,7 +1939,26 @@ window.teamNameReplacer = {
         } catch (e) {}
         return stats;
     },
-    addToCache: addToCache
+    addToCache: addToCache,
+    // 🔴 NOVÉ FUNKCIE
+    replaceAllNow: replaceAllIdentifiersNow,
+    startPeriodic: (intervalSeconds = 30) => {
+        periodicReplaceActive = true;
+        startPeriodicReplacement(intervalSeconds);
+    },
+    stopPeriodic: () => {
+        periodicReplaceActive = false;
+        stopPeriodicReplacement();
+    },
+    setPeriodicInterval: (intervalSeconds) => {
+        if (periodicReplaceInterval) {
+            startPeriodicReplacement(intervalSeconds);
+        } else {
+            startPeriodicReplacement(intervalSeconds);
+        }
+        console.log(`📊 Interval periodického nahrádzania nastavený na ${intervalSeconds} sekúnd`);
+    },
+    isPeriodicActive: () => periodicReplaceInterval !== null && periodicReplaceActive
 };
 
 console.log('📋 Pridané funkcie pre nahrádzanie identifikátorov:');
