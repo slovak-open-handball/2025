@@ -1477,6 +1477,57 @@ if (window.matchTracker) {
     window.matchTracker.cleanCategoryName = cleanCategoryName;
 }
 
+// ** NOVÁ FUNKCIA: Periodické nahrádzanie **
+let periodicReplaceInterval = null;
+let periodicReplaceActive = true;
+
+function startPeriodicReplacement(intervalSeconds = 30) {
+    if (periodicReplaceInterval) {
+        clearInterval(periodicReplaceInterval);
+    }
+    
+    console.log(`🔄 Spúšťam periodické nahrádzanie každých ${intervalSeconds} sekúnd...`);
+    
+    periodicReplaceInterval = setInterval(() => {
+        if (!periodicReplaceActive) return;
+        
+        console.log(`⏰ Periodické nahrádzanie (každých ${intervalSeconds}s) - kontrola...`);
+        
+        // Znovu skontrolujeme pripravenosť všetkých skupín
+        const allText = document.body.innerText;
+        const identifiers = extractIdentifiersFromText(allText);
+        
+        if (identifiers.length === 0) {
+            console.log('ℹ️ Žiadne identifikátory na nahrádzanie');
+            return;
+        }
+        
+        // Pre každý identifikátor skontrolujeme, či už bol nahradený
+        const notYetReplaced = [];
+        for (const id of identifiers) {
+            const replaceKey = `${id.category}|${id.groupLetter}|${id.position}`;
+            if (!replacedIdentifiers.has(replaceKey)) {
+                notYetReplaced.push(id);
+            }
+        }
+        
+        if (notYetReplaced.length > 0) {
+            console.log(`🔄 Periodické nahrádzanie: ${notYetReplaced.length} identifikátorov ešte nebolo nahradených`);
+            replaceTeamIdentifiersWhenReady();
+        } else {
+            console.log(`✅ Všetky identifikátory už boli nahradené, periodické nahrádzanie pokračuje v monitorovaní...`);
+        }
+    }, intervalSeconds * 1000);
+}
+
+function stopPeriodicReplacement() {
+    if (periodicReplaceInterval) {
+        clearInterval(periodicReplaceInterval);
+        periodicReplaceInterval = null;
+        console.log('⏹️ Periodické nahrádzanie zastavené');
+    }
+}
+
 // Funkcia na spustenie sledovania - BEZ čakania na všetky skupiny
 async function startTeamNameReplacement() {
     console.log('🚀 Spúšťam automatické nahrádzanie identifikátorov tímov...');
@@ -1493,6 +1544,9 @@ async function startTeamNameReplacement() {
             // Jedno okamžité nahradenie hneď po spustení
             console.log('🔄 Spúšťam prvé kolo nahrádzania...');
             replaceTeamIdentifiersWhenReady();
+            
+            // 🔴 SPUSTENIE PERIODICKÉHO NAHRÁDZANIA (každých 30 sekúnd)
+            startPeriodicReplacement(30);
         }
     }, 500);
     
@@ -1501,6 +1555,7 @@ async function startTeamNameReplacement() {
         if (!window.matchTracker) {
             console.log('⚠️ MatchTracker nie je dostupný');
             replaceTeamIdentifiersWhenReady();
+            startPeriodicReplacement(30);
         }
     }, 10000);
 }
@@ -1525,6 +1580,13 @@ window.teamNameReplacer = {
             clearInterval(window._readyCheckInterval);
             window._readyCheckInterval = null;
         }
+        // 🔴 ZASTAVENIE PERIODICKÉHO NAHRÁDZANIA
+        stopPeriodicReplacement();
+        // 🔴 ZASTAVENIE STABILITY CHECKOV
+        for (const timeout of groupStabilityCheck.values()) {
+            clearTimeout(timeout);
+        }
+        groupStabilityCheck.clear();
     },
     checkGroupStatus: (category, groupLetter) => {
         const isReady = isGroupReadyForReplacement(category, groupLetter);
