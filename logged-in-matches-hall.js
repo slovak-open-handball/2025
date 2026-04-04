@@ -1792,19 +1792,19 @@ const matchesHallApp = ({ userProfileData }) => {
 
     useEffect(() => {
         const handleScroll = () => {
-            // Sledujeme header s dátumom a časom (je úplne hore v detaile zápasu)
-            const dateHeader = document.querySelector('.text-center.mb-8.p-4.bg-blue-50.rounded-lg');
+            // Sledujeme tlačidlo "Všetky zápasy" (je v hornej časti)
+            const backButton = document.querySelector('.absolute.left-4.top-4');
             
-            if (dateHeader) {
-                const rect = dateHeader.getBoundingClientRect();
-                // Keď header zmizne z obrazovky (jeho spodná hrana je nad 0)
+            if (backButton) {
+                const rect = backButton.getBoundingClientRect();
+                // Keď je tlačidlo mimo viewport (hore), zobrazíme plávajúci box
                 if (rect.bottom < 0) {
                     setShowFloatingScore(true);
                 } else {
                     setShowFloatingScore(false);
                 }
             } else {
-                // Fallback na pôvodný selektor
+                // Fallback - sledujeme box s priebehom zápasu
                 const matchSection = document.querySelector('.match-progress-section');
                 if (matchSection) {
                     const rect = matchSection.getBoundingClientRect();
