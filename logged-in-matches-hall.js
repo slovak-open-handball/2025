@@ -48,6 +48,100 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// Pridajte tento CSS pre plávajúci box (za existujúce štýly)
+const floatingBoxStyle = document.createElement('style');
+floatingBoxStyle.textContent = `
+    .floating-score-box {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%) translateY(-100px);
+        background: white;
+        border-radius: 50px;
+        padding: 8px 24px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        opacity: 0;
+        transition: transform 0.3s ease, opacity 0.3s ease;
+        border: 1px solid #e5e7eb;
+        pointer-events: none;
+    }
+    
+    .floating-score-box.visible {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+    
+    .floating-score-box .team-name {
+        font-weight: 600;
+        font-size: 14px;
+        color: #374151;
+        max-width: 150px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .floating-score-box .score {
+        font-weight: 700;
+        font-size: 24px;
+        color: #1f2937;
+        min-width: 60px;
+        text-align: center;
+    }
+    
+    .floating-score-box .vs {
+        font-weight: 600;
+        font-size: 14px;
+        color: #9ca3af;
+    }
+    
+    .floating-score-box .match-time {
+        font-family: monospace;
+        font-weight: 700;
+        font-size: 18px;
+        color: #3b82f6;
+        background: #eff6ff;
+        padding: 4px 12px;
+        border-radius: 30px;
+        margin-left: 10px;
+    }
+    
+    .floating-score-box .separator {
+        width: 1px;
+        height: 30px;
+        background: #e5e7eb;
+        margin: 0 10px;
+    }
+    
+    @media (max-width: 768px) {
+        .floating-score-box {
+            padding: 6px 16px;
+            gap: 10px;
+        }
+        .floating-score-box .team-name {
+            max-width: 100px;
+            font-size: 12px;
+        }
+        .floating-score-box .score {
+            font-size: 18px;
+            min-width: 45px;
+        }
+        .floating-score-box .match-time {
+            font-size: 14px;
+            padding: 2px 8px;
+        }
+        .floating-score-box .separator {
+            height: 25px;
+            margin: 0 5px;
+        }
+    }
+`;
+document.head.appendChild(floatingBoxStyle);
+
 const { useState, useEffect } = React;
 
 // Funkcia na formátovanie dátumu s dňom v týždni
