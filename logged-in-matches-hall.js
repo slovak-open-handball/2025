@@ -2662,51 +2662,90 @@ const matchesHallApp = ({ userProfileData }) => {
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
         
-        // Ak je teamManager pripravený, použijeme ho
-        if (teamManagerReady && window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+        // SKÚSIME POUŽIŤ teamManager (najpresnejšie)
+        if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
             const teamName = window.teamManager.getTeamNameByDisplayIdSync(identifier);
-            if (teamName) return teamName;
+            if (teamName) {
+                return teamName;
+            }
+            // Ak teamManager existuje ale nenašiel tím, pokračujeme fallbackom
         }
         
-        // Inak použijeme fallback (vyhľadávanie v users)
+        // FALLBACK 1: Manuálne vyhľadávanie v používateľoch
         const parts = identifier.split(' ');
-        if (parts.length < 2) return identifier;
-        
-        const groupAndOrder = parts.pop();
-        const category = parts.join(' ');
-        
-        let groupLetter = '';
-        let order = '';
-        for (let i = 0; i < groupAndOrder.length; i++) {
-            const char = groupAndOrder[i];
-            if (char >= '0' && char <= '9') {
-                order = groupAndOrder.substring(i);
-                groupLetter = groupAndOrder.substring(0, i);
-                break;
+        if (parts.length >= 2) {
+            const groupAndOrder = parts.pop();
+            const category = parts.join(' ');
+            
+            let groupLetter = '';
+            let order = '';
+            for (let i = 0; i < groupAndOrder.length; i++) {
+                const char = groupAndOrder[i];
+                if (char >= '0' && char <= '9') {
+                    order = groupAndOrder.substring(i);
+                    groupLetter = groupAndOrder.substring(0, i);
+                    break;
+                }
+            }
+            
+            if (order) {
+                const fullGroupName = `skupina ${groupLetter}`;
+                const orderNum = parseInt(order, 10);
+                
+                for (const user of users) {
+                    if (!user.teams) continue;
+                    const userTeams = user.teams[category];
+                    if (!userTeams || !Array.isArray(userTeams)) continue;
+                    
+                    const team = userTeams.find(t => 
+                        t.groupName === fullGroupName && 
+                        t.order === orderNum
+                    );
+                    
+                    if (team && team.teamName) {
+                        return team.teamName;
+                    }
+                }
             }
         }
         
-        if (!order) return identifier;
-        
-        const fullGroupName = `skupina ${groupLetter}`;
-        const orderNum = parseInt(order, 10);
-        
-        // Hľadáme v users
-        for (const user of users) {
-            if (!user.teams) continue;
-            const userTeams = user.teams[category];
-            if (!userTeams || !Array.isArray(userTeams)) continue;
-            
-            const team = userTeams.find(t => 
-                t.groupName === fullGroupName && 
-                t.order === orderNum
-            );
-            
-            if (team && team.teamName) {
-                return team.teamName;
+        // FALLBACK 2: Skúsime superstructureTeams priamo
+        if (window.superstructureTeams) {
+            const parts = identifier.split(' ');
+            if (parts.length >= 2) {
+                const groupAndOrder = parts.pop();
+                const category = parts.join(' ');
+                
+                let groupLetter = '';
+                let order = '';
+                for (let i = 0; i < groupAndOrder.length; i++) {
+                    const char = groupAndOrder[i];
+                    if (char >= '0' && char <= '9') {
+                        order = groupAndOrder.substring(i);
+                        groupLetter = groupAndOrder.substring(0, i);
+                        break;
+                    }
+                }
+                
+                if (order) {
+                    const fullGroupName = `skupina ${groupLetter}`;
+                    const orderNum = parseInt(order, 10);
+                    
+                    const categoryTeams = window.superstructureTeams[category];
+                    if (categoryTeams && Array.isArray(categoryTeams)) {
+                        const team = categoryTeams.find(t => 
+                            t.groupName === fullGroupName && 
+                            t.order === orderNum
+                        );
+                        if (team && team.teamName) {
+                            return team.teamName;
+                        }
+                    }
+                }
             }
         }
         
+        // Ak nič nenašlo, vrátime identifikátor
         return identifier;
     };
 
