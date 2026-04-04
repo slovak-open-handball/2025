@@ -53,7 +53,7 @@ const floatingBoxStyle = document.createElement('style');
 floatingBoxStyle.textContent = `
     .floating-score-box {
         position: fixed;
-        top: 50px;
+        top: 55px;
         left: 50%;
         transform: translateX(-50%) translateY(-150px);
         background: white;
