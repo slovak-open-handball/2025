@@ -801,6 +801,9 @@
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+let processedGroups = new Map(); // Sleduje stav každej skupiny: { isReady: boolean, lastCheck: timestamp }
+let pendingReplaceTimeout = null;
+
 // Pomocná funkcia na odstránenie "VS" z názvu kategórie
 function cleanCategoryName(categoryName) {
     if (!categoryName) return categoryName;
