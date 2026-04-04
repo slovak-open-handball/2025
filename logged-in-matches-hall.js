@@ -3437,7 +3437,7 @@ const matchesHallApp = ({ userProfileData }) => {
                         React.createElement(
                             'div',
                             { className: 'flex-1 text-center' },
-                            React.createElement('div', { className: 'text-sm text-gray-500 mb-2' }, 'DOMÁCI'),
+//                            React.createElement('div', { className: 'text-sm text-gray-500 mb-2' }, 'DOMÁCI'),
                             React.createElement('div', { className: 'text-xl font-bold text-gray-800' }, homeTeamName)
                         ),
                         
@@ -3452,7 +3452,7 @@ const matchesHallApp = ({ userProfileData }) => {
                         React.createElement(
                             'div',
                             { className: 'flex-1 text-center' },
-                            React.createElement('div', { className: 'text-sm text-gray-500 mb-2' }, 'HOSTIA'),
+//                            React.createElement('div', { className: 'text-sm text-gray-500 mb-2' }, 'HOSTIA'),
                             React.createElement('div', { className: 'text-xl font-bold text-gray-800' }, awayTeamName)
                         )
                     ),
