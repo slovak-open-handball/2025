@@ -160,17 +160,6 @@
             console.log(`   📈 Počet udalostí: ${details.eventsCount}`);
             console.log(`   🆔 Domáci ID: ${details.homeTeamId}`);
             console.log(`   🆔 Hostia ID: ${details.awayTeamId}`);
-            
-            // Výpis gólov (ak existujú)
-            if (details.goals.length > 0) {
-                console.log(`   ⚽ Góly:`);
-                details.goals.forEach(goal => {
-                    const time = `${String(goal.minute || 0).padStart(2, '0')}:${String(goal.second || 0).padStart(2, '0')}`;
-                    const team = goal.team === 'home' ? 'DOMÁCI' : 'HOSTIA';
-                    const type = goal.type === 'penalty' ? '7m' : 'akcia';
-                    console.log(`      • ${time} - ${team} (${type})`);
-                });
-            }
         });
         
         console.log('\n' + '='.repeat(90));
