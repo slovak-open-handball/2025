@@ -1654,53 +1654,29 @@ function startPeriodicReplacement(intervalSeconds = 1) {
     periodicReplaceInterval = setInterval(() => {
         if (!periodicReplaceActive) return;
         
-        console.log(`⏰ Periodické nahrádzanie (každých ${intervalSeconds}s) - kontrola všetkých identifikátorov...`);
+        // Tichšie logovanie (voliteľné)
+        // console.log(`⏰ Periodické nahrádzanie (každých ${intervalSeconds}s)...`);
         
-        // 🔴 VŽDY SKONTROLUJEME VŠETKY IDENTIFIKÁTORY NA STRÁNKE
         const allText = document.body.innerText;
         const identifiers = extractIdentifiersFromText(allText);
         
-        if (identifiers.length === 0) {
-            console.log('ℹ️ Žiadne identifikátory na nahrádzanie');
-            return;
-        }
+        if (identifiers.length === 0) return;
         
-        console.log(`📋 Nájdených ${identifiers.length} identifikátorov, spúšťam nahrádzanie...`);
-        
-        // 🔴 PRE VŠETKY IDENTIFIKÁTORY SKÚSIME NAHRADIŤ (nie len nepripravené)
-        // Rozdelíme na pripravené a nepripravené podľa skupiny
         const readyIdentifiers = [];
-        const notReadyIdentifiers = [];
         
         for (const id of identifiers) {
             if (!id || !id.category || !id.groupLetter) continue;
             
-            // Kontrola pripravenosti skupiny
             const isReady = isGroupReadyForReplacement(id.category, id.groupLetter);
             if (isReady) {
                 readyIdentifiers.push(id);
-            } else {
-                notReadyIdentifiers.push(id);
             }
         }
         
-        console.log(`   ✅ Pripravené na nahradenie: ${readyIdentifiers.length}`);
-        console.log(`   ⏳ Čakajú na dokončenie: ${notReadyIdentifiers.length}`);
-        
-        // Nahradíme pripravené identifikátory
         if (readyIdentifiers.length > 0) {
-            console.log(`🔄 Nahrádzam ${readyIdentifiers.length} pripravených identifikátorov...`);
+            console.log(`🔄 Periodické nahrádzanie: ${readyIdentifiers.length} identifikátorov`);
             performPartialReplacement(readyIdentifiers);
-        } else {
-            console.log(`ℹ️ Žiadne identifikátory nie sú pripravené na nahradenie`);
         }
-        
-        // Pre nepripravené len logujeme
-        if (notReadyIdentifiers.length > 0) {
-            const notReadyList = notReadyIdentifiers.map(i => i.originalIdentifier).join(', ');
-            console.log(`⏳ Nepripravené identifikátory: ${notReadyList}`);
-        }
-        
     }, intervalSeconds * 1000);
 }
 
