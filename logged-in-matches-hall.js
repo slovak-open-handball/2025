@@ -2688,14 +2688,40 @@ const matchesHallApp = ({ userProfileData }) => {
     // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA - POUŽÍVA ROVNAKÚ LOGIKU AKO teamManager
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
-        
-        // SKÚSIME POUŽIŤ teamManager (najpresnejšie)
+    
+        // 1. Skúsime teamManager
         if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
             const teamName = window.teamManager.getTeamNameByDisplayIdSync(identifier);
-            if (teamName) {
-                return teamName;
+            if (teamName) return teamName;
+        }
+        
+        // 2. Skúsime window.__teamManagerData
+        if (window.__teamManagerData?.allTeams) {
+            // Vytvoríme displayId rovnakým spôsobom ako v teamManager
+            const parts = identifier.split(' ');
+            if (parts.length >= 2) {
+                const groupAndOrder = parts.pop();
+                const category = parts.join(' ');
+                
+                let groupLetter = '';
+                let order = '';
+                for (let i = 0; i < groupAndOrder.length; i++) {
+                    const char = groupAndOrder[i];
+                    if (char >= '0' && char <= '9') {
+                        order = groupAndOrder.substring(i);
+                        groupLetter = groupAndOrder.substring(0, i);
+                        break;
+                    }
+                }
+                
+                const team = window.__teamManagerData.allTeams.find(t => 
+                    t.category === category && 
+                    t.groupName === `skupina ${groupLetter}` && 
+                    t.order === parseInt(order, 10)
+                );
+                
+                if (team && team.teamName) return team.teamName;
             }
-            // Ak teamManager existuje ale nenašiel tím, pokračujeme fallbackom
         }
         
         // FALLBACK 1: Manuálne vyhľadávanie v používateľoch
