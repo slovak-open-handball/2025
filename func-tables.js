@@ -834,7 +834,7 @@ function getTeamNameByDisplayId(displayId) {
     // Zvyšok je názov kategórie (môže byť viacslovná, napr. "U12 D" alebo "U12 D VS")
     let category = parts.join(' ');
     
-    // 🔴 ODSTRÁNIME "VS" Z NÁZVU KATEGÓRIE
+    // ODSTRÁNIME "VS" Z NÁZVU KATEGÓRIE
     const originalCategory = category;
     category = cleanCategoryName(category);
     
@@ -868,8 +868,35 @@ function getTeamNameByDisplayId(displayId) {
     // VYTVORÍME TABUĽKU SKUPINY A VYHĽADÁME V NIEJ
     const groupTable = window.matchTracker?.createGroupTable(category, fullGroupName);
     
+    // AK SKUPINA NEMÁ ŽIADNE ZÁPASY, POUŽIJEME SUPERSTRUCTURE TEAMS
+    if (!groupTable) {
+        console.log(`ℹ️ Skupina ${fullGroupName} v kategórii ${category} nemá žiadne zápasy, skúšam superstructureTeams...`);
+        
+        // Skúsime nájsť tím v superstructureTeams
+        if (window.superstructureTeams) {
+            const categoryTeams = window.superstructureTeams[category];
+            if (categoryTeams && Array.isArray(categoryTeams)) {
+                const team = categoryTeams.find(t => 
+                    t.groupName === fullGroupName && 
+                    t.order === positionNum
+                );
+                if (team && team.teamName) {
+                    // Odstránime názov kategórie z názvu tímu ak je na začiatku
+                    let teamName = team.teamName;
+                    if (teamName.startsWith(category + ' ')) {
+                        teamName = teamName.substring(category.length + 1);
+                    }
+                    console.log(`✅ Nájdený tím (superstructureTeams): ${teamName}`);
+                    return teamName;
+                }
+            }
+        }
+        
+        console.log(`❌ Tabuľka pre skupinu ${fullGroupName} v kategórii ${category} nebola nájdená a ani v superstructureTeams`);
+        return null;
+    }
+    
     if (groupTable && groupTable.teams && groupTable.teams.length > 0) {
-        // 🔴 KRITICKÉ: SKONTROLUJEME, ČI SÚ VŠETKY ZÁPASY V SKUPINE ODOHRANÉ (100%)
         const totalMatches = groupTable.totalMatches || 0;
         const completedMatches = groupTable.completedCount || 0;
         const completionPercentage = totalMatches > 0 ? (completedMatches / totalMatches * 100) : 0;
@@ -1028,12 +1055,17 @@ function extractIdentifiersFromText(text) {
     return identifiers;
 }
 
-// Aktualizujeme funkciu isGroupReadyForReplacement, aby používala očistenú kategóriu
+// Aktualizovaná funkcia isGroupReadyForReplacement - ak skupina nemá žiadne zápasy, považuje sa za pripravenú
 function isGroupReadyForReplacement(category, groupLetter) {
-    // Odstránime "VS" z kategórie
     const cleanCategory = cleanCategoryName(category);
     const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
     const groupTable = window.matchTracker?.createGroupTable(cleanCategory, fullGroupName);
+    
+    // Ak skupina nemá žiadne zápasy, považujeme ju za pripravenú na nahradenie
+    if (!groupTable) {
+        console.log(`ℹ️ Skupina ${fullGroupName} v kategórii ${cleanCategory} nemá žiadne zápasy, považujem za pripravenú`);
+        return true;
+    }
     
     if (groupTable && groupTable.teams && groupTable.teams.length > 0) {
         const totalMatches = groupTable.totalMatches || 0;
@@ -1052,7 +1084,8 @@ function isGroupReadyForReplacement(category, groupLetter) {
         return isReady;
     }
     
-    return false;
+    // Ak nie sú žiadne tímy, tiež považujeme za pripravenú
+    return true;
 }
 
 // Aktualizujeme funkciu performPartialReplacement, aby ukladala pôvodný identifikátor
