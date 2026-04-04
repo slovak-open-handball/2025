@@ -1350,7 +1350,7 @@ function replaceTeamIdentifiersWhenReady() {
         setTimeout(() => {
             console.log('✅ Vykonávam nahradenie pre pripravené skupiny...');
             performPartialReplacement(readyIdentifiers);
-        }, 2000);
+        }, 0);
     } else {
         console.log('ℹ️ Žiadna skupina ešte nie je pripravená na nahradenie');
     }
