@@ -2974,7 +2974,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         };
 
-        // UPRAVENÁ FUNKCIA PRE ZOBRAZENIE HRÁČOV - berie do úvahy match-specific removals
+        // Funkcia pre zobrazenie hráčov (UPRAVENÁ - sekcia Ostatní sa zobrazuje vždy, ale bez klikania v režimoch in-progress/completed)
         const renderPlayersSection = (teamDetails, teamType, teamName) => {
             // Získame aktívnych hráčov (ktorí nie sú odstránení pre tento zápas)
             const activePlayers = teamDetails?.team.playerDetails?.filter(p => p && !p.removedForMatch) || [];
@@ -2996,9 +2996,13 @@ const matchesHallApp = ({ userProfileData }) => {
             // Celkový počet odstránených
             const totalRemoved = removedPlayers.length + removedMenStaff.length + removedWomenStaff.length;
             
-            // Zistíme, či je zápas ukončený
+            // Zistíme, či je zápas ukončený alebo prebieha
             const isMatchCompleted = selectedMatch?.status === 'completed';
+            const isMatchInProgress = selectedMatch?.status === 'in-progress' || selectedMatch?.status === 'paused';
             const isMatchScheduled = selectedMatch?.status === 'scheduled';
+            
+            // Zistíme, či sa má sekcia "Ostatní" zobraziť (vždy, ak je aspoň jeden odstránený člen)
+            const showRemovedSection = totalRemoved > 0;
             
             return React.createElement(
                 'div',
@@ -3041,7 +3045,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 if (isMatchCompleted) {
                                     // Ukončený zápas - žiadne kliknutie, vyblednutý vzhľad
                                     cursorClass = 'opacity-50 cursor-not-allowed';
-                                } else if (selectedMatch?.status === 'scheduled') {
+                                } else if (isMatchScheduled) {
                                     // Naplánovaný zápas - úprava hráča
                                     onClickHandler = () => openEditPlayerModal(player, teamType, teamDetails, false);
                                     cursorClass = 'hover:bg-blue-50 cursor-pointer';
@@ -3104,7 +3108,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             key: `${teamType}-player-${idx}`, 
                                             className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${cursorClass}`,
                                             onClick: onClickHandler,
-                                            title: isMatchCompleted ? 'Zápas je ukončený' : (!isMatchActionAllowed() && selectedMatch?.status !== 'scheduled' ? (selectedMatch?.status === 'scheduled' ? 'Kliknite pre úpravu hráča' : 'Zápas je ukončený') : '')
+                                            title: isMatchCompleted ? 'Zápas je ukončený' : (!isMatchActionAllowed() && !isMatchScheduled ? 'Zápas je ukončený' : '')
                                         },
                                         React.createElement(
                                             'div',
@@ -3121,7 +3125,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 `${player.lastName} ${player.firstName}`
                                             )
                                         ),
-                                        selectedMatch?.status === 'scheduled' && React.createElement(
+                                        isMatchScheduled && React.createElement(
                                             'i',
                                             { className: 'fa-solid fa-pencil text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity' }
                                         )
@@ -3139,8 +3143,9 @@ const matchesHallApp = ({ userProfileData }) => {
                     'Nedostupné'
                 ),
                 
-                // SEKcia Ostatní - zobrazí sa len pri naplánovanom zápase a ak je nejaký odstránený
-                selectedMatch?.status === 'scheduled' && totalRemoved > 0 && React.createElement(
+                // SEKcia Ostatní - zobrazí sa vždy, keď je aspoň jeden odstránený člen
+                // (pre všetky stavy zápasu: scheduled, in-progress, paused, completed)
+                showRemovedSection && React.createElement(
                     'div',
                     { className: 'mt-4 pt-3 border-t border-gray-200' },
                     React.createElement(
@@ -3152,7 +3157,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     React.createElement(
                         'div',
                         { className: 'space-y-1' },
-                        // Odstránení hráči
+                        // Odstránení hráči - bez klikania v režimoch in-progress a completed
                         [...removedPlayers]
                             .sort((a, b) => {
                                 const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
@@ -3160,12 +3165,33 @@ const matchesHallApp = ({ userProfileData }) => {
                                 return numA - numB;
                             })
                             .map((player, idx) => {
+                                // Určenie správania pre položky v sekcii "Ostatní"
+                                let onClickHandler = undefined;
+                                let cursorClass = 'cursor-not-allowed opacity-60';
+                                let hoverClass = '';
+                                let titleText = '';
+                                
+                                if (isMatchScheduled) {
+                                    // Len pri naplánovanom zápase je možné obnoviť hráča
+                                    onClickHandler = () => restorePlayerToRoster(player, teamType, teamDetails);
+                                    cursorClass = 'cursor-pointer';
+                                    hoverClass = 'hover:bg-blue-50';
+                                    titleText = 'Kliknite pre obnovenie do súpisky';
+                                } else if (isMatchInProgress || isMatchCompleted) {
+                                    // Pri prebiehajúcom alebo ukončenom zápase - žiadne kliknutie, iba zobrazenie
+                                    onClickHandler = undefined;
+                                    cursorClass = 'cursor-not-allowed';
+                                    hoverClass = '';
+                                    titleText = isMatchCompleted ? 'Zápas je ukončený' : 'Nie je možné obnoviť počas prebiehajúceho zápasu';
+                                }
+                                
                                 return React.createElement(
                                     'div',
                                     { 
                                         key: `${teamType}-removed-player-${idx}`, 
-                                        className: 'flex items-center justify-between gap-2 p-2 rounded border border-gray-200 bg-gray-50 text-sm group relative cursor-pointer hover:bg-blue-50',
-                                        onClick: () => restorePlayerToRoster(player, teamType, teamDetails)
+                                        className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 bg-gray-50 text-sm group relative transition-colors ${cursorClass} ${hoverClass}`,
+                                        onClick: onClickHandler,
+                                        title: titleText
                                     },
                                     React.createElement(
                                         'div',
@@ -3178,24 +3204,43 @@ const matchesHallApp = ({ userProfileData }) => {
                                         ),
                                         React.createElement(
                                             'span',
-                                            { className: 'font-medium text-gray-500' },
+                                            { className: `font-medium ${isMatchScheduled ? 'text-gray-700' : 'text-gray-400'}` },
                                             `${player.lastName} ${player.firstName}`
                                         )
                                     ),
-                                    React.createElement(
+                                    // Ikona obnovenia sa zobrazí len pri naplánovanom zápase
+                                    isMatchScheduled && React.createElement(
                                         'i',
                                         { className: 'fa-solid fa-undo text-xs text-green-500 opacity-0 group-hover:opacity-100 transition-opacity' }
                                     )
                                 );
                             }),
-                        // Odstránení členovia RT (muži)
+                        // Odstránení členovia RT (muži) - bez klikania v režimoch in-progress a completed
                         removedMenStaff.map((member, idx) => {
+                            let onClickHandler = undefined;
+                            let cursorClass = 'cursor-not-allowed opacity-60';
+                            let hoverClass = '';
+                            let titleText = '';
+                            
+                            if (isMatchScheduled) {
+                                onClickHandler = () => restoreStaffToRoster(member, teamType, teamDetails, 'men');
+                                cursorClass = 'cursor-pointer';
+                                hoverClass = 'hover:bg-blue-50';
+                                titleText = 'Kliknite pre obnovenie do súpisky';
+                            } else if (isMatchInProgress || isMatchCompleted) {
+                                onClickHandler = undefined;
+                                cursorClass = 'cursor-not-allowed';
+                                hoverClass = '';
+                                titleText = isMatchCompleted ? 'Zápas je ukončený' : 'Nie je možné obnoviť počas prebiehajúceho zápasu';
+                            }
+                            
                             return React.createElement(
                                 'div',
                                 { 
                                     key: `${teamType}-removed-men-${idx}`, 
-                                    className: 'flex items-center justify-between gap-2 p-2 rounded border border-gray-200 bg-gray-50 text-sm group relative cursor-pointer hover:bg-blue-50',
-                                    onClick: () => restoreStaffToRoster(member, teamType, teamDetails, 'men')
+                                    className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 bg-gray-50 text-sm group relative transition-colors ${cursorClass} ${hoverClass}`,
+                                    onClick: onClickHandler,
+                                    title: titleText
                                 },
                                 React.createElement(
                                     'div',
@@ -3203,24 +3248,42 @@ const matchesHallApp = ({ userProfileData }) => {
                                     React.createElement('i', { className: 'fa-solid fa-user text-gray-400 text-xs flex-shrink-0' }),
                                     React.createElement(
                                         'span',
-                                        { className: 'font-medium text-gray-500' },
+                                        { className: `font-medium ${isMatchScheduled ? 'text-gray-700' : 'text-gray-400'}` },
                                         `${member.lastName} ${member.firstName}`
                                     )
                                 ),
-                                React.createElement(
+                                isMatchScheduled && React.createElement(
                                     'i',
                                     { className: 'fa-solid fa-undo text-xs text-green-500 opacity-0 group-hover:opacity-100 transition-opacity' }
                                 )
                             );
                         }),
-                        // Odstránení členovia RT (ženy)
+                        // Odstránení členovia RT (ženy) - bez klikania v režimoch in-progress a completed
                         removedWomenStaff.map((member, idx) => {
+                            let onClickHandler = undefined;
+                            let cursorClass = 'cursor-not-allowed opacity-60';
+                            let hoverClass = '';
+                            let titleText = '';
+                            
+                            if (isMatchScheduled) {
+                                onClickHandler = () => restoreStaffToRoster(member, teamType, teamDetails, 'women');
+                                cursorClass = 'cursor-pointer';
+                                hoverClass = 'hover:bg-blue-50';
+                                titleText = 'Kliknite pre obnovenie do súpisky';
+                            } else if (isMatchInProgress || isMatchCompleted) {
+                                onClickHandler = undefined;
+                                cursorClass = 'cursor-not-allowed';
+                                hoverClass = '';
+                                titleText = isMatchCompleted ? 'Zápas je ukončený' : 'Nie je možné obnoviť počas prebiehajúceho zápasu';
+                            }
+                            
                             return React.createElement(
                                 'div',
                                 { 
                                     key: `${teamType}-removed-women-${idx}`, 
-                                    className: 'flex items-center justify-between gap-2 p-2 rounded border border-gray-200 bg-gray-50 text-sm group relative cursor-pointer hover:bg-blue-50',
-                                    onClick: () => restoreStaffToRoster(member, teamType, teamDetails, 'women')
+                                    className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 bg-gray-50 text-sm group relative transition-colors ${cursorClass} ${hoverClass}`,
+                                    onClick: onClickHandler,
+                                    title: titleText
                                 },
                                 React.createElement(
                                     'div',
@@ -3228,11 +3291,11 @@ const matchesHallApp = ({ userProfileData }) => {
                                     React.createElement('i', { className: 'fa-solid fa-user text-pink-400 text-xs flex-shrink-0' }),
                                     React.createElement(
                                         'span',
-                                        { className: 'font-medium text-gray-500' },
+                                        { className: `font-medium ${isMatchScheduled ? 'text-gray-700' : 'text-gray-400'}` },
                                         `${member.lastName} ${member.firstName}`
                                     )
                                 ),
-                                React.createElement(
+                                isMatchScheduled && React.createElement(
                                     'i',
                                     { className: 'fa-solid fa-undo text-xs text-green-500 opacity-0 group-hover:opacity-100 transition-opacity' }
                                 )
