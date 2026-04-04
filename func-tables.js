@@ -527,7 +527,7 @@
         refresh: refresh,
         printAll: printAllMatches,
         printLive: printLiveMatches,
-        printCompleted: printCompletedMatches
+        printCompleted: printCompletedMatches,
         printMatch: printMatchDetails,
         getMatches: () => matchesData,
         getEvents: (matchId) => eventsData[matchId] || []
