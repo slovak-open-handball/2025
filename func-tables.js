@@ -169,11 +169,11 @@
                 
                 if (homeScore > awayScore) {
                     homeTeamStats.wins++;
-                    homeTeamStats.points += 3;
+                    homeTeamStats.points += 2;
                     awayTeamStats.losses++;
                 } else if (awayScore > homeScore) {
                     awayTeamStats.wins++;
-                    awayTeamStats.points += 3;
+                    awayTeamStats.points += 2;
                     homeTeamStats.losses++;
                 } else {
                     homeTeamStats.draws++;
