@@ -4778,7 +4778,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         React.createElement('div', { className: 'col-span-1 text-center font-bold text-red-600' }, stats?.redCards || 0),
                                                         React.createElement('div', { className: 'col-span-1 text-center font-bold text-blue-800' }, stats?.blueCards || 0),
                                                         React.createElement('div', { className: 'col-span-1 text-center font-bold text-orange-600' }, stats?.exclusions || 0),
-                                                        selectedMatch?.status === 'scheduled' && React.createElement(
+                                                        !showPlayerStats && selectedMatch?.status === 'scheduled' && React.createElement(
                                                             'div',
                                                             { className: 'col-span-1 text-right' },
                                                             React.createElement('i', { className: 'fa-solid fa-pencil text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity' })
@@ -4843,7 +4843,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         React.createElement('div', { className: 'col-span-1 text-center font-bold text-red-600' }, stats?.redCards || 0),
                                                         React.createElement('div', { className: 'col-span-1 text-center font-bold text-blue-800' }, stats?.blueCards || 0),
                                                         React.createElement('div', { className: 'col-span-1 text-center font-bold text-orange-600' }, stats?.exclusions || 0),
-                                                        selectedMatch?.status === 'scheduled' && React.createElement(
+                                                        !showPlayerStats && selectedMatch?.status === 'scheduled' && React.createElement(
                                                             'div',
                                                             { className: 'col-span-1 text-right' },
                                                             React.createElement('i', { className: 'fa-solid fa-pencil text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity' })
