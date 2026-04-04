@@ -1453,8 +1453,89 @@ if (window.matchTracker) {
     window.matchTracker.cleanCategoryName = cleanCategoryName;
 }
 
+// Počkáme, kým sa načítajú VŠETKY zápasy a udalosti
+function waitForAllData() {
+    return new Promise((resolve) => {
+        if (!window.matchTracker) {
+            console.log('⏳ Čakám na matchTracker...');
+            setTimeout(() => waitForAllData().then(resolve), 500);
+            return;
+        }
+        
+        let checkCount = 0;
+        const maxChecks = 30; // Max 30 sekúnd čakania
+        
+        const checkInterval = setInterval(() => {
+            checkCount++;
+            
+            const allMatches = window.matchTracker.getAllMatches?.() || [];
+            if (allMatches.length === 0) {
+                console.log(`⏳ Čakám na načítanie zápasov... (${checkCount}/30)`);
+                return;
+            }
+            
+            // Získame všetky unikátne skupiny
+            const groups = new Set();
+            allMatches.forEach(match => {
+                if (match.categoryName && match.groupName) {
+                    groups.add(`${match.categoryName}|${match.groupName}`);
+                }
+            });
+            
+            let allGroupsReady = true;
+            let totalMatches = 0;
+            let totalCompletedMatches = 0;
+            
+            for (const groupKey of groups) {
+                const [category, group] = groupKey.split('|');
+                const groupTable = window.matchTracker.createGroupTable(category, group);
+                
+                if (!groupTable) {
+                    allGroupsReady = false;
+                    break;
+                }
+                
+                totalMatches += groupTable.totalMatches || 0;
+                totalCompletedMatches += groupTable.completedCount || 0;
+                
+                // Kontrola, či skupina má všetky zápasy
+                const allMatchesInGroup = window.matchTracker.getGroupMatches?.(category, group) || [];
+                if (allMatchesInGroup.length === 0) {
+                    allGroupsReady = false;
+                    break;
+                }
+                
+                // Kontrola, či všetky odohrané zápasy majú udalosti
+                const completedMatches = allMatchesInGroup.filter(m => m.status === 'completed');
+                for (const match of completedMatches) {
+                    const events = window.matchTracker.getEvents?.(match.id) || [];
+                    if (events.length === 0) {
+                        allGroupsReady = false;
+                        break;
+                    }
+                }
+                
+                if (!allGroupsReady) break;
+            }
+            
+            const percentage = totalMatches > 0 ? (totalCompletedMatches / totalMatches * 100) : 0;
+            console.log(`📊 Celkový stav: ${totalCompletedMatches}/${totalMatches} odohraných (${percentage.toFixed(1)}%)`);
+            
+            if (allGroupsReady && totalMatches > 0 && percentage === 100) {
+                clearInterval(checkInterval);
+                console.log('✅ VŠETKY dáta sú načítané a všetky skupiny sú kompletné!');
+                resolve();
+            } else if (checkCount >= maxChecks) {
+                clearInterval(checkInterval);
+                console.log('⚠️ Timeout: Pokračujem s čiastočnými dátami');
+                resolve();
+            }
+        }, 1000);
+    });
+}
+
 // Funkcia na spustenie sledovania
-function startTeamNameReplacement() {
+async function startTeamNameReplacement() {
     console.log('🚀 Spúšťam automatické nahrádzanie identifikátorov tímov...');
     console.log('📌 Nahrádzajú sa len skupiny, ktoré majú 100% odohraných zápasov a všetky zápasy sú spracované.');
     
@@ -1463,8 +1544,17 @@ function startTeamNameReplacement() {
             clearInterval(checkInterval);
             console.log('✅ MatchTracker je pripravený');
             
-            const observer = observePageChanges();
-            window._teamNameObserver = observer;
+            // POČKÁME NA VŠETKY DÁTA PRED SPUSTENÍM
+            waitForAllData().then(() => {
+                const observer = observePageChanges();
+                window._teamNameObserver = observer;
+                
+                // Jedno okamžité nahradenie po načítaní všetkých dát
+                setTimeout(() => {
+                    console.log('🔄 Spúšťam úplné nahradenie po načítaní všetkých dát...');
+                    replaceTeamIdentifiersWhenReady();
+                }, 500);
+            });
         }
     }, 500);
     
