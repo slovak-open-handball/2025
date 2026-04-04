@@ -1810,6 +1810,33 @@ const matchesHallApp = ({ userProfileData }) => {
         
         // Timeout pre prípad, že sa teamManager nenačíta
         const timeout = setTimeout(() => {
+            setTeamManagerReady(true);
+        }, 5000);
+        
+        return () => {
+            window.removeEventListener('teamManagerUpdate', handleTeamManagerUpdate);
+            clearTimeout(timeout);
+        };
+    }, []);
+
+    useEffect(() => {
+        // Skontrolujeme, či už je teamManager dostupný
+        if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+            setTeamManagerReady(true);
+            return;
+        }
+        
+        // Počkáme na udalosť teamManagerUpdate
+        const handleTeamManagerUpdate = () => {
+            if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+                setTeamManagerReady(true);
+            }
+        };
+        
+        window.addEventListener('teamManagerUpdate', handleTeamManagerUpdate);
+        
+        // Timeout pre prípad, že sa teamManager nenačíta
+        const timeout = setTimeout(() => {
             setTeamManagerReady(true); // aj tak pokračujeme
         }, 5000);
         
