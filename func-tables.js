@@ -1446,28 +1446,23 @@ if (window.matchTracker) {
     window.matchTracker.cleanCategoryName = cleanCategoryName;
 }
 
-// Počkáme, kým sa načítajú VŠETKY zápasy a udalosti
 function waitForAllData() {
     return new Promise((resolve) => {
         if (!window.matchTracker) {
-            console.log('⏳ Čakám na matchTracker...');
             setTimeout(() => waitForAllData().then(resolve), 500);
             return;
         }
         
-        let checkCount = 0;
-        const maxChecks = 30; // Max 30 sekúnd čakania
+        let lastChangeTime = Date.now();
+        let lastPercentage = -1;
+        let stableCount = 0;
+        const maxStableChecks = 5; // 5 sekúnd bez zmeny = hotovo
         
         const checkInterval = setInterval(() => {
-            checkCount++;
-            
             const allMatches = window.matchTracker.getAllMatches?.() || [];
-            if (allMatches.length === 0) {
-                console.log(`⏳ Čakám na načítanie zápasov... (${checkCount}/30)`);
-                return;
-            }
+            if (allMatches.length === 0) return;
             
-            // Získame všetky unikátne skupiny
+            // Vypočítame aktuálny stav
             const groups = new Set();
             allMatches.forEach(match => {
                 if (match.categoryName && match.groupName) {
@@ -1475,52 +1470,50 @@ function waitForAllData() {
                 }
             });
             
-            let allGroupsReady = true;
             let totalMatches = 0;
             let totalCompletedMatches = 0;
             
             for (const groupKey of groups) {
                 const [category, group] = groupKey.split('|');
                 const groupTable = window.matchTracker.createGroupTable(category, group);
-                
-                if (!groupTable) {
-                    allGroupsReady = false;
-                    break;
+                if (groupTable) {
+                    totalMatches += groupTable.totalMatches || 0;
+                    totalCompletedMatches += groupTable.completedCount || 0;
                 }
-                
-                totalMatches += groupTable.totalMatches || 0;
-                totalCompletedMatches += groupTable.completedCount || 0;
-                
-                // Kontrola, či skupina má všetky zápasy
-                const allMatchesInGroup = window.matchTracker.getGroupMatches?.(category, group) || [];
-                if (allMatchesInGroup.length === 0) {
-                    allGroupsReady = false;
-                    break;
-                }
-                
-                // Kontrola, či všetky odohrané zápasy majú udalosti
-                const completedMatches = allMatchesInGroup.filter(m => m.status === 'completed');
-                for (const match of completedMatches) {
-                    const events = window.matchTracker.getEvents?.(match.id) || [];
-                    if (events.length === 0) {
-                        allGroupsReady = false;
-                        break;
-                    }
-                }
-                
-                if (!allGroupsReady) break;
             }
             
             const percentage = totalMatches > 0 ? (totalCompletedMatches / totalMatches * 100) : 0;
-            console.log(`📊 Celkový stav: ${totalCompletedMatches}/${totalMatches} odohraných (${percentage.toFixed(1)}%)`);
             
-            if (allGroupsReady && totalMatches > 0 && percentage === 100) {
+            // Ak sa percento zmenilo, resetujeme stabilný counter
+            if (percentage !== lastPercentage) {
+                lastPercentage = percentage;
+                lastChangeTime = Date.now();
+                stableCount = 0;
+                console.log(`📊 Stav sa mení: ${percentage.toFixed(1)}%`);
+            } else {
+                stableCount++;
+                console.log(`⏱️ Stabilný stav ${stableCount}/${maxStableChecks} (${percentage.toFixed(1)}%)`);
+            }
+            
+            // Podmienky na ukončenie:
+            // 1. Máme 100% → OK
+            // 2. Alebo 30 sekúnd bez zmeny → timeout
+            // 3. Alebo 5 kontrol bez zmeny (5 sekúnd) pri >= 90% → skoro hotovo
+            const timeSinceLastChange = Date.now() - lastChangeTime;
+            const isAlmostComplete = percentage >= 90 && stableCount >= maxStableChecks;
+            const isTimeout = timeSinceLastChange >= 30000;
+            
+            if (percentage === 100) {
                 clearInterval(checkInterval);
-                console.log('✅ VŠETKY dáta sú načítané a všetky skupiny sú kompletné!');
+                console.log('✅ 100% dokončené!');
                 resolve();
-            } else if (checkCount >= maxChecks) {
+            } else if (isAlmostComplete) {
                 clearInterval(checkInterval);
-                console.log('⚠️ Timeout: Pokračujem s čiastočnými dátami');
+                console.log(`✅ Stav ${percentage.toFixed(1)}% je stabilný, pokračujem...`);
+                resolve();
+            } else if (isTimeout) {
+                clearInterval(checkInterval);
+                console.log(`⚠️ Timeout: Žiadna zmena ${(timeSinceLastChange/1000).toFixed(0)} sekúnd, pokračujem s ${percentage.toFixed(1)}%`);
                 resolve();
             }
         }, 1000);
