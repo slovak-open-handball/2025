@@ -3820,7 +3820,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         selectedMatch?.status === 'scheduled' && React.createElement(
                                                             'div',
                                                             { className: 'col-span-1 text-right' },
-                                                            React.createElement('i', { className: 'fa-solid fa-pencil text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity' })
+                                                            React.createElement('i', { className: 'fa-solid fa-pencil text-xs text-gray-400' })
                                                         )
                                                     );
                                                 } else {
@@ -4598,7 +4598,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         !showPlayerStats && selectedMatch?.status === 'scheduled' && React.createElement(
                                                             'div',
                                                             { className: 'col-span-1 text-right' },
-                                                            React.createElement('i', { className: 'fa-solid fa-pencil text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity' })
+                                                            React.createElement('i', { className: 'fa-solid fa-pencil text-xs text-gray-400' })
                                                         )
                                                     );
                                                 })
@@ -4663,7 +4663,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         !showPlayerStats && selectedMatch?.status === 'scheduled' && React.createElement(
                                                             'div',
                                                             { className: 'col-span-1 text-right' },
-                                                            React.createElement('i', { className: 'fa-solid fa-pencil text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity' })
+                                                            React.createElement('i', { className: 'fa-solid fa-pencil text-xs text-gray-400' })
                                                         )
                                                     );
                                                 })
@@ -4782,7 +4782,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         !showPlayerStats && selectedMatch?.status === 'scheduled' && React.createElement(
                                                             'div',
                                                             { className: 'col-span-1 text-right' },
-                                                            React.createElement('i', { className: 'fa-solid fa-pencil text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity' })
+                                                            React.createElement('i', { className: 'fa-solid fa-pencil text-xs text-gray-400' })
                                                         )
                                                     );
                                                 })
@@ -4847,7 +4847,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         !showPlayerStats && selectedMatch?.status === 'scheduled' && React.createElement(
                                                             'div',
                                                             { className: 'col-span-1 text-right' },
-                                                            React.createElement('i', { className: 'fa-solid fa-pencil text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity' })
+                                                            React.createElement('i', { className: 'fa-solid fa-pencil text-xs text-gray-400' })
                                                         )
                                                     );
                                                 })
