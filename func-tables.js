@@ -834,8 +834,99 @@ function getTeamInfoByDisplayId(displayId) {
 }
 
 // Aktualizovaná funkcia extractIdentifiersFromText - lepšie filtrovanie
+// Aktualizovaná funkcia extractIdentifiersFromText - lepšie filtrovanie a vždy vracia pole
 function extractIdentifiersFromText(text) {
-    // ... (zachovaj pôvodnú implementáciu) ...
+    // Ak text nie je reťazec, vrátime prázdne pole
+    if (typeof text !== 'string' || !text) {
+        console.log('ℹ️ extractIdentifiersFromText: text nie je platný reťazec');
+        return [];
+    }
+    
+    // Regulárny výraz na nájdenie identifikátorov - musí začínať písmenom a obsahovať medzeru pred číslom+písmenom
+    const teamIdPattern = /(?<![A-Za-z0-9])([A-Za-z][A-Za-z0-9\s]*?)\s+(\d+[A-Za-z])(?![A-Za-z0-9])/g;
+    const identifiers = [];
+    let match;
+    
+    // Rozdelíme text na riadky a spracujeme každý zvlášť
+    const lines = text.split(/\r?\n/);
+    
+    for (const line of lines) {
+        // Preskočíme prázdne riadky
+        if (!line || line.trim() === '') continue;
+        
+        teamIdPattern.lastIndex = 0;
+        while ((match = teamIdPattern.exec(line)) !== null) {
+            let categoryPart = match[1].trim();
+            const numberLetter = match[2];
+            
+            // Kontrola, či categoryPart neobsahuje nežiaduce slová
+            const unwantedWords = ['zápas', 'udalosti', 'priebeh', 'skupina', 'tím', 'kategória', 'vs', 'VS', 'gól', 'červená', 'žltá'];
+            let skip = false;
+            for (const word of unwantedWords) {
+                if (categoryPart.toLowerCase().includes(word.toLowerCase())) {
+                    skip = true;
+                    break;
+                }
+            }
+            if (skip) continue;
+            
+            // Kontrola, či categoryPart vyzerá ako platná kategória (začína písmenom a číslom)
+            if (!/^[A-Za-z]+\d+/.test(categoryPart) && !/^[A-Za-z]+\s+[A-Za-z]+\d+/.test(categoryPart)) {
+                // Možno je to ešte validný formát (napr. "U12 D")
+                if (!/^[A-Za-z0-9\s]+$/.test(categoryPart)) {
+                    continue;
+                }
+            }
+            
+            // Odstránime "VS" z názvu kategórie
+            const originalCategory = categoryPart;
+            categoryPart = cleanCategoryName(categoryPart);
+            
+            // Kontrola, či po očistení nie je prázdny reťazec
+            if (!categoryPart || categoryPart.length < 2) continue;
+            
+            const identifier = `${categoryPart} ${numberLetter}`;
+            
+            // Extrahujeme pozíciu a písmeno skupiny
+            let position = '';
+            let groupLetter = '';
+            for (let i = 0; i < numberLetter.length; i++) {
+                const char = numberLetter[i];
+                if (char >= '0' && char <= '9') {
+                    position += char;
+                } else if (/[A-Za-z]/.test(char)) {
+                    groupLetter += char;
+                }
+            }
+            
+            if (!position || !groupLetter) continue;
+            
+            identifiers.push({
+                identifier: identifier,
+                originalIdentifier: `${originalCategory} ${numberLetter}`,
+                category: categoryPart,
+                originalCategory: originalCategory,
+                position: parseInt(position, 10),
+                groupLetter: groupLetter.toUpperCase(),
+                fullMatch: match[0],
+                startIndex: match.index,
+                endIndex: match.index + match[0].length
+            });
+        }
+    }
+    
+    // Odstránime duplicitné identifikátory
+    const uniqueIdentifiers = [];
+    const seen = new Set();
+    for (const id of identifiers) {
+        const key = `${id.category}|${id.groupLetter}|${id.position}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            uniqueIdentifiers.push(id);
+        }
+    }
+    
+    return uniqueIdentifiers;
 }
 
 // ** UPRAVENÁ FUNKCIA: isGroupReadyForReplacement **
@@ -953,8 +1044,20 @@ function performPartialReplacement(identifiersToReplace) {
 function replaceTeamIdentifiersWhenReady() {
     console.log('🔍 Kontrolujem pripravenosť skupín na nahrádzanie...');
     
+    // Bezpečnostná kontrola - či existuje document.body
+    if (!document || !document.body) {
+        console.log('⚠️ document.body nie je dostupný, čakám...');
+        return;
+    }
+    
     const allText = document.body.innerText;
     const identifiers = extractIdentifiersFromText(allText);
+    
+    // Bezpečnostná kontrola - či identifiers je pole
+    if (!identifiers || !Array.isArray(identifiers)) {
+        console.log('⚠️ extractIdentifiersFromText nevrátil platné pole, čakám...');
+        return;
+    }
     
     if (identifiers.length === 0) {
         console.log('ℹ️ Žiadne identifikátory tímov neboli nájdené na stránke');
@@ -965,6 +1068,12 @@ function replaceTeamIdentifiersWhenReady() {
     const notReadyIdentifiers = [];
     
     for (const id of identifiers) {
+        // Bezpečnostná kontrola - či id existuje a má potrebné vlastnosti
+        if (!id || !id.category || !id.groupLetter) {
+            console.log('⚠️ Neplatný identifikátor, preskakujem:', id);
+            continue;
+        }
+        
         const isReady = isGroupReadyForReplacement(id.category, id.groupLetter);
         if (isReady) {
             readyIdentifiers.push(id);
