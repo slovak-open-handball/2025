@@ -330,6 +330,8 @@ const matchesHallApp = ({ userProfileData }) => {
 
     const [showFloatingScore, setShowFloatingScore] = useState(false);
 
+    const [teamManagerReady, setTeamManagerReady] = useState(false);
+
     // Funkcia na otvorenie modálneho okna pre úpravu člena realizačného tímu
     const openEditStaffModal = (member, team, teamDetails, staffType, staffIndex) => {
         if (selectedMatch?.status !== 'scheduled') {
@@ -1791,6 +1793,33 @@ const matchesHallApp = ({ userProfileData }) => {
     };
 
     useEffect(() => {
+        // Skontrolujeme, či už je teamManager dostupný
+        if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+            setTeamManagerReady(true);
+            return;
+        }
+        
+        // Počkáme na udalosť teamManagerUpdate
+        const handleTeamManagerUpdate = () => {
+            if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+                setTeamManagerReady(true);
+            }
+        };
+        
+        window.addEventListener('teamManagerUpdate', handleTeamManagerUpdate);
+        
+        // Timeout pre prípad, že sa teamManager nenačíta
+        const timeout = setTimeout(() => {
+            setTeamManagerReady(true); // aj tak pokračujeme
+        }, 5000);
+        
+        return () => {
+            window.removeEventListener('teamManagerUpdate', handleTeamManagerUpdate);
+            clearTimeout(timeout);
+        };
+    }, []);
+
+    useEffect(() => {
         const handleScroll = () => {
             // Sledujeme tlačidlo "Všetky zápasy" (je v hornej časti)
             const backButton = document.querySelector('.absolute.left-4.top-4');
@@ -2631,7 +2660,54 @@ const matchesHallApp = ({ userProfileData }) => {
 
     // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA - POUŽÍVA ROVNAKÚ LOGIKU AKO teamManager
     const getTeamNameByIdentifier = (identifier) => {
-        return getTeamNameSafe(identifier);
+        if (!identifier) return 'Neznámy tím';
+        
+        // Ak je teamManager pripravený, použijeme ho
+        if (teamManagerReady && window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+            const teamName = window.teamManager.getTeamNameByDisplayIdSync(identifier);
+            if (teamName) return teamName;
+        }
+        
+        // Inak použijeme fallback (vyhľadávanie v users)
+        const parts = identifier.split(' ');
+        if (parts.length < 2) return identifier;
+        
+        const groupAndOrder = parts.pop();
+        const category = parts.join(' ');
+        
+        let groupLetter = '';
+        let order = '';
+        for (let i = 0; i < groupAndOrder.length; i++) {
+            const char = groupAndOrder[i];
+            if (char >= '0' && char <= '9') {
+                order = groupAndOrder.substring(i);
+                groupLetter = groupAndOrder.substring(0, i);
+                break;
+            }
+        }
+        
+        if (!order) return identifier;
+        
+        const fullGroupName = `skupina ${groupLetter}`;
+        const orderNum = parseInt(order, 10);
+        
+        // Hľadáme v users
+        for (const user of users) {
+            if (!user.teams) continue;
+            const userTeams = user.teams[category];
+            if (!userTeams || !Array.isArray(userTeams)) continue;
+            
+            const team = userTeams.find(t => 
+                t.groupName === fullGroupName && 
+                t.order === orderNum
+            );
+            
+            if (team && team.teamName) {
+                return team.teamName;
+            }
+        }
+        
+        return identifier;
     };
 
     // FUNKCIA NA ZÍSKANIE KOMPLETNÝCH INFORMÁCIÍ O TÍME
