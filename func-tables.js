@@ -1075,7 +1075,6 @@ function isGroupReadyForReplacement(category, groupLetter) {
     // 1. Skúsime získať tabuľku skupiny
     let groupTable = window.matchTracker?.createGroupTable(cleanCategory, fullGroupName);
     
-    // Ak tabuľka neexistuje, skupina ešte nie je pripravená
     if (!groupTable) {
         console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Tabuľka neexistuje → NIE JE PRIpravená`);
         return false;
@@ -1088,7 +1087,6 @@ function isGroupReadyForReplacement(category, groupLetter) {
     // 2. Podmienka 1: Všetky zápasy musia byť odohrané (100%)
     if (completionPercentage < 100) {
         console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Len ${completedMatches}/${totalMatches} (${completionPercentage}%) odohraných → NIE JE PRIpravená`);
-        console.log(`   Čakám na dokončenie všetkých ${totalMatches} zápasov.`);
         return false;
     }
     
@@ -1107,7 +1105,6 @@ function isGroupReadyForReplacement(category, groupLetter) {
             break;
         }
         
-        // Overíme, či máme správne skóre z udalostí
         const { home, away } = getCurrentScoreFromEvents(events);
         if (home === 0 && away === 0 && events.length > 0) {
             console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Zápas ${match.id} má udalosti ale skóre je 0:0 → NIE JE PRIpravená`);
@@ -1121,22 +1118,7 @@ function isGroupReadyForReplacement(category, groupLetter) {
     }
     
     console.log(`✅ [${cleanCategory} - ${fullGroupName}] Všetky udalosti načítané`);
-    
-    // 4. Podmienka 3: Skontrolujeme, či všetky tímy v tabuľke majú platné mená
-    const allTeamsHaveRealNames = groupTable.teams.every(team => {
-        const isStillIdentifier = /^\d+[A-Za-z]$/.test(team.name);
-        const isDefaultName = team.name === team.id || team.name.includes(' ');
-        return !isStillIdentifier && !isDefaultName && team.name.length > 2;
-    });
-    
-    if (!allTeamsHaveRealNames) {
-        console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Tímy ešte nemajú priradené skutočné názvy → NIE JE PRIpravená`);
-        console.log(`   Mená tímov: ${groupTable.teams.map(t => t.name).join(', ')}`);
-        return false;
-    }
-    
-    console.log(`✅ [${cleanCategory} - ${fullGroupName}] Všetky tímy majú skutočné mená`);
-    
+        
     // 5. Dodatočná kontrola: Žiadny zápas by nemal byť v stave 'in-progress' alebo 'paused'
     const hasInProgressMatches = allGroupMatches.some(m => m.status === 'in-progress' || m.status === 'paused');
     if (hasInProgressMatches) {
