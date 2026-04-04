@@ -232,6 +232,8 @@ const matchesHallApp = ({ userProfileData }) => {
     const [editStaffLastName, setEditStaffLastName] = useState('');
     const [editStaffIsMen, setEditStaffIsMen] = useState(true); // true = men, false = women
 
+    const [showFloatingScore, setShowFloatingScore] = useState(false);
+
     // Funkcia na otvorenie modálneho okna pre úpravu člena realizačného tímu
     const openEditStaffModal = (member, team, teamDetails, staffType, staffIndex) => {
         if (selectedMatch?.status !== 'scheduled') {
@@ -543,42 +545,42 @@ const matchesHallApp = ({ userProfileData }) => {
             // Uložíme hráča s informáciou o zápase
             team.matchSpecificRemovals[selectedMatch.id].removedPlayersForMatch.push({
                 ...removedPlayer,
-            removedAt: Timestamp.now(),
-            matchId: selectedMatch.id,
-            team: playerTeam
-        });
-        
-        // Odstránime hráča z aktívneho zoznamu pre tento zápas
-        team.playerDetails[playerIndex].removedForMatch = selectedMatch.id;
-        
-        updatedTeams[teamIndex] = team;
-        teams[categoryName] = updatedTeams;
-        
-        await updateDoc(userRef, { teams });
-        
-        // AKTUALIZUJEME LOKÁLNY STAV users
-        setUsers(prevUsers => {
-            return prevUsers.map(user => {
-                if (user.id === playerTeamDetails.userId) {
-                    return {
-                        ...user,
-                        teams: teams
-                    };
-                }
-                return user;
+                removedAt: Timestamp.now(),
+                matchId: selectedMatch.id,
+                team: playerTeam
             });
-        });
         
-        window.showGlobalNotification('Hráč bol odstránený zo súpisky pre tento zápas', 'success');
-        
-        setEditPlayerModalOpen(false);
-        setPlayerToEdit(null);
-        
-    } catch (error) {
-        console.error('Chyba pri odstraňovaní hráča:', error);
-        window.showGlobalNotification('Chyba pri odstraňovaní hráča: ' + error.message, 'error');
-    }
-};
+            // Odstránime hráča z aktívneho zoznamu pre tento zápas
+            team.playerDetails[playerIndex].removedForMatch = selectedMatch.id;
+            
+            updatedTeams[teamIndex] = team;
+            teams[categoryName] = updatedTeams;
+            
+            await updateDoc(userRef, { teams });
+            
+            // AKTUALIZUJEME LOKÁLNY STAV users
+            setUsers(prevUsers => {
+                return prevUsers.map(user => {
+                    if (user.id === playerTeamDetails.userId) {
+                        return {
+                            ...user,
+                            teams: teams
+                        };
+                    }
+                    return user;
+                });
+            });
+            
+            window.showGlobalNotification('Hráč bol odstránený zo súpisky pre tento zápas', 'success');
+            
+            setEditPlayerModalOpen(false);
+            setPlayerToEdit(null);
+            
+        } catch (error) {
+            console.error('Chyba pri odstraňovaní hráča:', error);
+            window.showGlobalNotification('Chyba pri odstraňovaní hráča: ' + error.message, 'error');
+        }
+    };
 
     // Funkcia na obnovenie člena RT do súpisky
     const restoreStaffToRoster = async (member, team, teamDetails, staffType) => {
@@ -1191,8 +1193,6 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     };
     
-    // Nahraďte existujúcu funkciu resetMatchTimer
-
     const resetMatchTimer = async (matchId, deleteEvents = false) => {
         if (!window.db || !matchId) return;
         
@@ -1693,6 +1693,25 @@ const matchesHallApp = ({ userProfileData }) => {
         // Povolené len pre zápasy v stave 'scheduled' (Naplánované)
         return selectedMatch.status === 'scheduled';
     };
+
+    useEffect(() => {
+        const handleScroll = () => {
+            // Získame pozíciu boxu s priebehom zápasu
+            const matchProgressSection = document.querySelector('.match-progress-section');
+            if (matchProgressSection) {
+                const rect = matchProgressSection.getBoundingClientRect();
+                // Ak je box s priebehom zápasu mimo viewport (hore), zobrazíme plávajúci box
+                if (rect.top < 0) {
+                    setShowFloatingScore(true);
+                } else {
+                    setShowFloatingScore(false);
+                }
+            }
+        };
+        
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [selectedMatch]);
 
     // Prepočítanie štatistík hráčov pri zmene udalostí
     useEffect(() => {
@@ -3349,12 +3368,28 @@ const matchesHallApp = ({ userProfileData }) => {
                 selectMatch(nextMatch);
             }
         };
+
+        const floatingScoreBox = (selectedMatch.status === 'in-progress' || selectedMatch.status === 'paused') && showFloatingScore && React.createElement(
+            'div',
+            { className: `floating-score-box ${showFloatingScore ? 'visible' : ''}` },
+            React.createElement('span', { className: 'team-name', title: homeTeamName }, homeTeamName),
+            React.createElement('span', { className: 'score' }, loadingEvents ? '...' : `${matchScore.home}`),
+            React.createElement('span', { className: 'vs' }, ':'),
+            React.createElement('span', { className: 'score' }, loadingEvents ? '...' : `${matchScore.away}`),
+            React.createElement('span', { className: 'team-name', title: awayTeamName }, awayTeamName),
+            React.createElement('div', { className: 'separator' }),
+            React.createElement('span', { className: 'match-time' }, formatMatchTime(cleanPlayingTime || 0))
+        );
     
         // ✅ HLAVNÝ OBSAH - vykreslenie detailu zápasu
         const mainContent = React.createElement(
-            'div',
-            { className: 'flex-grow flex justify-center items-start p-4' },
+            React.Fragment,
+            null,
+            floatingScoreBox,
             React.createElement(
+                'div',
+                    { className: 'flex-grow flex justify-center items-start p-4' },
+                    React.createElement(
                 'div',
                 { className: 'w-full max-w-6xl bg-white rounded-xl shadow-xl p-8' },
                 
@@ -5316,6 +5351,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     )
                 )
             )
+        )
         );
     
         return React.createElement(
