@@ -6081,7 +6081,7 @@ const ResetMatchModal = ({ isOpen, onClose, onConfirm, onConfirmWithDelete, titl
                         },
                         className: 'px-4 py-2 text-white bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors'
                     },
-                    'Len reset čas'
+                    'Len reset'
                 ),
                 React.createElement(
                     'button',
