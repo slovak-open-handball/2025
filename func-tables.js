@@ -1346,11 +1346,8 @@ function replaceTeamIdentifiersWhenReady() {
     
     if (readyIdentifiers.length > 0) {
         // PRIDANÉ ONESKORENIE - počkáme ešte 2 sekundy pre istotu, že všetky dáta sú stabilné
-        console.log('⏳ Počkám 2 sekundy pre istotu, že všetky dáta sú stabilné...');
-        setTimeout(() => {
-            console.log('✅ Vykonávam nahradenie pre pripravené skupiny...');
-            performPartialReplacement(readyIdentifiers);
-        }, 2000);
+        console.log('✅ Vykonávam nahradenie pre pripravené skupiny...');
+        performPartialReplacement(readyIdentifiers);
     } else {
         console.log('ℹ️ Žiadna skupina ešte nie je pripravená na nahradenie');
     }
@@ -1376,11 +1373,7 @@ function replaceTeamIdentifiersWhenReady() {
                 console.log(`✅ Ďalších ${nowReady.length} skupín je pripravených, vykonávam nahradenie...`);
                 clearInterval(window._readyCheckInterval);
                 window._readyCheckInterval = null;
-                
-                // Ešte jedno oneskorenie pred nahradením
-                setTimeout(() => {
-                    performPartialReplacement(nowReady);
-                }, 2000);
+                performPartialReplacement(nowReady);
             }
         }, 10000); // Kontrola každých 10 sekúnd
     }
