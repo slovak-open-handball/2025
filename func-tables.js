@@ -156,8 +156,6 @@
             console.log(`   🏷️ Kategória: ${details.category}`);
             console.log(`   👥 Skupina: ${details.group}`);
             console.log(`   🥅 Konečné skóre: ${details.homeScore} : ${details.awayScore}`);
-            console.log(`   ⏱️ Trvanie zápasu: ${formatMatchTime(details.endTime)}`);
-            console.log(`   📈 Počet udalostí: ${details.eventsCount}`);
             console.log(`   🆔 Domáci ID: ${details.homeTeamId}`);
             console.log(`   🆔 Hostia ID: ${details.awayTeamId}`);
         });
@@ -204,8 +202,6 @@
         console.log(`👥 Skupina: ${details.group}`);
         console.log(`📊 Stav: ${getStatusText(details.status)}`);
         console.log(`🥅 Konečné skóre: ${details.homeScore} : ${details.awayScore}`);
-        console.log(`⏱️ Trvanie zápasu: ${formatMatchTime(details.endTime)}`);
-        console.log(`📈 Počet udalostí: ${details.eventsCount}`);
         
         console.log(`\n🆔 Domáci tím:`);
         console.log(`   • Názov: ${details.homeTeamName}`);
@@ -215,24 +211,6 @@
         console.log(`   • Názov: ${details.awayTeamName}`);
         console.log(`   • Identifikátor: ${details.awayTeamId}`);
         
-        if (details.events.length > 0) {
-            console.log(`\n📋 VŠETKY UDALOSTI (chronologicky):`);
-            details.events.forEach((event, idx) => {
-                const time = `${String(event.minute || 0).padStart(2, '0')}:${String(event.second || 0).padStart(2, '0')}`;
-                let eventText = '';
-                switch (event.type) {
-                    case 'goal': eventText = `⚽ GÓL - ${event.team === 'home' ? 'DOMÁCI' : 'HOSTIA'}`; break;
-                    case 'penalty': eventText = `🎯 7m ${event.subType === 'scored' ? 'PREMENENÁ' : 'NEPREMENENÁ'} - ${event.team === 'home' ? 'DOMÁCI' : 'HOSTIA'}`; break;
-                    case 'yellow': eventText = `🟨 ŽLTÁ KARTA - ${event.team === 'home' ? 'DOMÁCI' : 'HOSTIA'}`; break;
-                    case 'red': eventText = `🟥 ČERVENÁ KARTA - ${event.team === 'home' ? 'DOMÁCI' : 'HOSTIA'}`; break;
-                    case 'blue': eventText = `🔵 MODRÁ KARTA - ${event.team === 'home' ? 'DOMÁCI' : 'HOSTIA'}`; break;
-                    case 'exclusion': eventText = `⏱️ VYLÚČENIE - ${event.team === 'home' ? 'DOMÁCI' : 'HOSTIA'}`; break;
-                    default: eventText = `❓ ${event.type}`;
-                }
-                const scoreInfo = event.scoreAfter ? ` (${event.scoreAfter.home}:${event.scoreAfter.away})` : '';
-                console.log(`   ${String(idx + 1).padStart(2)}. ${time} - ${eventText}${scoreInfo}`);
-            });
-        }
         console.log('='.repeat(80) + '\n');
     }
     
