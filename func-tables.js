@@ -1470,7 +1470,7 @@ function waitForAllData() {
     });
 }
 
-// Funkcia na spustenie sledovania
+// Funkcia na spustenie sledovania - BEZ čakania na všetky skupiny
 async function startTeamNameReplacement() {
     console.log('🚀 Spúšťam automatické nahrádzanie identifikátorov tímov...');
     console.log('📌 Nahrádzajú sa len skupiny, ktoré majú 100% odohraných zápasov a všetky zápasy sú spracované.');
@@ -1480,17 +1480,13 @@ async function startTeamNameReplacement() {
             clearInterval(checkInterval);
             console.log('✅ MatchTracker je pripravený');
             
-            // POČKÁME NA VŠETKY DÁTA PRED SPUSTENÍM
-            waitForAllData().then(() => {
-                const observer = observePageChanges();
-                window._teamNameObserver = observer;
-                
-                // Jedno okamžité nahradenie po načítaní všetkých dát
-                setTimeout(() => {
-                    console.log('🔄 Spúšťam úplné nahradenie po načítaní všetkých dát...');
-                    replaceTeamIdentifiersWhenReady();
-                }, 500);
-            });
+            // 🔴 ODSTRÁNENÉ waitForAllData() - nahrádzanie sa spúšťa OKAMŽITE
+            const observer = observePageChanges();
+            window._teamNameObserver = observer;
+            
+            // Jedno okamžité nahradenie hneď po spustení
+            console.log('🔄 Spúšťam prvé kolo nahrádzania...');
+            replaceTeamIdentifiersWhenReady();
         }
     }, 500);
     
