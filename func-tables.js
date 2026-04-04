@@ -125,22 +125,6 @@
             console.log(`   🏷️ Kategória: ${match.categoryName || 'neurčená'}`);
             console.log(`   👥 Skupina: ${match.groupName || 'neurčená'}`);
             console.log(`   🥅 Konečné skóre: ${homeScore} : ${awayScore}`);
-            console.log(`   ⏱️ Trvanie zápasu: ${formatMatchTime(endTime)}`);
-            console.log(`   📈 Počet udalostí: ${events.length}`);
-            
-            // Výpis gólov (ak existujú)
-            if (events.length > 0) {
-                const goals = events.filter(e => e.type === 'goal' || (e.type === 'penalty' && e.subType === 'scored'));
-                if (goals.length > 0) {
-                    console.log(`   ⚽ Góly:`);
-                    goals.forEach(goal => {
-                        const time = `${String(goal.minute || 0).padStart(2, '0')}:${String(goal.second || 0).padStart(2, '0')}`;
-                        const team = goal.team === 'home' ? 'DOMÁCI' : 'HOSTIA';
-                        const type = goal.type === 'penalty' ? '7m' : 'akcia';
-                        console.log(`      • ${time} - ${team} (${type})`);
-                    });
-                }
-            }
         });
         
         console.log('\n' + '='.repeat(80));
