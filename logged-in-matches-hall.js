@@ -1792,36 +1792,32 @@ const matchesHallApp = ({ userProfileData }) => {
 
     useEffect(() => {
         const handleScroll = () => {
-            // Skúsime nájsť element viacerými spôsobmi
-            let matchProgressSection = document.querySelector('.match-progress-section');
+            // Sledujeme header s dátumom a časom (je úplne hore v detaile zápasu)
+            const dateHeader = document.querySelector('.text-center.mb-8.p-4.bg-blue-50.rounded-lg');
             
-            // Ak nenájde, skúsime nájsť podľa iných selektorov
-            if (!matchProgressSection) {
-                matchProgressSection = document.querySelector('.col-span-2.bg-gray-50.rounded-lg.p-4');
-            }
-            if (!matchProgressSection) {
-                matchProgressSection = document.querySelector('.mt-6.bg-gray-50.rounded-lg.p-4');
-            }
-            
-            if (matchProgressSection) {
-                const rect = matchProgressSection.getBoundingClientRect();
-                console.log('Match progress section position:', rect.top); // Pre ladenie
-                // Ak je box s priebehom zápasu mimo viewport (hore), zobrazíme plávajúci box
-                if (rect.top < 50) {
+            if (dateHeader) {
+                const rect = dateHeader.getBoundingClientRect();
+                // Keď header zmizne z obrazovky (jeho spodná hrana je nad 0)
+                if (rect.bottom < 0) {
                     setShowFloatingScore(true);
-                    console.log('Show floating box: TRUE'); // Pre ladenie
                 } else {
                     setShowFloatingScore(false);
-                    console.log('Show floating box: FALSE'); // Pre ladenie
                 }
             } else {
-                console.log('Match progress section NOT found');
+                // Fallback na pôvodný selektor
+                const matchSection = document.querySelector('.match-progress-section');
+                if (matchSection) {
+                    const rect = matchSection.getBoundingClientRect();
+                    if (rect.top < 100) {
+                        setShowFloatingScore(true);
+                    } else {
+                        setShowFloatingScore(false);
+                    }
+                }
             }
         };
         
-        // Spustíme raz pri načítaní
         setTimeout(handleScroll, 100);
-        
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, [selectedMatch]);
