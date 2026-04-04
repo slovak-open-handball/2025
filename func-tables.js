@@ -964,9 +964,11 @@ function getTeamNameByDisplayIdFromDB(displayId) {
     }
 }
 
+
+
 // Prepíšeme pôvodnú getTeamNameByDisplayId na verziu s cache
-function getTeamNameByDisplayId(displayId) {
-    // Parsovanie identifikátora pre získanie kľúča
+// Funkcia na získanie názvu tímu LEN Z CACHE (bez kontroly pripravenosti)
+function getTeamNameFromCacheOnly(displayId) {
     const parts = displayId.trim().split(' ');
     if (parts.length < 2) return null;
     
@@ -987,9 +989,91 @@ function getTeamNameByDisplayId(displayId) {
     
     if (!position || !groupLetter) return null;
     const positionNum = parseInt(position, 10);
+    const cacheKey = `${category}|${groupLetter.toUpperCase()}|${positionNum}`;
     
-    // Použijeme cache
-    return getTeamNameWithCache(displayId, category, groupLetter, positionNum);
+    // Iba z cache, žiadne volanie do databázy
+    if (replacementCache.has(cacheKey)) {
+        const cached = replacementCache.get(cacheKey);
+        console.log(`💿 POUŽITÉ Z CACHE (rýchle): "${displayId}" → "${cached.teamName}"`);
+        return cached.teamName;
+    }
+    
+    return null;
+}
+
+// Funkcia na získanie názvu tímu z databázy (s kontrolou pripravenosti)
+function getTeamNameFromDatabase(displayId) {
+    console.log(`🔄 NAČÍTAM Z DATABÁZY: "${displayId}"`);
+    
+    // Parsovanie identifikátora
+    const parts = displayId.trim().split(' ');
+    if (parts.length < 2) return null;
+    
+    const positionAndGroup = parts.pop();
+    let category = parts.join(' ');
+    category = cleanCategoryName(category);
+    
+    let position = '';
+    let groupLetter = '';
+    for (let i = 0; i < positionAndGroup.length; i++) {
+        const char = positionAndGroup[i];
+        if (char >= '0' && char <= '9') {
+            position += char;
+        } else if (/[A-Za-z]/.test(char)) {
+            groupLetter += char;
+        }
+    }
+    
+    if (!position || !groupLetter) return null;
+    const positionNum = parseInt(position, 10);
+    const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
+    
+    // 🔴 KONTROLA PRIPRAVENOSTI - IBA PRI NAČÍTANÍ Z DB
+    const isReady = isGroupReadyForReplacement(category, groupLetter);
+    if (!isReady) {
+        console.log(`⛔ [${category} - ${fullGroupName}] Skupina NIE JE pripravená, nenačítam z DB`);
+        return null;
+    }
+    
+    const groupTable = window.matchTracker?.createGroupTable(category, fullGroupName);
+    if (!groupTable || !groupTable.teams || groupTable.teams.length === 0) {
+        console.log(`❌ Tabuľka pre skupinu ${fullGroupName} neexistuje`);
+        return null;
+    }
+    
+    const teamIndex = positionNum - 1;
+    if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
+        const team = groupTable.teams[teamIndex];
+        console.log(`🎉 NAJDENÝ V DB: "${displayId}" → "${team.name}"`);
+        
+        // Uložíme do cache
+        const cacheKey = `${category}|${groupLetter.toUpperCase()}|${positionNum}`;
+        replacementCache.set(cacheKey, {
+            teamName: team.name,
+            displayId: displayId,
+            category: category,
+            groupLetter: groupLetter.toUpperCase(),
+            position: positionNum,
+            timestamp: Date.now()
+        });
+        saveReplacementCache(replacementCache);
+        
+        return team.name;
+    }
+    
+    return null;
+}
+
+// Hlavná funkcia - najprv cache, potom databáza
+function getTeamNameByDisplayId(displayId) {
+    // 1. Najprv skúsime cache (rýchle, bez kontroly pripravenosti)
+    const cachedName = getTeamNameFromCacheOnly(displayId);
+    if (cachedName) {
+        return cachedName;
+    }
+    
+    // 2. Nie je v cache - načítame z databázy (s kontrolou pripravenosti)
+    return getTeamNameFromDatabase(displayId);
 }
 
 // Funkcia na vymazanie cache (napr. pri aktualizácii dát)
@@ -1397,42 +1481,45 @@ function performPartialReplacement(identifiersToReplace) {
     let failedCount = 0;
     let skippedCount = 0;
     let alreadyReplacedCount = 0;
+    let fromCacheCount = 0;
     const failedIdentifiers = [];
     const skippedIdentifiers = [];
     
     for (const idInfo of identifiersToReplace) {
         const replaceKey = `${idInfo.category}|${idInfo.groupLetter}|${idInfo.position}`;
+        
+        // Kontrola, či už bol nahradený v tejto session
         if (replacedIdentifiers.has(replaceKey)) {
             console.log(`⏭️ UŽ NAHRADENÝ: "${idInfo.originalIdentifier}" - preskakujem`);
             alreadyReplacedCount++;
             continue;
         }
         
-        const isStillReady = isGroupReadyForReplacement(idInfo.category, idInfo.groupLetter);
-        
-        if (!isStillReady) {
-            console.log(`⏭️ PRESKAKUJEM: "${idInfo.originalIdentifier}" - skupina nie je pripravená`);
-            skippedCount++;
-            skippedIdentifiers.push(idInfo.originalIdentifier);
-            continue;
-        }
-        
-        let teamName = getTeamNameByDisplayId(idInfo.identifier);
+        // 🔴 NAJPRV SKÚSIŤ IBA CACHE (bez kontroly pripravenosti)
+        let teamName = getTeamNameFromCacheOnly(idInfo.identifier);
+        let fromCache = true;
         
         if (!teamName) {
-            teamName = getTeamNameByDisplayId(idInfo.originalIdentifier);
+            teamName = getTeamNameFromCacheOnly(idInfo.originalIdentifier);
+        }
+        
+        // Ak nie je v cache, načítame z databázy (s kontrolou)
+        if (!teamName) {
+            fromCache = false;
+            teamName = getTeamNameFromDatabase(idInfo.identifier);
+            if (!teamName) {
+                teamName = getTeamNameFromDatabase(idInfo.originalIdentifier);
+            }
         }
         
         if (teamName && teamName !== idInfo.identifier && teamName !== idInfo.originalIdentifier) {
             const escapedIdentifier = idInfo.originalIdentifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const regex = new RegExp(escapedIdentifier, 'g');
             
-            // 🔴 OPRAVA: Prechádzame všetky elementy a nahrádzame VŠETKY výskyty
             const elements = document.querySelectorAll('*');
             let anyFound = false;
             
             for (const element of elements) {
-                // Preskočíme elementy, ktoré majú deti (aby sme nenahrádzali v rodičovských elementoch)
                 if (element.children.length > 0) continue;
                 
                 const text = element.textContent;
@@ -1441,7 +1528,8 @@ function performPartialReplacement(identifiersToReplace) {
                     if (newText !== text) {
                         element.textContent = newText;
                         anyFound = true;
-                        console.log(`✅ NAHRADENÝ: "${idInfo.originalIdentifier}" → "${teamName}" v elemente: ${element.tagName}`);
+                        const source = fromCache ? 'CACHE' : 'DB';
+                        console.log(`✅ NAHRADENÝ (${source}): "${idInfo.originalIdentifier}" → "${teamName}" v elemente: ${element.tagName}`);
                     }
                 }
             }
@@ -1449,22 +1537,8 @@ function performPartialReplacement(identifiersToReplace) {
             if (anyFound) {
                 replacedCount++;
                 replacedIdentifiers.add(replaceKey);
-    
-                // 🔴 PRIDAŤ: Uložiť do cache ak ešte nie je
-                const cacheKey = `${idInfo.category}|${idInfo.groupLetter}|${idInfo.position}`;
-                if (!replacementCache.has(cacheKey)) {
-                    replacementCache.set(cacheKey, {
-                        teamName: teamName,
-                        displayId: idInfo.originalIdentifier,
-                        category: idInfo.category,
-                        groupLetter: idInfo.groupLetter,
-                        position: idInfo.position,
-                        timestamp: Date.now()
-                    });
-                    saveReplacementCache(replacementCache);
-                }
-                
-                console.log(`🎉 Kompletne nahradený identifikátor...`);
+                if (fromCache) fromCacheCount++;
+                console.log(`🎉 Kompletne nahradený identifikátor: "${idInfo.originalIdentifier}" (všetky výskyty)`);
             } else {
                 failedCount++;
                 failedIdentifiers.push(idInfo.originalIdentifier);
@@ -1479,9 +1553,9 @@ function performPartialReplacement(identifiersToReplace) {
     
     console.log('\n' + '='.repeat(60));
     console.log('📊 SÚHRN NAHRADENIA:');
-    console.log(`   ✅ Úspešne nahradených: ${replacedCount}`);
+    console.log(`   ✅ Úspešne nahradených: ${replacedCount} (z toho z cache: ${fromCacheCount})`);
     console.log(`   ⏭️ Už skôr nahradených: ${alreadyReplacedCount}`);
-    console.log(`   ⏭️ Preskočených (nebolo 100%): ${skippedCount}`);
+    console.log(`   ⏭️ Preskočených: ${skippedCount}`);
     console.log(`   ❌ Neúspešných: ${failedCount}`);
     if (skippedIdentifiers.length > 0) {
         console.log(`   ⏭️ Preskočené: ${skippedIdentifiers.join(', ')}`);
@@ -1495,6 +1569,7 @@ function performPartialReplacement(identifiersToReplace) {
     
     return {
         replaced: replacedCount,
+        fromCache: fromCacheCount,
         alreadyReplaced: alreadyReplacedCount,
         skipped: skippedCount,
         failed: failedCount,
