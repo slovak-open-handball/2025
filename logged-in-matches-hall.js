@@ -3425,8 +3425,18 @@ const matchesHallApp = ({ userProfileData }) => {
                             'div', 
                             { className: 'text-2xl font-bold text-blue-600 mt-1 flex items-center justify-center gap-1' },
                             `${matchStartTime} hod.`
+                        ),
+                        // NOVÁ ČASŤ: Informácia o perióde
+                        category && React.createElement(
+                            'div',
+                            { className: 'mt-2 text-sm text-gray-600 flex items-center justify-center gap-2' },
+                            React.createElement('i', { className: 'fa-solid fa-clock text-blue-500 text-xs' }),
+                            React.createElement('span', null, `${category.periods || 2} x ${category.periodDuration || 20} min`),
+                            React.createElement('span', { className: 'text-gray-400' }, '•'),
+                            React.createElement('i', { className: 'fa-solid fa-hourglass-half text-blue-500 text-xs' }),
+                            React.createElement('span', null, `Prestávka: ${category.breakDuration || 2} min`)
                         )
-                    ),
+                    ),                 
                     
                     // Tímy
                     React.createElement(
