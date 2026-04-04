@@ -3952,7 +3952,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     // Box s priebehom zápasu (medzi tímami)
                                     React.createElement(
                                         'div',
-                                        { className: 'col-span-2 bg-gray-50 rounded-lg p-4 border border-gray-200 flex flex-col' },
+                                        { className: 'col-span-2 bg-gray-50 rounded-lg p-4 border border-gray-200 flex flex-col match-progress-section' },
                                         React.createElement(
                                             'h3',
                                             { className: 'font-bold text-lg text-gray-800 mb-3 text-center border-b border-gray-200 pb-2' },
@@ -4921,7 +4921,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     // Box s priebehom zápasu - pod tímami (s horným okrajom)
                                     React.createElement(
                                         'div',
-                                        { className: 'mt-6 bg-gray-50 rounded-lg p-4 border border-gray-200 flex flex-col' },
+                                        { className: 'mt-6 bg-gray-50 rounded-lg p-4 border border-gray-200 flex flex-col match-progress-section' },
                                         React.createElement(
                                             'h3',
                                             { className: 'font-bold text-lg text-gray-800 mb-3 text-center border-b border-gray-200 pb-2' },
