@@ -135,68 +135,68 @@
         return { teamAScore, teamBScore, teamAWins, teamBWins };
     }
     
-    // Funkcia na porovnanie dvoch tímov podľa nastavených kritérií
+    // Funkcia na porovnanie dvoch tímov podľa nastavených kritérií (až po zohľadnení bodov)
     function compareTeams(teamA, teamB, groupMatches, sortingConditions) {
-        if (!sortingConditions || sortingConditions.length === 0) {
-            // Predvolené porovnanie len podľa bodov
-            if (teamA.points !== teamB.points) return teamB.points - teamA.points;
-            if (teamA.goalDifference !== teamB.goalDifference) return teamB.goalDifference - teamA.goalDifference;
-            if (teamA.goalsFor !== teamB.goalsFor) return teamB.goalsFor - teamA.goalsFor;
-            return teamA.name.localeCompare(teamB.name);
+        // 1. Najprv porovnáme podľa bodov
+        if (teamA.points !== teamB.points) {
+            return teamB.points - teamA.points; // Viac bodov = lepšie
         }
-        
-        for (const condition of sortingConditions) {
-            const { parameter, direction } = condition;
-            let comparison = 0;
-            
-            switch (parameter) {
-                case 'headToHead':
-                    const { teamAScore, teamBScore, teamAWins, teamBWins } = calculateHeadToHead(teamA.id, teamB.id, groupMatches);
-                    // Najprv podľa výhier vo vzájomných zápasoch
-                    if (teamAWins !== teamBWins) {
-                        comparison = teamBWins - teamAWins;
-                    } else if (teamAScore !== teamBScore) {
-                        // Potom podľa skóre vo vzájomných zápasoch
-                        comparison = teamBScore - teamAScore;
-                    }
-                    break;
+    
+        // 2. Ak sú body rovnaké, použijeme nastavené kritériá
+        if (sortingConditions && sortingConditions.length > 0) {
+            for (const condition of sortingConditions) {
+                const { parameter, direction } = condition;
+                let comparison = 0;
+                
+                switch (parameter) {
+                    case 'headToHead':
+                        const { teamAScore, teamBScore, teamAWins, teamBWins } = calculateHeadToHead(teamA.id, teamB.id, groupMatches);
+                        // Najprv podľa výhier vo vzájomných zápasoch
+                        if (teamAWins !== teamBWins) {
+                            comparison = teamBWins - teamAWins;
+                        } else if (teamAScore !== teamBScore) {
+                            // Potom podľa skóre vo vzájomných zápasoch
+                            comparison = teamBScore - teamAScore;
+                        }
+                        break;
+                        
+                    case 'scoreDifference':
+                        comparison = (direction === 'desc' ? teamB.goalDifference - teamA.goalDifference : teamA.goalDifference - teamB.goalDifference);
+                        break;
+                        
+                    case 'goalsScored':
+                        comparison = (direction === 'desc' ? teamB.goalsFor - teamA.goalsFor : teamA.goalsFor - teamB.goalsFor);
+                        break;
+                        
+                    case 'goalsConceded':
+                        comparison = (direction === 'asc' ? teamA.goalsAgainst - teamB.goalsAgainst : teamB.goalsAgainst - teamA.goalsAgainst);
+                        break;
+                        
+                    case 'wins':
+                        comparison = (direction === 'desc' ? teamB.wins - teamA.wins : teamA.wins - teamB.wins);
+                        break;
                     
-                case 'scoreDifference':
-                    comparison = (direction === 'desc' ? teamB.goalDifference - teamA.goalDifference : teamA.goalDifference - teamB.goalDifference);
-                    break;
+                    case 'losses':
+                        comparison = (direction === 'asc' ? teamA.losses - teamB.losses : teamB.losses - teamA.losses);
+                        break;
                     
-                case 'goalsScored':
-                    comparison = (direction === 'desc' ? teamB.goalsFor - teamA.goalsFor : teamA.goalsFor - teamB.goalsFor);
-                    break;
-                    
-                case 'goalsConceded':
-                    comparison = (direction === 'asc' ? teamA.goalsAgainst - teamB.goalsAgainst : teamB.goalsAgainst - teamA.goalsAgainst);
-                    break;
-                    
-                case 'wins':
-                    comparison = (direction === 'desc' ? teamB.wins - teamA.wins : teamA.wins - teamB.wins);
-                    break;
-                    
-                case 'losses':
-                    comparison = (direction === 'asc' ? teamA.losses - teamB.losses : teamB.losses - teamA.losses);
-                    break;
-                    
-                case 'draw':
-                    // Losovanie - vrátime 0, čo znamená, že sa tímy považujú za rovnaké
-                    comparison = 0;
-                    break;
-                    
-                default:
-                    comparison = 0;
+                    case 'draw':
+                        // Losovanie - vrátime 0, čo znamená, že sa tímy považujú za rovnaké
+                        comparison = 0;
+                        break;
+                        
+                    default:
+                        comparison = 0;
+                }
+                
+                if (comparison !== 0) return comparison;
             }
-            
-            if (comparison !== 0) return comparison;
         }
         
-        // Ak sú všetky kritériá rovnaké, použijeme abecedné poradie
+        // 3. Ak sú všetky kritériá rovnaké, použijeme abecedné poradie
         return teamA.name.localeCompare(teamB.name);
     }
-    
+            
     // Funkcia na vytvorenie tabuľky skupiny z odohratých zápasov
     function createGroupTable(categoryName, groupName) {
         const completedMatches = getCompletedMatches();
