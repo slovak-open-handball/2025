@@ -3431,15 +3431,22 @@ const matchesHallApp = ({ userProfileData }) => {
                             'div',
                             { className: 'mt-2 text-sm text-gray-600 flex items-center justify-center gap-2' },
                             React.createElement('span', null, `${category.periods || 2} x ${category.periodDuration || 20} min`),
-                            // Zobrazenie prestávky len ak je definovaná a väčšia ako 0 (aj pre reťazec)
-                            category.breakDuration && Number(category.breakDuration) > 0 && React.createElement(
-                                React.Fragment,
-                                null,
-                                React.createElement('span', { className: 'text-gray-400' }, '•'),
-                                React.createElement('span', null, `Prestávka: ${category.breakDuration} min`)
-                            )
+                            // Zobrazenie prestávky len ak je definovaná a väčšia ako 0
+                            (() => {
+                                const breakDur = category.breakDuration;
+                                const breakNum = typeof breakDur === 'number' ? breakDur : parseInt(breakDur, 10);
+                                if (breakDur && !isNaN(breakNum) && breakNum > 0) {
+                                    return React.createElement(
+                                        React.Fragment,
+                                        null,
+                                        React.createElement('span', { className: 'text-gray-400' }, '•'),
+                                        React.createElement('span', null, `Prestávka: ${breakDur} min`)
+                                    );
+                                }
+                                return null;
+                            })()
                         )
-                    ),           
+                    ),       
                     
                     // Tímy
                     React.createElement(
