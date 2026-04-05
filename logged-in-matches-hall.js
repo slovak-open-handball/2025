@@ -2796,44 +2796,85 @@ const matchesHallApp = ({ userProfileData }) => {
     // UPRAVENÉ FUNKCIE PRE VYHĽADÁVANIE TÍMOV PODĽA NÁZVU
     // ============================================================
     
-    // Funkcia na vyhľadanie tímu podľa názvu (keď už bol identifikátor nahradený)
+    // Funkcia na vyhľadanie tímu podľa názvu v kolekcii users
     function findTeamByName(teamName, categoryName) {
         if (!teamName || !users || users.length === 0) return null;
         
-        // Prehľadáme všetkých používateľov
+        console.log(`🔍 Hľadám tím podľa názvu: "${teamName}" (kategória: ${categoryName || 'ľubovoľná'})`);
+    
         for (const user of users) {
             if (!user.teams) continue;
             
-            // Prehľadáme všetky kategórie
             for (const [category, teams] of Object.entries(user.teams)) {
-                // Ak je zadaná kategória, filtrujeme len tú
                 if (categoryName && category !== categoryName) continue;
-                
                 if (!Array.isArray(teams)) continue;
                 
                 for (const team of teams) {
                     if (team.teamName === teamName) {
-                        // Vytvoríme identifikátor z nájdeného tímu
-                        let groupLetter = '';
-                        if (team.groupName) {
-                            const match = team.groupName.match(/skupina\s+(\w+)/i);
-                            if (match) groupLetter = match[1];
-                        }
-                        
-                        const identifier = `${category} ${team.order}${groupLetter}`;
-                        
+                        console.log(`✅ Tím nájdený podľa názvu: "${teamName}" → user: ${user.email}`);
                         return {
                             team: team,
                             userEmail: user.email,
                             userId: user.id,
                             userDisplayName: user.displayName,
-                            identifier: identifier,
                             category: category
                         };
                     }
                 }
             }
         }
+        
+        return null;
+    }
+
+    function findTeamByIdentifier(identifier, categoryName = null) {
+        if (!identifier) return null;
+        
+        const parts = identifier.split(' ');
+        if (parts.length < 2) return null;
+        
+        const groupAndOrder = parts.pop();
+        const category = parts.join(' ');
+        
+        let groupLetter = '';
+        let order = '';
+        for (let i = 0; i < groupAndOrder.length; i++) {
+            const char = groupAndOrder[i];
+            if (char >= '0' && char <= '9') {
+                order = groupAndOrder.substring(i);
+                groupLetter = groupAndOrder.substring(0, i);
+                break;
+            }
+        }
+        
+        if (!order) return null;
+        
+        const fullGroupName = `skupina ${groupLetter}`;
+        const orderNum = parseInt(order, 10);
+        
+        for (const user of users) {
+            if (!user.teams) continue;
+            
+            const userTeams = user.teams[category];
+            if (!userTeams || !Array.isArray(userTeams)) continue;
+            
+            const team = userTeams.find(t => 
+                t.groupName === fullGroupName && 
+                t.order === orderNum
+            );
+            
+            if (team) {
+                console.log(`✅ Tím nájdený podľa identifikátora: "${identifier}" → "${team.teamName}"`);
+                return {
+                    team: team,
+                    userEmail: user.email,
+                    userId: user.id,
+                    userDisplayName: user.displayName,
+                    category: category
+                };
+            }
+        }
+        
         return null;
     }
     
@@ -2906,11 +2947,12 @@ const matchesHallApp = ({ userProfileData }) => {
     }
     
     // ============================================================
-    // FUNKCIE NA ZÍSKANIE NAHRADENÝCH NÁZVOV TÍMOV Z DOM
+    // FUNKCIE NA ZÍSKANIE NAHRADENÝCH NÁZVOV Z DOM
     // ============================================================
-
-    const replacedNamesCache = new Map();
     
+    // Cache pre nahradené názvy (aby sme nemuseli často prehľadávať DOM)
+    const replacedNamesCache = new Map();
+
     // Funkcia na získanie aktuálneho zobrazeného názvu tímu z DOM
     // podľa pôvodného identifikátora
     function getReplacedTeamNameFromDOM(originalIdentifier) {
@@ -2919,13 +2961,12 @@ const matchesHallApp = ({ userProfileData }) => {
         // Najprv skúsime cache
         if (replacedNamesCache.has(originalIdentifier)) {
             const cached = replacedNamesCache.get(originalIdentifier);
-            // Cache je platná 5 sekúnd
             if (Date.now() - cached.timestamp < 5000) {
                 return cached.teamName;
             }
             replacedNamesCache.delete(originalIdentifier);
         }
-        
+    
         // Hľadáme element, ktorý má data-original-identifier s touto hodnotou
         const elements = document.querySelectorAll(`[data-original-identifier="${originalIdentifier}"]`);
         
@@ -2933,19 +2974,18 @@ const matchesHallApp = ({ userProfileData }) => {
             const teamName = element.getAttribute('data-team-name');
             if (teamName) {
                 console.log(`🔍 Nájdený nahradený názov v DOM: "${originalIdentifier}" → "${teamName}"`);
-                // Uložíme do cache
                 replacedNamesCache.set(originalIdentifier, {
                     teamName: teamName,
                     timestamp: Date.now()
-                });
+                });    
                 return teamName;
             }
         }
         
         return null;
     }
-
-    // Funkcia na vymazanie cache (volať po zmene view)
+    
+    // Funkcia na vymazanie cache
     function clearReplacedNamesCache() {
         replacedNamesCache.clear();
         console.log('🗑️ Cache nahradených názvov vymazaná');
@@ -2983,36 +3023,41 @@ const matchesHallApp = ({ userProfileData }) => {
         return null;
     }
     
-    // UPRAVENÁ FUNKCIA getTeamDetails - najprv skúsi získať názov z mapovania
+    // Najprv skúsi získať nahradený názov z DOM a podľa neho hľadať
     const getTeamDetails = (identifier, categoryName = null) => {
         if (!identifier) return null;
         
-        console.log(`🔍 getTeamDetails: identifier="${identifier}", category="${categoryName}"`);
+        console.log(`🔍 getTeamDetails: vstupný identifikátor="${identifier}", kategória="${categoryName}"`);
         
-        // 1. Skúsime získať názov z globálneho mapovania
-        const mappedTeamName = getTeamNameFromGlobalMapping(identifier);
+        // 1. Skúsime získať nahradený názov z DOM
+        const replacedTeamName = getReplacedTeamNameFromDOM(identifier);
         
-        if (mappedTeamName && mappedTeamName !== identifier) {
-            // Máme názov z mapovania - skúsime podľa neho nájsť tím
-            const teamByMappedName = findTeamByName(mappedTeamName, categoryName);
-            if (teamByMappedName) {
-                console.log(`✅ Tím nájdený podľa mapovaného názvu: "${mappedTeamName}"`);
-                return teamByMappedName;
+        if (replacedTeamName && replacedTeamName !== identifier) {
+            // Máme nahradený názov - hľadáme podľa neho
+            console.log(`🔍 Používam nahradený názov: "${replacedTeamName}"`);
+            const teamByReplacedName = findTeamByName(replacedTeamName, categoryName);
+            if (teamByReplacedName) {
+                console.log(`✅ Tím nájdený podľa nahradeného názvu: "${replacedTeamName}"`);
+                return teamByReplacedName;
             }
         }
         
-        // 2. Pôvodné vyhľadávanie podľa identifikátora
-        const result = getTeamDetailsByIdentifierOrName(identifier, categoryName);
-        if (result) {
-            console.log(`✅ Tím nájdený podľa identifikátora: "${identifier}"`);
-            return result;
+        // 2. Ak je identifikátor už názov tímu (neobsahuje číslice+písmeno), hľadáme priamo podľa názvu
+        const hasNumberLetterPattern = /[0-9]+[A-Za-z]/;
+        if (!hasNumberLetterPattern.test(identifier)) {
+            console.log(`🔍 Identifikátor vyzerá ako názov tímu: "${identifier}"`);
+            const teamByName = findTeamByName(identifier, categoryName);
+            if (teamByName) {
+                console.log(`✅ Tím nájdený podľa názvu: "${identifier}"`);
+                return teamByName;
+            }
         }
         
-        // 3. Skúsime vyhľadať podľa názvu (ak je identifikátor už nahradený)
-        const teamByName = findTeamByName(identifier, categoryName);
-        if (teamByName) {
-            console.log(`✅ Tím nájdený podľa názvu: "${identifier}"`);
-            return teamByName;
+        // 3. Fallback - pôvodné vyhľadávanie podľa identifikátora
+        console.log(`🔍 Fallback: hľadám podľa identifikátora: "${identifier}"`);
+        const teamByIdentifier = findTeamByIdentifier(identifier, categoryName);
+        if (teamByIdentifier) {
+            return teamByIdentifier;
         }
         
         console.log(`❌ Tím nebol nájdený: "${identifier}"`);
@@ -3033,66 +3078,31 @@ const matchesHallApp = ({ userProfileData }) => {
         return null;
     }
     
-    // UPRAVENÁ FUNKCIA getTeamNameByIdentifier - najprv skúsi globálne mapovanie
+    // HLAVNÁ FUNKCIA NA ZÍSKANIE NÁZVU TÍMU
+    // Vždy vráti nahradený názov ak existuje v DOM
     function getTeamNameByIdentifier(identifier, categoryName = null) {
         if (!identifier) return 'Neznámy tím';
         
-        // 1. NAJPRV skúsime získať z globálneho mapovania (z func-tables.js)
-        const mappedName = getTeamNameFromGlobalMapping(identifier);
-        if (mappedName && mappedName !== identifier) {
-            console.log(`💿 Použitý názov z globálneho mapovania: "${identifier}" → "${mappedName}"`);
-            return mappedName;
+        // 1. Skúsime získať nahradený názov z DOM
+        const replacedName = getReplacedTeamNameFromDOM(identifier);
+        if (replacedName && replacedName !== identifier) {
+            console.log(`💿 Zobrazený názov z DOM: "${identifier}" → "${replacedName}"`);
+            return replacedName;
         }
         
-        // 2. Skúsime superstructureTeams
-        if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
-            const parts = identifier.split(' ');
-            if (parts.length >= 2) {
-                const groupAndOrder = parts.pop();
-                const category = parts.join(' ');
-                
-                let groupLetter = '';
-                let order = '';
-                for (let i = 0; i < groupAndOrder.length; i++) {
-                    const char = groupAndOrder[i];
-                    if (char >= '0' && char <= '9') {
-                        order = groupAndOrder.substring(i);
-                        groupLetter = groupAndOrder.substring(0, i);
-                        break;
-                    }
-                }
-                
-                if (order) {
-                    const fullGroupName = `skupina ${groupLetter}`;
-                    const orderNum = parseInt(order, 10);
-                    
-                    const categoryTeams = superstructureTeams[category];
-                    if (categoryTeams && Array.isArray(categoryTeams)) {
-                        const team = categoryTeams.find(t => 
-                            t.groupName === fullGroupName && 
-                            t.order === orderNum
-                        );
-                        if (team && team.teamName) {
-                            return team.teamName;
-                        }
-                    }
-                }
-            }
-        }
-        
-        // 3. Skúsime vyhľadať v používateľoch (podľa identifikátora)
-        const teamDetails = getTeamDetailsByIdentifierOrName(identifier, categoryName);
-        if (teamDetails && teamDetails.team && teamDetails.team.teamName) {
-            return teamDetails.team.teamName;
-        }
-        
-        // 4. Ak je identifikátor už názov tímu (neobsahuje číslice+písmeno), vrátime ho
+        // 2. Ak je identifikátor už názov tímu, vrátime ho
         const hasNumberLetterPattern = /[0-9]+[A-Za-z]/;
         if (!hasNumberLetterPattern.test(identifier)) {
             return identifier;
         }
         
-        // 5. Fallback - vrátime pôvodný identifikátor
+        // 3. Skúsime nájsť tím podľa identifikátora a vrátiť jeho názov
+        const teamDetails = findTeamByIdentifier(identifier, categoryName);
+        if (teamDetails && teamDetails.team && teamDetails.team.teamName) {
+            return teamDetails.team.teamName;
+        }
+        
+        // 4. Fallback - vrátime pôvodný identifikátor
         return identifier;
     }
 
