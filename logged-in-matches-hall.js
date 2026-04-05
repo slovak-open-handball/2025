@@ -2832,25 +2832,30 @@ const matchesHallApp = ({ userProfileData }) => {
         const parts = identifier.split(' ');
         if (parts.length < 2) return null;
         
-        const groupAndOrder = parts.pop();
+        // Posledná časť je číslo + písmeno (napr. "2A")
+        const numberAndLetter = parts.pop();
+        // Zvyšok je názov kategórie (napr. "U12 D")
         const category = parts.join(' ');
         
-        let groupLetter = '';
+        // Extrahujeme číslo a písmeno
         let order = '';
-        for (let i = 0; i < groupAndOrder.length; i++) {
-            const char = groupAndOrder[i];
+        let groupLetter = '';
+        
+        for (let i = 0; i < numberAndLetter.length; i++) {
+            const char = numberAndLetter[i];
             if (char >= '0' && char <= '9') {
-                order = groupAndOrder.substring(i);
-                groupLetter = groupAndOrder.substring(0, i);
-                break;
+                order += char;
+            } else if (/[A-Za-z]/.test(char)) {
+                groupLetter += char;
             }
         }
         
-        if (!order) return null;
+        if (!order || !groupLetter) return null;
         
-        const fullGroupName = `skupina ${groupLetter}`;
+        const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
         const orderNum = parseInt(order, 10);
         
+        // Prehľadávame všetkých používateľov
         for (const user of users) {
             if (!user.teams) continue;
             
@@ -2862,8 +2867,8 @@ const matchesHallApp = ({ userProfileData }) => {
                 t.order === orderNum
             );
             
-            if (team) {
-                console.log(`✅ Tím nájdený podľa identifikátora: "${identifier}" → "${team.teamName}"`);
+            if (team && team.teamName) {
+                console.log(`✅ Tím nájdený: "${identifier}" → "${team.teamName}"`);
                 return {
                     team: team,
                     userEmail: user.email,
@@ -3077,40 +3082,36 @@ const matchesHallApp = ({ userProfileData }) => {
         return null;
     }
     
-    // HLAVNÁ FUNKCIA NA ZÍSKANIE NÁZVU TÍMU
-    // Vždy vráti nahradený názov ak existuje (najprv z mapovania, potom z DOM)
     function getTeamNameByIdentifier(identifier, categoryName = null) {
         if (!identifier) return 'Neznámy tím';
         
-        // 1. NAJPRV skúsime získať názov z globálneho mapovania (z func-tables.js)
+        // Skúsime najprv globálne mapovanie (z func-tables.js)
         if (window.__teamNameMapping && window.__teamNameMapping[identifier]) {
             const mappedName = window.__teamNameMapping[identifier].teamName;
             if (mappedName && mappedName !== identifier) {
-                console.log(`📦 Názov z mapovania: "${identifier}" → "${mappedName}"`);
                 return mappedName;
             }
         }
         
-        // 2. Skúsime získať nahradený názov z DOM (ak už bol nahradený)
+        // Skúsime nahradený názov z DOM
         const replacedName = getReplacedTeamNameFromDOM(identifier);
         if (replacedName && replacedName !== identifier) {
-            console.log(`💿 Zobrazený názov z DOM: "${identifier}" → "${replacedName}"`);
             return replacedName;
         }
         
-        // 3. Ak je identifikátor už názov tímu, vrátime ho
+        // Ak identifikátor nevyzerá ako systémový (neobsahuje číslo+písmeno)
         const hasNumberLetterPattern = /[0-9]+[A-Za-z]/;
         if (!hasNumberLetterPattern.test(identifier)) {
             return identifier;
         }
         
-        // 4. Skúsime nájsť tím podľa identifikátora a vrátiť jeho názov
+        // Nájdeme tím podľa identifikátora
         const teamDetails = findTeamByIdentifier(identifier, categoryName);
         if (teamDetails && teamDetails.team && teamDetails.team.teamName) {
             return teamDetails.team.teamName;
         }
         
-        // 5. Fallback - vrátime pôvodný identifikátor
+        // Fallback - vrátime identifikátor
         return identifier;
     }
 
