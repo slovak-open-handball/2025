@@ -1794,33 +1794,46 @@ const matchesHallApp = ({ userProfileData }) => {
         return selectedMatch.status === 'scheduled';
     };
 
-    // 🔴 UPRAVENÝ useEffect PRE SLEDOVANIE NAHRADENIA TÍMOV S DEBUG VÝPISOM
+    // 🔴 UPRAVENÝ useEffect PRE SLEDOVANIE NAHRADENIA TÍMOV
     useEffect(() => {
-        // Funkcia na aktualizáciu stavu po nahradení tímov
         const handleTeamNamesReplaced = (event) => {
             console.log('🔄 Boli nahradené názvy tímov, aktualizujem stav...');
-            console.log('📋 Podrobnosti udalosti:', event.detail);
             
-            const replacedTeams = event.detail?.replacedTeams || [];
             const mappings = event.detail?.mappings || window.__teamNameMapping || {};
+            console.log('📊 Mapovania:', mappings);
             
-            console.log('📊 Počet nahradených tímov:', replacedTeams.length);
-            console.log('📊 Mapovania (identifikátor -> názov):', mappings);
-            
-            if (replacedTeams.length > 0 && selectedMatch) {
-                // Vypíšeme informácie o aktuálnom zápase
-                console.log('🏆 Aktuálny zápas:');
-                console.log(`   Domáci identifikátor: ${selectedMatch.homeTeamIdentifier}`);
-                console.log(`   Hosťovský identifikátor: ${selectedMatch.awayTeamIdentifier}`);
+            if (selectedMatch) {
+                // 🔴 TERAZ SKÚSIME NAJSŤ NÁZVY TÍMOV PRIAMO V POUŽÍVATEĽOCH
+                let homeTeamFound = false;
+                let awayTeamFound = false;
                 
-                // Skúsime nájsť názvy v mapovaní
-                const homeMapping = mappings[selectedMatch.homeTeamIdentifier];
-                const awayMapping = mappings[selectedMatch.awayTeamIdentifier];
+                // Hľadáme domáci tím v users
+                for (const user of users) {
+                    if (!user.teams) continue;
+                    for (const category of Object.keys(user.teams)) {
+                        const teams = user.teams[category];
+                        if (!teams) continue;
+                        for (const team of teams) {
+                            if (team.teamName && (team.teamName === selectedMatch.homeTeamIdentifier || 
+                                (team.groupName === `skupina ${selectedMatch.homeTeamIdentifier.slice(-1)}` && 
+                                 team.order === parseInt(selectedMatch.homeTeamIdentifier.match(/\d+/)?.[0] || '0')))) {
+                                console.log(`🏆 Nájdený domáci tím v databáze: ${team.teamName}`);
+                                homeTeamFound = true;
+                            }
+                            if (team.teamName && (team.teamName === selectedMatch.awayTeamIdentifier ||
+                                (team.groupName === `skupina ${selectedMatch.awayTeamIdentifier.slice(-1)}` && 
+                                 team.order === parseInt(selectedMatch.awayTeamIdentifier.match(/\d+/)?.[0] || '0')))) {
+                                console.log(`🏆 Nájdený hosťovský tím v databáze: ${team.teamName}`);
+                                awayTeamFound = true;
+                            }
+                        }
+                    }
+                }
                 
-                console.log(`   Domáci názov z mapovania: ${homeMapping?.teamName || 'nenájdený'}`);
-                console.log(`   Hosťovský názov z mapovania: ${awayMapping?.teamName || 'nenájdený'}`);
+                console.log(`🏆 Domáci tím nájdený: ${homeTeamFound ? 'ÁNO' : 'NIE'}`);
+                console.log(`🏆 Hosťovský tím nájdený: ${awayTeamFound ? 'ÁNO' : 'NIE'}`);
                 
-                // Aktualizujeme stav
+                // Aktualizujeme stav aj keď sme nenašli v mapovaní, ale v databáze áno
                 setUsers(prevUsers => {
                     console.log('🔄 Aktualizujem users state, počet používateľov:', prevUsers.length);
                     return [...prevUsers];
@@ -1830,23 +1843,10 @@ const matchesHallApp = ({ userProfileData }) => {
         
         window.addEventListener('teamNamesReplaced', handleTeamNamesReplaced);
         
-        // Kontrola existujúcich mapovaní
-        if (window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0) {
-            console.log('📋 Existujúce mapovania pri načítaní:', window.__teamNameMapping);
-            
-            if (selectedMatch) {
-                const homeMapping = window.__teamNameMapping[selectedMatch.homeTeamIdentifier];
-                const awayMapping = window.__teamNameMapping[selectedMatch.awayTeamIdentifier];
-                
-                console.log(`🏆 Pre aktuálny zápas - domáci: ${homeMapping?.teamName || selectedMatch.homeTeamIdentifier}`);
-                console.log(`🏆 Pre aktuálny zápas - hostia: ${awayMapping?.teamName || selectedMatch.awayTeamIdentifier}`);
-            }
-        }
-        
         return () => {
             window.removeEventListener('teamNamesReplaced', handleTeamNamesReplaced);
         };
-    }, [selectedMatch]);
+    }, [selectedMatch, users]);
 
     useEffect(() => {
         if (!window.db) return;
@@ -2794,8 +2794,9 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        // 2. Skúsime vyhľadať v používateľoch (user teams)
+        // 2. 🔴 HLAVNÉ VYHĽADÁVANIE V POUŽÍVATEĽOCH (user teams) - PODĽA KATEGÓRIE A NÁZVU TÍMU
         if (users && users.length > 0) {
+            // Rozparsujeme identifikátor na kategóriu a skupinu+poradie
             const parts = identifier.split(' ');
             if (parts.length >= 2) {
                 const groupAndOrder = parts.pop();
@@ -2816,6 +2817,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     const fullGroupName = `skupina ${groupLetter}`;
                     const orderNum = parseInt(order, 10);
                     
+                    // Prehľadávame všetkých používateľov
                     for (const user of users) {
                         if (!user.teams) continue;
                         const userTeams = user.teams[category];
@@ -2827,6 +2829,25 @@ const matchesHallApp = ({ userProfileData }) => {
                         );
                         
                         if (team && team.teamName) {
+                            console.log(`✅ Nájdený názov tímu v používateľoch: "${team.teamName}" pre identifikátor "${identifier}"`);
+                            return team.teamName;
+                        }
+                    }
+                }
+            }
+            
+            // 🔴 AK NENAŠLO PODĽA PARSOVANIA, SKÚSIME VYHĽADÁVAŤ PODĽA NÁZVU (pre prípad, že už je nahradený)
+            // Toto je dôležité pre prípady, keď identifikátor už je názov tímu
+            for (const user of users) {
+                if (!user.teams) continue;
+                
+                for (const category of Object.keys(user.teams)) {
+                    const teams = user.teams[category];
+                    if (!teams || !Array.isArray(teams)) continue;
+                    
+                    for (const team of teams) {
+                        if (team.teamName === identifier && team.teamName) {
+                            console.log(`✅ Nájdený priamy názov tímu: "${team.teamName}"`);
                             return team.teamName;
                         }
                     }
@@ -2834,35 +2855,25 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        // 3. 🔴 NOVÉ: Skúsime vyhľadať podľa názvu tímu v globálnom mapovaní (po nahradení druhým kódom)
-        // Ak identifikátor vyzerá ako názov tímu (neobsahuje medzeru + číslo+písmeno), skúsime ho nájsť v mapovaní
+        // 3. Skúsime vyhľadať v globálnom mapovaní (z druhého kódu)
         const identifierPattern = /\s+\d+[A-Za-z]/;
         const isDisplayId = identifierPattern.test(identifier);
         
         if (!isDisplayId && window.__teamNameMapping) {
-            // Hľadáme v mapovaní podľa názvu tímu
             for (const [originalId, mapping] of Object.entries(window.__teamNameMapping)) {
                 if (mapping.teamName === identifier) {
                     console.log(`🔍 Nájdený pôvodný identifikátor pre názov "${identifier}": ${originalId}`);
-                    return identifier; // Vrátime názov, ktorý už máme
-                }
-            }
-            
-            // Skúsime nájsť podľa čiastočnej zhody v mape
-            for (const [originalId, mapping] of Object.entries(window.__teamNameMapping)) {
-                if (mapping.teamName.toLowerCase().includes(identifier.toLowerCase()) ||
-                    identifier.toLowerCase().includes(mapping.teamName.toLowerCase())) {
-                    console.log(`🔍 Nájdený podobný názov: "${mapping.teamName}" pre "${identifier}"`);
-                    return mapping.teamName;
+                    return identifier;
                 }
             }
         }
         
         // 4. Ak nič nenašlo, vrátime pôvodný identifikátor
+        console.log(`⚠️ Názov tímu nebol nájdený pre identifikátor: "${identifier}"`);
         return identifier;
     };
-
-    // FUNKCIA NA ZÍSKANIE KOMPLETNÝCH INFORMÁCIÍ O TÍME
+    
+    // FUNKCIA NA ZÍSKANIE KOMPLETNÝCH INFORMÁCIÍ O TÍME (vylepšená)
     const getTeamDetails = (identifier) => {
         if (!identifier) return null;
         
@@ -2872,18 +2883,43 @@ const matchesHallApp = ({ userProfileData }) => {
         const identifierPattern = /\s+\d+[A-Za-z]/;
         const isDisplayId = identifierPattern.test(identifier);
         
-        // Ak to nie je displayId (je to názov tímu), skúsime ho nájsť v mapovaní
-        if (!isDisplayId && window.__teamNameMapping) {
-            for (const [originalId, mapping] of Object.entries(window.__teamNameMapping)) {
-                if (mapping.teamName === identifier && originalId) {
-                    searchIdentifier = originalId;
-                    console.log(`🔍 Pre názov "${identifier}" nájdený pôvodný identifikátor: ${searchIdentifier}`);
-                    break;
+        // 🔴 AK TO NIE JE DISPLAYID (JE TO NÁZOV TÍMU), SKÚSIME HO NAJSŤ PRIAMO V POUŽÍVATEĽOCH
+        if (!isDisplayId) {
+            // Hľadáme používateľa, ktorý má tím s týmto názvom
+            for (const user of users) {
+                if (!user.teams) continue;
+                
+                for (const category of Object.keys(user.teams)) {
+                    const teams = user.teams[category];
+                    if (!teams || !Array.isArray(teams)) continue;
+                    
+                    for (const team of teams) {
+                        if (team.teamName === identifier && team.teamName) {
+                            console.log(`✅ Nájdený tím podľa názvu "${identifier}": ${team.teamName} (${user.email})`);
+                            return {
+                                team: team,
+                                userEmail: user.email,
+                                userId: user.id,
+                                userDisplayName: user.displayName
+                            };
+                        }
+                    }
+                }
+            }
+            
+            // Skúsime nájsť v mapovaní (z druhého kódu)
+            if (window.__teamNameMapping) {
+                for (const [originalId, mapping] of Object.entries(window.__teamNameMapping)) {
+                    if (mapping.teamName === identifier && originalId) {
+                        searchIdentifier = originalId;
+                        console.log(`🔍 Pre názov "${identifier}" nájdený pôvodný identifikátor: ${searchIdentifier}`);
+                        break;
+                    }
                 }
             }
         }
         
-        // Parsujeme identifikátor
+        // Parsujeme identifikátor (pôvodný alebo nájdený)
         const parts = searchIdentifier.split(' ');
         if (parts.length < 2) return null;
         
@@ -2909,7 +2945,7 @@ const matchesHallApp = ({ userProfileData }) => {
         const fullGroupName = `skupina ${groupLetter}`;
         const orderNum = parseInt(order, 10);
         
-        // Hľadáme v users
+        // Hľadáme v users podľa kategórie, skupiny a poradia
         if (users && users.length > 0) {
             for (const user of users) {
                 if (!user.teams) continue;
@@ -2923,7 +2959,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 );
                 
                 if (team) {
-                    console.log(`✅ Nájdený používateľský tím: ${team.teamName} (${user.email})`);
+                    console.log(`✅ Nájdený používateľský tím: ${team.teamName} (${user.email}) pre identifikátor "${searchIdentifier}"`);
                     return {
                         team,
                         userEmail: user.email,
@@ -2934,6 +2970,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
+        console.log(`⚠️ Tím nebol nájdený pre identifikátor: "${searchIdentifier}"`);
         return null;
     };
 
