@@ -3066,7 +3066,7 @@ const matchesHallApp = ({ userProfileData }) => {
     // Funkcia na získanie názvu tímu z mapovania (z func-tables.js)
     function getTeamNameFromGlobalMapping(originalIdentifier) {
         if (!originalIdentifier) return null;
-        
+    
         // Skúsime získať z globálneho mapovania
         if (window.__teamNameMapping && window.__teamNameMapping[originalIdentifier]) {
             const teamName = window.__teamNameMapping[originalIdentifier].teamName;
@@ -3078,30 +3078,39 @@ const matchesHallApp = ({ userProfileData }) => {
     }
     
     // HLAVNÁ FUNKCIA NA ZÍSKANIE NÁZVU TÍMU
-    // Vždy vráti nahradený názov ak existuje v DOM
+    // Vždy vráti nahradený názov ak existuje (najprv z mapovania, potom z DOM)
     function getTeamNameByIdentifier(identifier, categoryName = null) {
         if (!identifier) return 'Neznámy tím';
         
-        // 1. Skúsime získať nahradený názov z DOM
+        // 1. NAJPRV skúsime získať názov z globálneho mapovania (z func-tables.js)
+        if (window.__teamNameMapping && window.__teamNameMapping[identifier]) {
+            const mappedName = window.__teamNameMapping[identifier].teamName;
+            if (mappedName && mappedName !== identifier) {
+                console.log(`📦 Názov z mapovania: "${identifier}" → "${mappedName}"`);
+                return mappedName;
+            }
+        }
+        
+        // 2. Skúsime získať nahradený názov z DOM (ak už bol nahradený)
         const replacedName = getReplacedTeamNameFromDOM(identifier);
         if (replacedName && replacedName !== identifier) {
             console.log(`💿 Zobrazený názov z DOM: "${identifier}" → "${replacedName}"`);
             return replacedName;
         }
         
-        // 2. Ak je identifikátor už názov tímu, vrátime ho
+        // 3. Ak je identifikátor už názov tímu, vrátime ho
         const hasNumberLetterPattern = /[0-9]+[A-Za-z]/;
         if (!hasNumberLetterPattern.test(identifier)) {
             return identifier;
         }
         
-        // 3. Skúsime nájsť tím podľa identifikátora a vrátiť jeho názov
+        // 4. Skúsime nájsť tím podľa identifikátora a vrátiť jeho názov
         const teamDetails = findTeamByIdentifier(identifier, categoryName);
         if (teamDetails && teamDetails.team && teamDetails.team.teamName) {
             return teamDetails.team.teamName;
         }
         
-        // 4. Fallback - vrátime pôvodný identifikátor
+        // 5. Fallback - vrátime pôvodný identifikátor
         return identifier;
     }
 
