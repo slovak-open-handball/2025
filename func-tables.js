@@ -1977,7 +1977,14 @@ console.log('   • window.teamNameReplacer.getReadyGroups() - zoznam pripraven�
 console.log('   • window.teamNameReplacer.stop() - zastaví sledovanie');
 console.log('   • window.matchTracker.getTeamNameByDisplayId("U12 D 1E") - priamy prístup k funkcii');
 
-startTeamNameReplacement();
+// Počkáme na načítanie React aplikácie
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(startTeamNameReplacement, 1000);
+    });
+} else {
+    setTimeout(startTeamNameReplacement, 1000);
+}
 
 // Pridanie funkcie na manuálne pridanie do cache
 function addToCache(displayId, teamName) {
