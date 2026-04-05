@@ -1865,7 +1865,7 @@ async function startTeamNameReplacement() {
             replaceTeamIdentifiersWhenReady();
             
             // 🔴 SPUSTENIE PERIODICKÉHO NAHRÁDZANIA (každých 30 sekúnd)
-            startPeriodicReplacement(1);
+            startPeriodicReplacement(0.5);
         }
     }, 500);
     
@@ -1874,7 +1874,7 @@ async function startTeamNameReplacement() {
         if (!window.matchTracker) {
             console.log('⚠️ MatchTracker nie je dostupný');
             replaceTeamIdentifiersWhenReady();
-            startPeriodicReplacement(1);
+            startPeriodicReplacement(0.5);
         }
     }, 10000);
     attachClickHandlersForReplacement();
