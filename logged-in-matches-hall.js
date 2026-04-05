@@ -2934,11 +2934,22 @@ const matchesHallApp = ({ userProfileData }) => {
     };
 
     // FUNKCIA PRE VÝBER ZÁPASU
-     const selectMatch = (match) => {
+    const selectMatch = (match) => {
         setSelectedMatch(match);
         setManualTimeOffset(match.manualTimeOffset || 0);
         updateUrlParameters(match.homeTeamIdentifier, match.awayTeamIdentifier);
-        window.currentMatchId = match.id; 
+        window.currentMatchId = match.id;
+    
+        // 🔴 NOVÉ: Ak už boli tímy nahradené, hneď po výbere zápasu skúsime nájsť tímy podľa názvu
+        // a aktualizovať ich v stave
+        setTimeout(() => {
+            if (window.teamNameReplacer && window.teamNameReplacer.hasReplacedAnyTeams && 
+                window.teamNameReplacer.hasReplacedAnyTeams()) {
+                console.log('🔄 Tímy boli nahradené, aktualizujem zobrazenie...');
+                // Force re-render
+                setSelectedMatch(prevMatch => ({ ...prevMatch }));
+            }
+        }, 500);
     };
 
     // Zoradenie dní podľa dátumu
