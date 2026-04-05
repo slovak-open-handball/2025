@@ -2898,6 +2898,9 @@ const matchesHallApp = ({ userProfileData }) => {
 
     // FUNKCIA NA ZÍSKANIE KOMPLETNÝCH INFORMÁCIÍ O TÍME (bez retry - synchronná)
     const getTeamDetails = (identifierOrName) => {
+        console.log(`🔍 getTeamDetails volaný s: "${identifierOrName}"`);
+        console.log(`📊 Users dostupných: ${users?.length || 0}`);
+        
         if (!identifierOrName) return null;
         
         // Najprv skúsime získať pôvodný identifikátor z DOM (ak je to názov)
@@ -3027,17 +3030,12 @@ const matchesHallApp = ({ userProfileData }) => {
             // Počkáme 500ms pre prípad, že nahrádzanie ešte neprebehlo
             await new Promise(resolve => setTimeout(resolve, 500));
             
-            // Dôležité: použijeme selectedMatch.homeTeamIdentifier a selectedMatch.awayTeamIdentifier
-            // Nie getTeamNameByIdentifier - to je len na zobrazenie
+            // getTeamDetails je synchronná funkcia, nie Promise
             const home = getTeamDetails(selectedMatch.homeTeamIdentifier);
             const away = getTeamDetails(selectedMatch.awayTeamIdentifier);
             
-            // Ak sú výsledky Promise (čo by nemali byť), počkáme
-            const homeResult = home instanceof Promise ? await home : home;
-            const awayResult = away instanceof Promise ? await away : away;
-            
-            setHomeTeamDetails(homeResult);
-            setAwayTeamDetails(awayResult);
+            setHomeTeamDetails(home);
+            setAwayTeamDetails(away);
             setLoadingTeamDetails(false);
         };
         
