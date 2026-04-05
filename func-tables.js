@@ -277,14 +277,14 @@ function startOverlayManagement() {
     }, 500); // Kontrola každých 0.5 sekundy
 }
 
-// Prepísanie pôvodnej funkcie startTeamNameReplacement
-const originalStartTeamNameReplacement = startTeamNameReplacement;
-window.startTeamNameReplacement = function() {
-    // Spustíme správu overlay
-    startOverlayManagement();
-    // Spustíme pôvodnú funkciu
-    return originalStartTeamNameReplacement();
-};
+// Prepísanie pôvodnej funkcie startTeamNameReplacement (ak existuje)
+if (typeof startTeamNameReplacement === 'function') {
+    const originalStartTeamNameReplacement = startTeamNameReplacement;
+    window.startTeamNameReplacement = function() {
+        startOverlayManagement();
+        return originalStartTeamNameReplacement();
+    };
+}
 
 // Prepísanie start funkcie v teamNameReplacer
 if (window.teamNameReplacer && window.teamNameReplacer.start) {
@@ -292,6 +292,16 @@ if (window.teamNameReplacer && window.teamNameReplacer.start) {
     window.teamNameReplacer.start = function() {
         startOverlayManagement();
         return originalReplacerStart();
+    };
+}
+
+// Ak neexistuje startTeamNameReplacement, vytvoríme ju
+if (typeof startTeamNameReplacement !== 'function') {
+    window.startTeamNameReplacement = function() {
+        startOverlayManagement();
+        if (window.teamNameReplacer && window.teamNameReplacer.start) {
+            window.teamNameReplacer.start();
+        }
     };
 }
 
@@ -2296,8 +2306,6 @@ console.log('   • window.teamNameReplacer.checkGroupStatus("U12 D", "B") - kon
 console.log('   • window.teamNameReplacer.getReadyGroups() - zoznam pripravených skupín');
 console.log('   • window.teamNameReplacer.stop() - zastaví sledovanie');
 console.log('   • window.matchTracker.getTeamNameByDisplayId("U12 D 1E") - priamy prístup k funkcii');
-
-startTeamNameReplacement();
 
 // Pridanie funkcie na manuálne pridanie do cache
 function addToCache(displayId, teamName) {
