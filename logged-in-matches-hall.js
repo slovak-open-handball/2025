@@ -2892,8 +2892,8 @@ const matchesHallApp = ({ userProfileData }) => {
         return () => observer.disconnect();
     }, [selectedMatch]);
 
-    // FUNKCIA NA ZÍSKANIE KOMPLETNÝCH INFORMÁCIÍ O TÍME (s retry)
-    const getTeamDetails = (identifierOrName, retryCount = 0) => {
+    // FUNKCIA NA ZÍSKANIE KOMPLETNÝCH INFORMÁCIÍ O TÍME (bez retry - synchronná)
+    const getTeamDetails = (identifierOrName) => {
         if (!identifierOrName) return null;
         
         // Najprv skúsime získať pôvodný identifikátor z DOM (ak je to názov)
@@ -2986,21 +2986,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        // 🔴 RETRY MECHANIZMUS: Ak sme nenašli a máme selectedMatch, skúsime znova o 500ms
-        if (selectedMatch && retryCount < 10) {
-            console.log(`⏳ Tím "${identifierOrName}" nebol nájdený, skúšam znova o 500ms (pokus ${retryCount + 1}/10)...`);
-            return new Promise((resolve) => {
-                setTimeout(() => {
-                    const result = getTeamDetails(identifierOrName, retryCount + 1);
-                    resolve(result);
-                }, 500);
-            });
-        }
-        
-        if (retryCount === 0) {
-            console.log(`❌ Tím nebol nájdený: "${identifierOrName}"`);
-        }
-        
+        console.log(`❌ Tím nebol nájdený: "${identifierOrName}"`);
         return null;
     };
 
@@ -3023,17 +3009,55 @@ const matchesHallApp = ({ userProfileData }) => {
         a.date - b.date
     );
 
+        // Pridaj nové stavy pre teamDetails
+    const [homeTeamDetails, setHomeTeamDetails] = useState(null);
+    const [awayTeamDetails, setAwayTeamDetails] = useState(null);
+    const [loadingTeamDetails, setLoadingTeamDetails] = useState(false);
+
+    // useEffect na načítanie detailov tímov
+    useEffect(() => {
+        if (!selectedMatch) {
+            setHomeTeamDetails(null);
+            setAwayTeamDetails(null);
+            return;
+        }
+        
+        const loadTeamDetails = async () => {
+            setLoadingTeamDetails(true);
+            
+            // Počkáme 500ms pre prípad, že nahrádzanie ešte neprebehlo
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            const home = await getTeamDetails(selectedMatch.homeTeamIdentifier);
+            const away = await getTeamDetails(selectedMatch.awayTeamIdentifier);
+            
+            setHomeTeamDetails(home);
+            setAwayTeamDetails(away);
+            setLoadingTeamDetails(false);
+        };
+        
+        loadTeamDetails();
+    }, [selectedMatch, users]); // Znovu načítať keď sa zmenia users
+
     // Ak je vybraný zápas, zobrazíme detail
     if (selectedMatch) {
         const homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
         const awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
-        const [homeTeamDetails, awayTeamDetails] = await Promise.all([
-            getTeamDetails(selectedMatch.homeTeamIdentifier),
-            getTeamDetails(selectedMatch.awayTeamIdentifier)
-        ]);
+        // Použi stavy namiesto priameho volania
+        // const homeTeamDetails = ... už nie je potrebné
+        // const awayTeamDetails = ... už nie je potrebné
         const matchDate = selectedMatch.scheduledTime ? formatDateWithDay(selectedMatch.scheduledTime.toDate()) : 'neurčený';
         const matchStartTime = selectedMatch.scheduledTime ? formatTime(selectedMatch.scheduledTime) : '-- : --';
         const category = categories.find(c => c.name === selectedMatch.categoryName);
+        
+        // Pridaj kontrolu načítavania
+        if (loadingTeamDetails) {
+            return React.createElement(
+                'div',
+                { className: 'flex justify-center items-center py-12' },
+                React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500' })
+            );
+        }
 
         const activeMenStaffHome = homeTeamDetails?.team.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
         const activeWomenStaffHome = homeTeamDetails?.team.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
