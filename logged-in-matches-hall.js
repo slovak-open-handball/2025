@@ -1850,55 +1850,6 @@ const matchesHallApp = ({ userProfileData }) => {
     };
 
     useEffect(() => {
-        // Funkcia na kontrolu, či už boli identifikátory nahradené
-        const checkReplacementReady = () => {
-            // Skontrolujeme, či existujú nejaké elementy s data-team-name
-            const replacedElements = document.querySelectorAll('[data-team-name]');
-            if (replacedElements.length > 0) {
-                console.log(`✅ Nahrádzanie dokončené, nájdených ${replacedElements.length} elementov`);
-                setReplacementReady(true);
-                if (replacementCheckInterval) {
-                    clearInterval(replacementCheckInterval);
-                    setReplacementCheckInterval(null);
-                }
-                return true;
-            }
-            return false;
-        };
-        
-        // Skúsime najprv okamžite
-        if (checkReplacementReady()) return;
-        
-        // FALLBACK: Ak po 5 sekundách stále žiadne elementy, pokračujeme ďalej
-        const fallbackTimeout = setTimeout(() => {
-            const elements = document.querySelectorAll('[data-team-name]');
-            if (elements.length === 0) {
-                console.log('⚠️ Žiadne identifikátory na nahrádzanie, pokračujem bez nahrádzania');
-                setReplacementReady(true);
-            }
-        }, 5000);
-        
-        // Ak nie, nastavíme interval na kontrolu každých 500ms
-        const interval = setInterval(checkReplacementReady, 500);
-        setReplacementCheckInterval(interval);
-        
-        return () => {
-            clearTimeout(fallbackTimeout);
-            if (interval) clearInterval(interval);
-        };
-    }, []);
-    
-    // Až keď je replacementReady, zobrazíme obsah
-    if (!replacementReady) {
-        return React.createElement(
-            'div',
-            { className: 'flex justify-center items-center h-full pt-16' },
-            React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' }),
-            React.createElement('p', { className: 'ml-4 text-gray-600' }, 'Načítavanie názvov tímov...')
-        );
-    }
-
-    useEffect(() => {
         if (!window.db) return;
     
         const superstructureDocRef = doc(window.db, 'settings', 'superstructureGroups');
