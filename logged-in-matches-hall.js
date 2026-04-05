@@ -1807,14 +1807,13 @@ const matchesHallApp = ({ userProfileData }) => {
                 console.log('📋 Nahradené tímy:', detail.replacedTeams.map(t => `${t.originalIdentifier} → ${t.teamName}`).join(', '));
             }
             
-            // VYMAŽEME CACHE - aby sa nabudúce načítali čerstvé názvy
+            // VYMAŽEME CACHE
             clearReplacedNamesCache();
             
-            // Počkáme krátko, aby DOM mal čas na aktualizáciu
+            // Počkáme na aktualizáciu DOM a potom obnovíme zápas
             setTimeout(() => {
                 if (selectedMatch) {
                     console.log('🔄 Obnovujem detail zápasu po nahradení tímov...');
-                    // Force re-render selectedMatch
                     setSelectedMatch({ ...selectedMatch });
                 }
             }, 500);
@@ -1822,7 +1821,7 @@ const matchesHallApp = ({ userProfileData }) => {
         
         window.addEventListener('teamNamesReplaced', handleTeamNamesReplaced);
         
-        // Skontrolujeme existujúce nahradenia pri načítaní
+        // Skontrolujeme existujúce nahradenia
         setTimeout(() => {
             if (selectedMatch) {
                 clearReplacedNamesCache();
