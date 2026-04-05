@@ -2569,8 +2569,8 @@ const matchesHallApp = ({ userProfileData }) => {
         if (matches.length > 0 && categories.length > 0) {
 //            console.log('=== VŠETKY ZÁPASY V TEJTO HALE S NASTAVENIAMI KATEGÓRIE ===');
             matches.forEach((match, index) => {
-                const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
-                const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
+                const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier, match.categoryName);
+                const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier, match.categoryName);
                 const matchTime = match.scheduledTime ? formatTime(match.scheduledTime) : 'neurčený';
                 const matchDate = match.scheduledTime ? formatDateWithDay(match.scheduledTime.toDate()) : 'neurčený';
                 const categoryName = match.categoryName || 'Neznáma kategória';
@@ -5738,8 +5738,8 @@ const matchesHallApp = ({ userProfileData }) => {
                             { className: 'divide-y divide-gray-100' },
                             dayGroup.matches.map((match) => {
                                 // Použijeme funkciu getTeamNameByIdentifier na získanie názvov tímov
-                                const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
-                                const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
+                                const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier, match.categoryName);
+                                const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier, match.categoryName);
                                 const category = categories.find(c => c.name === match.categoryName);
                                 
                                 // Zistenie, či má zápas typ (finále, semifinále, o umiestnenie)
