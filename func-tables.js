@@ -1,333 +1,3 @@
-// ========== LOADING OVERLAY ==========
-let loadingOverlay = null;
-let overlayFadeOutTimeout = null;
-
-// Funkcia na vytvorenie loading overlay
-function createLoadingOverlay() {
-    // Ak už overlay existuje, nebudeme ho vytvárať znovu
-    if (loadingOverlay && document.body.contains(loadingOverlay)) {
-        return loadingOverlay;
-    }
-    
-    // Vytvorenie overlay div
-    const overlay = document.createElement('div');
-    overlay.id = 'team-name-loading-overlay';
-    overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: white;
-        z-index: 999999;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
-        transition: opacity 0.5s ease-out;
-        opacity: 1;
-    `;
-    
-    // Vytvorenie container pre spinner a text
-    const content = document.createElement('div');
-    content.style.cssText = `
-        text-align: center;
-        background: white;
-        padding: 30px 40px;
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    `;
-    
-    // Vytvorenie SVG spinner (modrý krútiaci sa kruh)
-    const spinner = document.createElement('div');
-    spinner.innerHTML = `
-        <svg width="50" height="50" viewBox="0 0 50 50" style="animation: spin 1s linear infinite; margin: 0 auto 20px auto;">
-            <circle cx="25" cy="25" r="20" fill="none" stroke="#2196F3" stroke-width="4" stroke-dasharray="90 150" stroke-linecap="round"/>
-        </svg>
-        <style>
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-        </style>
-    `;
-    
-    // Text
-    const text = document.createElement('div');
-    text.textContent = 'Načítavajú sa názvy tímov';
-    text.style.cssText = `
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-        font-size: 18px;
-        color: #333;
-        margin-top: 10px;
-    `;
-    
-    content.appendChild(spinner);
-    content.appendChild(text);
-    overlay.appendChild(content);
-    
-    return overlay;
-}
-
-// Funkcia na zobrazenie overlay
-function showLoadingOverlay() {
-    // Zrušíme prípadný predchádzajúci timeout na skrytie
-    if (overlayFadeOutTimeout) {
-        clearTimeout(overlayFadeOutTimeout);
-        overlayFadeOutTimeout = null;
-    }
-    
-    // Odstránime existujúci overlay ak nejaký je
-    if (loadingOverlay && document.body.contains(loadingOverlay)) {
-        loadingOverlay.remove();
-        loadingOverlay = null;
-    }
-    
-    // Vytvoríme a pridáme nový overlay
-    loadingOverlay = createLoadingOverlay();
-    document.body.appendChild(loadingOverlay);
-    
-    console.log('🔄 Loading overlay zobrazený');
-}
-
-// Funkcia na skrytie overlay s fade-out efektom
-function hideLoadingOverlay() {
-    if (!loadingOverlay || !document.body.contains(loadingOverlay)) {
-        console.log('ℹ️ Loading overlay neexistuje, preskakujem');
-        return;
-    }
-    
-    console.log('✨ Loading overlay začína miznúť...');
-    
-    // Nastavíme opacity na 0 a po prechode odstránime element
-    loadingOverlay.style.opacity = '0';
-    
-    // Počkáme na dokončenie animácie a potom overlay odstránime
-    overlayFadeOutTimeout = setTimeout(() => {
-        if (loadingOverlay && document.body.contains(loadingOverlay)) {
-            loadingOverlay.remove();
-            loadingOverlay = null;
-            console.log('✅ Loading overlay úplne odstránený');
-        }
-        overlayFadeOutTimeout = null;
-    }, 500); // Čas musí zodpovedať transition duration (0.5s)
-}
-
-// Funkcia na kontrolu, či sú všetky skupiny pripravené (100% odohrané)
-function areAllGroupsReady() {
-    if (!window.matchTracker || typeof window.matchTracker.getAllMatches !== 'function') {
-        return false;
-    }
-    
-    const allMatches = window.matchTracker.getAllMatches();
-    if (allMatches.length === 0) return false;
-    
-    // Získame unikátne skupiny
-    const uniqueGroups = new Set();
-    allMatches.forEach(match => {
-        if (match.categoryName && match.groupName) {
-            uniqueGroups.add(`${match.categoryName}|${match.groupName}`);
-        }
-    });
-    
-    if (uniqueGroups.size === 0) return false;
-    
-    // Skontrolujeme každú skupinu
-    let allReady = true;
-    for (const groupKey of uniqueGroups) {
-        const [category, group] = groupKey.split('|');
-        
-        const groupTable = window.matchTracker.createGroupTable(category, group);
-        if (!groupTable) {
-            allReady = false;
-            break;
-        }
-        
-        const totalMatches = groupTable.totalMatches || 0;
-        const completedMatches = groupTable.completedCount || 0;
-        const completionPercentage = totalMatches > 0 ? (completedMatches / totalMatches * 100) : 0;
-        
-        if (completionPercentage < 100) {
-            allReady = false;
-            break;
-        }
-        
-        // Kontrola, či všetky zápasy majú udalosti
-        const allGroupMatches = window.matchTracker.getGroupMatches?.(category, group) || [];
-        const completedMatchesList = allGroupMatches.filter(m => m.status === 'completed');
-        
-        for (const match of completedMatchesList) {
-            const events = window.matchTracker.getEvents?.(match.id) || [];
-            if (events.length === 0) {
-                allReady = false;
-                break;
-            }
-        }
-        
-        if (!allReady) break;
-    }
-    
-    return allReady;
-}
-
-// Funkcia na kontrolu, či už boli nejaké identifikátory nahradené
-function hasAnyReplacementOccurred() {
-    // Skontrolujeme, či existujú elementy s atribútom data-replaced-100-percent
-    const replacedElements = document.querySelectorAll('[data-replaced-100-percent="true"]');
-    return replacedElements.length > 0;
-}
-
-// Funkcia na kontrolu, či máme nejaké dáta v cache
-function hasCacheData() {
-    try {
-        const cached = localStorage.getItem('teamNameReplacer_cache');
-        if (cached) {
-            const data = JSON.parse(cached);
-            return data.mappings && Object.keys(data.mappings).length > 0;
-        }
-    } catch (e) {}
-    return false;
-}
-
-// ** HLAVNÁ FUNKCIA NA SPRÁVU LOADING OVERLAY **
-let overlayCheckInterval = null;
-let overlayCheckAttempts = 0;
-const MAX_OVERLAY_CHECK_ATTEMPTS = 120; // Max 60 sekúnd (pri 0.5s intervale)
-
-function startOverlayManagement() {
-    console.log('🎬 Spúšťam správu loading overlay...');
-    
-    // Zobrazenie overlay
-    showLoadingOverlay();
-    
-    // Zrušíme predchádzajúci interval ak existuje
-    if (overlayCheckInterval) {
-        clearInterval(overlayCheckInterval);
-        overlayCheckInterval = null;
-    }
-    
-    overlayCheckAttempts = 0;
-    
-    // Kontrola každých 0.5 sekundy
-    overlayCheckInterval = setInterval(() => {
-        overlayCheckAttempts++;
-        
-        // Kontrola, či už boli nejaké názvy nahradené
-        const hasReplacements = hasAnyReplacementOccurred();
-        
-        // Kontrola, či sú všetky skupiny pripravené
-        const allGroupsReady = areAllGroupsReady();
-        
-        // Kontrola, či máme cache
-        const hasCache = hasCacheData();
-        
-        // Podmienky na skrytie overlay:
-        // 1. Už boli nejaké názvy nahradené ALEBO
-        // 2. Všetky skupiny sú pripravené na 100% ALEBO
-        // 3. Presiahli sme maximálny počet pokusov (timeout)
-        // 4. Máme cache a žiadne skupiny nie sú dostupné (prípad, keď nie sú žiadne zápasy)
-        
-        let shouldHide = false;
-        let reason = '';
-        
-        if (hasReplacements) {
-            shouldHide = true;
-            reason = 'boli nahradené názvy tímov';
-        } else if (allGroupsReady) {
-            shouldHide = true;
-            reason = 'všetky skupiny sú pripravené (100%)';
-        } else if (overlayCheckAttempts >= MAX_OVERLAY_CHECK_ATTEMPTS) {
-            shouldHide = true;
-            reason = 'uplynul časový limit';
-        } else if (hasCache && !window.matchTracker?.getAllMatches()?.length) {
-            // Ak máme cache ale nie sú žiadne zápasy, skryjeme overlay
-            shouldHide = true;
-            reason = 'žiadne zápasy v databáze (používam cache)';
-        }
-        
-        if (shouldHide) {
-            console.log(`✅ Podmienka na skrytie splnená (${reason})`);
-            clearInterval(overlayCheckInterval);
-            overlayCheckInterval = null;
-            
-            // Malé oneskorenie pred skrytím, aby sa dokončili posledné náhrady
-            setTimeout(() => {
-                hideLoadingOverlay();
-            }, 500);
-        } else if (overlayCheckAttempts % 10 === 0) { // Každých 5 sekúnd vypíšeme stav
-            const groupsReady = (() => {
-                if (!window.matchTracker) return 0;
-                const allMatches = window.matchTracker.getAllMatches?.() || [];
-                const uniqueGroups = new Set();
-                allMatches.forEach(m => {
-                    if (m.categoryName && m.groupName) {
-                        uniqueGroups.add(`${m.categoryName}|${m.groupName}`);
-                    }
-                });
-                let ready = 0;
-                for (const g of uniqueGroups) {
-                    const [cat, grp] = g.split('|');
-                    const table = window.matchTracker.createGroupTable?.(cat, grp);
-                    if (table && table.completionPercentage >= 100) ready++;
-                }
-                return { ready, total: uniqueGroups.size };
-            })();
-            console.log(`⏳ Loading overlay stále viditeľný (pokus ${overlayCheckAttempts}/${MAX_OVERLAY_CHECK_ATTEMPTS}) - pripravené skupiny: ${groupsReady.ready}/${groupsReady.total}`);
-        }
-    }, 500); // Kontrola každých 0.5 sekundy
-}
-
-// Prepísanie pôvodnej funkcie startTeamNameReplacement (ak existuje)
-if (typeof startTeamNameReplacement === 'function') {
-    const originalStartTeamNameReplacement = startTeamNameReplacement;
-    window.startTeamNameReplacement = function() {
-        startOverlayManagement();
-        return originalStartTeamNameReplacement();
-    };
-}
-
-// Prepísanie start funkcie v teamNameReplacer
-if (window.teamNameReplacer && window.teamNameReplacer.start) {
-    const originalReplacerStart = window.teamNameReplacer.start;
-    window.teamNameReplacer.start = function() {
-        startOverlayManagement();
-        return originalReplacerStart();
-    };
-}
-
-// Ak neexistuje startTeamNameReplacement, vytvoríme ju
-if (typeof startTeamNameReplacement !== 'function') {
-    window.startTeamNameReplacement = function() {
-        startOverlayManagement();
-        if (window.teamNameReplacer && window.teamNameReplacer.start) {
-            window.teamNameReplacer.start();
-        }
-    };
-}
-
-// Pridanie manuálnych funkcií pre ovládanie overlay
-window.loadingOverlay = {
-    show: showLoadingOverlay,
-    hide: hideLoadingOverlay,
-    isVisible: () => loadingOverlay !== null && document.body.contains(loadingOverlay),
-    checkGroups: areAllGroupsReady
-};
-
-console.log('📋 Pridané funkcie pre loading overlay:');
-console.log('   • Loading overlay sa zobrazí automaticky pri spustení');
-console.log('   • Zmizne po nahradení názvov tímov alebo po timeout-e');
-console.log('   • window.loadingOverlay.show() - manuálne zobrazenie');
-console.log('   • window.loadingOverlay.hide() - manuálne skrytie');
-
-
-
-
-
-
-
-
-
-
 (function() {
     'use strict';
     
@@ -1661,7 +1331,7 @@ function isGroupReadyForReplacement(category, groupLetter) {
     
     // 2. Podmienka 1: Všetky zápasy musia byť odohrané (100%)
     if (completionPercentage < 100) {
-//        console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Len ${completedMatches}/${totalMatches} (${completionPercentage}%) odohraných → NIE JE PRIpravená`);
+        console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Len ${completedMatches}/${totalMatches} (${completionPercentage}%) odohraných → NIE JE PRIpravená`);
         return false;
     }
     
@@ -2195,7 +1865,7 @@ async function startTeamNameReplacement() {
             replaceTeamIdentifiersWhenReady();
             
             // 🔴 SPUSTENIE PERIODICKÉHO NAHRÁDZANIA (každých 30 sekúnd)
-            startPeriodicReplacement(0.5);
+            startPeriodicReplacement(1);
         }
     }, 500);
     
@@ -2204,7 +1874,7 @@ async function startTeamNameReplacement() {
         if (!window.matchTracker) {
             console.log('⚠️ MatchTracker nie je dostupný');
             replaceTeamIdentifiersWhenReady();
-            startPeriodicReplacement(0.5);
+            startPeriodicReplacement(1);
         }
     }, 10000);
     attachClickHandlersForReplacement();
@@ -2306,6 +1976,13 @@ console.log('   • window.teamNameReplacer.checkGroupStatus("U12 D", "B") - kon
 console.log('   • window.teamNameReplacer.getReadyGroups() - zoznam pripravených skupín');
 console.log('   • window.teamNameReplacer.stop() - zastaví sledovanie');
 console.log('   • window.matchTracker.getTeamNameByDisplayId("U12 D 1E") - priamy prístup k funkcii');
+
+// Automatické spustenie
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startTeamNameReplacement);
+} else {
+    startTeamNameReplacement();
+}
 
 // Pridanie funkcie na manuálne pridanie do cache
 function addToCache(displayId, teamName) {
