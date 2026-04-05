@@ -386,6 +386,9 @@ const matchesHallApp = ({ userProfileData }) => {
     const [awayTeamDetails, setAwayTeamDetails] = useState(null);
     const [loadingTeamDetails, setLoadingTeamDetails] = useState(false);
 
+    const [replacementReady, setReplacementReady] = useState(false);
+    const [replacementCheckInterval, setReplacementCheckInterval] = useState(null);
+
     // Funkcia na otvorenie modálneho okna pre úpravu člena realizačného tímu
     const openEditStaffModal = (member, team, teamDetails, staffType, staffIndex) => {
         if (selectedMatch?.status !== 'scheduled') {
@@ -1845,6 +1848,46 @@ const matchesHallApp = ({ userProfileData }) => {
         // Povolené len pre zápasy v stave 'scheduled' (Naplánované)
         return selectedMatch.status === 'scheduled';
     };
+
+    // Pridaj useEffect na kontrolu pripravenosti nahrádzania
+    useEffect(() => {
+        // Funkcia na kontrolu, či už boli identifikátory nahradené
+        const checkReplacementReady = () => {
+            // Skontrolujeme, či existujú nejaké elementy s data-team-name
+            const replacedElements = document.querySelectorAll('[data-team-name]');
+            if (replacedElements.length > 0) {
+                console.log(`✅ Nahrádzanie dokončené, nájdených ${replacedElements.length} elementov`);
+                setReplacementReady(true);
+                if (replacementCheckInterval) {
+                    clearInterval(replacementCheckInterval);
+                    setReplacementCheckInterval(null);
+                }
+                return true;
+            }
+            return false;
+        };
+        
+        // Skúsime najprv okamžite
+        if (checkReplacementReady()) return;
+        
+        // Ak nie, nastavíme interval na kontrolu každých 500ms
+        const interval = setInterval(checkReplacementReady, 500);
+        setReplacementCheckInterval(interval);
+        
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, []);
+    
+    // Až keď je replacementReady, zobrazíme obsah
+    if (!replacementReady) {
+        return React.createElement(
+            'div',
+            { className: 'flex justify-center items-center h-full pt-16' },
+            React.createElement('div', { className: 'animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500' }),
+            React.createElement('p', { className: 'ml-4 text-gray-600' }, 'Načítavanie názvov tímov...')
+        );
+    }
 
     useEffect(() => {
         if (!window.db) return;
