@@ -2024,3 +2024,129 @@ function addToCache(displayId, teamName) {
 window.teamNameReplacer.addToCache = addToCache;
 
 
+
+// --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+// ============================================================
+// PRIDAJTE TÚTO ČASŤ NA KONIEC SUBORU func-tables.js
+// ============================================================
+
+// Premenná pre sledovanie, či už boli nahradené nejaké tímy
+let hasReplacedAnyTeams = false;
+
+// Zoznam callback funkcií, ktoré sa majú zavolať po nahradení
+const replacementCallbacks = [];
+
+// Funkcia na registráciu callbacku, ktorý sa zavolá po nahradení tímov
+function onTeamNamesReplaced(callback) {
+    if (typeof callback === 'function') {
+        replacementCallbacks.push(callback);
+        console.log(`📋 Zaregistrovaný callback, celkom ${replacementCallbacks.length} callbackov`);
+        
+        // Ak už boli nejaké tímy nahradené, zavoláme callback okamžite
+        if (hasReplacedAnyTeams) {
+            console.log('🔄 Tímy už boli nahradené, volám callback okamžite...');
+            callback();
+        }
+    }
+}
+
+// Funkcia na vyžiadanie aktuálneho stavu nahradených tímov
+function getReplacedTeams() {
+    const replacedTeams = [];
+    const elements = document.querySelectorAll('[data-replaced-100-percent="true"]');
+    
+    for (const element of elements) {
+        const originalId = element.getAttribute('data-original-identifier');
+        const teamName = element.getAttribute('data-team-name');
+        const category = element.getAttribute('data-team-category');
+        
+        if (originalId && teamName) {
+            replacedTeams.push({
+                originalIdentifier: originalId,
+                teamName: teamName,
+                category: category
+            });
+        }
+    }
+    
+    return replacedTeams;
+}
+
+// UPRAVENÁ FUNKCIA performPartialReplacement - PRIDANÉ VYSIELANIE UDALOSTI
+const originalPerformPartialReplacement = performPartialReplacement;
+performPartialReplacement = function(identifiersToReplace) {
+    const result = originalPerformPartialReplacement(identifiersToReplace);
+    
+    // Ak bolo aspoň jedno nahradenie úspešné
+    if (result && result.replaced > 0) {
+        hasReplacedAnyTeams = true;
+        
+        // Získame všetky nahradené tímy
+        const replacedTeams = getReplacedTeams();
+        
+        console.log(`🎉 BOLO NAHRADENÝCH ${result.replaced} TÍMOV, VYSIELAM UDALOSŤ...`);
+        
+        // Vytvoríme a vyšleme udalosť
+        const event = new CustomEvent('teamNamesReplaced', {
+            detail: {
+                replacedCount: result.replaced,
+                fromCache: result.fromCache,
+                fromDb: result.fromDb,
+                replacedTeams: replacedTeams,
+                timestamp: Date.now()
+            }
+        });
+        window.dispatchEvent(event);
+        
+        // Zavoláme všetky zaregistrované callbacky
+        replacementCallbacks.forEach(callback => {
+            try {
+                callback(replacedTeams);
+            } catch (error) {
+                console.error('❌ Chyba v callbacku:', error);
+            }
+        });
+    }
+    
+    return result;
+};
+
+// PRIDANÉ: Funkcia na manuálne spustenie eventu (pre prípad, že už boli nahradené tímy pred registráciou)
+function notifyReplacedTeams() {
+    if (hasReplacedAnyTeams) {
+        const replacedTeams = getReplacedTeams();
+        const event = new CustomEvent('teamNamesReplaced', {
+            detail: {
+                replacedCount: replacedTeams.length,
+                replacedTeams: replacedTeams,
+                timestamp: Date.now(),
+                isManual: true
+            }
+        });
+        window.dispatchEvent(event);
+        
+        replacementCallbacks.forEach(callback => {
+            try {
+                callback(replacedTeams);
+            } catch (error) {
+                console.error('❌ Chyba v callbacku:', error);
+            }
+        });
+    }
+}
+
+// Export nových funkcií
+window.teamNameReplacer = {
+    ...window.teamNameReplacer,
+    onTeamNamesReplaced: onTeamNamesReplaced,
+    getReplacedTeams: getReplacedTeams,
+    notifyReplacedTeams: notifyReplacedTeams,
+    hasReplacedAnyTeams: () => hasReplacedAnyTeams
+};
+
+console.log('📡 Pridané funkcie pre komunikáciu s hlavnou aplikáciou:');
+console.log('   • window.teamNameReplacer.onTeamNamesReplaced(callback) - registrácia callbacku po nahradení');
+console.log('   • window.teamNameReplacer.getReplacedTeams() - získanie zoznamu nahradených tímov');
+console.log('   • window.teamNameReplacer.notifyReplacedTeams() - manuálne vyžiadanie notifikácie');
+console.log('   • Udalosť "teamNamesReplaced" - automaticky vysielaná po každom nahradení');
