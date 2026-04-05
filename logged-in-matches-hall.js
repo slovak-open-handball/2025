@@ -382,6 +382,10 @@ const matchesHallApp = ({ userProfileData }) => {
 
     const [superstructureTeams, setSuperstructureTeams] = useState({});
 
+    const [homeTeamDetails, setHomeTeamDetails] = useState(null);
+    const [awayTeamDetails, setAwayTeamDetails] = useState(null);
+    const [loadingTeamDetails, setLoadingTeamDetails] = useState(false);
+
     // Funkcia na otvorenie modálneho okna pre úpravu člena realizačného tímu
     const openEditStaffModal = (member, team, teamDetails, staffType, staffIndex) => {
         if (selectedMatch?.status !== 'scheduled') {
@@ -3009,11 +3013,6 @@ const matchesHallApp = ({ userProfileData }) => {
         a.date - b.date
     );
 
-        // Pridaj nové stavy pre teamDetails
-    const [homeTeamDetails, setHomeTeamDetails] = useState(null);
-    const [awayTeamDetails, setAwayTeamDetails] = useState(null);
-    const [loadingTeamDetails, setLoadingTeamDetails] = useState(false);
-
     // useEffect na načítanie detailov tímov
     useEffect(() => {
         if (!selectedMatch) {
@@ -3028,19 +3027,32 @@ const matchesHallApp = ({ userProfileData }) => {
             // Počkáme 500ms pre prípad, že nahrádzanie ešte neprebehlo
             await new Promise(resolve => setTimeout(resolve, 500));
             
-            const home = await getTeamDetails(selectedMatch.homeTeamIdentifier);
-            const away = await getTeamDetails(selectedMatch.awayTeamIdentifier);
+            // Dôležité: použijeme selectedMatch.homeTeamIdentifier a selectedMatch.awayTeamIdentifier
+            // Nie getTeamNameByIdentifier - to je len na zobrazenie
+            const home = getTeamDetails(selectedMatch.homeTeamIdentifier);
+            const away = getTeamDetails(selectedMatch.awayTeamIdentifier);
             
-            setHomeTeamDetails(home);
-            setAwayTeamDetails(away);
+            // Ak sú výsledky Promise (čo by nemali byť), počkáme
+            const homeResult = home instanceof Promise ? await home : home;
+            const awayResult = away instanceof Promise ? await away : away;
+            
+            setHomeTeamDetails(homeResult);
+            setAwayTeamDetails(awayResult);
             setLoadingTeamDetails(false);
         };
         
         loadTeamDetails();
-    }, [selectedMatch, users]); // Znovu načítať keď sa zmenia users
+    }, [selectedMatch, users]);
 
     // Ak je vybraný zápas, zobrazíme detail
     if (selectedMatch) {
+        if (loadingTeamDetails) {
+            return React.createElement(
+                'div',
+                { className: 'flex justify-center items-center py-12' },
+                React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500' })
+            );
+        }        
         const homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
         const awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
         // Použi stavy namiesto priameho volania
