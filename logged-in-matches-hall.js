@@ -1794,6 +1794,36 @@ const matchesHallApp = ({ userProfileData }) => {
         return selectedMatch.status === 'scheduled';
     };
 
+    // 🔴 NOVÝ useEffect PRE SLEDOVANIE NAHRADENIA TÍMOV
+    useEffect(() => {
+        // Funkcia na aktualizáciu stavu po nahradení tímov
+        const handleTeamNamesReplaced = (event) => {
+            console.log('🔄 Boli nahradené názvy tímov, aktualizujem stav...');
+            const replacedTeams = event.detail?.replacedTeams || [];
+            
+            if (replacedTeams.length > 0 && selectedMatch) {
+                // Znovu načítame detaily tímov (pre prípad, že sa zmenili názvy)
+                // To spôsobí prekreslenie komponentu s novými názvami
+                setUsers(prevUsers => [...prevUsers]); // Trigger re-render
+            }
+        };
+        
+        window.addEventListener('teamNamesReplaced', handleTeamNamesReplaced);
+        
+        // Kontrola, či už boli nejaké tímy nahradené
+        if (window.teamNameReplacer?.hasReplacedAnyTeams?.()) {
+            const replacedTeams = window.teamNameReplacer.getReplacedTeams?.() || [];
+            if (replacedTeams.length > 0) {
+                console.log('🔄 Tímy už boli nahradené, aktualizujem stav...');
+                setUsers(prevUsers => [...prevUsers]);
+            }
+        }
+        
+        return () => {
+            window.removeEventListener('teamNamesReplaced', handleTeamNamesReplaced);
+        };
+    }, [selectedMatch]);
+
     useEffect(() => {
         if (!window.db) return;
     
@@ -2700,7 +2730,7 @@ const matchesHallApp = ({ userProfileData }) => {
         return identifier;
     };
 
-    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA
+    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA (alebo názvu)
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
         
@@ -2780,7 +2810,31 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        // 3. Ak nič nenašlo, vrátime identifikátor
+        // 3. 🔴 NOVÉ: Skúsime vyhľadať podľa názvu tímu v globálnom mapovaní (po nahradení druhým kódom)
+        // Ak identifikátor vyzerá ako názov tímu (neobsahuje medzeru + číslo+písmeno), skúsime ho nájsť v mapovaní
+        const identifierPattern = /\s+\d+[A-Za-z]/;
+        const isDisplayId = identifierPattern.test(identifier);
+        
+        if (!isDisplayId && window.__teamNameMapping) {
+            // Hľadáme v mapovaní podľa názvu tímu
+            for (const [originalId, mapping] of Object.entries(window.__teamNameMapping)) {
+                if (mapping.teamName === identifier) {
+                    console.log(`🔍 Nájdený pôvodný identifikátor pre názov "${identifier}": ${originalId}`);
+                    return identifier; // Vrátime názov, ktorý už máme
+                }
+            }
+            
+            // Skúsime nájsť podľa čiastočnej zhody v mape
+            for (const [originalId, mapping] of Object.entries(window.__teamNameMapping)) {
+                if (mapping.teamName.toLowerCase().includes(identifier.toLowerCase()) ||
+                    identifier.toLowerCase().includes(mapping.teamName.toLowerCase())) {
+                    console.log(`🔍 Nájdený podobný názov: "${mapping.teamName}" pre "${identifier}"`);
+                    return mapping.teamName;
+                }
+            }
+        }
+        
+        // 4. Ak nič nenašlo, vrátime pôvodný identifikátor
         return identifier;
     };
 
@@ -2795,22 +2849,44 @@ const matchesHallApp = ({ userProfileData }) => {
         const identifierPattern = /\s+\d+[A-Za-z]/;
         const isDisplayId = identifierPattern.test(identifier);
         
-        // Ak to nie je displayId (identifikátor), skúsime nájsť pôvodný identifikátor v DOM
-        if (!isDisplayId) {
-            // Hľadáme element, ktorý obsahuje tento názov tímu a má uložený pôvodný identifikátor
+        // 🔴 AK TO NIE JE DISPLAYID (JE TO NÁZOV TÍMU), SKÚSIME HO NÁJSŤ V MAPOVANÍ
+        if (!isDisplayId && window.__teamNameMapping) {
+            // Hľadáme v mapovaní podľa názvu tímu
+            for (const [originalId, mapping] of Object.entries(window.__teamNameMapping)) {
+                if (mapping.teamName === identifier && originalId) {
+                    searchIdentifier = originalId;
+                    console.log(`🔍 Pre názov "${identifier}" nájdený pôvodný identifikátor: ${searchIdentifier}`);
+                    break;
+                }
+            }
+            
+            // Ak sme nenašli presnú zhodu, skúsime čiastočnú
+            if (searchIdentifier === identifier) {
+                for (const [originalId, mapping] of Object.entries(window.__teamNameMapping)) {
+                    if (mapping.teamName.toLowerCase().includes(identifier.toLowerCase()) && originalId) {
+                        searchIdentifier = originalId;
+                        console.log(`🔍 Pre názov "${identifier}" nájdený pôvodný identifikátor (čiastočná zhoda): ${searchIdentifier}`);
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Ak stále nemáme správny identifikátor, skúsime nájsť podľa atribútov v DOM
+        if (!isDisplayId && searchIdentifier === identifier) {
             const elements = document.querySelectorAll(`[data-team-name="${identifier}"]`);
             if (elements.length > 0 && elements[0].getAttribute('data-original-identifier')) {
                 searchIdentifier = elements[0].getAttribute('data-original-identifier');
-                console.log(`🔍 Pre názov "${identifier}" nájdený pôvodný identifikátor: ${searchIdentifier}`);
+                console.log(`🔍 Pre názov "${identifier}" nájdený pôvodný identifikátor z DOM: ${searchIdentifier}`);
             } else {
                 // Skúsime nájsť podľa čiastočnej zhody v data-original-identifier
                 const allElementsWithId = document.querySelectorAll('[data-original-identifier]');
                 for (const el of allElementsWithId) {
                     const originalId = el.getAttribute('data-original-identifier');
-                    const teamName = window.matchTracker?.getTeamNameByDisplayId?.(originalId);
+                    const teamName = el.getAttribute('data-team-name');
                     if (teamName === identifier && originalId) {
                         searchIdentifier = originalId;
-                        console.log(`🔍 Pre názov "${identifier}" nájdený pôvodný identifikátor (fallback): ${searchIdentifier}`);
+                        console.log(`🔍 Pre názov "${identifier}" nájdený pôvodný identifikátor (fallback DOM): ${searchIdentifier}`);
                         break;
                     }
                 }
@@ -2900,8 +2976,28 @@ const matchesHallApp = ({ userProfileData }) => {
 
     // Ak je vybraný zápas, zobrazíme detail
     if (selectedMatch) {
-        const homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
-        const awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
+        let homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
+        let awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
+
+        // 🔴 Ak je názov tímu rovnaký ako identifikátor (nebol nahradený), skúsime ho nájsť v mapovaní
+        if (homeTeamName === selectedMatch.homeTeamIdentifier && window.__teamNameMapping) {
+            for (const [originalId, mapping] of Object.entries(window.__teamNameMapping)) {
+                if (originalId === selectedMatch.homeTeamIdentifier && mapping.teamName) {
+                    homeTeamName = mapping.teamName;
+                    break;
+                }
+            }
+        }
+        
+        if (awayTeamName === selectedMatch.awayTeamIdentifier && window.__teamNameMapping) {
+            for (const [originalId, mapping] of Object.entries(window.__teamNameMapping)) {
+                if (originalId === selectedMatch.awayTeamIdentifier && mapping.teamName) {
+                    awayTeamName = mapping.teamName;
+                    break;
+                }
+            }
+        }
+        
         const homeTeamDetails = getTeamDetails(selectedMatch.homeTeamIdentifier);
         const awayTeamDetails = getTeamDetails(selectedMatch.awayTeamIdentifier);
         const matchDate = selectedMatch.scheduledTime ? formatDateWithDay(selectedMatch.scheduledTime.toDate()) : 'neurčený';
@@ -3260,7 +3356,30 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         };
 
-        // Funkcia pre zobrazenie hráčov (UPRAVENÁ - sekcia Ostatní sa zobrazuje vždy, ale bez klikania v režimoch in-progress/completed)
+        // 🔴 POMOCNÁ FUNKCIA NA ZÍSKANIE SPRÁVNEHO IDENTIFIKÁTORA TÍMU
+        const getTeamIdentifierForMatch = (teamType) => {
+            if (!selectedMatch) return null;
+            
+            const identifier = teamType === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
+            
+            // Kontrola, či ide o názov tímu (nie identifikátor)
+            const identifierPattern = /\s+\d+[A-Za-z]/;
+            const isDisplayId = identifierPattern.test(identifier);
+            
+            // Ak to nie je displayId (je to názov tímu), skúsime nájsť pôvodný identifikátor
+            if (!isDisplayId && window.__teamNameMapping) {
+                for (const [originalId, mapping] of Object.entries(window.__teamNameMapping)) {
+                    if (mapping.teamName === identifier) {
+                        console.log(`🔍 Pre názov "${identifier}" nájdený pôvodný identifikátor: ${originalId}`);
+                        return originalId;
+                    }
+                }
+            }
+            
+            return identifier;
+        };
+
+        // Funkcia pre zobrazenie hráčov (UPRAVENÁ - správne získavanie identifikátorov)
         const renderPlayersSection = (teamDetails, teamType, teamName) => {
             // Získame aktívnych hráčov (ktorí nie sú odstránení pre tento zápas)
             const activePlayers = teamDetails?.team.playerDetails?.filter(p => p && !p.removedForMatch) || [];
@@ -3271,24 +3390,38 @@ const matchesHallApp = ({ userProfileData }) => {
             // Získame odstránených členov RT pre tento zápas
             const removedStaff = teamDetails?.team.matchSpecificRemovals?.[selectedMatch.id]?.removedStaff || [];
             
-            // Získame AKTÍVNYCH členov RT (ktorí NIE sú odstránení pre tento zápas)
+            // Získame AKTÍVNYCH členov RT
             const activeMenStaff = teamDetails?.team.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
             const activeWomenStaff = teamDetails?.team.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
             
-            // Získame odstránených členov RT podľa typu
-            const removedMenStaff = removedStaff.filter(s => s.staffType === 'men');
-            const removedWomenStaff = removedStaff.filter(s => s.staffType === 'women');
-            
             // Celkový počet odstránených
-            const totalRemoved = removedPlayers.length + removedMenStaff.length + removedWomenStaff.length;
+            const totalRemoved = removedPlayers.length + removedStaff.length;
             
             // Zistíme, či je zápas ukončený alebo prebieha
             const isMatchCompleted = selectedMatch?.status === 'completed';
             const isMatchInProgress = selectedMatch?.status === 'in-progress' || selectedMatch?.status === 'paused';
             const isMatchScheduled = selectedMatch?.status === 'scheduled';
             
-            // Zistíme, či sa má sekcia "Ostatní" zobraziť (vždy, ak je aspoň jeden odstránený člen)
-            const showRemovedSection = totalRemoved > 0;
+                // 🔴 Získanie správneho identifikátora tímu (ak je k dispozícii v mapovaní)
+                const getCorrectTeamIdentifier = () => {
+                    const identifier = teamType === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
+                
+                // Ak je identifikátor už názov tímu, skúsime nájsť pôvodný
+                const identifierPattern = /\s+\d+[A-Za-z]/;
+                const isDisplayId = identifierPattern.test(identifier);
+                
+                if (!isDisplayId && window.__teamNameMapping) {
+                    for (const [originalId, mapping] of Object.entries(window.__teamNameMapping)) {
+                        if (mapping.teamName === identifier) {
+                            return originalId;
+                        }
+                    }
+                }
+                
+                return identifier;
+            };
+            
+            const teamIdentifier = getCorrectTeamIdentifier();
             
             return React.createElement(
                 'div',
