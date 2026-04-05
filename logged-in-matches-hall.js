@@ -2892,38 +2892,27 @@ const matchesHallApp = ({ userProfileData }) => {
         return () => observer.disconnect();
     }, [selectedMatch]);
 
-    // FUNKCIA NA ZÍSKANIE KOMPLETNÝCH INFORMÁCIÍ O TÍME (upravená - hľadá podľa názvu aj identifikátora)
+    // FUNKCIA NA ZÍSKANIE KOMPLETNÝCH INFORMÁCIÍ O TÍME
     const getTeamDetails = (identifierOrName) => {
         if (!identifierOrName) return null;
         
+        // Najprv skúsime získať pôvodný identifikátor z DOM (ak je to názov)
         let searchIdentifier = identifierOrName;
-        
-        // Kontrola, či ide o názov tímu (nie identifikátor)
         const identifierPattern = /\s+\d+[A-Za-z]/;
         const isDisplayId = identifierPattern.test(identifierOrName);
         
-        // Ak to nie je displayId, skúsime nájsť pôvodný identifikátor
         if (!isDisplayId) {
-            // Použijeme globálnu funkciu ak existuje
-            if (window.getOriginalIdentifierFromDOM) {
-                const originalId = window.getOriginalIdentifierFromDOM(identifierOrName);
-                if (originalId) {
-                    searchIdentifier = originalId;
-                    console.log(`🔍 Pre názov "${identifierOrName}" nájdený pôvodný identifikátor: ${searchIdentifier}`);
-                }
-            } else {
-                // Pôvodná logika vyhľadávania v DOM
-                const elements = document.querySelectorAll(`[data-team-name="${identifierOrName}"]`);
-                if (elements.length > 0 && elements[0].getAttribute('data-original-identifier')) {
-                    searchIdentifier = elements[0].getAttribute('data-original-identifier');
-                }
+            // Je to názov tímu - skúsime nájsť pôvodný identifikátor
+            const elements = document.querySelectorAll(`[data-team-name="${identifierOrName}"]`);
+            if (elements.length > 0 && elements[0].getAttribute('data-original-identifier')) {
+                searchIdentifier = elements[0].getAttribute('data-original-identifier');
+                console.log(`🔍 Pre názov "${identifierOrName}" nájdený identifikátor: ${searchIdentifier}`);
             }
         }
         
-        // Ak sme našli identifikátor, parsujeme ho a hľadáme v používateľských tímoch
+        // Ak máme identifikátor, parsujeme ho a hľadáme v users
         if (searchIdentifier && identifierPattern.test(searchIdentifier)) {
             const parts = searchIdentifier.split(' ');
-            
             if (parts.length >= 2) {
                 const groupAndOrder = parts.pop();
                 const category = parts.join(' ');
@@ -2943,11 +2932,9 @@ const matchesHallApp = ({ userProfileData }) => {
                     const fullGroupName = `skupina ${groupLetter}`;
                     const orderNum = parseInt(order, 10);
                     
-                    // Hľadáme v používateľských tímoch
                     if (users && users.length > 0) {
                         for (const user of users) {
                             if (!user.teams) continue;
-                            
                             const userTeams = user.teams[category];
                             if (!userTeams || !Array.isArray(userTeams)) continue;
                             
@@ -2957,7 +2944,7 @@ const matchesHallApp = ({ userProfileData }) => {
                             );
                             
                             if (team) {
-                                console.log(`✅ Nájdený používateľský tím: ${team.teamName} (${user.email})`);
+                                console.log(`✅ Nájdený tím: ${team.teamName}`);
                                 return {
                                     team,
                                     userEmail: user.email,
@@ -2971,22 +2958,18 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        // 🔴 NOVÁ LOGIKA: Ak sme nenašli podľa identifikátora, skúsime vyhľadať PRIAMO PODĽA NÁZVU TÍMU
+        // Ak sme nenašli podľa identifikátora a vstup je názov, skúsime priamo podľa názvu
         if (!isDisplayId && users && users.length > 0 && selectedMatch) {
             console.log(`🔍 Hľadám tím podľa názvu "${identifierOrName}" v kategórii ${selectedMatch.categoryName}`);
             
-            const categoryName = selectedMatch.categoryName;
-            
             for (const user of users) {
                 if (!user.teams) continue;
-                
-                const userTeams = user.teams[categoryName];
+                const userTeams = user.teams[selectedMatch.categoryName];
                 if (!userTeams || !Array.isArray(userTeams)) continue;
                 
                 const team = userTeams.find(t => t.teamName === identifierOrName);
-                
                 if (team) {
-                    console.log(`✅ Nájdený používateľský tím podľa názvu: ${team.teamName} (${user.email})`);
+                    console.log(`✅ Nájdený tím podľa názvu: ${team.teamName}`);
                     return {
                         team,
                         userEmail: user.email,
