@@ -2817,55 +2817,75 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        // Parsujeme identifikátor v tvare "kategória skupinaorder" (napr. "U12 D F4")
-        const parts = searchIdentifier.split(' ');
-        
-        if (parts.length < 2) {
-            return null;
-        }
-        
-        // Posledná časť je skupina + order (napr. "F4")
-        const groupAndOrder = parts.pop();
-        // Zvyšok je kategória (môže byť viacslovná, napr. "U12 D")
-        const category = parts.join(' ');
-        
-        // Rozdelíme groupAndOrder na groupName a order
-        let groupLetter = '';
-        let order = '';
-        
-        for (let i = 0; i < groupAndOrder.length; i++) {
-            const char = groupAndOrder[i];
-            if (char >= '0' && char <= '9') {
-                order = groupAndOrder.substring(i);
-                groupLetter = groupAndOrder.substring(0, i);
-                break;
+        // Ak sme našli identifikátor, parsujeme ho a hľadáme v používateľských tímoch
+        if (searchIdentifier && identifierPattern.test(searchIdentifier)) {
+            const parts = searchIdentifier.split(' ');
+            
+            if (parts.length >= 2) {
+                const groupAndOrder = parts.pop();
+                const category = parts.join(' ');
+                
+                let groupLetter = '';
+                let order = '';
+                for (let i = 0; i < groupAndOrder.length; i++) {
+                    const char = groupAndOrder[i];
+                    if (char >= '0' && char <= '9') {
+                        order = groupAndOrder.substring(i);
+                        groupLetter = groupAndOrder.substring(0, i);
+                        break;
+                    }
+                }
+                
+                if (order) {
+                    const fullGroupName = `skupina ${groupLetter}`;
+                    const orderNum = parseInt(order, 10);
+                    
+                    // Hľadáme v používateľských tímoch
+                    if (users && users.length > 0) {
+                        for (const user of users) {
+                            if (!user.teams) continue;
+                            
+                            const userTeams = user.teams[category];
+                            if (!userTeams || !Array.isArray(userTeams)) continue;
+                            
+                            const team = userTeams.find(t => 
+                                t.groupName === fullGroupName && 
+                                t.order === orderNum
+                            );
+                            
+                            if (team) {
+                                console.log(`✅ Nájdený používateľský tím: ${team.teamName} (${user.email})`);
+                                return {
+                                    team,
+                                    userEmail: user.email,
+                                    userId: user.id,
+                                    userDisplayName: user.displayName
+                                };
+                            }
+                        }
+                    }
+                }
             }
         }
         
-        if (!order) {
-            order = '?';
-            groupLetter = groupAndOrder;
-        }
-        
-        // Vytvoríme názov skupiny v tvare "skupina X" (napr. "F" -> "skupina F")
-        const fullGroupName = `skupina ${groupLetter}`;
-        const orderNum = parseInt(order, 10);
-        
-        // Hľadáme v users (používateľských tímoch)
-        if (users && users.length > 0) {
+        // 🔴 NOVÁ LOGIKA: Ak sme nenašli podľa identifikátora, skúsime vyhľadať PRIAMO PODĽA NÁZVU TÍMU
+        // Toto je kľúčová časť pre prípad, keď je v DOM zobrazený názov tímu
+        if (!isDisplayId && users && users.length > 0 && selectedMatch) {
+            console.log(`🔍 Hľadám tím podľa názvu "${identifierOrName}" v kategórii ${selectedMatch.categoryName}`);
+            
+            const categoryName = selectedMatch.categoryName;
+            
             for (const user of users) {
                 if (!user.teams) continue;
                 
-                const userTeams = user.teams[category];
+                const userTeams = user.teams[categoryName];
                 if (!userTeams || !Array.isArray(userTeams)) continue;
                 
-                const team = userTeams.find(t => 
-                    t.groupName === fullGroupName && 
-                    t.order === orderNum
-                );
+                // Hľadáme tím, ktorý má rovnaký názov
+                const team = userTeams.find(t => t.teamName === identifierOrName);
                 
                 if (team) {
-                    console.log(`✅ Nájdený používateľský tím: ${team.teamName} (${user.email})`);
+                    console.log(`✅ Nájdený používateľský tím podľa názvu: ${team.teamName} (${user.email})`);
                     return {
                         team,
                         userEmail: user.email,
