@@ -2892,8 +2892,8 @@ const matchesHallApp = ({ userProfileData }) => {
         return () => observer.disconnect();
     }, [selectedMatch]);
 
-    // FUNKCIA NA ZÍSKANIE KOMPLETNÝCH INFORMÁCIÍ O TÍME
-    const getTeamDetails = (identifierOrName) => {
+    // FUNKCIA NA ZÍSKANIE KOMPLETNÝCH INFORMÁCIÍ O TÍME (s retry)
+    const getTeamDetails = (identifierOrName, retryCount = 0) => {
         if (!identifierOrName) return null;
         
         // Najprv skúsime získať pôvodný identifikátor z DOM (ak je to názov)
@@ -2907,6 +2907,12 @@ const matchesHallApp = ({ userProfileData }) => {
             if (elements.length > 0 && elements[0].getAttribute('data-original-identifier')) {
                 searchIdentifier = elements[0].getAttribute('data-original-identifier');
                 console.log(`🔍 Pre názov "${identifierOrName}" nájdený identifikátor: ${searchIdentifier}`);
+            } else if (window.getOriginalIdentifierFromDOM) {
+                const originalId = window.getOriginalIdentifierFromDOM(identifierOrName);
+                if (originalId) {
+                    searchIdentifier = originalId;
+                    console.log(`🔍 Pre názov "${identifierOrName}" nájdený identifikátor (fallback): ${searchIdentifier}`);
+                }
             }
         }
         
@@ -2980,6 +2986,21 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
+        // 🔴 RETRY MECHANIZMUS: Ak sme nenašli a máme selectedMatch, skúsime znova o 500ms
+        if (selectedMatch && retryCount < 10) {
+            console.log(`⏳ Tím "${identifierOrName}" nebol nájdený, skúšam znova o 500ms (pokus ${retryCount + 1}/10)...`);
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    const result = getTeamDetails(identifierOrName, retryCount + 1);
+                    resolve(result);
+                }, 500);
+            });
+        }
+        
+        if (retryCount === 0) {
+            console.log(`❌ Tím nebol nájdený: "${identifierOrName}"`);
+        }
+        
         return null;
     };
 
@@ -3006,8 +3027,10 @@ const matchesHallApp = ({ userProfileData }) => {
     if (selectedMatch) {
         const homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
         const awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
-        const homeTeamDetails = getTeamDetails(selectedMatch.homeTeamIdentifier);
-        const awayTeamDetails = getTeamDetails(selectedMatch.awayTeamIdentifier);
+        const [homeTeamDetails, awayTeamDetails] = await Promise.all([
+            getTeamDetails(selectedMatch.homeTeamIdentifier),
+            getTeamDetails(selectedMatch.awayTeamIdentifier)
+        ]);
         const matchDate = selectedMatch.scheduledTime ? formatDateWithDay(selectedMatch.scheduledTime.toDate()) : 'neurčený';
         const matchStartTime = selectedMatch.scheduledTime ? formatTime(selectedMatch.scheduledTime) : '-- : --';
         const category = categories.find(c => c.name === selectedMatch.categoryName);
