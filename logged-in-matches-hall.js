@@ -1849,7 +1849,6 @@ const matchesHallApp = ({ userProfileData }) => {
         return selectedMatch.status === 'scheduled';
     };
 
-    // Pridaj useEffect na kontrolu pripravenosti nahrádzania
     useEffect(() => {
         // Funkcia na kontrolu, či už boli identifikátory nahradené
         const checkReplacementReady = () => {
@@ -1870,11 +1869,21 @@ const matchesHallApp = ({ userProfileData }) => {
         // Skúsime najprv okamžite
         if (checkReplacementReady()) return;
         
+        // FALLBACK: Ak po 5 sekundách stále žiadne elementy, pokračujeme ďalej
+        const fallbackTimeout = setTimeout(() => {
+            const elements = document.querySelectorAll('[data-team-name]');
+            if (elements.length === 0) {
+                console.log('⚠️ Žiadne identifikátory na nahrádzanie, pokračujem bez nahrádzania');
+                setReplacementReady(true);
+            }
+        }, 5000);
+        
         // Ak nie, nastavíme interval na kontrolu každých 500ms
         const interval = setInterval(checkReplacementReady, 500);
         setReplacementCheckInterval(interval);
         
         return () => {
+            clearTimeout(fallbackTimeout);
             if (interval) clearInterval(interval);
         };
     }, []);
