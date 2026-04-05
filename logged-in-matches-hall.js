@@ -2703,6 +2703,54 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     }, [matches, categories]); // Tento useEffect sa spustí vždy, keď sa zmenia matches ALEBO categories
 
+    // ============================================================
+    // SLEDOVANIE NAHRADENIA TÍMOV A AUTOMATICKÉ OBnovENIE SÚPISIEK
+    // ============================================================
+    
+    useEffect(() => {
+        // Funkcia na obnovenie detailu zápasu a načítanie súpisiek
+        const refreshMatchDetails = () => {
+            if (selectedMatch) {
+                console.log('🔄 Obnovujem detail zápasu a načítavam súpisky...');
+                // Force re-render selectedMatch - to spôsobí opätovné volanie getTeamDetails
+                setSelectedMatch(prevMatch => ({ ...prevMatch, _refresh: Date.now() }));
+            }
+        };
+        
+        // Počúvame na udalosť z func-tables.js
+        const handleTeamNamesReplaced = (event) => {
+            const detail = event.detail;
+            console.log(`📢 Prijatá udalosť teamNamesReplaced: nahradených ${detail.replacedCount} tímov`);
+            
+            if (detail.replacedTeams && detail.replacedTeams.length > 0) {
+                console.log('📋 Nahradené tímy:', detail.replacedTeams.map(t => `${t.originalIdentifier} → ${t.teamName}`).join(', '));
+            }
+            
+            // Počkáme krátko, aby DOM mal čas na aktualizáciu
+            setTimeout(() => {
+                refreshMatchDetails();
+            }, 500);
+        };
+        
+        // Registrujeme poslucháča
+        window.addEventListener('teamNamesReplaced', handleTeamNamesReplaced);
+        
+        // Skontrolujeme, či už náhodou neboli tímy nahradené (pred registráciou)
+        if (window.teamNameReplacer && typeof window.teamNameReplacer.hasReplacedAnyTeams === 'function') {
+            if (window.teamNameReplacer.hasReplacedAnyTeams()) {
+                console.log('🔄 Tímy už boli nahradené pred registráciou, synchronizujem...');
+                setTimeout(() => {
+                    refreshMatchDetails();
+                }, 500);
+            }
+        }
+        
+        // Čistíme pri odmontovaní
+        return () => {
+            window.removeEventListener('teamNamesReplaced', handleTeamNamesReplaced);
+        };
+    }, [selectedMatch]); // Závislosť na selectedMatch
+
     // Pomocná funkcia na získanie názvu tímu s čakaním na teamManager
     const getTeamNameSafe = (identifier) => {
         if (!identifier) return 'Neznámy tím';
@@ -2800,9 +2848,10 @@ const matchesHallApp = ({ userProfileData }) => {
         return null;
     }
     
-    // Funkcia na získanie ID používateľa a detailov tímu (UPRAVENÁ - vyhľadáva aj podľa názvu)
     function getTeamDetailsByIdentifierOrName(identifier, categoryName = null) {
         if (!identifier) return null;
+        
+        console.log(`🔍 Hľadám tím: "${identifier}" (kategória: ${categoryName || 'neurčená'})`);
         
         // 1. Najprv skúsime pôvodný spôsob - podľa identifikátora
         const parts = identifier.split(' ');
@@ -2840,6 +2889,7 @@ const matchesHallApp = ({ userProfileData }) => {
                         );
                         
                         if (team) {
+                            console.log(`✅ Tím nájdený podľa identifikátora: "${identifier}" → "${team.teamName}" (user: ${user.email})`);
                             return {
                                 team: team,
                                 userEmail: user.email,
@@ -2855,13 +2905,14 @@ const matchesHallApp = ({ userProfileData }) => {
         }
         
         // 2. Ak sme nenašli podľa identifikátora, skúsime vyhľadať podľa názvu tímu
-        // (toto je nová časť pre prípad, že druhý kód nahradil identifikátor názvom)
+        console.log(`🔍 Skúšam vyhľadať podľa názvu: "${identifier}"`);
         const teamByName = findTeamByName(identifier, categoryName);
         if (teamByName) {
-            console.log(`✅ Tím nájdený podľa názvu: "${identifier}" → ID: ${teamByName.userId}`);
+            console.log(`✅ Tím nájdený podľa názvu: "${identifier}" → ID: ${teamByName.userId}, tím: ${teamByName.team.teamName}`);
             return teamByName;
         }
         
+        console.log(`❌ Tím nebol nájdený: "${identifier}"`);
         return null;
     }
     
