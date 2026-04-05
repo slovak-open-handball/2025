@@ -3061,15 +3061,6 @@ const matchesHallApp = ({ userProfileData }) => {
         const matchDate = selectedMatch.scheduledTime ? formatDateWithDay(selectedMatch.scheduledTime.toDate()) : 'neurčený';
         const matchStartTime = selectedMatch.scheduledTime ? formatTime(selectedMatch.scheduledTime) : '-- : --';
         const category = categories.find(c => c.name === selectedMatch.categoryName);
-        
-        // Pridaj kontrolu načítavania
-        if (loadingTeamDetails) {
-            return React.createElement(
-                'div',
-                { className: 'flex justify-center items-center py-12' },
-                React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500' })
-            );
-        }
 
         const activeMenStaffHome = homeTeamDetails?.team.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
         const activeWomenStaffHome = homeTeamDetails?.team.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
