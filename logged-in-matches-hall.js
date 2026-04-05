@@ -2338,7 +2338,10 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     };
     
-    // 🔴 UPRAVENÁ FUNKCIA: getPlayerNameFromRef - používa referencie bez mien
+    // ============================================================
+    // UPRAVENÁ FUNKCIA getPlayerNameFromRef - pre správne zobrazenie mien
+    // ============================================================
+    
     const getPlayerNameFromRef = (playerRef) => {
         if (!playerRef || !playerRef.userId) return 'Neznámy hráč';
         
@@ -2371,7 +2374,7 @@ const matchesHallApp = ({ userProfileData }) => {
             
             const player = teamDetails.team.playerDetails[playerRef.playerIndex];
             if (player) {
-                return `${player.lastName} ${player.firstName} `;
+                return `${player.lastName} ${player.firstName}`;
             }
         }
         
@@ -2782,101 +2785,178 @@ const matchesHallApp = ({ userProfileData }) => {
         
         // 3. Ak nič nenašlo, vrátime identifikátor
         return identifier;
-    };
+    };    
 
-    // FUNKCIA NA ZÍSKANIE KOMPLETNÝCH INFORMÁCIÍ O TÍME (upravená - hľadá podľa názvu aj identifikátora)
-    const getTeamDetails = (identifier) => {
+    // ============================================================
+    // UPRAVENÉ FUNKCIE PRE VYHĽADÁVANIE TÍMOV PODĽA NÁZVU
+    // ============================================================
+    
+    // Funkcia na vyhľadanie tímu podľa názvu (keď už bol identifikátor nahradený)
+    function findTeamByName(teamName, categoryName) {
+        if (!teamName || !users || users.length === 0) return null;
+        
+        // Prehľadáme všetkých používateľov
+        for (const user of users) {
+            if (!user.teams) continue;
+            
+            // Prehľadáme všetky kategórie
+            for (const [category, teams] of Object.entries(user.teams)) {
+                // Ak je zadaná kategória, filtrujeme len tú
+                if (categoryName && category !== categoryName) continue;
+                
+                if (!Array.isArray(teams)) continue;
+                
+                for (const team of teams) {
+                    if (team.teamName === teamName) {
+                        // Vytvoríme identifikátor z nájdeného tímu
+                        let groupLetter = '';
+                        if (team.groupName) {
+                            const match = team.groupName.match(/skupina\s+(\w+)/i);
+                            if (match) groupLetter = match[1];
+                        }
+                        
+                        const identifier = `${category} ${team.order}${groupLetter}`;
+                        
+                        return {
+                            team: team,
+                            userEmail: user.email,
+                            userId: user.id,
+                            userDisplayName: user.displayName,
+                            identifier: identifier,
+                            category: category
+                        };
+                    }
+                }
+            }
+        }
+        return null;
+    }
+    
+    // Funkcia na získanie ID používateľa a detailov tímu (UPRAVENÁ - vyhľadáva aj podľa názvu)
+    function getTeamDetailsByIdentifierOrName(identifier, categoryName = null) {
         if (!identifier) return null;
         
-        let searchIdentifier = identifier;
+        // 1. Najprv skúsime pôvodný spôsob - podľa identifikátora
+        const parts = identifier.split(' ');
         
-        // Kontrola, či ide o názov tímu (nie identifikátor)
-        // Identifikátor má typicky tvar "U12 D 2B" - obsahuje medzeru a číslo+písmeno
-        const identifierPattern = /\s+\d+[A-Za-z]/;
-        const isDisplayId = identifierPattern.test(identifier);
-        
-        // Ak to nie je displayId (identifikátor), skúsime nájsť pôvodný identifikátor v DOM
-        if (!isDisplayId) {
-            // Hľadáme element, ktorý obsahuje tento názov tímu a má uložený pôvodný identifikátor
-            const elements = document.querySelectorAll(`[data-team-name="${identifier}"]`);
-            if (elements.length > 0 && elements[0].getAttribute('data-original-identifier')) {
-                searchIdentifier = elements[0].getAttribute('data-original-identifier');
-                console.log(`🔍 Pre názov "${identifier}" nájdený pôvodný identifikátor: ${searchIdentifier}`);
-            } else {
-                // Skúsime nájsť podľa čiastočnej zhody v data-original-identifier
-                const allElementsWithId = document.querySelectorAll('[data-original-identifier]');
-                for (const el of allElementsWithId) {
-                    const originalId = el.getAttribute('data-original-identifier');
-                    const teamName = window.matchTracker?.getTeamNameByDisplayId?.(originalId);
-                    if (teamName === identifier && originalId) {
-                        searchIdentifier = originalId;
-                        console.log(`🔍 Pre názov "${identifier}" nájdený pôvodný identifikátor (fallback): ${searchIdentifier}`);
-                        break;
+        if (parts.length >= 2) {
+            const groupAndOrder = parts.pop();
+            const category = parts.join(' ');
+            
+            let groupLetter = '';
+            let order = '';
+            for (let i = 0; i < groupAndOrder.length; i++) {
+                const char = groupAndOrder[i];
+                if (char >= '0' && char <= '9') {
+                    order = groupAndOrder.substring(i);
+                    groupLetter = groupAndOrder.substring(0, i);
+                    break;
+                }
+            }
+            
+            if (order) {
+                const fullGroupName = `skupina ${groupLetter}`;
+                const orderNum = parseInt(order, 10);
+                
+                // Hľadáme v users
+                if (users && users.length > 0) {
+                    for (const user of users) {
+                        if (!user.teams) continue;
+                        
+                        const userTeams = user.teams[category];
+                        if (!userTeams || !Array.isArray(userTeams)) continue;
+                        
+                        const team = userTeams.find(t => 
+                            t.groupName === fullGroupName && 
+                            t.order === orderNum
+                        );
+                        
+                        if (team) {
+                            return {
+                                team: team,
+                                userEmail: user.email,
+                                userId: user.id,
+                                userDisplayName: user.displayName,
+                                identifier: identifier,
+                                category: category
+                            };
+                        }
                     }
                 }
             }
         }
         
-        // Parsujeme identifikátor v tvare "kategória skupinaorder" (napr. "U12 D F4")
-        const parts = searchIdentifier.split(' ');
-        
-        if (parts.length < 2) {
-            return null;
+        // 2. Ak sme nenašli podľa identifikátora, skúsime vyhľadať podľa názvu tímu
+        // (toto je nová časť pre prípad, že druhý kód nahradil identifikátor názvom)
+        const teamByName = findTeamByName(identifier, categoryName);
+        if (teamByName) {
+            console.log(`✅ Tím nájdený podľa názvu: "${identifier}" → ID: ${teamByName.userId}`);
+            return teamByName;
         }
         
-        // Posledná časť je skupina + order (napr. "F4")
-        const groupAndOrder = parts.pop();
-        // Zvyšok je kategória (môže byť viacslovná, napr. "U12 D")
-        const category = parts.join(' ');
+        return null;
+    }
+    
+    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA ALEBO NÁZVU
+    function getTeamNameByIdentifier(identifier, categoryName = null) {
+        if (!identifier) return 'Neznámy tím';
         
-        // Rozdelíme groupAndOrder na groupName a order
-        let groupLetter = '';
-        let order = '';
-        
-        for (let i = 0; i < groupAndOrder.length; i++) {
-            const char = groupAndOrder[i];
-            if (char >= '0' && char <= '9') {
-                order = groupAndOrder.substring(i);
-                groupLetter = groupAndOrder.substring(0, i);
-                break;
-            }
-        }
-        
-        if (!order) {
-            order = '?';
-            groupLetter = groupAndOrder;
-        }
-        
-        // Vytvoríme názov skupiny v tvare "skupina X" (napr. "F" -> "skupina F")
-        const fullGroupName = `skupina ${groupLetter}`;
-        const orderNum = parseInt(order, 10);
-        
-        // Hľadáme v users (používateľských tímoch)
-        if (users && users.length > 0) {
-            for (const user of users) {
-                if (!user.teams) continue;
+        // 1. Skúsime superstructureTeams
+        if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
+            const parts = identifier.split(' ');
+            if (parts.length >= 2) {
+                const groupAndOrder = parts.pop();
+                const category = parts.join(' ');
                 
-                const userTeams = user.teams[category];
-                if (!userTeams || !Array.isArray(userTeams)) continue;
+                let groupLetter = '';
+                let order = '';
+                for (let i = 0; i < groupAndOrder.length; i++) {
+                    const char = groupAndOrder[i];
+                    if (char >= '0' && char <= '9') {
+                        order = groupAndOrder.substring(i);
+                        groupLetter = groupAndOrder.substring(0, i);
+                        break;
+                    }
+                }
                 
-                const team = userTeams.find(t => 
-                    t.groupName === fullGroupName && 
-                    t.order === orderNum
-                );
-                
-                if (team) {
-                    console.log(`✅ Nájdený používateľský tím: ${team.teamName} (${user.email})`);
-                    return {
-                        team,
-                        userEmail: user.email,
-                        userId: user.id,
-                        userDisplayName: user.displayName
-                    };
+                if (order) {
+                    const fullGroupName = `skupina ${groupLetter}`;
+                    const orderNum = parseInt(order, 10);
+                    
+                    const categoryTeams = superstructureTeams[category];
+                    if (categoryTeams && Array.isArray(categoryTeams)) {
+                        const team = categoryTeams.find(t => 
+                            t.groupName === fullGroupName && 
+                            t.order === orderNum
+                        );
+                        if (team && team.teamName) {
+                            return team.teamName;
+                        }
+                    }
                 }
             }
         }
         
-        return null;
+        // 2. Skúsime vyhľadať v používateľoch (podľa identifikátora)
+        const teamDetails = getTeamDetailsByIdentifierOrName(identifier, categoryName);
+        if (teamDetails && teamDetails.team && teamDetails.team.teamName) {
+            return teamDetails.team.teamName;
+        }
+        
+        // 3. Ak je identifikátor už názov tímu (neobsahuje číslice+písmeno), vrátime ho
+        const hasNumberLetterPattern = /[0-9]+[A-Za-z]/;
+        if (!hasNumberLetterPattern.test(identifier)) {
+            // Môže to byť už názov tímu
+            return identifier;
+        }
+        
+        // 4. Fallback - vrátime pôvodný identifikátor
+        return identifier;
+    }
+    
+    // FUNKCIA NA ZÍSKANIE KOMPLETNÝCH INFORMÁCIÍ O TÍME (UPRAVENÁ)
+    const getTeamDetails = (identifier, categoryName = null) => {
+        return getTeamDetailsByIdentifierOrName(identifier, categoryName);
     };
 
     // FUNKCIA PRE ZOBRAZENIE VŠETKÝCH ZÁPASOV
@@ -2900,10 +2980,10 @@ const matchesHallApp = ({ userProfileData }) => {
 
     // Ak je vybraný zápas, zobrazíme detail
     if (selectedMatch) {
-        const homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
-        const awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
-        const homeTeamDetails = getTeamDetails(selectedMatch.homeTeamIdentifier);
-        const awayTeamDetails = getTeamDetails(selectedMatch.awayTeamIdentifier);
+        const homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier, selectedMatch.categoryName);
+        const awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier, selectedMatch.categoryName);
+        const homeTeamDetails = getTeamDetails(selectedMatch.homeTeamIdentifier, selectedMatch.categoryName);
+        const awayTeamDetails = getTeamDetails(selectedMatch.awayTeamIdentifier, selectedMatch.categoryName);
         const matchDate = selectedMatch.scheduledTime ? formatDateWithDay(selectedMatch.scheduledTime.toDate()) : 'neurčený';
         const matchStartTime = selectedMatch.scheduledTime ? formatTime(selectedMatch.scheduledTime) : '-- : --';
         const category = categories.find(c => c.name === selectedMatch.categoryName);
@@ -3260,7 +3340,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         };
 
-        // Funkcia pre zobrazenie hráčov (UPRAVENÁ - sekcia Ostatní sa zobrazuje vždy, ale bez klikania v režimoch in-progress/completed)
+        // Funkcia pre zobrazenie hráčov (UPRAVENÁ)
         const renderPlayersSection = (teamDetails, teamType, teamName) => {
             // Získame aktívnych hráčov (ktorí nie sú odstránení pre tento zápas)
             const activePlayers = teamDetails?.team.playerDetails?.filter(p => p && !p.removedForMatch) || [];
@@ -3300,7 +3380,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     React.createElement('i', { className: 'fa-solid fa-users text-xs text-gray-500' }),
                     `Hráči (${activePlayers.length})`
                 ),
-
+        
                 showPlayerStats && React.createElement(
                     'div',
                     { className: 'grid grid-cols-12 gap-1 mb-2 px-2 text-xs font-semibold text-gray-600 bg-gray-100 py-2 rounded' },
@@ -3325,9 +3405,12 @@ const matchesHallApp = ({ userProfileData }) => {
                                 return numA - numB;
                             })
                             .map((player, idx) => {
+                                // Použijeme uložený identifikátor alebo vytvoríme nový
+                                const teamIdentifier = teamType === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
+                                
                                 const playerIdentifier = {
                                     userId: teamDetails.userId,
-                                    teamIdentifier: teamType === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier,
+                                    teamIdentifier: teamIdentifier,
                                     displayName: `${player.lastName} ${player.firstName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`,
                                     index: activePlayers.indexOf(player),
                                     isStaff: false
@@ -3341,28 +3424,22 @@ const matchesHallApp = ({ userProfileData }) => {
                                 let cursorClass = '';
                                 
                                 if (isMatchCompleted) {
-                                    // Ukončený zápas - žiadne kliknutie, vyblednutý vzhľad
                                     cursorClass = 'opacity-50 cursor-not-allowed';
                                 } else if (isMatchScheduled) {
-                                    // Naplánovaný zápas - úprava hráča
                                     onClickHandler = () => openEditPlayerModal(player, teamType, teamDetails, false);
                                     cursorClass = 'hover:bg-blue-50 cursor-pointer';
                                 } else if (isMatchActionAllowed()) {
-                                    // Prebiehajúci zápas - pridanie udalosti
                                     onClickHandler = () => {
                                         if (eventType) {
-                                            // ULOŽÍME SI AKTUALNE HODNOTY DO LOKÁLNYCH PREMENNÝCH
                                             const currentEventType = eventType;
                                             const currentEventSubType = eventSubType;
                                             const currentEventTeam = teamType;
                                             
-                                            // OKAMŽITE VYMAŽEME VYBRANÚ AKCIU (ešte pred zápisom do DB)
                                             setEventType(null);
                                             setEventTeam(null);
                                             setEventSubType(null);
                                             setSelectedPlayerForEvent(null);
         
-                                            // TERAZ VYVOLÁME PRIDANIE UDALOSTI S ULOŽENÝMI HODNOTAMI
                                             if (currentEventType === 'goal' && currentEventSubType === null) {
                                                 addMatchEvent('goal', currentEventTeam, null, playerIdentifier);
                                             } else if (currentEventType === 'penalty' && currentEventSubType === 'scored') {
@@ -3379,7 +3456,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                     cursorClass = 'cursor-not-allowed opacity-60';
                                 }
                                 
-                                // Režim štatistík vs normálny režim
                                 if (showPlayerStats) {
                                     return React.createElement(
                                         'div',
@@ -3453,8 +3529,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     'Nedostupné'
                 ),
                 
-                // SEKcia Ostatní - zobrazí sa vždy, keď je aspoň jeden odstránený člen
-                // (pre všetky stavy zápasu: scheduled, in-progress, paused, completed)
+                // Sekcia Ostatní - odstránení hráči a členovia RT
                 showRemovedSection && React.createElement(
                     'div',
                     { className: 'mt-4 pt-3 border-t border-gray-200' },
@@ -3467,7 +3542,6 @@ const matchesHallApp = ({ userProfileData }) => {
                     React.createElement(
                         'div',
                         { className: 'space-y-1' },
-                        // Odstránení hráči - bez klikania v režimoch in-progress a completed
                         [...removedPlayers]
                             .sort((a, b) => {
                                 const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
@@ -3475,24 +3549,14 @@ const matchesHallApp = ({ userProfileData }) => {
                                 return numA - numB;
                             })
                             .map((player, idx) => {
-                                // Určenie správania pre položky v sekcii "Ostatní"
                                 let onClickHandler = undefined;
                                 let cursorClass = 'cursor-not-allowed opacity-60';
                                 let hoverClass = '';
-                                let titleText = '';
                                 
                                 if (isMatchScheduled) {
-                                    // Len pri naplánovanom zápase je možné obnoviť hráča
                                     onClickHandler = () => restorePlayerToRoster(player, teamType, teamDetails);
                                     cursorClass = 'cursor-pointer';
                                     hoverClass = 'hover:bg-blue-50';
-                                    titleText = '';
-                                } else if (isMatchInProgress || isMatchCompleted) {
-                                    // Pri prebiehajúcom alebo ukončenom zápase - žiadne kliknutie, iba zobrazenie
-                                    onClickHandler = undefined;
-                                    cursorClass = 'cursor-not-allowed';
-                                    hoverClass = '';
-                                    titleText = '';
                                 }
                                 
                                 return React.createElement(
@@ -3500,8 +3564,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     { 
                                         key: `${teamType}-removed-player-${idx}`, 
                                         className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 bg-gray-50 text-sm group relative transition-colors ${cursorClass} ${hoverClass}`,
-                                        onClick: onClickHandler,
-                                        title: titleText
+                                        onClick: onClickHandler
                                     },
                                     React.createElement(
                                         'div',
@@ -3518,30 +3581,21 @@ const matchesHallApp = ({ userProfileData }) => {
                                             `${player.lastName} ${player.firstName}`
                                         )
                                     ),
-                                    // Ikona obnovenia sa zobrazí len pri naplánovanom zápase
                                     isMatchScheduled && React.createElement(
                                         'i',
                                         { className: 'fa-solid fa-undo text-xs text-green-500' }
                                     )
                                 );
                             }),
-                        // Odstránení členovia RT (muži) - bez klikania v režimoch in-progress a completed
                         removedMenStaff.map((member, idx) => {
                             let onClickHandler = undefined;
                             let cursorClass = 'cursor-not-allowed opacity-60';
                             let hoverClass = '';
-                            let titleText = '';
                             
                             if (isMatchScheduled) {
                                 onClickHandler = () => restoreStaffToRoster(member, teamType, teamDetails, 'men');
                                 cursorClass = 'cursor-pointer';
                                 hoverClass = 'hover:bg-blue-50';
-                                titleText = '';
-                            } else if (isMatchInProgress || isMatchCompleted) {
-                                onClickHandler = undefined;
-                                cursorClass = 'cursor-not-allowed';
-                                hoverClass = '';
-                                titleText = '';
                             }
                             
                             return React.createElement(
@@ -3549,8 +3603,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 { 
                                     key: `${teamType}-removed-men-${idx}`, 
                                     className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 bg-gray-50 text-sm group relative transition-colors ${cursorClass} ${hoverClass}`,
-                                    onClick: onClickHandler,
-                                    title: titleText
+                                    onClick: onClickHandler
                                 },
                                 React.createElement(
                                     'div',
@@ -3568,23 +3621,15 @@ const matchesHallApp = ({ userProfileData }) => {
                                 )
                             );
                         }),
-                        // Odstránení členovia RT (ženy) - bez klikania v režimoch in-progress a completed
                         removedWomenStaff.map((member, idx) => {
                             let onClickHandler = undefined;
                             let cursorClass = 'cursor-not-allowed opacity-60';
                             let hoverClass = '';
-                            let titleText = '';
                             
                             if (isMatchScheduled) {
                                 onClickHandler = () => restoreStaffToRoster(member, teamType, teamDetails, 'women');
                                 cursorClass = 'cursor-pointer';
                                 hoverClass = 'hover:bg-blue-50';
-                                titleText = '';
-                            } else if (isMatchInProgress || isMatchCompleted) {
-                                onClickHandler = undefined;
-                                cursorClass = 'cursor-not-allowed';
-                                hoverClass = '';
-                                titleText = '';
                             }
                             
                             return React.createElement(
@@ -3592,8 +3637,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                 { 
                                     key: `${teamType}-removed-women-${idx}`, 
                                     className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 bg-gray-50 text-sm group relative transition-colors ${cursorClass} ${hoverClass}`,
-                                    onClick: onClickHandler,
-                                    title: titleText
+                                    onClick: onClickHandler
                                 },
                                 React.createElement(
                                     'div',
