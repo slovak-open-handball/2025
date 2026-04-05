@@ -3386,25 +3386,31 @@ const matchesHallApp = ({ userProfileData }) => {
             
             // Získame odstránených hráčov pre tento zápas
             const removedPlayers = teamDetails?.team.matchSpecificRemovals?.[selectedMatch.id]?.removedPlayersForMatch || [];
-            
-            // Získame odstránených členov RT pre tento zápas
+                // Získame odstránených členov RT pre tento zápas
             const removedStaff = teamDetails?.team.matchSpecificRemovals?.[selectedMatch.id]?.removedStaff || [];
             
             // Získame AKTÍVNYCH členov RT
             const activeMenStaff = teamDetails?.team.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
             const activeWomenStaff = teamDetails?.team.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
             
+            // 🔴 PRIDANÉ: Rozdelenie odstránených členov RT podľa typu
+            const removedMenStaff = removedStaff.filter(s => s.staffType === 'men');
+            const removedWomenStaff = removedStaff.filter(s => s.staffType === 'women');
+            
             // Celkový počet odstránených
-            const totalRemoved = removedPlayers.length + removedStaff.length;
+            const totalRemoved = removedPlayers.length + removedMenStaff.length + removedWomenStaff.length;
+            
+            // 🔴 PRIDANÉ: Premenná pre zobrazenie sekcie "Ostatní"
+            const showRemovedSection = totalRemoved > 0;
             
             // Zistíme, či je zápas ukončený alebo prebieha
             const isMatchCompleted = selectedMatch?.status === 'completed';
             const isMatchInProgress = selectedMatch?.status === 'in-progress' || selectedMatch?.status === 'paused';
             const isMatchScheduled = selectedMatch?.status === 'scheduled';
             
-                // 🔴 Získanie správneho identifikátora tímu (ak je k dispozícii v mapovaní)
-                const getCorrectTeamIdentifier = () => {
-                    const identifier = teamType === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
+            // 🔴 Získanie správneho identifikátora tímu (ak je k dispozícii v mapovaní)
+            const getCorrectTeamIdentifier = () => {
+                const identifier = teamType === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
                 
                 // Ak je identifikátor už názov tímu, skúsime nájsť pôvodný
                 const identifierPattern = /\s+\d+[A-Za-z]/;
