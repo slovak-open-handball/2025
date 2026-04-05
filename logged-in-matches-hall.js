@@ -2896,7 +2896,8 @@ const matchesHallApp = ({ userProfileData }) => {
         }
         
         // 5. Ak nič nenašlo, vrátime pôvodný identifikátor
-        return identifier;
+//        return identifier;
+        return team.name;
     };
     
     // Funkcia na získanie detailov tímu
