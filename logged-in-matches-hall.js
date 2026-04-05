@@ -2983,21 +2983,21 @@ const matchesHallApp = ({ userProfileData }) => {
         return null;
     }
     
-    // UPRAVENÁ FUNKCIA getTeamDetails - najprv skúsi získať nahradený názov z DOM
+    // UPRAVENÁ FUNKCIA getTeamDetails - najprv skúsi získať názov z mapovania
     const getTeamDetails = (identifier, categoryName = null) => {
         if (!identifier) return null;
         
         console.log(`🔍 getTeamDetails: identifier="${identifier}", category="${categoryName}"`);
         
-        // 1. Skúsime získať nahradený názov tímu z DOM
-        const replacedTeamName = getReplacedTeamNameFromDOM(identifier);
+        // 1. Skúsime získať názov z globálneho mapovania
+        const mappedTeamName = getTeamNameFromGlobalMapping(identifier);
         
-        if (replacedTeamName && replacedTeamName !== identifier) {
-            // Máme nahradený názov - skúsime podľa neho nájsť tím
-            const teamByReplacedName = findTeamByReplacedName(replacedTeamName, categoryName);
-            if (teamByReplacedName) {
-                console.log(`✅ Tím nájdený podľa nahradeného názvu: "${replacedTeamName}"`);
-                return teamByReplacedName;
+        if (mappedTeamName && mappedTeamName !== identifier) {
+            // Máme názov z mapovania - skúsime podľa neho nájsť tím
+            const teamByMappedName = findTeamByName(mappedTeamName, categoryName);
+            if (teamByMappedName) {
+                console.log(`✅ Tím nájdený podľa mapovaného názvu: "${mappedTeamName}"`);
+                return teamByMappedName;
             }
         }
         
@@ -3018,16 +3018,30 @@ const matchesHallApp = ({ userProfileData }) => {
         console.log(`❌ Tím nebol nájdený: "${identifier}"`);
         return null;
     };
+
+    // Funkcia na získanie názvu tímu z mapovania (z func-tables.js)
+    function getTeamNameFromGlobalMapping(originalIdentifier) {
+        if (!originalIdentifier) return null;
+        
+        // Skúsime získať z globálneho mapovania
+        if (window.__teamNameMapping && window.__teamNameMapping[originalIdentifier]) {
+            const teamName = window.__teamNameMapping[originalIdentifier].teamName;
+            console.log(`📦 Nájdený názov v globálnom mapovaní: "${originalIdentifier}" → "${teamName}"`);
+            return teamName;
+        }
+        
+        return null;
+    }
     
-    // UPRAVENÁ FUNKCIA getTeamNameByIdentifier - najprv skúsi nahradený názov z DOM
+    // UPRAVENÁ FUNKCIA getTeamNameByIdentifier - najprv skúsi globálne mapovanie
     function getTeamNameByIdentifier(identifier, categoryName = null) {
         if (!identifier) return 'Neznámy tím';
         
-        // 1. NAJPRV skúsime získať nahradený názov z DOM (ak už bol nahradený)
-        const replacedName = getReplacedTeamNameFromDOM(identifier);
-        if (replacedName && replacedName !== identifier) {
-            console.log(`💿 Použitý nahradený názov z DOM: "${identifier}" → "${replacedName}"`);
-            return replacedName;
+        // 1. NAJPRV skúsime získať z globálneho mapovania (z func-tables.js)
+        const mappedName = getTeamNameFromGlobalMapping(identifier);
+        if (mappedName && mappedName !== identifier) {
+            console.log(`💿 Použitý názov z globálneho mapovania: "${identifier}" → "${mappedName}"`);
+            return mappedName;
         }
         
         // 2. Skúsime superstructureTeams
