@@ -2824,7 +2824,6 @@ const matchesHallApp = ({ userProfileData }) => {
         return null;
     };
     
-    // Funkcia na získanie názvu tímu podľa identifikátora - HLAVNÁ FUNKCIA
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
         
@@ -2884,8 +2883,8 @@ const matchesHallApp = ({ userProfileData }) => {
         }
         
         // 4. Skúsime vyhľadať podľa superstructureGroups
-        if (window.superstructureTeams && typeof window.superstructureTeams === 'object') {
-            for (const [groupKey, groupData] of Object.entries(window.superstructureTeams)) {
+        if (superstructureTeams && typeof superstructureTeams === 'object') {
+            for (const [groupKey, groupData] of Object.entries(superstructureTeams)) {
                 if (groupData.teams && Array.isArray(groupData.teams)) {
                     for (const team of groupData.teams) {
                         if (team.displayId === identifier && team.name) {
