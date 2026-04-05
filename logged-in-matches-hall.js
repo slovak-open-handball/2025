@@ -296,6 +296,29 @@ window.getOriginalIdentifierFromDOM = function(teamName) {
     return null;
 };
 
+// Funkcia na získanie pôvodného identifikátora z selectedMatch podľa zobrazeného názvu v DOM
+window.getOriginalIdentifierFromDisplayName = function(displayName) {
+    if (!displayName) return null;
+    
+    // Hľadáme element, ktorý zobrazuje tento názov tímu
+    const elements = document.querySelectorAll(`[data-team-name="${displayName}"]`);
+    if (elements.length > 0 && elements[0].getAttribute('data-original-identifier')) {
+        return elements[0].getAttribute('data-original-identifier');
+    }
+    
+    // Fallback: prehľadáme všetky elementy s data-original-identifier
+    const allElements = document.querySelectorAll('[data-original-identifier]');
+    for (const el of allElements) {
+        const originalId = el.getAttribute('data-original-identifier');
+        const teamName = el.getAttribute('data-team-name');
+        if (teamName === displayName && originalId) {
+            return originalId;
+        }
+    }
+    
+    return null;
+};
+
 const matchesHallApp = ({ userProfileData }) => {
     // Extrahujeme hallId z userProfileData
     const hallId = userProfileData?.hallId;
@@ -2728,6 +2751,13 @@ const matchesHallApp = ({ userProfileData }) => {
     // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
+        
+        // Najprv skúsime nájsť, či už nebol tento identifikátor nahradený v DOM
+        const cachedName = window.getOriginalIdentifierFromDisplayName?.(identifier);
+        if (cachedName && cachedName !== identifier) {
+            // Rekurzívne zavoláme s pôvodným identifikátorom
+            return getTeamNameByIdentifier(cachedName);
+        }
         
         // 1. Skúsime superstructureTeams zo stavu
         if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
