@@ -1977,12 +1977,7 @@ console.log('   • window.teamNameReplacer.getReadyGroups() - zoznam pripraven�
 console.log('   • window.teamNameReplacer.stop() - zastaví sledovanie');
 console.log('   • window.matchTracker.getTeamNameByDisplayId("U12 D 1E") - priamy prístup k funkcii');
 
-// Automatické spustenie
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startTeamNameReplacement);
-} else {
-    startTeamNameReplacement();
-}
+startTeamNameReplacement();
 
 // Pridanie funkcie na manuálne pridanie do cache
 function addToCache(displayId, teamName) {
