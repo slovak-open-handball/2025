@@ -334,6 +334,9 @@ const matchesHallApp = ({ userProfileData }) => {
 
     const [superstructureTeams, setSuperstructureTeams] = useState({});
 
+    const [teamsReplaced, setTeamsReplaced] = useState(false);
+    const [replacedTeamsList, setReplacedTeamsList] = useState([]);
+
     // Funkcia na otvorenie modálneho okna pre úpravu člena realizačného tímu
     const openEditStaffModal = (member, team, teamDetails, staffType, staffIndex) => {
         if (selectedMatch?.status !== 'scheduled') {
@@ -1793,6 +1796,55 @@ const matchesHallApp = ({ userProfileData }) => {
         // Povolené len pre zápasy v stave 'scheduled' (Naplánované)
         return selectedMatch.status === 'scheduled';
     };
+
+    // Efekt na počúvanie udalosti z func-tables.js
+    useEffect(() => {
+        // Funkcia, ktorá sa zavolá po nahradení tímov
+        const handleTeamNamesReplaced = (event) => {
+            const detail = event.detail;
+            console.log(`📢 Prijatá udalosť teamNamesReplaced: nahradených ${detail.replacedCount} tímov`);
+            
+            // Uložíme zoznam nahradených tímov
+            if (detail.replacedTeams && detail.replacedTeams.length > 0) {
+                setReplacedTeamsList(detail.replacedTeams);
+            }
+            
+            // Označíme, že tímy boli nahradené
+            setTeamsReplaced(true);
+            
+            // 🔴 DÔLEŽITÉ: Po nahradení tímov obnovíme detail zápasu (prepíšeme selectedMatch)
+            // aby sa znovu načítali tímy a ich súpisky
+            if (selectedMatch) {
+                console.log('🔄 Obnovujem detail zápasu po nahradení tímov...');
+                // Force re-render selectedMatch
+                setSelectedMatch(prevMatch => ({ ...prevMatch }));
+            }
+        };
+        
+        // Registrujeme poslucháča
+        window.addEventListener('teamNamesReplaced', handleTeamNamesReplaced);
+        
+        // Skontrolujeme, či už náhodou neboli tímy nahradené (pred registráciou)
+        if (window.teamNameReplacer && window.teamNameReplacer.hasReplacedAnyTeams && 
+            window.teamNameReplacer.hasReplacedAnyTeams()) {
+            console.log('🔄 Tímy už boli nahradené pred registráciou, synchronizujem...');
+            const replacedTeams = window.teamNameReplacer.getReplacedTeams();
+            if (replacedTeams && replacedTeams.length > 0) {
+                setReplacedTeamsList(replacedTeams);
+                setTeamsReplaced(true);
+                
+                // Obnovíme detail zápasu
+                if (selectedMatch) {
+                    setSelectedMatch(prevMatch => ({ ...prevMatch }));
+                }
+            }
+        }
+        
+        // Čistíme pri odmontovaní
+        return () => {
+            window.removeEventListener('teamNamesReplaced', handleTeamNamesReplaced);
+        };
+    }, [selectedMatch]); // Závislosť na selectedMatch - keď sa zmení, znovu skontrolujeme
 
     useEffect(() => {
         if (!window.db) return;
