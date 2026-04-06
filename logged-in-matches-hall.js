@@ -2947,6 +2947,24 @@ const matchesHallApp = ({ userProfileData }) => {
         updateUrlParameters(match.homeTeamIdentifier, match.awayTeamIdentifier);
         window.currentMatchId = match.id;
         
+        // ✅ VÝPIS NÁZOV TÍMOV A KATEGÓRIE DO KONZOLY
+        const homeTeamNameDisplay = getTeamNameByIdentifier(match.homeTeamIdentifier);
+        const awayTeamNameDisplay = getTeamNameByIdentifier(match.awayTeamIdentifier);
+        const categoryNameDisplay = match.categoryName || 'neurčená';
+        
+        console.log('');
+        console.log('='.repeat(70));
+        console.log('📋 VYBRANÝ ZÁPAS:');
+        console.log('='.repeat(70));
+        console.log(`🏠 DOMÁCI TÍM: ${homeTeamNameDisplay}`);
+        console.log(`✈️ HOSŤOVSKÝ TÍM: ${awayTeamNameDisplay}`);
+        console.log(`📂 KATEGÓRIA: ${categoryNameDisplay}`);
+        console.log(`🆔 ID zápasu: ${match.id}`);
+        console.log(`📅 Dátum: ${match.scheduledTime ? formatDateWithDay(match.scheduledTime.toDate()) : 'neurčený'}`);
+        console.log(`⏰ Čas: ${match.scheduledTime ? formatTime(match.scheduledTime) : '-- : --'}`);
+        console.log('='.repeat(70));
+        console.log('');
+        
         // AUTOMATICKÉ NASTAVENIE TÍMOV PO KLIKNUTÍ NA ZÁPAS - PRIAMO Z DOM ELEMENTU
         console.log('🔄 Automatické nastavenie tímov pre vybraný zápas...');
         
