@@ -2553,7 +2553,6 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     };
     
-    // 🔴 UPRAVENÁ FUNKCIA: getPlayerNameFromRef - používa referencie bez mien
     const getPlayerNameFromRef = (playerRef) => {
         if (!playerRef || !playerRef.userId) return 'Neznámy hráč';
         
@@ -2563,7 +2562,7 @@ const matchesHallApp = ({ userProfileData }) => {
         // Kontrola, či ide o člena realizačného tímu (staff)
         if (playerRef.staffType && playerRef.staffIndex !== undefined) {
             // Získame detail tímu podľa identifikátora
-            const teamDetails = getTeamDetails(playerRef.teamIdentifier);
+            const teamDetails = getTeamDetailsFromIdentifier(playerRef.teamIdentifier);
             if (!teamDetails) return 'Neznámy člen RT';
             
             if (playerRef.staffType === 'men' && teamDetails.team.menTeamMemberDetails && 
@@ -2578,15 +2577,40 @@ const matchesHallApp = ({ userProfileData }) => {
             return 'Neznámy člen RT';
         }
         
-        // Pre hráča
+        // Pre hráča - OPRAVA: Vyhľadávanie podľa unikátneho identifikátora
         if (playerRef.playerIndex !== undefined) {
             // Získame detail tímu podľa identifikátora
-            const teamDetails = getTeamDetails(playerRef.teamIdentifier);
+            const teamDetails = getTeamDetailsFromIdentifier(playerRef.teamIdentifier);
             if (!teamDetails || !teamDetails.team.playerDetails) return 'Neznámy hráč';
             
-            const player = teamDetails.team.playerDetails[playerRef.playerIndex];
-            if (player) {
-                return `${player.lastName} ${player.firstName} `;
+            // 🔴 OPRAVA: Namiesto indexu hľadáme podľa kombinácie mena a priezviska
+            // alebo podľa nejakého unikátneho ID, ak existuje
+            const players = teamDetails.team.playerDetails;
+            
+            // Prvý pokus: Ak máme uložené aj meno v referencii, použijeme ho
+            if (playerRef.playerName) {
+                const player = players.find(p => 
+                    `${p.lastName} ${p.firstName}` === playerRef.playerName
+                );
+                if (player) return `${player.lastName} ${player.firstName}`;
+            }
+            
+            // Druhý pokus: Skúsime podľa indexu (ale to je nespoľahlivé)
+            if (playerRef.playerIndex < players.length) {
+                const player = players[playerRef.playerIndex];
+                if (player && player.firstName && player.lastName) {
+                    return `${player.lastName} ${player.firstName}`;
+                }
+            }
+            
+            // Tretí pokus: Prehľadáme všetkých hráčov v tíme
+            for (const player of players) {
+                if (player.firstName && player.lastName) {
+                    // Ak máme v referencii uložené číslo dresu, môžeme podľa neho hľadať
+                    if (playerRef.jerseyNumber && player.jerseyNumber === playerRef.jerseyNumber) {
+                        return `${player.lastName} ${player.firstName}`;
+                    }
+                }
             }
         }
         
