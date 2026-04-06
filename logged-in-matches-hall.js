@@ -339,6 +339,27 @@ const matchesHallApp = ({ userProfileData }) => {
     const [superstructureTeams, setSuperstructureTeams] = useState({}); 
     const [teamManagerReady, setTeamManagerReady] = useState(false);
 
+    // Cache pre mapovanie identifikátorov na názvy tímov
+    const teamNameCache = new Map();
+
+    // Prepísaná funkcia getTeamNameByIdentifier s cache
+    const getTeamNameByIdentifierCached = (identifier) => {
+        if (!identifier) return 'Neznámy tím';
+        
+        // Skontrolujeme cache
+        if (teamNameCache.has(identifier)) {
+            return teamNameCache.get(identifier);
+        }
+        
+        // Získame názov pôvodnou funkciou (ale bez logovania)
+        const result = getTeamNameByIdentifierSync(identifier);
+        
+        // Uložíme do cache
+        teamNameCache.set(identifier, result);
+        
+        return result;
+    };
+
     // Funkcia na otvorenie modálneho okna pre úpravu člena realizačného tímu
     const openEditStaffModal = (member, team, teamDetails, staffType, staffIndex) => {
         if (selectedMatch?.status !== 'scheduled') {
@@ -3223,7 +3244,7 @@ const matchesHallApp = ({ userProfileData }) => {
     // ============================================================
     // HLAVNÁ FUNKCIA (synchrónna, pre React vykresľovanie)
     // ============================================================
-    const getTeamNameByIdentifier = getTeamNameByIdentifierSync;
+    const getTeamNameByIdentifier = getTeamNameByIdentifierCached;
 
     // FUNKCIA NA ZÍSKANIE KOMPLETNÝCH INFORMÁCIÍ O TÍME (upravená - hľadá podľa názvu aj identifikátora)
     const getTeamDetails = (identifier) => {
