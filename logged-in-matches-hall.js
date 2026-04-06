@@ -289,6 +289,7 @@ const matchesHallApp = ({ userProfileData }) => {
     const [eventType, setEventType] = useState(null);
     const [eventSubType, setEventSubType] = useState(null); // pre 7m hody: 'scored' alebo 'missed'
     const [eventTeam, setEventTeam] = useState(null);
+    const [selectedPlayerForEvent, setSelectedPlayerForEvent] = useState(null);
     const [matchPaused, setMatchPaused] = useState(false);
     const [matchTime, setMatchTime] = useState(0); // čas v sekundách
     const [timerInterval, setTimerInterval] = useState(null);
