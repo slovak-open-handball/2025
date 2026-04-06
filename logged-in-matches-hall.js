@@ -3038,8 +3038,10 @@ const matchesHallApp = ({ userProfileData }) => {
         return identifier;
     };
 
-    // OPRAVENÁ FUNKCIA: getTeamNameByIdentifier - rekurzívne mapovanie s oneskorením
-    const getTeamNameByIdentifier = (identifier, originalCategory = null, visited = new Set(), depth = 0, retryDelay = 500) => {
+    // ============================================================
+    // SYNCHRÓNNA FUNKCIA (pôvodná, vracia priamo hodnotu)
+    // ============================================================
+    const getTeamNameByIdentifierSync = (identifier, originalCategory = null, visited = new Set(), depth = 0) => {
         if (!identifier) return 'Neznámy tím';
         
         // Ochrana proti nekonečnej rekurzii
@@ -3049,14 +3051,12 @@ const matchesHallApp = ({ userProfileData }) => {
         }
         visited.add(identifier);
         
-        console.log(`🔍 getTeamNameByIdentifier (depth ${depth}): Hľadám názov pre identifikátor: "${identifier}"`);
+        console.log(`🔍 getTeamNameByIdentifierSync (depth ${depth}): Hľadám názov pre identifikátor: "${identifier}"`);
         
-        // Ak sme dostali aj pôvodnú kategóriu, uložíme si ju
         const originalCategoryName = originalCategory;
         
-        // 🔴 FUNKCIA NA ZÍSKANIE MAPOVANIA (môže byť volaná viackrát)
+        // Funkcia na získanie mapovania
         const getMapping = (input) => {
-            // 1. Skúsime získať názov z mapovania (z druhého kódu)
             if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
                 const mapped = window.teamNameReplacer.getTeamNameFromMapping(input);
                 if (mapped !== undefined && mapped !== null) {
@@ -3064,7 +3064,6 @@ const matchesHallApp = ({ userProfileData }) => {
                 }
             }
             
-            // 2. Ak nie je v teamNameReplacer, skúsime z __teamNameMapping
             if (window.__teamNameMapping && window.__teamNameMapping[input]) {
                 const mapped = window.__teamNameMapping[input].teamName;
                 if (mapped) {
@@ -3075,254 +3074,340 @@ const matchesHallApp = ({ userProfileData }) => {
             return null;
         };
         
-        // 🔴 FUNKCIA NA OPATOVNÉ SKÚSENIE MAPOVANIA S ONESKORENÍM
-        const tryMappingWithRetry = async (input, currentMappingResult, currentMappingSource) => {
-            // Ak už máme výsledok, vrátime ho
-            if (currentMappingResult && currentMappingResult !== input) {
-                return { result: currentMappingResult, source: currentMappingSource };
-            }
-            
-            // Počkáme oneskorenie a skúsime znova
-            console.log(`   ⏳ Čakám ${retryDelay}ms a skúšam mapovanie znova pre: "${input}"...`);
-            
-            return new Promise((resolve) => {
-                setTimeout(() => {
-                    const newResult = getMapping(input);
-                    if (newResult) {
-                        console.log(`   🔄 Mapovanie po oneskorení: "${input}" → "${newResult.name}" (${newResult.source})`);
-                        resolve({ result: newResult.name, source: newResult.source });
-                    } else {
-                        resolve({ result: null, source: null });
-                    }
-                }, retryDelay);
-            });
-        };
-        
-        // 🔴 KĽÚČOVÁ LOGIKA: Opakované mapovanie s oneskorením
+        // Pokus o mapovanie (synchrónne, bez oneskorenia)
         let currentIdentifier = identifier;
         let mappingResult = null;
         let mappingSource = null;
         let mappingAttempts = 0;
-        const MAX_MAPPING_ATTEMPTS = 5; // Maximálne 5 pokusov
+        const MAX_MAPPING_ATTEMPTS = 3;
         
-        // Vytvoríme async funkciu pre postupné skúšanie
-        const processMapping = async () => {
-            let lastResult = null;
-            let lastSource = null;
+        while (mappingAttempts < MAX_MAPPING_ATTEMPTS) {
+            const result = getMapping(currentIdentifier);
             
-            for (let attempt = 0; attempt < MAX_MAPPING_ATTEMPTS; attempt++) {
-                const result = getMapping(currentIdentifier);
-                
-                if (!result) {
-                    // Žiadne mapovanie neexistuje - končíme
-                    break;
-                }
-                
-                if (result.name === currentIdentifier) {
-                    // Mapovanie vrátilo rovnakú hodnotu - počkáme a skúsime znova
-                    console.log(`   🔄 Mapovanie z ${result.source} vrátilo rovnakú hodnotu: "${currentIdentifier}" → "${result.name}" (pokus ${attempt + 1}/${MAX_MAPPING_ATTEMPTS})`);
-                    
-                    if (attempt < MAX_MAPPING_ATTEMPTS - 1) {
-                        // Počkáme a skúsime znova
-                        await new Promise(resolve => setTimeout(resolve, retryDelay));
-                        continue;
-                    } else {
-                        // Posledný pokus - použijeme túto hodnotu (aj keď je rovnaká)
-                        console.log(`   ⚠️ Po ${MAX_MAPPING_ATTEMPTS} pokusoch mapovanie stále vracia rovnakú hodnotu, pokračujem...`);
-                        lastResult = result.name;
-                        lastSource = result.source;
-                        break;
-                    }
-                }
-                
-                // Mapovanie vrátilo INÚ hodnotu - uložíme a končíme
-                lastResult = result.name;
-                lastSource = result.source;
-                console.log(`   ✅ Mapovanie z ${lastSource} vrátilo rozdielnu hodnotu: "${currentIdentifier}" → "${lastResult}" (po ${attempt + 1} pokusoch)`);
-                break;
+            if (!result) break;
+            
+            if (result.name === currentIdentifier) {
+                console.log(`   🔄 Mapovanie z ${result.source} vrátilo rovnakú hodnotu: "${currentIdentifier}" → "${result.name}" (pokus ${mappingAttempts + 1}/${MAX_MAPPING_ATTEMPTS})`);
+                mappingAttempts++;
+                continue;
             }
             
-            return { result: lastResult, source: lastSource };
-        };
+            mappingResult = result.name;
+            mappingSource = result.source;
+            console.log(`   ✅ Mapovanie z ${mappingSource} vrátilo rozdielnu hodnotu: "${currentIdentifier}" → "${mappingResult}"`);
+            break;
+        }
         
-        // Spustíme async spracovanie (ale musíme počkať na výsledok)
-        // Keďže sme v sync funkcii, použijeme Promise a rekurziu
+        if (mappingResult) {
+            const identifierPattern = /\s+\d+[A-Za-z]/;
+            
+            if (identifierPattern.test(mappingResult) && mappingResult !== currentIdentifier) {
+                console.log(`   🔄 Mapovanie z ${mappingSource} vrátilo identifikátor: "${currentIdentifier}" → "${mappingResult}"`);
+                return getTeamNameByIdentifierSync(mappingResult, originalCategoryName, visited, depth + 1);
+            } 
+            else if (mappingResult !== currentIdentifier) {
+                console.log(`   ✅ Konečný výsledok mapovania: "${currentIdentifier}" → "${mappingResult}"`);
+                if (originalCategoryName) {
+                    return {
+                        teamName: mappingResult,
+                        category: originalCategoryName
+                    };
+                }
+                return mappingResult;
+            }
+        }
         
-        // Pre jednoduchosť použijeme sync verziu s oneskorením pomocou setTimeout
-        // Vrátime Promise, ktorý sa vyrieši po dokončení mapovania
+        // Vyhľadávanie v superstructureTeams
+        let foundName = null;
         
-        return new Promise((resolve) => {
-            const executeMapping = async () => {
-                let lastResult = null;
-                let lastSource = null;
-                let currentId = identifier;
+        if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
+            const parts = identifier.split(' ');
+            if (parts.length >= 2) {
+                const groupAndOrder = parts.pop();
+                const category = parts.join(' ');
                 
-                for (let attempt = 0; attempt < MAX_MAPPING_ATTEMPTS; attempt++) {
-                    const result = getMapping(currentId);
-                    
-                    if (!result) {
+                let groupLetter = '';
+                let order = '';
+                for (let i = 0; i < groupAndOrder.length; i++) {
+                    const char = groupAndOrder[i];
+                    if (char >= '0' && char <= '9') {
+                        order = groupAndOrder.substring(i);
+                        groupLetter = groupAndOrder.substring(0, i);
                         break;
                     }
+                }
+                
+                if (order) {
+                    const fullGroupName = `skupina ${groupLetter}`;
+                    const orderNum = parseInt(order, 10);
                     
-                    if (result.name === currentId) {
-                        console.log(`   🔄 Mapovanie z ${result.source} vrátilo rovnakú hodnotu: "${currentId}" → "${result.name}" (pokus ${attempt + 1}/${MAX_MAPPING_ATTEMPTS})`);
+                    const categoryTeams = superstructureTeams[category];
+                    if (categoryTeams && Array.isArray(categoryTeams)) {
+                        const team = categoryTeams.find(t => 
+                            t.groupName === fullGroupName && 
+                            t.order === orderNum
+                        );
+                        if (team && team.teamName) {
+                            foundName = team.teamName;
+                            console.log(`   ✅ Nájdený v superstructureTeams: "${identifier}" → "${foundName}"`);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Vyhľadávanie v používateľoch
+        if (!foundName && users && users.length > 0) {
+            const parts = identifier.split(' ');
+            if (parts.length >= 2) {
+                const groupAndOrder = parts.pop();
+                const category = parts.join(' ');
+                
+                let groupLetter = '';
+                let order = '';
+                for (let i = 0; i < groupAndOrder.length; i++) {
+                    const char = groupAndOrder[i];
+                    if (char >= '0' && char <= '9') {
+                        order = groupAndOrder.substring(i);
+                        groupLetter = groupAndOrder.substring(0, i);
+                        break;
+                    }
+                }
+                
+                if (order) {
+                    const fullGroupName = `skupina ${groupLetter}`;
+                    const orderNum = parseInt(order, 10);
+                    
+                    for (const user of users) {
+                        if (!user.teams) continue;
+                        const userTeams = user.teams[category];
+                        if (!userTeams || !Array.isArray(userTeams)) continue;
                         
-                        if (attempt < MAX_MAPPING_ATTEMPTS - 1) {
-                            await new Promise(resolveTimeout => setTimeout(resolveTimeout, retryDelay));
-                            continue;
-                        } else {
-                            console.log(`   ⚠️ Po ${MAX_MAPPING_ATTEMPTS} pokusoch mapovanie stále vracia rovnakú hodnotu, pokračujem...`);
-                            lastResult = result.name;
-                            lastSource = result.source;
+                        const team = userTeams.find(t => 
+                            t.groupName === fullGroupName && 
+                            t.order === orderNum
+                        );
+                        
+                        if (team && team.teamName) {
+                            foundName = team.teamName;
+                            console.log(`   ✅ Nájdený v používateľoch: "${identifier}" → "${foundName}" (používateľ: ${user.email})`);
                             break;
                         }
                     }
-                    
-                    lastResult = result.name;
-                    lastSource = result.source;
-                    console.log(`   ✅ Mapovanie z ${lastSource} vrátilo rozdielnu hodnotu: "${currentId}" → "${lastResult}" (po ${attempt + 1} pokusoch)`);
+                }
+            }
+        }
+        
+        if (foundName) {
+            const identifierPattern = /\s+\d+[A-Za-z]/;
+            if (identifierPattern.test(foundName) && foundName !== identifier) {
+                console.log(`   🔄 Nájdený názov je identifikátor: "${foundName}", pokračujem v mapovaní...`);
+                return getTeamNameByIdentifierSync(foundName, originalCategoryName, visited, depth + 1);
+            }
+            
+            if (originalCategoryName) {
+                return {
+                    teamName: foundName,
+                    category: originalCategoryName
+                };
+            }
+            return foundName;
+        }
+        
+        console.log(`   🏁 Výsledok getTeamNameByIdentifierSync: "${identifier}" → "${identifier}" (žiadne mapovanie)`);
+        return identifier;
+    };
+    
+    // ============================================================
+    // ASYNCHRÓNNA FUNKCIA S ONESKORENÍM (pre prípady, keď je potrebné čakať)
+    // ============================================================
+    const getTeamNameByIdentifierAsync = async (identifier, originalCategory = null, visited = new Set(), depth = 0, retryDelay = 500) => {
+        if (!identifier) return 'Neznámy tím';
+        
+        if (visited.has(identifier)) {
+            console.log(`⚠️ Detekovaný cyklus v mapovaní pre identifikátor: "${identifier}"`);
+            return identifier;
+        }
+        visited.add(identifier);
+        
+        console.log(`🔍 getTeamNameByIdentifierAsync (depth ${depth}): Hľadám názov pre identifikátor: "${identifier}"`);
+        
+        const originalCategoryName = originalCategory;
+        
+        const getMapping = (input) => {
+            if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
+                const mapped = window.teamNameReplacer.getTeamNameFromMapping(input);
+                if (mapped !== undefined && mapped !== null) {
+                    return { name: mapped, source: 'teamNameReplacer' };
+                }
+            }
+            
+            if (window.__teamNameMapping && window.__teamNameMapping[input]) {
+                const mapped = window.__teamNameMapping[input].teamName;
+                if (mapped) {
+                    return { name: mapped, source: '__teamNameMapping' };
+                }
+            }
+            
+            return null;
+        };
+        
+        // Asynchrónne opakované mapovanie s oneskorením
+        let currentIdentifier = identifier;
+        let mappingResult = null;
+        let mappingSource = null;
+        let mappingAttempts = 0;
+        const MAX_MAPPING_ATTEMPTS = 5;
+        
+        for (let attempt = 0; attempt < MAX_MAPPING_ATTEMPTS; attempt++) {
+            const result = getMapping(currentIdentifier);
+            
+            if (!result) break;
+            
+            if (result.name === currentIdentifier) {
+                console.log(`   🔄 Mapovanie z ${result.source} vrátilo rovnakú hodnotu: "${currentIdentifier}" → "${result.name}" (pokus ${attempt + 1}/${MAX_MAPPING_ATTEMPTS})`);
+                
+                if (attempt < MAX_MAPPING_ATTEMPTS - 1) {
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                    continue;
+                } else {
+                    console.log(`   ⚠️ Po ${MAX_MAPPING_ATTEMPTS} pokusoch mapovanie stále vracia rovnakú hodnotu, pokračujem...`);
+                    mappingResult = result.name;
+                    mappingSource = result.source;
                     break;
                 }
-                
-                resolve({ result: lastResult, source: lastSource, currentId: currentId });
-            };
+            }
             
-            executeMapping().then(({ result: mappingResultValue, source: mappingSourceValue, currentId: currentIdValue }) => {
-                // Ak sme našli mapovanie na inú hodnotu
-                if (mappingResultValue && mappingResultValue !== currentIdValue) {
-                    const identifierPattern = /\s+\d+[A-Za-z]/;
+            mappingResult = result.name;
+            mappingSource = result.source;
+            console.log(`   ✅ Mapovanie z ${mappingSource} vrátilo rozdielnu hodnotu: "${currentIdentifier}" → "${mappingResult}" (po ${attempt + 1} pokusoch)`);
+            break;
+        }
+        
+        if (mappingResult && mappingResult !== currentIdentifier) {
+            const identifierPattern = /\s+\d+[A-Za-z]/;
+            
+            if (identifierPattern.test(mappingResult) && mappingResult !== currentIdentifier) {
+                console.log(`   🔄 Mapovanie z ${mappingSource} vrátilo identifikátor: "${currentIdentifier}" → "${mappingResult}"`);
+                return getTeamNameByIdentifierAsync(mappingResult, originalCategoryName, visited, depth + 1, retryDelay);
+            } 
+            else if (mappingResult !== currentIdentifier) {
+                console.log(`   ✅ Konečný výsledok mapovania: "${currentIdentifier}" → "${mappingResult}"`);
+                if (originalCategoryName) {
+                    return {
+                        teamName: mappingResult,
+                        category: originalCategoryName
+                    };
+                }
+                return mappingResult;
+            }
+        }
+        
+        // Vyhľadávanie v superstructureTeams (synchrónne)
+        let foundName = null;
+        
+        if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
+            const parts = identifier.split(' ');
+            if (parts.length >= 2) {
+                const groupAndOrder = parts.pop();
+                const category = parts.join(' ');
+                
+                let groupLetter = '';
+                let order = '';
+                for (let i = 0; i < groupAndOrder.length; i++) {
+                    const char = groupAndOrder[i];
+                    if (char >= '0' && char <= '9') {
+                        order = groupAndOrder.substring(i);
+                        groupLetter = groupAndOrder.substring(0, i);
+                        break;
+                    }
+                }
+                
+                if (order) {
+                    const fullGroupName = `skupina ${groupLetter}`;
+                    const orderNum = parseInt(order, 10);
                     
-                    if (identifierPattern.test(mappingResultValue) && mappingResultValue !== currentIdValue) {
-                        // Výsledok je ďalší identifikátor - rekurzívne ho zmapujeme
-                        console.log(`   🔄 Mapovanie z ${mappingSourceValue} vrátilo identifikátor: "${currentIdValue}" → "${mappingResultValue}"`);
-                        getTeamNameByIdentifier(mappingResultValue, originalCategoryName, visited, depth + 1, retryDelay).then(resolve);
-                        return;
-                    } 
-                    else if (mappingResultValue !== currentIdValue) {
-                        // Výsledok je skutočný názov tímu
-                        console.log(`   ✅ Konečný výsledok mapovania: "${currentIdValue}" → "${mappingResultValue}"`);
-                        if (originalCategoryName) {
-                            resolve({
-                                teamName: mappingResultValue,
-                                category: originalCategoryName
-                            });
-                        } else {
-                            resolve(mappingResultValue);
-                        }
-                        return;
-                    }
-                }
-                
-                // 4. Pôvodné vyhľadávanie v superstructureTeams (ak mapovanie nič nevrátilo)
-                let foundName = null;
-                
-                if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
-                    const parts = identifier.split(' ');
-                    if (parts.length >= 2) {
-                        const groupAndOrder = parts.pop();
-                        const category = parts.join(' ');
-                        
-                        let groupLetter = '';
-                        let order = '';
-                        for (let i = 0; i < groupAndOrder.length; i++) {
-                            const char = groupAndOrder[i];
-                            if (char >= '0' && char <= '9') {
-                                order = groupAndOrder.substring(i);
-                                groupLetter = groupAndOrder.substring(0, i);
-                                break;
-                            }
-                        }
-                        
-                        if (order) {
-                            const fullGroupName = `skupina ${groupLetter}`;
-                            const orderNum = parseInt(order, 10);
-                            
-                            const categoryTeams = superstructureTeams[category];
-                            if (categoryTeams && Array.isArray(categoryTeams)) {
-                                const team = categoryTeams.find(t => 
-                                    t.groupName === fullGroupName && 
-                                    t.order === orderNum
-                                );
-                                if (team && team.teamName) {
-                                    foundName = team.teamName;
-                                    console.log(`   ✅ Nájdený v superstructureTeams: "${identifier}" → "${foundName}"`);
-                                }
-                            }
+                    const categoryTeams = superstructureTeams[category];
+                    if (categoryTeams && Array.isArray(categoryTeams)) {
+                        const team = categoryTeams.find(t => 
+                            t.groupName === fullGroupName && 
+                            t.order === orderNum
+                        );
+                        if (team && team.teamName) {
+                            foundName = team.teamName;
+                            console.log(`   ✅ Nájdený v superstructureTeams: "${identifier}" → "${foundName}"`);
                         }
                     }
                 }
+            }
+        }
+        
+        // Vyhľadávanie v používateľoch
+        if (!foundName && users && users.length > 0) {
+            const parts = identifier.split(' ');
+            if (parts.length >= 2) {
+                const groupAndOrder = parts.pop();
+                const category = parts.join(' ');
                 
-                // 5. Vyhľadávanie v používateľoch (user teams)
-                if (!foundName && users && users.length > 0) {
-                    const parts = identifier.split(' ');
-                    if (parts.length >= 2) {
-                        const groupAndOrder = parts.pop();
-                        const category = parts.join(' ');
-                        
-                        let groupLetter = '';
-                        let order = '';
-                        for (let i = 0; i < groupAndOrder.length; i++) {
-                            const char = groupAndOrder[i];
-                            if (char >= '0' && char <= '9') {
-                                order = groupAndOrder.substring(i);
-                                groupLetter = groupAndOrder.substring(0, i);
-                                break;
-                            }
-                        }
-                        
-                        if (order) {
-                            const fullGroupName = `skupina ${groupLetter}`;
-                            const orderNum = parseInt(order, 10);
-                            
-                            for (const user of users) {
-                                if (!user.teams) continue;
-                                const userTeams = user.teams[category];
-                                if (!userTeams || !Array.isArray(userTeams)) continue;
-                                
-                                const team = userTeams.find(t => 
-                                    t.groupName === fullGroupName && 
-                                    t.order === orderNum
-                                );
-                                
-                                if (team && team.teamName) {
-                                    foundName = team.teamName;
-                                    console.log(`   ✅ Nájdený v používateľoch: "${identifier}" → "${foundName}" (používateľ: ${user.email})`);
-                                    break;
-                                }
-                            }
-                        }
+                let groupLetter = '';
+                let order = '';
+                for (let i = 0; i < groupAndOrder.length; i++) {
+                    const char = groupAndOrder[i];
+                    if (char >= '0' && char <= '9') {
+                        order = groupAndOrder.substring(i);
+                        groupLetter = groupAndOrder.substring(0, i);
+                        break;
                     }
                 }
                 
-                // 6. Ak sme našli názov
-                if (foundName) {
-                    const identifierPattern = /\s+\d+[A-Za-z]/;
-                    if (identifierPattern.test(foundName) && foundName !== identifier) {
-                        // Nájdený názov je v skutočnosti identifikátor - rekurzívne ho zmapujeme
-                        console.log(`   🔄 Nájdený názov je identifikátor: "${foundName}", pokračujem v mapovaní...`);
-                        getTeamNameByIdentifier(foundName, originalCategoryName, visited, depth + 1, retryDelay).then(resolve);
-                        return;
-                    }
+                if (order) {
+                    const fullGroupName = `skupina ${groupLetter}`;
+                    const orderNum = parseInt(order, 10);
                     
-                    // Ak máme pôvodnú kategóriu, vrátime názov tímu a kategóriu ako objekt
-                    if (originalCategoryName) {
-                        resolve({
-                            teamName: foundName,
-                            category: originalCategoryName
-                        });
-                    } else {
-                        resolve(foundName);
+                    for (const user of users) {
+                        if (!user.teams) continue;
+                        const userTeams = user.teams[category];
+                        if (!userTeams || !Array.isArray(userTeams)) continue;
+                        
+                        const team = userTeams.find(t => 
+                            t.groupName === fullGroupName && 
+                            t.order === orderNum
+                        );
+                        
+                        if (team && team.teamName) {
+                            foundName = team.teamName;
+                            console.log(`   ✅ Nájdený v používateľoch: "${identifier}" → "${foundName}" (používateľ: ${user.email})`);
+                            break;
+                        }
                     }
-                    return;
                 }
-                
-                // 7. Ak nič nenašlo, vrátime pôvodný identifikátor
-                const result = identifier;
-                console.log(`   🏁 Výsledok getTeamNameByIdentifier: "${identifier}" → "${result}" (žiadne mapovanie)`);
-                resolve(result);
-            });
-        });
+            }
+        }
+        
+        if (foundName) {
+            const identifierPattern = /\s+\d+[A-Za-z]/;
+            if (identifierPattern.test(foundName) && foundName !== identifier) {
+                console.log(`   🔄 Nájdený názov je identifikátor: "${foundName}", pokračujem v mapovaní...`);
+                return getTeamNameByIdentifierAsync(foundName, originalCategoryName, visited, depth + 1, retryDelay);
+            }
+            
+            if (originalCategoryName) {
+                return {
+                    teamName: foundName,
+                    category: originalCategoryName
+                };
+            }
+            return foundName;
+        }
+        
+        console.log(`   🏁 Výsledok getTeamNameByIdentifierAsync: "${identifier}" → "${identifier}" (žiadne mapovanie)`);
+        return identifier;
     };
+    
+    // ============================================================
+    // HLAVNÁ FUNKCIA (synchrónna, pre React vykresľovanie)
+    // ============================================================
+    const getTeamNameByIdentifier = getTeamNameByIdentifierSync;
 
     // Funkcia na získanie detailov tímu priamo z mapovania
     const getTeamDetailsFromMapping = (identifier) => {
