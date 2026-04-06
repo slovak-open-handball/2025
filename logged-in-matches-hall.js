@@ -7359,7 +7359,7 @@ function findCurrentMatchTeamsFromDOM(renderToDOM = true) {
     
     for (const teamInfo of teamsInfo) {
         console.log(`\n🔍 Vyhľadávam tím "${teamInfo.teamName}" v kategórii "${teamInfo.category}"...`);
-        const result = findTeamByNameAndCategory(teamInfo.teamName, teamInfo.category, renderToDOM);
+        const result = findTeamByNameAndCategory(teamInfo.teamName, teamInfo.category, false);
         
         if (result && !Array.isArray(result)) {
             if (Object.keys(results).length === 0) {
@@ -7437,7 +7437,7 @@ const findCurrentMatchFromDOM = async (renderToDOM = true, autoSetTeams = true) 
     
     for (const teamInfo of teamsInfo) {
         console.log(`\n🔍 Vyhľadávam tím "${teamInfo.teamName}" v kategórii "${teamInfo.category}"...`);
-        const result = findTeamByNameAndCategory(teamInfo.teamName, teamInfo.category, renderToDOM);
+        const result = findTeamByNameAndCategory(teamInfo.teamName, teamInfo.category, false);
         
         if (result && !Array.isArray(result)) {
             if (Object.keys(results).length === 0) {
