@@ -2546,3 +2546,607 @@ if (Object.keys(window.__teamNameMapping).length > 0) {
 
 
 
+// ============================================================
+// PRIDAJTE TÚTO ČASŤ NA KONIEC SUBORU func-tables.js
+// ============================================================
+
+// Premenná pre sledovanie, či už boli nahradené nejaké tímy
+let hasReplacedAnyTeams = false;
+
+// Zoznam callback funkcií, ktoré sa majú zavolať po nahradení
+const replacementCallbacks = [];
+
+// ** NOVÉ: Sledovanie percentuálneho zastúpenia skupín **
+let groupCompletionSnapshot = new Map(); // Ukladá posledné známe percentá skupín
+
+// Funkcia na kontrolu, či niektorá skupina stratila 100% (napr. pri zmazaní výsledku)
+function checkForCompletionLoss() {
+    if (!window.matchTracker) return false;
+    
+    const allMatches = window.matchTracker.getAllMatches?.() || [];
+    const groupsWithLoss = [];
+    
+    // Získame aktuálne percentá pre všetky skupiny
+    const currentCompletion = new Map();
+    
+    allMatches.forEach(match => {
+        if (match.isPlacementMatch) return;
+        if (match.categoryName && match.groupName) {
+            const key = `${match.categoryName}|${match.groupName}`;
+            if (!currentCompletion.has(key)) {
+                currentCompletion.set(key, {
+                    category: match.categoryName,
+                    group: match.groupName,
+                    total: 0,
+                    completed: 0
+                });
+            }
+            const group = currentCompletion.get(key);
+            group.total++;
+            if (match.status === 'completed') {
+                group.completed++;
+            }
+        }
+    });
+    
+    // Vypočítame percentá a porovnáme s posledným známym stavom
+    for (const [key, data] of currentCompletion.entries()) {
+        const percentage = data.total > 0 ? (data.completed / data.total * 100) : 0;
+        const was100 = groupCompletionSnapshot.get(key) === 100;
+        const isNow100 = percentage === 100;
+        
+        // Ak bola skupina na 100% a teraz už nie je -> treba obnoviť stránku
+        if (was100 && !isNow100) {
+            groupsWithLoss.push({
+                key: key,
+                category: data.category,
+                group: data.group,
+                oldPercentage: 100,
+                newPercentage: percentage,
+                completedBefore: groupCompletionSnapshot.get(`${key}_completed`) || 0,
+                completedNow: data.completed,
+                total: data.total
+            });
+        }
+        
+        // Aktualizujeme snapshot
+        groupCompletionSnapshot.set(key, percentage);
+        groupCompletionSnapshot.set(`${key}_completed`, data.completed);
+        groupCompletionSnapshot.set(`${key}_total`, data.total);
+    }
+    
+    return groupsWithLoss;
+}
+
+// ** NOVÉ: Sledovanie zmien v skupinách (napr. pri zmazaní výsledku) **
+let groupMonitorInterval = null;
+let isReloading = false; // Zabráni nekonečnému reštartovaniu
+
+function startGroupMonitoring(intervalSeconds = 5) {
+    if (groupMonitorInterval) {
+        clearInterval(groupMonitorInterval);
+    }
+    
+    // Najprv naplníme snapshot aktuálnymi hodnotami
+    const allMatches = window.matchTracker?.getAllMatches?.() || [];
+    allMatches.forEach(match => {
+        if (match.isPlacementMatch) return;
+        if (match.categoryName && match.groupName) {
+            const key = `${match.categoryName}|${match.groupName}`;
+            if (!groupCompletionSnapshot.has(key)) {
+                groupCompletionSnapshot.set(key, 0);
+            }
+        }
+    });
+    
+    // Prvé naplnenie percentami
+    const initialGroups = new Map();
+    allMatches.forEach(match => {
+        if (match.isPlacementMatch) return;
+        if (match.categoryName && match.groupName) {
+            const key = `${match.categoryName}|${match.groupName}`;
+            if (!initialGroups.has(key)) {
+                initialGroups.set(key, {
+                    total: 0,
+                    completed: 0
+                });
+            }
+            const group = initialGroups.get(key);
+            group.total++;
+            if (match.status === 'completed') {
+                group.completed++;
+            }
+        }
+    });
+    
+    for (const [key, data] of initialGroups.entries()) {
+        const percentage = data.total > 0 ? (data.completed / data.total * 100) : 0;
+        groupCompletionSnapshot.set(key, percentage);
+        groupCompletionSnapshot.set(`${key}_completed`, data.completed);
+        groupCompletionSnapshot.set(`${key}_total`, data.total);
+    }
+    
+    // Spustíme monitorovanie
+    groupMonitorInterval = setInterval(() => {
+        if (isReloading) return; // Už sa reštartuje
+        
+        const groupsWithLoss = checkForCompletionLoss();
+        
+        if (groupsWithLoss && groupsWithLoss.length > 0) {
+            console.warn('⚠️ VAROVANIE: Skupina(y) stratili 100% dokončených zápasov!');
+            groupsWithLoss.forEach(group => {
+                console.warn(`   📉 ${group.category} - ${group.group}: 100% → ${group.newPercentage.toFixed(1)}% (bolo ${group.completedBefore}/${group.total}, teraz ${group.completedNow}/${group.total})`);
+            });
+            
+            // Obnovíme stránku
+            isReloading = true;
+            console.log('🔄 Obnovujem stránku kvôli zmene stavu skupiny...');
+            
+            // Krátke oneskorenie pre istotu, že sa zapíšu logy
+            setTimeout(() => {
+                location.reload();
+            }, 500);
+        }
+    }, intervalSeconds * 1000);
+}
+
+function stopGroupMonitoring() {
+    if (groupMonitorInterval) {
+        clearInterval(groupMonitorInterval);
+        groupMonitorInterval = null;
+    }
+}
+
+// Funkcia na získanie aktuálneho stavu skupín
+function getGroupCompletionStatus() {
+    const status = [];
+    for (const [key, percentage] of groupCompletionSnapshot.entries()) {
+        if (!key.includes('_completed') && !key.includes('_total')) {
+            const [category, group] = key.split('|');
+            status.push({
+                category: category,
+                group: group,
+                percentage: percentage,
+                completed: groupCompletionSnapshot.get(`${key}_completed`) || 0,
+                total: groupCompletionSnapshot.get(`${key}_total`) || 0
+            });
+        }
+    }
+    return status;
+}
+
+// Funkcia na funkciu na získanie názvu tímu (z mapovania)
+function getTeamNameFromMapping(originalIdentifier) {
+    if (!originalIdentifier) return null;
+    
+    const mapping = window.__teamNameMapping[originalIdentifier];
+    if (mapping && mapping.teamName) {
+        // Kontrola, či mapovanie nie je príliš staré (napr. viac ako 1 hodinu)
+        if (Date.now() - mapping.timestamp < 3600000) {
+            return mapping.teamName;
+        }
+    }
+    return null;
+}
+
+// Funkcia na získanie všetkých mapovaní
+function getAllTeamMappings() {
+    return window.__teamNameMapping;
+}
+
+// Funkcia na registráciu callbacku, ktorý sa zavolá po nahradení tímov
+function onTeamNamesReplaced(callback) {
+    if (typeof callback === 'function') {
+        replacementCallbacks.push(callback);
+        
+        // Ak už boli nejaké tímy nahradené, zavoláme callback okamžite
+        if (hasReplacedAnyTeams) {
+            callback();
+        }
+    }
+}
+
+// Funkcia na vyžiadanie aktuálneho stavu nahradených tímov
+function getReplacedTeams() {
+    const replacedTeams = [];
+    const elements = document.querySelectorAll('[data-replaced-100-percent="true"]');
+    
+    for (const element of elements) {
+        const originalId = element.getAttribute('data-original-identifier');
+        const teamName = element.getAttribute('data-team-name');
+        const category = element.getAttribute('data-team-category');
+        
+        if (originalId && teamName) {
+            replacedTeams.push({
+                originalIdentifier: originalId,
+                teamName: teamName,
+                category: category
+            });
+        }
+    }
+    
+    return replacedTeams;
+}
+
+// ============================================================
+// GLOBÁLNE MAPOVANIE IDENTIFIKÁTOROV NA NÁZVY TÍMOV
+// ============================================================
+
+// Globálny objekt pre mapovanie identifikátorov na názvy tímov
+window.__teamNameMapping = window.__teamNameMapping || {};
+
+// Funkcia na registráciu mapovania
+function registerTeamNameMapping(originalIdentifier, teamName, category, groupLetter, position) {
+    if (!originalIdentifier || !teamName) return;
+    
+    window.__teamNameMapping[originalIdentifier] = {
+        teamName: teamName,
+        category: category,
+        groupLetter: groupLetter,
+        position: position,
+        timestamp: Date.now()
+    };
+}
+
+// ============================================================
+// OPRAVENÁ FUNKCIA performPartialReplacement - LEPŠIE VYHĽADÁVANIE + MAPOVANIE
+// ============================================================
+
+// Uložíme pôvodnú funkciu (ak existuje)
+const existingPerformPartialReplacement = window.performPartialReplacement || performPartialReplacement;
+
+// Prepíšeme funkciu - NOVÁ VERZIA (bez duplicitnej deklarácie)
+window.performPartialReplacement = function(identifiersToReplace) {
+    if (isReplacingInProgress) {
+        return;
+    }
+    
+    isReplacingInProgress = true;
+    
+    let replacedCount = 0;
+    let failedCount = 0;
+    let fromCacheCount = 0;
+    let fromDbCount = 0;
+    const failedIdentifiers = [];
+    
+    for (const idInfo of identifiersToReplace) {
+        // Najprv skúsime cache (rýchle)
+        let teamName = getTeamNameFromCacheOnly(idInfo.identifier);
+        let fromCache = true;
+        
+        if (!teamName) {
+            teamName = getTeamNameFromCacheOnly(idInfo.originalIdentifier);
+        }
+        
+        // Ak nie je v cache, načítame z databázy
+        if (!teamName) {
+            fromCache = false;
+            teamName = getTeamNameFromDatabase(idInfo.identifier);
+            if (!teamName) {
+                teamName = getTeamNameFromDatabase(idInfo.originalIdentifier);
+            }
+        }
+        
+        if (teamName && teamName !== idInfo.identifier && teamName !== idInfo.originalIdentifier) {
+            // REGISTRÁCIA MAPOVANIA - vždy, aj keď nenahradíme text
+            registerTeamNameMapping(
+                idInfo.originalIdentifier, 
+                teamName, 
+                idInfo.category, 
+                idInfo.groupLetter, 
+                idInfo.position
+            );
+            
+            const escapedIdentifier = idInfo.originalIdentifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(escapedIdentifier, 'g');
+            
+            // Prehľadávanie textových uzlov
+            const walker = document.createTreeWalker(
+                document.body,
+                NodeFilter.SHOW_TEXT,
+                {
+                    acceptNode: function(node) {
+                        if (node.parentElement && 
+                            (node.parentElement.tagName === 'SCRIPT' || 
+                             node.parentElement.tagName === 'STYLE' ||
+                             node.parentElement.tagName === 'CODE')) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                }
+            );
+            
+            const textNodes = [];
+            let node;
+            while (node = walker.nextNode()) {
+                if (node.textContent && node.textContent.includes(idInfo.originalIdentifier)) {
+                    textNodes.push(node);
+                }
+            }
+            
+            let anyFound = false;
+            
+            for (const textNode of textNodes) {
+                const newText = textNode.textContent.replace(regex, teamName);
+                if (newText !== textNode.textContent) {
+                    textNode.textContent = newText;
+                    anyFound = true;
+                }
+            }
+            
+            // Kontrola input elementov
+            const inputs = document.querySelectorAll('input, textarea, [contenteditable="true"]');
+            for (const input of inputs) {
+                let value = input.value || input.textContent;
+                if (value && value.includes(idInfo.originalIdentifier)) {
+                    const newValue = value.replace(regex, teamName);
+                    if (input.value !== undefined) {
+                        input.value = newValue;
+                    } else {
+                        input.textContent = newValue;
+                    }
+                    anyFound = true;
+                }
+            }
+            
+            if (anyFound) {
+                replacedCount++;
+                if (fromCache) fromCacheCount++;
+                else fromDbCount++;
+                
+                // Uložíme atribúty na rodičovské elementy
+                const parentElements = document.querySelectorAll(`*`);
+                for (const element of parentElements) {
+                    if (element.textContent && element.textContent.includes(teamName) && 
+                        !element.hasAttribute('data-original-identifier')) {
+                        element.setAttribute('data-original-identifier', idInfo.identifier);
+                        element.setAttribute('data-team-category', idInfo.category);
+                        element.setAttribute('data-team-position', idInfo.position);
+                        element.setAttribute('data-team-group', idInfo.groupLetter);
+                        element.setAttribute('data-team-name', teamName);
+                        element.setAttribute('data-replaced-100-percent', 'true');
+                        element.setAttribute('data-replaced-at', Date.now());
+                        break;
+                    }
+                }
+            }
+        } else if (!teamName) {
+            failedCount++;
+            failedIdentifiers.push(idInfo.originalIdentifier);
+        }
+    }
+    
+    // VYSIELAME UDALOSŤ S MAPOVANÍM
+    if (Object.keys(window.__teamNameMapping).length > 0) {
+        hasReplacedAnyTeams = true;
+        
+        const event = new CustomEvent('teamNamesReplaced', {
+            detail: {
+                replacedCount: replacedCount,
+                fromCache: fromCacheCount,
+                fromDb: fromDbCount,
+                replacedTeams: Object.entries(window.__teamNameMapping).map(([id, data]) => ({
+                    originalIdentifier: id,
+                    teamName: data.teamName,
+                    category: data.category
+                })),
+                mappings: window.__teamNameMapping,
+                timestamp: Date.now()
+            }
+        });
+        window.dispatchEvent(event);
+        
+        replacementCallbacks.forEach(callback => {
+            try {
+                callback(Object.entries(window.__teamNameMapping).map(([id, data]) => ({
+                    originalIdentifier: id,
+                    teamName: data.teamName,
+                    category: data.category
+                })));
+            } catch (error) {
+                console.error('❌ Chyba v callbacku:', error);
+            }
+        });
+    }
+    
+    isReplacingInProgress = false;
+    
+    return {
+        replaced: replacedCount,
+        fromCache: fromCacheCount,
+        fromDb: fromDbCount,
+        failed: failedCount,
+        failedIdentifiers: failedIdentifiers
+    };
+};
+
+// Nahradíme pôvodnú funkciu novou
+const originalPerformPartialReplacementFunc = performPartialReplacement;
+performPartialReplacement = window.performPartialReplacement;
+
+// PRIDANÉ: Funkcia na manuálne spustenie eventu (pre prípad, že už boli nahradené tímy pred registráciou)
+function notifyReplacedTeams() {
+    if (hasReplacedAnyTeams) {
+        const replacedTeams = getReplacedTeams();
+        const event = new CustomEvent('teamNamesReplaced', {
+            detail: {
+                replacedCount: replacedTeams.length,
+                replacedTeams: replacedTeams,
+                timestamp: Date.now(),
+                isManual: true
+            }
+        });
+        window.dispatchEvent(event);
+        
+        replacementCallbacks.forEach(callback => {
+            try {
+                callback(replacedTeams);
+            } catch (error) {
+                console.error('❌ Chyba v callbacku:', error);
+            }
+        });
+    }
+}
+
+// ============================================================
+// NOTIFIKÁCIA O DOKONČENÍ MAPOVANIA – OKAMŽITÁ
+// ============================================================
+
+// Premenná na sledovanie, či už bolo mapovanie dokončené
+let mappingCompleted = false;
+let initialMappingDone = false;
+
+// Funkcia na odoslanie udalosti, že mapovanie je pripravené
+function notifyMappingReady() {
+    if (mappingCompleted) return;
+    mappingCompleted = true;
+    const mappings = getAllTeamMappings();
+    const mappingsCount = Object.keys(mappings).length;
+    console.log(`🎉 MAPOVANIE DOKONČENÉ! Počet mapovaní: ${mappingsCount}`);
+    const event = new CustomEvent('teamNameMappingReady', {
+        detail: { mappings, mappingsCount, timestamp: Date.now(), ready: true }
+    });
+    window.dispatchEvent(event);
+}
+
+// TOTO JE DÔLEŽITÉ - po načítaní existujúcich mapovaní
+if (Object.keys(window.__teamNameMapping).length > 0) {
+    console.log('✅ Mapovanie už existuje, odosielam udalosť okamžite...');
+    notifyMappingReady();
+}
+
+// DÔLEŽITÉ: Po každom úspešnom nahradení skontrolujeme, či už máme mapovanie
+const originalPerformPartialReplacementWrapper = window.performPartialReplacement || performPartialReplacement;
+
+window.performPartialReplacement = function(identifiersToReplace) {
+    const result = originalPerformPartialReplacementWrapper(identifiersToReplace);
+    
+    // Ak máme aspoň jedno mapovanie a ešte sme neodoslali udalosť
+    if (!initialMappingDone && Object.keys(window.__teamNameMapping).length > 0) {
+        initialMappingDone = true;
+        notifyMappingReady();
+    }
+    
+    return result;
+};
+
+// TIEŽ po každom úspešnom načítaní z databázy
+const originalGetTeamNameFromDatabaseWrapper = getTeamNameFromDatabase;
+window.getTeamNameFromDatabase = function(displayId) {
+    const result = originalGetTeamNameFromDatabaseWrapper(displayId);
+    
+    if (!initialMappingDone && result && window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0) {
+        initialMappingDone = true;
+        notifyMappingReady();
+    }
+    
+    return result;
+};
+
+// AKTUALIZOVANÁ FUNKCIA pre periodické nahrádzanie – po prvom nahradení odoslať udalosť
+const originalStartPeriodicReplacementWrapper = startPeriodicReplacement;
+window.startPeriodicReplacement = function(intervalSeconds = 1) {
+    const result = originalStartPeriodicReplacementWrapper(intervalSeconds);
+    
+    // Skontrolujeme, či už náhodou nemáme mapovanie
+    if (!initialMappingDone && Object.keys(window.__teamNameMapping).length > 0) {
+        initialMappingDone = true;
+        notifyMappingReady();
+    }
+    
+    return result;
+};
+
+// Funkcia na manuálne ohlásenie pripravenosti
+function announceMappingReady() {
+    if (mappingCompleted) return;
+    if (Object.keys(window.__teamNameMapping).length > 0) {
+        notifyMappingReady();
+    } else {
+        setTimeout(announceMappingReady, 500);
+    }
+}
+
+// ============================================================
+// ŠTARTOVACIA FUNKCIA S MONITOROVANÍM SKUPÍN
+// ============================================================
+
+// Uložíme pôvodnú štartovaciu funkciu
+const originalStartTeamNameReplacement = startTeamNameReplacement;
+
+// Prepíšeme štartovaciu funkciu, aby spustila aj monitorovanie skupín
+window.startTeamNameReplacement = async function() {
+    // Spustíme pôvodnú funkcionalitu
+    if (originalStartTeamNameReplacement) {
+        await originalStartTeamNameReplacement();
+    }
+    
+    // Počkáme na matchTracker a potom spustíme monitorovanie skupín
+    let checkInterval = setInterval(() => {
+        if (window.matchTracker && typeof window.matchTracker.getAllMatches === 'function') {
+            clearInterval(checkInterval);
+            console.log('✅ MatchTracker je pripravený, spúšťam monitorovanie skupín...');
+            
+            // Spustíme monitorovanie zmien v skupinách (kontrola každých 3 sekúnd)
+            startGroupMonitoring(3);
+            
+            // Taktiež sledujeme zmeny v databáze cez matchTracker
+            if (window.matchTracker && window.matchTracker.stop === 'function') {
+                // Uložíme pôvodný unsubscribe
+                const originalUnsubscribe = window.matchTracker.stop;
+            }
+        }
+    }, 500);
+};
+
+// Export funkcií - ROZŠÍRENIE existujúceho objektu
+if (window.teamNameReplacer) {
+    window.teamNameReplacer.onTeamNamesReplaced = onTeamNamesReplaced;
+    window.teamNameReplacer.getReplacedTeams = getReplacedTeams;
+    window.teamNameReplacer.notifyReplacedTeams = notifyReplacedTeams;
+    window.teamNameReplacer.hasReplacedAnyTeams = () => hasReplacedAnyTeams;
+    window.teamNameReplacer.registerTeamNameMapping = registerTeamNameMapping;
+    window.teamNameReplacer.getTeamNameFromMapping = getTeamNameFromMapping;
+    window.teamNameReplacer.getAllTeamMappings = getAllTeamMappings;
+    window.teamNameReplacer.isMappingReady = () => mappingCompleted;
+    window.teamNameReplacer.getMappings = () => window.__teamNameMapping;
+    window.teamNameReplacer.announceReady = announceMappingReady;
+    window.teamNameReplacer.forceNotify = notifyMappingReady;
+    // NOVÉ FUNKCIE PRE SLEDOVANIE SKUPÍN
+    window.teamNameReplacer.startGroupMonitoring = startGroupMonitoring;
+    window.teamNameReplacer.stopGroupMonitoring = stopGroupMonitoring;
+    window.teamNameReplacer.getGroupCompletionStatus = getGroupCompletionStatus;
+} else {
+    window.teamNameReplacer = {
+        ...window.teamNameReplacer,
+        onTeamNamesReplaced: onTeamNamesReplaced,
+        getReplacedTeams: getReplacedTeams,
+        notifyReplacedTeams: notifyReplacedTeams,
+        hasReplacedAnyTeams: () => hasReplacedAnyTeams,
+        registerTeamNameMapping: registerTeamNameMapping,
+        getTeamNameFromMapping: getTeamNameFromMapping,
+        getAllTeamMappings: getAllTeamMappings,
+        isMappingReady: () => mappingCompleted,
+        getMappings: () => window.__teamNameMapping,
+        announceReady: announceMappingReady,
+        forceNotify: notifyMappingReady,
+        startGroupMonitoring: startGroupMonitoring,
+        stopGroupMonitoring: stopGroupMonitoring,
+        getGroupCompletionStatus: getGroupCompletionStatus
+    };
+}
+
+// OKAMŽITÁ KONTROLA – ak už náhodou máme mapovanie, pošleme udalosť hneď
+if (Object.keys(window.__teamNameMapping).length > 0) {
+    notifyMappingReady();
+}
+
+// Spustíme upravenú verziu štartovacej funkcie
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.startTeamNameReplacement();
+    });
+} else {
+    window.startTeamNameReplacement();
+}
