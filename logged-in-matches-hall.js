@@ -2451,22 +2451,17 @@ const matchesHallApp = ({ userProfileData }) => {
             snapshot.forEach((doc) => {
                 const event = { id: doc.id, ...doc.data() };
                 loadedEvents.push(event);
-                
-                // Výpočet skóre podľa udalostí v chronologickom poradí
-                // (ale zachováme pôvodné poradie pre zobrazenie)
             });
             
-            // Zoradenie od najnovšej po najstaršiu (zostupne podľa času)
+            // Zoradenie od najnovšej po najstaršiu
             loadedEvents.sort((a, b) => {
-                // Najprv podľa minúty (zostupne)
                 if (a.minute !== b.minute) {
                     return (b.minute || 0) - (a.minute || 0);
                 }
-                // Potom podľa sekundy (zostupne)
                 return (b.second || 0) - (a.second || 0);
             });
             
-            // Pre výpočet aktuálneho skóre ideme od najstaršej po najnovšiu
+            // Výpočet skóre (zoradené od najstaršej)
             const sortedAsc = [...loadedEvents].sort((a, b) => {
                 if (a.minute !== b.minute) {
                     return (a.minute || 0) - (b.minute || 0);
@@ -2488,12 +2483,12 @@ const matchesHallApp = ({ userProfileData }) => {
             setMatchScore({ home: homeScore, away: awayScore });
             setLoadingEvents(false);
         }, (error) => {
-//            console.error("Chyba pri načítaní udalostí zápasu:", error);
+            console.error("Chyba pri načítaní udalostí zápasu:", error);
             setLoadingEvents(false);
         });
     
         return () => unsubscribe();
-    }, [selectedMatch]);
+    }, [selectedMatch]); // <-- DÔLEŽITÉ: selectedMatch ako závislosť
     
     const deleteMatchEvent = async (eventId) => {
         if (!window.db || !eventId) return;
