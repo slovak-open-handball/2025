@@ -3588,8 +3588,6 @@ const matchesHallApp = ({ userProfileData }) => {
         a.date - b.date
     );
 
-    // Ak je vybraný zápas, zobrazíme detail
-    if (selectedMatch) {
         const homeTeamName = React.useMemo(() => {
             if (!selectedMatch?.homeTeamIdentifier) return 'Neznámy tím';
             // Najprv skúsime cache
@@ -3609,6 +3607,9 @@ const matchesHallApp = ({ userProfileData }) => {
             teamNameCacheGlobal.set(selectedMatch.awayTeamIdentifier, result);
             return result;
         }, [selectedMatch?.awayTeamIdentifier]);
+
+    // Ak je vybraný zápas, zobrazíme detail
+    if (selectedMatch) {
         const homeTeamDetails = homeTeamDetailsState || getTeamDetails(selectedMatch.homeTeamIdentifier);
         const awayTeamDetails = awayTeamDetailsState || getTeamDetails(selectedMatch.awayTeamIdentifier);
         const matchDate = selectedMatch.scheduledTime ? formatDateWithDay(selectedMatch.scheduledTime.toDate()) : 'neurčený';
