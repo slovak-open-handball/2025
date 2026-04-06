@@ -8609,7 +8609,7 @@ const getCurrentMatchIdFromURL = async () => {
     }
 };
 
-// UPRAVENÁ FUNKCIA: setHomeTeamDetails - automaticky nájde aktuálny zápas
+// UPRAVENÁ FUNKCIA: setHomeTeamDetails - automaticky vykreslí do UI
 window.setHomeTeamDetails = async (teamName, categoryName) => {
     // 🔄 NAJPRV POUŽIJEME MAPPING
     let actualTeamName = teamName;
@@ -8654,6 +8654,10 @@ window.setHomeTeamDetails = async (teamName, categoryName) => {
             teamDetails: result,
             timestamp: Date.now()
         };
+        
+        // 🔄 VYKRESLÍME TÍM DO UI AJ BEZ matchId
+        renderFullTeamToUI(result, 'home');
+        window._homeTeamDetails = result;
         return;
     }
     
@@ -8666,13 +8670,17 @@ window.setHomeTeamDetails = async (teamName, categoryName) => {
     });
     window.dispatchEvent(event);
     
-    console.log(`✅ Domáci tím nastavený: ${actualTeamName}`);
+    // 🔄 VYKRESLÍME TÍM DO UI OKAMŽITE (nespoliehame sa na listener)
+    renderFullTeamToUI(result, 'home');
+    window._homeTeamDetails = result;
+    
+    console.log(`✅ Domáci tím nastavený a vykreslený: ${actualTeamName}`);
     console.log(`   📧 Používateľ: ${result.user.email}`);
     console.log(`   👥 Počet hráčov: ${result.team.playerDetails?.length || 0}`);
     console.log(`   🆔 ID zápasu: ${matchId}`);
 };
 
-// UPRAVENÁ FUNKCIA: setAwayTeamDetails - automaticky nájde aktuálny zápas
+// UPRAVENÁ FUNKCIA: setAwayTeamDetails - automaticky vykreslí do UI
 window.setAwayTeamDetails = async (teamName, categoryName) => {
     // 🔄 NAJPRV POUŽIJEME MAPPING
     let actualTeamName = teamName;
@@ -8717,6 +8725,10 @@ window.setAwayTeamDetails = async (teamName, categoryName) => {
             teamDetails: result,
             timestamp: Date.now()
         };
+        
+        // 🔄 VYKRESLÍME TÍM DO UI AJ BEZ matchId
+        renderFullTeamToUI(result, 'away');
+        window._awayTeamDetails = result;
         return;
     }
     
@@ -8729,7 +8741,11 @@ window.setAwayTeamDetails = async (teamName, categoryName) => {
     });
     window.dispatchEvent(event);
     
-    console.log(`✅ Hosťovský tím nastavený: ${actualTeamName}`);
+    // 🔄 VYKRESLÍME TÍM DO UI OKAMŽITE (nespoliehame sa na listener)
+    renderFullTeamToUI(result, 'away');
+    window._awayTeamDetails = result;
+    
+    console.log(`✅ Hosťovský tím nastavený a vykreslený: ${actualTeamName}`);
     console.log(`   📧 Používateľ: ${result.user.email}`);
     console.log(`   👥 Počet hráčov: ${result.team.playerDetails?.length || 0}`);
     console.log(`   🆔 ID zápasu: ${matchId}`);
@@ -8854,3 +8870,50 @@ console.log('');
 console.log('🚀 RÝCHLE POUŽITIE:');
 console.log('   setTeamsFromCurrentMatch()  - automaticky nastaví tímy z DOM');
 console.log('   showCurrentMatchStatus()    - zobrazí aktuálny stav');
+
+
+// ============================================================
+// FUNKCIA NA AUTOMATICKÉ VYKRESLENIE TÍMOV PO NASTAVENÍ
+// ============================================================
+
+// Táto funkcia sa spustí po každom nastavení tímu a vykreslí ho do UI
+const setupTeamRenderingListener = () => {
+    // Poslúchač pre domáci tím
+    const handleHomeTeamRendered = (event) => {
+        const teamDetails = event.detail.teamDetails;
+        const matchId = event.detail.matchId;
+        
+        // Skontrolujeme, či je to aktuálny zápas
+        if (matchId === window.currentMatchId || !window.currentMatchId) {
+            console.log(`🎨 Automatické vykreslenie domáceho tímu: ${teamDetails.team.teamName}`);
+            renderFullTeamToUI(teamDetails, 'home');
+            window._homeTeamDetails = teamDetails;
+        }
+    };
+    
+    // Poslúchač pre hosťovský tím
+    const handleAwayTeamRendered = (event) => {
+        const teamDetails = event.detail.teamDetails;
+        const matchId = event.detail.matchId;
+        
+        // Skontrolujeme, či je to aktuálny zápas
+        if (matchId === window.currentMatchId || !window.currentMatchId) {
+            console.log(`🎨 Automatické vykreslenie hosťovského tímu: ${teamDetails.team.teamName}`);
+            renderFullTeamToUI(teamDetails, 'away');
+            window._awayTeamDetails = teamDetails;
+        }
+    };
+    
+    // Odstránime staré poslúchače (aby sa neduplikovali)
+    window.removeEventListener('setHomeTeamDetails', handleHomeTeamRendered);
+    window.removeEventListener('setAwayTeamDetails', handleAwayTeamRendered);
+    
+    // Pridáme nové poslúchače
+    window.addEventListener('setHomeTeamDetails', handleHomeTeamRendered);
+    window.addEventListener('setAwayTeamDetails', handleAwayTeamRendered);
+    
+    console.log('✅ Nastavené automatické vykreslenie tímov do UI');
+};
+
+// Spustíme listener
+setupTeamRenderingListener();
