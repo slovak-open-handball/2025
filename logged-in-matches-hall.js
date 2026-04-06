@@ -3421,6 +3421,25 @@ const matchesHallApp = ({ userProfileData }) => {
 
         // Funkcia pre zobrazenie hráčov (UPRAVENÁ - sekcia Ostatní sa zobrazuje vždy, ale bez klikania v režimoch in-progress/completed)
         const renderPlayersSection = (teamDetails, teamType, teamName) => {
+            // Ak nie sú detaily tímu, zobrazíme "Nedostupné" a ukončíme
+            if (!teamDetails) {
+                return React.createElement(
+                    'div',
+                    null,
+                    React.createElement(
+                        'h4',
+                        { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
+                        React.createElement('i', { className: 'fa-solid fa-users text-xs text-gray-500' }),
+                        `Hráči (0)`
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'text-sm text-gray-500 italic p-2' },
+                        'Nedostupné'
+                    )
+                );
+            }
+            
             // Získame aktívnych hráčov (ktorí nie sú odstránení pre tento zápas)
             const activePlayers = teamDetails?.team.playerDetails?.filter(p => p && !p.removedForMatch) || [];
             
