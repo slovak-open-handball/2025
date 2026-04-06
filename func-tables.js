@@ -530,7 +530,7 @@
         return `[${filled}${empty}]`;
     }
     
-    // Funkcia na výpis všetkých tabuliek skupín
+        // Funkcia na výpis všetkých tabuliek skupín
     function printAllGroupTables() {
         const allMatches = getAllMatches();
         
@@ -539,9 +539,12 @@
             return;
         }
         
-        // Získame unikátne kombinácie kategória + skupina
+        // Získame unikátne kombinácie kategória + skupina, ALE VYNEChÁME ZÁPASY O UMIESTNENIE
         const uniqueGroups = new Set();
         allMatches.forEach(match => {
+            // PRESKOČÍME ZÁPASY O UMIESTNENIE
+            if (match.isPlacementMatch) return;
+            
             if (match.categoryName && match.groupName) {
                 uniqueGroups.add(`${match.categoryName}|${match.groupName}`);
             }
