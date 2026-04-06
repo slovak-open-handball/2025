@@ -6917,23 +6917,15 @@ console.log('   • window.setMatchToInProgressByIdentifiers(homeIdentifier, awa
 
 
 // ============================================================================
-// OPRAVENÁ FUNKCIA NA MANUÁLNE VLOŽENIE TÍMU DO UI PODĽA NÁZVU A KATEGÓRIE
+// POMOCNÁ FUNKCIA NA VYHĽADANIE TÍMU V POUŽÍVATEĽSKÝCH DÁTACH
 // ============================================================================
 
 /**
- * Vyhľadá tím v používateľských dátach podľa názvu tímu a kategórie
- * a vloží jeho hráčov a členov RT do aktuálneho detailu zápasu.
- * 
- * @param {string} teamName - Názov tímu (napr. "ŠK Slovan Bratislava")
- * @param {string} categoryName - Názov kategórie (napr. "U12 D")
- * @param {string} teamSide - Ktorá strana sa má nahradiť: 'home' alebo 'away'
- * @returns {Promise<Object|null>} - Vráti informácie o nájdenom tíme alebo null
- * 
- * Príklad použitia v konzole:
- * window.forceTeamIntoMatch("ŠK Slovan Bratislava", "U12 D", "home")
- * window.forceTeamIntoMatch("MŠK Žilina", "U12 D", "away")
+ * Vyhľadá tím v používateľských dátach podľa názvu a kategórie.
+ * @param {string} teamName - Názov tímu
+ * @param {string} categoryName - Názov kategórie
+ * @returns {Promise<Object|null>} - Informácie o tíme alebo null
  */
-
 window.findTeamInUsers = async (teamName, categoryName) => {
     if (!window.db) {
         console.error('❌ Firebase databáza nie je inicializovaná.');
@@ -7030,6 +7022,23 @@ window.findTeamInUsers = async (teamName, categoryName) => {
     }
 };
 
+// ============================================================================
+// OPRAVENÁ FUNKCIA NA MANUÁLNE VLOŽENIE TÍMU DO UI PODĽA NÁZVU A KATEGÓRIE
+// ============================================================================
+
+/**
+ * Vyhľadá tím v používateľských dátach podľa názvu tímu a kategórie
+ * a vloží jeho hráčov a členov RT do aktuálneho detailu zápasu.
+ * 
+ * @param {string} teamName - Názov tímu (napr. "ŠK Slovan Bratislava")
+ * @param {string} categoryName - Názov kategórie (napr. "U12 D")
+ * @param {string} teamSide - Ktorá strana sa má nahradiť: 'home' alebo 'away'
+ * @returns {Promise<Object|null>} - Vráti informácie o nájdenom tíme alebo null
+ * 
+ * Príklad použitia v konzole:
+ * window.forceTeamIntoMatch("ŠK Slovan Bratislava", "U12 D", "home")
+ * window.forceTeamIntoMatch("MŠK Žilina", "U12 D", "away")
+ */
 window.forceTeamIntoMatch = async (teamName, categoryName, teamSide = 'home') => {
     if (!teamName || !categoryName) {
         console.error('❌ Chyba: Je potrebné zadať názov tímu a názov kategórie.');
@@ -7070,6 +7079,8 @@ window.forceTeamIntoMatch = async (teamName, categoryName, teamSide = 'home') =>
                         window.currentMatchId = currentMatchId;
                         console.log(`✅ Nájdený zápas z URL: ${currentMatchId}`);
                     });
+                } else {
+                    console.log(`❌ Zápas s domáci=${homeIdentifier} a hostia=${awayIdentifier} nebol nájdený.`);
                 }
             } catch (error) {
                 console.error('Chyba pri vyhľadávaní zápasu z URL:', error);
@@ -7077,18 +7088,7 @@ window.forceTeamIntoMatch = async (teamName, categoryName, teamSide = 'home') =>
         }
     }
     
-    // 2. AK STILL NEMÁME ID, SKÚSIME HO ZÍSKAŤ Z AKTÍVNEHO PRVKU V DOM
-    if (!currentMatchId) {
-        // Skúsime nájsť aktívny detail zápasu v DOM
-        const matchDetailElement = document.querySelector('[data-match-id]');
-        if (matchDetailElement) {
-            currentMatchId = matchDetailElement.getAttribute('data-match-id');
-            window.currentMatchId = currentMatchId;
-            console.log(`✅ Nájdený zápas z DOM: ${currentMatchId}`);
-        }
-    }
-    
-    // 3. SKONTROLUJEME, ČI MÁME ID ZÁPASU
+    // 2. SKONTROLUJEME, ČI MÁME ID ZÁPASU
     if (!currentMatchId) {
         console.error('❌ Chyba: Nie je vybraný žiadny zápas. Najprv otvorte detail zápasu.');
         console.log('   Tip: Otvorte zápas kliknutím v zozname alebo priamym URL s parametrami domaci a hostia');
@@ -7097,7 +7097,7 @@ window.forceTeamIntoMatch = async (teamName, categoryName, teamSide = 'home') =>
     }
 
     try {
-        // 4. Načítame aktuálny zápas
+        // 3. Načítame aktuálny zápas
         const matchRef = doc(window.db, 'matches', currentMatchId);
         const matchSnap = await getDoc(matchRef);
         
@@ -7114,8 +7114,8 @@ window.forceTeamIntoMatch = async (teamName, categoryName, teamSide = 'home') =>
             category: matchData.categoryName
         });
 
-        // 5. Vyhľadáme tím v používateľských dátach
-        const teamInfo = await findTeamInUsers(teamName, categoryName);
+        // 4. Vyhľadáme tím v používateľských dátach
+        const teamInfo = await window.findTeamInUsers(teamName, categoryName);
         
         if (!teamInfo) {
             console.error(`❌ Tím "${teamName}" v kategórii "${categoryName}" nebol nájdený.`);
@@ -7124,19 +7124,21 @@ window.forceTeamIntoMatch = async (teamName, categoryName, teamSide = 'home') =>
 
         console.log(`✅ Nájdený tím:`, teamInfo);
 
-        // 6. Vytvoríme identifikátor pre tím
+        // 5. Vytvoríme identifikátor pre tím
         let teamIdentifier = null;
         
         if (teamInfo.groupName && teamInfo.order) {
+            // Extrahujeme písmeno skupiny (napr. "skupina D" -> "D")
             const groupLetter = teamInfo.groupName.replace('skupina ', '').toUpperCase();
             teamIdentifier = `${categoryName} ${teamInfo.order}${groupLetter}`;
+            console.log(`🔍 Vytvorený identifikátor z groupName a order: ${teamIdentifier}`);
         } else {
+            // Fallback - použijeme názov tímu
             teamIdentifier = teamName;
+            console.log(`⚠️ Tím nemá groupName/order, používam názov ako identifikátor: ${teamIdentifier}`);
         }
-        
-        console.log(`🔍 Vytvorený identifikátor: ${teamIdentifier}`);
 
-        // 7. Aktualizujeme zápas v databáze
+        // 6. Aktualizujeme zápas v databáze
         const updateData = {};
         if (teamSide === 'home') {
             updateData.homeTeamIdentifier = teamIdentifier;
@@ -7147,8 +7149,7 @@ window.forceTeamIntoMatch = async (teamName, categoryName, teamSide = 'home') =>
         await updateDoc(matchRef, updateData);
         console.log(`✅ Zápas bol aktualizovaný: ${teamSide} tím nastavený na "${teamIdentifier}"`);
         
-        // 8. AKTUÁLNE VYVOLÁME OBNOVENIE UI (manuálne)
-        // Najprv skúsime cez React setter
+        // 7. Vyvoláme obnovenie UI
         if (window.__reactSelectedMatchSetter && typeof window.__reactSelectedMatchSetter === 'function') {
             const updatedMatch = {
                 ...matchData,
@@ -7158,15 +7159,10 @@ window.forceTeamIntoMatch = async (teamName, categoryName, teamSide = 'home') =>
             window.__reactSelectedMatchSetter(updatedMatch);
             console.log('🔄 UI bolo aktualizované cez React setter.');
         } else {
-            // Ak nemáme React setter, skúsime obnoviť celú stránku
-            console.log('⚠️ UI sa nepodarilo aktualizovať automaticky.');
-            console.log('🔄 Obnovujem stránku pre zobrazenie zmien...');
-            setTimeout(() => {
-                window.location.reload();
-            }, 2000);
+            console.log('⚠️ UI sa nepodarilo aktualizovať automaticky. Obnovte stránku (F5) pre zobrazenie zmien.');
         }
         
-        // 9. Vypíšeme informácie o tíme
+        // 8. Vypíšeme informácie o tíme pre kontrolu
         console.log('\n📊 INFORMÁCIE O VLOŽENOM TÍME:');
         console.log(`   Názov: ${teamInfo.teamName}`);
         console.log(`   Kategória: ${categoryName}`);
@@ -7198,6 +7194,8 @@ window.forceTeamIntoMatch = async (teamName, categoryName, teamSide = 'home') =>
             });
         }
         
+        console.log('\n💡 Pre úplné zobrazenie v UI môže byť potrebné obnoviť stránku (F5).');
+        
         return teamInfo;
         
     } catch (error) {
@@ -7205,3 +7203,92 @@ window.forceTeamIntoMatch = async (teamName, categoryName, teamSide = 'home') =>
         return null;
     }
 };
+
+/**
+ * Pomocná funkcia na zobrazenie všetkých dostupných tímov v systéme.
+ * @returns {Promise<Array>} - Zoznam všetkých tímov
+ */
+window.listAllTeams = async () => {
+    if (!window.db) {
+        console.error('❌ Chyba: Firebase databáza nie je inicializovaná.');
+        return [];
+    }
+    
+    try {
+        const usersRef = collection(window.db, 'users');
+        const usersSnap = await getDocs(usersRef);
+        const allTeams = [];
+        
+        console.log('📋 ZOZNAM VŠETKÝCH TÍMOV V SYSTÉME:\n');
+        
+        for (const userDoc of usersSnap.docs) {
+            const userData = userDoc.data();
+            const teams = userData.teams || {};
+            
+            for (const [category, teamsArray] of Object.entries(teams)) {
+                if (Array.isArray(teamsArray)) {
+                    teamsArray.forEach(team => {
+                        if (team.teamName) {
+                            const teamInfo = {
+                                name: team.teamName,
+                                category: category,
+                                group: team.groupName,
+                                order: team.order,
+                                userId: userDoc.id,
+                                userEmail: userData.email,
+                                playersCount: team.playerDetails?.length || 0,
+                                menStaffCount: team.menTeamMemberDetails?.length || 0,
+                                womenStaffCount: team.womenTeamMemberDetails?.length || 0
+                            };
+                            allTeams.push(teamInfo);
+                            
+                            console.log(`🏆 ${team.teamName}`);
+                            console.log(`   Kategória: ${category}`);
+                            console.log(`   Skupina: ${team.groupName || 'neurčená'}, Poradie: ${team.order || 'neurčené'}`);
+                            console.log(`   Používateľ: ${userData.email}`);
+                            console.log(`   Hráči: ${teamInfo.playersCount}, RT (M/Ž): ${teamInfo.menStaffCount}/${teamInfo.womenStaffCount}`);
+                            console.log('   ---');
+                        }
+                    });
+                }
+            }
+        }
+        
+        console.log(`\n📊 Celkový počet tímov: ${allTeams.length}`);
+        return allTeams;
+        
+    } catch (error) {
+        console.error('❌ Chyba pri načítaní tímov:', error);
+        return [];
+    }
+};
+
+/**
+ * Funkcia na registráciu React settera pre aktualizáciu UI.
+ * Túto funkciu treba zavolať z React komponentu, keď je selectedMatch dostupný.
+ */
+window.registerMatchSetter = (setterFunction) => {
+    window.__reactSelectedMatchSetter = setterFunction;
+    console.log('✅ React setter pre selectedMatch bol zaregistrovaný.');
+};
+
+// ============================================================================
+// PRÍKLADY POUŽITIA V KONZOLE:
+// ============================================================================
+// 
+// 1. Zobrazenie všetkých dostupných tímov:
+//    window.listAllTeams()
+//
+// 2. Vloženie tímu do domácich:
+//    window.forceTeamIntoMatch("MHK Piešťany", "U12 D", "home")
+//
+// 3. Vloženie tímu do hostí:
+//    window.forceTeamIntoMatch("MŠK Žilina", "U12 D", "away")
+//
+// ============================================================================
+
+console.log('✅ Pripravené funkcie na manuálne vloženie tímu do UI:');
+console.log('   • window.listAllTeams() - zobrazenie všetkých dostupných tímov');
+console.log('   • window.findTeamInUsers("názov", "kategória") - vyhľadanie tímu');
+console.log('   • window.forceTeamIntoMatch("názov tímu", "kategória", "home/away") - vloženie tímu do zápasu');
+console.log('   • window.registerMatchSetter(setterFunction) - registrácia React settera (voliteľné)');
