@@ -7606,6 +7606,7 @@ function escapeHtml(str) {
         .replace(/'/g, '&#39;');
 }
 
+
 // OPRAVENÁ FUNKCIA: findTeamByNameAndCategoryDirect - používa mapovanie
 async function findTeamByNameAndCategoryDirect(teamNameOrIdentifier, categoryName, renderToDOM = false) {
     if (!teamNameOrIdentifier || !categoryName) {
