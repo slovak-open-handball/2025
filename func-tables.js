@@ -1085,7 +1085,7 @@ function getTeamNameFromCacheOnly(displayId) {
     // Iba z cache, žiadne volanie do databázy
     if (replacementCache.has(cacheKey)) {
         const cached = replacementCache.get(cacheKey);
-        console.log(`💿 POUŽITÉ Z CACHE (rýchle): "${displayId}" → "${cached.teamName}"`);
+//        console.log(`💿 POUŽITÉ Z CACHE (rýchle): "${displayId}" → "${cached.teamName}"`);
         return cached.teamName;
     }
     
