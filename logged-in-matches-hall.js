@@ -6754,6 +6754,57 @@ console.log('   • window.matchTracker.getTeamInfoByDisplayId("U12 D 2B") - vr�
 
 
 
+const getCurrentMatchIdFromURL = async () => {
+    // 1. Skúsime získať z URL parametrov
+    const urlParams = new URLSearchParams(window.location.search);
+    const homeIdentifier = urlParams.get('domaci');
+    const awayIdentifier = urlParams.get('hostia');
+    
+    if (homeIdentifier && awayIdentifier) {
+        // Skúsime nájsť zápas v databáze podľa identifikátorov
+        if (window.db) {
+            try {
+                const matchesRef = collection(window.db, 'matches');
+                const q = query(
+                    matchesRef, 
+                    where("homeTeamIdentifier", "==", homeIdentifier),
+                    where("awayTeamIdentifier", "==", awayIdentifier)
+                );
+                const querySnapshot = await getDocs(q);
+                
+                if (!querySnapshot.empty) {
+                    let matchId = null;
+                    querySnapshot.forEach((doc) => {
+                        matchId = doc.id;
+                    });
+                    if (matchId) {
+                        console.log(`✅ Nájdené ID zápasu z URL: ${matchId}`);
+                        return matchId;
+                    }
+                }
+            } catch (error) {
+                console.warn('Chyba pri hľadaní zápasu v DB:', error);
+            }
+        }
+        
+        // Ak nemôžeme nájsť v DB, vrátime identifikátory ako string (pre neskoršie použitie)
+        console.log(`ℹ️ Zápas podľa URL: domáci=${homeIdentifier}, hostia=${awayIdentifier}`);
+        return `temp_${homeIdentifier}_${awayIdentifier}`;
+    }
+    
+    // 2. Skúsime získať z DOM elementov
+    const matchElement = document.querySelector('[data-match-id]');
+    if (matchElement) {
+        const matchId = matchElement.getAttribute('data-match-id');
+        if (matchId) {
+            console.log(`✅ Nájdené ID zápasu z DOM: ${matchId}`);
+            return matchId;
+        }
+    }
+    
+    console.log('❌ Nepodarilo sa získať ID zápasu');
+    return null;
+};
 
 // Funkcia na vyhľadanie všetkých tímov v aktuálnom DOM
 function findAllTeamsInDOM() {
@@ -7413,93 +7464,126 @@ console.log('   findTeamByNameAndCategory("ŠK Slovan", "U12 D")');
 // KOMPLETNÉ FUNKCIE PRE MANUÁLNE NASTAVENIE TÍMOV
 // ============================================================
 
-// Funkcia na manuálne nastavenie detailov domáceho tímu
-window.setHomeTeamDetails = (teamName, categoryName) => {
-    if (!window.currentMatchId) {
-        console.log('❌ Žiadny aktuálny zápas nie je vybraný');
-        console.log('💡 Najprv kliknite na nejaký zápas v zozname');
-        return;
-    }
-    
+// UPRAVENÁ FUNKCIA: setHomeTeamDetails - automaticky nájde aktuálny zápas
+window.setHomeTeamDetails = async (teamName, categoryName) => {
     console.log(`🔍 Vyhľadávam domáci tím: "${teamName}" v kategórii: "${categoryName}"`);
     
+    // Nájdenie detailov tímu
     const result = findTeamByNameAndCategory(teamName, categoryName, false);
     
-    if (result && !Array.isArray(result)) {
-        const event = new CustomEvent('setHomeTeamDetails', {
-            detail: {
-                teamDetails: result,
-                matchId: window.currentMatchId
-            }
-        });
-        window.dispatchEvent(event);
-        console.log(`✅ Domáci tím nastavený: ${teamName}`);
-        console.log(`   📧 Používateľ: ${result.user.email}`);
-        console.log(`   👥 Počet hráčov: ${result.team.playerDetails?.length || 0}`);
-    } else {
+    if (!result || Array.isArray(result)) {
         console.log(`❌ Tím "${teamName}" v kategórii "${categoryName}" nebol nájdený`);
-    }
-};
-
-// Funkcia na manuálne nastavenie detailov hosťovského tímu
-window.setAwayTeamDetails = (teamName, categoryName) => {
-    if (!window.currentMatchId) {
-        console.log('❌ Žiadny aktuálny zápas nie je vybraný');
-        console.log('💡 Najprv kliknite na nejaký zápas v zozname');
         return;
     }
     
+    // Získanie ID zápasu (automaticky)
+    let matchId = window.currentMatchId;
+    if (!matchId) {
+        matchId = await getCurrentMatchIdFromURL();
+    }
+    
+    if (!matchId) {
+        console.log('⚠️ Nepodarilo sa získať ID zápasu, ale tím bol nájdený.');
+        console.log(`   Tím: ${result.team.teamName}`);
+        console.log(`   Používateľ: ${result.user.email}`);
+        console.log(`   Počet hráčov: ${result.team.playerDetails?.length || 0}`);
+        
+        // Uložíme do globálneho stavu aj bez matchId
+        window._lastFoundTeam = {
+            type: 'home',
+            teamDetails: result,
+            timestamp: Date.now()
+        };
+        return;
+    }
+    
+    // Odoslanie udalosti
+    const event = new CustomEvent('setHomeTeamDetails', {
+        detail: {
+            teamDetails: result,
+            matchId: matchId
+        }
+    });
+    window.dispatchEvent(event);
+    
+    console.log(`✅ Domáci tím nastavený: ${teamName}`);
+    console.log(`   📧 Používateľ: ${result.user.email}`);
+    console.log(`   👥 Počet hráčov: ${result.team.playerDetails?.length || 0}`);
+    console.log(`   🆔 ID zápasu: ${matchId}`);
+};
+
+// UPRAVENÁ FUNKCIA: setAwayTeamDetails - automaticky nájde aktuálny zápas
+window.setAwayTeamDetails = async (teamName, categoryName) => {
     console.log(`🔍 Vyhľadávam hosťovský tím: "${teamName}" v kategórii: "${categoryName}"`);
     
+    // Nájdenie detailov tímu
     const result = findTeamByNameAndCategory(teamName, categoryName, false);
     
-    if (result && !Array.isArray(result)) {
-        const event = new CustomEvent('setAwayTeamDetails', {
-            detail: {
-                teamDetails: result,
-                matchId: window.currentMatchId
-            }
-        });
-        window.dispatchEvent(event);
-        console.log(`✅ Hosťovský tím nastavený: ${teamName}`);
-        console.log(`   📧 Používateľ: ${result.user.email}`);
-        console.log(`   👥 Počet hráčov: ${result.team.playerDetails?.length || 0}`);
-    } else {
+    if (!result || Array.isArray(result)) {
         console.log(`❌ Tím "${teamName}" v kategórii "${categoryName}" nebol nájdený`);
-    }
-};
-
-// Funkcia na nastavenie oboch tímov naraz
-window.setBothTeamsDetails = (homeTeamName, homeCategory, awayTeamName, awayCategory) => {
-    console.log('🔧 Nastavujem oba tímy...');
-    if (homeTeamName && homeCategory) {
-        window.setHomeTeamDetails(homeTeamName, homeCategory);
-    }
-    if (awayTeamName && awayCategory) {
-        window.setAwayTeamDetails(awayTeamName, awayCategory);
-    }
-};
-
-// Funkcia na automatické nastavenie tímov z aktuálneho zápasu v DOM
-window.setTeamsFromCurrentMatch = () => {
-    console.log('🔍 Automatické nastavenie tímov z aktuálneho zápasu v DOM...');
-    
-    if (!window.currentMatchId) {
-        console.log('⚠️ Žiadny aktuálny zápas nie je vybraný');
-        console.log('💡 Najprv kliknite na nejaký zápas v zozname, potom spustite túto funkciu');
         return;
     }
+    
+    // Získanie ID zápasu (automaticky)
+    let matchId = window.currentMatchId;
+    if (!matchId) {
+        matchId = await getCurrentMatchIdFromURL();
+    }
+    
+    if (!matchId) {
+        console.log('⚠️ Nepodarilo sa získať ID zápasu, ale tím bol nájdený.');
+        console.log(`   Tím: ${result.team.teamName}`);
+        console.log(`   Používateľ: ${result.user.email}`);
+        console.log(`   Počet hráčov: ${result.team.playerDetails?.length || 0}`);
+        
+        // Uložíme do globálneho stavu aj bez matchId
+        window._lastFoundTeam = {
+            type: 'away',
+            teamDetails: result,
+            timestamp: Date.now()
+        };
+        return;
+    }
+    
+    // Odoslanie udalosti
+    const event = new CustomEvent('setAwayTeamDetails', {
+        detail: {
+            teamDetails: result,
+            matchId: matchId
+        }
+    });
+    window.dispatchEvent(event);
+    
+    console.log(`✅ Hosťovský tím nastavený: ${teamName}`);
+    console.log(`   📧 Používateľ: ${result.user.email}`);
+    console.log(`   👥 Počet hráčov: ${result.team.playerDetails?.length || 0}`);
+    console.log(`   🆔 ID zápasu: ${matchId}`);
+};
+
+window.setBothTeamsDetails = async (homeTeamName, homeCategory, awayTeamName, awayCategory) => {
+    console.log('🔧 Nastavujem oba tímy...');
+    if (homeTeamName && homeCategory) {
+        await window.setHomeTeamDetails(homeTeamName, homeCategory);
+    }
+    if (awayTeamName && awayCategory) {
+        await window.setAwayTeamDetails(awayTeamName, awayCategory);
+    }
+};
+
+// UPRAVENÁ FUNKCIA: setTeamsFromCurrentMatch
+window.setTeamsFromCurrentMatch = async () => {
+    console.log('🔍 Automatické nastavenie tímov z aktuálneho zápasu v DOM...');
     
     const result = findCurrentMatchTeamsFromDOM(false);
     
     if (result && result.home) {
-        window.setHomeTeamDetails(result.home.team.teamName, result.home.category);
+        await window.setHomeTeamDetails(result.home.team.teamName, result.home.category);
     } else {
         console.log('❌ Nepodarilo sa nájsť domáci tím v DOM');
     }
     
     if (result && result.away) {
-        window.setAwayTeamDetails(result.away.team.teamName, result.away.category);
+        await window.setAwayTeamDetails(result.away.team.teamName, result.away.category);
     } else {
         console.log('❌ Nepodarilo sa nájsť hosťovský tím v DOM');
     }
