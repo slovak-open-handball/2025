@@ -7905,139 +7905,51 @@ async function findTeamByNameAndCategory(teamNameOrIdentifier, categoryName, ren
 // Prepíšeme pôvodnú funkciu
 window.findTeamByNameAndCategory = findTeamByNameAndCategory;
 
-
-// OPRAVENÁ FUNKCIA: findTeamByNameAndCategoryDirect - najprv skúsi mapovanie, potom priame vyhľadávanie
-async function findTeamByNameAndCategoryDirect(teamNameOrIdentifier, categoryName, renderToDOM = false) {
-    if (!teamNameOrIdentifier || !categoryName) {
-        console.log('❌ DIRECT: Je potrebné zadať názov/identifikátor tímu a kategóriu');
+// OPRAVENÁ FUNKCIA: findTeamByNameAndCategoryDirect - hľadá VÝHRADNE podľa názvu tímu
+async function findTeamByNameAndCategoryDirect(teamName, categoryName, renderToDOM = false) {
+    if (!teamName || !categoryName) {
+        console.log('❌ DIRECT: Je potrebné zadať názov tímu a kategóriu');
         return null;
     }
     
-    console.log(`🔍 DIRECT: Hľadám tím: "${teamNameOrIdentifier}" v kategórii: "${categoryName}"`);
+    console.log(`🔍 DIRECT: Hľadám tím podľa NÁZVU: "${teamName}" v kategórii: "${categoryName}"`);
     
-    // 1. NAJPRV SKÚSIME ZÍSKAŤ PÔVODNÝ IDENTIFIKÁTOR CEZ MAPOVANIE
-    let searchIdentifier = null;
-    let actualTeamName = teamNameOrIdentifier;
-    
-    // Skontrolujeme, či je zadaný názov už identifikátor (obsahuje medzeru a číslo+písmeno)
-    const identifierPattern = /\s+\d+[A-Za-z]/;
-    const isIdentifier = identifierPattern.test(teamNameOrIdentifier);
-    
-    if (!isIdentifier) {
-        // Toto je pravdepodobne zobrazený názov tímu, skúsime nájsť jeho identifikátor
-        if (window.__teamNameMapping) {
-            for (const [identifier, mapping] of Object.entries(window.__teamNameMapping)) {
-                if (mapping.teamName === teamNameOrIdentifier) {
-                    searchIdentifier = identifier;
-                    console.log(`   🔄 Nájdený identifikátor pre názov "${teamNameOrIdentifier}": "${searchIdentifier}"`);
-                    break;
-                }
-            }
-        }
-        
-        // Ak sme nenašli v __teamNameMapping, skúsime v DOM
-        if (!searchIdentifier) {
-            const elements = document.querySelectorAll(`[data-team-name="${teamNameOrIdentifier}"]`);
-            if (elements.length > 0) {
-                searchIdentifier = elements[0].getAttribute('data-original-identifier');
-                if (searchIdentifier) {
-                    console.log(`   🔄 Nájdený identifikátor v DOM: "${searchIdentifier}"`);
-                }
-            }
-        }
-    } else {
-        // Už je to identifikátor
-        searchIdentifier = teamNameOrIdentifier;
-        console.log(`   📌 Používam priamo identifikátor: "${searchIdentifier}"`);
-    }
-    
-    // 2. AK MÁME IDENTIFIKÁTOR, POUŽIJEME HO NA VYHĽADANIE
-    if (searchIdentifier) {
-        // Parsujeme identifikátor
-        const parts = searchIdentifier.trim().split(' ');
-        if (parts.length >= 2) {
-            const groupAndOrder = parts.pop();
-            const parsedCategory = parts.join(' ');
-            
-            // Rozdelíme groupAndOrder na groupLetter a order
-            let groupLetter = '';
-            let order = '';
-            for (let i = 0; i < groupAndOrder.length; i++) {
-                const char = groupAndOrder[i];
-                if (char >= '0' && char <= '9') {
-                    order = groupAndOrder.substring(i);
-                    groupLetter = groupAndOrder.substring(0, i);
-                    break;
-                }
-            }
-            
-            if (order && groupLetter) {
-                const fullGroupName = `skupina ${groupLetter}`;
-                const orderNum = parseInt(order, 10);
-                
-                console.log(`   🎯 Vyhľadávam podľa: kategória="${parsedCategory}", skupina="${fullGroupName}", poradie=${orderNum}`);
-                
-                // Získame všetkých používateľov
-                let allUsers = [];
-                if (window.users && Array.isArray(window.users) && window.users.length > 0) {
-                    allUsers = window.users;
-                } else if (window.__users && Array.isArray(window.__users) && window.__users.length > 0) {
-                    allUsers = window.__users;
-                }
-                
-                for (const user of allUsers) {
-                    if (!user.teams) continue;
-                    
-                    for (const [category, teams] of Object.entries(user.teams)) {
-                        if (category.toLowerCase() !== parsedCategory.toLowerCase()) continue;
-                        if (!Array.isArray(teams)) continue;
-                        
-                        const team = teams.find(t => 
-                            t.groupName === fullGroupName && 
-                            t.order === orderNum
-                        );
-                        
-                        if (team) {
-                            console.log(`✅ DIRECT: Nájdený tím podľa identifikátora: ${team.teamName} (používateľ: ${user.email})`);
-                            return {
-                                user: {
-                                    id: user.id,
-                                    email: user.email,
-                                    displayName: user.displayName,
-                                    role: user.role,
-                                    approved: user.approved,
-                                    hallId: user.hallId
-                                },
-                                team: team,
-                                category: category
-                            };
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    // 3. FALLBACK: Skúsime priame vyhľadávanie podľa názvu (pre prípad, že tím je uložený priamo pod tým názvom)
+    // Získame všetkých používateľov
     let allUsers = [];
     if (window.users && Array.isArray(window.users) && window.users.length > 0) {
         allUsers = window.users;
     } else if (window.__users && Array.isArray(window.__users) && window.__users.length > 0) {
         allUsers = window.__users;
+    } else {
+        console.log('⚠️ DIRECT: window.users nie je dostupný');
+        return null;
     }
     
+    // Prehľadávame všetkých používateľov a ich tímy
     for (const user of allUsers) {
         if (!user.teams) continue;
         
         for (const [category, teams] of Object.entries(user.teams)) {
+            // Porovnanie kategórie (case-insensitive)
             if (category.toLowerCase() !== categoryName.toLowerCase()) continue;
+            
             if (!Array.isArray(teams)) continue;
             
-            const team = teams.find(t => t.teamName && t.teamName.toLowerCase() === actualTeamName.toLowerCase());
+            // Hľadáme tím podľa PRESNEJ ZHODY NÁZVU (case-insensitive)
+            const team = teams.find(t => 
+                t.teamName && 
+                t.teamName.toLowerCase() === teamName.toLowerCase()
+            );
             
             if (team) {
-                console.log(`✅ DIRECT: Nájdený tím podľa názvu: ${team.teamName} (používateľ: ${user.email})`);
-                return {
+                console.log(`✅ DIRECT: Nájdený tím: "${team.teamName}"`);
+                console.log(`   📧 Používateľ: ${user.email}`);
+                console.log(`   📂 Kategória: ${category}`);
+                console.log(`   👥 Skupina: ${team.groupName}`);
+                console.log(`   📈 Poradie: ${team.order}`);
+                console.log(`   👕 Počet hráčov: ${team.playerDetails?.length || 0}`);
+                
+                const result = {
                     user: {
                         id: user.id,
                         email: user.email,
@@ -8049,13 +7961,21 @@ async function findTeamByNameAndCategoryDirect(teamNameOrIdentifier, categoryNam
                     team: team,
                     category: category
                 };
+                
+                // Ak je požadované vykreslenie do DOM
+                if (renderToDOM && typeof renderTeamInfoToDOM === 'function') {
+                    renderTeamInfoToDOM(result, team.teamName, category);
+                }
+                
+                return result;
             }
         }
     }
     
-    console.log(`❌ DIRECT: Tím "${teamNameOrIdentifier}" v kategórii "${categoryName}" nebol nájdený`);
+    console.log(`❌ DIRECT: Tím s názvom "${teamName}" v kategórii "${categoryName}" nebol nájdený`);
     return null;
 }
+
 // Prepíšeme pôvodnú funkciu
 window.findTeamByNameAndCategoryDirect = findTeamByNameAndCategoryDirect;
 
