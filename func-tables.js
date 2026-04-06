@@ -2403,3 +2403,82 @@ if (window.teamNameReplacer) {
 //console.log('   • window.teamNameReplacer.getAllTeamMappings() - získa všetky mapovania');
 //console.log('   • window.__teamNameMapping - globálny objekt s mapovaniami');
 
+// ============================================================
+// NOTIFIKÁCIA O DOKONČENÍ MAPOVANIA
+// ============================================================
+
+// Premenná na sledovanie, či už bolo mapovanie dokončené
+let mappingCompleted = false;
+let initialMappingDone = false;
+
+// Funkcia na odoslanie udalosti, že mapovanie je pripravené
+function notifyMappingReady() {
+    if (mappingCompleted) return;
+    
+    mappingCompleted = true;
+    
+    const mappings = getAllTeamMappings();
+    const mappingsCount = Object.keys(mappings).length;
+    
+    console.log(`🎉 MAPOVANIE DOKONČENÉ! Počet mapovaní: ${mappingsCount}`);
+    
+    const event = new CustomEvent('teamNameMappingReady', {
+        detail: {
+            mappings: mappings,
+            mappingsCount: mappingsCount,
+            timestamp: Date.now(),
+            ready: true
+        }
+    });
+    window.dispatchEvent(event);
+}
+
+// Prepíšeme funkciu performPartialReplacement, aby po prvom úspešnom nahradení odoslala udalosť
+const originalPerformReplacement = window.performPartialReplacement || performPartialReplacement;
+
+window.performPartialReplacement = function(identifiersToReplace) {
+    const result = originalPerformReplacement(identifiersToReplace);
+    
+    // Ak máme aspoň jedno mapovanie a ešte sme neodoslali udalosť
+    if (!initialMappingDone && Object.keys(window.__teamNameMapping).length > 0) {
+        initialMappingDone = true;
+        notifyMappingReady();
+    }
+    
+    return result;
+};
+
+// Tiež po každom úspešnom nahradení z cache alebo DB
+const originalGetTeamNameFromDatabase = getTeamNameFromDatabase;
+window.getTeamNameFromDatabase = function(displayId) {
+    const result = originalGetTeamNameFromDatabase(displayId);
+    
+    if (!initialMappingDone && result && window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0) {
+        initialMappingDone = true;
+        notifyMappingReady();
+    }
+    
+    return result;
+};
+
+// Funkcia na manuálne ohlásenie pripravenosti (pre prípad, že už boli mapovania pripravené)
+function announceMappingReady() {
+    if (mappingCompleted) return;
+    if (Object.keys(window.__teamNameMapping).length > 0) {
+        notifyMappingReady();
+    } else {
+        console.log('⏳ Mapovanie ešte nie je pripravené, čakám...');
+        // Skúsime o sekundu znova
+        setTimeout(announceMappingReady, 1000);
+    }
+}
+
+// Pridáme funkcie do window.teamNameReplacer
+if (window.teamNameReplacer) {
+    window.teamNameReplacer.isMappingReady = () => mappingCompleted;
+    window.teamNameReplacer.getMappings = () => window.__teamNameMapping;
+    window.teamNameReplacer.announceReady = announceMappingReady;
+}
+
+console.log('📡 Pridaná notifikácia o pripravenosti mapovania (udalosť "teamNameMappingReady")');
+
