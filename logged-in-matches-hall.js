@@ -3517,20 +3517,33 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         };
 
-        // Funkcia pre zobrazenie hráčov (UPRAVENÁ - sekcia Ostatní sa zobrazuje vždy, ale bez klikania v režimoch in-progress/completed)
+        // OPRAVENÁ FUNKCIA PRE ZOBRAZENIE HRÁČOV A ČLENOV RT
         const renderPlayersSection = (teamDetails, teamType, teamName) => {
+            // DÔLEŽITÉ: teamDetails je objekt { team, userEmail, userId, ... }
+            // Preto pristupujeme k hráčom cez teamDetails.team.playerDetails
+            const teamData = teamDetails?.team;
+            
+            if (!teamData) {
+                console.log(`⚠️ Žiadne dáta pre tím ${teamType} (${teamName})`);
+                return React.createElement(
+                    'div',
+                    { className: 'text-sm text-gray-500 italic p-2 text-center' },
+                    'Dáta tímu nie sú dostupné'
+                );
+            }
+            
             // Získame aktívnych hráčov (ktorí nie sú odstránení pre tento zápas)
-            const activePlayers = teamDetails?.team.playerDetails?.filter(p => p && !p.removedForMatch) || [];
+            const activePlayers = teamData.playerDetails?.filter(p => p && !p.removedForMatch) || [];
             
             // Získame odstránených hráčov pre tento zápas
-            const removedPlayers = teamDetails?.team.matchSpecificRemovals?.[selectedMatch.id]?.removedPlayersForMatch || [];
+            const removedPlayers = teamData.matchSpecificRemovals?.[selectedMatch.id]?.removedPlayersForMatch || [];
             
             // Získame odstránených členov RT pre tento zápas
-            const removedStaff = teamDetails?.team.matchSpecificRemovals?.[selectedMatch.id]?.removedStaff || [];
+            const removedStaff = teamData.matchSpecificRemovals?.[selectedMatch.id]?.removedStaff || [];
             
             // Získame AKTÍVNYCH členov RT (ktorí NIE sú odstránení pre tento zápas)
-            const activeMenStaff = teamDetails?.team.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
-            const activeWomenStaff = teamDetails?.team.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
+            const activeMenStaff = teamData.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
+            const activeWomenStaff = teamData.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
             
             // Získame odstránených členov RT podľa typu
             const removedMenStaff = removedStaff.filter(s => s.staffType === 'men');
@@ -3547,6 +3560,13 @@ const matchesHallApp = ({ userProfileData }) => {
             // Zistíme, či sa má sekcia "Ostatní" zobraziť (vždy, ak je aspoň jeden odstránený člen)
             const showRemovedSection = totalRemoved > 0;
             
+            // DEBUG výpis
+            console.log(`📋 Render tímu ${teamType} (${teamName}):`);
+            console.log(`   - Hráčov aktívnych: ${activePlayers.length}`);
+            console.log(`   - Hráčov odstránených: ${removedPlayers.length}`);
+            console.log(`   - RT muži aktívni: ${activeMenStaff.length}`);
+            console.log(`   - RT ženy aktívne: ${activeWomenStaff.length}`);
+            
             return React.createElement(
                 'div',
                 null,
@@ -3557,7 +3577,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     React.createElement('i', { className: 'fa-solid fa-users text-xs text-gray-500' }),
                     `Hráči (${activePlayers.length})`
                 ),
-
+        
                 showPlayerStats && React.createElement(
                     'div',
                     { className: 'grid grid-cols-12 gap-1 mb-2 px-2 text-xs font-semibold text-gray-600 bg-gray-100 py-2 rounded' },
@@ -3571,7 +3591,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 ),
                 
                 // Zoznam aktívnych hráčov
-                teamDetails ? React.createElement(
+                React.createElement(
                     'div',
                     { className: showPlayerStats ? 'space-y-1' : 'space-y-1' },
                     activePlayers.length > 0 ? 
@@ -3586,7 +3606,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     userId: teamDetails.userId,
                                     teamIdentifier: teamType === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier,
                                     displayName: `${player.lastName} ${player.firstName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`,
-                                    index: activePlayers.indexOf(player),
+                                    index: idx,  // Používame index v poli activePlayers
                                     isStaff: false
                                 };
                                 
@@ -3598,28 +3618,22 @@ const matchesHallApp = ({ userProfileData }) => {
                                 let cursorClass = '';
                                 
                                 if (isMatchCompleted) {
-                                    // Ukončený zápas - žiadne kliknutie, vyblednutý vzhľad
                                     cursorClass = 'opacity-50 cursor-not-allowed';
                                 } else if (isMatchScheduled) {
-                                    // Naplánovaný zápas - úprava hráča
                                     onClickHandler = () => openEditPlayerModal(player, teamType, teamDetails, false);
                                     cursorClass = 'hover:bg-blue-50 cursor-pointer';
                                 } else if (isMatchActionAllowed()) {
-                                    // Prebiehajúci zápas - pridanie udalosti
                                     onClickHandler = () => {
                                         if (eventType) {
-                                            // ULOŽÍME SI AKTUALNE HODNOTY DO LOKÁLNYCH PREMENNÝCH
                                             const currentEventType = eventType;
                                             const currentEventSubType = eventSubType;
                                             const currentEventTeam = teamType;
                                             
-                                            // OKAMŽITE VYMAŽEME VYBRANÚ AKCIU (ešte pred zápisom do DB)
                                             setEventType(null);
                                             setEventTeam(null);
                                             setEventSubType(null);
                                             setSelectedPlayerForEvent(null);
         
-                                            // TERAZ VYVOLÁME PRIDANIE UDALOSTI S ULOŽENÝMI HODNOTAMI
                                             if (currentEventType === 'goal' && currentEventSubType === null) {
                                                 addMatchEvent('goal', currentEventTeam, null, playerIdentifier);
                                             } else if (currentEventType === 'penalty' && currentEventSubType === 'scored') {
@@ -3636,7 +3650,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                     cursorClass = 'cursor-not-allowed opacity-60';
                                 }
                                 
-                                // Režim štatistík vs normálny režim
                                 if (showPlayerStats) {
                                     return React.createElement(
                                         'div',
@@ -3701,17 +3714,194 @@ const matchesHallApp = ({ userProfileData }) => {
                             })
                         : React.createElement(
                             'div',
-                            { className: 'text-sm text-gray-500 italic p-2' },
+                            { className: 'text-sm text-gray-500 italic p-2 text-center' },
                             'Žiadni hráči'
                         )
-                ) : React.createElement(
-                    'div',
-                    { className: 'text-sm text-gray-500 italic p-2' },
-                    'Nedostupné'
                 ),
                 
-                // SEKcia Ostatní - zobrazí sa vždy, keď je aspoň jeden odstránený člen
-                // (pre všetky stavy zápasu: scheduled, in-progress, paused, completed)
+                // Sekcia Realizačný tím - MUŽI
+                React.createElement(
+                    'div',
+                    { className: 'mt-4' },
+                    React.createElement(
+                        'h4',
+                        { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
+                        React.createElement('i', { className: 'fa-solid fa-user-tie text-xs text-gray-500' }),
+                        `Realizačný tím - muži (${activeMenStaff.length})`
+                    ),
+                    activeMenStaff.length > 0 ?
+                        activeMenStaff.map((member, idx) => {
+                            const staffIdentifier = {
+                                userId: teamDetails.userId,
+                                teamIdentifier: teamType === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier,
+                                displayName: `${member.lastName} ${member.firstName}`,
+                                isStaff: true,
+                                staffType: 'men',
+                                staffIndex: idx
+                            };
+                            
+                            let onClickHandler = undefined;
+                            let cursorClass = '';
+                            
+                            if (isMatchScheduled) {
+                                onClickHandler = () => openEditStaffModal(member, teamType, teamDetails, 'men', idx);
+                                cursorClass = 'hover:bg-blue-50 cursor-pointer';
+                            } else if (isMatchActionAllowed()) {
+                                onClickHandler = () => {
+                                    if (eventType) {
+                                        if (eventType === 'goal' || eventType === 'penalty') {
+                                            window.showGlobalNotification('Gól a 7m hod môžu byť priradené len hráčom', 'error');
+                                            return;
+                                        }
+                                        addMatchEvent(eventType, teamType, null, staffIdentifier);
+                                    }
+                                };
+                                cursorClass = 'hover:bg-blue-50 cursor-pointer';
+                            } else {
+                                cursorClass = 'cursor-not-allowed opacity-60';
+                            }
+                            
+                            const stats = showPlayerStats ? getPlayerStats(staffIdentifier) : null;
+                            
+                            if (showPlayerStats) {
+                                return React.createElement(
+                                    'div',
+                                    { 
+                                        key: `${teamType}-men-${idx}`, 
+                                        className: `grid grid-cols-12 gap-1 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${cursorClass}`,
+                                        onClick: onClickHandler
+                                    },
+                                    React.createElement(
+                                        'div',
+                                        { className: 'col-span-8 flex items-center gap-2 truncate' },
+                                        React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
+                                        React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
+                                    ),
+                                    React.createElement('div', { className: 'col-span-1 text-center font-bold text-yellow-600' }, stats?.yellowCards || 0),
+                                    React.createElement('div', { className: 'col-span-1 text-center font-bold text-red-600' }, stats?.redCards || 0),
+                                    React.createElement('div', { className: 'col-span-1 text-center font-bold text-blue-800' }, stats?.blueCards || 0),
+                                    React.createElement('div', { className: 'col-span-1 text-center font-bold text-orange-600' }, stats?.exclusions || 0)
+                                );
+                            } else {
+                                return React.createElement(
+                                    'div',
+                                    { 
+                                        key: `${teamType}-men-${idx}`, 
+                                        className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${cursorClass}`,
+                                        onClick: onClickHandler
+                                    },
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex items-center gap-2' },
+                                        React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
+                                        React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
+                                    ),
+                                    isMatchScheduled && React.createElement(
+                                        'i',
+                                        { className: 'fa-solid fa-pencil text-xs text-gray-400' }
+                                    )
+                                );
+                            }
+                        })
+                        : React.createElement(
+                            'div',
+                            { className: 'text-sm text-gray-500 italic p-2 text-center' },
+                            'Žiadni muži v RT'
+                        )
+                ),
+                
+                // Sekcia Realizačný tím - ŽENY
+                React.createElement(
+                    'div',
+                    { className: 'mt-4' },
+                    React.createElement(
+                        'h4',
+                        { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
+                        React.createElement('i', { className: 'fa-solid fa-user-tie text-xs text-pink-500' }),
+                        `Realizačný tím - ženy (${activeWomenStaff.length})`
+                    ),
+                    activeWomenStaff.length > 0 ?
+                        activeWomenStaff.map((member, idx) => {
+                            const staffIdentifier = {
+                                userId: teamDetails.userId,
+                                teamIdentifier: teamType === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier,
+                                displayName: `${member.lastName} ${member.firstName}`,
+                                isStaff: true,
+                                staffType: 'women',
+                                staffIndex: idx
+                            };
+                            
+                            let onClickHandler = undefined;
+                            let cursorClass = '';
+                            
+                            if (isMatchScheduled) {
+                                onClickHandler = () => openEditStaffModal(member, teamType, teamDetails, 'women', idx);
+                                cursorClass = 'hover:bg-blue-50 cursor-pointer';
+                            } else if (isMatchActionAllowed()) {
+                                onClickHandler = () => {
+                                    if (eventType) {
+                                        if (eventType === 'goal' || eventType === 'penalty') {
+                                            window.showGlobalNotification('Gól a 7m hod môžu byť priradené len hráčom', 'error');
+                                            return;
+                                        }
+                                        addMatchEvent(eventType, teamType, null, staffIdentifier);
+                                    }
+                                };
+                                cursorClass = 'hover:bg-blue-50 cursor-pointer';
+                            } else {
+                                cursorClass = 'cursor-not-allowed opacity-60';
+                            }
+                            
+                            const stats = showPlayerStats ? getPlayerStats(staffIdentifier) : null;
+                            
+                            if (showPlayerStats) {
+                                return React.createElement(
+                                    'div',
+                                    { 
+                                        key: `${teamType}-women-${idx}`, 
+                                        className: `grid grid-cols-12 gap-1 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${cursorClass}`,
+                                        onClick: onClickHandler
+                                    },
+                                    React.createElement(
+                                        'div',
+                                        { className: 'col-span-8 flex items-center gap-2 truncate' },
+                                        React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs flex-shrink-0' }),
+                                        React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
+                                    ),
+                                    React.createElement('div', { className: 'col-span-1 text-center font-bold text-yellow-600' }, stats?.yellowCards || 0),
+                                    React.createElement('div', { className: 'col-span-1 text-center font-bold text-red-600' }, stats?.redCards || 0),
+                                    React.createElement('div', { className: 'col-span-1 text-center font-bold text-blue-800' }, stats?.blueCards || 0),
+                                    React.createElement('div', { className: 'col-span-1 text-center font-bold text-orange-600' }, stats?.exclusions || 0)
+                                );
+                            } else {
+                                return React.createElement(
+                                    'div',
+                                    { 
+                                        key: `${teamType}-women-${idx}`, 
+                                        className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${cursorClass}`,
+                                        onClick: onClickHandler
+                                    },
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex items-center gap-2' },
+                                        React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs flex-shrink-0' }),
+                                        React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
+                                    ),
+                                    isMatchScheduled && React.createElement(
+                                        'i',
+                                        { className: 'fa-solid fa-pencil text-xs text-gray-400' }
+                                    )
+                                );
+                            }
+                        })
+                        : React.createElement(
+                            'div',
+                            { className: 'text-sm text-gray-500 italic p-2 text-center' },
+                            'Žiadne ženy v RT'
+                        )
+                ),
+                
+                // Sekcia Ostatní - odstránení hráči a členovia RT
                 showRemovedSection && React.createElement(
                     'div',
                     { className: 'mt-4 pt-3 border-t border-gray-200' },
@@ -3724,7 +3914,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     React.createElement(
                         'div',
                         { className: 'space-y-1' },
-                        // Odstránení hráči - bez klikania v režimoch in-progress a completed
+                        // Odstránení hráči
                         [...removedPlayers]
                             .sort((a, b) => {
                                 const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
@@ -3732,33 +3922,20 @@ const matchesHallApp = ({ userProfileData }) => {
                                 return numA - numB;
                             })
                             .map((player, idx) => {
-                                // Určenie správania pre položky v sekcii "Ostatní"
                                 let onClickHandler = undefined;
                                 let cursorClass = 'cursor-not-allowed opacity-60';
-                                let hoverClass = '';
-                                let titleText = '';
                                 
                                 if (isMatchScheduled) {
-                                    // Len pri naplánovanom zápase je možné obnoviť hráča
                                     onClickHandler = () => restorePlayerToRoster(player, teamType, teamDetails);
-                                    cursorClass = 'cursor-pointer';
-                                    hoverClass = 'hover:bg-blue-50';
-                                    titleText = '';
-                                } else if (isMatchInProgress || isMatchCompleted) {
-                                    // Pri prebiehajúcom alebo ukončenom zápase - žiadne kliknutie, iba zobrazenie
-                                    onClickHandler = undefined;
-                                    cursorClass = 'cursor-not-allowed';
-                                    hoverClass = '';
-                                    titleText = '';
+                                    cursorClass = 'cursor-pointer hover:bg-blue-50';
                                 }
                                 
                                 return React.createElement(
                                     'div',
                                     { 
                                         key: `${teamType}-removed-player-${idx}`, 
-                                        className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 bg-gray-50 text-sm group relative transition-colors ${cursorClass} ${hoverClass}`,
-                                        onClick: onClickHandler,
-                                        title: titleText
+                                        className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 bg-gray-50 text-sm group relative transition-colors ${cursorClass}`,
+                                        onClick: onClickHandler
                                     },
                                     React.createElement(
                                         'div',
@@ -3775,39 +3952,28 @@ const matchesHallApp = ({ userProfileData }) => {
                                             `${player.lastName} ${player.firstName}`
                                         )
                                     ),
-                                    // Ikona obnovenia sa zobrazí len pri naplánovanom zápase
                                     isMatchScheduled && React.createElement(
                                         'i',
                                         { className: 'fa-solid fa-undo text-xs text-green-500' }
                                     )
                                 );
                             }),
-                        // Odstránení členovia RT (muži) - bez klikania v režimoch in-progress a completed
+                        // Odstránení členovia RT (muži)
                         removedMenStaff.map((member, idx) => {
                             let onClickHandler = undefined;
                             let cursorClass = 'cursor-not-allowed opacity-60';
-                            let hoverClass = '';
-                            let titleText = '';
                             
                             if (isMatchScheduled) {
                                 onClickHandler = () => restoreStaffToRoster(member, teamType, teamDetails, 'men');
-                                cursorClass = 'cursor-pointer';
-                                hoverClass = 'hover:bg-blue-50';
-                                titleText = '';
-                            } else if (isMatchInProgress || isMatchCompleted) {
-                                onClickHandler = undefined;
-                                cursorClass = 'cursor-not-allowed';
-                                hoverClass = '';
-                                titleText = '';
+                                cursorClass = 'cursor-pointer hover:bg-blue-50';
                             }
                             
                             return React.createElement(
                                 'div',
                                 { 
                                     key: `${teamType}-removed-men-${idx}`, 
-                                    className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 bg-gray-50 text-sm group relative transition-colors ${cursorClass} ${hoverClass}`,
-                                    onClick: onClickHandler,
-                                    title: titleText
+                                    className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 bg-gray-50 text-sm group relative transition-colors ${cursorClass}`,
+                                    onClick: onClickHandler
                                 },
                                 React.createElement(
                                     'div',
@@ -3825,32 +3991,22 @@ const matchesHallApp = ({ userProfileData }) => {
                                 )
                             );
                         }),
-                        // Odstránení členovia RT (ženy) - bez klikania v režimoch in-progress a completed
+                        // Odstránení členovia RT (ženy)
                         removedWomenStaff.map((member, idx) => {
                             let onClickHandler = undefined;
                             let cursorClass = 'cursor-not-allowed opacity-60';
-                            let hoverClass = '';
-                            let titleText = '';
                             
                             if (isMatchScheduled) {
                                 onClickHandler = () => restoreStaffToRoster(member, teamType, teamDetails, 'women');
-                                cursorClass = 'cursor-pointer';
-                                hoverClass = 'hover:bg-blue-50';
-                                titleText = '';
-                            } else if (isMatchInProgress || isMatchCompleted) {
-                                onClickHandler = undefined;
-                                cursorClass = 'cursor-not-allowed';
-                                hoverClass = '';
-                                titleText = '';
+                                cursorClass = 'cursor-pointer hover:bg-blue-50';
                             }
                             
                             return React.createElement(
                                 'div',
                                 { 
                                     key: `${teamType}-removed-women-${idx}`, 
-                                    className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 bg-gray-50 text-sm group relative transition-colors ${cursorClass} ${hoverClass}`,
-                                    onClick: onClickHandler,
-                                    title: titleText
+                                    className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 bg-gray-50 text-sm group relative transition-colors ${cursorClass}`,
+                                    onClick: onClickHandler
                                 },
                                 React.createElement(
                                     'div',
