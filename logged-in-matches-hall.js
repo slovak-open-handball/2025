@@ -6933,6 +6933,103 @@ console.log('   • window.setMatchToInProgressByIdentifiers(homeIdentifier, awa
  * window.forceTeamIntoMatch("ŠK Slovan Bratislava", "U12 D", "home")
  * window.forceTeamIntoMatch("MŠK Žilina", "U12 D", "away")
  */
+
+window.findTeamInUsers = async (teamName, categoryName) => {
+    if (!window.db) {
+        console.error('❌ Firebase databáza nie je inicializovaná.');
+        return null;
+    }
+    
+    try {
+        // Načítame všetkých používateľov
+        const usersRef = collection(window.db, 'users');
+        const usersSnap = await getDocs(usersRef);
+        
+        let foundTeam = null;
+        let foundUser = null;
+        
+        console.log(`🔍 Hľadám tím "${teamName}" v kategórii "${categoryName}"...`);
+        
+        // Prehľadávame všetkých používateľov
+        for (const userDoc of usersSnap.docs) {
+            const userData = userDoc.data();
+            const teams = userData.teams || {};
+            
+            // Prehľadávame všetky kategórie v tímoch používateľa
+            for (const [category, teamsArray] of Object.entries(teams)) {
+                // Kontrola, či kategória zodpovedá hľadanej (ak je zadaná)
+                if (categoryName && category !== categoryName) continue;
+                
+                if (Array.isArray(teamsArray)) {
+                    // Hľadáme tím s daným názvom (case-insensitive pre istotu)
+                    const team = teamsArray.find(t => 
+                        t.teamName && t.teamName.toLowerCase() === teamName.toLowerCase()
+                    );
+                    
+                    if (team) {
+                        foundTeam = team;
+                        foundUser = {
+                            id: userDoc.id,
+                            email: userData.email,
+                            displayName: userData.displayName
+                        };
+                        console.log(`✅ Tím nájdený u používateľa: ${userData.email}`);
+                        break;
+                    }
+                }
+            }
+            
+            if (foundTeam) break;
+        }
+        
+        if (!foundTeam) {
+            console.log(`❌ Tím "${teamName}" nebol nájdený v žiadnej kategórii.`);
+            
+            // Výpis dostupných tímov pre debug
+            console.log('\n📋 Dostupné tímy v systéme:');
+            for (const userDoc of usersSnap.docs) {
+                const userData = userDoc.data();
+                const teams = userData.teams || {};
+                
+                for (const [category, teamsArray] of Object.entries(teams)) {
+                    if (Array.isArray(teamsArray)) {
+                        teamsArray.forEach(team => {
+                            if (team.teamName) {
+                                console.log(`   - ${team.teamName} (${category}) - používateľ: ${userData.email}`);
+                            }
+                        });
+                    }
+                }
+            }
+            
+            return null;
+        }
+        
+        // Získame hráčov a členov RT
+        const players = foundTeam.playerDetails || [];
+        const menStaff = foundTeam.menTeamMemberDetails || [];
+        const womenStaff = foundTeam.womenTeamMemberDetails || [];
+        
+        console.log(`📊 Tím obsahuje: ${players.length} hráčov, ${menStaff.length} mužov RT, ${womenStaff.length} žien RT`);
+        
+        return {
+            teamName: foundTeam.teamName,
+            groupName: foundTeam.groupName,
+            order: foundTeam.order,
+            players: players,
+            menStaff: menStaff,
+            womenStaff: womenStaff,
+            userId: foundUser.id,
+            userEmail: foundUser.email,
+            teamData: foundTeam
+        };
+        
+    } catch (error) {
+        console.error('❌ Chyba pri vyhľadávaní tímu:', error);
+        return null;
+    }
+};
+
 window.forceTeamIntoMatch = async (teamName, categoryName, teamSide = 'home') => {
     if (!teamName || !categoryName) {
         console.error('❌ Chyba: Je potrebné zadať názov tímu a názov kategórie.');
