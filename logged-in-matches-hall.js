@@ -3549,6 +3549,11 @@ const matchesHallApp = ({ userProfileData }) => {
         const matchStartTime = selectedMatch.scheduledTime ? formatTime(selectedMatch.scheduledTime) : '-- : --';
         const category = categories.find(c => c.name === selectedMatch.categoryName);
 
+        const isMatchScheduled = selectedMatch.status === 'scheduled';
+        const isMatchInProgress = selectedMatch.status === 'in-progress';
+        const isMatchPaused = selectedMatch.status === 'paused';
+        const isMatchCompleted = selectedMatch.status === 'completed';
+
         const activeMenStaffHome = homeTeamDetails?.team.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
         const activeWomenStaffHome = homeTeamDetails?.team.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
 
