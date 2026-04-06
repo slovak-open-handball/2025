@@ -3163,7 +3163,6 @@ const matchesHallApp = ({ userProfileData }) => {
     const getTeamDetails = (identifier) => {
         // Táto funkcia už nebude používaná na priame vyhľadávanie
         // Namiesto toho použite getTeamDetailsByName
-        console.warn(`⚠️ getTeamDetails() je zastaraná. Použite getTeamDetailsByName() s názvom tímu.`);
         return null;
     };
 
