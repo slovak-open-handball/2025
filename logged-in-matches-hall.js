@@ -2907,11 +2907,61 @@ const matchesHallApp = ({ userProfileData }) => {
         return identifier;
     };   
 
-    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA
+    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA (UPRAVENÁ)
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
         
-        // 1. Skúsime superstructureTeams zo stavu
+        // 1. NAJPRV SKÚSIME ZÍSKAť SPRÁVNY NÁZOV TÍMU CEZ matchTracker
+        let resolvedTeamName = null;
+        let originalIdentifier = identifier;
+        
+        if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+            const teamNameFromTracker = window.matchTracker.getTeamNameByDisplayId(identifier);
+            if (teamNameFromTracker && teamNameFromTracker !== identifier) {
+                resolvedTeamName = teamNameFromTracker;
+                console.log(`🔍 Pre identifikátor "${identifier}" bol nájdený názov tímu: "${resolvedTeamName}"`);
+            }
+        }
+        
+        // 2. AK MÁME VYRIEŠENÝ NÁZOV TÍMU, SKÚSIME HO NAJPRV POUŽIŤ NA VYHĽADÁVANIE
+        if (resolvedTeamName) {
+            // Skúsime vyhľadať tím podľa vyriešeného názvu v superstructureTeams
+            if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
+                // Prehľadáme všetky kategórie v superstructureTeams
+                for (const [category, teamsArray] of Object.entries(superstructureTeams)) {
+                    if (Array.isArray(teamsArray)) {
+                        const foundTeam = teamsArray.find(t => t.teamName === resolvedTeamName);
+                        if (foundTeam && foundTeam.teamName) {
+                            console.log(`✅ Nájdený tím v superstructureTeams: "${foundTeam.teamName}" (kategória: ${category})`);
+                            return foundTeam.teamName;
+                        }
+                    }
+                }
+            }
+            
+            // Skúsime vyhľadať podľa vyriešeného názvu v používateľských dátach
+            if (users && users.length > 0) {
+                for (const user of users) {
+                    if (!user.teams) continue;
+                    
+                    for (const [category, teamsArray] of Object.entries(user.teams)) {
+                        if (Array.isArray(teamsArray)) {
+                            const foundTeam = teamsArray.find(t => t.teamName === resolvedTeamName);
+                            if (foundTeam && foundTeam.teamName) {
+                                console.log(`✅ Nájdený tím v používateľských dátach: "${foundTeam.teamName}" (kategória: ${category})`);
+                                return foundTeam.teamName;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Ak sme nenašli podľa vyriešeného názvu, vrátime ho ako taký
+            console.log(`⚠️ Tím "${resolvedTeamName}" nebol nájdený v databáze, vraciam vyriešený názov.`);
+            return resolvedTeamName;
+        }
+        
+        // 3. PÔVODNÁ LOGIKA - vyhľadávanie podľa identifikátora v superstructureTeams
         if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
             const parts = identifier.split(' ');
             if (parts.length >= 2) {
@@ -2947,7 +2997,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        // 2. Skúsime vyhľadať v používateľoch (user teams)
+        // 4. PÔVODNÁ LOGIKA - vyhľadávanie v používateľoch
         if (users && users.length > 0) {
             const parts = identifier.split(' ');
             if (parts.length >= 2) {
@@ -2987,7 +3037,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        // 3. Ak nič nenašlo, vrátime identifikátor
+        // 5. Ak nič nenašlo, vrátime pôvodný identifikátor
         return identifier;
     };
 
