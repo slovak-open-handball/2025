@@ -1305,9 +1305,9 @@ const matchesHallApp = ({ userProfileData }) => {
         try {
             const matchRef = doc(window.db, 'matches', matchId);
             const updateData = {
-                status: 'in-progress',
+                status: 'paused',        // ZMENENÉ: z 'in-progress' na 'paused'
                 endedAt: null,
-                pausedAt: null,
+                pausedAt: Timestamp.now(), // Nastavíme čas pozastavenia na aktuálny čas
                 manualTimeOffset: newOffset,
                 updatedAt: Timestamp.now()
             };
@@ -1323,8 +1323,9 @@ const matchesHallApp = ({ userProfileData }) => {
             setMatchTime(maxMatchTime);
             setCleanPlayingTime(maxMatchTime);
             setManualTimeOffset(newOffset);
+            setMatchPaused(true);  // Nastavíme, že zápas je pozastavený
             
-            window.showGlobalNotification('Zápas bol obnovený do stavu "Prebieha"', 'success');
+            window.showGlobalNotification('Zápas bol obnovený do stavu "Pozastavené" s maximálnym časom', 'success');
         } catch (error) {
             console.error('Chyba pri obnovovaní zápasu:', error);
             window.showGlobalNotification('Chyba pri obnovovaní zápasu', 'error');
