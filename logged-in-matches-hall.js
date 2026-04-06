@@ -6702,6 +6702,32 @@ console.log('   • window.matchTracker.getTeamInfoByDisplayId("U12 D 2B") - vr�
 
 
 
+// Funkcia na získanie názvu tímu z DOM elementu podľa identifikátora
+function getTeamNameFromDOM(identifier) {
+    if (!identifier) return null;
+    
+    // Skúsime nájsť element s atribútom data-original-identifier
+    const elements = document.querySelectorAll(`[data-original-identifier="${identifier}"]`);
+    if (elements.length > 0) {
+        const teamName = elements[0].getAttribute('data-team-name');
+        if (teamName && teamName !== identifier) {
+            return teamName;
+        }
+    }
+    
+    // Skúsime nájsť element, ktorý obsahuje tento identifikátor v texte
+    const allElements = document.querySelectorAll('*');
+    for (const element of allElements) {
+        if (element.children.length > 0) continue;
+        const text = element.textContent;
+        if (text && text.includes(identifier) && element.getAttribute('data-team-name')) {
+            return element.getAttribute('data-team-name');
+        }
+    }
+    
+    return null;
+}
+
 // Funkcia na vyhľadanie tímu podľa názvu a kategórie v používateľských dátach
 function findTeamByNameAndCategory(teamName, categoryName) {
     if (!teamName || !categoryName) {
@@ -6723,7 +6749,7 @@ function findTeamByNameAndCategory(teamName, categoryName) {
         console.log('⚠️ window.users nie je dostupný, skúšam načítať z Firebase...');
         // Pokúsime sa načítať používateľov z Firebase
         if (window.db) {
-            import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js").then(async ({ collection, getDocs, query }) => {
+            import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js").then(async ({ collection, getDocs }) => {
                 const usersRef = collection(window.db, 'users');
                 const querySnapshot = await getDocs(usersRef);
                 const usersList = [];
@@ -6852,128 +6878,82 @@ function findTeamByNameAndCategory(teamName, categoryName) {
     return result;
 }
 
-// Funkcia na získanie aktuálneho zápasu z URL a vyhľadanie tímov
-function findCurrentMatchTeams() {
-    console.log('🔍 Získavam aktuálny zápas z URL...');
+// Funkcia na získanie aktuálneho zápasu z DOM a vyhľadanie tímov (NEPOUŽÍVA URL)
+function findCurrentMatchTeamsFromDOM() {
+    console.log('🔍 Získavam aktuálny zápas z DOM (nie z URL)...');
     
-    const urlParams = new URLSearchParams(window.location.search);
-    const homeIdentifier = urlParams.get('domaci');
-    const awayIdentifier = urlParams.get('hostia');
+    // Hľadáme všetky elementy s atribútom data-original-identifier (pôvodné identifikátory)
+    const allTeamElements = document.querySelectorAll('[data-original-identifier]');
     
-    if (!homeIdentifier || !awayIdentifier) {
-        console.log('❌ V URL sa nenašli parametre "domaci" a "hostia"');
-        console.log('Aktuálna URL: ' + window.location.href);
+    if (allTeamElements.length === 0) {
+        console.log('❌ V DOM sa nenašli žiadne elementy s atribútom data-original-identifier');
+        console.log('   (Pravdepodobne ešte neboli nahradené názvy tímov)');
         return null;
     }
     
-    console.log(`📋 Domáci identifikátor: ${homeIdentifier}`);
-    console.log(`📋 Hosťovský identifikátor: ${awayIdentifier}`);
+    // Získame unikátne identifikátory z DOM
+    const identifiers = new Set();
+    allTeamElements.forEach(el => {
+        const identifier = el.getAttribute('data-original-identifier');
+        if (identifier) identifiers.add(identifier);
+    });
     
-    // Parsovanie identifikátorov na názov tímu a kategóriu
-    const parseIdentifier = (identifier) => {
-        const parts = identifier.trim().split(' ');
-        if (parts.length < 2) return null;
-        
-        const positionAndGroup = parts.pop();
-        const category = parts.join(' ');
-        
-        let position = '';
-        let groupLetter = '';
-        for (let i = 0; i < positionAndGroup.length; i++) {
-            const char = positionAndGroup[i];
-            if (char >= '0' && char <= '9') {
-                position += char;
-            } else if (/[A-Za-z]/.test(char)) {
-                groupLetter += char;
+    console.log(`📋 Nájdených identifikátorov v DOM: ${identifiers.size}`);
+    console.log(`   Identifikátory: ${Array.from(identifiers).join(', ')}`);
+    
+    // Pre každý identifikátor získame názov tímu a kategóriu
+    const teamsInfo = [];
+    
+    for (const identifier of identifiers) {
+        const elements = document.querySelectorAll(`[data-original-identifier="${identifier}"]`);
+        if (elements.length > 0) {
+            const teamName = elements[0].getAttribute('data-team-name');
+            const category = elements[0].getAttribute('data-team-category');
+            
+            if (teamName && teamName !== identifier) {
+                teamsInfo.push({
+                    identifier: identifier,
+                    teamName: teamName,
+                    category: category
+                });
+                console.log(`   • ${identifier} → "${teamName}" (kategória: ${category})`);
             }
         }
-        
-        return {
-            identifier: identifier,
-            category: category,
-            position: position,
-            groupLetter: groupLetter,
-            fullGroupName: `skupina ${groupLetter.toUpperCase()}`
-        };
-    };
+    }
     
-    const homeInfo = parseIdentifier(homeIdentifier);
-    const awayInfo = parseIdentifier(awayIdentifier);
-    
-    if (!homeInfo || !awayInfo) {
-        console.log('❌ Nepodarilo sa spracovať identifikátory');
+    if (teamsInfo.length === 0) {
+        console.log('❌ Nepodarilo sa získať názvy tímov z DOM');
         return null;
     }
     
-    console.log(`\n🏠 DOMÁCI TÍM:`);
-    console.log(`   • Identifikátor: ${homeInfo.identifier}`);
-    console.log(`   • Kategória: ${homeInfo.category}`);
-    console.log(`   • Pozícia: ${homeInfo.position}`);
-    console.log(`   • Skupina: ${homeInfo.fullGroupName}`);
-    
-    console.log(`\n✈️ HOSŤOVSKÝ TÍM:`);
-    console.log(`   • Identifikátor: ${awayInfo.identifier}`);
-    console.log(`   • Kategória: ${awayInfo.category}`);
-    console.log(`   • Pozícia: ${awayInfo.position}`);
-    console.log(`   • Skupina: ${awayInfo.fullGroupName}`);
-    
-    // Najprv skúsime získať názvy tímov z matchTracker (ak sú skupiny dokončené)
-    let homeTeamName = null;
-    let awayTeamName = null;
-    
-    if (window.matchTracker && window.matchTracker.getTeamNameByDisplayId) {
-        homeTeamName = window.matchTracker.getTeamNameByDisplayId(homeIdentifier);
-        awayTeamName = window.matchTracker.getTeamNameByDisplayId(awayIdentifier);
+    // Ak máme 2 tímy (domáci a hostia), predpokladáme, že ide o aktuálny zápas
+    // V detail view sú zvyčajne 2 tímy (domáci a hostia)
+    if (teamsInfo.length === 2) {
+        console.log('\n🏠 Pravdepodobný aktuálny zápas:');
+        console.log(`   Domáci: ${teamsInfo[0].teamName} (${teamsInfo[0].category})`);
+        console.log(`   Hosťovský: ${teamsInfo[1].teamName} (${teamsInfo[1].category})`);
+    } else {
+        console.log(`\n⚠️ Nájdených ${teamsInfo.length} tímov v DOM (očakávali sme 2)`);
+        console.log('   Skúšam vyhľadať všetky...');
     }
     
-    // Ak matchTracker nevrátil názvy, skúsime z DOM elementov
-    if (!homeTeamName || homeTeamName === homeIdentifier) {
-        const homeElements = document.querySelectorAll(`[data-original-identifier="${homeIdentifier}"]`);
-        if (homeElements.length > 0) {
-            homeTeamName = homeElements[0].getAttribute('data-team-name');
-        }
-    }
-    
-    if (!awayTeamName || awayTeamName === awayIdentifier) {
-        const awayElements = document.querySelectorAll(`[data-original-identifier="${awayIdentifier}"]`);
-        if (awayElements.length > 0) {
-            awayTeamName = awayElements[0].getAttribute('data-team-name');
-        }
-    }
-    
-    console.log(`\n📛 NÁZVY TÍMOV ZO STRÁNKY:`);
-    console.log(`   • Domáci: ${homeTeamName || 'nezistený'}`);
-    console.log(`   • Hosťovský: ${awayTeamName || 'nezistený'}`);
-    
-    // Vyhľadáme tímy v používateľských dátach
+    // Vyhľadáme každý tím v používateľských dátach
     const results = {};
     
-    if (homeTeamName && homeTeamName !== homeIdentifier) {
-        console.log(`\n🔍 Vyhľadávam domáci tím "${homeTeamName}" v kategórii "${homeInfo.category}"...`);
-        const homeResult = findTeamByNameAndCategory(homeTeamName, homeInfo.category);
-        if (homeResult && !Array.isArray(homeResult)) {
-            results.home = homeResult;
-        }
-    } else {
-        console.log(`\n⚠️ Názov domáceho tímu nebol zistený, vyhľadávam podľa identifikátora...`);
-        // Skúsime vyhľadať podľa identifikátora (kategória + skupina + poradie)
-        const homeByIdResult = findTeamByIdentifier(homeIdentifier);
-        if (homeByIdResult) {
-            results.home = homeByIdResult;
-        }
-    }
-    
-    if (awayTeamName && awayTeamName !== awayIdentifier) {
-        console.log(`\n🔍 Vyhľadávam hosťovský tím "${awayTeamName}" v kategórii "${awayInfo.category}"...`);
-        const awayResult = findTeamByNameAndCategory(awayTeamName, awayInfo.category);
-        if (awayResult && !Array.isArray(awayResult)) {
-            results.away = awayResult;
-        }
-    } else {
-        console.log(`\n⚠️ Názov hosťovského tímu nebol zistený, vyhľadávam podľa identifikátora...`);
-        const awayByIdResult = findTeamByIdentifier(awayIdentifier);
-        if (awayByIdResult) {
-            results.away = awayByIdResult;
+    for (const teamInfo of teamsInfo) {
+        console.log(`\n🔍 Vyhľadávam tím "${teamInfo.teamName}" v kategórii "${teamInfo.category}"...`);
+        const result = findTeamByNameAndCategory(teamInfo.teamName, teamInfo.category);
+        
+        if (result && !Array.isArray(result)) {
+            // Pokúsime sa určiť, či ide o domáci alebo hosťovský tím
+            // (podľa pozície v DOM alebo podľa poradia)
+            if (Object.keys(results).length === 0) {
+                results.home = result;
+            } else if (Object.keys(results).length === 1) {
+                results.away = result;
+            } else {
+                results[`team_${Object.keys(results).length + 1}`] = result;
+            }
         }
     }
     
@@ -6983,18 +6963,24 @@ function findCurrentMatchTeams() {
     
     if (results.home) {
         console.log(`\n🏠 DOMÁCI TÍM: ${results.home.team.teamName}`);
+        console.log(`   • Kategória: ${results.home.category}`);
         console.log(`   • Používateľ: ${results.home.user.email}`);
         console.log(`   • Rola: ${results.home.user.role || 'user'}`);
-    } else {
-        console.log(`\n🏠 DOMÁCI TÍM: Nenájdený`);
     }
     
     if (results.away) {
         console.log(`\n✈️ HOSŤOVSKÝ TÍM: ${results.away.team.teamName}`);
+        console.log(`   • Kategória: ${results.away.category}`);
         console.log(`   • Používateľ: ${results.away.user.email}`);
         console.log(`   • Rola: ${results.away.user.role || 'user'}`);
-    } else {
-        console.log(`\n✈️ HOSŤOVSKÝ TÍM: Nenájdený`);
+    }
+    
+    // Vypíšeme aj ostatné tímy ak sú
+    for (const [key, value] of Object.entries(results)) {
+        if (key !== 'home' && key !== 'away') {
+            console.log(`\n📌 ĎALŠÍ TÍM (${key}): ${value.team.teamName}`);
+            console.log(`   • Používateľ: ${value.user.email}`);
+        }
     }
     
     console.log('\n' + '='.repeat(70));
@@ -7002,10 +6988,69 @@ function findCurrentMatchTeams() {
     return results;
 }
 
-// Pomocná funkcia na vyhľadanie tímu podľa identifikátora (kategória + skupina + poradie)
-function findTeamByIdentifier(identifier) {
+// Funkcia na vyhľadanie všetkých tímov v aktuálnom DOM
+function findAllTeamsInDOM() {
+    console.log('🔍 Vyhľadávam všetky tímy v aktuálnom DOM...');
+    
+    const allTeamElements = document.querySelectorAll('[data-original-identifier]');
+    
+    if (allTeamElements.length === 0) {
+        console.log('❌ V DOM sa nenašli žiadne elementy s atribútom data-original-identifier');
+        return [];
+    }
+    
+    const teamsMap = new Map();
+    
+    allTeamElements.forEach(el => {
+        const identifier = el.getAttribute('data-original-identifier');
+        const teamName = el.getAttribute('data-team-name');
+        const category = el.getAttribute('data-team-category');
+        
+        if (identifier && teamName && teamName !== identifier) {
+            if (!teamsMap.has(identifier)) {
+                teamsMap.set(identifier, {
+                    identifier: identifier,
+                    teamName: teamName,
+                    category: category
+                });
+            }
+        }
+    });
+    
+    const teams = Array.from(teamsMap.values());
+    
+    console.log(`📋 Nájdených ${teams.length} unikátnych tímov v DOM:`);
+    teams.forEach((team, idx) => {
+        console.log(`   ${idx + 1}. ${team.identifier} → "${team.teamName}" (${team.category || 'neznáma kategória'})`);
+    });
+    
+    return teams;
+}
+
+// Pomocná funkcia na vyhľadanie tímu podľa identifikátora (kategória + skupina + poradie) - IBA Z DOM
+function findTeamByIdentifierFromDOM(identifier) {
+    if (!identifier) return null;
+    
+    console.log(`🔍 Vyhľadávam tím podľa identifikátora: "${identifier}"`);
+    
+    // Najprv skúsime nájsť v DOM
+    const elements = document.querySelectorAll(`[data-original-identifier="${identifier}"]`);
+    if (elements.length > 0) {
+        const teamName = elements[0].getAttribute('data-team-name');
+        const category = elements[0].getAttribute('data-team-category');
+        
+        if (teamName && teamName !== identifier && category) {
+            console.log(`   → Nájdený v DOM: "${teamName}" (kategória: ${category})`);
+            return findTeamByNameAndCategory(teamName, category);
+        }
+    }
+    
+    // Ak nie je v DOM, parsujeme identifikátor
     const parts = identifier.trim().split(' ');
-    if (parts.length < 2) return null;
+    if (parts.length < 2) {
+        console.log(`❌ Neplatný formát identifikátora: ${identifier}`);
+        return null;
+    }
     
     const positionAndGroup = parts.pop();
     const category = parts.join(' ');
@@ -7026,7 +7071,7 @@ function findTeamByIdentifier(identifier) {
     const positionNum = parseInt(position, 10);
     const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
     
-    console.log(`🔍 Vyhľadávam tím podľa identifikátora: kategória="${category}", skupina="${fullGroupName}", poradie=${positionNum}`);
+    console.log(`   → Parsovaný identifikátor: kategória="${category}", skupina="${fullGroupName}", poradie=${positionNum}`);
     
     // Získame všetkých používateľov
     let allUsers = window.users || window.__users || [];
@@ -7045,7 +7090,7 @@ function findTeamByIdentifier(identifier) {
             );
             
             if (team) {
-                console.log(`✅ Nájdený tím: ${team.teamName} (používateľ: ${user.email})`);
+                console.log(`   ✅ Nájdený tím: ${team.teamName} (používateľ: ${user.email})`);
                 return {
                     user: user,
                     team: team,
@@ -7055,23 +7100,28 @@ function findTeamByIdentifier(identifier) {
         }
     }
     
-    console.log(`❌ Tím nebol nájdený: ${identifier}`);
+    console.log(`   ❌ Tím nebol nájdený: ${identifier}`);
     return null;
 }
 
 // Vytvorenie skratiek pre jednoduchšie volanie
 window.findTeam = findTeamByNameAndCategory;
-window.findCurrentMatch = findCurrentMatchTeams;
+window.findCurrentMatchFromDOM = findCurrentMatchTeamsFromDOM;
+window.findAllTeamsInDOM = findAllTeamsInDOM;
+window.findTeamByIdentifierFromDOM = findTeamByIdentifierFromDOM;
+window.getTeamNameFromDOM = getTeamNameFromDOM;
 
 console.log('✅ Funkcie boli načítané!');
-console.log('   • findTeamByNameAndCategory("Názov tímu", "Kategória") - vyhľadá tím podľa názvu a kategórie');
-console.log('   • findCurrentMatchTeams() - vyhľadá tímy z aktuálneho zápasu v URL');
-console.log('   • findTeamByIdentifier("U12 D 1A") - vyhľadá tím podľa identifikátora');
 console.log('');
-console.log('📌 Príklady použitia:');
-console.log('   findTeamByNameAndCategory("ŠK Slovan", "U12 D")');
-console.log('   findCurrentMatchTeams()');
-console.log('   findTeamByIdentifier("U12 D 1A")');
-
-
-
+console.log('📌 ZOZNAM FUNKCIÍ:');
+console.log('   • findTeamByNameAndCategory("Názov tímu", "Kategória") - vyhľadá tím podľa názvu a kategórie');
+console.log('   • findCurrentMatchFromDOM() - vyhľadá tímy z aktuálneho zápasu VÝHRADNE z DOM (nie z URL)');
+console.log('   • findAllTeamsInDOM() - vypíše všetky tímy, ktoré sú v aktuálnom DOM');
+console.log('   • findTeamByIdentifierFromDOM("U12 D 1A") - vyhľadá tím podľa identifikátora (najskôr z DOM)');
+console.log('   • getTeamNameFromDOM("U12 D 1A") - získa názov tímu z DOM podľa identifikátora');
+console.log('');
+console.log('📌 PRÍKLADY POUŽITIA:');
+console.log('   findCurrentMatchFromDOM()');
+console.log('   findAllTeamsInDOM()');
+console.log('   findTeamByIdentifierFromDOM("U12 D 1A")');
+console.log('   getTeamNameFromDOM("U12 D 1A")');
