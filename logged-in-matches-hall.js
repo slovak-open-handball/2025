@@ -7556,37 +7556,68 @@ function escapeHtml(str) {
         .replace(/'/g, '&#39;');
 }
 
-// ============================================================
 // KOMPLETNE OPRAVENÁ FUNKCIA: findTeamByNameAndCategory (ASYNC)
-// ============================================================
-
-async function findTeamByNameAndCategory(teamName, categoryName, renderToDOM = true) {
-    if (!teamName || !categoryName) {
-        console.log('❌ Je potrebné zadať názov tímu a kategóriu');
-        console.log('Použitie: findTeamByNameAndCategory("Názov tímu", "Kategória")');
+async function findTeamByNameAndCategory(teamNameOrIdentifier, categoryName, renderToDOM = true) {
+    if (!teamNameOrIdentifier || !categoryName) {
+        console.log('❌ Je potrebné zadať názov/identifikátor tímu a kategóriu');
+        console.log('Použitie: findTeamByNameAndCategory("Názov tímu alebo U12 D 4E", "Kategória")');
         return null;
     }
     
-    // 🔄 NAJPRV POUŽIJEME MAPPING NA PREVOD NÁZVU TÍMU
-    let actualTeamName = teamName;
-    if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
-        const mappedName = window.teamNameReplacer.getTeamNameFromMapping(teamName);
-        if (mappedName && mappedName !== teamName) {
-            console.log(`🔄 Názov tímu bol zmapovaný: "${teamName}" → "${mappedName}"`);
-            actualTeamName = mappedName;
-        } else if (mappedName) {
-            console.log(`✅ Názov tímu už je správny: "${teamName}"`);
-            actualTeamName = mappedName;
+    // 🔄 NAJPRV SKONTROLUJEME, ČI ZADANÝ REŤAZEC NIE JE IDENTIFIKÁTOR
+    // Identifikátor má typicky tvar "U12 D 4E" - obsahuje medzeru a číslo+písmeno
+    const identifierPattern = /\s+\d+[A-Za-z]/;
+    let actualTeamName = teamNameOrIdentifier;
+    
+    if (identifierPattern.test(teamNameOrIdentifier)) {
+        console.log(`🔍 Zadaný reťazec vyzerá ako identifikátor: "${teamNameOrIdentifier}"`);
+        
+        // Skúsime získať skutočný názov tímu cez mapovanie
+        if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
+            const mappedName = window.teamNameReplacer.getTeamNameFromMapping(teamNameOrIdentifier);
+            if (mappedName && mappedName !== teamNameOrIdentifier) {
+                console.log(`🔄 Identifikátor bol zmapovaný na názov tímu: "${teamNameOrIdentifier}" → "${mappedName}"`);
+                actualTeamName = mappedName;
+            } else if (mappedName) {
+                console.log(`✅ Identifikátor už je správne zmapovaný: "${teamNameOrIdentifier}" → "${mappedName}"`);
+                actualTeamName = mappedName;
+            } else {
+                console.log(`⚠️ Žiadne mapovanie pre identifikátor: "${teamNameOrIdentifier}", používam pôvodný`);
+            }
+        } else if (window.__teamNameMapping && window.__teamNameMapping[teamNameOrIdentifier]) {
+            const mappedName = window.__teamNameMapping[teamNameOrIdentifier].teamName;
+            if (mappedName && mappedName !== teamNameOrIdentifier) {
+                console.log(`🔄 Identifikátor bol zmapovaný (z __teamNameMapping): "${teamNameOrIdentifier}" → "${mappedName}"`);
+                actualTeamName = mappedName;
+            }
         } else {
-            console.log(`⚠️ Žiadne mapovanie pre názov: "${teamName}", používam pôvodný`);
+            // Skúsime nájsť v DOM elemente s týmto identifikátorom
+            const elements = document.querySelectorAll(`[data-original-identifier="${teamNameOrIdentifier}"]`);
+            if (elements.length > 0) {
+                const teamNameFromDOM = elements[0].getAttribute('data-team-name');
+                if (teamNameFromDOM && teamNameFromDOM !== teamNameOrIdentifier) {
+                    console.log(`🔄 Identifikátor bol nájdený v DOM: "${teamNameOrIdentifier}" → "${teamNameFromDOM}"`);
+                    actualTeamName = teamNameFromDOM;
+                }
+            }
         }
     } else {
-        console.log(`⚠️ window.teamNameReplacer.getTeamNameFromMapping nie je dostupný, používam pôvodný názov: "${teamName}"`);
+        // Ak to nie je identifikátor, skúsime aplikovať mapovanie aj na názov tímu
+        if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
+            const mappedName = window.teamNameReplacer.getTeamNameFromMapping(teamNameOrIdentifier);
+            if (mappedName && mappedName !== teamNameOrIdentifier) {
+                console.log(`🔄 Názov tímu bol zmapovaný: "${teamNameOrIdentifier}" → "${mappedName}"`);
+                actualTeamName = mappedName;
+            } else if (mappedName) {
+                console.log(`✅ Názov tímu už je správny: "${teamNameOrIdentifier}"`);
+                actualTeamName = mappedName;
+            }
+        }
     }
     
     console.log(`🔍 Hľadám tím: "${actualTeamName}" v kategórii: "${categoryName}"`);
     
-    // Získame všetkých používateľov z window.users (ak existuje)
+    // Získame všetkých používateľov
     let allUsers = [];
     
     if (window.users && Array.isArray(window.users) && window.users.length > 0) {
@@ -7664,7 +7695,6 @@ async function findTeamByNameAndCategory(teamName, categoryName, renderToDOM = t
             console.log(`   Poradie: ${item.team.order}`);
         });
         
-        // Ak je viac výsledkov, vykreslíme zoznam do DOM
         if (renderToDOM) {
             renderMultipleTeamsToDOM(foundTeams, actualTeamName, categoryName);
         }
@@ -7718,14 +7748,9 @@ async function findTeamByNameAndCategory(teamName, categoryName, renderToDOM = t
     if (result.user.hallId) {
         console.log(`   • ID haly: ${result.user.hallId}`);
     }
-    if (result.user.createdAt) {
-        const createdDate = result.user.createdAt.toDate ? result.user.createdAt.toDate() : new Date(result.user.createdAt);
-        console.log(`   • Dátum registrácie: ${createdDate.toLocaleDateString('sk-SK')}`);
-    }
     
     console.log('\n' + '='.repeat(70));
     
-    // VYKRESLENIE DO DOM
     if (renderToDOM) {
         renderTeamInfoToDOM(result, actualTeamName, categoryName);
     }
@@ -7822,25 +7847,53 @@ function renderMultipleTeamsToDOM(teamsList, searchTeamName, searchCategory) {
     resultsContainer.insertAdjacentHTML('beforeend', html);
 }
 
-// UPRAVENÁ FUNKCIA: findTeamByIdentifierFromDOM - teraz aj vykresľuje do DOM
+// OPRAVENÁ FUNKCIA: findTeamByIdentifierFromDOM
 function findTeamByIdentifierFromDOM(identifier, renderToDOM = true) {
     if (!identifier) return null;
     
     console.log(`🔍 Vyhľadávam tím podľa identifikátora: "${identifier}"`);
     
-    // Najprv skúsime nájsť v DOM
-    const elements = document.querySelectorAll(`[data-original-identifier="${identifier}"]`);
-    if (elements.length > 0) {
-        const teamName = elements[0].getAttribute('data-team-name');
-        const category = elements[0].getAttribute('data-team-category');
-        
-        if (teamName && teamName !== identifier && category) {
-            console.log(`   → Nájdený v DOM: "${teamName}" (kategória: ${category})`);
-            return findTeamByNameAndCategory(teamName, category, renderToDOM);
+    // 🔄 NAJPRV SKÚSIME ZÍSKAŤ NÁZOV TÍMU CEZ MAPOVANIE
+    let teamName = null;
+    let category = null;
+    
+    if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
+        const mappedName = window.teamNameReplacer.getTeamNameFromMapping(identifier);
+        if (mappedName && mappedName !== identifier) {
+            console.log(`🔄 Identifikátor bol zmapovaný na názov: "${identifier}" → "${mappedName}"`);
+            teamName = mappedName;
         }
     }
     
-    // Ak nie je v DOM, parsujeme identifikátor
+    // Ak sme nezískali názov z mapovania, skúsime nájsť v DOM
+    if (!teamName) {
+        const elements = document.querySelectorAll(`[data-original-identifier="${identifier}"]`);
+        if (elements.length > 0) {
+            teamName = elements[0].getAttribute('data-team-name');
+            category = elements[0].getAttribute('data-team-category');
+            
+            if (teamName && teamName !== identifier) {
+                console.log(`   → Nájdený v DOM: "${teamName}" (kategória: ${category})`);
+            }
+        }
+    }
+    
+    // Ak sme získali názov tímu, vyhľadáme ho v databáze
+    if (teamName && teamName !== identifier) {
+        if (category) {
+            return findTeamByNameAndCategory(teamName, category, renderToDOM);
+        } else {
+            // Ak nemáme kategóriu, skúsime ju získať z identifikátora
+            const parts = identifier.trim().split(' ');
+            if (parts.length >= 2) {
+                const groupAndOrder = parts.pop();
+                const parsedCategory = parts.join(' ');
+                return findTeamByNameAndCategory(teamName, parsedCategory, renderToDOM);
+            }
+        }
+    }
+    
+    // Ak nie je v DOM a nemáme mapovanie, parsujeme identifikátor
     const parts = identifier.trim().split(' ');
     if (parts.length < 2) {
         console.log(`❌ Neplatný formát identifikátora: ${identifier}`);
@@ -7848,7 +7901,7 @@ function findTeamByIdentifierFromDOM(identifier, renderToDOM = true) {
     }
     
     const positionAndGroup = parts.pop();
-    const category = parts.join(' ');
+    const parsedCategory = parts.join(' ');
     
     let position = '';
     let groupLetter = '';
@@ -7866,7 +7919,7 @@ function findTeamByIdentifierFromDOM(identifier, renderToDOM = true) {
     const positionNum = parseInt(position, 10);
     const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
     
-    console.log(`   → Parsovaný identifikátor: kategória="${category}", skupina="${fullGroupName}", poradie=${positionNum}`);
+    console.log(`   → Parsovaný identifikátor: kategória="${parsedCategory}", skupina="${fullGroupName}", poradie=${positionNum}`);
     
     let allUsers = window.users || window.__users || [];
     
@@ -7874,7 +7927,7 @@ function findTeamByIdentifierFromDOM(identifier, renderToDOM = true) {
         if (!user.teams) continue;
         
         for (const [userCategory, teams] of Object.entries(user.teams)) {
-            if (userCategory.toLowerCase() !== category.toLowerCase()) continue;
+            if (userCategory.toLowerCase() !== parsedCategory.toLowerCase()) continue;
             
             if (!Array.isArray(teams)) continue;
             
@@ -7904,9 +7957,9 @@ function findTeamByIdentifierFromDOM(identifier, renderToDOM = true) {
     return null;
 }
 
-// UPRAVENÁ FUNKCIA: findCurrentMatchTeamsFromDOM - teraz aj vykresľuje do DOM
+// OPRAVENÁ FUNKCIA: findCurrentMatchTeamsFromDOM
 function findCurrentMatchTeamsFromDOM(renderToDOM = true) {
-    console.log('🔍 Získavam aktuálny zápas z DOM (nie z URL)...');
+    console.log('🔍 Získavam aktuálny zápas z DOM...');
     
     const allTeamElements = document.querySelectorAll('[data-original-identifier]');
     
@@ -7928,8 +7981,26 @@ function findCurrentMatchTeamsFromDOM(renderToDOM = true) {
     for (const identifier of identifiers) {
         const elements = document.querySelectorAll(`[data-original-identifier="${identifier}"]`);
         if (elements.length > 0) {
-            const teamName = elements[0].getAttribute('data-team-name');
-            const category = elements[0].getAttribute('data-team-category');
+            let teamName = elements[0].getAttribute('data-team-name');
+            let category = elements[0].getAttribute('data-team-category');
+            
+            // 🔄 AK JE NÁZOV TÍMU V SKUTOČNOSTI IDENTIFIKÁTOR, POUŽIJEME MAPOVANIE
+            const identifierPattern = /\s+\d+[A-Za-z]/;
+            if (teamName && identifierPattern.test(teamName)) {
+                if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
+                    const mappedName = window.teamNameReplacer.getTeamNameFromMapping(teamName);
+                    if (mappedName && mappedName !== teamName) {
+                        console.log(`🔄 Mapovanie názvu z DOM: "${teamName}" → "${mappedName}"`);
+                        teamName = mappedName;
+                    }
+                } else if (window.__teamNameMapping && window.__teamNameMapping[teamName]) {
+                    const mappedName = window.__teamNameMapping[teamName].teamName;
+                    if (mappedName && mappedName !== teamName) {
+                        console.log(`🔄 Mapovanie názvu z DOM (__teamNameMapping): "${teamName}" → "${mappedName}"`);
+                        teamName = mappedName;
+                    }
+                }
+            }
             
             if (teamName && teamName !== identifier) {
                 teamsInfo.push({
@@ -9431,3 +9502,49 @@ window.forceRenderTeamsToUI = forceRenderTeamsToUI;
 console.log('✅ PRIDANÉ VYNÚTENÉ VYKRESLENIE TÍMOV!');
 console.log('📌 Ak sa tímy nevykreslia automaticky, spustite manuálne: forceRenderTeamsToUI()');
 
+// POMOCNÁ FUNKCIA: konvertuje identifikátor na skutočný názov tímu
+function convertIdentifierToTeamName(identifier) {
+    if (!identifier) return null;
+    
+    // Skontrolujeme, či ide o identifikátor (obsahuje medzeru a číslo+písmeno)
+    const identifierPattern = /\s+\d+[A-Za-z]/;
+    if (!identifierPattern.test(identifier)) {
+        // Už je to pravdepodobne názov tímu
+        return identifier;
+    }
+    
+    // Skúsime získať názov z mapovania
+    if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
+        const mappedName = window.teamNameReplacer.getTeamNameFromMapping(identifier);
+        if (mappedName && mappedName !== identifier) {
+            console.log(`🔄 Konverzia identifikátora: "${identifier}" → "${mappedName}"`);
+            return mappedName;
+        }
+    }
+    
+    // Skúsime z __teamNameMapping
+    if (window.__teamNameMapping && window.__teamNameMapping[identifier]) {
+        const mappedName = window.__teamNameMapping[identifier].teamName;
+        if (mappedName && mappedName !== identifier) {
+            console.log(`🔄 Konverzia identifikátora (z __teamNameMapping): "${identifier}" → "${mappedName}"`);
+            return mappedName;
+        }
+    }
+    
+    // Skúsime nájsť v DOM
+    const elements = document.querySelectorAll(`[data-original-identifier="${identifier}"]`);
+    if (elements.length > 0) {
+        const teamName = elements[0].getAttribute('data-team-name');
+        if (teamName && teamName !== identifier) {
+            console.log(`🔄 Konverzia identifikátora (z DOM): "${identifier}" → "${teamName}"`);
+            return teamName;
+        }
+    }
+    
+    // Ak nič nefunguje, vrátime pôvodný reťazec
+    console.log(`⚠️ Nepodarilo sa skonvertovať identifikátor: "${identifier}", používam pôvodný`);
+    return identifier;
+}
+
+// Export funkcie
+window.convertIdentifierToTeamName = convertIdentifierToTeamName;
