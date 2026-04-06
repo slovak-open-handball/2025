@@ -7391,6 +7391,183 @@ function findCurrentMatchTeamsFromDOM(renderToDOM = true) {
     return results;
 }
 
+const findCurrentMatchFromDOM = async (renderToDOM = true, autoSetTeams = true) => {
+    console.log('🔍 Získavam aktuálny zápas z DOM (nie z URL)...');
+    
+    const allTeamElements = document.querySelectorAll('[data-original-identifier]');
+    
+    if (allTeamElements.length === 0) {
+        console.log('❌ V DOM sa nenašli žiadne elementy s atribútom data-original-identifier');
+        return null;
+    }
+    
+    const identifiers = new Set();
+    allTeamElements.forEach(el => {
+        const identifier = el.getAttribute('data-original-identifier');
+        if (identifier) identifiers.add(identifier);
+    });
+    
+    console.log(`📋 Nájdených identifikátorov v DOM: ${identifiers.size}`);
+    
+    const teamsInfo = [];
+    
+    for (const identifier of identifiers) {
+        const elements = document.querySelectorAll(`[data-original-identifier="${identifier}"]`);
+        if (elements.length > 0) {
+            const teamName = elements[0].getAttribute('data-team-name');
+            const category = elements[0].getAttribute('data-team-category');
+            
+            if (teamName && teamName !== identifier) {
+                teamsInfo.push({
+                    identifier: identifier,
+                    teamName: teamName,
+                    category: category
+                });
+                console.log(`   • ${identifier} → "${teamName}" (kategória: ${category})`);
+            }
+        }
+    }
+    
+    if (teamsInfo.length === 0) {
+        console.log('❌ Nepodarilo sa získať názvy tímov z DOM');
+        return null;
+    }
+    
+    const results = {};
+    
+    for (const teamInfo of teamsInfo) {
+        console.log(`\n🔍 Vyhľadávam tím "${teamInfo.teamName}" v kategórii "${teamInfo.category}"...`);
+        const result = findTeamByNameAndCategory(teamInfo.teamName, teamInfo.category, renderToDOM);
+        
+        if (result && !Array.isArray(result)) {
+            if (Object.keys(results).length === 0) {
+                results.home = result;
+            } else if (Object.keys(results).length === 1) {
+                results.away = result;
+            } else {
+                results[`team_${Object.keys(results).length + 1}`] = result;
+            }
+        }
+    }
+    
+    console.log('\n' + '='.repeat(70));
+    console.log('📊 VÝSLEDOK VYHĽADÁVANIA:');
+    console.log('='.repeat(70));
+    
+    if (results.home) {
+        console.log(`\n🏠 DOMÁCI TÍM: ${results.home.team.teamName}`);
+        console.log(`   • Kategória: ${results.home.category}`);
+        console.log(`   • Používateľ: ${results.home.user.email}`);
+    }
+    
+    if (results.away) {
+        console.log(`\n✈️ HOSŤOVSKÝ TÍM: ${results.away.team.teamName}`);
+        console.log(`   • Kategória: ${results.away.category}`);
+        console.log(`   • Používateľ: ${results.away.user.email}`);
+    }
+    
+    console.log('\n' + '='.repeat(70));
+    
+    // AUTOMATICKÉ NASTAVENIE TÍMOV
+    if (autoSetTeams && results.home && results.away) {
+        console.log('\n🚀 AUTOMATICKÉ NASTAVENIE TÍMOV:');
+        console.log(`   setBothTeamsDetails("${results.home.team.teamName}", "${results.home.category}", "${results.away.team.teamName}", "${results.away.category}")`);
+        
+        await window.setBothTeamsDetails(
+            results.home.team.teamName, 
+            results.home.category, 
+            results.away.team.teamName, 
+            results.away.category
+        );
+        
+        console.log('✅ Tímy boli automaticky nastavené!');
+    } else if (autoSetTeams && (!results.home || !results.away)) {
+        console.log('⚠️ Neboli nájdené oba tímy, automatické nastavenie preskočené.');
+    }
+    
+    return results;
+};
+
+// Prepíšeme pôvodnú funkciu
+window.findCurrentMatchFromDOM = findCurrentMatchFromDOM;
+
+// ============================================================
+// PRIDANÁ NOVÁ FUNKCIA: quickSetup - rýchle nastavenie z DOM
+// ============================================================
+
+window.quickSetup = async () => {
+    console.log('🚀 RÝCHLE NASTAVENIE TÍMOV Z DOM...');
+    console.log('');
+
+    // Najprv nájdeme tímy v DOM
+    const allTeamElements = document.querySelectorAll('[data-original-identifier]');
+    
+    if (allTeamElements.length === 0) {
+        console.log('❌ V DOM sa nenašli žiadne elementy s atribútom data-original-identifier');
+        console.log('💡 Uistite sa, že ste na stránke s detailom zápasu');
+        return;
+    }
+    
+    const teamsData = [];
+    
+    for (const el of allTeamElements) {
+        const identifier = el.getAttribute('data-original-identifier');
+        const teamName = el.getAttribute('data-team-name');
+        const category = el.getAttribute('data-team-category');
+        
+        if (identifier && teamName && teamName !== identifier && category) {
+            teamsData.push({
+                identifier: identifier,
+                teamName: teamName,
+                category: category
+            });
+        }
+    }
+    
+    if (teamsData.length === 0) {
+        console.log('❌ Nepodarilo sa získať údaje o tímoch z DOM');
+        return;
+    }
+    
+    console.log(`📋 Nájdených ${teamsData.length} tímov v DOM:`);
+    teamsData.forEach((team, idx) => {
+        console.log(`   ${idx + 1}. ${team.identifier} → "${team.teamName}" (${team.category})`);
+    });
+    
+    if (teamsData.length >= 2) {
+        const homeTeam = teamsData[0];
+        const awayTeam = teamsData[1];
+        
+        console.log('\n🏠 Domáci tím:', homeTeam.teamName, `(${homeTeam.category})`);
+        console.log('✈️ Hosťovský tím:', awayTeam.teamName, `(${awayTeam.category})`);
+        console.log('\n🔧 Nastavujem tímy...');
+        
+        await window.setBothTeamsDetails(
+            homeTeam.teamName,
+            homeTeam.category,
+            awayTeam.teamName,
+            awayTeam.category
+        );
+        
+        console.log('\n✅ HOTOVO! Tímy boli nastavené.');
+    } else {
+        console.log('❌ Nenašli sa oba tímy (domáci a hosťovský)');
+    }
+};
+
+console.log('');
+console.log('✅ FUNKCIE BOLI AKTUALIZOVANÉ!');
+console.log('');
+console.log('📌 TERAZ MÔŽETE POUŽIŤ:');
+console.log('');
+console.log('   1️⃣ findCurrentMatchFromDOM()  - vyhľadá tímy a AUTOMATICKY ich nastaví');
+console.log('   2️⃣ quickSetup()               - rýchle nastavenie tímov z DOM (odporúčané)');
+console.log('   3️⃣ setTeamsFromCurrentMatch() - pôvodná funkcia (tiež funguje)');
+console.log('');
+console.log('🚀 RÝCHLE POUŽITIE:');
+console.log('   quickSetup()');
+console.log('');
+
 const setupPermanentTeamListeners = () => {
     // Poslúchač pre domáci tím
     const handleSetHomeTeamPermanent = (event) => {
