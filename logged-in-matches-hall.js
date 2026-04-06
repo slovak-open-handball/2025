@@ -7877,6 +7877,13 @@ async function findTeamByNameAndCategoryDirect(teamNameOrIdentifier, categoryNam
         // Skúsime získať názov tímu cez mapovanie
         if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
             const mappedName = window.teamNameReplacer.getTeamNameFromMapping(teamNameOrIdentifier);
+            
+            // 🔴 DÔLEŽITÉ: Ak mappedName je null, OKAMŽITE VRÁTIME NULL a nehľadáme ďalej
+            if (mappedName === null) {
+                console.log(`   ❌ DIRECT: Mapovanie vrátilo null pre identifikátor "${teamNameOrIdentifier}" - tím neexistuje, končím.`);
+                return null;
+            }
+            
             if (mappedName && mappedName !== teamNameOrIdentifier) {
                 console.log(`   ✅ DIRECT: Identifikátor bol zmapovaný: "${teamNameOrIdentifier}" → "${mappedName}"`);
                 actualTeamName = mappedName;
@@ -7891,20 +7898,21 @@ async function findTeamByNameAndCategoryDirect(teamNameOrIdentifier, categoryNam
                 actualTeamName = mappedName;
             }
         } else {
-            // Skúsime nájsť v DOM
-            const elements = document.querySelectorAll(`[data-original-identifier="${teamNameOrIdentifier}"]`);
-            if (elements.length > 0) {
-                const teamNameFromDOM = elements[0].getAttribute('data-team-name');
-                if (teamNameFromDOM && teamNameFromDOM !== teamNameOrIdentifier) {
-                    console.log(`   ✅ DIRECT: Identifikátor bol nájdený v DOM: "${teamNameOrIdentifier}" → "${teamNameFromDOM}"`);
-                    actualTeamName = teamNameFromDOM;
-                }
-            }
+            // 🔴 Ak nie je k dispozícii mapovanie, skúsime DOM, ale ak je to identifikátor a nie je zmapovaný, vrátime null
+            console.log(`   ❌ DIRECT: Mapovanie nie je dostupné pre identifikátor "${teamNameOrIdentifier}" - končím.`);
+            return null;
         }
     } else {
         // Ak to nie je identifikátor, skúsime aplikovať mapovanie aj na názov tímu
         if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
             const mappedName = window.teamNameReplacer.getTeamNameFromMapping(teamNameOrIdentifier);
+            
+            // 🔴 Ak mappedName je null, znamená to, že názov tímu neexistuje v mapovaní
+            if (mappedName === null) {
+                console.log(`   ❌ DIRECT: Mapovanie vrátilo null pre názov "${teamNameOrIdentifier}" - tím neexistuje, končím.`);
+                return null;
+            }
+            
             if (mappedName && mappedName !== teamNameOrIdentifier) {
                 console.log(`   🔄 DIRECT: Názov tímu bol zmapovaný: "${teamNameOrIdentifier}" → "${mappedName}"`);
                 actualTeamName = mappedName;
