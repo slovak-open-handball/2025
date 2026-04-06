@@ -8917,3 +8917,256 @@ const setupTeamRenderingListener = () => {
 
 // Spustíme listener
 setupTeamRenderingListener();
+
+
+// ============================================================
+// OPRAVA: Funkcia na manuálne vykreslenie tímov do UI s oneskorením
+// ============================================================
+
+// Táto funkcia počka na to, kým sa UI načíta a potom vykreslí tímy
+const forceRenderTeamsToUI = () => {
+    console.log('🔄 FORCE RENDER: Spúšťam vynútené vykreslenie tímov...');
+    
+    // Počkáme 500ms, aby sa UI stihlo načítať
+    setTimeout(() => {
+        // Skúsime vykresliť domáci tím
+        if (window._homeTeamDetails) {
+            console.log(`🏠 Vynútené vykreslenie domáceho tímu: ${window._homeTeamDetails.team.teamName}`);
+            renderFullTeamToUI(window._homeTeamDetails, 'home');
+        } else {
+            console.log('⚠️ Žiadny domáci tím na vykreslenie');
+        }
+        
+        // Skúsime vykresliť hosťovský tím
+        if (window._awayTeamDetails) {
+            console.log(`✈️ Vynútené vykreslenie hosťovského tímu: ${window._awayTeamDetails.team.teamName}`);
+            renderFullTeamToUI(window._awayTeamDetails, 'away');
+        } else {
+            console.log('⚠️ Žiadny hosťovský tím na vykreslenie');
+        }
+    }, 500);
+};
+
+// Prepíšeme pôvodnú funkciu setBothTeamsDetails, aby po nastavení tímov zavolala force render
+const originalSetBothTeamsDetails = window.setBothTeamsDetails;
+window.setBothTeamsDetails = async (homeTeamName, homeCategory, awayTeamName, awayCategory) => {
+    console.log('🔧 Nastavujem oba tímy...');
+    
+    // 🔄 NAJPRV POUŽIJEME MAPPING NA NÁZVY TÍMOV
+    let actualHomeTeamName = homeTeamName;
+    let actualAwayTeamName = awayTeamName;
+    
+    if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
+        if (homeTeamName) {
+            const mappedHome = window.teamNameReplacer.getTeamNameFromMapping(homeTeamName);
+            if (mappedHome && mappedHome !== homeTeamName) {
+                console.log(`🔄 Mapovanie domáceho tímu: "${homeTeamName}" → "${mappedHome}"`);
+                actualHomeTeamName = mappedHome;
+            } else if (mappedHome) {
+                actualHomeTeamName = mappedHome;
+            }
+        }
+        
+        if (awayTeamName) {
+            const mappedAway = window.teamNameReplacer.getTeamNameFromMapping(awayTeamName);
+            if (mappedAway && mappedAway !== awayTeamName) {
+                console.log(`🔄 Mapovanie hosťovského tímu: "${awayTeamName}" → "${mappedAway}"`);
+                actualAwayTeamName = mappedAway;
+            } else if (mappedAway) {
+                actualAwayTeamName = mappedAway;
+            }
+        }
+    }
+    
+    if (actualHomeTeamName && homeCategory) {
+        await window.setHomeTeamDetails(actualHomeTeamName, homeCategory);
+    }
+    if (actualAwayTeamName && awayCategory) {
+        await window.setAwayTeamDetails(actualAwayTeamName, awayCategory);
+    }
+    
+    // Po nastavení tímov spustíme vynútené vykreslenie
+    forceRenderTeamsToUI();
+};
+
+// Prepíšeme aj pôvodné setHomeTeamDetails a setAwayTeamDetails
+const originalSetHomeTeamDetails = window.setHomeTeamDetails;
+window.setHomeTeamDetails = async (teamName, categoryName) => {
+    // 🔄 NAJPRV POUŽIJEME MAPPING
+    let actualTeamName = teamName;
+    if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
+        const mappedName = window.teamNameReplacer.getTeamNameFromMapping(teamName);
+        if (mappedName && mappedName !== teamName) {
+            console.log(`🔄 Mapovanie domáceho tímu: "${teamName}" → "${mappedName}"`);
+            actualTeamName = mappedName;
+        } else if (mappedName) {
+            console.log(`✅ Domáci tím už je správne zmapovaný: "${teamName}"`);
+            actualTeamName = mappedName;
+        } else {
+            console.log(`⚠️ Žiadne mapovanie pre domáci tím: "${teamName}", používam pôvodný`);
+        }
+    }
+    
+    console.log(`🔍 Vyhľadávam domáci tím: "${actualTeamName}" v kategórii: "${categoryName}"`);
+    
+    // Nájdenie detailov tímu
+    const result = findTeamByNameAndCategory(actualTeamName, categoryName, false);
+    
+    if (!result || Array.isArray(result)) {
+        console.log(`❌ Tím "${actualTeamName}" v kategórii "${categoryName}" nebol nájdený`);
+        return;
+    }
+    
+    // Získanie ID zápasu (automaticky)
+    let matchId = window.currentMatchId;
+    if (!matchId) {
+        matchId = await getCurrentMatchIdFromURL();
+    }
+    
+    if (!matchId) {
+        console.log('⚠️ Nepodarilo sa získať ID zápasu, ale tím bol nájdený.');
+        console.log(`   Tím: ${result.team.teamName}`);
+        console.log(`   Používateľ: ${result.user.email}`);
+        console.log(`   Počet hráčov: ${result.team.playerDetails?.length || 0}`);
+        
+        window._lastFoundTeam = {
+            type: 'home',
+            teamDetails: result,
+            timestamp: Date.now()
+        };
+        
+        // 🔄 VYKRESLÍME TÍM DO UI AJ BEZ matchId
+        renderFullTeamToUI(result, 'home');
+        window._homeTeamDetails = result;
+        return;
+    }
+    
+    // Odoslanie udalosti
+    const event = new CustomEvent('setHomeTeamDetails', {
+        detail: {
+            teamDetails: result,
+            matchId: matchId
+        }
+    });
+    window.dispatchEvent(event);
+    
+    // 🔄 VYKRESLÍME TÍM DO UI OKAMŽITE
+    renderFullTeamToUI(result, 'home');
+    window._homeTeamDetails = result;
+    
+    console.log(`✅ Domáci tím nastavený a vykreslený: ${actualTeamName}`);
+    console.log(`   📧 Používateľ: ${result.user.email}`);
+    console.log(`   👥 Počet hráčov: ${result.team.playerDetails?.length || 0}`);
+    console.log(`   🆔 ID zápasu: ${matchId}`);
+};
+
+const originalSetAwayTeamDetails = window.setAwayTeamDetails;
+window.setAwayTeamDetails = async (teamName, categoryName) => {
+    // 🔄 NAJPRV POUŽIJEME MAPPING
+    let actualTeamName = teamName;
+    if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
+        const mappedName = window.teamNameReplacer.getTeamNameFromMapping(teamName);
+        if (mappedName && mappedName !== teamName) {
+            console.log(`🔄 Mapovanie hosťovského tímu: "${teamName}" → "${mappedName}"`);
+            actualTeamName = mappedName;
+        } else if (mappedName) {
+            console.log(`✅ Hosťovský tím už je správne zmapovaný: "${teamName}"`);
+            actualTeamName = mappedName;
+        } else {
+            console.log(`⚠️ Žiadne mapovanie pre hosťovský tím: "${teamName}", používam pôvodný`);
+        }
+    }
+    
+    console.log(`🔍 Vyhľadávam hosťovský tím: "${actualTeamName}" v kategórii: "${categoryName}"`);
+    
+    // Nájdenie detailov tímu
+    const result = findTeamByNameAndCategory(actualTeamName, categoryName, false);
+    
+    if (!result || Array.isArray(result)) {
+        console.log(`❌ Tím "${actualTeamName}" v kategórii "${categoryName}" nebol nájdený`);
+        return;
+    }
+    
+    // Získanie ID zápasu (automaticky)
+    let matchId = window.currentMatchId;
+    if (!matchId) {
+        matchId = await getCurrentMatchIdFromURL();
+    }
+    
+    if (!matchId) {
+        console.log('⚠️ Nepodarilo sa získať ID zápasu, ale tím bol nájdený.');
+        console.log(`   Tím: ${result.team.teamName}`);
+        console.log(`   Používateľ: ${result.user.email}`);
+        console.log(`   Počet hráčov: ${result.team.playerDetails?.length || 0}`);
+        
+        window._lastFoundTeam = {
+            type: 'away',
+            teamDetails: result,
+            timestamp: Date.now()
+        };
+        
+        // 🔄 VYKRESLÍME TÍM DO UI AJ BEZ matchId
+        renderFullTeamToUI(result, 'away');
+        window._awayTeamDetails = result;
+        return;
+    }
+    
+    // Odoslanie udalosti
+    const event = new CustomEvent('setAwayTeamDetails', {
+        detail: {
+            teamDetails: result,
+            matchId: matchId
+        }
+    });
+    window.dispatchEvent(event);
+    
+    // 🔄 VYKRESLÍME TÍM DO UI OKAMŽITE
+    renderFullTeamToUI(result, 'away');
+    window._awayTeamDetails = result;
+    
+    console.log(`✅ Hosťovský tím nastavený a vykreslený: ${actualTeamName}`);
+    console.log(`   📧 Používateľ: ${result.user.email}`);
+    console.log(`   👥 Počet hráčov: ${result.team.playerDetails?.length || 0}`);
+    console.log(`   🆔 ID zápasu: ${matchId}`);
+};
+
+// PRIDÁME AJ MUTATION OBSERVER PRE PRÍPAD, ŽE SA UI ZMENÍ AŽ PO NASTAVENÍ
+const setupMutationObserverForTeams = () => {
+    // Sledujeme zmeny v DOM, aby sme zachytili, keď sa objavia kontajnery pre tímy
+    const observer = new MutationObserver((mutations) => {
+        // Skontrolujeme, či sa objavil kontajner s triedou .grid-cols-4 alebo .grid-cols-2
+        const containers = document.querySelectorAll('.grid-cols-4, .grid-cols-2');
+        if (containers.length > 0) {
+            console.log('🔍 MutationObserver: Našiel som kontajnery pre tímy, spúšťam vykreslenie...');
+            
+            // Ak máme uložené tímy, vykreslíme ich
+            if (window._homeTeamDetails) {
+                renderFullTeamToUI(window._homeTeamDetails, 'home');
+            }
+            if (window._awayTeamDetails) {
+                renderFullTeamToUI(window._awayTeamDetails, 'away');
+            }
+            
+            // Po úspešnom vykreslení môžeme observer zastaviť
+            observer.disconnect();
+            console.log('✅ MutationObserver: Vykreslenie dokončené, observer zastavený');
+        }
+    });
+    
+    // Sledujeme celý dokument
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+    
+    console.log('👀 MutationObserver nastavený pre sledovanie kontajnerov tímov');
+};
+
+// Spustíme observer
+setupMutationObserverForTeams();
+
+// Exportujeme pomocné funkcie
+window.forceRenderTeamsToUI = forceRenderTeamsToUI;
+
+console.log('✅ PRIDANÉ VYNÚTENÉ VYKRESLENIE TÍMOV!');
+console.log('📌 Ak sa tímy nevykreslia automaticky, spustite manuálne: forceRenderTeamsToUI()');
