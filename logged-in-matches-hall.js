@@ -329,10 +329,12 @@ const matchesHallApp = ({ userProfileData }) => {
     const [editStaffIsMen, setEditStaffIsMen] = useState(true); // true = men, false = women
 
     const [showFloatingScore, setShowFloatingScore] = useState(false);
-
     const [teamManagerReady, setTeamManagerReady] = useState(false);
-
     const [superstructureTeams, setSuperstructureTeams] = useState({});
+    
+    // Pridajte k ostatným useState deklaráciám
+    const [isMappingReady, setIsMappingReady] = useState(false);
+    const [teamMappings, setTeamMappings] = useState({});
 
     // Pridajte k ostatným useState deklaráciám
     const [homeTeamDetailsState, setHomeTeamDetailsState] = useState(null);
@@ -1798,6 +1800,52 @@ const matchesHallApp = ({ userProfileData }) => {
         return selectedMatch.status === 'scheduled';
     };
 
+    useEffect(() => {
+        // Kontrola, či už náhodou nie je mapovanie pripravené
+        if (window.teamNameReplacer?.isMappingReady?.()) {
+            console.log('✅ Mapovanie už je pripravené (kontrola)');
+            setIsMappingReady(true);
+            setTeamMappings(window.__teamNameMapping || {});
+            return;
+        }
+        
+        // Kontrola, či už existujú mapovania v __teamNameMapping
+        if (window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0) {
+            console.log(`✅ Mapovanie už existuje (${Object.keys(window.__teamNameMapping).length} položiek)`);
+            setIsMappingReady(true);
+            setTeamMappings(window.__teamNameMapping);
+            return;
+        }
+        
+        // Počkáme na udalosť, že mapovanie je pripravené
+        const handleMappingReady = (event) => {
+            console.log('📡 Prijatá udalosť teamNameMappingReady!');
+            console.log(`   Počet mapovaní: ${event.detail.mappingsCount}`);
+            setIsMappingReady(true);
+            setTeamMappings(event.detail.mappings);
+        };
+        
+        window.addEventListener('teamNameMappingReady', handleMappingReady);
+        
+        // Tiež môžeme požiadať o ohlásenie pripravenosti
+        if (window.teamNameReplacer?.announceReady) {
+            window.teamNameReplacer.announceReady();
+        }
+        
+        // Timeout pre prípad, že by mapovanie nikdy neprišlo (po 10 sekundách aj tak pokračujeme)
+        const timeout = setTimeout(() => {
+            if (!isMappingReady) {
+                console.log('⚠️ Timeout čakania na mapovanie, pokračujem bez neho...');
+                setIsMappingReady(true);
+            }
+        }, 10000);
+        
+        return () => {
+            window.removeEventListener('teamNameMappingReady', handleMappingReady);
+            clearTimeout(timeout);
+        };
+    }, []);
+
     // ============================================================
     // AUTOMATICKÉ NASTAVENIE TÍMOV PRI VÝBERE ZÁPASU Z URL
     // ============================================================
@@ -1831,6 +1879,11 @@ const matchesHallApp = ({ userProfileData }) => {
         // ✅ Počkáme na kategórie
         if (categories.length === 0) {
             console.log("⏳ Čakám na načítanie kategórií...");
+            return;
+        }
+
+        if (!isMappingReady) {
+            console.log("⏳ Čakám na dokončenie mapovania tímov (teamNameReplacer)...");
             return;
         }
         
@@ -1923,7 +1976,7 @@ const matchesHallApp = ({ userProfileData }) => {
         
         setupTeams();
         
-    }, [selectedMatch, users, categories]); // ✅ Pridané categories do závislostí
+    }, [selectedMatch, users, categories, isMappingReady]);
 
     useEffect(() => {
         // Poslúchač pre nastavenie domáceho tímu
@@ -2884,7 +2937,26 @@ const matchesHallApp = ({ userProfileData }) => {
     // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA (OPRAVENÁ)
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
+    
+        // 🔴 1. NAJPRV SKÚSIME ZÍSKAŤ NÁZOV Z MAPOVANIA (z druhého kódu)
+        if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
+            const mappedName = window.teamNameReplacer.getTeamNameFromMapping(identifier);
+            if (mappedName && mappedName !== identifier) {
+                console.log(`🔄 Mapovanie z druhého kódu: "${identifier}" → "${mappedName}"`);
+                return mappedName;
+            }
+        }
         
+        // 🔴 2. SKÚSIME PRIAMO Z GLOBÁLNEHO OBJEKTU __teamNameMapping
+        if (window.__teamNameMapping && window.__teamNameMapping[identifier]) {
+            const mappedName = window.__teamNameMapping[identifier].teamName;
+            if (mappedName && mappedName !== identifier) {
+                console.log(`🔄 Mapovanie z __teamNameMapping: "${identifier}" → "${mappedName}"`);
+                return mappedName;
+            }
+        }
+        
+        // 3. Pôvodné vyhľadávanie v superstructureTeams
         let foundName = null;
         
         // 1. Skúsime superstructureTeams zo stavu
