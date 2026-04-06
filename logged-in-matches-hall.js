@@ -1861,6 +1861,10 @@ const matchesHallApp = ({ userProfileData }) => {
     }, []);
 
     useEffect(() => {
+        window.__reactUsersState = users;
+    }, [users]);
+
+    useEffect(() => {
         if (!window.db) return;
     
         const superstructureDocRef = doc(window.db, 'settings', 'superstructureGroups');
@@ -7303,3 +7307,286 @@ console.log('   • window.listAllTeams() - zobrazenie všetkých dostupných t�
 console.log('   • window.findTeamInUsers("názov", "kategória") - vyhľadanie tímu');
 console.log('   • window.forceTeamIntoMatch("názov tímu", "kategória", "home/away") - vloženie tímu do zápasu');
 console.log('   • window.registerMatchSetter(setterFunction) - registrácia React settera (voliteľné)');
+
+
+// ============================================================================
+// NOVÁ FUNKCIA NA PRIAMO VLOŽENIE TÍMU DO UI (bez spoliehania sa na getTeamDetails)
+// ============================================================================
+
+/**
+ * Priamo vloží hráčov a členov RT tímu do UI podľa kategórie, skupiny a poradia.
+ * Táto funkcia obchádza getTeamDetails() a priamo aktualizuje React stav.
+ * 
+ * @param {string} categoryName - Názov kategórie (napr. "U12 D")
+ * @param {string} groupName - Názov skupiny (napr. "skupina B")
+ * @param {number} order - Poradie tímu v skupine (napr. 2)
+ * @param {string} teamSide - Ktorá strana: 'home' alebo 'away'
+ * @returns {Promise<Object|null>} - Informácie o vloženom tíme
+ * 
+ * Príklad použitia v konzole:
+ * window.forceTeamByGroup("U12 D", "skupina B", 2, "home")
+ */
+window.forceTeamByGroup = async (categoryName, groupName, order, teamSide = 'home') => {
+    if (!categoryName || !groupName || !order) {
+        console.error('❌ Chyba: Je potrebné zadať categoryName, groupName a order.');
+        console.log('   Príklad: window.forceTeamByGroup("U12 D", "skupina B", 2, "home")');
+        return null;
+    }
+
+    if (!window.db) {
+        console.error('❌ Chyba: Firebase databáza nie je inicializovaná.');
+        return null;
+    }
+
+    // Získanie aktuálneho zápasu
+    let currentMatchId = window.currentMatchId;
+    
+    if (!currentMatchId) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const homeIdentifier = urlParams.get('domaci');
+        const awayIdentifier = urlParams.get('hostia');
+        
+        if (homeIdentifier && awayIdentifier) {
+            try {
+                const matchesRef = collection(window.db, 'matches');
+                const q = query(
+                    matchesRef, 
+                    where("homeTeamIdentifier", "==", homeIdentifier),
+                    where("awayTeamIdentifier", "==", awayIdentifier)
+                );
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                    querySnapshot.forEach((doc) => {
+                        currentMatchId = doc.id;
+                        window.currentMatchId = currentMatchId;
+                    });
+                }
+            } catch (error) {
+                console.error('Chyba pri vyhľadávaní zápasu:', error);
+            }
+        }
+    }
+    
+    if (!currentMatchId) {
+        console.error('❌ Chyba: Nie je vybraný žiadny zápas.');
+        return null;
+    }
+
+    try {
+        // 1. Vyhľadáme používateľa, ktorý vlastní tento tím
+        const usersRef = collection(window.db, 'users');
+        const usersSnap = await getDocs(usersRef);
+        
+        let foundTeam = null;
+        let foundUser = null;
+        
+        for (const userDoc of usersSnap.docs) {
+            const userData = userDoc.data();
+            const teams = userData.teams || {};
+            
+            for (const [category, teamsArray] of Object.entries(teams)) {
+                if (category !== categoryName) continue;
+                
+                if (Array.isArray(teamsArray)) {
+                    const team = teamsArray.find(t => 
+                        t.groupName === groupName && 
+                        t.order === order
+                    );
+                    
+                    if (team) {
+                        foundTeam = team;
+                        foundUser = {
+                            id: userDoc.id,
+                            email: userData.email,
+                            displayName: userData.displayName
+                        };
+                        break;
+                    }
+                }
+            }
+            if (foundTeam) break;
+        }
+        
+        if (!foundTeam) {
+            console.error(`❌ Tím nebol nájdený: kategória="${categoryName}", skupina="${groupName}", poradie=${order}`);
+            return null;
+        }
+        
+        console.log(`✅ Nájdený tím: ${foundTeam.teamName}`);
+        console.log(`   Hráči: ${foundTeam.playerDetails?.length || 0}`);
+        console.log(`   RT muži: ${foundTeam.menTeamMemberDetails?.length || 0}`);
+        console.log(`   RT ženy: ${foundTeam.womenTeamMemberDetails?.length || 0}`);
+        
+        // 2. Vytvoríme identifikátor pre tím
+        const groupLetter = groupName.replace('skupina ', '').toUpperCase();
+        const teamIdentifier = `${categoryName} ${order}${groupLetter}`;
+        
+        // 3. Aktualizujeme zápas v databáze
+        const matchRef = doc(window.db, 'matches', currentMatchId);
+        const updateData = {};
+        if (teamSide === 'home') {
+            updateData.homeTeamIdentifier = teamIdentifier;
+        } else {
+            updateData.awayTeamIdentifier = teamIdentifier;
+        }
+        
+        await updateDoc(matchRef, updateData);
+        console.log(`✅ Zápas aktualizovaný: ${teamSide} tím nastavený na "${teamIdentifier}"`);
+        
+        // 4. AKTUÁLNE AKTUALIZUJEME LOKÁLNY STAV users
+        // Nájdeme a aktualizujeme používateľa v stave users
+        const updatedUsers = [...window.__reactUsersState || []];
+        const userIndex = updatedUsers.findIndex(u => u.id === foundUser.id);
+        
+        if (userIndex !== -1) {
+            // Aktualizujeme existujúceho používateľa
+            const updatedUser = { ...updatedUsers[userIndex] };
+            if (!updatedUser.teams) updatedUser.teams = {};
+            if (!updatedUser.teams[categoryName]) updatedUser.teams[categoryName] = [];
+            
+            const teamIndex = updatedUser.teams[categoryName].findIndex(t => 
+                t.groupName === groupName && t.order === order
+            );
+            
+            if (teamIndex !== -1) {
+                updatedUser.teams[categoryName][teamIndex] = foundTeam;
+            } else {
+                updatedUser.teams[categoryName].push(foundTeam);
+            }
+            
+            updatedUsers[userIndex] = updatedUser;
+            
+            // Ak máme React setter pre users, zavoláme ho
+            if (window.__reactUsersSetter && typeof window.__reactUsersSetter === 'function') {
+                window.__reactUsersSetter(updatedUsers);
+                console.log('🔄 Stav users bol aktualizovaný cez React setter.');
+            }
+        }
+        
+        // 5. Ak máme React setter pre selectedMatch, aktualizujeme ho
+        if (window.__reactSelectedMatchSetter && typeof window.__reactSelectedMatchSetter === 'function') {
+            const matchRef2 = doc(window.db, 'matches', currentMatchId);
+            const matchSnap = await getDoc(matchRef2);
+            if (matchSnap.exists()) {
+                window.__reactSelectedMatchSetter({ id: currentMatchId, ...matchSnap.data() });
+                console.log('🔄 Stav selectedMatch bol aktualizovaný.');
+            }
+        }
+        
+        // 6. Vypíšeme kompletný zoznam hráčov a RT
+        console.log('\n📋 ZOZNAM HRÁČOV:');
+        if (foundTeam.playerDetails && foundTeam.playerDetails.length > 0) {
+            foundTeam.playerDetails.forEach((player, idx) => {
+                console.log(`   ${idx + 1}. ${player.lastName} ${player.firstName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`);
+            });
+        } else {
+            console.log('   Žiadni hráči');
+        }
+        
+        console.log('\n👨‍🏫 REALIZAČNÝ TÍM (MUŽI):');
+        if (foundTeam.menTeamMemberDetails && foundTeam.menTeamMemberDetails.length > 0) {
+            foundTeam.menTeamMemberDetails.forEach((member, idx) => {
+                console.log(`   ${idx + 1}. ${member.lastName} ${member.firstName}`);
+            });
+        } else {
+            console.log('   Žiadni muži v RT');
+        }
+        
+        console.log('\n👩‍🏫 REALIZAČNÝ TÍM (ŽENY):');
+        if (foundTeam.womenTeamMemberDetails && foundTeam.womenTeamMemberDetails.length > 0) {
+            foundTeam.womenTeamMemberDetails.forEach((member, idx) => {
+                console.log(`   ${idx + 1}. ${member.lastName} ${member.firstName}`);
+            });
+        } else {
+            console.log('   Žiadne ženy v RT');
+        }
+        
+        console.log('\n💡 Pre úplné zobrazenie v UI môže byť potrebné obnoviť stránku (F5).');
+        
+        return {
+            team: foundTeam,
+            user: foundUser,
+            teamIdentifier: teamIdentifier
+        };
+        
+    } catch (error) {
+        console.error('❌ Chyba pri vkladaní tímu:', error);
+        return null;
+    }
+};
+
+/**
+ * Registrácia React settera pre users stav.
+ */
+window.registerUsersSetter = (setterFunction) => {
+    window.__reactUsersSetter = setterFunction;
+    console.log('✅ React setter pre users bol zaregistrovaný.');
+};
+
+/**
+ * Získa všetky tímy v danej kategórii a skupine.
+ */
+window.getTeamsByGroup = async (categoryName, groupName) => {
+    if (!window.db) return [];
+    
+    try {
+        const usersRef = collection(window.db, 'users');
+        const usersSnap = await getDocs(usersRef);
+        const teams = [];
+        
+        for (const userDoc of usersSnap.docs) {
+            const userData = userDoc.data();
+            const teamsData = userData.teams || {};
+            
+            for (const [category, teamsArray] of Object.entries(teamsData)) {
+                if (category !== categoryName) continue;
+                
+                if (Array.isArray(teamsArray)) {
+                    const filteredTeams = teamsArray.filter(t => t.groupName === groupName);
+                    teams.push(...filteredTeams.map(t => ({
+                        ...t,
+                        userId: userDoc.id,
+                        userEmail: userData.email
+                    })));
+                }
+            }
+        }
+        
+        console.log(`📋 Tímy v kategórii "${categoryName}", skupine "${groupName}":`);
+        teams.forEach((team, idx) => {
+            console.log(`   ${idx + 1}. ${team.teamName} (poradie: ${team.order})`);
+        });
+        
+        return teams;
+    } catch (error) {
+        console.error('Chyba pri získavaní tímov:', error);
+        return [];
+    }
+};
+
+// ============================================================================
+// PRÍKLADY POUŽITIA:
+// ============================================================================
+// 
+// 1. Vloženie tímu podľa skupiny a poradia:
+//    window.forceTeamByGroup("U12 D", "skupina B", 2, "home")
+//
+// 2. Získanie všetkých tímov v skupine:
+//    window.getTeamsByGroup("U12 D", "skupina B")
+//
+// 3. Registrácia React setterov (pridajte do React komponentu):
+//    useEffect(() => {
+//        window.registerMatchSetter(setSelectedMatch);
+//        window.registerUsersSetter(setUsers);
+//        return () => {
+//            window.__reactSelectedMatchSetter = null;
+//            window.__reactUsersSetter = null;
+//        };
+//    }, []);
+//
+// ============================================================================
+
+console.log('✅ Pripravené nové funkcie na vkladanie tímov podľa skupiny:');
+console.log('   • window.forceTeamByGroup("U12 D", "skupina B", 2, "home") - vloženie tímu');
+console.log('   • window.getTeamsByGroup("U12 D", "skupina B") - zoznam tímov v skupine');
+console.log('   • window.registerUsersSetter(setUsers) - registrácia settera pre users');
