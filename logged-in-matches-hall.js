@@ -1805,6 +1805,11 @@ const matchesHallApp = ({ userProfileData }) => {
         // Tento useEffect sa spustí vždy, keď sa zmení selectedMatch
         // a keď je selectedMatch nastavený (napr. z URL parametrov)
         if (!selectedMatch) return;
+
+        if (users.length === 0) {
+            console.log("⏳ Čakám na načítanie používateľov...");
+            return; // Týmto sa zastaví ďalšie vykonávanie
+        }
         
         // Skontrolujeme, či už boli tímy nastavené pre tento zápas
         // (aby sme nevolali nastavenie viackrát)
@@ -1886,7 +1891,7 @@ const matchesHallApp = ({ userProfileData }) => {
         
         setupTeams();
         
-    }, [selectedMatch]); // Spustí sa pri každej zmene selectedMatch
+    }, [selectedMatch, users]); // Spustí sa pri každej zmene selectedMatch
 
     useEffect(() => {
         // Poslúchač pre nastavenie domáceho tímu
