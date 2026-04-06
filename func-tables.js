@@ -709,7 +709,7 @@
                 const match = { id: change.doc.id, ...change.doc.data() };
                 
                 if (change.type === 'added') {
-                  console.log(`➕ Pridaný zápas: ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier} (${match.status})`);
+//                  console.log(`➕ Pridaný zápas: ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier} (${match.status})`);
                     matchesData[match.id] = match;
                     subscribeToMatchEvents(match.id);
                     
