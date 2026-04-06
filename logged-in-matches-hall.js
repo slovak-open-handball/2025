@@ -3569,7 +3569,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     ),
                     React.createElement(
                         'div',
-                        { className: 'text-sm text-gray-500 italic p-4 text-center border border-gray-200 rounded' },
+                        { className: 'text-sm text-gray-500 italic p-2' },
                         'Nedostupné'
                     )
                 );
