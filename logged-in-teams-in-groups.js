@@ -2249,7 +2249,7 @@ const createTeamAssignmentNotification = async (action, team) => {
                                     className: `flex-grow ${textColor} ${additionalClasses}`,
                                     title: title
                                 },
-                                `${pos}. ${displayName}${hasDuplicate ? '' : ''}`
+                                `${pos}. ${window.matchTracker.getTeamNameByDisplayId(displayName) ?? displayName}${hasDuplicate ? '' : ''}`
                             ),
                             React.createElement(
                                 'div',
