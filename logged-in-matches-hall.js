@@ -2397,9 +2397,119 @@ const matchesHallApp = ({ userProfileData }) => {
         fetchHallName();
     }, [hallId]);
 
-    // 🔴 NOVÝ useEffect PRE NAČÍTANIE UDALOSTÍ ZÁPASU - PRIDAŤ SEM
+    // NOVÝ useEffect: Sledovanie zmien selectedMatch a automatické obnovenie údajov
+    useEffect(() => {
+        if (!selectedMatch) return;
+        
+        console.log('🔄 selectedMatch sa zmenil, obnovujem údaje pre zápas:', selectedMatch.id);
+        
+        // 1. Zastavíme starý timer
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            setTimerInterval(null);
+        }
+        
+        // 2. Resetujeme čas
+        setMatchTime(selectedMatch.manualTimeOffset || 0);
+        setManualTimeOffset(selectedMatch.manualTimeOffset || 0);
+        setCleanPlayingTime(selectedMatch.manualTimeOffset || 0);
+        setMatchPaused(selectedMatch.status === 'paused');
+        
+        // 3. Vymažeme staré tímy z UI
+        renderFullTeamToUI(null, 'home');
+        renderFullTeamToUI(null, 'away');
+        
+        // 4. Načítame tímy pre nový zápas
+        const loadTeamsForMatch = async () => {
+            console.log('🔧 Načítavam tímy pre zápas:', selectedMatch.homeTeamIdentifier, 'vs', selectedMatch.awayTeamIdentifier);
+            
+            // Získame názvy tímov pomocou mapovania
+            let homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
+            let awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
+            
+            const identifierPattern = /\s+\d+[A-Za-z]/;
+            
+            // Ak je názov stále identifikátor, skúsime ho manuálne zmapovať
+            if (identifierPattern.test(homeTeamName)) {
+                const converted = convertIdentifierToTeamName(selectedMatch.homeTeamIdentifier);
+                if (converted && converted !== selectedMatch.homeTeamIdentifier) {
+                    homeTeamName = converted;
+                    console.log('🔄 Domáci názov zkonvertovaný:', homeTeamName);
+                }
+            }
+            
+            if (identifierPattern.test(awayTeamName)) {
+                const converted = convertIdentifierToTeamName(selectedMatch.awayTeamIdentifier);
+                if (converted && converted !== selectedMatch.awayTeamIdentifier) {
+                    awayTeamName = converted;
+                    console.log('🔄 Hosťovský názov zkonvertovaný:', awayTeamName);
+                }
+            }
+            
+            // Načítanie domáceho tímu
+            if (homeTeamName && homeTeamName !== selectedMatch.homeTeamIdentifier) {
+                const homeResult = await findTeamByNameAndCategoryDirect(homeTeamName, selectedMatch.categoryName, false);
+                if (homeResult && !Array.isArray(homeResult)) {
+                    window._homeTeamDetails = homeResult;
+                    setHomeTeamDetailsState({
+                        team: homeResult.team,
+                        userEmail: homeResult.user.email,
+                        userId: homeResult.user.id,
+                        userDisplayName: homeResult.user.displayName
+                    });
+                    renderFullTeamToUI(homeResult, 'home');
+                    console.log('✅ Domáci tím načítaný:', homeResult.team.teamName);
+                } else {
+                    console.log('❌ Domáci tím nebol nájdený:', homeTeamName);
+                    setHomeTeamDetailsState(null);
+                    renderFullTeamToUI(null, 'home');
+                }
+            } else {
+                console.log('⚠️ Nepodarilo sa získať názov domáceho tímu');
+                setHomeTeamDetailsState(null);
+                renderFullTeamToUI(null, 'home');
+            }
+            
+            // Načítanie hosťovského tímu
+            if (awayTeamName && awayTeamName !== selectedMatch.awayTeamIdentifier) {
+                const awayResult = await findTeamByNameAndCategoryDirect(awayTeamName, selectedMatch.categoryName, false);
+                if (awayResult && !Array.isArray(awayResult)) {
+                    window._awayTeamDetails = awayResult;
+                    setAwayTeamDetailsState({
+                        team: awayResult.team,
+                        userEmail: awayResult.user.email,
+                        userId: awayResult.user.id,
+                        userDisplayName: awayResult.user.displayName
+                    });
+                    renderFullTeamToUI(awayResult, 'away');
+                    console.log('✅ Hosťovský tím načítaný:', awayResult.team.teamName);
+                } else {
+                    console.log('❌ Hosťovský tím nebol nájdený:', awayTeamName);
+                    setAwayTeamDetailsState(null);
+                    renderFullTeamToUI(null, 'away');
+                }
+            } else {
+                console.log('⚠️ Nepodarilo sa získať názov hosťovského tímu');
+                setAwayTeamDetailsState(null);
+                renderFullTeamToUI(null, 'away');
+            }
+        };
+        
+        // Spustíme načítanie tímov s malým oneskorením
+        const timeoutId = setTimeout(() => {
+            loadTeamsForMatch();
+        }, 100);
+        
+        return () => {
+            clearTimeout(timeoutId);
+        };
+    }, [selectedMatch?.id]); // Spustí sa vždy, keď sa zmení ID zápasu
+
+    // Tento useEffect už máte, ale skontrolujte že je správne
     useEffect(() => {
         if (!selectedMatch || !window.db) return;
+    
+        console.log('📋 Načítavam udalosti pre zápas:', selectedMatch.id);
     
         const eventsRef = collection(window.db, 'matchEvents');
         const q = query(eventsRef, where("matchId", "==", selectedMatch.id));
@@ -2445,13 +2555,14 @@ const matchesHallApp = ({ userProfileData }) => {
             setMatchEvents(loadedEvents);
             setMatchScore({ home: homeScore, away: awayScore });
             setLoadingEvents(false);
+            console.log('✅ Udalosti načítané, skóre:', homeScore, ':', awayScore);
         }, (error) => {
             console.error("Chyba pri načítaní udalostí zápasu:", error);
             setLoadingEvents(false);
         });
     
         return () => unsubscribe();
-    }, [selectedMatch]);
+    }, [selectedMatch]); // DÔLEŽITÉ: selectedMatch ako závislosť (nie selectedMatch?.id)
     
     const deleteMatchEvent = async (eventId) => {
         if (!window.db || !eventId) return;
@@ -4149,60 +4260,43 @@ const matchesHallApp = ({ userProfileData }) => {
         // Funkcie pre navigáciu
         // Nahraďte existujúce funkcie goToPreviousMatch, goToNextMatch a pridajte nové funkcie:
 
-        // Funkcie pre navigáciu - OPRAVENÉ
         const goToPreviousMatch = () => {
             if (hasPrevious) {
                 const previousMatch = sortedMatchesForNavigation[currentIndex - 1];
-                console.log('⬅️ Prechádzam na predchádzajúci zápas:', previousMatch.homeTeamIdentifier, 'vs', previousMatch.awayTeamIdentifier);
+                console.log('⬅️ Prechádzam na predchádzajúci zápas:', previousMatch.homeTeamIdentifier);
                 
-                // 1. Zastavíme timer
+                // Zastavíme timer
                 if (timerInterval) {
                     clearInterval(timerInterval);
                     setTimerInterval(null);
                 }
                 
-                // 2. Vymažeme všetky staré dáta
-                clearMatchData();
-                
-                // 3. Nastavíme nový vybraný zápas
+                // Nastavíme nový selectedMatch - toto spustí useEffecty
                 setSelectedMatch(previousMatch);
                 
-                // 4. Aktualizujeme URL
+                // Aktualizujeme URL
                 updateUrlParameters(previousMatch.homeTeamIdentifier, previousMatch.awayTeamIdentifier);
                 window.currentMatchId = previousMatch.id;
-                
-                // 5. Oneskorené nastavenie tímov (počkáme na React render)
-                setTimeout(() => {
-                    setupTeamsForMatch(previousMatch);
-                }, 200);
             }
         };
         
         const goToNextMatch = () => {
             if (hasNext) {
                 const nextMatch = sortedMatchesForNavigation[currentIndex + 1];
-                console.log('➡️ Prechádzam na nasledujúci zápas:', nextMatch.homeTeamIdentifier, 'vs', nextMatch.awayTeamIdentifier);
+                console.log('➡️ Prechádzam na nasledujúci zápas:', nextMatch.homeTeamIdentifier);
                 
-                // 1. Zastavíme timer
+                // Zastavíme timer
                 if (timerInterval) {
                     clearInterval(timerInterval);
                     setTimerInterval(null);
                 }
                 
-                // 2. Vymažeme všetky staré dáta
-                clearMatchData();
-                
-                // 3. Nastavíme nový vybraný zápas
+                // Nastavíme nový selectedMatch - toto spustí useEffecty
                 setSelectedMatch(nextMatch);
                 
-                // 4. Aktualizujeme URL
+                // Aktualizujeme URL
                 updateUrlParameters(nextMatch.homeTeamIdentifier, nextMatch.awayTeamIdentifier);
                 window.currentMatchId = nextMatch.id;
-                
-                // 5. Oneskorené nastavenie tímov (počkáme na React render)
-                setTimeout(() => {
-                    setupTeamsForMatch(nextMatch);
-                }, 200);
             }
         };
         
