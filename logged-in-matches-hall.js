@@ -1806,7 +1806,7 @@ const matchesHallApp = ({ userProfileData }) => {
         // a keď je selectedMatch nastavený (napr. z URL parametrov)
         if (!selectedMatch) return;
 
-        if (users.length === 0) {
+        if (users.length || window.users.length === 0) {
             console.log("⏳ Čakám na načítanie používateľov...");
             return; // Týmto sa zastaví ďalšie vykonávanie
         }
