@@ -2404,7 +2404,7 @@ if (window.teamNameReplacer) {
 //console.log('   • window.__teamNameMapping - globálny objekt s mapovaniami');
 
 // ============================================================
-// NOTIFIKÁCIA O DOKONČENÍ MAPOVANIA
+// NOTIFIKÁCIA O DOKONČENÍ MAPOVANIA – OKAMŽITÁ
 // ============================================================
 
 // Premenná na sledovanie, či už bolo mapovanie dokončené
@@ -2433,22 +2433,23 @@ function notifyMappingReady() {
     window.dispatchEvent(event);
 }
 
-// Prepíšeme funkciu performPartialReplacement, aby po prvom úspešnom nahradení odoslala udalosť
-const originalPerformReplacement = window.performPartialReplacement || performPartialReplacement;
+// 🔴 DÔLEŽITÉ: Po každom úspešnom nahradení skontrolujeme, či už máme mapovanie
+const originalPerformPartialReplacement = window.performPartialReplacement || performPartialReplacement;
 
 window.performPartialReplacement = function(identifiersToReplace) {
-    const result = originalPerformReplacement(identifiersToReplace);
+    const result = originalPerformPartialReplacement(identifiersToReplace);
     
     // Ak máme aspoň jedno mapovanie a ešte sme neodoslali udalosť
     if (!initialMappingDone && Object.keys(window.__teamNameMapping).length > 0) {
         initialMappingDone = true;
+        // 🔴 OKAMŽITÉ odoslanie, nie oneskorené
         notifyMappingReady();
     }
     
     return result;
 };
 
-// Tiež po každom úspešnom nahradení z cache alebo DB
+// 🔴 TIEŽ po každom úspešnom načítaní z databázy
 const originalGetTeamNameFromDatabase = getTeamNameFromDatabase;
 window.getTeamNameFromDatabase = function(displayId) {
     const result = originalGetTeamNameFromDatabase(displayId);
@@ -2461,24 +2462,41 @@ window.getTeamNameFromDatabase = function(displayId) {
     return result;
 };
 
-// Funkcia na manuálne ohlásenie pripravenosti (pre prípad, že už boli mapovania pripravené)
+// 🔴 AKTUALIZOVANÁ FUNKCIA pre periodické nahrádzanie – po prvom nahradení odoslať udalosť
+const originalStartPeriodicReplacement = startPeriodicReplacement;
+window.startPeriodicReplacement = function(intervalSeconds = 1) {
+    const result = originalStartPeriodicReplacement(intervalSeconds);
+    
+    // Skontrolujeme, či už náhodou nemáme mapovanie
+    if (!initialMappingDone && Object.keys(window.__teamNameMapping).length > 0) {
+        initialMappingDone = true;
+        notifyMappingReady();
+    }
+    
+    return result;
+};
+
+// Funkcia na manuálne ohlásenie pripravenosti
 function announceMappingReady() {
     if (mappingCompleted) return;
     if (Object.keys(window.__teamNameMapping).length > 0) {
         notifyMappingReady();
     } else {
-        console.log('⏳ Mapovanie ešte nie je pripravené, čakám...');
-        // Skúsime o sekundu znova
-        setTimeout(announceMappingReady, 1000);
+        console.log('⏳ Mapovanie ešte nie je pripravené, skúšam znova o 500ms...');
+        setTimeout(announceMappingReady, 500);
     }
 }
 
-// Pridáme funkcie do window.teamNameReplacer
+// Pridáme do window.teamNameReplacer
 if (window.teamNameReplacer) {
     window.teamNameReplacer.isMappingReady = () => mappingCompleted;
     window.teamNameReplacer.getMappings = () => window.__teamNameMapping;
     window.teamNameReplacer.announceReady = announceMappingReady;
+    window.teamNameReplacer.forceNotify = notifyMappingReady;
 }
 
-console.log('📡 Pridaná notifikácia o pripravenosti mapovania (udalosť "teamNameMappingReady")');
-
+// 🔴 OKAMŽITÁ KONTROLA – ak už náhodou máme mapovanie, pošleme udalosť hneď
+if (Object.keys(window.__teamNameMapping).length > 0) {
+    console.log('✅ Mapovanie už existuje, odosielam udalosť okamžite...');
+    notifyMappingReady();
+}
