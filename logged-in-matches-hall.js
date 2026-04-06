@@ -1881,13 +1881,13 @@ const matchesHallApp = ({ userProfileData }) => {
             // Skúsime nájsť tím v používateľských dátach
             if (users && users.length > 0) {
                 // Pre domáci tím
-                const homeTeamDetails = getTeamDetailsFromIdentifier(selectedMatch.homeTeamIdentifier, homeTeamName);
+                const homeTeamDetails = getTeamDetailsFromIdentifier(selectedMatch.homeTeamIdentifier);
                 if (homeTeamDetails && homeTeamDetails.userId) {
                     homeTeamDatabaseId = homeTeamDetails.userId;
                 }
                 
                 // Pre hosťovský tím
-                const awayTeamDetails = getTeamDetailsFromIdentifier(selectedMatch.awayTeamIdentifier, awayTeamName);
+                const awayTeamDetails = getTeamDetailsFromIdentifier(selectedMatch.awayTeamIdentifier);
                 if (awayTeamDetails && awayTeamDetails.userId) {
                     awayTeamDatabaseId = awayTeamDetails.userId;
                 }
@@ -3190,8 +3190,12 @@ const matchesHallApp = ({ userProfileData }) => {
     if (selectedMatch) {
         const homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
         const awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
-        const homeTeamDetails = getTeamDetailsFromIdentifier(selectedMatch.homeTeamIdentifier, homeTeamName);
-        const awayTeamDetails = getTeamDetailsFromIdentifier(selectedMatch.awayTeamIdentifier, awayTeamName);
+
+        console.log(`🏠 Domáci: ${homeTeamName}`);
+        console.log(`✈️ Hostia: ${awayTeamName}`);
+        
+        const homeTeamDetails = getTeamDetailsFromIdentifier(selectedMatch.homeTeamIdentifier);
+        const awayTeamDetails = getTeamDetailsFromIdentifier(selectedMatch.awayTeamIdentifier);
         const matchDate = selectedMatch.scheduledTime ? formatDateWithDay(selectedMatch.scheduledTime.toDate()) : 'neurčený';
         const matchStartTime = selectedMatch.scheduledTime ? formatTime(selectedMatch.scheduledTime) : '-- : --';
         const category = categories.find(c => c.name === selectedMatch.categoryName);
