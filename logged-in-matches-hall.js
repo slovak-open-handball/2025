@@ -1988,12 +1988,12 @@ const matchesHallApp = ({ userProfileData }) => {
                 console.log('\n👥 POUŽÍVATELIA S TÍMMI:');
                 for (const user of users) {
                     if (user.teams && Object.keys(user.teams).length > 0) {
-                        console.log(`\n   📧 ${user.email} (ID: ${user.id})`);
+//                        console.log(`\n   📧 ${user.email} (ID: ${user.id})`);
                         for (const [category, teamsArray] of Object.entries(user.teams)) {
                             if (Array.isArray(teamsArray) && teamsArray.length > 0) {
-                                console.log(`      Kategória: ${category}`);
+//                                console.log(`      Kategória: ${category}`);
                                 teamsArray.forEach(team => {
-                                    console.log(`         - ${team.teamName} (skupina: ${team.groupName}, poradie: ${team.order})`);
+//                                    console.log(`         - ${team.teamName} (skupina: ${team.groupName}, poradie: ${team.order})`);
                                 });
                             }
                         }
