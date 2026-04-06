@@ -1964,7 +1964,7 @@ const matchesHallApp = ({ userProfileData }) => {
         setTimeout(() => {
             setupTeams();
         }, 100);
-    } [selectedMatch, users, categories, isMappingReady]);
+    }, [selectedMatch, users, categories, isMappingReady]);
 
     useEffect(() => {
         // Poslúchač pre nastavenie domáceho tímu
