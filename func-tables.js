@@ -698,14 +698,18 @@
         
         const matchesRef = collection(window.db, 'matches');
         
+        // Nahraďte existujúcu funkciu onSnapshot v initializeMatchTracker touto verziou
+
         unsubscribeMatches = onSnapshot(matchesRef, (snapshot) => {
-//            console.log(`🔄 Zmena v databáze: ${snapshot.size} zápasov celkom`);
+        //    console.log(`🔄 Zmena v databáze: ${snapshot.size} zápasov celkom`);
             
+            let completedMatchChanged = false; // <- PRIDANÉ: Flag pre zmenu na "completed"
+        
             snapshot.docChanges().forEach(change => {
                 const match = { id: change.doc.id, ...change.doc.data() };
                 
                 if (change.type === 'added') {
-//                    console.log(`➕ Pridaný zápas: ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier} (${match.status})`);
+        //          console.log(`➕ Pridaný zápas: ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier} (${match.status})`);
                     matchesData[match.id] = match;
                     subscribeToMatchEvents(match.id);
                     
@@ -713,12 +717,17 @@
                     const oldMatch = matchesData[match.id];
                     matchesData[match.id] = match;
                     
-                    if (oldMatch && oldMatch.status !== match.status) {
-//                        console.log(`🔄 Zmena stavu zápasu: ${getStatusText(oldMatch.status)} → ${getStatusText(match.status)}`);
+                    // ========== UPRAVENÉ: Kontrola zmeny na "completed" ==========
+                    if (oldMatch && oldMatch.status !== match.status && match.status === 'completed') {
+        //              console.log(`✅ Zápas DOHRANÝ! Zmena stavu: ${getStatusText(oldMatch.status)} → ${getStatusText(match.status)}`);
+                        completedMatchChanged = true; // <- PRIDANÉ: Nastavíme flag
+                    } else if (oldMatch && oldMatch.status !== match.status) {
+        //              console.log(`🔄 Zmena stavu zápasu: ${getStatusText(oldMatch.status)} → ${getStatusText(match.status)} (nie je completed, ignorujem)`);
                     }
+                    // ===========================================================
                     
                 } else if (change.type === 'removed') {
-//                    console.log(`❌ Odstránený zápas: ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`);
+        //          console.log(`❌ Odstránený zápas: ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`);
                     delete matchesData[match.id];
                     
                     if (unsubscribeEvents[match.id]) {
@@ -729,8 +738,19 @@
                 }
             });
             
-            // Po každej zmene vypíšeme tabuľky skupín
-            printAllGroupTables();
+            // ========== UPRAVENÉ: IBA ak sa zmenil zápas na "completed" ==========
+            if (completedMatchChanged) {
+        //        console.log('🏁 Spúšťam prepočet tabuliek skupín (zápas bol dohraný)...');
+                printAllGroupTables();
+                
+                // 🔥 VYŠLEME UDALOSŤ PRE teamNameReplacer
+                if (window.dispatchEvent) {
+                    window.dispatchEvent(new CustomEvent('groupTablesUpdated', {
+                        detail: { reason: 'match_completed', timestamp: Date.now() }
+                    }));
+                }
+            }
+            // ====================================================================
             
         }, (error) => {
             console.error('❌ Chyba pri sledovaní zápasov:', error);
@@ -1889,7 +1909,8 @@ function attachClickHandlersForReplacement() {
     });
 }
 
-// Funkcia na spustenie sledovania - BEZ čakania na všetky skupiny
+// Nahraďte existujúcu funkciu startTeamNameReplacement touto verziou
+
 async function startTeamNameReplacement() {
 //    console.log('🚀 Spúšťam automatické nahrádzanie identifikátorov tímov...');
 //    console.log('📌 Nahrádzajú sa len skupiny, ktoré majú 100% odohraných zápasov a všetky zápasy sú spracované.');
@@ -1899,15 +1920,24 @@ async function startTeamNameReplacement() {
             clearInterval(checkInterval);
 //            console.log('✅ MatchTracker je pripravený');
             
+            // ========== ZMENENÉ: Sledovanie zmien namiesto periodického behu ==========
+            // Spustíme sledovanie zmien na stránke (napr. pri kliknutí)
             const observer = observePageChanges();
             window._teamNameObserver = observer;
             
-            // Jedno okamžité nahradenie hneď po spustení
+            // Jedno úvodné nahradenie (pre prípad, že už sú nejaké skupiny hotové)
 //            console.log('🔄 Spúšťam prvé kolo nahrádzania...');
             replaceTeamIdentifiersWhenReady();
             
-            // 🔴 SPUSTENIE PERIODICKÉHO NAHRÁDZANIA (každých 30 sekúnd)
-            startPeriodicReplacement(1);
+            // 🔥 NOVÉ: Počúvame na udalosť, že sa zmenili tabuľky (dohraný zápas)
+            window.addEventListener('groupTablesUpdated', () => {
+//                console.log('📢 Prijatá udalosť: groupTablesUpdated - kontrolujem pripravenosť skupín...');
+                replaceTeamIdentifiersWhenReady();
+            });
+            
+            // 🔥 VOLITEĽNÉ: Môžeme pridať aj počúvanie na kliknutia (pre prípad manuálnej zmeny view)
+            attachClickHandlersForReplacement();
+            // ========================================================================
         }
     }, 500);
     
@@ -1916,10 +1946,14 @@ async function startTeamNameReplacement() {
         if (!window.matchTracker) {
 //            console.log('⚠️ MatchTracker nie je dostupný');
             replaceTeamIdentifiersWhenReady();
-            startPeriodicReplacement(1);
+            // Namiesto periodického, len raz a potom už len na udalosť
+            window.addEventListener('groupTablesUpdated', () => {
+                replaceTeamIdentifiersWhenReady();
+            });
         }
     }, 10000);
-    attachClickHandlersForReplacement();
+    
+    // attachClickHandlersForReplacement už je volané vyššie
 }
 
 // Jednorazové spustenie
