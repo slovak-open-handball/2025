@@ -144,7 +144,7 @@ floatingBoxStyle.textContent = `
 `;
 document.head.appendChild(floatingBoxStyle);
 
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 // Funkcia na formátovanie dátumu s dňom v týždni
 const getDayName = (date) => {
