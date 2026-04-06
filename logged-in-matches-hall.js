@@ -3039,7 +3039,7 @@ const matchesHallApp = ({ userProfileData }) => {
     };
 
     // OPRAVENÁ FUNKCIA: getTeamNameByIdentifier - rekurzívne mapovanie, zachováva pôvodnú kategóriu
-    const getTeamNameByIdentifier = (identifier, originalCategory = null, visited = new Set()) => {
+    const getTeamNameByIdentifier = (identifier, originalCategory = null, visited = new Set(), depth = 0) => {
         if (!identifier) return 'Neznámy tím';
         
         // Ochrana proti nekonečnej rekurzii
@@ -3049,7 +3049,7 @@ const matchesHallApp = ({ userProfileData }) => {
         }
         visited.add(identifier);
         
-        console.log(`🔍 getTeamNameByIdentifier: Hľadám názov pre identifikátor: "${identifier}"`);
+        console.log(`🔍 getTeamNameByIdentifier (depth ${depth}): Hľadám názov pre identifikátor: "${identifier}"`);
         
         // Ak sme dostali aj pôvodnú kategóriu, uložíme si ju
         const originalCategoryName = originalCategory;
@@ -3078,15 +3078,19 @@ const matchesHallApp = ({ userProfileData }) => {
             // Skontrolujeme, či výsledok mapovania vyzerá ako identifikátor (obsahuje medzeru a číslo+písmeno)
             const identifierPattern = /\s+\d+[A-Za-z]/;
             
-            if (identifierPattern.test(mappedTeamName) && mappedTeamName !== identifier) {
+            // 🔴 NOVÁ LOGIKA: Ak je mapovanie ROVNAKÉ ako vstup, pokračujeme v hľadaní (nepovažujeme to za konečný výsledok)
+            if (mappedTeamName === identifier) {
+                console.log(`   🔄 Mapovanie z ${mappingSource} vrátilo rovnakú hodnotu: "${identifier}" → "${mappedTeamName}" (pokračujem v hľadaní)`);
+                // Neprerušujeme, pokračujeme v hľadaní cez superstructureTeams a používateľov
+            } 
+            else if (identifierPattern.test(mappedTeamName) && mappedTeamName !== identifier) {
                 // Výsledok je ďalší identifikátor - rekurzívne ho zmapujeme
                 console.log(`   🔄 Mapovanie z ${mappingSource} vrátilo identifikátor: "${identifier}" → "${mappedTeamName}"`);
-                // Pri rekurzívnom volaní odovzdáme pôvodnú kategóriu (ak existuje)
-                return getTeamNameByIdentifier(mappedTeamName, originalCategoryName, visited);
-            } else if (mappedTeamName !== identifier) {
+                return getTeamNameByIdentifier(mappedTeamName, originalCategoryName, visited, depth + 1);
+            } 
+            else if (mappedTeamName !== identifier) {
                 // Výsledok je skutočný názov tímu
                 console.log(`   ✅ Mapovanie z ${mappingSource}: "${identifier}" → "${mappedTeamName}"`);
-                // Ak máme pôvodnú kategóriu, vrátime názov tímu a kategóriu ako objekt
                 if (originalCategoryName) {
                     return {
                         teamName: mappedTeamName,
@@ -3097,7 +3101,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        // 4. Pôvodné vyhľadávanie v superstructureTeams (len ak nemáme mapovanie)
+        // 4. Pôvodné vyhľadávanie v superstructureTeams
         let foundName = null;
         
         if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
@@ -3136,7 +3140,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        // 5. Vyhľadávanie v používateľoch (user teams) - len ak nemáme mapovanie
+        // 5. Vyhľadávanie v používateľoch (user teams)
         if (!foundName && users && users.length > 0) {
             const parts = identifier.split(' ');
             if (parts.length >= 2) {
@@ -3184,7 +3188,7 @@ const matchesHallApp = ({ userProfileData }) => {
             if (identifierPattern.test(foundName) && foundName !== identifier) {
                 // Nájdený názov je v skutočnosti identifikátor - rekurzívne ho zmapujeme
                 console.log(`   🔄 Nájdený názov je identifikátor: "${foundName}", pokračujem v mapovaní...`);
-                return getTeamNameByIdentifier(foundName, originalCategoryName, visited);
+                return getTeamNameByIdentifier(foundName, originalCategoryName, visited, depth + 1);
             }
             
             // Ak máme pôvodnú kategóriu, vrátime názov tímu a kategóriu ako objekt
