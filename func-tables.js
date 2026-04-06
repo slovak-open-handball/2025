@@ -501,21 +501,21 @@
         }
         
         // Výpis použitých kritérií poradia
-        if (tableSettings.sortingConditions.length > 0) {
+//        if (tableSettings.sortingConditions.length > 0) {
 //            console.log(`\n📋 Kritériá poradia: ${tableSettings.sortingConditions.map((c, i) => {
-                const param = c.parameter === 'headToHead' ? 'vzájomný zápas' :
-                             c.parameter === 'scoreDifference' ? '+/-' :
-                             c.parameter === 'goalsScored' ? 'strelené góly' :
-                             c.parameter === 'goalsConceded' ? 'inkasované góly' :
-                             c.parameter === 'wins' ? 'výhry' :
-                             c.parameter === 'losses' ? 'prehry' :
-                             c.parameter === 'draw' ? 'losovanie' : c.parameter;
-                const dir = c.direction === 'asc' ? 'vzostupne' : 'zostupne';
-                return `${i+1}. ${param}${c.parameter !== 'draw' && c.parameter !== 'headToHead' ? ` (${dir})` : ''}`;
-            }).join(', ')}`);
-        } else {
+//                const param = c.parameter === 'headToHead' ? 'vzájomný zápas' :
+//                             c.parameter === 'scoreDifference' ? '+/-' :
+//                             c.parameter === 'goalsScored' ? 'strelené góly' :
+//                             c.parameter === 'goalsConceded' ? 'inkasované góly' :
+//                             c.parameter === 'wins' ? 'výhry' :
+//                             c.parameter === 'losses' ? 'prehry' :
+//                             c.parameter === 'draw' ? 'losovanie' : c.parameter;
+//                const dir = c.direction === 'asc' ? 'vzostupne' : 'zostupne';
+//                return `${i+1}. ${param}${c.parameter !== 'draw' && c.parameter !== 'headToHead' ? ` (${dir})` : ''}`;
+//            }).join(', ')}`);
+//        } else {
 //            console.log(`\n📋 Kritériá poradia: predvolené (body, +/-, strelené góly, abeceda)`);
-        }
+//        }
         
 //        console.log('='.repeat(120) + '\n');
     }
