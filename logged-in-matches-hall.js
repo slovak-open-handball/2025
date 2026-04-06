@@ -1810,6 +1810,12 @@ const matchesHallApp = ({ userProfileData }) => {
             console.log("⏳ Čakám na načítanie používateľov...");
             return; // Týmto sa zastaví ďalšie vykonávanie
         }
+
+        // Počkáme na kategórie (voliteľné, ale odporúčané)
+        if (categories.length === 0) {
+            console.log("⏳ Čakám na načítanie kategórií...");
+            return;
+        }
         
         // Skontrolujeme, či už boli tímy nastavené pre tento zápas
         // (aby sme nevolali nastavenie viackrát)
