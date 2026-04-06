@@ -343,6 +343,32 @@ const matchesHallApp = ({ userProfileData }) => {
     const teamNameCache = new Map();
     const teamNameCacheGlobal = new Map();    
 
+
+    const homeTeamDetails = homeTeamDetailsState || getTeamDetails(selectedMatch?.homeTeamIdentifier);
+    const awayTeamDetails = awayTeamDetailsState || getTeamDetails(selectedMatch?.awayTeamIdentifier);
+
+    const homeTeamName = React.useMemo(() => {
+        if (!selectedMatch?.homeTeamIdentifier) return 'Neznámy tím';
+        // Najprv skúsime cache
+        if (teamNameCacheGlobal.has(selectedMatch.homeTeamIdentifier)) {
+            return teamNameCacheGlobal.get(selectedMatch.homeTeamIdentifier);
+        }
+        const result = getTeamNameByIdentifierCached(selectedMatch.homeTeamIdentifier);
+        teamNameCacheGlobal.set(selectedMatch.homeTeamIdentifier, result);
+        return result;
+    }, [selectedMatch?.homeTeamIdentifier]);
+    const awayTeamName = React.useMemo(() => {
+        if (!selectedMatch?.awayTeamIdentifier) return 'Neznámy tím';
+        if (teamNameCacheGlobal.has(selectedMatch.awayTeamIdentifier)) {
+            return teamNameCacheGlobal.get(selectedMatch.awayTeamIdentifier);
+        }
+        const result = getTeamNameByIdentifierCached(selectedMatch.awayTeamIdentifier);
+        teamNameCacheGlobal.set(selectedMatch.awayTeamIdentifier, result);
+        return result;
+    }, [selectedMatch?.awayTeamIdentifier]);
+
+    
+
     // Prepísaná funkcia getTeamNameByIdentifier s cache
     const getTeamNameByIdentifierCached = (identifier) => {
         if (!identifier) return 'Neznámy tím';
@@ -3587,26 +3613,6 @@ const matchesHallApp = ({ userProfileData }) => {
     const sortedDays = Object.values(groupedMatches).sort((a, b) => 
         a.date - b.date
     );
-
-        const homeTeamName = React.useMemo(() => {
-            if (!selectedMatch?.homeTeamIdentifier) return 'Neznámy tím';
-            // Najprv skúsime cache
-            if (teamNameCacheGlobal.has(selectedMatch.homeTeamIdentifier)) {
-                return teamNameCacheGlobal.get(selectedMatch.homeTeamIdentifier);
-            }
-            const result = getTeamNameByIdentifierCached(selectedMatch.homeTeamIdentifier);
-            teamNameCacheGlobal.set(selectedMatch.homeTeamIdentifier, result);
-            return result;
-        }, [selectedMatch?.homeTeamIdentifier]);
-        const awayTeamName = React.useMemo(() => {
-            if (!selectedMatch?.awayTeamIdentifier) return 'Neznámy tím';
-            if (teamNameCacheGlobal.has(selectedMatch.awayTeamIdentifier)) {
-                return teamNameCacheGlobal.get(selectedMatch.awayTeamIdentifier);
-            }
-            const result = getTeamNameByIdentifierCached(selectedMatch.awayTeamIdentifier);
-            teamNameCacheGlobal.set(selectedMatch.awayTeamIdentifier, result);
-            return result;
-        }, [selectedMatch?.awayTeamIdentifier]);
 
     // Ak je vybraný zápas, zobrazíme detail
     if (selectedMatch) {
