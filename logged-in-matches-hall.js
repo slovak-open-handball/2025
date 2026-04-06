@@ -3868,7 +3868,7 @@ const matchesHallApp = ({ userProfileData }) => {
         // Funkcia pre zobrazenie hráčov (UPRAVENÁ - sekcia Ostatní sa zobrazuje vždy, ale bez klikania v režimoch in-progress/completed)
         const renderPlayersSection = (teamDetails, teamType, teamName) => {
             // Ak nie sú detaily tímu, zobrazíme "Nedostupné" a ukončíme
-            if (!teamDetails) {
+            if (!teamDetails || !teamDetails.team || !teamDetails.team.playerDetails) {
                 return React.createElement(
                     'div',
                     null,
