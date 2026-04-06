@@ -2403,115 +2403,99 @@ const matchesHallApp = ({ userProfileData }) => {
         
         console.log('🔄 selectedMatch sa zmenil, obnovujem údaje pre zápas:', selectedMatch.id);
         
+        // 1. Zastavíme starý timer
         if (timerInterval) {
             clearInterval(timerInterval);
             setTimerInterval(null);
         }
         
+        // 2. Resetujeme čas
         setMatchTime(selectedMatch.manualTimeOffset || 0);
         setManualTimeOffset(selectedMatch.manualTimeOffset || 0);
         setCleanPlayingTime(selectedMatch.manualTimeOffset || 0);
         setMatchPaused(selectedMatch.status === 'paused');
         
-        // 🔴 VŽDY najprv vymažeme staré tímy a zobrazíme "Nedostupné"
+        // 3. Vymažeme staré tímy z UI
         renderFullTeamToUI(null, 'home');
         renderFullTeamToUI(null, 'away');
-        setHomeTeamDetailsState(null);
-        setAwayTeamDetailsState(null);
         
+        // 4. Načítame tímy pre nový zápas
         const loadTeamsForMatch = async () => {
             console.log('🔧 Načítavam tímy pre zápas:', selectedMatch.homeTeamIdentifier, 'vs', selectedMatch.awayTeamIdentifier);
             
-            // 🔴 POUŽIJEME getTeamNameByIdentifier, ktorá funguje správne
+            // Získame názvy tímov pomocou mapovania
             let homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
             let awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
             
             const identifierPattern = /\s+\d+[A-Za-z]/;
             
-            // Skontrolujeme, či sme získali platný názov (nie identifikátor)
+            // Ak je názov stále identifikátor, skúsime ho manuálne zmapovať
             if (identifierPattern.test(homeTeamName)) {
-                console.log(`⚠️ Domáci názov je stále identifikátor: ${homeTeamName}, skúšam konverziu...`);
                 const converted = convertIdentifierToTeamName(selectedMatch.homeTeamIdentifier);
                 if (converted && converted !== selectedMatch.homeTeamIdentifier) {
                     homeTeamName = converted;
-                    console.log(`🔄 Domáci názov zkonvertovaný na: ${homeTeamName}`);
-                } else {
-                    console.log(`❌ Domáci názov sa nepodarilo skonvertovať: ${homeTeamName}`);
-                    homeTeamName = null;
+                    console.log('🔄 Domáci názov zkonvertovaný:', homeTeamName);
                 }
-            } else {
-                console.log(`✅ Domáci názov získaný: "${homeTeamName}"`);
             }
             
             if (identifierPattern.test(awayTeamName)) {
-                console.log(`⚠️ Hosťovský názov je stále identifikátor: ${awayTeamName}, skúšam konverziu...`);
                 const converted = convertIdentifierToTeamName(selectedMatch.awayTeamIdentifier);
                 if (converted && converted !== selectedMatch.awayTeamIdentifier) {
                     awayTeamName = converted;
-                    console.log(`🔄 Hosťovský názov zkonvertovaný na: ${awayTeamName}`);
+                    console.log('🔄 Hosťovský názov zkonvertovaný:', awayTeamName);
+                }
+            }
+            
+            // Načítanie domáceho tímu
+            if (homeTeamName && homeTeamName !== selectedMatch.homeTeamIdentifier) {
+                const homeResult = await findTeamByNameAndCategoryDirect(homeTeamName, selectedMatch.categoryName, false);
+                if (homeResult && !Array.isArray(homeResult)) {
+                    window._homeTeamDetails = homeResult;
+                    setHomeTeamDetailsState({
+                        team: homeResult.team,
+                        userEmail: homeResult.user.email,
+                        userId: homeResult.user.id,
+                        userDisplayName: homeResult.user.displayName
+                    });
+                    renderFullTeamToUI(homeResult, 'home');
+                    console.log('✅ Domáci tím načítaný:', homeResult.team.teamName);
                 } else {
-                    console.log(`❌ Hosťovský názov sa nepodarilo skonvertovať: ${awayTeamName}`);
-                    awayTeamName = null;
+                    console.log('❌ Domáci tím nebol nájdený:', homeTeamName);
+                    setHomeTeamDetailsState(null);
+                    renderFullTeamToUI(null, 'home');
                 }
             } else {
-                console.log(`✅ Hosťovský názov získaný: "${awayTeamName}"`);
-            }
-            
-            let homeResult = null;
-            let awayResult = null;
-            
-            // 🔴 NAČÍTANIE DOMÁCEHO TÍMU - POUŽIJEME NÁZOV Z getTeamNameByIdentifier
-            if (homeTeamName && homeTeamName !== selectedMatch.homeTeamIdentifier) {
-                console.log(`🏠 Vyhľadávam domáci tím pod názvom: "${homeTeamName}"`);
-                homeResult = await findTeamByNameAndCategoryDirect(homeTeamName, selectedMatch.categoryName, false);
-            } else {
-                console.log(`❌ Domáci tím NEBUDE vyhľadávaný - chýba platný názov (aktuálny: "${homeTeamName}")`);
-            }
-            
-            // 🔴 NAČÍTANIE HOSŤOVSKÉHO TÍMU - POUŽIJEME NÁZOV Z getTeamNameByIdentifier
-            if (awayTeamName && awayTeamName !== selectedMatch.awayTeamIdentifier) {
-                console.log(`✈️ Vyhľadávam hosťovský tím pod názvom: "${awayTeamName}"`);
-                awayResult = await findTeamByNameAndCategoryDirect(awayTeamName, selectedMatch.categoryName, false);
-            } else {
-                console.log(`❌ Hosťovský tím NEBUDE vyhľadávaný - chýba platný názov (aktuálny: "${awayTeamName}")`);
-            }
-            
-            // 🔴 AK SA NEPODARILO NAČÍTAŤ TÍM, ZOBRAZÍME "Nedostupné"
-            if (homeResult && !Array.isArray(homeResult)) {
-                window._homeTeamDetails = homeResult;
-                setHomeTeamDetailsState({
-                    team: homeResult.team,
-                    userEmail: homeResult.user.email,
-                    userId: homeResult.user.id,
-                    userDisplayName: homeResult.user.displayName
-                });
-                renderFullTeamToUI(homeResult, 'home');
-                console.log('✅ Domáci tím načítaný:', homeResult.team.teamName);
-            } else {
-                console.log('❌ Domáci tím nebol načítaný - zobrazujem "Nedostupné"');
-                window._homeTeamDetails = null;
+                console.log('⚠️ Nepodarilo sa získať názov domáceho tímu');
                 setHomeTeamDetailsState(null);
                 renderFullTeamToUI(null, 'home');
             }
             
-            if (awayResult && !Array.isArray(awayResult)) {
-                window._awayTeamDetails = awayResult;
-                setAwayTeamDetailsState({
-                    team: awayResult.team,
-                    userEmail: awayResult.user.email,
-                    userId: awayResult.user.id,
-                    userDisplayName: awayResult.user.displayName
-                });
-                renderFullTeamToUI(awayResult, 'away');
-                console.log('✅ Hosťovský tím načítaný:', awayResult.team.teamName);
+            // Načítanie hosťovského tímu
+            if (awayTeamName && awayTeamName !== selectedMatch.awayTeamIdentifier) {
+                const awayResult = await findTeamByNameAndCategoryDirect(awayTeamName, selectedMatch.categoryName, false);
+                if (awayResult && !Array.isArray(awayResult)) {
+                    window._awayTeamDetails = awayResult;
+                    setAwayTeamDetailsState({
+                        team: awayResult.team,
+                        userEmail: awayResult.user.email,
+                        userId: awayResult.user.id,
+                        userDisplayName: awayResult.user.displayName
+                    });
+                    renderFullTeamToUI(awayResult, 'away');
+                    console.log('✅ Hosťovský tím načítaný:', awayResult.team.teamName);
+                } else {
+                    console.log('❌ Hosťovský tím nebol nájdený:', awayTeamName);
+                    setAwayTeamDetailsState(null);
+                    renderFullTeamToUI(null, 'away');
+                }
             } else {
-                console.log('❌ Hosťovský tím nebol načítaný - zobrazujem "Nedostupné"');
-                window._awayTeamDetails = null;
+                console.log('⚠️ Nepodarilo sa získať názov hosťovského tímu');
                 setAwayTeamDetailsState(null);
                 renderFullTeamToUI(null, 'away');
             }
         };
         
+        // Spustíme načítanie tímov s malým oneskorením
         const timeoutId = setTimeout(() => {
             loadTeamsForMatch();
         }, 100);
@@ -2519,7 +2503,7 @@ const matchesHallApp = ({ userProfileData }) => {
         return () => {
             clearTimeout(timeoutId);
         };
-    }, [selectedMatch?.id]);
+    }, [selectedMatch?.id]); // Spustí sa vždy, keď sa zmení ID zápasu
 
     // Tento useEffect už máte, ale skontrolujte že je správne
     useEffect(() => {
@@ -3884,7 +3868,7 @@ const matchesHallApp = ({ userProfileData }) => {
         // Funkcia pre zobrazenie hráčov (UPRAVENÁ - sekcia Ostatní sa zobrazuje vždy, ale bez klikania v režimoch in-progress/completed)
         const renderPlayersSection = (teamDetails, teamType, teamName) => {
             // Ak nie sú detaily tímu, zobrazíme "Nedostupné" a ukončíme
-            if (!teamDetails || !teamDetails.team || !teamDetails.team.playerDetails) {
+            if (!teamDetails) {
                 return React.createElement(
                     'div',
                     null,
@@ -7873,7 +7857,7 @@ async function findTeamByNameAndCategory(teamNameOrIdentifier, categoryName, ren
 window.findTeamByNameAndCategory = findTeamByNameAndCategory;
 
 
-// OPRAVENÁ FUNKCIA: findTeamByNameAndCategoryDirect - používa IBA mapovanie
+// OPRAVENÁ FUNKCIA: findTeamByNameAndCategoryDirect - používa mapovanie
 async function findTeamByNameAndCategoryDirect(teamNameOrIdentifier, categoryName, renderToDOM = false) {
     if (!teamNameOrIdentifier || !categoryName) {
         console.log('❌ DIRECT: Je potrebné zadať názov/identifikátor tímu a kategóriu');
@@ -7882,15 +7866,15 @@ async function findTeamByNameAndCategoryDirect(teamNameOrIdentifier, categoryNam
     
     console.log(`🔍 DIRECT: Hľadám tím: "${teamNameOrIdentifier}" v kategórii: "${categoryName}"`);
     
-    // 🔄 1. NAJPRV SKONTROLUJEME, ČI ZADANÝ REŤAZEC NIE JE IDENTIFIKÁTOR A ZÍSKAME NÁZOV Z MAPOVANIA
-    let actualTeamName = null;
+    // 🔄 1. NAJPRV SKONTROLUJEME, ČI ZADANÝ REŤAZEC NIE JE IDENTIFIKÁTOR A SKÚSIME HO ZMAPOVAŤ
+    let actualTeamName = teamNameOrIdentifier;
     const identifierPattern = /\s+\d+[A-Za-z]/;
     
     // Ak to vyzerá ako identifikátor (napr. "U12 D 2B")
     if (identifierPattern.test(teamNameOrIdentifier)) {
         console.log(`   🔄 DIRECT: Zadaný reťazec vyzerá ako identifikátor: "${teamNameOrIdentifier}"`);
         
-        // 🔴 DÔLEŽITÉ: Použijeme IBA mapovanie, žiadne fallback vyhľadávanie!
+        // Skúsime získať názov tímu cez mapovanie
         if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
             const mappedName = window.teamNameReplacer.getTeamNameFromMapping(teamNameOrIdentifier);
             if (mappedName && mappedName !== teamNameOrIdentifier) {
@@ -7899,33 +7883,36 @@ async function findTeamByNameAndCategoryDirect(teamNameOrIdentifier, categoryNam
             } else if (mappedName) {
                 console.log(`   ✅ DIRECT: Identifikátor už je správne zmapovaný: "${teamNameOrIdentifier}" → "${mappedName}"`);
                 actualTeamName = mappedName;
-            } else {
-                console.log(`   ❌ DIRECT: Identifikátor "${teamNameOrIdentifier}" NEBOL zmapovaný, vracam null`);
-                return null; // 🔴 OKAMŽITE VRÁTIME NULL - žiadne ďalšie vyhľadávanie!
             }
         } else if (window.__teamNameMapping && window.__teamNameMapping[teamNameOrIdentifier]) {
             const mappedName = window.__teamNameMapping[teamNameOrIdentifier].teamName;
             if (mappedName && mappedName !== teamNameOrIdentifier) {
                 console.log(`   ✅ DIRECT: Identifikátor bol zmapovaný (z __teamNameMapping): "${teamNameOrIdentifier}" → "${mappedName}"`);
                 actualTeamName = mappedName;
-            } else {
-                console.log(`   ❌ DIRECT: Identifikátor "${teamNameOrIdentifier}" NEBOL zmapovaný (__teamNameMapping), vracam null`);
-                return null; // 🔴 OKAMŽITE VRÁTIME NULL
             }
         } else {
-            console.log(`   ❌ DIRECT: Mapovanie nie je dostupné, vracam null`);
-            return null; // 🔴 OKAMŽITE VRÁTIME NULL
+            // Skúsime nájsť v DOM
+            const elements = document.querySelectorAll(`[data-original-identifier="${teamNameOrIdentifier}"]`);
+            if (elements.length > 0) {
+                const teamNameFromDOM = elements[0].getAttribute('data-team-name');
+                if (teamNameFromDOM && teamNameFromDOM !== teamNameOrIdentifier) {
+                    console.log(`   ✅ DIRECT: Identifikátor bol nájdený v DOM: "${teamNameOrIdentifier}" → "${teamNameFromDOM}"`);
+                    actualTeamName = teamNameFromDOM;
+                }
+            }
         }
     } else {
-        // Ak to nie je identifikátor, použijeme pôvodný názov
-        actualTeamName = teamNameOrIdentifier;
-        console.log(`   ✅ DIRECT: Zadaný reťazec nie je identifikátor, používam názov: "${actualTeamName}"`);
-    }
-    
-    // 🔴 AK SME NEMALI ŽIADNY NÁZOV Z MAPOVANIA, VRÁTIME NULL
-    if (!actualTeamName) {
-        console.log(`   ❌ DIRECT: Nepodarilo sa získať názov tímu z mapovania, vracam null`);
-        return null;
+        // Ak to nie je identifikátor, skúsime aplikovať mapovanie aj na názov tímu
+        if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
+            const mappedName = window.teamNameReplacer.getTeamNameFromMapping(teamNameOrIdentifier);
+            if (mappedName && mappedName !== teamNameOrIdentifier) {
+                console.log(`   🔄 DIRECT: Názov tímu bol zmapovaný: "${teamNameOrIdentifier}" → "${mappedName}"`);
+                actualTeamName = mappedName;
+            } else if (mappedName) {
+                console.log(`   ✅ DIRECT: Názov tímu už je správny: "${teamNameOrIdentifier}"`);
+                actualTeamName = mappedName;
+            }
+        }
     }
     
     console.log(`   🎯 DIRECT: Konečný názov na vyhľadávanie: "${actualTeamName}"`);
@@ -7977,7 +7964,68 @@ async function findTeamByNameAndCategoryDirect(teamNameOrIdentifier, categoryNam
         }
     }
     
-    // 🔴 3. AK NENAŠLI SME PODĽA NÁZVU, VRÁTIME NULL (už NESKÚŠAME HĽADAŤ PODĽA IDENTIFIKÁTORA)
+    // 3. AK NENAŠLI SME PODĽA NÁZVU, SKÚSIME VYHĽADÁVAŤ PODĽA IDENTIFIKÁTORA V TEAMS
+    // (pre prípad, že by sa názov nezhodoval)
+    const identifierPattern2 = /\s+\d+[A-Za-z]/;
+    if (identifierPattern2.test(teamNameOrIdentifier)) {
+        console.log(`   🔄 DIRECT: Skúšam vyhľadávať priamo podľa identifikátora "${teamNameOrIdentifier}"...`);
+        
+        // Parsujeme identifikátor
+        const parts = teamNameOrIdentifier.trim().split(' ');
+        if (parts.length >= 2) {
+            const positionAndGroup = parts.pop();
+            const parsedCategory = parts.join(' ');
+            
+            let position = '';
+            let groupLetter = '';
+            for (let i = 0; i < positionAndGroup.length; i++) {
+                const char = positionAndGroup[i];
+                if (char >= '0' && char <= '9') {
+                    position += char;
+                } else if (/[A-Za-z]/.test(char)) {
+                    groupLetter += char;
+                }
+            }
+            
+            if (position && groupLetter) {
+                const positionNum = parseInt(position, 10);
+                const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
+                
+                console.log(`   🔍 DIRECT: Vyhľadávam podľa skupiny: ${fullGroupName}, poradie: ${positionNum}`);
+                
+                for (const user of allUsers) {
+                    if (!user.teams) continue;
+                    
+                    for (const [category, teams] of Object.entries(user.teams)) {
+                        if (category.toLowerCase() !== parsedCategory.toLowerCase()) continue;
+                        if (!Array.isArray(teams)) continue;
+                        
+                        const team = teams.find(t => 
+                            t.groupName === fullGroupName && 
+                            t.order === positionNum
+                        );
+                        
+                        if (team && team.teamName) {
+                            console.log(`✅ DIRECT: Nájdený tím podľa identifikátora: ${team.teamName} (používateľ: ${user.email})`);
+                            return {
+                                user: {
+                                    id: user.id,
+                                    email: user.email,
+                                    displayName: user.displayName,
+                                    role: user.role,
+                                    approved: user.approved,
+                                    hallId: user.hallId
+                                },
+                                team: team,
+                                category: category
+                            };
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     console.log(`❌ DIRECT: Tím "${actualTeamName}" v kategórii "${categoryName}" nebol nájdený`);
     return null;
 }
@@ -8676,10 +8724,13 @@ const renderStaffToUI = (teamDetails, teamType, container) => {
     }
 };
 
+// KOMPLETNE OPRAVENÁ FUNKCIA renderFullTeamToUI s oneskorením
 const renderFullTeamToUI = (teamDetails, teamType) => {
     console.log(`🎨 Vykresľujem ${teamType === 'home' ? 'domáci' : 'hosťovský'} tím do UI...`);
     
+    // Funkcia na skutočné vykreslenie
     const doRender = () => {
+        // DÔLEŽITÉ: Najprv zistíme, či sme v režime štatistík (2 stĺpce) alebo normálnom režime (4 stĺpce)
         const isStatsMode = document.querySelector('.grid-cols-2') !== null;
         const isNormalMode = document.querySelector('.grid-cols-4') !== null;
         
@@ -8705,6 +8756,7 @@ const renderFullTeamToUI = (teamDetails, teamType) => {
             }
         }
         
+        // Ak sme nenašli kontajnery, skúsime alternatívny spôsob
         if (!targetContainer) {
             const allTeamContainers = document.querySelectorAll('.bg-gray-50.rounded-lg.p-4.border.border-gray-200');
             if (allTeamContainers.length >= 2) {
@@ -8721,8 +8773,9 @@ const renderFullTeamToUI = (teamDetails, teamType) => {
             setTimeout(doRender, 500);
             return;
         }
-        
-        // Zachováme hlavičku
+    
+        // AKTUÁLNE VYMAŽEME VŠETKY EXISTUJÚCE ÚDAJE V KONTAJNERI (okrem hlavičky)
+        // Zachováme iba hlavičku h3
         const header = targetContainer.querySelector('h3');
         const originalHeaderText = header ? header.textContent : (teamType === 'home' ? 'Domáci tím' : 'Hosťovský tím');
         
@@ -8730,6 +8783,7 @@ const renderFullTeamToUI = (teamDetails, teamType) => {
         while (targetContainer.children.length > 0) {
             const child = targetContainer.firstChild;
             if (child === header) {
+                // Preskočíme hlavičku
                 targetContainer.appendChild(child.cloneNode(true));
                 targetContainer.removeChild(child);
             } else {
@@ -8747,11 +8801,11 @@ const renderFullTeamToUI = (teamDetails, teamType) => {
             targetContainer.appendChild(newHeader);
         }
         
-        // 🔴 DÔLEŽITÉ: Ak nie sú detaily tímu, zobrazíme "Nedostupné" pre obe sekcie
-        if (!teamDetails || !teamDetails.team) {
+        // Ak nie sú detaily tímu, zobrazíme "Nedostupné"
+        if (!teamDetails) {
             console.log(`   ⚠️ Žiadne detaily pre ${teamType === 'home' ? 'domáci' : 'hosťovský'} tím, zobrazujem "Nedostupné"`);
             
-            // Sekcia Realizačný tím - Nedostupné
+            // Vytvoríme sekciu Realizačný tím
             const staffSection = document.createElement('div');
             staffSection.className = 'mb-4';
             staffSection.innerHTML = `
@@ -8764,7 +8818,7 @@ const renderFullTeamToUI = (teamDetails, teamType) => {
             `;
             targetContainer.appendChild(staffSection);
             
-            // Sekcia Hráči - Nedostupné
+            // Vytvoríme sekciu Hráči
             const playersSection = document.createElement('div');
             playersSection.className = 'mb-4';
             playersSection.innerHTML = `
@@ -8783,15 +8837,16 @@ const renderFullTeamToUI = (teamDetails, teamType) => {
         
         // Aktualizujeme názov tímu v hlavičke
         const teamHeader = targetContainer.querySelector('h3');
-        if (teamHeader && teamDetails.team.teamName) {
+        if (teamHeader && teamDetails?.team?.teamName) {
             teamHeader.textContent = teamDetails.team.teamName;
         }
         
         // ======================== REALIZAČNÝ TÍM ========================
-        const activeMenStaff = teamDetails.team.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[window.currentMatchId]) || [];
-        const activeWomenStaff = teamDetails.team.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[window.currentMatchId]) || [];
+        const activeMenStaff = teamDetails?.team.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[window.currentMatchId]) || [];
+        const activeWomenStaff = teamDetails?.team.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[window.currentMatchId]) || [];
         const totalStaff = activeMenStaff.length + activeWomenStaff.length;
         
+        // Vytvoríme sekciu Realizačný tím
         const staffSection = document.createElement('div');
         staffSection.className = 'mb-4';
         
@@ -8805,6 +8860,7 @@ const renderFullTeamToUI = (teamDetails, teamType) => {
         if (totalStaff === 0) {
             staffHtml += `<div class="text-sm text-gray-500 italic p-2">Žiadni členovia realizačného tímu</div>`;
         } else {
+            // Muži
             activeMenStaff.forEach((member) => {
                 staffHtml += `
                     <div class="flex items-center justify-between gap-2 p-2 rounded border border-gray-200 text-sm group relative transition-colors">
@@ -8816,6 +8872,7 @@ const renderFullTeamToUI = (teamDetails, teamType) => {
                 `;
             });
             
+            // Ženy
             activeWomenStaff.forEach((member) => {
                 staffHtml += `
                     <div class="flex items-center justify-between gap-2 p-2 rounded border border-gray-200 text-sm group relative transition-colors">
@@ -8827,20 +8884,22 @@ const renderFullTeamToUI = (teamDetails, teamType) => {
                 `;
             });
         }
-        
+    
         staffHtml += `</div>`;
         staffSection.innerHTML = staffHtml;
         targetContainer.appendChild(staffSection);
         
         // ======================== HRÁČI ========================
-        const activePlayers = teamDetails.team.playerDetails?.filter(p => p && !p.removedForMatch?.[window.currentMatchId]) || [];
+        const activePlayers = teamDetails?.team.playerDetails?.filter(p => p && !p.removedForMatch?.[window.currentMatchId]) || [];
         
+        // Zoradenie podľa čísla dresu
         activePlayers.sort((a, b) => {
             const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
             const numB = b.jerseyNumber ? parseInt(b.jerseyNumber) || 999 : 999;
             return numA - numB;
         });
-        
+    
+        // Vytvoríme sekciu Hráči
         const playersSection = document.createElement('div');
         playersSection.className = 'mb-4';
         
