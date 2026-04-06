@@ -268,13 +268,13 @@
             return null;
         }
         
-        // Získame len ODOHRANÉ zápasy pre výpočet štatistík
-        const completedGroupMatches = allGroupMatches.filter(match => match.status === 'completed');
+        // Získame len ODOHRANÉ zápasy pre výpočet štatistík, ALE VYFILTRUJEME ZÁPASY O UMIESTNENIE
+        const completedGroupMatches = allGroupMatches.filter(match => match.status === 'completed' && !match.isPlacementMatch);
         
         // Získame všetky tímy v skupine (na základe všetkých zápasov)
         const teamsInGroup = getTeamsInGroupFromAllMatches(allGroupMatches);
         
-        // Spracujeme výsledky LEN z ODOHRANÝCH zápasov
+        // Spracujeme výsledky LEN z ODOHRANÝCH ZÁPASOV (a NIE z tých o umiestnenie)
         completedGroupMatches.forEach(match => {
             const events = eventsData[match.id] || [];
             const { home: homeScore, away: awayScore } = getCurrentScore(events);
@@ -318,8 +318,8 @@
             return compareTeams(a, b, allGroupMatches, tableSettings.sortingConditions);
         });
         
-        // Výpočet celkového počtu zápasov v skupine a odohraných
-        const totalMatches = allGroupMatches.length;
+        // Výpočet celkového počtu zápasov v skupine a odohraných (NEPOČÍTAME ZÁPASY O UMIESTNENIE)
+        const totalMatches = allGroupMatches.filter(match => !match.isPlacementMatch).length;
         const completedMatches = completedGroupMatches.length;
         const remainingMatches = totalMatches - completedMatches;
         
