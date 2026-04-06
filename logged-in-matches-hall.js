@@ -1805,16 +1805,23 @@ const matchesHallApp = ({ userProfileData }) => {
         // Tento useEffect sa spustí vždy, keď sa zmení selectedMatch
         // a keď je selectedMatch nastavený (napr. z URL parametrov)
         if (!selectedMatch) return;
-
-        if (users.length || window.users.length === 0) {
-            console.log("⏳ Čakám na načítanie používateľov...");
-            return; // Týmto sa zastaví ďalšie vykonávanie
+    
+        // ✅ OPRAVA: Počkáme na React stav users (najspoľahlivejšie)
+        if (users.length === 0) {
+            console.log("⏳ Čakám na načítanie používateľov do React stavu...");
+            return;
         }
-
-        // Počkáme na kategórie (voliteľné, ale odporúčané)
+    
+        // ✅ Počkáme na kategórie
         if (categories.length === 0) {
             console.log("⏳ Čakám na načítanie kategórií...");
             return;
+        }
+        
+        // ✅ Synchronizujeme window.users s React stavom (pre findTeamByNameAndCategory)
+        if (!window.users || window.users.length === 0) {
+            window.users = users;
+            console.log(`✅ Synchronizovaných ${users.length} používateľov do window.users`);
         }
         
         // Skontrolujeme, či už boli tímy nastavené pre tento zápas
@@ -1855,49 +1862,56 @@ const matchesHallApp = ({ userProfileData }) => {
         
         // Nastavíme tímy
         const setupTeams = async () => {
+            // Najprv skúsime nájsť domáci tím podľa názvu
             if (homeTeamName && homeTeamName !== selectedMatch.homeTeamIdentifier && categoryName) {
                 console.log(`🏠 Nastavujem domáci tím: "${homeTeamName}"`);
                 await window.setHomeTeamDetails(homeTeamName, categoryName);
-            } else {
+            } 
+            // Ak sa nepodarilo získať názov, skúsime priamo vyhľadať podľa identifikátora
+            else {
                 console.log(`⚠️ Nepodarilo sa získať názov domáceho tímu, skúšam priamo identifikátor...`);
-                // Skúsime priamo vyhľadať podľa identifikátora
                 const homeResult = await findTeamByIdentifierFromDOM(selectedMatch.homeTeamIdentifier, false);
                 if (homeResult && !Array.isArray(homeResult)) {
                     console.log(`✅ Nájdený domáci tím podľa identifikátora: ${homeResult.team.teamName}`);
                     await window.setHomeTeamDetails(homeResult.team.teamName, categoryName);
+                } else {
+                    console.log(`❌ Domáci tím "${selectedMatch.homeTeamIdentifier}" nebol nájdený`);
                 }
             }
             
+            // Najprv skúsime nájsť hosťovský tím podľa názvu
             if (awayTeamName && awayTeamName !== selectedMatch.awayTeamIdentifier && categoryName) {
                 console.log(`✈️ Nastavujem hosťovský tím: "${awayTeamName}"`);
                 await window.setAwayTeamDetails(awayTeamName, categoryName);
-            } else {
+            } 
+            // Ak sa nepodarilo získať názov, skúsime priamo vyhľadať podľa identifikátora
+            else {
                 console.log(`⚠️ Nepodarilo sa získať názov hosťovského tímu, skúšam priamo identifikátor...`);
                 const awayResult = await findTeamByIdentifierFromDOM(selectedMatch.awayTeamIdentifier, false);
                 if (awayResult && !Array.isArray(awayResult)) {
                     console.log(`✅ Nájdený hosťovský tím podľa identifikátora: ${awayResult.team.teamName}`);
                     await window.setAwayTeamDetails(awayResult.team.teamName, categoryName);
+                } else {
+                    console.log(`❌ Hosťovský tím "${selectedMatch.awayTeamIdentifier}" nebol nájdený`);
                 }
             }
             
             // Označíme, že tímy boli nastavené pre tento zápas
             window._teamsSetForMatch = matchId;
             
-            // Po nastavení tímov spustíme oneskorené vykreslenie pre prípad, že by UI nebolo pripravené
-            setTimeout(() => {
-                console.log('🔄 Dodatočné vykreslenie tímov...');
-                if (window._homeTeamDetails) {
-                    renderFullTeamToUI(window._homeTeamDetails, 'home');
-                }
-                if (window._awayTeamDetails) {
-                    renderFullTeamToUI(window._awayTeamDetails, 'away');
-                }
-            }, 500);
+            // Po nastavení tímov vykreslíme UI (už nie je potrebné oneskorenie, pretože používatelia sú načítaní)
+            console.log('🔄 Vykreslenie tímov do UI...');
+            if (window._homeTeamDetails) {
+                renderFullTeamToUI(window._homeTeamDetails, 'home');
+            }
+            if (window._awayTeamDetails) {
+                renderFullTeamToUI(window._awayTeamDetails, 'away');
+            }
         };
         
         setupTeams();
         
-    }, [selectedMatch, users]); // Spustí sa pri každej zmene selectedMatch
+    }, [selectedMatch, users, categories]); // ✅ Pridané categories do závislostí
 
     useEffect(() => {
         // Poslúchač pre nastavenie domáceho tímu
