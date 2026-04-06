@@ -2419,65 +2419,61 @@ const matchesHallApp = ({ userProfileData }) => {
         setHomeTeamDetailsState(null);
         setAwayTeamDetailsState(null);
         
-        // V useEffect pre sledovanie zmien selectedMatch (okolo riadku 2450)
         const loadTeamsForMatch = async () => {
             console.log('🔧 Načítavam tímy pre zápas:', selectedMatch.homeTeamIdentifier, 'vs', selectedMatch.awayTeamIdentifier);
             
-            // 🔴 NAJPRV SKÚSIME ZÍSKAŤ NÁZOV Z MAPOVANIA
-            let homeTeamName = null;
-            let awayTeamName = null;
+            // 🔴 POUŽIJEME getTeamNameByIdentifier, ktorá funguje správne
+            let homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
+            let awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
             
-            // Skúsime získať názov domáceho tímu cez mapovanie
-            if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
-                homeTeamName = window.teamNameReplacer.getTeamNameFromMapping(selectedMatch.homeTeamIdentifier);
-                awayTeamName = window.teamNameReplacer.getTeamNameFromMapping(selectedMatch.awayTeamIdentifier);
-                
-                if (homeTeamName) {
-                    console.log(`✅ Domáci tím zmapovaný: "${selectedMatch.homeTeamIdentifier}" → "${homeTeamName}"`);
+            const identifierPattern = /\s+\d+[A-Za-z]/;
+            
+            // Skontrolujeme, či sme získali platný názov (nie identifikátor)
+            if (identifierPattern.test(homeTeamName)) {
+                console.log(`⚠️ Domáci názov je stále identifikátor: ${homeTeamName}, skúšam konverziu...`);
+                const converted = convertIdentifierToTeamName(selectedMatch.homeTeamIdentifier);
+                if (converted && converted !== selectedMatch.homeTeamIdentifier) {
+                    homeTeamName = converted;
+                    console.log(`🔄 Domáci názov zkonvertovaný na: ${homeTeamName}`);
                 } else {
-                    console.log(`❌ Domáci tím NEBOL zmapovaný: "${selectedMatch.homeTeamIdentifier}"`);
-                }
-                
-                if (awayTeamName) {
-                    console.log(`✅ Hosťovský tím zmapovaný: "${selectedMatch.awayTeamIdentifier}" → "${awayTeamName}"`);
-                } else {
-                    console.log(`❌ Hosťovský tím NEBOL zmapovaný: "${selectedMatch.awayTeamIdentifier}"`);
-                }
-            } else {
-                // Fallback - použijeme getTeamNameByIdentifier
-                homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
-                awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
-                
-                // Skontrolujeme, či názov nie je stále identifikátor
-                const identifierPattern = /\s+\d+[A-Za-z]/;
-                if (identifierPattern.test(homeTeamName)) {
-                    console.log(`⚠️ Domáci názov je stále identifikátor: ${homeTeamName}`);
+                    console.log(`❌ Domáci názov sa nepodarilo skonvertovať: ${homeTeamName}`);
                     homeTeamName = null;
                 }
-                
-                if (identifierPattern.test(awayTeamName)) {
-                    console.log(`⚠️ Hosťovský názov je stále identifikátor: ${awayTeamName}`);
+            } else {
+                console.log(`✅ Domáci názov získaný: "${homeTeamName}"`);
+            }
+            
+            if (identifierPattern.test(awayTeamName)) {
+                console.log(`⚠️ Hosťovský názov je stále identifikátor: ${awayTeamName}, skúšam konverziu...`);
+                const converted = convertIdentifierToTeamName(selectedMatch.awayTeamIdentifier);
+                if (converted && converted !== selectedMatch.awayTeamIdentifier) {
+                    awayTeamName = converted;
+                    console.log(`🔄 Hosťovský názov zkonvertovaný na: ${awayTeamName}`);
+                } else {
+                    console.log(`❌ Hosťovský názov sa nepodarilo skonvertovať: ${awayTeamName}`);
                     awayTeamName = null;
                 }
+            } else {
+                console.log(`✅ Hosťovský názov získaný: "${awayTeamName}"`);
             }
             
             let homeResult = null;
             let awayResult = null;
             
-            // 🔴 NAČÍTANIE DOMÁCEHO TÍMU - LEN AK MÁME NÁZOV Z MAPOVANIA
+            // 🔴 NAČÍTANIE DOMÁCEHO TÍMU - POUŽIJEME NÁZOV Z getTeamNameByIdentifier
             if (homeTeamName && homeTeamName !== selectedMatch.homeTeamIdentifier) {
                 console.log(`🏠 Vyhľadávam domáci tím pod názvom: "${homeTeamName}"`);
                 homeResult = await findTeamByNameAndCategoryDirect(homeTeamName, selectedMatch.categoryName, false);
             } else {
-                console.log(`❌ Domáci tím NEBUDE vyhľadávaný - chýba názov z mapovania`);
+                console.log(`❌ Domáci tím NEBUDE vyhľadávaný - chýba platný názov (aktuálny: "${homeTeamName}")`);
             }
             
-            // 🔴 NAČÍTANIE HOSŤOVSKÉHO TÍMU - LEN AK MÁME NÁZOV Z MAPOVANIA
+            // 🔴 NAČÍTANIE HOSŤOVSKÉHO TÍMU - POUŽIJEME NÁZOV Z getTeamNameByIdentifier
             if (awayTeamName && awayTeamName !== selectedMatch.awayTeamIdentifier) {
                 console.log(`✈️ Vyhľadávam hosťovský tím pod názvom: "${awayTeamName}"`);
                 awayResult = await findTeamByNameAndCategoryDirect(awayTeamName, selectedMatch.categoryName, false);
             } else {
-                console.log(`❌ Hosťovský tím NEBUDE vyhľadávaný - chýba názov z mapovania`);
+                console.log(`❌ Hosťovský tím NEBUDE vyhľadávaný - chýba platný názov (aktuálny: "${awayTeamName}")`);
             }
             
             // 🔴 AK SA NEPODARILO NAČÍTAŤ TÍM, ZOBRAZÍME "Nedostupné"
