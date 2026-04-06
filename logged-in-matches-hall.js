@@ -1851,23 +1851,15 @@ const matchesHallApp = ({ userProfileData }) => {
 
     // Pridajte tento useEffect do matchesHallApp komponentu -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     useEffect(() => {
-        // Zaregistrujeme setter pre selectedMatch
         window.registerMatchSetter(setSelectedMatch);
-    
-        // Zaregistrujeme setter pre users
         window.registerUsersSetter(setUsers);
-    
-        // Uložíme aktuálny stav users do window pre prístup z konzoly
         window.__reactUsersState = users;
-    
-        // Vyčistenie pri odmontovaní
         return () => {
             window.__reactSelectedMatchSetter = null;
             window.__reactUsersSetter = null;
         };
     }, []);
     
-    // Sledovanie zmien users pre aktualizáciu window.__reactUsersState
     useEffect(() => {
         window.__reactUsersState = users;
     }, [users]);
