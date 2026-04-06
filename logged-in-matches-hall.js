@@ -9140,8 +9140,9 @@ window.setBothTeamsDetails = async (homeTeamName, homeCategory, awayTeamName, aw
 
 // Prepíšeme aj pôvodné setHomeTeamDetails a setAwayTeamDetails
 const originalSetHomeTeamDetails = window.setHomeTeamDetails;
+// Prepíšeme setHomeTeamDetails - najprv skúsime mapovanie
 window.setHomeTeamDetails = async (teamName, categoryName) => {
-    // 🔄 NAJPRV POUŽIJEME MAPPING
+    // 🔄 NAJPRV POUŽIJEME MAPPING NA PREVOD NÁZVU TÍMU
     let actualTeamName = teamName;
     if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
         const mappedName = window.teamNameReplacer.getTeamNameFromMapping(teamName);
@@ -9158,15 +9159,37 @@ window.setHomeTeamDetails = async (teamName, categoryName) => {
     
     console.log(`🔍 Vyhľadávam domáci tím: "${actualTeamName}" v kategórii: "${categoryName}"`);
     
-    // Nájdenie detailov tímu (AWAIT!)
-    const result = await findTeamByNameAndCategory(actualTeamName, categoryName, false);
+    // 🔴 1. NAJPRV SKÚSIME ZÍSKAŤ DETAILY TÍMU PRIAMO Z MAPOVANIA
+    // Vyhľadáme používateľa, ktorý má tím s názvom actualTeamName
+    let result = null;
+    
+    if (window.__teamNameMapping) {
+        // Prejdeme všetky mapovania a nájdeme také, ktoré vedie na actualTeamName
+        for (const [identifier, mapping] of Object.entries(window.__teamNameMapping)) {
+            if (mapping.teamName === actualTeamName) {
+                // Našli sme identifikátor, ktorý sa mapuje na tento názov
+                // Teraz vyhľadáme používateľa podľa tohto identifikátora
+                const teamDetails = getTeamDetails(identifier);
+                if (teamDetails) {
+                    result = teamDetails;
+                    console.log(`✅ Nájdený domáci tím cez mapovanie: ${teamDetails.team.teamName} (${teamDetails.userEmail})`);
+                    break;
+                }
+            }
+        }
+    }
+    
+    // 2. Ak nie je v mapovaní, skúsime štandardné vyhľadávanie
+    if (!result) {
+        result = await findTeamByNameAndCategory(actualTeamName, categoryName, false);
+    }
     
     if (!result || Array.isArray(result)) {
         console.log(`❌ Tím "${actualTeamName}" v kategórii "${categoryName}" nebol nájdený`);
         return;
     }
     
-    // Získanie ID zápasu (automaticky)
+    // Získanie ID zápasu
     let matchId = window.currentMatchId;
     if (!matchId) {
         matchId = await getCurrentMatchIdFromURL();
@@ -9174,17 +9197,11 @@ window.setHomeTeamDetails = async (teamName, categoryName) => {
     
     if (!matchId) {
         console.log('⚠️ Nepodarilo sa získať ID zápasu, ale tím bol nájdený.');
-        console.log(`   Tím: ${result.team.teamName}`);
-        console.log(`   Používateľ: ${result.user.email}`);
-        console.log(`   Počet hráčov: ${result.team.playerDetails?.length || 0}`);
-        
         window._lastFoundTeam = {
             type: 'home',
             teamDetails: result,
             timestamp: Date.now()
         };
-        
-        // 🔄 VYKRESLÍME TÍM DO UI AJ BEZ matchId
         renderFullTeamToUI(result, 'home');
         window._homeTeamDetails = result;
         return;
@@ -9199,19 +9216,16 @@ window.setHomeTeamDetails = async (teamName, categoryName) => {
     });
     window.dispatchEvent(event);
     
-    // 🔄 VYKRESLÍME TÍM DO UI OKAMŽITE
     renderFullTeamToUI(result, 'home');
     window._homeTeamDetails = result;
     
     console.log(`✅ Domáci tím nastavený a vykreslený: ${actualTeamName}`);
     console.log(`   📧 Používateľ: ${result.user.email}`);
     console.log(`   👥 Počet hráčov: ${result.team.playerDetails?.length || 0}`);
-    console.log(`   🆔 ID zápasu: ${matchId}`);
 };
 
 const originalSetAwayTeamDetails = window.setAwayTeamDetails;
 window.setAwayTeamDetails = async (teamName, categoryName) => {
-    // 🔄 NAJPRV POUŽIJEME MAPPING
     let actualTeamName = teamName;
     if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
         const mappedName = window.teamNameReplacer.getTeamNameFromMapping(teamName);
@@ -9228,15 +9242,32 @@ window.setAwayTeamDetails = async (teamName, categoryName) => {
     
     console.log(`🔍 Vyhľadávam hosťovský tím: "${actualTeamName}" v kategórii: "${categoryName}"`);
     
-    // Nájdenie detailov tímu (AWAIT!)
-    const result = await findTeamByNameAndCategory(actualTeamName, categoryName, false);
+    let result = null;
+    
+    // 🔴 1. NAJPRV SKÚSIME ZÍSKAŤ DETAILY TÍMU PRIAMO Z MAPOVANIA
+    if (window.__teamNameMapping) {
+        for (const [identifier, mapping] of Object.entries(window.__teamNameMapping)) {
+            if (mapping.teamName === actualTeamName) {
+                const teamDetails = getTeamDetails(identifier);
+                if (teamDetails) {
+                    result = teamDetails;
+                    console.log(`✅ Nájdený hosťovský tím cez mapovanie: ${teamDetails.team.teamName} (${teamDetails.userEmail})`);
+                    break;
+                }
+            }
+        }
+    }
+    
+    // 2. Ak nie je v mapovaní, skúsime štandardné vyhľadávanie
+    if (!result) {
+        result = await findTeamByNameAndCategory(actualTeamName, categoryName, false);
+    }
     
     if (!result || Array.isArray(result)) {
         console.log(`❌ Tím "${actualTeamName}" v kategórii "${categoryName}" nebol nájdený`);
         return;
     }
     
-    // Získanie ID zápasu (automaticky)
     let matchId = window.currentMatchId;
     if (!matchId) {
         matchId = await getCurrentMatchIdFromURL();
@@ -9244,23 +9275,16 @@ window.setAwayTeamDetails = async (teamName, categoryName) => {
     
     if (!matchId) {
         console.log('⚠️ Nepodarilo sa získať ID zápasu, ale tím bol nájdený.');
-        console.log(`   Tím: ${result.team.teamName}`);
-        console.log(`   Používateľ: ${result.user.email}`);
-        console.log(`   Počet hráčov: ${result.team.playerDetails?.length || 0}`);
-        
         window._lastFoundTeam = {
             type: 'away',
             teamDetails: result,
             timestamp: Date.now()
         };
-        
-        // 🔄 VYKRESLÍME TÍM DO UI AJ BEZ matchId
         renderFullTeamToUI(result, 'away');
         window._awayTeamDetails = result;
         return;
     }
     
-    // Odoslanie udalosti
     const event = new CustomEvent('setAwayTeamDetails', {
         detail: {
             teamDetails: result,
@@ -9269,14 +9293,12 @@ window.setAwayTeamDetails = async (teamName, categoryName) => {
     });
     window.dispatchEvent(event);
     
-    // 🔄 VYKRESLÍME TÍM DO UI OKAMŽITE
     renderFullTeamToUI(result, 'away');
     window._awayTeamDetails = result;
     
     console.log(`✅ Hosťovský tím nastavený a vykreslený: ${actualTeamName}`);
     console.log(`   📧 Používateľ: ${result.user.email}`);
     console.log(`   👥 Počet hráčov: ${result.team.playerDetails?.length || 0}`);
-    console.log(`   🆔 ID zápasu: ${matchId}`);
 };
 
 // PRIDÁME AJ MUTATION OBSERVER PRE PRÍPAD, ŽE SA UI ZMENÍ AŽ PO NASTAVENÍ
