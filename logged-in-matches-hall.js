@@ -1281,40 +1281,50 @@ const matchesHallApp = ({ userProfileData }) => {
         if (!window.db || !matchId) return;
         
         // Získame kategóriu pre aktuálny zápas
-        const currentCategory = categories.find(c => c.name === selectedMatch.categoryName);
+        const currentCategory = categories.find(c => c.name === selectedMatch?.categoryName);
         
         // Vypočítame maximálny možný čas zápasu (v sekundách)
-        const maxMatchTime = currentCategory 
-            ? (currentCategory.periods || 2) * (currentCategory.periodDuration || 20) * 60
-            : 40 * 60; // predvolené: 2 x 20 minút = 40 minút = 2400 sekúnd
+        const maxMatchTime = (currentCategory?.periods || 2) * (currentCategory?.periodDuration || 20) * 60;
         
-        // Vypočítame offset, ktorý nastaví čas na maximálnu hodnotu
         let newOffset = 0;
+        let startedAtValue = null;
         
+        // Ak máme selectedMatch a startedAt, vypočítame offset
         if (selectedMatch && selectedMatch.startedAt) {
             const now = Timestamp.now();
             const startedAt = selectedMatch.startedAt;
             const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
-            // Offset = požadovaný čas - základný čas
             newOffset = maxMatchTime - baseSeconds;
+            startedAtValue = selectedMatch.startedAt;
+        } else {
+            // Ak nemáme startedAt, nastavíme startedAt na aktuálny čas a offset = maxMatchTime
+            startedAtValue = Timestamp.now();
+            newOffset = maxMatchTime;
         }
         
         try {
             const matchRef = doc(window.db, 'matches', matchId);
-            await updateDoc(matchRef, {
+            const updateData = {
                 status: 'in-progress',
                 endedAt: null,
                 pausedAt: null,
-                manualTimeOffset: newOffset,  // Nastavíme offset na maximálny čas
+                manualTimeOffset: newOffset,
                 updatedAt: Timestamp.now()
-            });
+            };
+            
+            // Ak nemáme startedAt, nastavíme ho
+            if (!selectedMatch?.startedAt) {
+                updateData.startedAt = startedAtValue;
+            }
+            
+            await updateDoc(matchRef, updateData);
             
             // Aktualizujeme lokálne stavy
             setMatchTime(maxMatchTime);
             setCleanPlayingTime(maxMatchTime);
             setManualTimeOffset(newOffset);
             
-            window.showGlobalNotification('Zápas bol obnovený do stavu "Prebieha" s maximálnym časom', 'success');
+            window.showGlobalNotification('Zápas bol obnovený do stavu "Prebieha"', 'success');
         } catch (error) {
             console.error('Chyba pri obnovovaní zápasu:', error);
             window.showGlobalNotification('Chyba pri obnovovaní zápasu', 'error');
