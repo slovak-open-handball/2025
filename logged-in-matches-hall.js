@@ -3204,6 +3204,12 @@ const matchesHallApp = ({ userProfileData }) => {
 
     // FUNKCIA PRE VÝBER ZÁPASU (KOMPLETNE OPRAVENÁ)
     const selectMatch = async (match) => {
+        // 🔴 AK VYBERÁME ROVNAKÝ ZÁPAS, NEUROBÍME NIČ (zabráni zbytočnému prekresleniu a vymazaniu priebehu)
+        if (selectedMatch?.id === match.id) {
+            console.log('ℹ️ Rovnaký zápas už je vybraný, preskakujem...');
+            return;
+        }
+        
         setSelectedMatch(match);
         setManualTimeOffset(match.manualTimeOffset || 0);
         updateUrlParameters(match.homeTeamIdentifier, match.awayTeamIdentifier);
