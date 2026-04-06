@@ -3562,7 +3562,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 return React.createElement(
                     'div',
                     { className: 'text-sm text-gray-500 italic p-2 text-center' },
-                    'Dáta tímu nie sú dostupné'
+                    ' ' // Nedostupné
                 );
             }
             
