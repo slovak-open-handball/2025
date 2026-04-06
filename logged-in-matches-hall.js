@@ -3557,14 +3557,14 @@ const matchesHallApp = ({ userProfileData }) => {
             // Preto pristupujeme k hráčom cez teamDetails.team.playerDetails
             const teamData = teamDetails?.team;
             
-            if (!teamData) {
-                console.log(`⚠️ Žiadne dáta pre tím ${teamType} (${teamName})`);
-                return React.createElement(
-                    'div',
-                    { className: 'text-sm text-gray-500 italic p-2 text-center' },
-                    'Dáta tímu nie sú dostupné'
-                );
-            }
+//            if (!teamData) {
+//                console.log(`⚠️ Žiadne dáta pre tím ${teamType} (${teamName})`);
+//                return React.createElement(
+//                    'div',
+//                    { className: 'text-sm text-gray-500 italic p-2 text-center' },
+//                    'Dáta tímu nie sú dostupné'
+//                );
+//            }
             
             // Získame aktívnych hráčov (ktorí nie sú odstránení pre tento zápas)
             const activePlayers = teamData.playerDetails?.filter(p => p && !p.removedForMatch) || [];
