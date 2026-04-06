@@ -1905,35 +1905,33 @@ const matchesHallApp = ({ userProfileData }) => {
         let awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
         const categoryName = selectedMatch.categoryName;
         
-        // 🔴 NEPOUŽÍVAME ZNOVA MAPOVANIE! Názvy už sú zmapované z getTeamNameByIdentifier
-        
-        // Nastavíme tímy
+        // 🔴 OPRAVENÁ FUNKCIA setupTeams - používa selectedMatch namiesto match
         const setupTeams = async () => {
-            // Získame názvy tímov POUŽITÍM MAPOVANIA
-            let homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
-            let awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
+            // Získame názvy tímov POUŽITÍM MAPOVANIA (použijeme selectedMatch)
+            let homeTeamNameFromMap = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
+            let awayTeamNameFromMap = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
             
             // Ak je názov stále identifikátor, skúsime ho manuálne zmapovať
             const identifierPattern = /\s+\d+[A-Za-z]/;
-            if (identifierPattern.test(homeTeamName)) {
-                console.log(`⚠️ Domáci názov je stále identifikátor: ${homeTeamName}, skúšam konverziu...`);
-                const converted = convertIdentifierToTeamName(match.homeTeamIdentifier);
-                if (converted && converted !== match.homeTeamIdentifier) {
-                    homeTeamName = converted;
+            if (identifierPattern.test(homeTeamNameFromMap)) {
+                console.log(`⚠️ Domáci názov je stále identifikátor: ${homeTeamNameFromMap}, skúšam konverziu...`);
+                const converted = convertIdentifierToTeamName(selectedMatch.homeTeamIdentifier);
+                if (converted && converted !== selectedMatch.homeTeamIdentifier) {
+                    homeTeamNameFromMap = converted;
                 }
             }
             
-            if (identifierPattern.test(awayTeamName)) {
-                console.log(`⚠️ Hosťovský názov je stále identifikátor: ${awayTeamName}, skúšam konverziu...`);
-                const converted = convertIdentifierToTeamName(match.awayTeamIdentifier);
-                if (converted && converted !== match.awayTeamIdentifier) {
-                    awayTeamName = converted;
+            if (identifierPattern.test(awayTeamNameFromMap)) {
+                console.log(`⚠️ Hosťovský názov je stále identifikátor: ${awayTeamNameFromMap}, skúšam konverziu...`);
+                const converted = convertIdentifierToTeamName(selectedMatch.awayTeamIdentifier);
+                if (converted && converted !== selectedMatch.awayTeamIdentifier) {
+                    awayTeamNameFromMap = converted;
                 }
             }
             
             // Použijeme DIRECT funkciu na vyhľadanie
-            if (homeTeamName && homeTeamName !== match.homeTeamIdentifier) {
-                const homeResult = await findTeamByNameAndCategoryDirect(homeTeamName, match.categoryName, false);
+            if (homeTeamNameFromMap && homeTeamNameFromMap !== selectedMatch.homeTeamIdentifier) {
+                const homeResult = await findTeamByNameAndCategoryDirect(homeTeamNameFromMap, selectedMatch.categoryName, false);
                 if (homeResult && !Array.isArray(homeResult)) {
                     window._homeTeamDetails = homeResult;
                     setHomeTeamDetailsState({
@@ -1946,8 +1944,8 @@ const matchesHallApp = ({ userProfileData }) => {
                 }
             }
             
-            if (awayTeamName && awayTeamName !== match.awayTeamIdentifier) {
-                const awayResult = await findTeamByNameAndCategoryDirect(awayTeamName, match.categoryName, false);
+            if (awayTeamNameFromMap && awayTeamNameFromMap !== selectedMatch.awayTeamIdentifier) {
+                const awayResult = await findTeamByNameAndCategoryDirect(awayTeamNameFromMap, selectedMatch.categoryName, false);
                 if (awayResult && !Array.isArray(awayResult)) {
                     window._awayTeamDetails = awayResult;
                     setAwayTeamDetailsState({
@@ -1964,7 +1962,7 @@ const matchesHallApp = ({ userProfileData }) => {
         setTimeout(() => {
             setupTeams();
         }, 100);
-    }, [selectedMatch, users, categories, isMappingReady]);
+    }, [selectedMatch, users, categories, isMappingReady]); // <-- správne uzavretie
 
     useEffect(() => {
         // Poslúchač pre nastavenie domáceho tímu
