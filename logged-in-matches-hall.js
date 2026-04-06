@@ -1804,48 +1804,44 @@ const matchesHallApp = ({ userProfileData }) => {
     // ČAKANIE NA MAPOVANIE TÍMOV Z DRUHÉHO KÓDU
     // ============================================================
     useEffect(() => {
-        // Kontrola, či už náhodou nie je mapovanie pripravené
+        // 1. Rýchla kontrola - už je pripravené?
         if (window.teamNameReplacer?.isMappingReady?.()) {
-            console.log('✅ Mapovanie už je pripravené (kontrola)');
             setIsMappingReady(true);
             setTeamMappings(window.__teamNameMapping || {});
             return;
         }
         
-        // Kontrola, či už existujú mapovania v __teamNameMapping
+        // 2. Už existujú mapovania?
         if (window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0) {
-            console.log(`✅ Mapovanie už existuje (${Object.keys(window.__teamNameMapping).length} položiek)`);
             setIsMappingReady(true);
             setTeamMappings(window.__teamNameMapping);
             return;
         }
         
-        // Počkáme na udalosť, že mapovanie je pripravené
+        // 3. Nastavenie poslúchača na udalosť
         const handleMappingReady = (event) => {
-            console.log('📡 Prijatá udalosť teamNameMappingReady!');
-            console.log(`   Počet mapovaní: ${event.detail.mappingsCount}`);
             setIsMappingReady(true);
             setTeamMappings(event.detail.mappings);
-            
-            // 🔴 DÔLEŽITÉ: Po prijatí udalosti spustíme nastavenie tímov, ak už je vybraný zápas
-            if (selectedMatch && users.length > 0 && categories.length > 0) {
-                console.log('🔄 Mapovanie je pripravené, spúšťam nastavenie tímov...');
-                // Tu by sa mal spustiť useEffect pre nastavenie tímov
-                // (automaticky sa spustí, keďže isMappingReady sa zmení)
-            }
         };
-        
         window.addEventListener('teamNameMappingReady', handleMappingReady);
         
-        // Požiadame o ohlásenie pripravenosti
+        // 4. 🔴 ŽIADOSŤ O OHLÁSENIE (tu je váš kód)
         if (window.teamNameReplacer?.announceReady) {
             window.teamNameReplacer.announceReady();
+        } else if (window.teamNameReplacer?.forceNotify) {
+            window.teamNameReplacer.forceNotify();
+        } else {
+            setTimeout(() => {
+                if (window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0) {
+                    setIsMappingReady(true);
+                    setTeamMappings(window.__teamNameMapping);
+                }
+            }, 2000);
         }
         
-        // Timeout pre prípad, že by mapovanie nikdy neprišlo (po 10 sekundách aj tak pokračujeme)
+        // 5. Timeout poistka
         const timeout = setTimeout(() => {
             if (!isMappingReady) {
-                console.log('⚠️ Timeout čakania na mapovanie, pokračujem bez neho...');
                 setIsMappingReady(true);
             }
         }, 10000);
@@ -1854,7 +1850,7 @@ const matchesHallApp = ({ userProfileData }) => {
             window.removeEventListener('teamNameMappingReady', handleMappingReady);
             clearTimeout(timeout);
         };
-    }, [selectedMatch]); // 🔴 PRIDANÉ selectedMatch – ak sa zmení zápas, znova skontrolujeme mapovanie
+    }, [selectedMatch]);
 
     // ============================================================
     // AUTOMATICKÉ NASTAVENIE TÍMOV PRI VÝBERE ZÁPASU Z URL
