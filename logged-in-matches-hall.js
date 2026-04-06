@@ -3057,6 +3057,39 @@ const matchesHallApp = ({ userProfileData }) => {
         return foundName || identifier;
     };
 
+    // Funkcia na získanie detailov tímu priamo z mapovania
+    const getTeamDetailsFromMapping = (identifier) => {
+        if (!identifier) return null;
+        
+        // Získame mapovanie pre tento identifikátor
+        const mapping = window.__teamNameMapping?.[identifier];
+        if (!mapping) return null;
+        
+        // Teraz vieme, že identifikátor U12 D 1A zodpovedá tímu s názvom mapping.teamName
+        // Potrebujeme nájsť používateľa, ktorý má tento tím
+        
+        for (const user of users) {
+            if (!user.teams) continue;
+            
+            for (const [category, teams] of Object.entries(user.teams)) {
+                if (!Array.isArray(teams)) continue;
+                
+                const team = teams.find(t => t.teamName === mapping.teamName);
+                if (team) {
+                    console.log(`✅ Nájdený používateľský tím cez mapovanie: ${team.teamName} (${user.email})`);
+                    return {
+                        team: team,
+                        userEmail: user.email,
+                        userId: user.id,
+                        userDisplayName: user.displayName
+                    };
+                }
+            }
+        }
+        
+        return null;
+    };
+
     // FUNKCIA NA ZÍSKANIE KOMPLETNÝCH INFORMÁCIÍ O TÍME (upravená - hľadá podľa názvu aj identifikátora)
     const getTeamDetails = (identifier) => {
         if (!identifier) return null;
