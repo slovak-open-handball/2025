@@ -7443,3 +7443,59 @@ window.setTeamsFromCurrentMatch = () => {
         window.setAwayTeamDetails(result.away.team.teamName, result.away.category);
     }
 };
+
+// Funkcia na manuálne nastavenie detailov domáceho tímu
+window.setHomeTeamDetails = (teamName, categoryName) => {
+    if (!window.currentMatchId) {
+        console.log('❌ Žiadny aktuálny zápas nie je vybraný');
+        return;
+    }
+    
+    const result = findTeamByNameAndCategory(teamName, categoryName, false);
+    
+    if (result && !Array.isArray(result)) {
+        const event = new CustomEvent('setHomeTeamDetails', {
+            detail: {
+                teamDetails: result,
+                matchId: window.currentMatchId
+            }
+        });
+        window.dispatchEvent(event);
+        console.log(`✅ Nastavujem domáci tím: ${teamName}`);
+    } else {
+        console.log(`❌ Tím "${teamName}" v kategórii "${categoryName}" nebol nájdený`);
+    }
+};
+
+window.setAwayTeamDetails = (teamName, categoryName) => {
+    if (!window.currentMatchId) {
+        console.log('❌ Žiadny aktuálny zápas nie je vybraný');
+        return;
+    }
+    
+    const result = findTeamByNameAndCategory(teamName, categoryName, false);
+    
+    if (result && !Array.isArray(result)) {
+        const event = new CustomEvent('setAwayTeamDetails', {
+            detail: {
+                teamDetails: result,
+                matchId: window.currentMatchId
+            }
+        });
+        window.dispatchEvent(event);
+        console.log(`✅ Nastavujem hosťovský tím: ${teamName}`);
+    } else {
+        console.log(`❌ Tím "${teamName}" v kategórii "${categoryName}" nebol nájdený`);
+    }
+};
+
+window.setBothTeamsDetails = (homeTeamName, homeCategory, awayTeamName, awayCategory) => {
+    if (homeTeamName && homeCategory) window.setHomeTeamDetails(homeTeamName, homeCategory);
+    if (awayTeamName && awayCategory) window.setAwayTeamDetails(awayTeamName, awayCategory);
+};
+
+window.setTeamsFromCurrentMatch = () => {
+    const result = findCurrentMatchTeamsFromDOM(false);
+    if (result?.home) window.setHomeTeamDetails(result.home.team.teamName, result.home.category);
+    if (result?.away) window.setAwayTeamDetails(result.away.team.teamName, result.away.category);
+};
