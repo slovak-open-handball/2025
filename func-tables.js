@@ -48,7 +48,7 @@ function error(...args) {
     myConsoleError(...args);
 }
 
-// Teraz v celom kóde používame tieto funkcie namiesto priamo console.log
+// Teraz v celom kóde používame tieto funkcie namiesto priamo console.log ---------------- všetko pred týmto riadkom vymaž
 
 (function() {
     'use strict';
