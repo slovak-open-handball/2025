@@ -1,3 +1,15 @@
+// ========== GLOBÁLNY PREPÍNAČ PRE LOGOVANIE ==========
+const DEBUG_MODE = false;  // false = vypnuté, true = zapnuté
+
+// Prepísanie console.log (voliteľné - úplne vypne všetky logy)
+if (!DEBUG_MODE) {
+    const noop = () => {};
+    console.log = noop;
+    console.debug = noop;
+    console.info = noop;
+    // console.warn a console.error nechávame zapnuté
+}
+
 (function() {
     'use strict';
     
