@@ -10526,26 +10526,6 @@ window.forceRenderTeamsToUI = function() {
 };
 
 // ============================================================
-// OPRAVA: Zabránenie prerenderovania pri kliknutí na hráča
-// ============================================================
-
-// Uložíme pôvodnú funkciu addMatchEvent
-const originalAddMatchEvent = addMatchEvent;
-
-// Prepíšeme addMatchEvent, aby nevolala žiadne renderovanie
-window.addMatchEvent = async function(localEventType, localEventTeam, localEventSubType, localPlayer) {
-    console.log(`⚽ Pridávam udalosť: ${localEventType} pre ${localEventTeam === 'home' ? 'domácich' : 'hostí'}`);
-    
-    // Zavoláme pôvodnú funkciu, ktorá pridá udalosť do Firebase
-    if (originalAddMatchEvent) {
-        await originalAddMatchEvent(localEventType, localEventTeam, localEventSubType, localPlayer);
-    }
-    
-    // Nevoláme žiadne ďalšie renderovanie - Firebase onSnapshot sa postará o aktualizáciu
-    console.log('✅ Udalosť pridaná, UI sa aktualizuje automaticky cez Firebase');
-};
-
-// ============================================================
 // OPRAVA: Resetovanie stavu pri zmene zápasu
 // ============================================================
 
