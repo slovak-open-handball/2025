@@ -6755,7 +6755,44 @@ console.log('   • window.matchTracker.getTeamInfoByDisplayId("U12 D 2B") - vr�
 
 
 
-
+// Funkcia na vyhľadanie všetkých tímov v aktuálnom DOM
+function findAllTeamsInDOM() {
+    console.log('🔍 Vyhľadávam všetky tímy v aktuálnom DOM...');
+    
+    const allTeamElements = document.querySelectorAll('[data-original-identifier]');
+    
+    if (allTeamElements.length === 0) {
+        console.log('❌ V DOM sa nenašli žiadne elementy s atribútom data-original-identifier');
+        return [];
+    }
+    
+    const teamsMap = new Map();
+    
+    allTeamElements.forEach(el => {
+        const identifier = el.getAttribute('data-original-identifier');
+        const teamName = el.getAttribute('data-team-name');
+        const category = el.getAttribute('data-team-category');
+        
+        if (identifier && teamName && teamName !== identifier) {
+            if (!teamsMap.has(identifier)) {
+                teamsMap.set(identifier, {
+                    identifier: identifier,
+                    teamName: teamName,
+                    category: category
+                });
+            }
+        }
+    });
+    
+    const teams = Array.from(teamsMap.values());
+    
+    console.log(`📋 Nájdených ${teams.length} unikátnych tímov v DOM:`);
+    teams.forEach((team, idx) => {
+        console.log(`   ${idx + 1}. ${team.identifier} → "${team.teamName}" (${team.category || 'neznáma kategória'})`);
+    });
+    
+    return teams;
+}
 
 // Funkcia na získanie názvu tímu z DOM elementu podľa identifikátora
 function getTeamNameFromDOM(identifier) {
