@@ -1798,7 +1798,96 @@ const matchesHallApp = ({ userProfileData }) => {
         return selectedMatch.status === 'scheduled';
     };
 
-    // PRIDAJTE TENTO useEffect do matchesHallApp komponentu
+    // ============================================================
+    // AUTOMATICKÉ NASTAVENIE TÍMOV PRI VÝBERE ZÁPASU Z URL
+    // ============================================================
+    useEffect(() => {
+        // Tento useEffect sa spustí vždy, keď sa zmení selectedMatch
+        // a keď je selectedMatch nastavený (napr. z URL parametrov)
+        if (!selectedMatch) return;
+        
+        // Skontrolujeme, či už boli tímy nastavené pre tento zápas
+        // (aby sme nevolali nastavenie viackrát)
+        const matchId = selectedMatch.id;
+        if (window._teamsSetForMatch === matchId) {
+            console.log('✅ Tímy už boli nastavené pre tento zápas, preskakujem');
+            return;
+        }
+        
+        console.log('🔄 Automatické nastavenie tímov pre zápas z URL/React stavu...');
+        console.log(`🏠 Domáci identifikátor: ${selectedMatch.homeTeamIdentifier}`);
+        console.log(`✈️ Hosťovský identifikátor: ${selectedMatch.awayTeamIdentifier}`);
+        console.log(`📂 Kategória: ${selectedMatch.categoryName}`);
+        
+        // Získame názvy tímov z identifikátorov
+        let homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
+        let awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
+        const categoryName = selectedMatch.categoryName;
+        
+        // Aplikujeme mapping na názvy z databázy
+        if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
+            if (homeTeamName && homeTeamName !== selectedMatch.homeTeamIdentifier) {
+                const mappedHome = window.teamNameReplacer.getTeamNameFromMapping(homeTeamName);
+                if (mappedHome) {
+                    console.log(`🔄 Mapovanie domáceho tímu: "${homeTeamName}" → "${mappedHome}"`);
+                    homeTeamName = mappedHome;
+                }
+            }
+            if (awayTeamName && awayTeamName !== selectedMatch.awayTeamIdentifier) {
+                const mappedAway = window.teamNameReplacer.getTeamNameFromMapping(awayTeamName);
+                if (mappedAway) {
+                    console.log(`🔄 Mapovanie hosťovského tímu: "${awayTeamName}" → "${mappedAway}"`);
+                    awayTeamName = mappedAway;
+                }
+            }
+        }
+        
+        // Nastavíme tímy
+        const setupTeams = async () => {
+            if (homeTeamName && homeTeamName !== selectedMatch.homeTeamIdentifier && categoryName) {
+                console.log(`🏠 Nastavujem domáci tím: "${homeTeamName}"`);
+                await window.setHomeTeamDetails(homeTeamName, categoryName);
+            } else {
+                console.log(`⚠️ Nepodarilo sa získať názov domáceho tímu, skúšam priamo identifikátor...`);
+                // Skúsime priamo vyhľadať podľa identifikátora
+                const homeResult = await findTeamByIdentifierFromDOM(selectedMatch.homeTeamIdentifier, false);
+                if (homeResult && !Array.isArray(homeResult)) {
+                    console.log(`✅ Nájdený domáci tím podľa identifikátora: ${homeResult.team.teamName}`);
+                    await window.setHomeTeamDetails(homeResult.team.teamName, categoryName);
+                }
+            }
+            
+            if (awayTeamName && awayTeamName !== selectedMatch.awayTeamIdentifier && categoryName) {
+                console.log(`✈️ Nastavujem hosťovský tím: "${awayTeamName}"`);
+                await window.setAwayTeamDetails(awayTeamName, categoryName);
+            } else {
+                console.log(`⚠️ Nepodarilo sa získať názov hosťovského tímu, skúšam priamo identifikátor...`);
+                const awayResult = await findTeamByIdentifierFromDOM(selectedMatch.awayTeamIdentifier, false);
+                if (awayResult && !Array.isArray(awayResult)) {
+                    console.log(`✅ Nájdený hosťovský tím podľa identifikátora: ${awayResult.team.teamName}`);
+                    await window.setAwayTeamDetails(awayResult.team.teamName, categoryName);
+                }
+            }
+            
+            // Označíme, že tímy boli nastavené pre tento zápas
+            window._teamsSetForMatch = matchId;
+            
+            // Po nastavení tímov spustíme oneskorené vykreslenie pre prípad, že by UI nebolo pripravené
+            setTimeout(() => {
+                console.log('🔄 Dodatočné vykreslenie tímov...');
+                if (window._homeTeamDetails) {
+                    renderFullTeamToUI(window._homeTeamDetails, 'home');
+                }
+                if (window._awayTeamDetails) {
+                    renderFullTeamToUI(window._awayTeamDetails, 'away');
+                }
+            }, 500);
+        };
+        
+        setupTeams();
+        
+    }, [selectedMatch]); // Spustí sa pri každej zmene selectedMatch
+
     useEffect(() => {
         // Poslúchač pre nastavenie domáceho tímu
         const handleSetHomeTeam = (event) => {
