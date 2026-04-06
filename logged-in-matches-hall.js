@@ -6126,7 +6126,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'span',
                                                 { className: 'font-medium text-gray-800 text-right flex-1' },
-                                                homeTeamName
+                                                window.matchTracker.getTeamNameByDisplayId(homeTeamName) ?? homeTeamName
                                             ),
                                             
                                             // Zobrazenie stavu zápasu
@@ -6164,7 +6164,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'span',
                                                 { className: 'font-medium text-gray-800 flex-1' },
-                                                awayTeamName
+                                                window.matchTracker.getTeamNameByDisplayId(awayTeamName) ?? awayTeamName
                                             )
                                         ),
                                         
