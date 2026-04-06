@@ -340,6 +340,510 @@ const matchesHallApp = ({ userProfileData }) => {
     const [homeTeamDetailsState, setHomeTeamDetailsState] = useState(null);
     const [awayTeamDetailsState, setAwayTeamDetailsState] = useState(null);
 
+
+
+
+
+
+
+
+    // ============================================================
+    // FUNKCIE PRE LOKÁLNE ULOŽISKO (localStorage)
+    // ============================================================
+    
+    // Kľúče pre localStorage
+    const STORAGE_KEYS = {
+        HOME_TEAM: 'match_home_team_details',
+        AWAY_TEAM: 'match_away_team_details',
+        CURRENT_MATCH: 'match_current_match_data',
+        TEAMS_CACHE: 'match_teams_cache'
+    };
+    
+    // Uloženie detailov tímu do localStorage
+    const saveTeamToLocalStorage = (teamDetails, teamType, matchId) => {
+        if (!teamDetails || !teamType || !matchId) return;
+        
+        try {
+            const storageKey = teamType === 'home' ? STORAGE_KEYS.HOME_TEAM : STORAGE_KEYS.AWAY_TEAM;
+            const dataToStore = {
+                matchId: matchId,
+                teamDetails: {
+                    team: {
+                        teamName: teamDetails.team.teamName,
+                        groupName: teamDetails.team.groupName,
+                        order: teamDetails.team.order,
+                        playerDetails: teamDetails.team.playerDetails ? teamDetails.team.playerDetails.map(p => ({
+                            firstName: p.firstName,
+                            lastName: p.lastName,
+                            jerseyNumber: p.jerseyNumber,
+                            removedForMatch: p.removedForMatch
+                        })) : [],
+                        menTeamMemberDetails: teamDetails.team.menTeamMemberDetails ? teamDetails.team.menTeamMemberDetails.map(m => ({
+                            firstName: m.firstName,
+                            lastName: m.lastName,
+                            removedForMatch: m.removedForMatch
+                        })) : [],
+                        womenTeamMemberDetails: teamDetails.team.womenTeamMemberDetails ? teamDetails.team.womenTeamMemberDetails.map(m => ({
+                            firstName: m.firstName,
+                            lastName: m.lastName,
+                            removedForMatch: m.removedForMatch
+                        })) : [],
+                        matchSpecificRemovals: teamDetails.team.matchSpecificRemovals
+                    },
+                    userEmail: teamDetails.userEmail,
+                    userId: teamDetails.userId,
+                    userDisplayName: teamDetails.userDisplayName
+                },
+                savedAt: Date.now()
+            };
+            
+            localStorage.setItem(storageKey, JSON.stringify(dataToStore));
+            console.log(`✅ Tím ${teamType === 'home' ? 'domáci' : 'hosťovský'} uložený do localStorage pre zápas ${matchId}`);
+        } catch (error) {
+            console.error('Chyba pri ukladaní tímu do localStorage:', error);
+        }
+    };
+    
+    // Načítanie detailov tímu z localStorage
+    const loadTeamFromLocalStorage = (teamType, matchId) => {
+        if (!teamType || !matchId) return null;
+        
+        try {
+            const storageKey = teamType === 'home' ? STORAGE_KEYS.HOME_TEAM : STORAGE_KEYS.AWAY_TEAM;
+            const storedData = localStorage.getItem(storageKey);
+            
+            if (!storedData) return null;
+            
+            const data = JSON.parse(storedData);
+            
+            // Kontrola, či uložené dáta patria k aktuálnemu zápasu
+            if (data.matchId !== matchId) {
+                console.log(`⚠️ Uložený tím ${teamType === 'home' ? 'domáci' : 'hosťovský'} je z iného zápasu, ignorujem`);
+                return null;
+            }
+            
+            // Kontrola, či dáta nie sú príliš staré (napr. viac ako 1 hodina)
+            const ONE_HOUR = 60 * 60 * 1000;
+            if (Date.now() - data.savedAt > ONE_HOUR) {
+                console.log(`⚠️ Uložený tím ${teamType === 'home' ? 'domáci' : 'hosťovský'} je príliš starý, ignorujem`);
+                localStorage.removeItem(storageKey);
+                return null;
+            }
+            
+            console.log(`✅ Tím ${teamType === 'home' ? 'domáci' : 'hosťovský'} načítaný z localStorage`);
+            return data.teamDetails;
+        } catch (error) {
+            console.error('Chyba pri načítaní tímu z localStorage:', error);
+            return null;
+        }
+    };
+    
+    // Vymazanie uložených tímov z localStorage
+    const clearTeamsFromLocalStorage = (matchId = null) => {
+        if (matchId) {
+            // Vymažeme len tímy pre konkrétny zápas
+            const homeData = localStorage.getItem(STORAGE_KEYS.HOME_TEAM);
+            const awayData = localStorage.getItem(STORAGE_KEYS.AWAY_TEAM);
+            
+            if (homeData) {
+                const home = JSON.parse(homeData);
+                if (home.matchId === matchId) localStorage.removeItem(STORAGE_KEYS.HOME_TEAM);
+            }
+            if (awayData) {
+                const away = JSON.parse(awayData);
+                if (away.matchId === matchId) localStorage.removeItem(STORAGE_KEYS.AWAY_TEAM);
+            }
+        } else {
+            // Vymažeme všetky tímy
+            localStorage.removeItem(STORAGE_KEYS.HOME_TEAM);
+            localStorage.removeItem(STORAGE_KEYS.AWAY_TEAM);
+        }
+        console.log('🗑️ localStorage tímov vymazané');
+    };
+    
+    // ============================================================
+    // UPRAVENÁ FUNKCIA PRE NASTAVENIE TÍMOV (s localStorage)
+    // ============================================================
+    
+    // Upravte existujúcu funkciu renderFullTeamToUI alebo vytvorte novú
+    const renderFullTeamToUIWithLocalStorage = (teamDetails, teamType, matchId) => {
+        // Najprv vykreslíme do UI
+        renderFullTeamToUI(teamDetails, teamType);
+        
+        // Potom uložíme do localStorage
+        if (teamDetails && matchId) {
+            saveTeamToLocalStorage(teamDetails, teamType, matchId);
+        }
+    };
+    
+    // ============================================================
+    // UPRAVENÁ FUNKCIA selectMatch - načítava tímy najprv z localStorage
+    // ============================================================
+    
+    // Nájdite existujúcu funkciu selectMatch a upravte ju (pridajte localStorage logiku)
+    // Tu je upravená verzia - vložte ju namiesto pôvodnej selectMatch
+    
+    // UPRAVENÁ FUNKCIA PRE VÝBER ZÁPASU (s localStorage)
+    const selectMatchWithLocalStorage = async (match) => {
+        // 🔴 AK VYBERÁME ROVNAKÝ ZÁPAS, NEUROBÍME NIČ
+        if (selectedMatch?.id === match.id) {
+            console.log('ℹ️ Rovnaký zápas už je vybraný, preskakujem...');
+            return;
+        }
+    
+        // 🔴 NASTAVÍME selectedMatch OKAMŽITE, aby React začal prerenderovávať
+        setSelectedMatch(match);
+        
+        // 🔴 AKTUÁLNE VYMAŽEME STARÉ ÚDAJE (duplicitne, pre istotu)
+        setMatchEvents([]);
+        setMatchScore({ home: 0, away: 0 });
+        setMatchTime(match.manualTimeOffset || 0);
+        setManualTimeOffset(match.manualTimeOffset || 0);
+        setCleanPlayingTime(match.manualTimeOffset || 0);
+        setHighlightedEventId(null);
+        setPlayerStats({});
+        setShowPlayerStats(false);
+    
+        // 🔴 NAJPRV SKÚSIME NAČÍTAŤ TÍMY Z LOCALSTORAGE
+        let homeTeamFromStorage = loadTeamFromLocalStorage('home', match.id);
+        let awayTeamFromStorage = loadTeamFromLocalStorage('away', match.id);
+        
+        if (homeTeamFromStorage && awayTeamFromStorage) {
+            console.log('✅ Tímy boli načítané z localStorage!');
+            window._homeTeamDetails = homeTeamFromStorage;
+            window._awayTeamDetails = awayTeamFromStorage;
+            setHomeTeamDetailsState({
+                team: homeTeamFromStorage.team,
+                userEmail: homeTeamFromStorage.userEmail,
+                userId: homeTeamFromStorage.userId,
+                userDisplayName: homeTeamFromStorage.userDisplayName
+            });
+            setAwayTeamDetailsState({
+                team: awayTeamFromStorage.team,
+                userEmail: awayTeamFromStorage.userEmail,
+                userId: awayTeamFromStorage.userId,
+                userDisplayName: awayTeamFromStorage.userDisplayName
+            });
+            renderFullTeamToUI(homeTeamFromStorage, 'home');
+            renderFullTeamToUI(awayTeamFromStorage, 'away');
+            
+            // Aktualizujeme URL
+            updateUrlParameters(match.homeTeamIdentifier, match.awayTeamIdentifier);
+            window.currentMatchId = match.id;
+            return;
+        }
+        
+        // 🔴 AK NIE SÚ V LOCALSTORAGE, VYMAŽEME GLOBÁLNE PREMENNÉ
+        window._homeTeamDetails = null;
+        window._awayTeamDetails = null;
+        window._teamsSetForMatch = null;
+        setHomeTeamDetailsState(null);
+        setAwayTeamDetailsState(null);
+        
+        // Aktualizujeme URL
+        updateUrlParameters(match.homeTeamIdentifier, match.awayTeamIdentifier);
+        window.currentMatchId = match.id;
+        
+        // ✅ PODROBNÝ VÝPIS INFORMÁCIÍ O ZÁPASE DO KONZOLY
+        console.log('');
+        console.log('='.repeat(80));
+        console.log('📋 VYBRANÝ ZÁPAS - DETAILNÉ INFORMÁCIE:');
+        console.log('='.repeat(80));
+                
+        // AUTOMATICKÉ NASTAVENIE TÍMOV PO KLIKNUTÍ NA ZÁPAS
+        console.log('🔄 Automatické nastavenie tímov pre vybraný zápas...');
+        
+        const setupTeamsWithDelay = async (retryCount = 0) => {
+            const maxRetries = 15;
+            const delay = 200;
+            
+            // Počkáme, kým sa DOM kontajnery načítajú
+            const containers = document.querySelectorAll('.grid-cols-4 > div, .grid-cols-2 > div');
+            
+            if (containers.length === 0 && retryCount < maxRetries) {
+                console.log(`⏳ Čakám na načítanie DOM kontajnerov (pokus ${retryCount + 1}/${maxRetries})...`);
+                setTimeout(() => setupTeamsWithDelay(retryCount + 1), delay);
+                return;
+            }
+            
+            if (containers.length === 0) {
+                console.log('⚠️ DOM kontajnery sa nenačítali, pokračujem napriek tomu...');
+            } else {
+                console.log(`✅ DOM kontajnery načítané (${containers.length} kontajnerov)`);
+            }
+            
+            // Získame názvy tímov
+            let finalHomeTeamName = '';
+            let finalAwayTeamName = '';
+            let finalCategoryName = match.categoryName;
+            
+            // 1. SKÚSIME NAJPRV ZÍSKAŤ NÁZVY Z DOM ELEMENTU (najspoľahlivejšie)
+            const matchRows = document.querySelectorAll('.divide-y.divide-gray-100 > div, .px-6.py-4');
+            let clickedRow = null;
+            
+            for (const row of matchRows) {
+                const rowText = row.textContent || '';
+                if (rowText.includes(match.homeTeamIdentifier) || rowText.includes(match.awayTeamIdentifier)) {
+                    clickedRow = row;
+                    break;
+                }
+            }
+            
+            if (!clickedRow && match.scheduledTime) {
+                const matchTime = formatTime(match.scheduledTime);
+                for (const row of matchRows) {
+                    if (row.textContent?.includes(matchTime)) {
+                        clickedRow = row;
+                        break;
+                    }
+                }
+            }
+            
+            if (clickedRow) {
+                const teamSpans = clickedRow.querySelectorAll('.font-medium.text-gray-800');
+                
+                if (teamSpans.length >= 2) {
+                    finalHomeTeamName = teamSpans[0]?.textContent?.trim() || '';
+                    finalAwayTeamName = teamSpans[1]?.textContent?.trim() || '';
+                } else {
+                    const allText = clickedRow.textContent || '';
+                    const parts = allText.split('VS');
+                    if (parts.length >= 2) {
+                        const homePart = parts[0].trim();
+                        const awayPart = parts[1].trim();
+                        const homeWords = homePart.split(' ');
+                        const awayWords = awayPart.split(' ');
+                        finalHomeTeamName = homeWords.filter(w => !w.includes(':') && !w.match(/^\d{2}:\d{2}$/)).join(' ') || '';
+                        finalAwayTeamName = awayWords.filter(w => !w.includes(':') && !w.match(/^\d{2}:\d{2}$/)).join(' ') || '';
+                    }
+                }
+                
+                finalHomeTeamName = finalHomeTeamName.replace(/\s+/g, ' ').trim();
+                finalAwayTeamName = finalAwayTeamName.replace(/\s+/g, ' ').trim();
+                
+                // Získame kategóriu z DOM
+                const categorySpan = clickedRow.querySelector('.px-3.py-1.text-xs.font-medium.rounded-full.mr-2');
+                if (categorySpan) {
+                    finalCategoryName = categorySpan.textContent?.trim() || match.categoryName;
+                }
+            }
+            
+            // 2. AK NEMÁME NÁZVY Z DOM, POUŽIJEME MAPOVANIE Z IDENTIFIKÁTOROV
+            if (!finalHomeTeamName || !finalAwayTeamName) {
+                console.log('⚠️ Nepodarilo sa získať názvy z DOM, používam mapovanie z identifikátorov...');
+                
+                finalHomeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
+                finalAwayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
+                
+                if (finalHomeTeamName === match.homeTeamIdentifier) {
+                    console.log(`⚠️ Domáci tím nebol zmapovaný, skúšam priamo vyhľadať podľa identifikátora...`);
+                    const homeResult = await findTeamByIdentifierFromDOM(match.homeTeamIdentifier, false);
+                    if (homeResult && !Array.isArray(homeResult)) {
+                        finalHomeTeamName = homeResult.team.teamName;
+                        console.log(`✅ Domáci tím nájdený priamo: ${finalHomeTeamName}`);
+                    }
+                }
+                
+                if (finalAwayTeamName === match.awayTeamIdentifier) {
+                    console.log(`⚠️ Hosťovský tím nebol zmapovaný, skúšam priamo vyhľadať podľa identifikátora...`);
+                    const awayResult = await findTeamByIdentifierFromDOM(match.awayTeamIdentifier, false);
+                    if (awayResult && !Array.isArray(awayResult)) {
+                        finalAwayTeamName = awayResult.team.teamName;
+                        console.log(`✅ Hosťovský tím nájdený priamo: ${finalAwayTeamName}`);
+                    }
+                }
+            }
+            
+            console.log(`🏠 KONEČNÝ DOMÁCI NÁZOV: "${finalHomeTeamName}"`);
+            console.log(`✈️ KONEČNÝ HOSŤOVSKÝ NÁZOV: "${finalAwayTeamName}"`);
+            console.log(`📂 KATEGÓRIA: ${finalCategoryName}`);
+            
+            // 3. NASTAVENIE TÍMOV POMOCOU DIRECT FUNKCIE
+            if (finalHomeTeamName && finalHomeTeamName !== match.homeTeamIdentifier) {
+                console.log(`🏠 Nastavujem domáci tím: "${finalHomeTeamName}"`);
+                const homeResult = await findTeamByNameAndCategoryDirect(finalHomeTeamName, finalCategoryName, false);
+                
+                if (homeResult && !Array.isArray(homeResult)) {
+                    console.log(`✅ Domáci tím nájdený: ${homeResult.team.teamName}`);
+                    window._homeTeamDetails = homeResult;
+                    setHomeTeamDetailsState({
+                        team: homeResult.team,
+                        userEmail: homeResult.user.email,
+                        userId: homeResult.user.id,
+                        userDisplayName: homeResult.user.displayName
+                    });
+                    // ULOŽENIE DO LOCALSTORAGE
+                    saveTeamToLocalStorage(homeResult, 'home', match.id);
+                    renderFullTeamToUI(homeResult, 'home');
+                } else {
+                    console.log(`❌ Domáci tím "${finalHomeTeamName}" nebol nájdený v databáze`);
+                    window._homeTeamDetails = null;
+                }
+            } else {
+                console.log(`⚠️ Nepodarilo sa získať platný názov domáceho tímu`);
+            }
+            
+            if (finalAwayTeamName && finalAwayTeamName !== match.awayTeamIdentifier) {
+                console.log(`✈️ Nastavujem hosťovský tím: "${finalAwayTeamName}"`);
+                const awayResult = await findTeamByNameAndCategoryDirect(finalAwayTeamName, finalCategoryName, false);
+    
+                if (awayResult && !Array.isArray(awayResult)) {
+                    console.log(`✅ Hosťovský tím nájdený: ${awayResult.team.teamName}`);
+                    window._awayTeamDetails = awayResult;
+                    setAwayTeamDetailsState({
+                        team: awayResult.team,
+                        userEmail: awayResult.user.email,
+                        userId: awayResult.user.id,
+                        userDisplayName: awayResult.user.displayName
+                    });
+                    // ULOŽENIE DO LOCALSTORAGE
+                    saveTeamToLocalStorage(awayResult, 'away', match.id);
+                    renderFullTeamToUI(awayResult, 'away');
+                } else {
+                    console.log(`❌ Hosťovský tím "${finalAwayTeamName}" nebol nájdený v databáze`);
+                    window._awayTeamDetails = null;
+                }
+            } else {
+                console.log(`⚠️ Nepodarilo sa získať platný názov hosťovského tímu`);
+            }
+            
+            // 4. AK SA NEPODARILO NASTAVIŤ TÍMY, SKÚSIME EŠTE RAZ S ONESKORENÍM
+            if ((!window._homeTeamDetails || !window._awayTeamDetails) && retryCount < 3) {
+                console.log(`🔄 Skúšam znova nastaviť tímy (pokus ${retryCount + 2}/5)...`);
+                setTimeout(() => setupTeamsWithDelay(retryCount + 1), 1000);
+            } else if (window._homeTeamDetails && window._awayTeamDetails) {
+                console.log('✅ Oba tímy boli úspešne nastavené!');
+                window._teamsSetForMatch = match.id;
+            } else {
+                console.log('⚠️ Nastavenie tímov sa nepodarilo úplne, skontrolujte názvy tímov v databáze.');
+            }
+        };
+        
+        // Spustíme nastavenie tímov s oneskorením
+        setTimeout(() => {
+            setupTeamsWithDelay(0);
+        }, 150);
+    };
+    
+    // ============================================================
+    // FUNKCIA PRE ZÍSKANIE AKTÍVNYCH HRÁČOV Z LOCALSTORAGE
+    // ============================================================
+    
+    const getActivePlayersFromLocalStorage = (teamType) => {
+        const matchId = window.currentMatchId;
+        if (!matchId) return [];
+        
+        const teamDetails = loadTeamFromLocalStorage(teamType, matchId);
+        if (!teamDetails || !teamDetails.team.playerDetails) return [];
+        
+        // Filtrujeme hráčov, ktorí nie sú odstránení pre tento zápas
+        return teamDetails.team.playerDetails.filter(p => p && !p.removedForMatch?.[matchId]);
+    };
+    
+    const getActiveStaffFromLocalStorage = (teamType) => {
+        const matchId = window.currentMatchId;
+        if (!matchId) return { men: [], women: [] };
+        
+        const teamDetails = loadTeamFromLocalStorage(teamType, matchId);
+        if (!teamDetails) return { men: [], women: [] };
+        
+        return {
+            men: teamDetails.team.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[matchId]) || [],
+            women: teamDetails.team.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[matchId]) || []
+        };
+    };
+    
+    // ============================================================
+    // FUNKCIA PRE AKTUALIZÁCIU TÍMU V LOCALSTORAGE PO ZMENE
+    // ============================================================
+    
+    const updateTeamInLocalStorage = (teamType, updatedTeamDetails, matchId) => {
+        if (!teamType || !updatedTeamDetails || !matchId) return;
+        
+        const storageKey = teamType === 'home' ? STORAGE_KEYS.HOME_TEAM : STORAGE_KEYS.AWAY_TEAM;
+        const storedData = localStorage.getItem(storageKey);
+        
+        if (storedData) {
+            const data = JSON.parse(storedData);
+            if (data.matchId === matchId) {
+                data.teamDetails = updatedTeamDetails;
+                data.savedAt = Date.now();
+                localStorage.setItem(storageKey, JSON.stringify(data));
+                console.log(`✅ Tím ${teamType === 'home' ? 'domáci' : 'hosťovský'} aktualizovaný v localStorage`);
+            }
+        }
+    };
+    
+    // ============================================================
+    // VLOŽTE TENTO KÓD NA ZAČIATOK FUNKCIE startMatchTimer
+    // ============================================================
+    
+    // Upravte existujúcu funkciu startMatchTimer:
+    const startMatchTimerWithLocalStorage = async (matchId) => {
+        if (!window.db || !matchId) return;
+        
+        // SKONTROLUJEME, ČI MÁME TÍMY V LOCALSTORAGE
+        const homeTeam = loadTeamFromLocalStorage('home', matchId);
+        const awayTeam = loadTeamFromLocalStorage('away', matchId);
+        
+        if (homeTeam && awayTeam) {
+            console.log('✅ Tímy sú načítané z localStorage, používam ich pre zápas');
+            // Zabezpečíme, že UI používa tieto dáta
+            if (window._homeTeamDetails !== homeTeam) {
+                window._homeTeamDetails = homeTeam;
+                renderFullTeamToUI(homeTeam, 'home');
+            }
+            if (window._awayTeamDetails !== awayTeam) {
+                window._awayTeamDetails = awayTeam;
+                renderFullTeamToUI(awayTeam, 'away');
+            }
+        } else {
+            console.log('⚠️ Tímy nie sú v localStorage, pokračujem bez nich');
+        }
+        
+        try {
+            const matchRef = doc(window.db, 'matches', matchId);
+            await updateDoc(matchRef, {
+                status: 'in-progress',
+                startedAt: Timestamp.now(),
+                currentPeriod: 1
+            });
+            window.showGlobalNotification('Čas zápasu spustený', 'success');
+        } catch (error) {
+            window.showGlobalNotification('Chyba pri spúšťaní časovača', 'error');
+        }
+    };
+    
+    // ============================================================
+    // PREPÍSANIE PÔVODNÝCH FUNKCIÍ
+    // ============================================================
+    
+    // Prepíšeme selectMatch
+    window.selectMatch = selectMatchWithLocalStorage;
+    
+    // Prepíšeme startMatchTimer
+    window.startMatchTimer = startMatchTimerWithLocalStorage;
+    
+    // Pridáme pomocné funkcie do window
+    window.saveTeamToLocalStorage = saveTeamToLocalStorage;
+    window.loadTeamFromLocalStorage = loadTeamFromLocalStorage;
+    window.clearTeamsFromLocalStorage = clearTeamsFromLocalStorage;
+    window.getActivePlayersFromLocalStorage = getActivePlayersFromLocalStorage;
+    window.getActiveStaffFromLocalStorage = getActiveStaffFromLocalStorage;
+    window.updateTeamInLocalStorage = updateTeamInLocalStorage;
+    
+    console.log('✅ Funkcie pre localStorage boli pridané!');
+    console.log('📌 Tímy sa automaticky ukladajú do localStorage a načítavajú odtiaľ');
+    console.log('📌 Po kliknutí na "Čas štart" sa používajú uložené dáta');
+
+
+
+
+
+
+    
+    
+
     // Funkcia na otvorenie modálneho okna pre úpravu člena realizačného tímu
     const openEditStaffModal = (member, team, teamDetails, staffType, staffIndex) => {
         if (selectedMatch?.status !== 'scheduled') {
@@ -9817,493 +10321,3 @@ window.convertIdentifierToTeamName = function(identifier) {
 
 // Export funkcie
 window.convertIdentifierToTeamName = convertIdentifierToTeamName;
-
-
-// ============================================================
-// FUNKCIE PRE LOKÁLNE ULOŽISKO (localStorage)
-// ============================================================
-
-// Kľúče pre localStorage
-const STORAGE_KEYS = {
-    HOME_TEAM: 'match_home_team_details',
-    AWAY_TEAM: 'match_away_team_details',
-    CURRENT_MATCH: 'match_current_match_data',
-    TEAMS_CACHE: 'match_teams_cache'
-};
-
-// Uloženie detailov tímu do localStorage
-const saveTeamToLocalStorage = (teamDetails, teamType, matchId) => {
-    if (!teamDetails || !teamType || !matchId) return;
-    
-    try {
-        const storageKey = teamType === 'home' ? STORAGE_KEYS.HOME_TEAM : STORAGE_KEYS.AWAY_TEAM;
-        const dataToStore = {
-            matchId: matchId,
-            teamDetails: {
-                team: {
-                    teamName: teamDetails.team.teamName,
-                    groupName: teamDetails.team.groupName,
-                    order: teamDetails.team.order,
-                    playerDetails: teamDetails.team.playerDetails ? teamDetails.team.playerDetails.map(p => ({
-                        firstName: p.firstName,
-                        lastName: p.lastName,
-                        jerseyNumber: p.jerseyNumber,
-                        removedForMatch: p.removedForMatch
-                    })) : [],
-                    menTeamMemberDetails: teamDetails.team.menTeamMemberDetails ? teamDetails.team.menTeamMemberDetails.map(m => ({
-                        firstName: m.firstName,
-                        lastName: m.lastName,
-                        removedForMatch: m.removedForMatch
-                    })) : [],
-                    womenTeamMemberDetails: teamDetails.team.womenTeamMemberDetails ? teamDetails.team.womenTeamMemberDetails.map(m => ({
-                        firstName: m.firstName,
-                        lastName: m.lastName,
-                        removedForMatch: m.removedForMatch
-                    })) : [],
-                    matchSpecificRemovals: teamDetails.team.matchSpecificRemovals
-                },
-                userEmail: teamDetails.userEmail,
-                userId: teamDetails.userId,
-                userDisplayName: teamDetails.userDisplayName
-            },
-            savedAt: Date.now()
-        };
-        
-        localStorage.setItem(storageKey, JSON.stringify(dataToStore));
-        console.log(`✅ Tím ${teamType === 'home' ? 'domáci' : 'hosťovský'} uložený do localStorage pre zápas ${matchId}`);
-    } catch (error) {
-        console.error('Chyba pri ukladaní tímu do localStorage:', error);
-    }
-};
-
-// Načítanie detailov tímu z localStorage
-const loadTeamFromLocalStorage = (teamType, matchId) => {
-    if (!teamType || !matchId) return null;
-    
-    try {
-        const storageKey = teamType === 'home' ? STORAGE_KEYS.HOME_TEAM : STORAGE_KEYS.AWAY_TEAM;
-        const storedData = localStorage.getItem(storageKey);
-        
-        if (!storedData) return null;
-        
-        const data = JSON.parse(storedData);
-        
-        // Kontrola, či uložené dáta patria k aktuálnemu zápasu
-        if (data.matchId !== matchId) {
-            console.log(`⚠️ Uložený tím ${teamType === 'home' ? 'domáci' : 'hosťovský'} je z iného zápasu, ignorujem`);
-            return null;
-        }
-        
-        // Kontrola, či dáta nie sú príliš staré (napr. viac ako 1 hodina)
-        const ONE_HOUR = 60 * 60 * 1000;
-        if (Date.now() - data.savedAt > ONE_HOUR) {
-            console.log(`⚠️ Uložený tím ${teamType === 'home' ? 'domáci' : 'hosťovský'} je príliš starý, ignorujem`);
-            localStorage.removeItem(storageKey);
-            return null;
-        }
-        
-        console.log(`✅ Tím ${teamType === 'home' ? 'domáci' : 'hosťovský'} načítaný z localStorage`);
-        return data.teamDetails;
-    } catch (error) {
-        console.error('Chyba pri načítaní tímu z localStorage:', error);
-        return null;
-    }
-};
-
-// Vymazanie uložených tímov z localStorage
-const clearTeamsFromLocalStorage = (matchId = null) => {
-    if (matchId) {
-        // Vymažeme len tímy pre konkrétny zápas
-        const homeData = localStorage.getItem(STORAGE_KEYS.HOME_TEAM);
-        const awayData = localStorage.getItem(STORAGE_KEYS.AWAY_TEAM);
-        
-        if (homeData) {
-            const home = JSON.parse(homeData);
-            if (home.matchId === matchId) localStorage.removeItem(STORAGE_KEYS.HOME_TEAM);
-        }
-        if (awayData) {
-            const away = JSON.parse(awayData);
-            if (away.matchId === matchId) localStorage.removeItem(STORAGE_KEYS.AWAY_TEAM);
-        }
-    } else {
-        // Vymažeme všetky tímy
-        localStorage.removeItem(STORAGE_KEYS.HOME_TEAM);
-        localStorage.removeItem(STORAGE_KEYS.AWAY_TEAM);
-    }
-    console.log('🗑️ localStorage tímov vymazané');
-};
-
-// ============================================================
-// UPRAVENÁ FUNKCIA PRE NASTAVENIE TÍMOV (s localStorage)
-// ============================================================
-
-// Upravte existujúcu funkciu renderFullTeamToUI alebo vytvorte novú
-const renderFullTeamToUIWithLocalStorage = (teamDetails, teamType, matchId) => {
-    // Najprv vykreslíme do UI
-    renderFullTeamToUI(teamDetails, teamType);
-    
-    // Potom uložíme do localStorage
-    if (teamDetails && matchId) {
-        saveTeamToLocalStorage(teamDetails, teamType, matchId);
-    }
-};
-
-// ============================================================
-// UPRAVENÁ FUNKCIA selectMatch - načítava tímy najprv z localStorage
-// ============================================================
-
-// Nájdite existujúcu funkciu selectMatch a upravte ju (pridajte localStorage logiku)
-// Tu je upravená verzia - vložte ju namiesto pôvodnej selectMatch
-
-// UPRAVENÁ FUNKCIA PRE VÝBER ZÁPASU (s localStorage)
-const selectMatchWithLocalStorage = async (match) => {
-    // 🔴 AK VYBERÁME ROVNAKÝ ZÁPAS, NEUROBÍME NIČ
-    if (selectedMatch?.id === match.id) {
-        console.log('ℹ️ Rovnaký zápas už je vybraný, preskakujem...');
-        return;
-    }
-
-    // 🔴 NASTAVÍME selectedMatch OKAMŽITE, aby React začal prerenderovávať
-    setSelectedMatch(match);
-    
-    // 🔴 AKTUÁLNE VYMAŽEME STARÉ ÚDAJE (duplicitne, pre istotu)
-    setMatchEvents([]);
-    setMatchScore({ home: 0, away: 0 });
-    setMatchTime(match.manualTimeOffset || 0);
-    setManualTimeOffset(match.manualTimeOffset || 0);
-    setCleanPlayingTime(match.manualTimeOffset || 0);
-    setHighlightedEventId(null);
-    setPlayerStats({});
-    setShowPlayerStats(false);
-
-    // 🔴 NAJPRV SKÚSIME NAČÍTAŤ TÍMY Z LOCALSTORAGE
-    let homeTeamFromStorage = loadTeamFromLocalStorage('home', match.id);
-    let awayTeamFromStorage = loadTeamFromLocalStorage('away', match.id);
-    
-    if (homeTeamFromStorage && awayTeamFromStorage) {
-        console.log('✅ Tímy boli načítané z localStorage!');
-        window._homeTeamDetails = homeTeamFromStorage;
-        window._awayTeamDetails = awayTeamFromStorage;
-        setHomeTeamDetailsState({
-            team: homeTeamFromStorage.team,
-            userEmail: homeTeamFromStorage.userEmail,
-            userId: homeTeamFromStorage.userId,
-            userDisplayName: homeTeamFromStorage.userDisplayName
-        });
-        setAwayTeamDetailsState({
-            team: awayTeamFromStorage.team,
-            userEmail: awayTeamFromStorage.userEmail,
-            userId: awayTeamFromStorage.userId,
-            userDisplayName: awayTeamFromStorage.userDisplayName
-        });
-        renderFullTeamToUI(homeTeamFromStorage, 'home');
-        renderFullTeamToUI(awayTeamFromStorage, 'away');
-        
-        // Aktualizujeme URL
-        updateUrlParameters(match.homeTeamIdentifier, match.awayTeamIdentifier);
-        window.currentMatchId = match.id;
-        return;
-    }
-    
-    // 🔴 AK NIE SÚ V LOCALSTORAGE, VYMAŽEME GLOBÁLNE PREMENNÉ
-    window._homeTeamDetails = null;
-    window._awayTeamDetails = null;
-    window._teamsSetForMatch = null;
-    setHomeTeamDetailsState(null);
-    setAwayTeamDetailsState(null);
-    
-    // Aktualizujeme URL
-    updateUrlParameters(match.homeTeamIdentifier, match.awayTeamIdentifier);
-    window.currentMatchId = match.id;
-    
-    // ✅ PODROBNÝ VÝPIS INFORMÁCIÍ O ZÁPASE DO KONZOLY
-    console.log('');
-    console.log('='.repeat(80));
-    console.log('📋 VYBRANÝ ZÁPAS - DETAILNÉ INFORMÁCIE:');
-    console.log('='.repeat(80));
-            
-    // AUTOMATICKÉ NASTAVENIE TÍMOV PO KLIKNUTÍ NA ZÁPAS
-    console.log('🔄 Automatické nastavenie tímov pre vybraný zápas...');
-    
-    const setupTeamsWithDelay = async (retryCount = 0) => {
-        const maxRetries = 15;
-        const delay = 200;
-        
-        // Počkáme, kým sa DOM kontajnery načítajú
-        const containers = document.querySelectorAll('.grid-cols-4 > div, .grid-cols-2 > div');
-        
-        if (containers.length === 0 && retryCount < maxRetries) {
-            console.log(`⏳ Čakám na načítanie DOM kontajnerov (pokus ${retryCount + 1}/${maxRetries})...`);
-            setTimeout(() => setupTeamsWithDelay(retryCount + 1), delay);
-            return;
-        }
-        
-        if (containers.length === 0) {
-            console.log('⚠️ DOM kontajnery sa nenačítali, pokračujem napriek tomu...');
-        } else {
-            console.log(`✅ DOM kontajnery načítané (${containers.length} kontajnerov)`);
-        }
-        
-        // Získame názvy tímov
-        let finalHomeTeamName = '';
-        let finalAwayTeamName = '';
-        let finalCategoryName = match.categoryName;
-        
-        // 1. SKÚSIME NAJPRV ZÍSKAŤ NÁZVY Z DOM ELEMENTU (najspoľahlivejšie)
-        const matchRows = document.querySelectorAll('.divide-y.divide-gray-100 > div, .px-6.py-4');
-        let clickedRow = null;
-        
-        for (const row of matchRows) {
-            const rowText = row.textContent || '';
-            if (rowText.includes(match.homeTeamIdentifier) || rowText.includes(match.awayTeamIdentifier)) {
-                clickedRow = row;
-                break;
-            }
-        }
-        
-        if (!clickedRow && match.scheduledTime) {
-            const matchTime = formatTime(match.scheduledTime);
-            for (const row of matchRows) {
-                if (row.textContent?.includes(matchTime)) {
-                    clickedRow = row;
-                    break;
-                }
-            }
-        }
-        
-        if (clickedRow) {
-            const teamSpans = clickedRow.querySelectorAll('.font-medium.text-gray-800');
-            
-            if (teamSpans.length >= 2) {
-                finalHomeTeamName = teamSpans[0]?.textContent?.trim() || '';
-                finalAwayTeamName = teamSpans[1]?.textContent?.trim() || '';
-            } else {
-                const allText = clickedRow.textContent || '';
-                const parts = allText.split('VS');
-                if (parts.length >= 2) {
-                    const homePart = parts[0].trim();
-                    const awayPart = parts[1].trim();
-                    const homeWords = homePart.split(' ');
-                    const awayWords = awayPart.split(' ');
-                    finalHomeTeamName = homeWords.filter(w => !w.includes(':') && !w.match(/^\d{2}:\d{2}$/)).join(' ') || '';
-                    finalAwayTeamName = awayWords.filter(w => !w.includes(':') && !w.match(/^\d{2}:\d{2}$/)).join(' ') || '';
-                }
-            }
-            
-            finalHomeTeamName = finalHomeTeamName.replace(/\s+/g, ' ').trim();
-            finalAwayTeamName = finalAwayTeamName.replace(/\s+/g, ' ').trim();
-            
-            // Získame kategóriu z DOM
-            const categorySpan = clickedRow.querySelector('.px-3.py-1.text-xs.font-medium.rounded-full.mr-2');
-            if (categorySpan) {
-                finalCategoryName = categorySpan.textContent?.trim() || match.categoryName;
-            }
-        }
-        
-        // 2. AK NEMÁME NÁZVY Z DOM, POUŽIJEME MAPOVANIE Z IDENTIFIKÁTOROV
-        if (!finalHomeTeamName || !finalAwayTeamName) {
-            console.log('⚠️ Nepodarilo sa získať názvy z DOM, používam mapovanie z identifikátorov...');
-            
-            finalHomeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
-            finalAwayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
-            
-            if (finalHomeTeamName === match.homeTeamIdentifier) {
-                console.log(`⚠️ Domáci tím nebol zmapovaný, skúšam priamo vyhľadať podľa identifikátora...`);
-                const homeResult = await findTeamByIdentifierFromDOM(match.homeTeamIdentifier, false);
-                if (homeResult && !Array.isArray(homeResult)) {
-                    finalHomeTeamName = homeResult.team.teamName;
-                    console.log(`✅ Domáci tím nájdený priamo: ${finalHomeTeamName}`);
-                }
-            }
-            
-            if (finalAwayTeamName === match.awayTeamIdentifier) {
-                console.log(`⚠️ Hosťovský tím nebol zmapovaný, skúšam priamo vyhľadať podľa identifikátora...`);
-                const awayResult = await findTeamByIdentifierFromDOM(match.awayTeamIdentifier, false);
-                if (awayResult && !Array.isArray(awayResult)) {
-                    finalAwayTeamName = awayResult.team.teamName;
-                    console.log(`✅ Hosťovský tím nájdený priamo: ${finalAwayTeamName}`);
-                }
-            }
-        }
-        
-        console.log(`🏠 KONEČNÝ DOMÁCI NÁZOV: "${finalHomeTeamName}"`);
-        console.log(`✈️ KONEČNÝ HOSŤOVSKÝ NÁZOV: "${finalAwayTeamName}"`);
-        console.log(`📂 KATEGÓRIA: ${finalCategoryName}`);
-        
-        // 3. NASTAVENIE TÍMOV POMOCOU DIRECT FUNKCIE
-        if (finalHomeTeamName && finalHomeTeamName !== match.homeTeamIdentifier) {
-            console.log(`🏠 Nastavujem domáci tím: "${finalHomeTeamName}"`);
-            const homeResult = await findTeamByNameAndCategoryDirect(finalHomeTeamName, finalCategoryName, false);
-            
-            if (homeResult && !Array.isArray(homeResult)) {
-                console.log(`✅ Domáci tím nájdený: ${homeResult.team.teamName}`);
-                window._homeTeamDetails = homeResult;
-                setHomeTeamDetailsState({
-                    team: homeResult.team,
-                    userEmail: homeResult.user.email,
-                    userId: homeResult.user.id,
-                    userDisplayName: homeResult.user.displayName
-                });
-                // ULOŽENIE DO LOCALSTORAGE
-                saveTeamToLocalStorage(homeResult, 'home', match.id);
-                renderFullTeamToUI(homeResult, 'home');
-            } else {
-                console.log(`❌ Domáci tím "${finalHomeTeamName}" nebol nájdený v databáze`);
-                window._homeTeamDetails = null;
-            }
-        } else {
-            console.log(`⚠️ Nepodarilo sa získať platný názov domáceho tímu`);
-        }
-        
-        if (finalAwayTeamName && finalAwayTeamName !== match.awayTeamIdentifier) {
-            console.log(`✈️ Nastavujem hosťovský tím: "${finalAwayTeamName}"`);
-            const awayResult = await findTeamByNameAndCategoryDirect(finalAwayTeamName, finalCategoryName, false);
-
-            if (awayResult && !Array.isArray(awayResult)) {
-                console.log(`✅ Hosťovský tím nájdený: ${awayResult.team.teamName}`);
-                window._awayTeamDetails = awayResult;
-                setAwayTeamDetailsState({
-                    team: awayResult.team,
-                    userEmail: awayResult.user.email,
-                    userId: awayResult.user.id,
-                    userDisplayName: awayResult.user.displayName
-                });
-                // ULOŽENIE DO LOCALSTORAGE
-                saveTeamToLocalStorage(awayResult, 'away', match.id);
-                renderFullTeamToUI(awayResult, 'away');
-            } else {
-                console.log(`❌ Hosťovský tím "${finalAwayTeamName}" nebol nájdený v databáze`);
-                window._awayTeamDetails = null;
-            }
-        } else {
-            console.log(`⚠️ Nepodarilo sa získať platný názov hosťovského tímu`);
-        }
-        
-        // 4. AK SA NEPODARILO NASTAVIŤ TÍMY, SKÚSIME EŠTE RAZ S ONESKORENÍM
-        if ((!window._homeTeamDetails || !window._awayTeamDetails) && retryCount < 3) {
-            console.log(`🔄 Skúšam znova nastaviť tímy (pokus ${retryCount + 2}/5)...`);
-            setTimeout(() => setupTeamsWithDelay(retryCount + 1), 1000);
-        } else if (window._homeTeamDetails && window._awayTeamDetails) {
-            console.log('✅ Oba tímy boli úspešne nastavené!');
-            window._teamsSetForMatch = match.id;
-        } else {
-            console.log('⚠️ Nastavenie tímov sa nepodarilo úplne, skontrolujte názvy tímov v databáze.');
-        }
-    };
-    
-    // Spustíme nastavenie tímov s oneskorením
-    setTimeout(() => {
-        setupTeamsWithDelay(0);
-    }, 150);
-};
-
-// ============================================================
-// FUNKCIA PRE ZÍSKANIE AKTÍVNYCH HRÁČOV Z LOCALSTORAGE
-// ============================================================
-
-const getActivePlayersFromLocalStorage = (teamType) => {
-    const matchId = window.currentMatchId;
-    if (!matchId) return [];
-    
-    const teamDetails = loadTeamFromLocalStorage(teamType, matchId);
-    if (!teamDetails || !teamDetails.team.playerDetails) return [];
-    
-    // Filtrujeme hráčov, ktorí nie sú odstránení pre tento zápas
-    return teamDetails.team.playerDetails.filter(p => p && !p.removedForMatch?.[matchId]);
-};
-
-const getActiveStaffFromLocalStorage = (teamType) => {
-    const matchId = window.currentMatchId;
-    if (!matchId) return { men: [], women: [] };
-    
-    const teamDetails = loadTeamFromLocalStorage(teamType, matchId);
-    if (!teamDetails) return { men: [], women: [] };
-    
-    return {
-        men: teamDetails.team.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[matchId]) || [],
-        women: teamDetails.team.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[matchId]) || []
-    };
-};
-
-// ============================================================
-// FUNKCIA PRE AKTUALIZÁCIU TÍMU V LOCALSTORAGE PO ZMENE
-// ============================================================
-
-const updateTeamInLocalStorage = (teamType, updatedTeamDetails, matchId) => {
-    if (!teamType || !updatedTeamDetails || !matchId) return;
-    
-    const storageKey = teamType === 'home' ? STORAGE_KEYS.HOME_TEAM : STORAGE_KEYS.AWAY_TEAM;
-    const storedData = localStorage.getItem(storageKey);
-    
-    if (storedData) {
-        const data = JSON.parse(storedData);
-        if (data.matchId === matchId) {
-            data.teamDetails = updatedTeamDetails;
-            data.savedAt = Date.now();
-            localStorage.setItem(storageKey, JSON.stringify(data));
-            console.log(`✅ Tím ${teamType === 'home' ? 'domáci' : 'hosťovský'} aktualizovaný v localStorage`);
-        }
-    }
-};
-
-// ============================================================
-// VLOŽTE TENTO KÓD NA ZAČIATOK FUNKCIE startMatchTimer
-// ============================================================
-
-// Upravte existujúcu funkciu startMatchTimer:
-const startMatchTimerWithLocalStorage = async (matchId) => {
-    if (!window.db || !matchId) return;
-    
-    // SKONTROLUJEME, ČI MÁME TÍMY V LOCALSTORAGE
-    const homeTeam = loadTeamFromLocalStorage('home', matchId);
-    const awayTeam = loadTeamFromLocalStorage('away', matchId);
-    
-    if (homeTeam && awayTeam) {
-        console.log('✅ Tímy sú načítané z localStorage, používam ich pre zápas');
-        // Zabezpečíme, že UI používa tieto dáta
-        if (window._homeTeamDetails !== homeTeam) {
-            window._homeTeamDetails = homeTeam;
-            renderFullTeamToUI(homeTeam, 'home');
-        }
-        if (window._awayTeamDetails !== awayTeam) {
-            window._awayTeamDetails = awayTeam;
-            renderFullTeamToUI(awayTeam, 'away');
-        }
-    } else {
-        console.log('⚠️ Tímy nie sú v localStorage, pokračujem bez nich');
-    }
-    
-    try {
-        const matchRef = doc(window.db, 'matches', matchId);
-        await updateDoc(matchRef, {
-            status: 'in-progress',
-            startedAt: Timestamp.now(),
-            currentPeriod: 1
-        });
-        window.showGlobalNotification('Čas zápasu spustený', 'success');
-    } catch (error) {
-        window.showGlobalNotification('Chyba pri spúšťaní časovača', 'error');
-    }
-};
-
-// ============================================================
-// PREPÍSANIE PÔVODNÝCH FUNKCIÍ
-// ============================================================
-
-// Prepíšeme selectMatch
-window.selectMatch = selectMatchWithLocalStorage;
-
-// Prepíšeme startMatchTimer
-window.startMatchTimer = startMatchTimerWithLocalStorage;
-
-// Pridáme pomocné funkcie do window
-window.saveTeamToLocalStorage = saveTeamToLocalStorage;
-window.loadTeamFromLocalStorage = loadTeamFromLocalStorage;
-window.clearTeamsFromLocalStorage = clearTeamsFromLocalStorage;
-window.getActivePlayersFromLocalStorage = getActivePlayersFromLocalStorage;
-window.getActiveStaffFromLocalStorage = getActiveStaffFromLocalStorage;
-window.updateTeamInLocalStorage = updateTeamInLocalStorage;
-
-console.log('✅ Funkcie pre localStorage boli pridané!');
-console.log('📌 Tímy sa automaticky ukladajú do localStorage a načítavajú odtiaľ');
-console.log('📌 Po kliknutí na "Čas štart" sa používajú uložené dáta');
