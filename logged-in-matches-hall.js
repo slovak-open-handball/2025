@@ -9138,6 +9138,93 @@ window.setBothTeamsDetails = async (homeTeamName, homeCategory, awayTeamName, aw
     forceRenderTeamsToUI();
 };
 
+// ============================================================
+// GLOBÁLNE FUNKCIE (MIMO REACT KOMPONENTU)
+// ============================================================
+
+// FUNKCIA NA ZÍSKANIE KOMPLETNÝCH INFORMÁCIÍ O TÍME (GLOBÁLNA)
+window.getTeamDetails = (identifier) => {
+    if (!identifier) return null;
+    
+    let searchIdentifier = identifier;
+    
+    // Kontrola, či ide o názov tímu (nie identifikátor)
+    const identifierPattern = /\s+\d+[A-Za-z]/;
+    const isDisplayId = identifierPattern.test(identifier);
+    
+    // Ak to nie je displayId (identifikátor), skúsime nájsť pôvodný identifikátor v DOM
+    if (!isDisplayId) {
+        const elements = document.querySelectorAll(`[data-team-name="${identifier}"]`);
+        if (elements.length > 0 && elements[0].getAttribute('data-original-identifier')) {
+            searchIdentifier = elements[0].getAttribute('data-original-identifier');
+            console.log(`🔍 Pre názov "${identifier}" nájdený pôvodný identifikátor: ${searchIdentifier}`);
+        } else {
+            const allElementsWithId = document.querySelectorAll('[data-original-identifier]');
+            for (const el of allElementsWithId) {
+                const originalId = el.getAttribute('data-original-identifier');
+                const teamName = window.matchTracker?.getTeamNameByDisplayId?.(originalId);
+                if (teamName === identifier && originalId) {
+                    searchIdentifier = originalId;
+                    console.log(`🔍 Pre názov "${identifier}" nájdený pôvodný identifikátor (fallback): ${searchIdentifier}`);
+                    break;
+                }
+            }
+        }
+    }
+    
+    const parts = searchIdentifier.split(' ');
+    if (parts.length < 2) return null;
+    
+    const groupAndOrder = parts.pop();
+    const category = parts.join(' ');
+    
+    let groupLetter = '';
+    let order = '';
+    for (let i = 0; i < groupAndOrder.length; i++) {
+        const char = groupAndOrder[i];
+        if (char >= '0' && char <= '9') {
+            order = groupAndOrder.substring(i);
+            groupLetter = groupAndOrder.substring(0, i);
+            break;
+        }
+    }
+    
+    if (!order) {
+        order = '?';
+        groupLetter = groupAndOrder;
+    }
+    
+    const fullGroupName = `skupina ${groupLetter}`;
+    const orderNum = parseInt(order, 10);
+    
+    // Hľadáme v window.__users (globálne používatelia)
+    const allUsers = window.users || window.__users || [];
+    
+    for (const user of allUsers) {
+        if (!user.teams) continue;
+        
+        const userTeams = user.teams[category];
+        if (!userTeams || !Array.isArray(userTeams)) continue;
+        
+        const team = userTeams.find(t => 
+            t.groupName === fullGroupName && 
+            t.order === orderNum
+        );
+        
+        if (team) {
+            console.log(`✅ Nájdený používateľský tím: ${team.teamName} (${user.email})`);
+            return {
+                team: team,
+                userEmail: user.email,
+                userId: user.id,
+                userDisplayName: user.displayName
+            };
+        }
+    }
+    
+    return null;
+};
+
 // Prepíšeme aj pôvodné setHomeTeamDetails a setAwayTeamDetails
 const originalSetHomeTeamDetails = window.setHomeTeamDetails;
 // Prepíšeme setHomeTeamDetails - najprv skúsime mapovanie
@@ -9341,3 +9428,4 @@ window.forceRenderTeamsToUI = forceRenderTeamsToUI;
 
 console.log('✅ PRIDANÉ VYNÚTENÉ VYKRESLENIE TÍMOV!');
 console.log('📌 Ak sa tímy nevykreslia automaticky, spustite manuálne: forceRenderTeamsToUI()');
+
