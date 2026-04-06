@@ -1849,6 +1849,17 @@ const matchesHallApp = ({ userProfileData }) => {
         return selectedMatch.status === 'scheduled';
     };
 
+    // Pridajte tento useEffect do matchesHallApp komponentu -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    useEffect(() => {
+        // Zaregistrujeme setter pre selectedMatch
+        window.registerMatchSetter(setSelectedMatch);
+        
+        // Vyčistenie pri odmontovaní
+        return () => {
+            window.__reactSelectedMatchSetter = null;
+        };
+    }, []);
+
     useEffect(() => {
         if (!window.db) return;
     
