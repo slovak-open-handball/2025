@@ -341,6 +341,7 @@ const matchesHallApp = ({ userProfileData }) => {
 
     // Cache pre mapovanie identifikátorov na názvy tímov
     const teamNameCache = new Map();
+    const teamNameCacheGlobal = new Map();    
 
     // Prepísaná funkcia getTeamNameByIdentifier s cache
     const getTeamNameByIdentifierCached = (identifier) => {
@@ -2282,7 +2283,6 @@ const matchesHallApp = ({ userProfileData }) => {
             
     // UPRAVENÝ useEffect pre timer - automatické zastavenie na konci periódy
     useEffect(() => {
-        
         // Vymažeme existujúci interval
         if (timerInterval) {
             clearInterval(timerInterval);
@@ -2305,41 +2305,82 @@ const matchesHallApp = ({ userProfileData }) => {
             
             // Vypočítame koniec aktuálnej periódy (v sekundách)
             const endOfCurrentPeriod = currentPeriod * periodDurationSeconds;
-                        
-            const interval = setInterval(() => {
+            
+            // 🔴 POUŽIJEME requestAnimationFrame PRE HLADŠIE RENDEROVANIE
+            let lastTimestamp = performance.now();
+            let animationId = null;
+            
+            const updateTime = () => {
                 const now = Timestamp.now();
                 
                 // Ak je zápas pozastavený, čas nebeží
                 if (selectedMatch.status === 'paused') {
+                    animationId = requestAnimationFrame(updateTime);
                     return;
                 }
                 
                 const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
                 const elapsedSeconds = baseSeconds + manualTimeOffset;
                 
-                // Aktualizujeme čas
-                setMatchTime(elapsedSeconds);
-                setCleanPlayingTime(elapsedSeconds);
+                // Aktualizujeme čas LEN ak sa zmenil
+                if (Math.abs(elapsedSeconds - matchTime) >= 1) {
+                    setMatchTime(elapsedSeconds);
+                    setCleanPlayingTime(elapsedSeconds);
+                }
                 
                 // Kontrola konca aktuálnej periódy
                 if (elapsedSeconds >= endOfCurrentPeriod) {
-                    
                     // Ak to nie je posledná perióda
                     if (currentPeriod < periods) {
                         // Zastavíme časovač (koniec periódy)
                         stopMatchTimer(matchId);
                         window.showGlobalNotification(`Koniec ${currentPeriod}. periódy`, 'info');
+                        return;
                     } else {
                         // Ak je to posledná perióda, ukončíme zápas
+                        stopMatchTimer(matchId);
+                        window.showGlobalNotification('Koniec zápasu', 'info');
+                        return;
+                    }
+                }
+                
+                animationId = requestAnimationFrame(updateTime);
+            };
+            
+            // Použijeme setTimeout pre 1 sekundové intervaly namiesto setInterval
+            // (je to presnejšie a menej náročné)
+            const intervalId = setInterval(() => {
+                const now = Timestamp.now();
+                
+                if (selectedMatch.status === 'paused') return;
+                
+                const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
+                const elapsedSeconds = baseSeconds + manualTimeOffset;
+                
+                // Len ak sa čas zmenil o celú sekundu
+                if (Math.abs(elapsedSeconds - matchTime) >= 1) {
+                    setMatchTime(elapsedSeconds);
+                    setCleanPlayingTime(elapsedSeconds);
+                }
+                
+                // Kontrola konca periódy
+                if (elapsedSeconds >= endOfCurrentPeriod) {
+                    if (currentPeriod < periods) {
+                        stopMatchTimer(matchId);
+                        window.showGlobalNotification(`Koniec ${currentPeriod}. periódy`, 'info');
+                    } else {
                         stopMatchTimer(matchId);
                         window.showGlobalNotification('Koniec zápasu', 'info');
                     }
                 }
             }, 1000);
             
-            setTimerInterval(interval);
+            setTimerInterval(intervalId);
             
-            return () => clearInterval(interval);
+            return () => {
+                clearInterval(intervalId);
+                if (animationId) cancelAnimationFrame(animationId);
+            };
         }
         
         return () => {
@@ -3549,8 +3590,25 @@ const matchesHallApp = ({ userProfileData }) => {
 
     // Ak je vybraný zápas, zobrazíme detail
     if (selectedMatch) {
-        const homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
-        const awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
+        const homeTeamName = React.useMemo(() => {
+            if (!selectedMatch?.homeTeamIdentifier) return 'Neznámy tím';
+            // Najprv skúsime cache
+            if (teamNameCacheGlobal.has(selectedMatch.homeTeamIdentifier)) {
+                return teamNameCacheGlobal.get(selectedMatch.homeTeamIdentifier);
+            }
+            const result = getTeamNameByIdentifierCached(selectedMatch.homeTeamIdentifier);
+            teamNameCacheGlobal.set(selectedMatch.homeTeamIdentifier, result);
+            return result;
+        }, [selectedMatch?.homeTeamIdentifier]);
+        const awayTeamName = React.useMemo(() => {
+            if (!selectedMatch?.awayTeamIdentifier) return 'Neznámy tím';
+            if (teamNameCacheGlobal.has(selectedMatch.awayTeamIdentifier)) {
+                return teamNameCacheGlobal.get(selectedMatch.awayTeamIdentifier);
+            }
+            const result = getTeamNameByIdentifierCached(selectedMatch.awayTeamIdentifier);
+            teamNameCacheGlobal.set(selectedMatch.awayTeamIdentifier, result);
+            return result;
+        }, [selectedMatch?.awayTeamIdentifier]);
         const homeTeamDetails = homeTeamDetailsState || getTeamDetails(selectedMatch.homeTeamIdentifier);
         const awayTeamDetails = awayTeamDetailsState || getTeamDetails(selectedMatch.awayTeamIdentifier);
         const matchDate = selectedMatch.scheduledTime ? formatDateWithDay(selectedMatch.scheduledTime.toDate()) : 'neurčený';
