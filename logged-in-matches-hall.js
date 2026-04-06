@@ -2947,36 +2947,109 @@ const matchesHallApp = ({ userProfileData }) => {
         updateUrlParameters(match.homeTeamIdentifier, match.awayTeamIdentifier);
         window.currentMatchId = match.id;
         
-        // AUTOMATICKÉ NASTAVENIE TÍMOV PO KLIKNUTÍ NA ZÁPAS
+        // AUTOMATICKÉ NASTAVENIE TÍMOV PO KLIKNUTÍ NA ZÁPAS - PRIAMO Z DOM ELEMENTU
         console.log('🔄 Automatické nastavenie tímov pre vybraný zápas...');
         
-        // Získame názvy tímov z identifikátorov
-        const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
-        const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
-        const categoryName = match.categoryName;
-        
-        console.log(`🏠 Domáci tím: ${homeTeamName}`);
-        console.log(`✈️ Hosťovský tím: ${awayTeamName}`);
-        console.log(`📂 Kategória: ${categoryName}`);
-        
-        // Spustíme nastavenie tímov
-        if (homeTeamName && homeTeamName !== match.homeTeamIdentifier && 
-            awayTeamName && awayTeamName !== match.awayTeamIdentifier && 
-            categoryName) {
+        // Počkáme krátko, aby sa DOM stihol aktualizovať (pre prípad, že by sme potrebovali nájsť elementy)
+        setTimeout(async () => {
+            // Nájdeme všetky riadky zápasov v DOM
+            const matchRows = document.querySelectorAll('.divide-y.divide-gray-100 > div, .px-6.py-4');
             
-            await window.setBothTeamsDetails(homeTeamName, categoryName, awayTeamName, categoryName);
-            console.log('✅ Tímy boli automaticky nastavené po kliknutí na zápas');
-        } else {
-            console.log('⚠️ Nepodarilo sa získať názvy tímov, skúšam alternatívny spôsob...');
+            let clickedRow = null;
             
-            // Alternatívny spôsob - použijeme priamo DOM elementy
-            setTimeout(() => {
-                if (window.quickSetup) {
-                    console.log('🔄 Spúšťam quickSetup() ako alternatívu...');
-                    window.quickSetup();
+            // Nájdeme riadok, ktorý obsahuje tento zápas (podľa identifikátorov)
+            for (const row of matchRows) {
+                const rowText = row.textContent || '';
+                // Skúsime nájsť podľa identifikátorov v atribútoch alebo v texte
+                if (rowText.includes(match.homeTeamIdentifier) || rowText.includes(match.awayTeamIdentifier)) {
+                    clickedRow = row;
+                    break;
                 }
-            }, 500);
-        }
+            }
+            
+            // Ak sme nenašli podľa identifikátorov, skúsime podľa dátumu a času
+            if (!clickedRow && match.scheduledTime) {
+                const matchTime = formatTime(match.scheduledTime);
+                for (const row of matchRows) {
+                    if (row.textContent?.includes(matchTime)) {
+                        clickedRow = row;
+                        break;
+                    }
+                }
+            }
+            
+            if (clickedRow) {
+                // Nájdeme všetky elementy s názvami tímov v tomto riadku
+                // V riadku sú dva tímy - domáci a hosťovský
+                const teamSpans = clickedRow.querySelectorAll('.font-medium.text-gray-800');
+                
+                let homeTeamName = '';
+                let awayTeamName = '';
+                
+                if (teamSpans.length >= 2) {
+                    // Prvý span je domáci, druhý je hosťovský
+                    homeTeamName = teamSpans[0]?.textContent?.trim() || '';
+                    awayTeamName = teamSpans[1]?.textContent?.trim() || '';
+                } else {
+                    // Alternatívny spôsob - nájdeme podľa pozície v texte
+                    const allText = clickedRow.textContent || '';
+                    const parts = allText.split('VS');
+                    if (parts.length >= 2) {
+                        // Časť pred VS je domáci a časť za VS je hosťovský (ale obsahuje aj čas a ďalšie údaje)
+                        const homePart = parts[0].trim();
+                        const awayPart = parts[1].trim();
+                        
+                        // Extrahujeme názov tímu (prvé slová, ktoré nie sú čas)
+                        const homeWords = homePart.split(' ');
+                        const awayWords = awayPart.split(' ');
+                        
+                        // Názov tímu je zvyčajne pred dvojbodkou alebo pred VS
+                        homeTeamName = homeWords.filter(w => !w.includes(':') && !w.match(/^\d{2}:\d{2}$/)).join(' ') || '';
+                        awayTeamName = awayWords.filter(w => !w.includes(':') && !w.match(/^\d{2}:\d{2}$/)).join(' ') || '';
+                    }
+                }
+                
+                // Vyčistíme názvy (odstránime nadbytočné medzery)
+                homeTeamName = homeTeamName.replace(/\s+/g, ' ').trim();
+                awayTeamName = awayTeamName.replace(/\s+/g, ' ').trim();
+                
+                const categoryName = match.categoryName;
+                
+                console.log(`🏠 Domáci tím (z DOM): "${homeTeamName}"`);
+                console.log(`✈️ Hosťovský tím (z DOM): "${awayTeamName}"`);
+                console.log(`📂 Kategória: ${categoryName}`);
+                
+                // Spustíme nastavenie tímov s názvami z DOM
+                if (homeTeamName && awayTeamName && categoryName) {
+                    await window.setBothTeamsDetails(homeTeamName, categoryName, awayTeamName, categoryName);
+                    console.log('✅ Tímy boli automaticky nastavené z DOM elementu');
+                } else {
+                    console.log('⚠️ Nepodarilo sa získať názvy tímov z DOM, skúšam alternatívny spôsob...');
+                    // Fallback - použijeme pôvodnú metódu
+                    const homeTeamNameFromDb = getTeamNameByIdentifier(match.homeTeamIdentifier);
+                    const awayTeamNameFromDb = getTeamNameByIdentifier(match.awayTeamIdentifier);
+                    if (homeTeamNameFromDb && awayTeamNameFromDb && homeTeamNameFromDb !== match.homeTeamIdentifier) {
+                        await window.setBothTeamsDetails(homeTeamNameFromDb, categoryName, awayTeamNameFromDb, categoryName);
+                        console.log('✅ Tímy boli nastavené z databázy (fallback)');
+                    }
+                }
+            } else {
+                console.log('⚠️ Nenašiel sa DOM element pre vybraný zápas, skúšam použiť databázu...');
+                // Fallback - použijeme pôvodnú metódu
+                const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
+                const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
+                const categoryName = match.categoryName;
+                
+                if (homeTeamName && homeTeamName !== match.homeTeamIdentifier && 
+                    awayTeamName && awayTeamName !== match.awayTeamIdentifier && 
+                    categoryName) {
+                    await window.setBothTeamsDetails(homeTeamName, categoryName, awayTeamName, categoryName);
+                    console.log('✅ Tímy boli nastavené z databázy');
+                } else {
+                    console.log('❌ Nepodarilo sa nastaviť tímy ani z DOM ani z databázy');
+                }
+            }
+        }, 100);
     };
 
     // Zoradenie dní podľa dátumu
