@@ -2844,7 +2844,7 @@ const matchesHallApp = ({ userProfileData }) => {
         return identifier;
     };
 
-    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA
+    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA (OPRAVENÁ)
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
         
@@ -2927,7 +2927,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        // 3. Ak sme našli názov, aplikujeme mapping
+        // 3. 🔄 AK SME NAŠLI NÁZOV, APLIKUJEME MAPPING (toto je kľúčová časť!)
         if (foundName && window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
             const mappedName = window.teamNameReplacer.getTeamNameFromMapping(foundName);
             if (mappedName && mappedName !== foundName) {
@@ -2937,7 +2937,17 @@ const matchesHallApp = ({ userProfileData }) => {
             return mappedName || foundName;
         }
         
-        // 4. Ak nič nenašlo, vrátime identifikátor
+        // 4. AK NENAŠLI SME NÁZOV, SKÚSIME MAPOVAŤ PRIAMO IDENTIFIKÁTOR
+        // (toto je fallback pre prípad, že sa názov nenašiel v databáze)
+        if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
+            const mappedIdentifier = window.teamNameReplacer.getTeamNameFromMapping(identifier);
+            if (mappedIdentifier && mappedIdentifier !== identifier) {
+                console.log(`🔄 Mapovanie identifikátora: "${identifier}" → "${mappedIdentifier}"`);
+                return mappedIdentifier;
+            }
+        }
+        
+        // 5. Ak nič nenašlo, vrátime identifikátor
         return foundName || identifier;
     };
 
