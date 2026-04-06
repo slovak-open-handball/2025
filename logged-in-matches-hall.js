@@ -8120,6 +8120,69 @@ console.log('   findTeamByNameAndCategory("ŠK Slovan", "U12 D")');
 // KOMPLETNÉ FUNKCIE PRE MANUÁLNE NASTAVENIE TÍMOV
 // ============================================================
 
+const getCurrentMatchIdFromURL = async () => {
+    // Získame z URL parametrov
+    const urlParams = new URLSearchParams(window.location.search);
+    const homeIdentifier = urlParams.get('domaci');
+    const awayIdentifier = urlParams.get('hostia');
+    
+    if (homeIdentifier && awayIdentifier) {
+        console.log(`🔍 Vyhľadávam zápas - domáci: ${homeIdentifier}, hostia: ${awayIdentifier}`);
+        
+        // Skúsime použiť uložené ID z React stavu
+        if (window.currentMatchId) {
+            console.log(`✅ Používam uložené ID: ${window.currentMatchId}`);
+            return window.currentMatchId;
+        }
+        
+        // Ak nemáme uložené ID, vyhľadáme ho v databáze
+        if (!window.db) {
+            console.log('❌ Firebase databáza nie je inicializovaná');
+            return null;
+        }
+        
+        try {
+            const matchesRef = collection(window.db, 'matches');
+            const q = query(
+                matchesRef, 
+                where("homeTeamIdentifier", "==", homeIdentifier),
+                where("awayTeamIdentifier", "==", awayIdentifier)
+            );
+            
+            const querySnapshot = await getDocs(q);
+            
+            if (querySnapshot.empty) {
+                console.log('❌ Zápas nebol nájdený v databáze');
+                return null;
+            }
+            
+            const matches = [];
+            querySnapshot.forEach((doc) => {
+                matches.push({ id: doc.id, ...doc.data() });
+            });
+            
+            if (matches.length === 1) {
+                const matchId = matches[0].id;
+                console.log(`✅ Nájdené ID zápasu: ${matchId}`);
+                window.currentMatchId = matchId;
+                return matchId;
+            } else {
+                console.log(`⚠️ Nájdených viacero zápasov (${matches.length}), používam prvý:`);
+                matches.forEach(match => {
+                    console.log(`   - ID: ${match.id}`);
+                });
+                return matches[0]?.id || null;
+            }
+        } catch (error) {
+            console.error('❌ Chyba pri vyhľadávaní zápasu:', error);
+            return null;
+        }
+    } else {
+        console.log('❌ Žiadny zápas nie je aktuálne zobrazený (chýbajú parametre domaci/hostia)');
+        return null;
+    }
+};
+
 // UPRAVENÁ FUNKCIA: setHomeTeamDetails - automaticky nájde aktuálny zápas
 window.setHomeTeamDetails = async (teamName, categoryName) => {
     console.log(`🔍 Vyhľadávam domáci tím: "${teamName}" v kategórii: "${categoryName}"`);
