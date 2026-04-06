@@ -6671,3 +6671,175 @@ console.log('📋 Pridané funkcie (vyhľadávanie LEN pri 100% odohraných záp
 console.log('   • window.matchTracker.getTeamNameByDisplayId("U12 D 2B") - vráti názov tímu (len ak je skupina dokončená)');
 console.log('   • window.matchTracker.getTeamNameByParams("U12 D", "B", 2) - rovnaký výsledok');
 console.log('   • window.matchTracker.getTeamInfoByDisplayId("U12 D 2B") - vráti kompletné štatistiky tímu');
+
+
+
+
+
+
+
+
+
+
+
+
+// ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------   D  O  Č  A  S  N  E
+
+// ============================================================================
+// NOVÁ FUNKCIA NA ZMENU STAVU ZÁPASU Z "ODOHRANÉ" NA "PREBIEHA"
+// ============================================================================
+
+/**
+ * Zmení stav zápasu z "completed" (Odohrané) na "in-progress" (Prebieha).
+ * @param {string} matchId - ID zápasu v databáze Firestore.
+ * @returns {Promise<boolean>} - Vráti true pri úspechu, false pri chybe.
+ */
+window.setMatchToInProgress = async (matchId) => {
+    if (!matchId) {
+        console.error('❌ Chyba: Nebolo zadané ID zápasu.');
+        return false;
+    }
+
+    if (!window.db) {
+        console.error('❌ Chyba: Firebase databáza nie je inicializovaná.');
+        return false;
+    }
+
+    try {
+        const matchRef = doc(window.db, 'matches', matchId);
+        const matchSnap = await getDoc(matchRef);
+
+        if (!matchSnap.exists()) {
+            console.error(`❌ Chyba: Zápas s ID "${matchId}" neexistuje.`);
+            return false;
+        }
+
+        const matchData = matchSnap.data();
+        const currentStatus = matchData.status;
+
+        if (currentStatus !== 'completed') {
+            console.warn(`⚠️ Zápas má stav "${currentStatus}". Funkcia je určená len pre zmenu z "completed" na "in-progress".`);
+            // Ak chceš povoliť zmenu z akéhokoľvek stavu, odkomentuj nasledujúci riadok:
+            // console.log('   Pokračujem napriek tomu...');
+        }
+
+        // Vykonáme zmenu stavu
+        await updateDoc(matchRef, {
+            status: 'in-progress',
+            // Pri zmene späť na "prebieha" je vhodné vynulovať aj ukončovací čas, ak existuje
+            endedAt: null,
+            // Ak bol zápas pozastavený, odstránime aj ten záznam
+            pausedAt: null,
+            // Aktualizujeme čas poslednej zmeny (voliteľné)
+            updatedAt: Timestamp.now()
+        });
+
+        console.log(`✅ Úspešne: Stav zápasu "${matchId}" bol zmenený z "${currentStatus}" na "in-progress".`);
+        
+        // Ak máme otvorený detail zápasu, môžeme vyvolať manuálnu aktualizáciu (voliteľné)
+        if (window.currentMatchId === matchId && typeof window.dispatchEvent === 'function') {
+            // Vyvoláme udalosť pre prípad, že by React komponent načítal nový stav
+            window.dispatchEvent(new CustomEvent('matchStatusChanged', { detail: { matchId, newStatus: 'in-progress' } }));
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('❌ Chyba pri zmene stavu zápasu:', error);
+        return false;
+    }
+};
+
+/**
+ * Pomocná funkcia na vyhľadanie ID zápasu podľa identifikátorov domácich a hostí.
+ * @param {string} homeIdentifier - Identifikátor domáceho tímu (napr. "U12 D 2B").
+ * @param {string} awayIdentifier - Identifikátor hosťovského tímu (napr. "U12 D 1A").
+ * @returns {Promise<string|null>} - Vráti ID zápasu alebo null, ak nebol nájdený.
+ */
+window.findMatchByIdentifiers = async (homeIdentifier, awayIdentifier) => {
+    if (!homeIdentifier || !awayIdentifier) {
+        console.error('❌ Chyba: Je potrebné zadať oba identifikátory (domáci aj hostia).');
+        return null;
+    }
+
+    if (!window.db) {
+        console.error('❌ Chyba: Firebase databáza nie je inicializovaná.');
+        return null;
+    }
+
+    try {
+        const matchesRef = collection(window.db, 'matches');
+        const q = query(
+            matchesRef,
+            where("homeTeamIdentifier", "==", homeIdentifier),
+            where("awayTeamIdentifier", "==", awayIdentifier)
+        );
+
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            console.log(`❌ Zápas s domácimi "${homeIdentifier}" a hosťami "${awayIdentifier}" nebol nájdený.`);
+            return null;
+        }
+
+        const matches = [];
+        querySnapshot.forEach((doc) => {
+            matches.push({ id: doc.id, ...doc.data() });
+        });
+
+        if (matches.length === 1) {
+            console.log(`✅ Nájdený zápas s ID: ${matches[0].id} (stav: ${matches[0].status})`);
+            return matches[0].id;
+        } else {
+            console.log(`⚠️ Nájdených viacero zápasov (${matches.length}):`);
+            matches.forEach(match => {
+                console.log(`   - ID: ${match.id} (stav: ${match.status})`);
+            });
+            return matches[0]?.id || null;
+        }
+    } catch (error) {
+        console.error('❌ Chyba pri vyhľadávaní zápasu:', error);
+        return null;
+    }
+};
+
+/**
+ * Kombinovaná funkcia: Nájde zápas podľa identifikátorov a zmení jeho stav z "completed" na "in-progress".
+ * @param {string} homeIdentifier - Identifikátor domáceho tímu (napr. "U12 D 2B").
+ * @param {string} awayIdentifier - Identifikátor hosťovského tímu (napr. "U12 D 1A").
+ * @returns {Promise<boolean>} - Vráti true pri úspechu, false pri chybe.
+ */
+window.setMatchToInProgressByIdentifiers = async (homeIdentifier, awayIdentifier) => {
+    console.log(`🔍 Hľadám zápas: Domáci = "${homeIdentifier}", Hostia = "${awayIdentifier}"`);
+    const matchId = await window.findMatchByIdentifiers(homeIdentifier, awayIdentifier);
+    
+    if (!matchId) {
+        console.error('❌ Zápas nebol nájdený, nie je možné zmeniť stav.');
+        return false;
+    }
+    
+    return await window.setMatchToInProgress(matchId);
+};
+
+// ============================================================================
+// PRÍKLADY POUŽITIA V KONZOLE:
+// ============================================================================
+// 
+// 1. Ak poznáš ID zápasu (napr. "abc123xyz"):
+//    window.setMatchToInProgress("abc123xyz")
+//
+// 2. Ak poznáš identifikátory tímov (napr. "U12 D 2B" a "U12 D 1A"):
+//    window.setMatchToInProgressByIdentifiers("U12 D 2B", "U12 D 1A")
+//
+// 3. Najprv vyhľadaj ID zápasu:
+//    window.findMatchByIdentifiers("U12 D 2B", "U12 D 1A")
+//    a potom použij prvú funkciu s vráteným ID.
+//
+// ============================================================================
+
+console.log('✅ Pripravené funkcie na zmenu stavu zápasu:');
+console.log('   • window.setMatchToInProgress(matchId)');
+console.log('   • window.findMatchByIdentifiers(homeIdentifier, awayIdentifier)');
+console.log('   • window.setMatchToInProgressByIdentifiers(homeIdentifier, awayIdentifier)');
+
+
+// ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------   D  O  Č  A  S  N  E
