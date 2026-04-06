@@ -2940,32 +2940,34 @@ const matchesHallApp = ({ userProfileData }) => {
         return identifier;
     };
 
-    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA (OPRAVENÁ)
+    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA (KOMPLETNE OPRAVENÁ)
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
     
         // 🔴 1. NAJPRV SKÚSIME ZÍSKAŤ NÁZOV Z MAPOVANIA (z druhého kódu)
+        let mappedTeamName = null;
+        
         if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
-            const mappedName = window.teamNameReplacer.getTeamNameFromMapping(identifier);
-            if (mappedName && mappedName !== identifier) {
-                console.log(`🔄 Mapovanie z druhého kódu: "${identifier}" → "${mappedName}"`);
-                return mappedName;
+            mappedTeamName = window.teamNameReplacer.getTeamNameFromMapping(identifier);
+            if (mappedTeamName && mappedTeamName !== identifier) {
+                console.log(`🔄 Mapovanie z druhého kódu: "${identifier}" → "${mappedTeamName}"`);
+                return mappedTeamName;
             }
         }
         
         // 🔴 2. SKÚSIME PRIAMO Z GLOBÁLNEHO OBJEKTU __teamNameMapping
         if (window.__teamNameMapping && window.__teamNameMapping[identifier]) {
-            const mappedName = window.__teamNameMapping[identifier].teamName;
-            if (mappedName && mappedName !== identifier) {
-                console.log(`🔄 Mapovanie z __teamNameMapping: "${identifier}" → "${mappedName}"`);
-                return mappedName;
+            mappedTeamName = window.__teamNameMapping[identifier].teamName;
+            if (mappedTeamName && mappedTeamName !== identifier) {
+                console.log(`🔄 Mapovanie z __teamNameMapping: "${identifier}" → "${mappedTeamName}"`);
+                return mappedTeamName;
             }
         }
         
-        // 3. Pôvodné vyhľadávanie v superstructureTeams
+        // 3. Pôvodné vyhľadávanie v superstructureTeams (ak nie je mapovanie)
         let foundName = null;
         
-        // 1. Skúsime superstructureTeams zo stavu
+        // Skúsime superstructureTeams zo stavu
         if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
             const parts = identifier.split(' ');
             if (parts.length >= 2) {
@@ -3001,7 +3003,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        // 2. Skúsime vyhľadať v používateľoch (user teams)
+        // 4. Vyhľadávanie v používateľoch (user teams)
         if (!foundName && users && users.length > 0) {
             const parts = identifier.split(' ');
             if (parts.length >= 2) {
@@ -3042,27 +3044,16 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        // 3. 🔄 AK SME NAŠLI NÁZOV, APLIKUJEME MAPPING (toto je kľúčová časť!)
+        // 5. Ak sme našli názov v databáze, aplikujeme ešte raz mapping (pre prípad, že by bol potrebný)
         if (foundName && window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
-            const mappedName = window.teamNameReplacer.getTeamNameFromMapping(foundName);
-            if (mappedName && mappedName !== foundName) {
-                console.log(`🔄 Mapovanie názvu: "${foundName}" → "${mappedName}"`);
-                return mappedName;
-            }
-            return mappedName || foundName;
-        }
-        
-        // 4. AK NENAŠLI SME NÁZOV, SKÚSIME MAPOVAŤ PRIAMO IDENTIFIKÁTOR
-        // (toto je fallback pre prípad, že sa názov nenašiel v databáze)
-        if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
-            const mappedIdentifier = window.teamNameReplacer.getTeamNameFromMapping(identifier);
-            if (mappedIdentifier && mappedIdentifier !== identifier) {
-                console.log(`🔄 Mapovanie identifikátora: "${identifier}" → "${mappedIdentifier}"`);
-                return mappedIdentifier;
+            const remappedName = window.teamNameReplacer.getTeamNameFromMapping(foundName);
+            if (remappedName && remappedName !== foundName) {
+                console.log(`🔄 Re-mapovanie názvu: "${foundName}" → "${remappedName}"`);
+                return remappedName;
             }
         }
         
-        // 5. Ak nič nenašlo, vrátime identifikátor
+        // 6. Ak nič nenašlo, vrátime pôvodný identifikátor
         return foundName || identifier;
     };
 
