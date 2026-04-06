@@ -516,7 +516,6 @@ const matchesHallApp = ({ userProfileData }) => {
         setPlayerTeam(team);
         setPlayerTeamDetails(teamDetails);
         // Uložíme si aj priamo tím pre jednoduchší prístup
-        setPlayerTeamObject(teamDetails.team);  // <-- toto je správne
         setEditPlayerFirstName(player.firstName || '');
         setEditPlayerLastName(player.lastName || '');
         setEditPlayerJerseyNumber(player.jerseyNumber || '');
