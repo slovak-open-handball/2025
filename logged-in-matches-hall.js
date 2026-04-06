@@ -9247,16 +9247,12 @@ window.setHomeTeamDetails = async (teamName, categoryName) => {
     console.log(`🔍 Vyhľadávam domáci tím: "${actualTeamName}" v kategórii: "${categoryName}"`);
     
     // 🔴 1. NAJPRV SKÚSIME ZÍSKAŤ DETAILY TÍMU PRIAMO Z MAPOVANIA
-    // Vyhľadáme používateľa, ktorý má tím s názvom actualTeamName
     let result = null;
     
     if (window.__teamNameMapping) {
-        // Prejdeme všetky mapovania a nájdeme také, ktoré vedie na actualTeamName
         for (const [identifier, mapping] of Object.entries(window.__teamNameMapping)) {
             if (mapping.teamName === actualTeamName) {
-                // Našli sme identifikátor, ktorý sa mapuje na tento názov
-                // Teraz vyhľadáme používateľa podľa tohto identifikátora
-                const teamDetails = getTeamDetails(identifier);
+                const teamDetails = window.getTeamDetails(identifier);
                 if (teamDetails) {
                     result = teamDetails;
                     console.log(`✅ Nájdený domáci tím cez mapovanie: ${teamDetails.team.teamName} (${teamDetails.userEmail})`);
@@ -9289,7 +9285,9 @@ window.setHomeTeamDetails = async (teamName, categoryName) => {
             teamDetails: result,
             timestamp: Date.now()
         };
-        renderFullTeamToUI(result, 'home');
+        if (typeof renderFullTeamToUI === 'function') {
+            renderFullTeamToUI(result, 'home');
+        }
         window._homeTeamDetails = result;
         return;
     }
@@ -9303,7 +9301,9 @@ window.setHomeTeamDetails = async (teamName, categoryName) => {
     });
     window.dispatchEvent(event);
     
-    renderFullTeamToUI(result, 'home');
+    if (typeof renderFullTeamToUI === 'function') {
+        renderFullTeamToUI(result, 'home');
+    }
     window._homeTeamDetails = result;
     
     console.log(`✅ Domáci tím nastavený a vykreslený: ${actualTeamName}`);
@@ -9331,11 +9331,10 @@ window.setAwayTeamDetails = async (teamName, categoryName) => {
     
     let result = null;
     
-    // 🔴 1. NAJPRV SKÚSIME ZÍSKAŤ DETAILY TÍMU PRIAMO Z MAPOVANIA
     if (window.__teamNameMapping) {
         for (const [identifier, mapping] of Object.entries(window.__teamNameMapping)) {
             if (mapping.teamName === actualTeamName) {
-                const teamDetails = getTeamDetails(identifier);
+                const teamDetails = window.getTeamDetails(identifier);
                 if (teamDetails) {
                     result = teamDetails;
                     console.log(`✅ Nájdený hosťovský tím cez mapovanie: ${teamDetails.team.teamName} (${teamDetails.userEmail})`);
@@ -9345,7 +9344,6 @@ window.setAwayTeamDetails = async (teamName, categoryName) => {
         }
     }
     
-    // 2. Ak nie je v mapovaní, skúsime štandardné vyhľadávanie
     if (!result) {
         result = await findTeamByNameAndCategory(actualTeamName, categoryName, false);
     }
@@ -9367,7 +9365,9 @@ window.setAwayTeamDetails = async (teamName, categoryName) => {
             teamDetails: result,
             timestamp: Date.now()
         };
-        renderFullTeamToUI(result, 'away');
+        if (typeof renderFullTeamToUI === 'function') {
+            renderFullTeamToUI(result, 'away');
+        }
         window._awayTeamDetails = result;
         return;
     }
@@ -9380,7 +9380,9 @@ window.setAwayTeamDetails = async (teamName, categoryName) => {
     });
     window.dispatchEvent(event);
     
-    renderFullTeamToUI(result, 'away');
+    if (typeof renderFullTeamToUI === 'function') {
+        renderFullTeamToUI(result, 'away');
+    }
     window._awayTeamDetails = result;
     
     console.log(`✅ Hosťovský tím nastavený a vykreslený: ${actualTeamName}`);
