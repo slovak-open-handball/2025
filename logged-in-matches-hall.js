@@ -2003,7 +2003,7 @@ const matchesHallApp = ({ userProfileData }) => {
             
             console.log('\n' + '='.repeat(80) + '\n');
             
-        }, 500); // Oneskoríme o 500ms, aby sa načítali všetky potrebné dáta
+        }, 2500); // Oneskoríme o 500ms, aby sa načítali všetky potrebné dáta
         
         return () => clearTimeout(timer);
     }, [selectedMatch, users, superstructureTeams]);
