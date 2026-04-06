@@ -334,6 +334,10 @@ const matchesHallApp = ({ userProfileData }) => {
 
     const [superstructureTeams, setSuperstructureTeams] = useState({});
 
+    // Pridajte k ostatným useState deklaráciám
+    const [homeTeamDetailsState, setHomeTeamDetailsState] = useState(null);
+    const [awayTeamDetailsState, setAwayTeamDetailsState] = useState(null);
+
     // Funkcia na otvorenie modálneho okna pre úpravu člena realizačného tímu
     const openEditStaffModal = (member, team, teamDetails, staffType, staffIndex) => {
         if (selectedMatch?.status !== 'scheduled') {
@@ -1794,6 +1798,57 @@ const matchesHallApp = ({ userProfileData }) => {
         return selectedMatch.status === 'scheduled';
     };
 
+    // PRIDAJTE TENTO useEffect do matchesHallApp komponentu
+    useEffect(() => {
+        // Poslúchač pre nastavenie domáceho tímu
+        const handleSetHomeTeam = (event) => {
+            if (event.detail.matchId !== selectedMatch?.id) {
+                console.log('⚠️ Zápas sa nezhoduje, preskakujem');
+                return;
+            }
+            
+            const teamDetails = event.detail.teamDetails;
+            
+            // Aktualizujeme stav homeTeamDetails
+            setHomeTeamDetailsState({
+                team: teamDetails.team,
+                userEmail: teamDetails.user.email,
+                userId: teamDetails.user.id,
+                userDisplayName: teamDetails.user.displayName
+            });
+            
+            console.log(`✅ Domáci tím aktualizovaný: ${teamDetails.team.teamName}`);
+        };
+        
+        // Poslúchač pre nastavenie hosťovského tímu
+        const handleSetAwayTeam = (event) => {
+            if (event.detail.matchId !== selectedMatch?.id) {
+                console.log('⚠️ Zápas sa nezhoduje, preskakujem');
+                return;
+            }
+            
+            const teamDetails = event.detail.teamDetails;
+            
+            // Aktualizujeme stav awayTeamDetails
+            setAwayTeamDetailsState({
+                team: teamDetails.team,
+                userEmail: teamDetails.user.email,
+                userId: teamDetails.user.id,
+                userDisplayName: teamDetails.user.displayName
+            });
+            
+            console.log(`✅ Hosťovský tím aktualizovaný: ${teamDetails.team.teamName}`);
+        };
+        
+        window.addEventListener('setHomeTeamDetails', handleSetHomeTeam);
+        window.addEventListener('setAwayTeamDetails', handleSetAwayTeam);
+        
+        return () => {
+            window.removeEventListener('setHomeTeamDetails', handleSetHomeTeam);
+            window.removeEventListener('setAwayTeamDetails', handleSetAwayTeam);
+        };
+    }, [selectedMatch?.id]);
+
     useEffect(() => {
         if (!window.db) return;
     
@@ -2902,8 +2957,8 @@ const matchesHallApp = ({ userProfileData }) => {
     if (selectedMatch) {
         const homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
         const awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
-        const homeTeamDetails = getTeamDetails(selectedMatch.homeTeamIdentifier);
-        const awayTeamDetails = getTeamDetails(selectedMatch.awayTeamIdentifier);
+        const homeTeamDetails = homeTeamDetailsState || getTeamDetails(selectedMatch.homeTeamIdentifier);
+        const awayTeamDetails = awayTeamDetailsState || getTeamDetails(selectedMatch.awayTeamIdentifier);
         const matchDate = selectedMatch.scheduledTime ? formatDateWithDay(selectedMatch.scheduledTime.toDate()) : 'neurčený';
         const matchStartTime = selectedMatch.scheduledTime ? formatTime(selectedMatch.scheduledTime) : '-- : --';
         const category = categories.find(c => c.name === selectedMatch.categoryName);
@@ -7315,3 +7370,76 @@ console.log('📌 PRÍKLADY POUŽITIA:');
 console.log('   findCurrentMatchFromDOM()');
 console.log('   findTeamByIdentifierFromDOM("U12 D 1A")');
 console.log('   findTeamByNameAndCategory("ŠK Slovan", "U12 D")');
+
+
+// Funkcia na manuálne nastavenie detailov domáceho tímu (pre vloženie do konzoly)
+window.setHomeTeamDetails = (teamName, categoryName) => {
+    if (!window.currentMatchId) {
+        console.log('❌ Žiadny aktuálny zápas nie je vybraný');
+        return;
+    }
+    
+    // Nájdeme tím v používateľských dátach
+    const result = findTeamByNameAndCategory(teamName, categoryName, false);
+    
+    if (result && !Array.isArray(result)) {
+        // Vyvoláme udalosť, ktorú zachytí React komponent
+        const event = new CustomEvent('setHomeTeamDetails', {
+            detail: {
+                teamDetails: result,
+                matchId: window.currentMatchId
+            }
+        });
+        window.dispatchEvent(event);
+        console.log(`✅ Nastavujem domáci tím: ${teamName}`);
+    } else {
+        console.log(`❌ Tím "${teamName}" v kategórii "${categoryName}" nebol nájdený`);
+    }
+};
+
+// Funkcia na manuálne nastavenie detailov hosťovského tímu (pre vloženie do konzoly)
+window.setAwayTeamDetails = (teamName, categoryName) => {
+    if (!window.currentMatchId) {
+        console.log('❌ Žiadny aktuálny zápas nie je vybraný');
+        return;
+    }
+    
+    // Nájdeme tím v používateľských dátach
+    const result = findTeamByNameAndCategory(teamName, categoryName, false);
+    
+    if (result && !Array.isArray(result)) {
+        // Vyvoláme udalosť, ktorú zachytí React komponent
+        const event = new CustomEvent('setAwayTeamDetails', {
+            detail: {
+                teamDetails: result,
+                matchId: window.currentMatchId
+            }
+        });
+        window.dispatchEvent(event);
+        console.log(`✅ Nastavujem hosťovský tím: ${teamName}`);
+    } else {
+        console.log(`❌ Tím "${teamName}" v kategórii "${categoryName}" nebol nájdený`);
+    }
+};
+
+// Funkcia na nastavenie oboch tímov naraz (domáci aj hosťovský)
+window.setBothTeamsDetails = (homeTeamName, homeCategory, awayTeamName, awayCategory) => {
+    if (homeTeamName && homeCategory) {
+        window.setHomeTeamDetails(homeTeamName, homeCategory);
+    }
+    if (awayTeamName && awayCategory) {
+        window.setAwayTeamDetails(awayTeamName, awayCategory);
+    }
+};
+
+// Funkcia na automatické nastavenie tímov z aktuálneho zápasu v DOM
+window.setTeamsFromCurrentMatch = () => {
+    const result = findCurrentMatchTeamsFromDOM(false);
+    
+    if (result && result.home) {
+        window.setHomeTeamDetails(result.home.team.teamName, result.home.category);
+    }
+    if (result && result.away) {
+        window.setAwayTeamDetails(result.away.team.teamName, result.away.category);
+    }
+};
