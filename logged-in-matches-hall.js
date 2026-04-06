@@ -2941,11 +2941,42 @@ const matchesHallApp = ({ userProfileData }) => {
     };
 
     // FUNKCIA PRE VÝBER ZÁPASU
-     const selectMatch = (match) => {
+    const selectMatch = async (match) => {
         setSelectedMatch(match);
         setManualTimeOffset(match.manualTimeOffset || 0);
         updateUrlParameters(match.homeTeamIdentifier, match.awayTeamIdentifier);
-        window.currentMatchId = match.id; 
+        window.currentMatchId = match.id;
+        
+        // AUTOMATICKÉ NASTAVENIE TÍMOV PO KLIKNUTÍ NA ZÁPAS
+        console.log('🔄 Automatické nastavenie tímov pre vybraný zápas...');
+        
+        // Získame názvy tímov z identifikátorov
+        const homeTeamName = getTeamNameByIdentifier(match.homeTeamIdentifier);
+        const awayTeamName = getTeamNameByIdentifier(match.awayTeamIdentifier);
+        const categoryName = match.categoryName;
+        
+        console.log(`🏠 Domáci tím: ${homeTeamName}`);
+        console.log(`✈️ Hosťovský tím: ${awayTeamName}`);
+        console.log(`📂 Kategória: ${categoryName}`);
+        
+        // Spustíme nastavenie tímov
+        if (homeTeamName && homeTeamName !== match.homeTeamIdentifier && 
+            awayTeamName && awayTeamName !== match.awayTeamIdentifier && 
+            categoryName) {
+            
+            await window.setBothTeamsDetails(homeTeamName, categoryName, awayTeamName, categoryName);
+            console.log('✅ Tímy boli automaticky nastavené po kliknutí na zápas');
+        } else {
+            console.log('⚠️ Nepodarilo sa získať názvy tímov, skúšam alternatívny spôsob...');
+            
+            // Alternatívny spôsob - použijeme priamo DOM elementy
+            setTimeout(() => {
+                if (window.quickSetup) {
+                    console.log('🔄 Spúšťam quickSetup() ako alternatívu...');
+                    window.quickSetup();
+                }
+            }, 500);
+        }
     };
 
     // Zoradenie dní podľa dátumu
