@@ -107,17 +107,20 @@
         return Object.values(matchesData).filter(m => m.status === 'completed');
     }
     
-    // Funkcia na získanie všetkých zápasov v skupine (vrátane neodohraných)
     function getGroupMatches(categoryName, groupName) {
         return Object.values(matchesData).filter(match => 
-            match.categoryName === categoryName && match.groupName === groupName
+            match.categoryName === categoryName && 
+            match.groupName === groupName &&
+            !match.isPlacementMatch  // ← PRIDANÉ: VYNEChÁME ZÁPASY O UMIESTNENIE
         );
     }
     
-    // Funkcia na získanie odohraných zápasov v skupine
     function getCompletedGroupMatches(categoryName, groupName) {
         return Object.values(matchesData).filter(match => 
-            match.categoryName === categoryName && match.groupName === groupName && match.status === 'completed'
+            match.categoryName === categoryName && 
+            match.groupName === groupName && 
+            match.status === 'completed' &&
+            !match.isPlacementMatch  // ← PRIDANÉ: VYNECHÁME ZÁPASY O UMIESTNENIE
         );
     }
     
@@ -218,11 +221,76 @@
         return teamA.name.localeCompare(teamB.name);
     }
     
-    // Funkcia na získanie všetkých tímov v skupine (na základe všetkých zápasov, nielen odohraných)
+// Funkcia na získanie všetkých tímov v skupine (na základe všetkých zápasov, okrem zápasov o umiestnenie)
     function getTeamsInGroupFromAllMatches(groupMatches) {
         const teamsMap = new Map();
         
         groupMatches.forEach(match => {
+            // PRESKOČÍME ZÁPASY O UMIESTNENIE
+            if (match.isPlacementMatch) return;
+            
+            const homeTeamId = match.homeTeamIdentifier;
+            const awayTeamId = match.awayTeamIdentifier;
+            
+            if (!teamsMap.has(homeTeamId)) {
+                teamsMap.set(homeTeamId, {
+                    id: homeTeamId,
+                    name: window.teamManager?.getTeamNameByDisplayIdSync?.(homeTeamId) || homeTeamId,
+                    played: 0,
+                    wins: 0,
+                    draws: 0,
+                    losses: 0,
+                    goalsFor: 0,
+                    goalsAgainst: 0,
+                    points: 0
+                });
+            }
+            
+            if (!teamsMap.has(awayTeamId)) {
+                teamsMap.set(awayTeamId, {
+                    id: awayTeamId,
+                    name: window.teamManager?.getTeamNameByDisplayIdSync?.(awayTeamId) || awayTeamId,
+                    played: 0,
+                    wins: 0,
+                    draws: 0,
+                    losses: 0,
+                    goalsFor: 0,
+                    goalsAgainst: 0,
+                    points: 0
+                });
+            }
+        });
+        
+        return Array.from(teamsMap.values());
+    }
+    
+    // Funkcia na získanie všetkých zápasov v skupine (vrátane neodohraných) - VYNEChÁ ZÁPASY O UMIESTNENIE
+    function getGroupMatches(categoryName, groupName) {
+        return Object.values(matchesData).filter(match => 
+            match.categoryName === categoryName && 
+            match.groupName === groupName &&
+            !match.isPlacementMatch  // ← PRIDANÉ: VYNEChÁME ZÁPASY O UMIESTNENIE
+        );
+    }
+    
+    // Funkcia na získanie odohraných zápasov v skupine - VYNEChÁ ZÁPASY O UMIESTNENIE
+    function getCompletedGroupMatches(categoryName, groupName) {
+        return Object.values(matchesData).filter(match => 
+            match.categoryName === categoryName && 
+            match.groupName === groupName && 
+            match.status === 'completed' &&
+            !match.isPlacementMatch  // ← PRIDANÉ: VYNEChÁME ZÁPASY O UMIESTNENIE
+        );
+    }
+    
+    // Funkcia na získanie všetkých tímov v skupine (na základe všetkých zápasov, okrem zápasov o umiestnenie)
+    function getTeamsInGroupFromAllMatches(groupMatches) {
+        const teamsMap = new Map();
+        
+        groupMatches.forEach(match => {
+            // PRESKOČÍME ZÁPASY O UMIESTNENIE
+            if (match.isPlacementMatch) return;
+            
             const homeTeamId = match.homeTeamIdentifier;
             const awayTeamId = match.awayTeamIdentifier;
             
@@ -260,7 +328,7 @@
     
     // Funkcia na vytvorenie tabuľky skupiny zo všetkých zápasov (aj neodohraných)
     function createGroupTable(categoryName, groupName) {
-        // Získame VŠETKY zápasy v skupine (aj neodohrané)
+        // Získame VŠETKY zápasy v skupine (aj neodohrané) - už sú vyfiltrované cez getGroupMatches
         const allGroupMatches = getGroupMatches(categoryName, groupName);
         
         if (allGroupMatches.length === 0) {
@@ -268,13 +336,13 @@
             return null;
         }
         
-        // Získame len ODOHRANÉ zápasy pre výpočet štatistík, ALE VYFILTRUJEME ZÁPASY O UMIESTNENIE
-        const completedGroupMatches = allGroupMatches.filter(match => match.status === 'completed' && !match.isPlacementMatch);
+        // Získame len ODOHRANÉ zápasy pre výpočet štatistík
+        const completedGroupMatches = allGroupMatches.filter(match => match.status === 'completed');
         
         // Získame všetky tímy v skupine (na základe všetkých zápasov)
         const teamsInGroup = getTeamsInGroupFromAllMatches(allGroupMatches);
         
-        // Spracujeme výsledky LEN z ODOHRANÝCH ZÁPASOV (a NIE z tých o umiestnenie)
+        // Spracujeme výsledky LEN z ODOHRANÝCH ZÁPASOV
         completedGroupMatches.forEach(match => {
             const events = eventsData[match.id] || [];
             const { home: homeScore, away: awayScore } = getCurrentScore(events);
@@ -318,8 +386,8 @@
             return compareTeams(a, b, allGroupMatches, tableSettings.sortingConditions);
         });
         
-        // Výpočet celkového počtu zápasov v skupine a odohraných (NEPOČÍTAME ZÁPASY O UMIESTNENIE)
-        const totalMatches = allGroupMatches.filter(match => !match.isPlacementMatch).length;
+        // Výpočet celkového počtu zápasov v skupine a odohraných
+        const totalMatches = allGroupMatches.length;
         const completedMatches = completedGroupMatches.length;
         const remainingMatches = totalMatches - completedMatches;
         
