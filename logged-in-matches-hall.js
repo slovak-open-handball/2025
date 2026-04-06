@@ -1881,13 +1881,13 @@ const matchesHallApp = ({ userProfileData }) => {
             // Skúsime nájsť tím v používateľských dátach
             if (users && users.length > 0) {
                 // Pre domáci tím
-                const homeTeamDetails = getTeamDetailsFromIdentifier(selectedMatch.homeTeamIdentifier);
+                const homeTeamDetails = getTeamDetailsFromIdentifier(selectedMatch.homeTeamIdentifier, homeTeamName);
                 if (homeTeamDetails && homeTeamDetails.userId) {
                     homeTeamDatabaseId = homeTeamDetails.userId;
                 }
                 
                 // Pre hosťovský tím
-                const awayTeamDetails = getTeamDetailsFromIdentifier(selectedMatch.awayTeamIdentifier);
+                const awayTeamDetails = getTeamDetailsFromIdentifier(selectedMatch.awayTeamIdentifier, awayTeamName);
                 if (awayTeamDetails && awayTeamDetails.userId) {
                     awayTeamDatabaseId = awayTeamDetails.userId;
                 }
@@ -3074,41 +3074,33 @@ const matchesHallApp = ({ userProfileData }) => {
         return null;
     };
 
-    const getTeamDetailsFromIdentifier = (identifier) => {
+    const getTeamDetailsFromIdentifier = (identifier, teamDisplayName) => {
         if (!identifier) return null;
         
         console.log(`🔍 getTeamDetailsFromIdentifier() volaná s identifikátorom: "${identifier}"`);
         
-        // 1. Z IDENTIFIKÁTORA ZÍSKAME NÁZOV TÍMU (to čo je v logu ako "Názov")
-        //    Napr: identifikátor "U12 D F4" -> názov "U12 D 2B"
-        let teamDisplayName = null;
-        let categoryName = null;
-        
         // Získame kategóriu z identifikátora
         const parts = identifier.split(' ');
-        if (parts.length >= 2) {
-            const groupAndOrder = parts.pop();
-            categoryName = parts.join(' ');
+        if (parts.length < 2) {
+            console.log(`❌ Neplatný formát identifikátora: ${identifier}`);
+            return null;
         }
+        
+        const groupAndOrder = parts.pop();
+        const categoryName = parts.join(' ');
         
         if (!categoryName) {
             console.log(`❌ Nepodarilo sa určiť kategóriu z identifikátora: ${identifier}`);
             return null;
         }
         
-        // DÔLEŽITÉ: Použijeme getTeamNameByIdentifier() na získanie NÁZVU tímu
-        // Táto funkcia už správne volá window.matchTracker.getTeamNameByDisplayId()
-        teamDisplayName = getTeamNameByIdentifier(identifier);
+        // DÔLEŽITÉ: Použijeme odovzdaný teamDisplayName (názov z logu)
+        // Alebo ak nie je odovzdaný, použijeme pôvodný identifikátor
+        const teamNameToSearch = teamDisplayName || identifier;
         
-        if (!teamDisplayName || teamDisplayName === identifier) {
-            console.log(`❌ Nepodarilo sa získať názov tímu pre identifikátor: ${identifier}`);
-            return null;
-        }
+        console.log(`   Hľadám tím: "${teamNameToSearch}" v kategórii: "${categoryName}"`);
         
-        console.log(`   ✅ Získaný názov tímu: "${teamDisplayName}"`);
-        console.log(`   Kategória: "${categoryName}"`);
-        
-        // 2. TERAZ VYHĽADÁME TÍM PODĽA NÁZVU V POUŽÍVATEĽSKÝCH DÁTACH
+        // Vyhľadáme tím podľa názvu a kategórie
         if (users && users.length > 0) {
             for (const user of users) {
                 if (!user.teams) continue;
@@ -3116,22 +3108,13 @@ const matchesHallApp = ({ userProfileData }) => {
                 const userTeams = user.teams[categoryName];
                 if (!userTeams || !Array.isArray(userTeams)) continue;
                 
-                // Hľadáme podľa názvu tímu
-                const team = userTeams.find(t => t.teamName === teamDisplayName);
+                const team = userTeams.find(t => t.teamName === teamNameToSearch);
                 
                 if (team) {
                     console.log(`   ✅ Nájdený tím: "${team.teamName}" (${user.email})`);
                     console.log(`   📊 Počet hráčov: ${team.playerDetails?.length || 0}`);
                     console.log(`   👨‍🏫 RT muži: ${team.menTeamMemberDetails?.length || 0}`);
                     console.log(`   👩‍🏫 RT ženy: ${team.womenTeamMemberDetails?.length || 0}`);
-                    
-                    // Výpis prvých 5 hráčov pre kontrolu
-                    if (team.playerDetails && team.playerDetails.length > 0) {
-                        console.log(`   🎽 Hráči (prvých 5):`);
-                        team.playerDetails.slice(0, 5).forEach(p => {
-                            console.log(`      - ${p.lastName} ${p.firstName} (#${p.jerseyNumber || '?'})`);
-                        });
-                    }
                     
                     return {
                         team,
@@ -3143,7 +3126,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        console.log(`   ❌ Tím "${teamDisplayName}" v kategórii "${categoryName}" nebol nájdený`);
+        console.log(`   ❌ Tím "${teamNameToSearch}" v kategórii "${categoryName}" nebol nájdený`);
         return null;
     };
     
@@ -3178,8 +3161,8 @@ const matchesHallApp = ({ userProfileData }) => {
     if (selectedMatch) {
         const homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
         const awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
-        const homeTeamDetails = getTeamDetailsFromIdentifier(selectedMatch.homeTeamIdentifier);
-        const awayTeamDetails = getTeamDetailsFromIdentifier(selectedMatch.awayTeamIdentifier);
+        const homeTeamDetails = getTeamDetailsFromIdentifier(selectedMatch.homeTeamIdentifier, homeTeamName);
+        const awayTeamDetails = getTeamDetailsFromIdentifier(selectedMatch.awayTeamIdentifier, awayTeamName);
         const matchDate = selectedMatch.scheduledTime ? formatDateWithDay(selectedMatch.scheduledTime.toDate()) : 'neurčený';
         const matchStartTime = selectedMatch.scheduledTime ? formatTime(selectedMatch.scheduledTime) : '-- : --';
         const category = categories.find(c => c.name === selectedMatch.categoryName);
