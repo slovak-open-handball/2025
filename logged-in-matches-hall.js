@@ -1806,7 +1806,23 @@ const matchesHallApp = ({ userProfileData }) => {
         // a keď je selectedMatch nastavený (napr. z URL parametrov)
         if (!selectedMatch) return;
     
-        // ✅ OPRAVA: Počkáme na React stav users (najspoľahlivejšie)
+        // ✅ PRI KAŽDEJ ZMENE ZÁPASU NAJPRV VYMAŽEME SÚPISKY TÍMOV
+        console.log('🗑️ Vymazávam staré súpisky tímov...');
+        
+        // Vymažeme globálne uložené tímy
+        window._homeTeamDetails = null;
+        window._awayTeamDetails = null;
+        window._teamsSetForMatch = null;
+        
+        // Vymažeme React stavy
+        setHomeTeamDetailsState(null);
+        setAwayTeamDetailsState(null);
+        
+        // Vykreslíme "Nedostupné" do UI
+        renderFullTeamToUI(null, 'home');
+        renderFullTeamToUI(null, 'away');
+        
+        // ✅ Počkáme na React stav users (najspoľahlivejšie)
         if (users.length === 0) {
             console.log("⏳ Čakám na načítanie používateľov do React stavu...");
             return;
@@ -1822,14 +1838,6 @@ const matchesHallApp = ({ userProfileData }) => {
         if (!window.users || window.users.length === 0) {
             window.users = users;
             console.log(`✅ Synchronizovaných ${users.length} používateľov do window.users`);
-        }
-        
-        // Skontrolujeme, či už boli tímy nastavené pre tento zápas
-        // (aby sme nevolali nastavenie viackrát)
-        const matchId = selectedMatch.id;
-        if (window._teamsSetForMatch === matchId) {
-            console.log('✅ Tímy už boli nastavené pre tento zápas, preskakujem');
-            return;
         }
         
         console.log('🔄 Automatické nastavenie tímov pre zápas z URL/React stavu...');
@@ -1876,6 +1884,8 @@ const matchesHallApp = ({ userProfileData }) => {
                     await window.setHomeTeamDetails(homeResult.team.teamName, categoryName);
                 } else {
                     console.log(`❌ Domáci tím "${selectedMatch.homeTeamIdentifier}" nebol nájdený`);
+                    // Uistíme sa, že v UI je "Nedostupné"
+                    renderFullTeamToUI(null, 'home');
                 }
             }
             
@@ -1893,13 +1903,15 @@ const matchesHallApp = ({ userProfileData }) => {
                     await window.setAwayTeamDetails(awayResult.team.teamName, categoryName);
                 } else {
                     console.log(`❌ Hosťovský tím "${selectedMatch.awayTeamIdentifier}" nebol nájdený`);
+                    // Uistíme sa, že v UI je "Nedostupné"
+                    renderFullTeamToUI(null, 'away');
                 }
             }
             
             // Označíme, že tímy boli nastavené pre tento zápas
-            window._teamsSetForMatch = matchId;
+            window._teamsSetForMatch = selectedMatch.id;
             
-            // Po nastavení tímov vykreslíme UI (už nie je potrebné oneskorenie, pretože používatelia sú načítaní)
+            // Po nastavení tímov vykreslíme UI
             console.log('🔄 Vykreslenie tímov do UI...');
             if (window._homeTeamDetails) {
                 renderFullTeamToUI(window._homeTeamDetails, 'home');
