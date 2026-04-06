@@ -3358,7 +3358,6 @@ const matchesHallApp = ({ userProfileData }) => {
         // AUTOMATICKÉ NASTAVENIE TÍMOV PO KLIKNUTÍ NA ZÁPAS
         console.log('🔄 Automatické nastavenie tímov pre vybraný zápas...');
         
-        // Funkcia na oneskorené nastavenie tímov s kontrolou DOM
         const setupTeamsWithDelay = async (retryCount = 0) => {
             const maxRetries = 15;
             const delay = 200;
@@ -3378,16 +3377,13 @@ const matchesHallApp = ({ userProfileData }) => {
                 console.log(`✅ DOM kontajnery načítané (${containers.length} kontajnerov)`);
             }
             
-            // Vymažeme staré údaje z UI pred novým nastavením
-            console.log('🗑️ Vymazávam staré súpisky z UI...');
+            // 🔴 IBA VYMAŽEME DOM KONTAJNERY TÍMOV, NEREAGUJEME NA REACT STAV
+            console.log('🗑️ Vymazávam staré súpisky z UI (len DOM)...');
             
-            // Nájdeme všetky kontajnery tímov a vyčistíme ich
             const allTeamContainers = document.querySelectorAll('.bg-gray-50.rounded-lg.p-4.border.border-gray-200');
             allTeamContainers.forEach(container => {
-                // Zachováme iba hlavičku h3
                 const header = container.querySelector('h3');
                 if (header) {
-                    // Vymažeme všetko okrem hlavičky
                     const childrenToRemove = [];
                     for (const child of container.children) {
                         if (child !== header) {
