@@ -3926,9 +3926,9 @@ const matchesHallApp = ({ userProfileData }) => {
             'div',
             { className: `floating-score-box ${showFloatingScore ? 'visible' : ''}` },
             React.createElement('span', { className: 'team-name', title: homeTeamName }, homeTeamName),
-            React.createElement('span', { className: 'score' }, loadingEvents ? '...' : `${matchScore.home}`),
+            React.createElement('span', { className: 'score' }, loadingEvents ? '--:--' : `${matchScore.home}`),
             React.createElement('span', { className: 'vs' }, ':'),
-            React.createElement('span', { className: 'score' }, loadingEvents ? '...' : `${matchScore.away}`),
+            React.createElement('span', { className: 'score' }, loadingEvents ? '--:--' : `${matchScore.away}`),
             React.createElement('span', { className: 'team-name', title: awayTeamName }, awayTeamName),
             React.createElement('div', { className: 'separator' }),
             React.createElement('span', { className: 'match-time' }, formatMatchTime(cleanPlayingTime || 0))
@@ -4534,7 +4534,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { className: 'text-3xl font-bold text-gray-800 mb-1' },
-                                                loadingEvents ? '...' : `${matchScore.home} : ${matchScore.away}`
+                                                loadingEvents ? '--:--' : `${matchScore.home} : ${matchScore.away}`
                                             ),
                                             React.createElement(
                                                 'div',
@@ -5503,7 +5503,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { className: 'text-3xl font-bold text-gray-800 mb-1' },
-                                                loadingEvents ? '...' : `${matchScore.home} : ${matchScore.away}`
+                                                loadingEvents ? '--:--' : `${matchScore.home} : ${matchScore.away}`
                                             ),
                                             React.createElement(
                                                 'div',
