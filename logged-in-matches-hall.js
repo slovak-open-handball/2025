@@ -3490,6 +3490,61 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     }, [matches, categories]); // Tento useEffect sa spustí vždy, keď sa zmenia matches ALEBO categories
 
+    // ============================================================
+    // OPRAVA: SLEDOVANIE ZMIEN VYBRANÉHO ZÁPASU V REÁLNOM ČASE
+    // ============================================================
+    useEffect(() => {
+        if (!selectedMatch || !window.db) return;
+        
+        console.log('🔄 Nastavujem listener pre zmeny zápasu:', selectedMatch.id);
+        
+        const matchRef = doc(window.db, 'matches', selectedMatch.id);
+        const unsubscribe = onSnapshot(matchRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const updatedMatch = {
+                    id: docSnap.id,
+                    ...docSnap.data(),
+                    currentPeriod: docSnap.data().currentPeriod || 1,
+                    manualTimeOffset: docSnap.data().manualTimeOffset || 0
+                };
+                
+                // Kontrola, či sa zmenil status
+                const oldStatus = selectedMatch.status;
+                const newStatus = updatedMatch.status;
+                
+                if (oldStatus !== newStatus) {
+                    console.log(`🔄 Status zápasu sa zmenil: ${oldStatus} → ${newStatus}`);
+                    
+                    // Aktualizujeme selectedMatch
+                    setSelectedMatch(updatedMatch);
+                    
+                    // Ak sa zápas spustil (in-progress) alebo pozastavil (paused)
+                    if (newStatus === 'in-progress' || newStatus === 'paused') {
+                        window.showGlobalNotification(
+                            newStatus === 'in-progress' ? 'Zápas bol spustený!' : 'Zápas bol pozastavený!',
+                            'info'
+                        );
+                    }
+                    
+                    // Ak sa zápas ukončil
+                    if (newStatus === 'completed') {
+                        window.showGlobalNotification('Zápas bol ukončený!', 'success');
+                    }
+                } else {
+                    // Len aktualizujeme selectedMatch bez notifikácie
+                    setSelectedMatch(updatedMatch);
+                }
+                
+                // Aktualizujeme aj globálnu premennú
+                window.selectedMatch = updatedMatch;
+            }
+        }, (error) => {
+            console.error('Chyba pri sledovaní zápasu:', error);
+        });
+        
+        return () => unsubscribe();
+    }, [selectedMatch?.id]); // Spustí sa len keď sa zmení ID zápasu
+
     // Pomocná funkcia na získanie názvu tímu s čakaním na teamManager
     const getTeamNameSafe = (identifier) => {
         if (!identifier) return 'Neznámy tím';
@@ -4285,6 +4340,127 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         };
 
+        const addMatchEventSimple = async (eventType, team, subType, playerIdentifier) => {
+            if (!selectedMatch || !window.db) return;
+    
+            // Kontrola, či je zápas aktívny
+            if (selectedMatch.status !== 'in-progress' && selectedMatch.status !== 'paused') {
+                window.showGlobalNotification('Zápas nie je aktívny (nebol spustený alebo je ukončený)', 'error');
+                return;
+            }
+            
+            try {
+                const eventsRef = collection(window.db, 'matchEvents');
+                
+                // Aktuálny čas
+                const totalSeconds = matchTime;
+                const minute = Math.floor(totalSeconds / 60);
+                const second = totalSeconds % 60;
+                const formattedTime = `${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`;
+                
+                // Aktuálne skóre pred udalosťou
+                let homeScoreBefore = matchScore.home;
+                let awayScoreBefore = matchScore.away;
+                let homeScoreAfter = matchScore.home;
+                let awayScoreAfter = matchScore.away;
+                
+                // Výpočet nového skóre
+                if (eventType === 'goal' || (eventType === 'penalty' && subType === 'scored')) {
+                    if (team === 'home') {
+                        homeScoreAfter++;
+                    } else if (team === 'away') {
+                        awayScoreAfter++;
+                    }
+                }
+                
+                const eventData = {
+                    matchId: selectedMatch.id,
+                    type: eventType,
+                    team: team,
+                    minute: minute,
+                    second: second,
+                    formattedTime: formattedTime,
+                    timestamp: Timestamp.now(),
+                    createdBy: userProfileData?.email || 'unknown',
+                    scoreBefore: { home: homeScoreBefore, away: awayScoreBefore },
+                    scoreAfter: { home: homeScoreAfter, away: awayScoreAfter }
+                };
+                
+                // Pridanie informácií o hráčovi
+                if (playerIdentifier) {
+                    const teamDetails = team === 'home' ? homeTeamDetailsState : awayTeamDetailsState;
+                    const teamIdentifier = team === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
+                    
+                    let playerRef = null;
+                    if (playerIdentifier.isStaff) {
+                        playerRef = createPlayerReference(
+                            teamDetails, teamIdentifier, playerIdentifier, true,
+                            playerIdentifier.staffType, playerIdentifier.staffIndex
+                        );
+                    } else {
+                        playerRef = createPlayerReference(
+                            teamDetails, teamIdentifier, playerIdentifier, false
+                        );
+                    }
+                    
+                    if (playerRef) {
+                        eventData.playerRef = playerRef;
+                    }
+                    
+                    if (eventType === 'yellow' || eventType === 'red' || eventType === 'blue' || eventType === 'exclusion') {
+                        eventData.cardType = eventType === 'exclusion' ? 'exclusion' : eventType;
+                    }
+                }
+                
+                // Pre penalty ukladáme subType
+                if (eventType === 'penalty') {
+                    eventData.subType = subType;
+                }
+                
+                await addDoc(eventsRef, eventData);
+                
+                window.showGlobalNotification(`Udalosť bola pridaná v čase ${formattedTime}`, 'success');
+                
+                // Reset po pridaní
+                setEventType(null);
+                setEventTeam(null);
+                setEventSubType(null);
+                setSelectedPlayerForEvent(null);
+                
+            } catch (error) {
+                console.error('Chyba pri pridávaní udalosti:', error);
+                window.showGlobalNotification('Chyba pri ukladaní udalosti', 'error');
+            }
+        };
+
+        const handlePlayerClick = (playerIdentifier, teamType) => {
+            // Ak nie je vybraná žiadna akcia, nič nerobíme
+            if (!eventType) {
+                console.log('ℹ️ Najprv vyberte typ udalosti (Gól, ŽK, ČK, atď.)');
+                window.showGlobalNotification('Najprv vyberte typ udalosti', 'info');
+                return;
+            }
+            
+            // Kontrola, či je zápas aktívny
+            if (selectedMatch?.status !== 'in-progress' && selectedMatch?.status !== 'paused') {
+                window.showGlobalNotification('Zápas nie je aktívny', 'error');
+                return;
+            }
+            
+            console.log(`🎯 Pridávam udalosť: ${eventType} pre tím ${teamType}`);
+            
+            if (eventType === 'penalty') {
+                // Pre penaltu potrebujeme subType
+                if (!eventSubType) {
+                    window.showGlobalNotification('Vyberte typ penalty (premenená/nepremenená)', 'error');
+                    return;
+                }
+                addMatchEventSimple(eventType, teamType, eventSubType, playerIdentifier);
+            } else {
+                addMatchEventSimple(eventType, teamType, null, playerIdentifier);
+            }
+        };
+        
         // Upravte funkciu addMatchEvent, aby používala updateHighlightedEvent ak je zvýraznený riadok
         const addMatchEvent = async (localEventType, localEventTeam, localEventSubType, localPlayer) => {
             if (!selectedMatch || !window.db) return;
