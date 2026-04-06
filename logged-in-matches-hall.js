@@ -334,6 +334,9 @@ const matchesHallApp = ({ userProfileData }) => {
     const [homeTeamDetailsState, setHomeTeamDetailsState] = useState(null);
     const [awayTeamDetailsState, setAwayTeamDetailsState] = useState(null);   
 
+    const [superstructureTeams, setSuperstructureTeams] = useState({}); 
+    const [teamManagerReady, setTeamManagerReady] = useState(false);
+
     // Funkcia na otvorenie modálneho okna pre úpravu člena realizačného tímu
     const openEditStaffModal = (member, team, teamDetails, staffType, staffIndex) => {
         if (selectedMatch?.status !== 'scheduled') {
