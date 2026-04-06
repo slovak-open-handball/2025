@@ -2730,7 +2730,7 @@ const matchesHallApp = ({ userProfileData }) => {
         return () => unsubscribeUsers();
     }, []); // Prázdne pole závislostí - spustí sa raz pri načítaní
 
-    // Načítanie zápasov pre túto halu
+    // Načítanie zápasov pre túto halu (UPRAVENÉ)
     useEffect(() => {
         if (!window.db || !hallId) {
             setLoading(false);
@@ -2744,8 +2744,6 @@ const matchesHallApp = ({ userProfileData }) => {
             const loadedMatches = [];
             snapshot.forEach((doc) => {
                 const data = doc.data();
-//                console.log('Načítaný zápas:', data); // Pre ladenie
-                
                 loadedMatches.push({
                     id: doc.id,
                     ...data,
@@ -2787,30 +2785,44 @@ const matchesHallApp = ({ userProfileData }) => {
             setGroupedMatches(grouped);
             setLoading(false);
             
-            // Skontrolujeme URL parametre pre domácich a hostí
-            const homeIdentifierFromUrl = getUrlParameter('domaci');
-            const awayIdentifierFromUrl = getUrlParameter('hostia');
-            
-            if (homeIdentifierFromUrl && awayIdentifierFromUrl && !selectedMatch) {
-                // Hľadáme zápas, ktorý má oba identifikátory
-                const matchFromUrl = loadedMatches.find(m => 
-                    m.homeTeamIdentifier === homeIdentifierFromUrl && 
-                    m.awayTeamIdentifier === awayIdentifierFromUrl
-                );
-                
-                if (matchFromUrl) {
-                    setSelectedMatch(matchFromUrl);
-                    setManualTimeOffset(matchFromUrl.manualTimeOffset || 0);
-                }
-            }
+            // 🔴 NOVÉ: NEPOKÚŠAME SA NASTAVIŤ ZÁPAS Z URL OKAMŽITE,
+            // pretože matches ešte nemusia byť v stave.
+            // Namiesto toho použijeme samostatný useEffect nižšie.
             
         }, (error) => {
-//            console.error("Chyba pri načítaní zápasov:", error);
+            console.error("Chyba pri načítaní zápasov:", error);
             setLoading(false);
         });
     
         return () => unsubscribe();
     }, [hallId]);
+
+    // 🔴 NOVÝ useEffect PRE NAČÍTANIE ZÁPASU Z URL PARAMETROV
+    useEffect(() => {
+        // Počkáme, kým sa načítajú zápasy a nevyberieme žiadny zápas
+        if (matches.length === 0 || selectedMatch !== null) return;
+        
+        const homeIdentifierFromUrl = getUrlParameter('domaci');
+        const awayIdentifierFromUrl = getUrlParameter('hostia');
+        
+        if (homeIdentifierFromUrl && awayIdentifierFromUrl) {
+            // Hľadáme zápas, ktorý má oba identifikátory
+            const matchFromUrl = matches.find(m => 
+                m.homeTeamIdentifier === homeIdentifierFromUrl && 
+                m.awayTeamIdentifier === awayIdentifierFromUrl
+            );
+            
+            if (matchFromUrl) {
+                console.log(`✅ Automatické načítanie zápasu z URL: ${matchFromUrl.homeTeamIdentifier} vs ${matchFromUrl.awayTeamIdentifier}`);
+                // Použijeme selectMatch na načítanie detailov
+                selectMatch(matchFromUrl);
+            } else {
+                console.log(`⚠️ Zápas s identifikátormi ${homeIdentifierFromUrl} a ${awayIdentifierFromUrl} nebol nájdený v zozname.`);
+                // Voliteľne môžeme vymazať neplatné parametre z URL
+                // updateUrlParameters(null, null);
+            }
+        }
+    }, [matches, selectedMatch]);
     
     // SAMOSTATNÝ useEffect PRE VÝPIS DO KONZOLY - závislý na matches AJ categories
     useEffect(() => {
@@ -3212,7 +3224,8 @@ const matchesHallApp = ({ userProfileData }) => {
         
         setSelectedMatch(match);
         setManualTimeOffset(match.manualTimeOffset || 0);
-        updateUrlParameters(match.homeTeamIdentifier, match.awayTeamIdentifier);
+        // POZNÁMKA: URL paramettre sa už nastavujú v onClick handleri, ale pre istotu to necháme aj tu
+        // updateUrlParameters(match.homeTeamIdentifier, match.awayTeamIdentifier); 
         window.currentMatchId = match.id;
         
         // ✅ PODROBNÝ VÝPIS INFORMÁCIÍ O ZÁPASE DO KONZOLY
@@ -3220,9 +3233,7 @@ const matchesHallApp = ({ userProfileData }) => {
         console.log('='.repeat(80));
         console.log('📋 VYBRANÝ ZÁPAS - DETAILNÉ INFORMÁCIE:');
         console.log('='.repeat(80));
-        
-        // ... (zvyšok výpisov do konzoly zostáva rovnaký) ...
-        
+                
         // AUTOMATICKÉ NASTAVENIE TÍMOV PO KLIKNUTÍ NA ZÁPAS
         console.log('🔄 Automatické nastavenie tímov pre vybraný zápas...');
         
