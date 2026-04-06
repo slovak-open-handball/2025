@@ -3342,7 +3342,6 @@ const matchesHallApp = ({ userProfileData }) => {
                 if (homeResult && !Array.isArray(homeResult)) {
                     console.log(`✅ Domáci tím nájdený: ${homeResult.team.teamName}`);
                     window._homeTeamDetails = homeResult;
-                    // renderFullTeamToUI(homeResult, 'home'); // React sa postará o vykreslenie
                     setHomeTeamDetailsState({
                         team: homeResult.team,
                         userEmail: homeResult.user.email,
@@ -3360,11 +3359,10 @@ const matchesHallApp = ({ userProfileData }) => {
             if (finalAwayTeamName && finalAwayTeamName !== match.awayTeamIdentifier) {
                 console.log(`✈️ Nastavujem hosťovský tím: "${finalAwayTeamName}"`);
                 const awayResult = await findTeamByNameAndCategoryDirect(finalAwayTeamName, finalCategoryName, false);
-                
+    
                 if (awayResult && !Array.isArray(awayResult)) {
                     console.log(`✅ Hosťovský tím nájdený: ${awayResult.team.teamName}`);
                     window._awayTeamDetails = awayResult;
-                    // renderFullTeamToUI(awayResult, 'away'); // React sa postará o vykreslenie
                     setAwayTeamDetailsState({
                         team: awayResult.team,
                         userEmail: awayResult.user.email,
