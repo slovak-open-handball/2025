@@ -2414,23 +2414,20 @@ let initialMappingDone = false;
 // Funkcia na odoslanie udalosti, že mapovanie je pripravené
 function notifyMappingReady() {
     if (mappingCompleted) return;
-    
     mappingCompleted = true;
-    
     const mappings = getAllTeamMappings();
     const mappingsCount = Object.keys(mappings).length;
-    
     console.log(`🎉 MAPOVANIE DOKONČENÉ! Počet mapovaní: ${mappingsCount}`);
-    
     const event = new CustomEvent('teamNameMappingReady', {
-        detail: {
-            mappings: mappings,
-            mappingsCount: mappingsCount,
-            timestamp: Date.now(),
-            ready: true
-        }
+        detail: { mappings, mappingsCount, timestamp: Date.now(), ready: true }
     });
     window.dispatchEvent(event);
+}
+
+// TOTO JE DÔLEŽITÉ - po načítaní existujúcich mapovaní
+if (Object.keys(window.__teamNameMapping).length > 0) {
+    console.log('✅ Mapovanie už existuje, odosielam udalosť okamžite...');
+    notifyMappingReady();
 }
 
 // 🔴 DÔLEŽITÉ: Po každom úspešnom nahradení skontrolujeme, či už máme mapovanie
