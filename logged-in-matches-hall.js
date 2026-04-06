@@ -288,6 +288,7 @@ const matchesHallApp = ({ userProfileData }) => {
     const [loadingEvents, setLoadingEvents] = useState(false);
     const [eventType, setEventType] = useState(null);
     const [eventSubType, setEventSubType] = useState(null); // pre 7m hody: 'scored' alebo 'missed'
+    const [eventTeam, setEventTeam] = useState(null);
     const [matchPaused, setMatchPaused] = useState(false);
     const [matchTime, setMatchTime] = useState(0); // čas v sekundách
     const [timerInterval, setTimerInterval] = useState(null);
@@ -9673,13 +9674,10 @@ const fixStartTimerButtonFinal = () => {
                             currentPeriod: 1
                         });
                         window.showGlobalNotification('Čas zápasu spustený', 'success');
-                        console.log('✅ Časomiera spustená');
                     } catch (error) {
-                        console.error('❌ Chyba:', error);
                         window.showGlobalNotification('Chyba pri spúšťaní', 'error');
                     }
                 };
-                console.log('✅ Tlačidlo "Čas štart" bolo opravené (finálna verzia)');
             }
         }
     }, 2000);
@@ -9691,27 +9689,7 @@ if (document.readyState === 'loading') {
 } else {
     fixStartTimerButtonFinal();
 }
-
-// ============================================================
-// DIAGNOSTICKÁ FUNKCIA
-// ============================================================
-
-window.checkUIRenderStatus = () => {
-    console.log('📊 DIAGNOSTIKA UI RENDEROVANIA:');
-    console.log(`   • teamsInitialized: ${teamsInitialized}`);
-    console.log(`   • lastRenderedMatchId: ${lastRenderedMatchId}`);
-    console.log(`   • currentMatchId: ${window.currentMatchId}`);
-    console.log(`   • _homeTeamDetails: ${window._homeTeamDetails ? window._homeTeamDetails.team.teamName : 'null'}`);
-    console.log(`   • _awayTeamDetails: ${window._awayTeamDetails ? window._awayTeamDetails.team.teamName : 'null'}`);
-    
+window.checkUIRenderStatus = () => {    
     // Skontrolujeme, či sú tlačidlá na hráčoch funkčné
     const playerElements = document.querySelectorAll('[class*="hover:bg-blue-50"]');
-    console.log(`   • Počet klikateľných elementov: ${playerElements.length}`);
-    
-    if (playerElements.length === 0) {
-        console.log('⚠️ VAROVANIE: Nenašli sa žiadne klikateľné elementy!');
-    }
 };
-
-console.log('✅ OPRAVY DOKONČENÉ!');
-console.log('📌 Pre kontrolu stavu spustite: checkUIRenderStatus()');
