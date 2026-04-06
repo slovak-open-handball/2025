@@ -10321,3 +10321,146 @@ window.convertIdentifierToTeamName = function(identifier) {
 
 // Export funkcie
 window.convertIdentifierToTeamName = convertIdentifierToTeamName;
+
+// ============================================================
+// OPRAVA: Zabezpečenie správneho spustenia časomiery
+// ============================================================
+
+// Opravená funkcia startMatchTimer - priamo volá updateDoc
+window.startMatchTimerFixed = async (matchId) => {
+    if (!window.db || !matchId) {
+        console.error('❌ startMatchTimer: chýba db alebo matchId');
+        return;
+    }
+    
+    console.log('⏰ Spúšťam časomieru pre zápas:', matchId);
+    
+    try {
+        const matchRef = doc(window.db, 'matches', matchId);
+        await updateDoc(matchRef, {
+            status: 'in-progress',
+            startedAt: Timestamp.now(),
+            currentPeriod: 1
+        });
+        window.showGlobalNotification('Čas zápasu spustený', 'success');
+        console.log('✅ Časomiera spustená, stav zápasu: in-progress');
+    } catch (error) {
+        console.error('❌ Chyba pri spúšťaní časomiery:', error);
+        window.showGlobalNotification('Chyba pri spúšťaní časomiery', 'error');
+    }
+};
+
+// Prepíšeme pôvodnú funkciu
+window.startMatchTimer = window.startMatchTimerFixed;
+
+// ============================================================
+// OPRAVA: Zabezpečenie, že tímy sú v stave pre akcie
+// ============================================================
+
+// Funkcia na kontrolu, či sú tímy správne nastavené
+window.ensureTeamsAreSet = () => {
+    const matchId = window.currentMatchId;
+    if (!matchId) return false;
+    
+    // Skontrolujeme, či máme tímy v localStorage
+    const homeTeam = loadTeamFromLocalStorage('home', matchId);
+    const awayTeam = loadTeamFromLocalStorage('away', matchId);
+    
+    if (homeTeam && awayTeam) {
+        console.log('✅ Tímy sú v localStorage, môžem spustiť časomieru');
+        return true;
+    }
+    
+    console.log('⚠️ Tímy nie sú v localStorage, skúšam nastaviť z DOM...');
+    // Pokúsime sa nastaviť tímy z DOM
+    setTimeout(() => {
+        if (window.quickSetup) {
+            window.quickSetup();
+        }
+    }, 500);
+    
+    return false;
+};
+
+// ============================================================
+// OPRAVA: Pri kliknutí na "Čas štart" najprv zabezpečíme tímy
+// ============================================================
+
+// Override pôvodného onClick handlera pre tlačidlo "Čas štart"
+const fixStartTimerButton = () => {
+    // Počkáme na načítanie DOM
+    setTimeout(() => {
+        const startButtons = document.querySelectorAll('button');
+        for (const btn of startButtons) {
+            if (btn.textContent.includes('Čas štart') || btn.textContent.includes('Štart')) {
+                const originalOnClick = btn.onclick;
+                btn.onclick = async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const matchId = window.currentMatchId;
+                    if (!matchId) {
+                        console.error('❌ Nie je známe ID zápasu');
+                        window.showGlobalNotification('Nie je známe ID zápasu', 'error');
+                        return;
+                    }
+                    
+                    // Najprv zabezpečíme tímy
+                    window.ensureTeamsAreSet();
+                    
+                    // Potom spustíme časomieru
+                    await window.startMatchTimer(matchId);
+                };
+                console.log('✅ Opravené tlačidlo "Čas štart"');
+            }
+        }
+    }, 1000);
+};
+
+// Spustíme opravu po načítaní stránky
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixStartTimerButton);
+} else {
+    fixStartTimerButton();
+}
+
+// ============================================================
+// OPRAVA: Udalosti pre hráčov - musíme mať správny selectedMatch
+// ============================================================
+
+// Funkcia na kontrolu, či je zápas aktívny pre akcie
+window.isMatchActive = () => {
+    if (!window.selectedMatch && window.currentMatchId) {
+        // Skúsime nájsť zápas v matchTracker
+        if (window.matchTracker && window.matchTracker.getMatches) {
+            const matches = window.matchTracker.getMatches();
+            const match = matches[window.currentMatchId];
+            if (match) {
+                window.selectedMatch = match;
+                console.log('✅ Obnovený selectedMatch z matchTracker');
+            }
+        }
+    }
+    
+    const match = window.selectedMatch;
+    if (!match) return false;
+    
+    return match.status === 'in-progress' || match.status === 'paused';
+};
+
+// Pridáme funkciu na manuálne spustenie testovacej akcie
+window.testAddGoal = async (team) => {
+    if (!window.isMatchActive()) {
+        window.showGlobalNotification('Zápas nie je aktívny (nie je spustený alebo je pozastavený)', 'error');
+        return;
+    }
+    
+    console.log(`⚽ Testovací gól pre ${team === 'home' ? 'domácich' : 'hostí'}`);
+    window.showGlobalNotification(`Testovací gól pre ${team === 'home' ? 'domácich' : 'hostí'}`, 'info');
+};
+
+console.log('✅ Opravy boli aplikované!');
+console.log('📌 Ak časomiera nefunguje, skúste:');
+console.log('   1. window.startMatchTimer(window.currentMatchId) - manuálne spustenie');
+console.log('   2. window.ensureTeamsAreSet() - kontrola tímov');
+console.log('   3. window.testAddGoal("home") - testovací gól');
