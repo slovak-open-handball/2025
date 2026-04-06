@@ -2550,12 +2550,6 @@ if (Object.keys(window.__teamNameMapping).length > 0) {
 // PRIDAJTE TÚTO ČASŤ NA KONIEC SUBORU func-tables.js
 // ============================================================
 
-// Premenná pre sledovanie, či už boli nahradené nejaké tímy
-let hasReplacedAnyTeams = false;
-
-// Zoznam callback funkcií, ktoré sa majú zavolať po nahradení
-const replacementCallbacks = [];
-
 // ** NOVÉ: Sledovanie percentuálneho zastúpenia skupín **
 let groupCompletionSnapshot = new Map(); // Ukladá posledné známe percentá skupín
 
