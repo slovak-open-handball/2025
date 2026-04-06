@@ -2513,7 +2513,7 @@ function announceMappingReady() {
     if (Object.keys(window.__teamNameMapping).length > 0) {
         notifyMappingReady();
     } else {
-        console.log('⏳ Mapovanie ešte nie je pripravené, skúšam znova o 500ms...');
+//        console.log('⏳ Mapovanie ešte nie je pripravené, skúšam znova o 500ms...');
         setTimeout(announceMappingReady, 500);
     }
 }
