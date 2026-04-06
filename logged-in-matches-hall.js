@@ -6348,6 +6348,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     { 
                                         key: match.id, 
                                         className: 'px-6 py-4 hover:bg-blue-50 transition-colors cursor-pointer',
+                                        updateUrlParameters(match.homeTeamIdentifier, match.awayTeamIdentifier);
                                         onClick: () => selectMatch(match)
                                     },
                                     React.createElement(
