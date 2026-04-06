@@ -2865,7 +2865,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 );
                 
                 if (team) {
-                    console.log(`✅ Nájdený používateľský tím: ${team.teamName} (${user.email})`);
+//                    console.log(`✅ Nájdený používateľský tím: ${team.teamName} (${user.email})`);
                     return {
                         team,
                         userEmail: user.email,
