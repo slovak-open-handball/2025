@@ -10464,3 +10464,218 @@ console.log('📌 Ak časomiera nefunguje, skúste:');
 console.log('   1. window.startMatchTimer(window.currentMatchId) - manuálne spustenie');
 console.log('   2. window.ensureTeamsAreSet() - kontrola tímov');
 console.log('   3. window.testAddGoal("home") - testovací gól');
+
+// ============================================================
+// OPRAVA: ZABRÁNENIE NEUSTÁLEMU PRERENDERÚVANIU UI
+// ============================================================
+
+// Premenná na sledovanie, či už boli tímy inicializované
+let teamsInitialized = false;
+let lastRenderedMatchId = null;
+
+// Prepísaná funkcia renderFullTeamToUI - iba ak sa niečo ZMENILO
+const originalRenderFullTeamToUI = renderFullTeamToUI;
+window.renderFullTeamToUI = function(teamDetails, teamType) {
+    const currentMatchId = window.currentMatchId;
+    
+    // Ak už boli tímy inicializované pre tento zápas, nerenderujeme znova
+    if (teamsInitialized && lastRenderedMatchId === currentMatchId) {
+        console.log(`⏭️ Preskakujem renderovanie ${teamType === 'home' ? 'domáceho' : 'hosťovského'} tímu - už bolo vykreslené`);
+        return true;
+    }
+    
+    // Inak vykonáme pôvodné renderovanie
+    console.log(`🎨 Vykresľujem ${teamType === 'home' ? 'domáci' : 'hosťovský'} tím (prvýkrát pre zápas ${currentMatchId})`);
+    const result = originalRenderFullTeamToUI(teamDetails, teamType);
+    
+    // Ak máme oba tímy, nastavíme flag
+    if (window._homeTeamDetails && window._awayTeamDetails) {
+        teamsInitialized = true;
+        lastRenderedMatchId = currentMatchId;
+        console.log('✅ Oba tímy boli inicializované, ďalšie renderovanie bude preskočené');
+    }
+    
+    return result;
+};
+
+// Vypnutie MutationObservera po inicializácii
+const originalSetupMutationObserver = setupMutationObserverForTeams;
+window.setupMutationObserverForTeams = function() {
+    // Spustíme iba ak ešte nie sú inicializované tímy
+    if (!teamsInitialized) {
+        console.log('👀 Spúšťam MutationObserver (prvýkrát)');
+        originalSetupMutationObserver();
+    } else {
+        console.log('⏭️ Preskakujem MutationObserver - tímy už sú inicializované');
+    }
+};
+
+// Zastavenie neustáleho volania forceRenderTeamsToUI
+const originalForceRenderTeamsToUI = forceRenderTeamsToUI;
+window.forceRenderTeamsToUI = function() {
+    const currentMatchId = window.currentMatchId;
+    
+    // Ak už boli tímy inicializované, nerenderujeme
+    if (teamsInitialized && lastRenderedMatchId === currentMatchId) {
+        console.log('⏭️ Preskakujem forceRenderTeamsToUI - tímy už sú vykreslené');
+        return;
+    }
+    
+    console.log('🔄 FORCE RENDER: Spúšťam vynútené vykreslenie tímov...');
+    originalForceRenderTeamsToUI();
+};
+
+// ============================================================
+// OPRAVA: Zabránenie prerenderovania pri kliknutí na hráča
+// ============================================================
+
+// Uložíme pôvodnú funkciu addMatchEvent
+const originalAddMatchEvent = addMatchEvent;
+
+// Prepíšeme addMatchEvent, aby nevolala žiadne renderovanie
+window.addMatchEvent = async function(localEventType, localEventTeam, localEventSubType, localPlayer) {
+    console.log(`⚽ Pridávam udalosť: ${localEventType} pre ${localEventTeam === 'home' ? 'domácich' : 'hostí'}`);
+    
+    // Zavoláme pôvodnú funkciu, ktorá pridá udalosť do Firebase
+    if (originalAddMatchEvent) {
+        await originalAddMatchEvent(localEventType, localEventTeam, localEventSubType, localPlayer);
+    }
+    
+    // Nevoláme žiadne ďalšie renderovanie - Firebase onSnapshot sa postará o aktualizáciu
+    console.log('✅ Udalosť pridaná, UI sa aktualizuje automaticky cez Firebase');
+};
+
+// ============================================================
+// OPRAVA: Resetovanie stavu pri zmene zápasu
+// ============================================================
+
+// Funkcia na resetovanie stavu pri zmene zápasu
+window.resetTeamRenderState = () => {
+    console.log('🔄 Resetujem stav renderovania tímov');
+    teamsInitialized = false;
+    lastRenderedMatchId = null;
+};
+
+// Sledujeme zmenu zápasu cez URL
+const observeMatchChange = () => {
+    let lastHomeIdentifier = null;
+    let lastAwayIdentifier = null;
+    
+    setInterval(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const homeIdentifier = urlParams.get('domaci');
+        const awayIdentifier = urlParams.get('hostia');
+        
+        if (homeIdentifier !== lastHomeIdentifier || awayIdentifier !== lastAwayIdentifier) {
+            console.log('🔄 Zistil som zmenu zápasu, resetujem stav');
+            lastHomeIdentifier = homeIdentifier;
+            lastAwayIdentifier = awayIdentifier;
+            window.resetTeamRenderState();
+        }
+    }, 500);
+};
+
+// Spustíme sledovanie zmien zápasu
+observeMatchChange();
+
+// ============================================================
+// OPRAVA: Manuálne obnovenie bez prerenderovania
+// ============================================================
+
+// Funkcia na manuálne obnovenie UI (napr. po úprave hráča)
+window.refreshUIWithoutRerender = () => {
+    console.log('🔄 Obnovujem UI bez úplného prerenderovania...');
+    
+    // Iba aktualizujeme skóre a udalosti, nie celé tímy
+    const scoreElement = document.querySelector('.text-3xl.font-bold.text-gray-800.mb-1');
+    if (scoreElement && window.matchScore) {
+        scoreElement.textContent = `${window.matchScore.home} : ${window.matchScore.away}`;
+    }
+    
+    const timeElement = document.querySelector('.text-3xl.font-mono.font-bold');
+    if (timeElement && window.cleanPlayingTime !== undefined) {
+        const mins = Math.floor(window.cleanPlayingTime / 60);
+        const secs = window.cleanPlayingTime % 60;
+        timeElement.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    
+    console.log('✅ UI obnovené (len skóre a čas)');
+};
+
+// ============================================================
+// OPRAVA: Oprava tlačidla "Čas štart" - nech nerenderuje tímy
+// ============================================================
+
+// Prepíšeme onClick handler pre tlačidlo "Čas štart" znova
+const fixStartTimerButtonFinal = () => {
+    setTimeout(() => {
+        const buttons = document.querySelectorAll('button');
+        for (const btn of buttons) {
+            const text = btn.textContent || '';
+            if (text.includes('Čas štart') || text.includes('Štart')) {
+                // Odstránime všetky existujúce listenery
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
+                
+                newBtn.onclick = async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const matchId = window.currentMatchId;
+                    if (!matchId) {
+                        window.showGlobalNotification('Nie je známe ID zápasu', 'error');
+                        return;
+                    }
+                    
+                    console.log('⏰ Spúšťam časomieru pre zápas:', matchId);
+                    
+                    try {
+                        const matchRef = doc(window.db, 'matches', matchId);
+                        await updateDoc(matchRef, {
+                            status: 'in-progress',
+                            startedAt: Timestamp.now(),
+                            currentPeriod: 1
+                        });
+                        window.showGlobalNotification('Čas zápasu spustený', 'success');
+                        console.log('✅ Časomiera spustená');
+                    } catch (error) {
+                        console.error('❌ Chyba:', error);
+                        window.showGlobalNotification('Chyba pri spúšťaní', 'error');
+                    }
+                };
+                console.log('✅ Tlačidlo "Čas štart" bolo opravené (finálna verzia)');
+            }
+        }
+    }, 2000);
+};
+
+// Spustíme finálnu opravu
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixStartTimerButtonFinal);
+} else {
+    fixStartTimerButtonFinal();
+}
+
+// ============================================================
+// DIAGNOSTICKÁ FUNKCIA
+// ============================================================
+
+window.checkUIRenderStatus = () => {
+    console.log('📊 DIAGNOSTIKA UI RENDEROVANIA:');
+    console.log(`   • teamsInitialized: ${teamsInitialized}`);
+    console.log(`   • lastRenderedMatchId: ${lastRenderedMatchId}`);
+    console.log(`   • currentMatchId: ${window.currentMatchId}`);
+    console.log(`   • _homeTeamDetails: ${window._homeTeamDetails ? window._homeTeamDetails.team.teamName : 'null'}`);
+    console.log(`   • _awayTeamDetails: ${window._awayTeamDetails ? window._awayTeamDetails.team.teamName : 'null'}`);
+    
+    // Skontrolujeme, či sú tlačidlá na hráčoch funkčné
+    const playerElements = document.querySelectorAll('[class*="hover:bg-blue-50"]');
+    console.log(`   • Počet klikateľných elementov: ${playerElements.length}`);
+    
+    if (playerElements.length === 0) {
+        console.log('⚠️ VAROVANIE: Nenašli sa žiadne klikateľné elementy!');
+    }
+};
+
+console.log('✅ OPRAVY DOKONČENÉ!');
+console.log('📌 Pre kontrolu stavu spustite: checkUIRenderStatus()');
