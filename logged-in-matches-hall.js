@@ -7597,3 +7597,187 @@ console.log('✅ Pripravené nové funkcie na vkladanie tímov podľa skupiny:')
 console.log('   • window.forceTeamByGroup("U12 D", "skupina B", 2, "home") - vloženie tímu');
 console.log('   • window.getTeamsByGroup("U12 D", "skupina B") - zoznam tímov v skupine');
 console.log('   • window.registerUsersSetter(setUsers) - registrácia settera pre users');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ============================================================================
+// JEDNODUCHÝ PRÍKAZ NA NASTAVENIE IDENTIFIKÁTORA TÍMU V AKTUÁLNOM ZÁPASE
+// ============================================================================
+
+/**
+ * Priamo nastaví identifikátor tímu v aktuálne otvorenom zápase.
+ * @param {string} teamSide - 'home' alebo 'away'
+ * @param {string} identifier - Identifikátor tímu (napr. "U12 D 2B")
+ * @returns {Promise<boolean>} - true ak sa podarilo, false ak nie
+ * 
+ * Príklad použitia:
+ * window.setTeamIdentifier('home', 'U12 D 2B')
+ * window.setTeamIdentifier('away', 'U12 D 1A')
+ */
+window.setTeamIdentifier = async (teamSide, identifier) => {
+    if (!teamSide || !identifier) {
+        console.error('❌ Chyba: Je potrebné zadať stranu (home/away) a identifikátor.');
+        console.log('   Príklad: window.setTeamIdentifier("home", "U12 D 2B")');
+        return false;
+    }
+
+    if (!window.db) {
+        console.error('❌ Chyba: Firebase databáza nie je inicializovaná.');
+        return false;
+    }
+
+    // Získanie ID aktuálneho zápasu
+    let currentMatchId = window.currentMatchId;
+    
+    if (!currentMatchId) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const homeIdentifier = urlParams.get('domaci');
+        const awayIdentifier = urlParams.get('hostia');
+        
+        if (homeIdentifier && awayIdentifier) {
+            try {
+                const matchesRef = collection(window.db, 'matches');
+                const q = query(
+                    matchesRef, 
+                    where("homeTeamIdentifier", "==", homeIdentifier),
+                    where("awayTeamIdentifier", "==", awayIdentifier)
+                );
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                    querySnapshot.forEach((doc) => {
+                        currentMatchId = doc.id;
+                        window.currentMatchId = currentMatchId;
+                    });
+                }
+            } catch (error) {
+                console.error('Chyba pri vyhľadávaní zápasu:', error);
+            }
+        }
+    }
+    
+    if (!currentMatchId) {
+        console.error('❌ Chyba: Nie je vybraný žiadny zápas. Otvorte detail zápasu a skúste znova.');
+        return false;
+    }
+
+    try {
+        const matchRef = doc(window.db, 'matches', currentMatchId);
+        const updateData = {};
+        
+        if (teamSide === 'home') {
+            updateData.homeTeamIdentifier = identifier;
+        } else if (teamSide === 'away') {
+            updateData.awayTeamIdentifier = identifier;
+        } else {
+            console.error('❌ Chyba: teamSide musí byť "home" alebo "away"');
+            return false;
+        }
+        
+        await updateDoc(matchRef, updateData);
+        console.log(`✅ Úspešne nastavený ${teamSide} tím na "${identifier}" v zápase ${currentMatchId}`);
+        
+        // Aktualizujeme aj lokálny selectedMatch ak je dostupný setter
+        if (window.__reactSelectedMatchSetter && typeof window.__reactSelectedMatchSetter === 'function') {
+            const matchSnap = await getDoc(matchRef);
+            if (matchSnap.exists()) {
+                window.__reactSelectedMatchSetter({ id: currentMatchId, ...matchSnap.data() });
+                console.log('🔄 UI bolo aktualizované.');
+            }
+        }
+        
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Chyba pri nastavovaní identifikátora:', error);
+        return false;
+    }
+};
+
+// ============================================================================
+// SKRÁTENÉ VERSIE PRE RÝCHLEJŠIE POUŽITIE
+// ============================================================================
+
+window.setHomeTeam = (identifier) => window.setTeamIdentifier('home', identifier);
+window.setAwayTeam = (identifier) => window.setTeamIdentifier('away', identifier);
+
+// ============================================================================
+// PRÍKLADY POUŽITIA:
+// ============================================================================
+// 
+// 1. Nastavenie domáceho tímu:
+//    window.setHomeTeam("U12 D 2B")
+//    alebo
+//    window.setTeamIdentifier("home", "U12 D 2B")
+//
+// 2. Nastavenie hosťovského tímu:
+//    window.setAwayTeam("U12 D 1A")
+//    alebo
+//    window.setTeamIdentifier("away", "U12 D 1A")
+//
+// ============================================================================
+
+console.log('✅ Pripravené funkcie na priame nastavenie identifikátora tímu:');
+console.log('   • window.setHomeTeam("U12 D 2B") - nastaví domáceho');
+console.log('   • window.setAwayTeam("U12 D 1A") - nastaví hosťa');
+console.log('   • window.setTeamIdentifier("home", "U12 D 2B") - univerzálna verzia');
