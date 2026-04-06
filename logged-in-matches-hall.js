@@ -3074,34 +3074,53 @@ const matchesHallApp = ({ userProfileData }) => {
         return null;
     };
 
-    const getTeamDetailsFromIdentifier = (identifier, teamDisplayName) => {
+    const getTeamDetailsFromIdentifier = (identifier) => {
         if (!identifier) return null;
         
-        console.log(`🔍 getTeamDetailsFromIdentifier() volaná s identifikátorom: "${teamDisplayName}"`);
+        console.log(`🔍 getTeamDetailsFromIdentifier() volaná s identifikátorom: "${identifier}"`);
         
-        // Získame kategóriu z identifikátora
+        // 1. NAJPRV ZÍSKAME SPRÁVNY NÁZOV TÍMU CEZ window.matchTracker.getTeamNameByDisplayId()
+        //    DÔLEŽITÉ: Musíme poslať NÁZOV tímu, nie identifikátor
+        //    Ale ako získať názov? Potrebujeme najprv previesť identifikátor na zobrazovací názov
+        
+        // Získame kategóriu a skupinu z identifikátora
         const parts = identifier.split(' ');
         if (parts.length < 2) {
-            console.log(`❌ Neplatný formát identifikátora: ${teamDisplayName}`);
+            console.log(`❌ Neplatný formát identifikátora: ${identifier}`);
             return null;
         }
         
-        const groupAndOrder = parts.pop();
-        const categoryName = parts.join(' ');
+        const groupAndOrder = parts.pop();  // napr. "F4"
+        const categoryName = parts.join(' ');  // napr. "U12 D"
         
-        if (!categoryName) {
-            console.log(`❌ Nepodarilo sa určiť kategóriu z identifikátora: ${teamDisplayName}`);
+        // Potrebujeme previesť "F4" na správny formát "2B"
+        // Toto mapovanie by malo byť definované niekde v superstructureTeams
+        // Pre jednoduchosť použijeme existujúcu funkciu getTeamNameByIdentifier
+        const teamDisplayName = getTeamNameByIdentifier(identifier);
+        
+        if (!teamDisplayName || teamDisplayName === identifier) {
+            console.log(`❌ Nepodarilo sa získať zobrazovací názov pre identifikátor: ${identifier}`);
             return null;
         }
         
-        // DÔLEŽITÉ: Použijeme odovzdaný teamDisplayName (názov z logu)
-        // Alebo ak nie je odovzdaný, použijeme pôvodný identifikátor
-//        const teamNameToSearch = teamDisplayName || identifier;
-        const teamNameToSearch = teamDisplayName;
+        console.log(`   Získaný zobrazovací názov: "${teamDisplayName}"`);
         
-        console.log(`   Hľadám tím: "${teamNameToSearch}" v kategórii: "${categoryName}"`);
+        // 2. TERAZ ZAVOLÁME window.matchTracker.getTeamNameByDisplayId() SO SPRÁVNYM NÁZVOM
+        let actualTeamName = null;
         
-        // Vyhľadáme tím podľa názvu a kategórie
+        if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+            // DÔLEŽITÉ: Posielame teamDisplayName (napr. "U12 D 2B"), NIE identifikátor!
+            actualTeamName = window.matchTracker.getTeamNameByDisplayId(teamDisplayName);
+            console.log(`   window.matchTracker.getTeamNameByDisplayId("${teamDisplayName}") vrátil: "${actualTeamName}"`);
+        }
+        
+        // Ak sa nepodarilo získať názov cez matchTracker, použijeme zobrazovací názov
+        if (!actualTeamName) {
+            actualTeamName = teamDisplayName;
+            console.log(`   ⚠️ Používam zobrazovací názov ako fallback: "${actualTeamName}"`);
+        }
+        
+        // 3. VYHĽADÁME TÍM PODĽA SKUTOČNÉHO NÁZVU V POUŽÍVATEĽSKÝCH DÁTACH
         if (users && users.length > 0) {
             for (const user of users) {
                 if (!user.teams) continue;
@@ -3109,13 +3128,22 @@ const matchesHallApp = ({ userProfileData }) => {
                 const userTeams = user.teams[categoryName];
                 if (!userTeams || !Array.isArray(userTeams)) continue;
                 
-                const team = userTeams.find(t => t.teamName === teamNameToSearch);
+                // Hľadáme podľa skutočného názvu tímu
+                const team = userTeams.find(t => t.teamName === actualTeamName);
                 
                 if (team) {
                     console.log(`   ✅ Nájdený tím: "${team.teamName}" (${user.email})`);
                     console.log(`   📊 Počet hráčov: ${team.playerDetails?.length || 0}`);
                     console.log(`   👨‍🏫 RT muži: ${team.menTeamMemberDetails?.length || 0}`);
                     console.log(`   👩‍🏫 RT ženy: ${team.womenTeamMemberDetails?.length || 0}`);
+                    
+                    // Výpis prvých 5 hráčov pre kontrolu
+                    if (team.playerDetails && team.playerDetails.length > 0) {
+                        console.log(`   🎽 Hráči (prvých 5):`);
+                        team.playerDetails.slice(0, 5).forEach(p => {
+                            console.log(`      - ${p.lastName} ${p.firstName} (#${p.jerseyNumber || '?'})`);
+                        });
+                    }
                     
                     return {
                         team,
@@ -3127,7 +3155,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        console.log(`   ❌ Tím "${teamNameToSearch}" v kategórii "${categoryName}" nebol nájdený`);
+        console.log(`   ❌ Tím "${actualTeamName}" v kategórii "${categoryName}" nebol nájdený`);
         return null;
     };
     
