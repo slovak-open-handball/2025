@@ -6754,55 +6754,14 @@ console.log('   • window.matchTracker.getTeamInfoByDisplayId("U12 D 2B") - vr�
 
 
 
-const getCurrentMatchIdFromURL = async () => {
-    // 1. Skúsime získať z URL parametrov
+const getCurrentMatchIdFromURLSync = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const homeIdentifier = urlParams.get('domaci');
     const awayIdentifier = urlParams.get('hostia');
     
     if (homeIdentifier && awayIdentifier) {
-        // Skúsime nájsť zápas v databáze podľa identifikátorov
-        if (window.db) {
-            try {
-                const matchesRef = collection(window.db, 'matches');
-                const q = query(
-                    matchesRef, 
-                    where("homeTeamIdentifier", "==", homeIdentifier),
-                    where("awayTeamIdentifier", "==", awayIdentifier)
-                );
-                const querySnapshot = await getDocs(q);
-                
-                if (!querySnapshot.empty) {
-                    let matchId = null;
-                    querySnapshot.forEach((doc) => {
-                        matchId = doc.id;
-                    });
-                    if (matchId) {
-                        console.log(`✅ Nájdené ID zápasu z URL: ${matchId}`);
-                        return matchId;
-                    }
-                }
-            } catch (error) {
-                console.warn('Chyba pri hľadaní zápasu v DB:', error);
-            }
-        }
-        
-        // Ak nemôžeme nájsť v DB, vrátime identifikátory ako string (pre neskoršie použitie)
-        console.log(`ℹ️ Zápas podľa URL: domáci=${homeIdentifier}, hostia=${awayIdentifier}`);
-        return `temp_${homeIdentifier}_${awayIdentifier}`;
+        return `${homeIdentifier}_${awayIdentifier}`;
     }
-    
-    // 2. Skúsime získať z DOM elementov
-    const matchElement = document.querySelector('[data-match-id]');
-    if (matchElement) {
-        const matchId = matchElement.getAttribute('data-match-id');
-        if (matchId) {
-            console.log(`✅ Nájdené ID zápasu z DOM: ${matchId}`);
-            return matchId;
-        }
-    }
-    
-    console.log('❌ Nepodarilo sa získať ID zápasu');
     return null;
 };
 
@@ -7431,6 +7390,149 @@ function findCurrentMatchTeamsFromDOM(renderToDOM = true) {
     
     return results;
 }
+
+const setupPermanentTeamListeners = () => {
+    // Poslúchač pre domáci tím
+    const handleSetHomeTeamPermanent = (event) => {
+        const teamDetails = event.detail.teamDetails;
+        const matchId = event.detail.matchId;
+        
+        console.log(`🏠 PERMANENTNÝ POSLÚCHAČ: Domáci tím nastavený: ${teamDetails.team.teamName}`);
+        console.log(`   📧 Používateľ: ${teamDetails.user.email}`);
+        console.log(`   👥 Počet hráčov: ${teamDetails.team.playerDetails?.length || 0}`);
+        
+        // Manuálne aktualizujeme DOM - vykreslíme hráčov a RT
+        renderTeamToDOM(teamDetails, 'home');
+        
+        // Uložíme do globálnej premennej
+        window._homeTeamDetails = teamDetails;
+    };
+    
+    // Poslúchač pre hosťovský tím
+    const handleSetAwayTeamPermanent = (event) => {
+        const teamDetails = event.detail.teamDetails;
+        const matchId = event.detail.matchId;
+        
+        console.log(`✈️ PERMANENTNÝ POSLÚCHAČ: Hosťovský tím nastavený: ${teamDetails.team.teamName}`);
+        console.log(`   📧 Používateľ: ${teamDetails.user.email}`);
+        console.log(`   👥 Počet hráčov: ${teamDetails.team.playerDetails?.length || 0}`);
+        
+        // Manuálne aktualizujeme DOM - vykreslíme hráčov a RT
+        renderTeamToDOM(teamDetails, 'away');
+        
+        // Uložíme do globálnej premennej
+        window._awayTeamDetails = teamDetails;
+    };
+    
+    window.addEventListener('setHomeTeamDetails', handleSetHomeTeamPermanent);
+    window.addEventListener('setAwayTeamDetails', handleSetAwayTeamPermanent);
+    
+    console.log('✅ Permanentné poslúchače boli nastavené');
+};
+
+// Funkcia na manuálne vykreslenie tímu do DOM
+const renderTeamToDOM = (teamDetails, teamType) => {
+    // Nájdeme kontajnery pre tím
+    const teamContainer = document.querySelector(`.${teamType === 'home' ? 'bg-gray-50 rounded-lg p-4 border border-gray-200' : 'bg-gray-50 rounded-lg p-4 border border-gray-200'}`);
+    
+    // Nájdeme všetky kontajnery (prvý je domáci, tretí je hosťovský v 4-stĺpcovom gride)
+    const containers = document.querySelectorAll('.grid-cols-4 > div');
+    
+    if (containers.length >= 3) {
+        const homeContainer = containers[0];  // Domáci tím
+        const awayContainer = containers[2];  // Hosťovský tím
+        
+        const targetContainer = teamType === 'home' ? homeContainer : awayContainer;
+        
+        if (targetContainer) {
+            // Nájdeme sekciu Hráči v tomto kontajneri
+            const playersSection = targetContainer.querySelector('.mb-4:last-child, .mb-4:nth-child(2)');
+            if (playersSection) {
+                // Vymažeme existujúci zoznam hráčov (okrem nadpisu)
+                const existingPlayers = playersSection.querySelectorAll('.space-y-1 > div, .flex.items-center');
+                existingPlayers.forEach(el => {
+                    if (!el.closest('h4')) {
+                        el.remove();
+                    }
+                });
+                
+                // Vykreslíme hráčov
+                const activePlayers = teamDetails.team.playerDetails?.filter(p => p && !p.removedForMatch) || [];
+                
+                activePlayers.sort((a, b) => {
+                    const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
+                    const numB = b.jerseyNumber ? parseInt(b.jerseyNumber) || 999 : 999;
+                    return numA - numB;
+                });
+                
+                const playersListDiv = playersSection.querySelector('.space-y-1') || playersSection;
+                
+                activePlayers.forEach(player => {
+                    const playerDiv = document.createElement('div');
+                    playerDiv.className = 'flex items-center justify-between gap-2 p-2 rounded border border-gray-200 text-sm group relative transition-colors';
+                    playerDiv.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-shirt text-gray-600 text-xs flex-shrink-0"></i>
+                            ${player.jerseyNumber ? `<span class="font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0">${player.jerseyNumber}</span>` : ''}
+                            <span class="font-medium truncate">${player.lastName} ${player.firstName}</span>
+                        </div>
+                    `;
+                    playersListDiv.appendChild(playerDiv);
+                });
+                
+                console.log(`✅ Vykreslených ${activePlayers.length} hráčov pre ${teamType === 'home' ? 'domáci' : 'hosťovský'} tím`);
+            }
+            
+            // Vykreslíme realizačný tím
+            const staffSection = targetContainer.querySelector('.mb-4:first-child');
+            if (staffSection) {
+                const existingStaff = staffSection.querySelectorAll('.space-y-2 > div, .flex.items-center');
+                existingStaff.forEach(el => {
+                    if (!el.closest('h4')) {
+                        el.remove();
+                    }
+                });
+                
+                const activeMenStaff = teamDetails.team.menTeamMemberDetails?.filter(m => !m.removedForMatch) || [];
+                const activeWomenStaff = teamDetails.team.womenTeamMemberDetails?.filter(m => !m.removedForMatch) || [];
+                
+                const staffListDiv = staffSection.querySelector('.space-y-2') || staffSection;
+                
+                [...activeMenStaff, ...activeWomenStaff].forEach(member => {
+                    const staffDiv = document.createElement('div');
+                    staffDiv.className = 'flex items-center justify-between gap-2 p-2 rounded border border-gray-200 text-sm group relative transition-colors';
+                    staffDiv.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-user text-gray-600 text-xs flex-shrink-0"></i>
+                            <span class="font-medium truncate">${member.lastName} ${member.firstName}</span>
+                        </div>
+                    `;
+                    staffListDiv.appendChild(staffDiv);
+                });
+                
+                console.log(`✅ Vykreslených ${activeMenStaff.length + activeWomenStaff.length} členov RT pre ${teamType === 'home' ? 'domáci' : 'hosťovský'} tím`);
+            }
+        }
+    }
+};
+
+window.removeAllListeners = () => {
+    const oldHandlers = {
+        setHomeTeamDetails: null,
+        setAwayTeamDetails: null
+    };
+    
+    // Získame staré event listenery (toto je tricky, ale funguje to)
+    const events = ['setHomeTeamDetails', 'setAwayTeamDetails'];
+    events.forEach(eventName => {
+        const listeners = window._getEventListeners?.(window, eventName);
+        if (listeners) {
+            listeners.forEach(listener => {
+                window.removeEventListener(eventName, listener.listener);
+            });
+        }
+    });
+};
 
 // Aktualizujeme existujúce funkcie
 window.findTeam = findTeamByNameAndCategory;
