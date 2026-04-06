@@ -3861,15 +3861,20 @@ const matchesHallApp = ({ userProfileData }) => {
                                 ),
                                 
                                 // PRIEBEH ČASU (nový prvok)
-                                (selectedMatch.status === 'in-progress' || selectedMatch.status === 'paused' || selectedMatch.status === 'completed') && category && React.createElement(
+                                (selectedMatch.status === 'in-progress' || selectedMatch.status === 'paused' || selectedMatch.status === 'completed') && React.createElement(
                                     'div',
                                     { className: 'text-center mb-4 p-3 bg-white rounded-lg border border-gray-200' },
                                     React.createElement('div', { className: 'text-xs text-gray-500 mb-1' }, 'Priebeh času'),
                                     React.createElement(
                                         'div',
                                         { className: 'text-3xl font-mono font-bold' },
-                                        selectedMatch.status === 'completed' 
-                                            ? formatMatchTime(category.periods * category.periodDuration * 60)
+                                        selectedMatch.status === 'completed'
+                                            ? (() => {
+                                                const periods = category?.periods ?? 2;
+                                                const periodDuration = category?.periodDuration ?? 20;
+                                                const maxSeconds = periods * periodDuration * 60;
+                                                return formatMatchTime(maxSeconds);
+                                              })()
                                             : formatMatchTime(cleanPlayingTime || 0)
                                     )
                                 ),
