@@ -1800,6 +1800,9 @@ const matchesHallApp = ({ userProfileData }) => {
         return selectedMatch.status === 'scheduled';
     };
 
+    // ============================================================
+    // ČAKANIE NA MAPOVANIE TÍMOV Z DRUHÉHO KÓDU
+    // ============================================================
     useEffect(() => {
         // Kontrola, či už náhodou nie je mapovanie pripravené
         if (window.teamNameReplacer?.isMappingReady?.()) {
@@ -1823,11 +1826,18 @@ const matchesHallApp = ({ userProfileData }) => {
             console.log(`   Počet mapovaní: ${event.detail.mappingsCount}`);
             setIsMappingReady(true);
             setTeamMappings(event.detail.mappings);
+            
+            // 🔴 DÔLEŽITÉ: Po prijatí udalosti spustíme nastavenie tímov, ak už je vybraný zápas
+            if (selectedMatch && users.length > 0 && categories.length > 0) {
+                console.log('🔄 Mapovanie je pripravené, spúšťam nastavenie tímov...');
+                // Tu by sa mal spustiť useEffect pre nastavenie tímov
+                // (automaticky sa spustí, keďže isMappingReady sa zmení)
+            }
         };
         
         window.addEventListener('teamNameMappingReady', handleMappingReady);
         
-        // Tiež môžeme požiadať o ohlásenie pripravenosti
+        // Požiadame o ohlásenie pripravenosti
         if (window.teamNameReplacer?.announceReady) {
             window.teamNameReplacer.announceReady();
         }
@@ -1844,61 +1854,57 @@ const matchesHallApp = ({ userProfileData }) => {
             window.removeEventListener('teamNameMappingReady', handleMappingReady);
             clearTimeout(timeout);
         };
-    }, []);
+    }, [selectedMatch]); // 🔴 PRIDANÉ selectedMatch – ak sa zmení zápas, znova skontrolujeme mapovanie
 
     // ============================================================
     // AUTOMATICKÉ NASTAVENIE TÍMOV PRI VÝBERE ZÁPASU Z URL
     // ============================================================
     useEffect(() => {
-        // Tento useEffect sa spustí vždy, keď sa zmení selectedMatch
-        // a keď je selectedMatch nastavený (napr. z URL parametrov)
+        // 1. Musí byť vybraný zápas
         if (!selectedMatch) return;
-    
-        // ✅ PRI KAŽDEJ ZMENE ZÁPASU NAJPRV VYMAŽEME SÚPISKY TÍMOV
-        console.log('🗑️ Vymazávam staré súpisky tímov...');
         
-        // Vymažeme globálne uložené tímy
-        window._homeTeamDetails = null;
-        window._awayTeamDetails = null;
-        window._teamsSetForMatch = null;
-        
-        // Vymažeme React stavy
-        setHomeTeamDetailsState(null);
-        setAwayTeamDetailsState(null);
-        
-        // Vykreslíme "Nedostupné" do UI
-        renderFullTeamToUI(null, 'home');
-        renderFullTeamToUI(null, 'away');
-        
-        // ✅ Počkáme na React stav users (najspoľahlivejšie)
+        // 2. Musia byť načítaní používatelia
         if (users.length === 0) {
             console.log("⏳ Čakám na načítanie používateľov do React stavu...");
             return;
         }
-    
-        // ✅ Počkáme na kategórie
+        
+        // 3. Musia byť načítané kategórie
         if (categories.length === 0) {
             console.log("⏳ Čakám na načítanie kategórií...");
             return;
         }
-
+        
+        // 4. 🔴 MUSÍ BYŤ PRIPRAVENÉ MAPOVANIE
         if (!isMappingReady) {
             console.log("⏳ Čakám na dokončenie mapovania tímov (teamNameReplacer)...");
             return;
         }
         
-        // ✅ Synchronizujeme window.users s React stavom (pre findTeamByNameAndCategory)
+        // ✅ VŠETKY PODMIENKY SPLNENÉ – môžeme nastaviť tímy
+        
+        // Vymažeme staré súpisky
+        console.log('🗑️ Vymazávam staré súpisky tímov...');
+        window._homeTeamDetails = null;
+        window._awayTeamDetails = null;
+        window._teamsSetForMatch = null;
+        setHomeTeamDetailsState(null);
+        setAwayTeamDetailsState(null);
+        renderFullTeamToUI(null, 'home');
+        renderFullTeamToUI(null, 'away');
+        
+        // Synchronizujeme window.users
         if (!window.users || window.users.length === 0) {
             window.users = users;
             console.log(`✅ Synchronizovaných ${users.length} používateľov do window.users`);
         }
         
-        console.log('🔄 Automatické nastavenie tímov pre zápas z URL/React stavu...');
+        console.log('🔄 Automatické nastavenie tímov pre zápas...');
         console.log(`🏠 Domáci identifikátor: ${selectedMatch.homeTeamIdentifier}`);
         console.log(`✈️ Hosťovský identifikátor: ${selectedMatch.awayTeamIdentifier}`);
         console.log(`📂 Kategória: ${selectedMatch.categoryName}`);
         
-        // Získame názvy tímov z identifikátorov
+        // Získame názvy tímov (už z mapovania!)
         let homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
         let awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
         const categoryName = selectedMatch.categoryName;
