@@ -3038,8 +3038,8 @@ const matchesHallApp = ({ userProfileData }) => {
         return identifier;
     };
 
-    // OPRAVENÁ FUNKCIA: getTeamNameByIdentifier - rekurzívne mapovanie až kým nezíska skutočný názov
-    const getTeamNameByIdentifier = (identifier, visited = new Set()) => {
+    // OPRAVENÁ FUNKCIA: getTeamNameByIdentifier - rekurzívne mapovanie, zachováva pôvodnú kategóriu
+    const getTeamNameByIdentifier = (identifier, originalCategory = null, visited = new Set()) => {
         if (!identifier) return 'Neznámy tím';
         
         // Ochrana proti nekonečnej rekurzii
@@ -3051,49 +3051,53 @@ const matchesHallApp = ({ userProfileData }) => {
         
         console.log(`🔍 getTeamNameByIdentifier: Hľadám názov pre identifikátor: "${identifier}"`);
         
+        // Ak sme dostali aj pôvodnú kategóriu, uložíme si ju
+        const originalCategoryName = originalCategory;
+        
         // 🔴 1. NAJPRV SKÚSIME ZÍSKAŤ NÁZOV Z MAPOVANIA (z druhého kódu)
         let mappedTeamName = null;
+        let mappingSource = null;
         
         if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
             mappedTeamName = window.teamNameReplacer.getTeamNameFromMapping(identifier);
             if (mappedTeamName !== undefined && mappedTeamName !== null) {
-                if (mappedTeamName === identifier) {
-                    // Mapovanie vrátilo rovnaký identifikátor - toto je konečný názov
-                    console.log(`   ✅ Mapovanie z teamNameReplacer (rovnaké): "${identifier}" → "${mappedTeamName}"`);
-                    return mappedTeamName;
-                }
-                
-                // Skontrolujeme, či výsledok mapovania nie je ďalší identifikátor
-                const identifierPattern = /\s+\d+[A-Za-z]/;
-                if (identifierPattern.test(mappedTeamName) && mappedTeamName !== identifier) {
-                    // Výsledok je ďalší identifikátor - rekurzívne ho zmapujeme
-                    console.log(`   🔄 Mapovanie z teamNameReplacer vrátilo identifikátor: "${identifier}" → "${mappedTeamName}"`);
-                    return getTeamNameByIdentifier(mappedTeamName, visited);
-                } else if (mappedTeamName && mappedTeamName !== identifier) {
-                    // Výsledok je skutočný názov tímu
-                    console.log(`   ✅ Mapovanie z teamNameReplacer: "${identifier}" → "${mappedTeamName}"`);
-                    return mappedTeamName;
-                }
+                mappingSource = 'teamNameReplacer';
             }
         }
         
-        // 🔴 2. SKÚSIME PRIAMO Z GLOBÁLNEHO OBJEKTU __teamNameMapping
-        if (window.__teamNameMapping && window.__teamNameMapping[identifier]) {
+        // 2. Ak nie je v teamNameReplacer, skúsime z __teamNameMapping
+        if (!mappedTeamName && window.__teamNameMapping && window.__teamNameMapping[identifier]) {
             mappedTeamName = window.__teamNameMapping[identifier].teamName;
             if (mappedTeamName) {
-                // Skontrolujeme, či výsledok mapovania nie je ďalší identifikátor
-                const identifierPattern = /\s+\d+[A-Za-z]/;
-                if (identifierPattern.test(mappedTeamName) && mappedTeamName !== identifier) {
-                    console.log(`   🔄 Mapovanie z __teamNameMapping vrátilo identifikátor: "${identifier}" → "${mappedTeamName}"`);
-                    return getTeamNameByIdentifier(mappedTeamName, visited);
-                } else if (mappedTeamName !== identifier) {
-                    console.log(`   ✅ Mapovanie z __teamNameMapping: "${identifier}" → "${mappedTeamName}"`);
-                    return mappedTeamName;
-                }
+                mappingSource = '__teamNameMapping';
             }
         }
         
-        // 3. Pôvodné vyhľadávanie v superstructureTeams
+        // 3. Ak sme našli mapovanie
+        if (mappedTeamName) {
+            // Skontrolujeme, či výsledok mapovania vyzerá ako identifikátor (obsahuje medzeru a číslo+písmeno)
+            const identifierPattern = /\s+\d+[A-Za-z]/;
+            
+            if (identifierPattern.test(mappedTeamName) && mappedTeamName !== identifier) {
+                // Výsledok je ďalší identifikátor - rekurzívne ho zmapujeme
+                console.log(`   🔄 Mapovanie z ${mappingSource} vrátilo identifikátor: "${identifier}" → "${mappedTeamName}"`);
+                // Pri rekurzívnom volaní odovzdáme pôvodnú kategóriu (ak existuje)
+                return getTeamNameByIdentifier(mappedTeamName, originalCategoryName, visited);
+            } else if (mappedTeamName !== identifier) {
+                // Výsledok je skutočný názov tímu
+                console.log(`   ✅ Mapovanie z ${mappingSource}: "${identifier}" → "${mappedTeamName}"`);
+                // Ak máme pôvodnú kategóriu, vrátime názov tímu a kategóriu ako objekt
+                if (originalCategoryName) {
+                    return {
+                        teamName: mappedTeamName,
+                        category: originalCategoryName
+                    };
+                }
+                return mappedTeamName;
+            }
+        }
+        
+        // 4. Pôvodné vyhľadávanie v superstructureTeams (len ak nemáme mapovanie)
         let foundName = null;
         
         if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
@@ -3132,7 +3136,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        // 4. Vyhľadávanie v používateľoch (user teams)
+        // 5. Vyhľadávanie v používateľoch (user teams) - len ak nemáme mapovanie
         if (!foundName && users && users.length > 0) {
             const parts = identifier.split(' ');
             if (parts.length >= 2) {
@@ -3174,18 +3178,26 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        // 5. Ak sme našli názov, skontrolujeme, či nie je ďalší identifikátor
+        // 6. Ak sme našli názov
         if (foundName) {
             const identifierPattern = /\s+\d+[A-Za-z]/;
             if (identifierPattern.test(foundName) && foundName !== identifier) {
                 // Nájdený názov je v skutočnosti identifikátor - rekurzívne ho zmapujeme
                 console.log(`   🔄 Nájdený názov je identifikátor: "${foundName}", pokračujem v mapovaní...`);
-                return getTeamNameByIdentifier(foundName, visited);
+                return getTeamNameByIdentifier(foundName, originalCategoryName, visited);
+            }
+            
+            // Ak máme pôvodnú kategóriu, vrátime názov tímu a kategóriu ako objekt
+            if (originalCategoryName) {
+                return {
+                    teamName: foundName,
+                    category: originalCategoryName
+                };
             }
             return foundName;
         }
         
-        // 6. Ak nič nenašlo, vrátime pôvodný identifikátor
+        // 7. Ak nič nenašlo, vrátime pôvodný identifikátor
         const result = identifier;
         console.log(`   🏁 Výsledok getTeamNameByIdentifier: "${identifier}" → "${result}" (žiadne mapovanie)`);
         return result;
@@ -7894,7 +7906,7 @@ async function findTeamByNameAndCategory(teamNameOrIdentifier, categoryName, ren
 window.findTeamByNameAndCategory = findTeamByNameAndCategory;
 
 
-// OPRAVENÁ FUNKCIA: findTeamByNameAndCategoryDirect - používa rekurzívne mapovanie
+// OPRAVENÁ FUNKCIA: findTeamByNameAndCategoryDirect - používa rekurzívne mapovanie a zachováva kategóriu
 async function findTeamByNameAndCategoryDirect(teamNameOrIdentifier, categoryName, renderToDOM = false) {
     if (!teamNameOrIdentifier || !categoryName) {
         console.log('❌ DIRECT: Je potrebné zadať názov/identifikátor tímu a kategóriu');
@@ -7905,45 +7917,54 @@ async function findTeamByNameAndCategoryDirect(teamNameOrIdentifier, categoryNam
     
     // 🔄 1. NAJPRV REKURZÍVNE ZMAPUJEME IDENTIFIKÁTOR NA SKUTOČNÝ NÁZOV TÍMU
     let actualTeamName = teamNameOrIdentifier;
-    const identifierPattern = /\s+\d+[A-Za-z]/;
+    let actualCategoryName = categoryName;
     
-    // Ak to vyzerá ako identifikátor (napr. "U12 D 2B") alebo môže byť identifikátor
-    if (identifierPattern.test(teamNameOrIdentifier) || true) { // Skúsime mapovať vždy
-        console.log(`   🔄 DIRECT: Pokúšam sa zmapovať identifikátor/názov: "${teamNameOrIdentifier}"`);
+    console.log(`   🔄 DIRECT: Pokúšam sa zmapovať identifikátor/názov: "${teamNameOrIdentifier}"`);
+    
+    // Použijeme rekurzívnu funkciu getTeamNameByIdentifier
+    if (typeof getTeamNameByIdentifier === 'function') {
+        const mappedResult = getTeamNameByIdentifier(teamNameOrIdentifier, categoryName);
         
-        // Použijeme rekurzívnu funkciu getTeamNameByIdentifier
-        if (typeof getTeamNameByIdentifier === 'function') {
-            const mappedName = getTeamNameByIdentifier(teamNameOrIdentifier);
-            
-            // Ak mapovanie vrátilo null alebo undefined, alebo rovnakú hodnotu, skončíme
-            if (mappedName === null || mappedName === undefined) {
-                console.log(`   ❌ DIRECT: Mapovanie vrátilo null pre "${teamNameOrIdentifier}" - tím neexistuje, končím.`);
-                return null;
+        // Ak mapovanie vrátilo null alebo undefined, skončíme
+        if (mappedResult === null || mappedResult === undefined) {
+            console.log(`   ❌ DIRECT: Mapovanie vrátilo null pre "${teamNameOrIdentifier}" - tím neexistuje, končím.`);
+            return null;
+        }
+        
+        // Spracujeme výsledok mapovania (môže byť string alebo objekt s teamName a category)
+        if (typeof mappedResult === 'object' && mappedResult.teamName) {
+            actualTeamName = mappedResult.teamName;
+            if (mappedResult.category) {
+                actualCategoryName = mappedResult.category;
+                console.log(`   ✅ DIRECT: Zmapovaný názov: "${teamNameOrIdentifier}" → "${actualTeamName}" (kategória: ${actualCategoryName})`);
+            } else {
+                console.log(`   ✅ DIRECT: Zmapovaný názov: "${teamNameOrIdentifier}" → "${actualTeamName}"`);
             }
-            
-            if (mappedName !== teamNameOrIdentifier) {
-                console.log(`   ✅ DIRECT: Zmapovaný názov: "${teamNameOrIdentifier}" → "${mappedName}"`);
-                actualTeamName = mappedName;
+        } else if (typeof mappedResult === 'string') {
+            if (mappedResult !== teamNameOrIdentifier) {
+                console.log(`   ✅ DIRECT: Zmapovaný názov: "${teamNameOrIdentifier}" → "${mappedResult}"`);
+                actualTeamName = mappedResult;
             } else {
                 console.log(`   ℹ️ DIRECT: Žiadne mapovanie pre "${teamNameOrIdentifier}", používam pôvodný názov`);
             }
-        } else if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
-            // Fallback na pôvodné mapovanie
-            const mappedName = window.teamNameReplacer.getTeamNameFromMapping(teamNameOrIdentifier);
-            
-            if (mappedName === null) {
-                console.log(`   ❌ DIRECT: Mapovanie vrátilo null pre identifikátor "${teamNameOrIdentifier}" - tím neexistuje, končím.`);
-                return null;
-            }
-            
-            if (mappedName && mappedName !== teamNameOrIdentifier) {
-                console.log(`   ✅ DIRECT: Identifikátor bol zmapovaný: "${teamNameOrIdentifier}" → "${mappedName}"`);
-                actualTeamName = mappedName;
-            }
+        }
+    } else if (window.teamNameReplacer && typeof window.teamNameReplacer.getTeamNameFromMapping === 'function') {
+        // Fallback na pôvodné mapovanie
+        const mappedName = window.teamNameReplacer.getTeamNameFromMapping(teamNameOrIdentifier);
+        
+        if (mappedName === null) {
+            console.log(`   ❌ DIRECT: Mapovanie vrátilo null pre identifikátor "${teamNameOrIdentifier}" - tím neexistuje, končím.`);
+            return null;
+        }
+        
+        if (mappedName && mappedName !== teamNameOrIdentifier) {
+            console.log(`   ✅ DIRECT: Identifikátor bol zmapovaný: "${teamNameOrIdentifier}" → "${mappedName}"`);
+            actualTeamName = mappedName;
         }
     }
     
     console.log(`   🎯 DIRECT: Konečný názov na vyhľadávanie: "${actualTeamName}"`);
+    console.log(`   🎯 DIRECT: Kategória na vyhľadávanie: "${actualCategoryName}"`);
     
     // Získame všetkých používateľov
     let allUsers = [];
@@ -7962,7 +7983,8 @@ async function findTeamByNameAndCategoryDirect(teamNameOrIdentifier, categoryNam
         if (!user.teams) continue;
         
         for (const [category, teams] of Object.entries(user.teams)) {
-            if (category.toLowerCase() !== categoryName.toLowerCase()) continue;
+            // Porovnanie kategórie (case-insensitive)
+            if (category.toLowerCase() !== actualCategoryName.toLowerCase()) continue;
             
             if (!Array.isArray(teams)) continue;
             
@@ -7992,7 +8014,7 @@ async function findTeamByNameAndCategoryDirect(teamNameOrIdentifier, categoryNam
         }
     }
     
-    console.log(`❌ DIRECT: Tím "${actualTeamName}" v kategórii "${categoryName}" nebol nájdený`);
+    console.log(`❌ DIRECT: Tím "${actualTeamName}" v kategórii "${actualCategoryName}" nebol nájdený`);
     return null;
 }
 
