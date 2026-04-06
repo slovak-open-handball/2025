@@ -2451,7 +2451,7 @@ const matchesHallApp = ({ userProfileData }) => {
         });
     
         return () => unsubscribe();
-    }, [selectedMatch]); // <-- DÔLEŽITÉ: selectedMatch ako závislosť
+    }, [selectedMatch]);
     
     const deleteMatchEvent = async (eventId) => {
         if (!window.db || !eventId) return;
