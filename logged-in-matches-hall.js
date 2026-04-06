@@ -3077,12 +3077,12 @@ const matchesHallApp = ({ userProfileData }) => {
     const getTeamDetailsFromIdentifier = (identifier, teamDisplayName) => {
         if (!identifier) return null;
         
-        console.log(`🔍 getTeamDetailsFromIdentifier() volaná s identifikátorom: "${identifier}"`);
+        console.log(`🔍 getTeamDetailsFromIdentifier() volaná s identifikátorom: "${teamDisplayName}"`);
         
         // Získame kategóriu z identifikátora
         const parts = identifier.split(' ');
         if (parts.length < 2) {
-            console.log(`❌ Neplatný formát identifikátora: ${identifier}`);
+            console.log(`❌ Neplatný formát identifikátora: ${teamDisplayName}`);
             return null;
         }
         
@@ -3090,13 +3090,14 @@ const matchesHallApp = ({ userProfileData }) => {
         const categoryName = parts.join(' ');
         
         if (!categoryName) {
-            console.log(`❌ Nepodarilo sa určiť kategóriu z identifikátora: ${identifier}`);
+            console.log(`❌ Nepodarilo sa určiť kategóriu z identifikátora: ${teamDisplayName}`);
             return null;
         }
         
         // DÔLEŽITÉ: Použijeme odovzdaný teamDisplayName (názov z logu)
         // Alebo ak nie je odovzdaný, použijeme pôvodný identifikátor
-        const teamNameToSearch = teamDisplayName || identifier;
+//        const teamNameToSearch = teamDisplayName || identifier;
+        const teamNameToSearch = teamDisplayName;
         
         console.log(`   Hľadám tím: "${teamNameToSearch}" v kategórii: "${categoryName}"`);
         
