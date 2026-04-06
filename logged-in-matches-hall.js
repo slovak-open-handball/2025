@@ -1280,14 +1280,41 @@ const matchesHallApp = ({ userProfileData }) => {
     const revertMatchToInProgress = async (matchId) => {
         if (!window.db || !matchId) return;
         
+        // Získame kategóriu pre aktuálny zápas
+        const currentCategory = categories.find(c => c.name === selectedMatch.categoryName);
+        
+        // Vypočítame maximálny možný čas zápasu (v sekundách)
+        const maxMatchTime = currentCategory 
+            ? (currentCategory.periods || 2) * (currentCategory.periodDuration || 20) * 60
+            : 40 * 60; // predvolené: 2 x 20 minút = 40 minút = 2400 sekúnd
+        
+        // Vypočítame offset, ktorý nastaví čas na maximálnu hodnotu
+        let newOffset = 0;
+        
+        if (selectedMatch && selectedMatch.startedAt) {
+            const now = Timestamp.now();
+            const startedAt = selectedMatch.startedAt;
+            const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
+            // Offset = požadovaný čas - základný čas
+            newOffset = maxMatchTime - baseSeconds;
+        }
+        
         try {
             const matchRef = doc(window.db, 'matches', matchId);
             await updateDoc(matchRef, {
                 status: 'in-progress',
                 endedAt: null,
+                pausedAt: null,
+                manualTimeOffset: newOffset,  // Nastavíme offset na maximálny čas
                 updatedAt: Timestamp.now()
             });
-            window.showGlobalNotification('Zápas bol obnovený do stavu "Prebieha"', 'success');
+            
+            // Aktualizujeme lokálne stavy
+            setMatchTime(maxMatchTime);
+            setCleanPlayingTime(maxMatchTime);
+            setManualTimeOffset(newOffset);
+            
+            window.showGlobalNotification('Zápas bol obnovený do stavu "Prebieha" s maximálnym časom', 'success');
         } catch (error) {
             console.error('Chyba pri obnovovaní zápasu:', error);
             window.showGlobalNotification('Chyba pri obnovovaní zápasu', 'error');
@@ -3861,21 +3888,14 @@ const matchesHallApp = ({ userProfileData }) => {
                                 ),
                                 
                                 // PRIEBEH ČASU (nový prvok)
-                                (selectedMatch.status === 'in-progress' || selectedMatch.status === 'paused' || selectedMatch.status === 'completed') && React.createElement(
+                                (selectedMatch.status === 'in-progress' || selectedMatch.status === 'paused') && React.createElement(
                                     'div',
                                     { className: 'text-center mb-4 p-3 bg-white rounded-lg border border-gray-200' },
                                     React.createElement('div', { className: 'text-xs text-gray-500 mb-1' }, 'Priebeh času'),
                                     React.createElement(
                                         'div',
                                         { className: 'text-3xl font-mono font-bold' },
-                                        selectedMatch.status === 'completed'
-                                            ? (() => {
-                                                const periods = category?.periods ?? 2;
-                                                const periodDuration = category?.periodDuration ?? 20;
-                                                const maxSeconds = periods * periodDuration * 60;
-                                                return formatMatchTime(maxSeconds);
-                                              })()
-                                            : formatMatchTime(cleanPlayingTime || 0)
+                                        formatMatchTime(cleanPlayingTime || 0)
                                     )
                                 ),
                                 
