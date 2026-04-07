@@ -6944,7 +6944,6 @@ const ForfeitMatchModal = ({ isOpen, onClose, onConfirm, title, message, homeTea
                         disabled: !selectedTeam,
                         style: selectedTeam ? {} : { cursor: 'not-allowed', pointerEvents: 'none' }
                     },
-                    React.createElement('i', { className: `fa-solid fa-gavel ${selectedTeam ? '' : 'text-red-800'}` }),
                     'Potvrdiť kontumáciu'
                 )
             )
