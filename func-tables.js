@@ -1217,11 +1217,9 @@ function getTeamNameFromDatabase(displayId) {
 
 // Hlavná funkcia - najprv cache, potom databáza
 // ============================================================
-// OPRAVENÁ HLAVNÁ FUNKCIA - VŽDY KONTROLUJE PRIPRAVENOSŤ SKUPINY
+// OPRAVENÁ FUNKCIA: getTeamNameByDisplayId - rozpoznáva dva formáty
 // ============================================================
 
-// Hlavná funkcia - VŽDY kontroluje pripravenosť skupiny (100% odohraných zápasov)
-// CACHE sa používa LEN AK je skupina pripravená
 function getTeamNameByDisplayId(displayId) {
     if (!displayId) {
         log('❌ Nebol zadaný identifikátor tímu');
@@ -1230,81 +1228,124 @@ function getTeamNameByDisplayId(displayId) {
     
     // Parsovanie identifikátora
     const parts = displayId.trim().split(' ');
+    
     if (parts.length < 2) {
         log(`❌ Neplatný formát identifikátora: ${displayId}`);
         return null;
     }
     
-    const positionAndGroup = parts.pop();
-    let category = parts.join(' ');
+    const lastPart = parts[parts.length - 1]; // napr. "A2" alebo "2A"
+    let category = parts.slice(0, -1).join(' ');
     category = cleanCategoryName(category);
     
-    let position = '';
-    let groupLetter = '';
-    for (let i = 0; i < positionAndGroup.length; i++) {
-        const char = positionAndGroup[i];
-        if (char >= '0' && char <= '9') {
-            position += char;
-        } else if (/[A-Za-z]/.test(char)) {
-            groupLetter += char;
+    // ============================================================
+    // ROZPOZNANIE FORMÁTU: PÍSMENO PRED ČÍSLICOU (napr. "A2")
+    // ============================================================
+    // Formát: písmeno, potom číslice (napr. "A2", "B12", "C1")
+    const letterFirstMatch = lastPart.match(/^([A-Za-z]+)(\d+)$/);
+    
+    if (letterFirstMatch) {
+        const groupLetter = letterFirstMatch[1].toUpperCase();
+        const order = parseInt(letterFirstMatch[2], 10);
+        
+        log(`🔍 Formát "písmeno+číslo" (${lastPart}) → skupina: ${groupLetter}, poradie: ${order}`);
+        log(`   Hľadám tím v používateľských dátach (users)...`);
+        
+        // Vyhľadáme tím v používateľských dátach
+        const teamInfo = findTeamInUsersByGroupAndOrder(category, groupLetter, order);
+        
+        if (teamInfo && teamInfo.teamName) {
+            log(`✅ Nájdený tím v users: "${teamInfo.teamName}" (kategória: ${category}, skupina: ${groupLetter}, poradie: ${order})`);
+            return teamInfo.teamName;
+        } else {
+            log(`❌ Tím nebol nájdený v users: ${category} skupina ${groupLetter} poradie ${order}`);
+            return null;
         }
     }
     
-    if (!position || !groupLetter) {
-        log(`❌ Neplatný formát pozície/skupiny: ${positionAndGroup}`);
-        return null;
-    }
+    // ============================================================
+    // ROZPOZNANIE FORMÁTU: ČÍSLICA PRED PÍSMENOM (napr. "2A")
+    // ============================================================
+    // Formát: číslice, potom písmeno (napr. "2A", "12B", "1C")
+    const numberFirstMatch = lastPart.match(/^(\d+)([A-Za-z]+)$/);
     
-    const positionNum = parseInt(position, 10);
-    const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
-    
-    // 🔴 1. NAJPRV SKONTROLUJEME PRIPRAVENOSŤ SKUPINY (100% ODOHRANÝCH ZÁPASOV)
-    const isReady = isGroupReadyForReplacement(category, groupLetter);
-    
-    if (!isReady) {
-        log(`⛔ [${category} - ${fullGroupName}] Skupina NIE JE pripravená (nemá 100% odohraných zápasov) → nevraciam názov tímu`);
-        return null;
-    }
-    
-    // 2. Skupina JE pripravená - môžeme použiť cache ALEBO načítať z databázy
-    const cacheKey = `${category}|${groupLetter.toUpperCase()}|${positionNum}`;
-    
-    // Skúsime nájsť v cache
-    if (replacementCache.has(cacheKey)) {
-        const cached = replacementCache.get(cacheKey);
-        log(`💿 POUŽITÉ Z CACHE (skupina je pripravená): "${displayId}" → "${cached.teamName}"`);
-        return cached.teamName;
-    }
-    
-    // Nie je v cache - načítame z databázy (skupina už je overená ako pripravená)
-    log(`🔄 NAČÍTAM Z DATABÁZY (skupina je pripravená): "${displayId}"`);
-    
-    const groupTable = window.matchTracker?.createGroupTable(category, fullGroupName);
-    if (!groupTable || !groupTable.teams || groupTable.teams.length === 0) {
-        log(`❌ Tabuľka pre skupinu ${fullGroupName} neexistuje`);
-        return null;
-    }
-    
-    const teamIndex = positionNum - 1;
-    if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
-        const team = groupTable.teams[teamIndex];
-        log(`🎉 NAJDENÝ V DB: "${displayId}" → "${team.name}"`);
+    if (numberFirstMatch) {
+        const order = parseInt(numberFirstMatch[1], 10);
+        const groupLetter = numberFirstMatch[2].toUpperCase();
         
-        // Uložíme do cache
-        replacementCache.set(cacheKey, {
-            teamName: team.name,
-            displayId: displayId,
-            category: category,
-            groupLetter: groupLetter.toUpperCase(),
-            position: positionNum,
-            timestamp: Date.now()
-        });
-        saveReplacementCache(replacementCache);
+        log(`🔍 Formát "číslo+písmeno" (${lastPart}) → poradie: ${order}, skupina: ${groupLetter}`);
+        log(`   Kontrolujem tabuľku skupiny (vyžaduje 100% odohraných zápasov)...`);
         
-        return team.name;
+        const fullGroupName = `skupina ${groupLetter}`;
+        
+        // Kontrola pripravenosti skupiny (100% odohraných zápasov)
+        const isReady = isGroupReadyForReplacement(category, groupLetter);
+        
+        if (!isReady) {
+            log(`⛔ Skupina ${category} - ${fullGroupName} NIE JE pripravená (nemá 100% odohraných zápasov)`);
+            return null;
+        }
+        
+        // Skupina je pripravená, získame tabuľku
+        const groupTable = window.matchTracker?.createGroupTable(category, fullGroupName);
+        
+        if (!groupTable || !groupTable.teams || groupTable.teams.length === 0) {
+            log(`❌ Tabuľka pre skupinu ${fullGroupName} neexistuje`);
+            return null;
+        }
+        
+        const teamIndex = order - 1;
+        
+        if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
+            const team = groupTable.teams[teamIndex];
+            log(`✅ Nájdený v tabuľke: "${team.name}" (pozícia ${order} v skupine ${groupLetter})`);
+            return team.name;
+        } else {
+            log(`❌ Pozícia ${order} neexistuje (skupina má ${groupTable.teams.length} tímov)`);
+            return null;
+        }
     }
     
-    log(`❌ Tím nebol nájdený na pozícii ${positionNum} v skupine ${fullGroupName}`);
+    // ============================================================
+    // NEZNÁMY FORMÁT
+    // ============================================================
+    log(`❌ Neznámy formát poslednej časti: ${lastPart} (očakáva sa "A2" alebo "2A")`);
+    return null;
+}
+
+// ============================================================
+// POMOCNÁ FUNKCIA: Vyhľadanie tímu v používateľských dátach
+// ============================================================
+
+function findTeamInUsersByGroupAndOrder(category, groupLetter, order) {
+    if (!window.db) return null;
+    
+    // Získame všetkých používateľov z globálneho stavu
+    const users = window.__reactUsersState || [];
+    
+    for (const user of users) {
+        if (!user.teams) continue;
+        
+        const userTeams = user.teams[category];
+        if (!userTeams || !Array.isArray(userTeams)) continue;
+        
+        const fullGroupName = `skupina ${groupLetter}`;
+        
+        const team = userTeams.find(t => 
+            t.groupName === fullGroupName && 
+            t.order === order
+        );
+        
+        if (team && team.teamName) {
+            return {
+                teamName: team.teamName,
+                userId: user.id,
+                userEmail: user.email,
+                teamData: team
+            };
+        }
+    }
+    
     return null;
 }
 
@@ -1838,10 +1879,11 @@ function observePageChanges() {
 // Pridáme funkciu getTeamNameByDisplayId do matchTracker pre prístup z iných častí
 if (window.matchTracker) {
     window.matchTracker.getTeamNameByDisplayId = getTeamNameByDisplayId;
-    window.matchTracker.getTeamNameByParams = getTeamNameByParams;
-    window.matchTracker.getTeamInfoByDisplayId = getTeamInfoByDisplayId;
-    window.matchTracker.cleanCategoryName = cleanCategoryName;
+    window.matchTracker.findTeamInUsers = findTeamInUsersByGroupAndOrder;
 }
+
+window.getTeamNameByDisplayId = getTeamNameByDisplayId;
+window.findTeamInUsersByGroupAndOrder = findTeamInUsersByGroupAndOrder;
 
 // ** UPRAVENÁ FUNKCIA: Periodické nahrádzanie - vždy kontroluje všetky identifikátory **
 let periodicReplaceInterval = null;
