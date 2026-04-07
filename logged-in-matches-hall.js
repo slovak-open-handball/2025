@@ -3741,6 +3741,10 @@ const matchesHallApp = ({ userProfileData }) => {
                                 }
                                 
                                 if (showPlayerStats) {
+                                    const totalGoals = (stats?.goals || 0) + (stats?.penaltiesScored || 0);
+                                    const totalPenalties = (stats?.penaltiesScored || 0) + (stats?.penaltiesMissed || 0);
+                                    const penaltiesText = totalPenalties === 0 ? '' : `${stats?.penaltiesScored || 0}/${totalPenalties}`;
+                                    
                                     return React.createElement(
                                         'div',
                                         { 
@@ -3764,12 +3768,30 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 `${player.lastName} ${player.firstName}`
                                             )
                                         ),
-                                        React.createElement('div', { className: 'col-span-1 text-center font-bold text-green-600' }, (stats?.goals || 0) + (stats?.penaltiesScored || 0)),
-                                        React.createElement('div', { className: 'col-span-2 text-center font-bold text-blue-600' }, `${stats?.penaltiesScored || 0}/${(stats?.penaltiesScored || 0) + (stats?.penaltiesMissed || 0)}`),
-                                        React.createElement('div', { className: 'col-span-1 text-center font-bold text-yellow-600' }, stats?.yellowCards || 0),
-                                        React.createElement('div', { className: 'col-span-1 text-center font-bold text-red-600' }, stats?.redCards || 0),
-                                        React.createElement('div', { className: 'col-span-1 text-center font-bold text-blue-800' }, stats?.blueCards || 0),
-                                        React.createElement('div', { className: 'col-span-1 text-center font-bold text-orange-600' }, stats?.exclusions || 0)
+                                        // GÓLY - zobrazí nič ak je 0
+                                        React.createElement('div', { className: 'col-span-1 text-center font-bold text-green-600' }, 
+                                            totalGoals === 0 ? '' : totalGoals
+                                        ),
+                                        // 7M HODY - zobrazí nič ak je 0/0
+                                        React.createElement('div', { className: 'col-span-2 text-center font-bold text-blue-600' }, 
+                                            penaltiesText
+                                        ),
+                                        // ŽLTÉ KARTY
+                                        React.createElement('div', { className: 'col-span-1 text-center font-bold text-yellow-600' }, 
+                                            (stats?.yellowCards || 0) === 0 ? '' : (stats?.yellowCards || 0)
+                                        ),
+                                        // ČERVENÉ KARTY
+                                        React.createElement('div', { className: 'col-span-1 text-center font-bold text-red-600' }, 
+                                            (stats?.redCards || 0) === 0 ? '' : (stats?.redCards || 0)
+                                        ),
+                                        // MODRÉ KARTY (MK)
+                                        React.createElement('div', { className: 'col-span-1 text-center font-bold text-blue-800' }, 
+                                            (stats?.blueCards || 0) === 0 ? '' : (stats?.blueCards || 0)
+                                        ),
+                                        // VYLÚČENIA (2')
+                                        React.createElement('div', { className: 'col-span-1 text-center font-bold text-orange-600' }, 
+                                            (stats?.exclusions || 0) === 0 ? '' : (stats?.exclusions || 0)
+                                        )
                                     );
                                 } else {
                                     return React.createElement(
@@ -5252,10 +5274,22 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                     React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
                                                                     React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
                                                                 ),
-                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-yellow-600' }, stats?.yellowCards || 0),
-                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-red-600' }, stats?.redCards || 0),
-                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-blue-800' }, stats?.blueCards || 0),
-                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-orange-600' }, stats?.exclusions || 0),
+                                                                // ŽLTÉ KARTY
+                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-yellow-600' }, 
+                                                                    (stats?.yellowCards || 0) === 0 ? '' : (stats?.yellowCards || 0)
+                                                                ),
+                                                                // ČERVENÉ KARTY
+                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-red-600' }, 
+                                                                    (stats?.redCards || 0) === 0 ? '' : (stats?.redCards || 0)
+                                                                ),
+                                                                // MODRÉ KARTY
+                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-blue-800' }, 
+                                                                    (stats?.blueCards || 0) === 0 ? '' : (stats?.blueCards || 0)
+                                                                ),
+                                                                // VYLÚČENIA
+                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-orange-600' }, 
+                                                                    (stats?.exclusions || 0) === 0 ? '' : (stats?.exclusions || 0)
+                                                                ),
                                                                 !showPlayerStats && selectedMatch?.status === 'scheduled' && React.createElement(
                                                                     'div',
                                                                     { className: 'col-span-1 text-right' },
@@ -5314,13 +5348,25 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                 React.createElement(
                                                                     'div',
                                                                     { className: 'col-span-8 flex items-center gap-2 truncate' },
-                                                                    React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs flex-shrink-0' }),
+                                                                    React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
                                                                     React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
                                                                 ),
-                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-yellow-600' }, stats?.yellowCards || 0),
-                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-red-600' }, stats?.redCards || 0),
-                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-blue-800' }, stats?.blueCards || 0),
-                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-orange-600' }, stats?.exclusions || 0),
+                                                                // ŽLTÉ KARTY
+                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-yellow-600' }, 
+                                                                    (stats?.yellowCards || 0) === 0 ? '' : (stats?.yellowCards || 0)
+                                                                ),
+                                                                // ČERVENÉ KARTY
+                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-red-600' }, 
+                                                                    (stats?.redCards || 0) === 0 ? '' : (stats?.redCards || 0)
+                                                                ),
+                                                                // MODRÉ KARTY
+                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-blue-800' }, 
+                                                                    (stats?.blueCards || 0) === 0 ? '' : (stats?.blueCards || 0)
+                                                                ),
+                                                                // VYLÚČENIA
+                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-orange-600' }, 
+                                                                    (stats?.exclusions || 0) === 0 ? '' : (stats?.exclusions || 0)
+                                                                ),
                                                                 !showPlayerStats && selectedMatch?.status === 'scheduled' && React.createElement(
                                                                     'div',
                                                                     { className: 'col-span-1 text-right' },
@@ -5436,10 +5482,22 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                     React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
                                                                     React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
                                                                 ),
-                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-yellow-600' }, stats?.yellowCards || 0),
-                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-red-600' }, stats?.redCards || 0),
-                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-blue-800' }, stats?.blueCards || 0),
-                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-orange-600' }, stats?.exclusions || 0),
+                                                                // ŽLTÉ KARTY
+                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-yellow-600' }, 
+                                                                    (stats?.yellowCards || 0) === 0 ? '' : (stats?.yellowCards || 0)
+                                                                ),
+                                                                // ČERVENÉ KARTY
+                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-red-600' }, 
+                                                                    (stats?.redCards || 0) === 0 ? '' : (stats?.redCards || 0)
+                                                                ),
+                                                                // MODRÉ KARTY
+                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-blue-800' }, 
+                                                                    (stats?.blueCards || 0) === 0 ? '' : (stats?.blueCards || 0)
+                                                                ),
+                                                                // VYLÚČENIA
+                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-orange-600' }, 
+                                                                    (stats?.exclusions || 0) === 0 ? '' : (stats?.exclusions || 0)
+                                                                ),
                                                                 !showPlayerStats && selectedMatch?.status === 'scheduled' && React.createElement(
                                                                     'div',
                                                                     { className: 'col-span-1 text-right' },
@@ -5498,13 +5556,25 @@ const matchesHallApp = ({ userProfileData }) => {
                                                                 React.createElement(
                                                                     'div',
                                                                     { className: 'col-span-8 flex items-center gap-2 truncate' },
-                                                                    React.createElement('i', { className: 'fa-solid fa-user text-pink-600 text-xs flex-shrink-0' }),
+                                                                    React.createElement('i', { className: 'fa-solid fa-user text-gray-600 text-xs flex-shrink-0' }),
                                                                     React.createElement('span', { className: 'font-medium truncate' }, `${member.lastName} ${member.firstName}`)
                                                                 ),
-                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-yellow-600' }, stats?.yellowCards || 0),
-                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-red-600' }, stats?.redCards || 0),
-                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-blue-800' }, stats?.blueCards || 0),
-                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-orange-600' }, stats?.exclusions || 0),
+                                                                // ŽLTÉ KARTY
+                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-yellow-600' }, 
+                                                                    (stats?.yellowCards || 0) === 0 ? '' : (stats?.yellowCards || 0)
+                                                                ),
+                                                                // ČERVENÉ KARTY
+                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-red-600' }, 
+                                                                    (stats?.redCards || 0) === 0 ? '' : (stats?.redCards || 0)
+                                                                ),
+                                                                // MODRÉ KARTY
+                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-blue-800' }, 
+                                                                    (stats?.blueCards || 0) === 0 ? '' : (stats?.blueCards || 0)
+                                                                ),
+                                                                // VYLÚČENIA
+                                                                React.createElement('div', { className: 'col-span-1 text-center font-bold text-orange-600' }, 
+                                                                    (stats?.exclusions || 0) === 0 ? '' : (stats?.exclusions || 0)
+                                                                ),
                                                                 !showPlayerStats && selectedMatch?.status === 'scheduled' && React.createElement(
                                                                     'div',
                                                                     { className: 'col-span-1 text-right' },
