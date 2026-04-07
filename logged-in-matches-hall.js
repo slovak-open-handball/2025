@@ -6227,7 +6227,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 homeTeamName: homeTeamName,
                 awayTeamName: awayTeamName,
                 title: 'Kontumácia zápasu',
-                message: 'Vyberte, ktorý tím vyhráva kontumačne 10:0:'
+                message: 'Vyberte, ktorý tím vyhráva kontumačne 10:0'
             })
         );
     }
@@ -6897,7 +6897,6 @@ const ForfeitMatchModal = ({ isOpen, onClose, onConfirm, title, message, homeTea
                         }`,
                         onClick: () => onTeamSelect('home')
                     },
-                    React.createElement('i', { className: 'fa-solid fa-house text-2xl mb-2 block text-gray-600' }),
                     React.createElement('div', { className: 'font-semibold' }, homeTeamName || 'Domáci'),
                     React.createElement('div', { className: 'text-xs text-gray-500 mt-1' }, '10 : 0')
                 ),
@@ -6911,7 +6910,6 @@ const ForfeitMatchModal = ({ isOpen, onClose, onConfirm, title, message, homeTea
                         }`,
                         onClick: () => onTeamSelect('away')
                     },
-                    React.createElement('i', { className: 'fa-solid fa-plane text-2xl mb-2 block text-gray-600' }),
                     React.createElement('div', { className: 'font-semibold' }, awayTeamName || 'Hostia'),
                     React.createElement('div', { className: 'text-xs text-gray-500 mt-1' }, '10 : 0')
                 )
