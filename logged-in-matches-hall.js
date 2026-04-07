@@ -1934,7 +1934,7 @@ const matchesHallApp = ({ userProfileData }) => {
     // Načítanie skupín z databázy
     useEffect(() => {
         if (!window.db) return;
-    
+
         const groupsRef = doc(window.db, 'settings', 'groups');
         const unsubscribe = onSnapshot(groupsRef, (docSnap) => {
             if (docSnap.exists()) {
@@ -1942,9 +1942,11 @@ const matchesHallApp = ({ userProfileData }) => {
                 setGroupsData(data);
                 // Uložíme aj do window pre prístup z iných častí
                 window.groupsData = data;
+                console.log('📋 Načítané groupsData:', data);
             } else {
                 setGroupsData({});
                 window.groupsData = {};
+                console.log('⚠️ Žiadne groupsData v databáze');
             }
         }, (error) => {
             console.error('Chyba pri načítaní skupín:', error);
