@@ -2156,7 +2156,7 @@ window.teamNameReplacer.addToCache = addToCache;
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 // ============================================================
-// PRIDAJTE TÚTO ČASŤ NA KONIEC SUBORU func-tables.js
+// PRIDAJTE TÚTO ČASŇ NA KONIEC SUBORU func-tables.js
 // ============================================================
 
 // Premenná pre sledovanie, či už boli nahradené nejaké tímy
@@ -2227,6 +2227,42 @@ function checkForCompletionLoss() {
     return groupsWithLoss;
 }
 
+// ** FUNKCIA NA VYMAZANIE CACHE (LOCAL STORAGE + PAMÄŤ) **
+function clearAllTeamNameCache() {
+    log('🗑️ VYMAZÁVAM CACHE názvov tímov...');
+    
+    // 1. Vymažeme localStorage cache
+    try {
+        const STORAGE_KEY = 'teamNameReplacer_cache';
+        localStorage.removeItem(STORAGE_KEY);
+        log('   ✅ localStorage cache vymazaná');
+    } catch (error) {
+        console.error('   ❌ Chyba pri mazaní localStorage:', error);
+    }
+    
+    // 2. Vymažeme pamäťovú cache (premennú replacementCache)
+    if (typeof replacementCache !== 'undefined') {
+        if (replacementCache && typeof replacementCache.clear === 'function') {
+            replacementCache.clear();
+            log('   ✅ Pamäťová cache (replacementCache) vymazaná');
+        }
+    }
+    
+    // 3. Ak existuje window.teamNameReplacer, použijeme jeho metódu clearCache
+    if (window.teamNameReplacer && typeof window.teamNameReplacer.clearCache === 'function') {
+        window.teamNameReplacer.clearCache();
+        log('   ✅ teamNameReplacer.clearCache() vykonaná');
+    }
+    
+    // 4. Vymažeme aj globálne mapovanie
+    if (window.__teamNameMapping) {
+        window.__teamNameMapping = {};
+        log('   ✅ Globálne mapovanie (__teamNameMapping) vymazané');
+    }
+    
+    log('✅ Všetky cache boli úspešne vymazané');
+}
+
 // ** NOVÉ: Sledovanie zmien v skupinách (napr. pri zmazaní výsledku) **
 let groupMonitorInterval = null;
 let isReloading = false; // Zabráni nekonečnému reštartovaniu
@@ -2287,11 +2323,14 @@ function startGroupMonitoring(intervalSeconds = 5) {
                 console.warn(`   📉 ${group.category} - ${group.group}: 100% → ${group.newPercentage.toFixed(1)}% (bolo ${group.completedBefore}/${group.total}, teraz ${group.completedNow}/${group.total})`);
             });
             
+            // 🔥 VYMAŽEME CACHE PRED OBNOVENÍM STRÁNKY
+            clearAllTeamNameCache();
+            
             // Obnovíme stránku
             isReloading = true;
-            log('🔄 Obnovujem stránku kvôli zmene stavu skupiny...');
+            log('🔄 Obnovujem stránku kvôli zmene stavu skupiny (cache bola vymazaná)...');
             
-            // Krátke oneskorenie pre istotu, že sa zapíšu logy
+            // Krátke oneskorenie pre istotu, že sa zapíšu logy a vymaže cache
             setTimeout(() => {
                 location.reload();
             }, 500);
@@ -2726,6 +2765,7 @@ if (window.teamNameReplacer) {
     window.teamNameReplacer.startGroupMonitoring = startGroupMonitoring;
     window.teamNameReplacer.stopGroupMonitoring = stopGroupMonitoring;
     window.teamNameReplacer.getGroupCompletionStatus = getGroupCompletionStatus;
+    window.teamNameReplacer.clearAllTeamNameCache = clearAllTeamNameCache;
 } else {
     window.teamNameReplacer = {
         ...window.teamNameReplacer,
@@ -2742,7 +2782,8 @@ if (window.teamNameReplacer) {
         forceNotify: notifyMappingReady,
         startGroupMonitoring: startGroupMonitoring,
         stopGroupMonitoring: stopGroupMonitoring,
-        getGroupCompletionStatus: getGroupCompletionStatus
+        getGroupCompletionStatus: getGroupCompletionStatus,
+        clearAllTeamNameCache: clearAllTeamNameCache
     };
 }
 
