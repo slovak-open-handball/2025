@@ -6936,11 +6936,10 @@ const ForfeitMatchModal = ({ isOpen, onClose, onConfirm, title, message, homeTea
                         },
                         className: `px-4 py-2 rounded-lg transition-all flex items-center gap-2 font-medium ${
                             selectedTeam 
-                                ? 'bg-red-800 hover:bg-red-900 text-white' 
-                                : 'bg-white text-red-800 border-2 border-red-800 opacity-60'
+                                ? 'bg-red-800 hover:bg-red-900 text-white cursor-pointer' 
+                                : 'bg-white text-red-800 border-2 border-red-800 opacity-60 cursor-not-allowed'
                         }`,
-                        disabled: !selectedTeam,
-                        style: selectedTeam ? {} : { cursor: 'not-allowed', pointerEvents: 'none' }
+                        disabled: !selectedTeam
                     },
                     'Potvrdiť kontumáciu'
                 )
