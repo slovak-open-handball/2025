@@ -1,5 +1,5 @@
 // ========== GLOBÁLNY PREPÍNAČ PRE LOGOVANIE ==========
-const DEBUG_MODE = true;  // false = nevypisuje sa (len tento skript), true = vypisuje sa
+const DEBUG_MODE = false;  // false = nevypisuje sa (len tento skript), true = vypisuje sa
 
 // Uložíme pôvodné konzolové funkcie
 const originalConsoleLog = console.log;
