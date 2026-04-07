@@ -4262,22 +4262,29 @@ const matchesHallApp = ({ userProfileData }) => {
                                         selectedMatch.isPlacementMatch ? `Zápas o ${selectedMatch.placementRank}. miesto` : selectedMatch.matchType
                                     )
                                 ) : (() => {
-                                    // Získame typ skupiny z globálnych groups dát
+                                    // Získame typ skupiny z groupsData
                                     let groupTypeText = '';
                                     let groupTypeClass = '';
                                     
-                                    if (selectedMatch.groupName && window.groupsData) {
-                                        // Nájdeme kategóriu podľa názvu
+                                    if (selectedMatch.groupName && groupsData && Object.keys(groupsData).length > 0) {
+                                        // Kľúč v groupsData je categoryId (napr. "U12 CH")
                                         const categoryId = selectedMatch.categoryName;
                                         
-                                        // Skúsime nájsť skupinu v groupsData
-                                        if (window.groupsData && window.groupsData[categoryId]) {
-                                            const foundGroup = window.groupsData[categoryId].find(g => g.name === selectedMatch.groupName);
+                                        // Skúsime nájsť skupinu v groupsData podľa categoryId
+                                        if (groupsData[categoryId] && Array.isArray(groupsData[categoryId])) {
+                                            const foundGroup = groupsData[categoryId].find(g => g.name === selectedMatch.groupName);
                                             if (foundGroup && foundGroup.type) {
                                                 groupTypeText = foundGroup.type === 'základná skupina' ? 'Základná' : 'Nadstavbová';
                                                 groupTypeClass = foundGroup.type === 'základná skupina' ? 'text-green-600' : 'text-blue-600';
+                                                console.log(`✅ Nájdený typ skupiny: ${foundGroup.type} pre skupinu ${selectedMatch.groupName}`);
+                                            } else {
+                                                console.log(`⚠️ Skupina ${selectedMatch.groupName} nebola nájdená v groupsData[${categoryId}]`);
                                             }
+                                        } else {
+                                            console.log(`⚠️ Kategória ${categoryId} nebola nájdená v groupsData. Dostupné kategórie:`, Object.keys(groupsData));
                                         }
+                                    } else {
+                                        console.log(`ℹ️ groupsData nie je k dispozícii alebo je prázdne. selectedMatch.groupName: ${selectedMatch.groupName}`);
                                     }
                                     
                                     return React.createElement(
