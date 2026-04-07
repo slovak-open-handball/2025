@@ -1004,6 +1004,14 @@ function saveReplacementCache(cacheMap) {
 
 // Inicializácia cache
 let replacementCache = loadReplacementCache();
+window.__internalReplacementCache = {
+    get: () => replacementCache,
+    clear: () => {
+        replacementCache.clear();
+        replacementCache = new Map();
+        localStorage.removeItem('teamNameReplacer_cache');
+    }
+};
 
 // Funkcia na získanie názvu tímu (najskôr z cache, potom z databázy)
 function getTeamNameWithCache(displayId, category, groupLetter, position) {
@@ -2312,33 +2320,21 @@ function checkForCompletionLoss() {
 function clearAllTeamNameCache() {
     log('🗑️ VYMAZÁVAM CACHE názvov tímov...');
     
-    // 1. Vymažeme localStorage cache
+    // 🔥 POUŽIJEME GLOBÁLNY PRÍSTUP K CACHE
+    if (window.__internalReplacementCache) {
+        window.__internalReplacementCache.clear();
+        log('   ✅ replacementCache vymazaná cez window.__internalReplacementCache');
+    }
+    
+    // Pre istotu aj localStorage
     try {
-        const STORAGE_KEY = 'teamNameReplacer_cache';
-        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem('teamNameReplacer_cache');
         log('   ✅ localStorage cache vymazaná');
-    } catch (error) {
-        console.error('   ❌ Chyba pri mazaní localStorage:', error);
-    }
+    } catch (error) {}
     
-    // 2. Vymažeme pamäťovú cache (premennú replacementCache)
-    if (typeof replacementCache !== 'undefined') {
-        if (replacementCache && typeof replacementCache.clear === 'function') {
-            replacementCache.clear();
-            log('   ✅ Pamäťová cache (replacementCache) vymazaná');
-        }
-    }
-    
-    // 3. Ak existuje window.teamNameReplacer, použijeme jeho metódu clearCache
-    if (window.teamNameReplacer && typeof window.teamNameReplacer.clearCache === 'function') {
-        window.teamNameReplacer.clearCache();
-        log('   ✅ teamNameReplacer.clearCache() vykonaná');
-    }
-    
-    // 4. Vymažeme aj globálne mapovanie
     if (window.__teamNameMapping) {
         window.__teamNameMapping = {};
-        log('   ✅ Globálne mapovanie (__teamNameMapping) vymazané');
+        log('   ✅ Globálne mapovanie vymazané');
     }
     
     log('✅ Všetky cache boli úspešne vymazané');
