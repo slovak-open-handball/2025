@@ -6898,7 +6898,6 @@ const ForfeitMatchModal = ({ isOpen, onClose, onConfirm, title, message, homeTea
                         onClick: () => onTeamSelect('home')
                     },
                     React.createElement('div', { className: 'font-semibold' }, homeTeamName || 'Domáci'),
-                    React.createElement('div', { className: 'text-xs text-gray-500 mt-1' }, '10 : 0')
                 ),
                 React.createElement(
                     'button',
@@ -6911,7 +6910,6 @@ const ForfeitMatchModal = ({ isOpen, onClose, onConfirm, title, message, homeTea
                         onClick: () => onTeamSelect('away')
                     },
                     React.createElement('div', { className: 'font-semibold' }, awayTeamName || 'Hostia'),
-                    React.createElement('div', { className: 'text-xs text-gray-500 mt-1' }, '10 : 0')
                 )
             ),
 
