@@ -3577,8 +3577,6 @@ const matchesHallApp = ({ userProfileData }) => {
 
         // OPRAVENÁ FUNKCIA PRE ZOBRAZENIE HRÁČOV A ČLENOV RT
         const renderPlayersSection = (teamDetails, teamType, teamName) => {
-            // DÔLEŽITÉ: teamDetails je objekt { team, userEmail, userId, ... }
-            // Preto pristupujeme k hráčom cez teamDetails.team.playerDetails
             const teamData = teamDetails?.team;
             
             if (!teamData) {
@@ -3602,6 +3600,16 @@ const matchesHallApp = ({ userProfileData }) => {
             // Získame aktívnych hráčov (ktorí nie sú odstránení pre tento zápas)
             const activePlayers = teamData.playerDetails?.filter(p => p && !p.removedForMatch) || [];
             
+            // 🔥 DÔLEŽITÉ: Pre každého aktívneho hráča si zapamätáme jeho PÔVODNÝ index v playerDetails
+            const activePlayersWithOriginalIndex = activePlayers.map(player => ({
+                ...player,
+                originalIndex: teamData.playerDetails.findIndex(p => 
+                    p.firstName === player.firstName && 
+                    p.lastName === player.lastName && 
+                    p.jerseyNumber === player.jerseyNumber
+                )
+            }));
+            
             // Získame odstránených hráčov pre tento zápas
             const removedPlayers = teamData.matchSpecificRemovals?.[selectedMatch.id]?.removedPlayersForMatch || [];
             
@@ -3611,6 +3619,21 @@ const matchesHallApp = ({ userProfileData }) => {
             // Získame AKTÍVNYCH členov RT (ktorí NIE sú odstránení pre tento zápas)
             const activeMenStaff = teamData.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
             const activeWomenStaff = teamData.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
+            
+            // Pre členov RT si tiež musíme zapamätať pôvodné indexy
+            const activeMenStaffWithOriginalIndex = activeMenStaff.map(member => ({
+                ...member,
+                originalIndex: teamData.menTeamMemberDetails.findIndex(m => 
+                    m.firstName === member.firstName && m.lastName === member.lastName
+                )
+            }));
+            
+            const activeWomenStaffWithOriginalIndex = activeWomenStaff.map(member => ({
+                ...member,
+                originalIndex: teamData.womenTeamMemberDetails.findIndex(m => 
+                    m.firstName === member.firstName && m.lastName === member.lastName
+                )
+            }));
             
             // Získame odstránených členov RT podľa typu
             const removedMenStaff = removedStaff.filter(s => s.staffType === 'men');
@@ -3657,23 +3680,23 @@ const matchesHallApp = ({ userProfileData }) => {
                     React.createElement('div', { className: 'col-span-1 text-center' }, '2\'')
                 ),
                 
-                // Zoznam aktívnych hráčov
+                // Zoznam aktívnych hráčov - POUŽÍVAME activePlayersWithOriginalIndex
                 React.createElement(
                     'div',
                     { className: showPlayerStats ? 'space-y-1' : 'space-y-1' },
-                    activePlayers.length > 0 ? 
-                        [...activePlayers]
+                    activePlayersWithOriginalIndex.length > 0 ? 
+                        [...activePlayersWithOriginalIndex]
                             .sort((a, b) => {
                                 const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
                                 const numB = b.jerseyNumber ? parseInt(b.jerseyNumber) || 999 : 999;
                                 return numA - numB;
                             })
-                            .map((player, idx) => {
+                            .map((player, displayIdx) => {
                                 const playerIdentifier = {
                                     userId: teamDetails.userId,
                                     teamIdentifier: teamType === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier,
                                     displayName: `${player.lastName} ${player.firstName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`,
-                                    index: idx,  // Používame index v poli activePlayers
+                                    index: player.originalIndex,  // 🔥 POUŽÍVAME PÔVODNÝ INDEX!
                                     isStaff: false
                                 };
                                 
@@ -3721,7 +3744,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     return React.createElement(
                                         'div',
                                         { 
-                                            key: `${teamType}-player-${idx}`, 
+                                            key: `${teamType}-player-${player.originalIndex}`, 
                                             className: `grid grid-cols-12 gap-1 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${cursorClass}`,
                                             onClick: onClickHandler,
                                             title: isMatchCompleted ? 'Zápas je ukončený' : (isMatchScheduled ? 'Kliknite pre úpravu hráča' : '')
@@ -3752,7 +3775,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     return React.createElement(
                                         'div',
                                         { 
-                                            key: `${teamType}-player-${idx}`, 
+                                            key: `${teamType}-player-${player.originalIndex}`, 
                                             className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${cursorClass}`,
                                             onClick: onClickHandler,
                                             title: isMatchCompleted ? 'Zápas je ukončený' : (!isMatchActionAllowed() && !isMatchScheduled ? 'Zápas je ukončený' : '')
