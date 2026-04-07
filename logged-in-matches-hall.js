@@ -334,6 +334,7 @@ const matchesHallApp = ({ userProfileData }) => {
 
     const [forfeitModalOpen, setForfeitModalOpen] = useState(false);
     const [forfeitMatchId, setForfeitMatchId] = useState(null);
+    const [forfeitTeam, setForfeitTeam] = useState(null);
 
     // Funkcia na otvorenie modálneho okna pre úpravu člena realizačného tímu
     const openEditStaffModal = (member, team, teamDetails, staffType, staffIndex) => {
@@ -1334,18 +1335,30 @@ const matchesHallApp = ({ userProfileData }) => {
     };
 
     const confirmForfeitMatch = async () => {
-        if (!window.db || !forfeitMatchId) return;
+        if (!window.db || !forfeitMatchId || !forfeitTeam) return;
         
         try {
             const matchRef = doc(window.db, 'matches', forfeitMatchId);
             
-            // Nastavíme výsledok 10:0 pre domácich
+            // Nastavíme výsledok 10:0 pre vybraný tím
+            let homeScore = 0;
+            let awayScore = 0;
+            
+            if (forfeitTeam === 'home') {
+                homeScore = 10;
+                awayScore = 0;
+            } else {
+                homeScore = 0;
+                awayScore = 10;
+            }
+            
             await updateDoc(matchRef, {
                 status: 'completed',
                 endedAt: Timestamp.now(),
                 forfeitResult: {
-                    home: 10,
-                    away: 0,
+                    winner: forfeitTeam,
+                    home: homeScore,
+                    away: awayScore,
                     isForfeit: true
                 }
             });
@@ -1362,11 +1375,15 @@ const matchesHallApp = ({ userProfileData }) => {
             
             await Promise.all(deletePromises);
             
+            // Získame názvy tímov pre zobrazenie v udalosti
+            const homeTeamName = getTeamNameByIdentifier(selectedMatch?.homeTeamIdentifier);
+            const awayTeamName = getTeamNameByIdentifier(selectedMatch?.awayTeamIdentifier);
+            
             // Pridáme udalosť o kontumácii
             await addDoc(eventsRef, {
                 matchId: forfeitMatchId,
                 type: 'forfeit',
-                team: 'home',
+                team: forfeitTeam,
                 minute: 0,
                 second: 0,
                 formattedTime: '00:00',
@@ -1374,17 +1391,20 @@ const matchesHallApp = ({ userProfileData }) => {
                 createdBy: userProfileData?.email || 'unknown',
                 createdByUid: userProfileData?.uid || null,
                 scoreBefore: { home: 0, away: 0 },
-                scoreAfter: { home: 10, away: 0 },
+                scoreAfter: { home: homeScore, away: awayScore },
                 forfeitInfo: {
-                    reason: 'Kontumácia zápasu',
-                    result: '10:0'
+                    winnerTeam: forfeitTeam === 'home' ? homeTeamName : awayTeamName,
+                    loserTeam: forfeitTeam === 'home' ? awayTeamName : homeTeamName,
+                    result: `${homeScore}:${awayScore}`,
+                    reason: 'Kontumácia zápasu'
                 }
             });
             
-            window.showGlobalNotification('Zápas bol kontumovaný 10:0 v prospech domácich', 'success');
+            const winnerName = forfeitTeam === 'home' ? homeTeamName : awayTeamName;
+            window.showGlobalNotification(`Zápas bol kontumovaný 10:0 v prospech tímu ${winnerName}`, 'success');
             
             // Aktualizujeme lokálne stavy
-            setMatchScore({ home: 10, away: 0 });
+            setMatchScore({ home: homeScore, away: awayScore });
             setMatchEvents([]);
             
         } catch (error) {
@@ -4461,19 +4481,25 @@ const matchesHallApp = ({ userProfileData }) => {
                                         selectedMatch.status === 'completed' ? 'Obnoviť zápas' : 'Ukončiť zápas'
                                     ),
 
+                                    // Tlačidlo Kontumácia zápasu (len pre neukončené zápasy)
                                     (selectedMatch.status !== 'completed') && React.createElement(
-                                        'button',
-                                        {
-                                            className: 'px-4 py-2 bg-red-800 hover:bg-red-900 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
-                                            onClick: () => {
-                                                setForfeitMatchId(selectedMatch.id);
-                                                setForfeitModalOpen(true);
+                                        'div',
+                                        { className: 'relative inline-block' },
+                                        React.createElement(
+                                            'button',
+                                            {
+                                                className: 'px-4 py-2 bg-red-800 hover:bg-red-900 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
+                                                onClick: () => {
+                                                    setForfeitMatchId(selectedMatch.id);
+                                                    setForfeitTeam(null);
+                                                    setForfeitModalOpen(true);
+                                                },
+                                                title: 'Kontumovať zápas 10:0 v prospech vybraného tímu'
                                             },
-                                            title: 'Kontumovať zápas 10:0 v prospech domácich'
-                                        },
-                                        React.createElement('i', { className: 'fa-solid fa-gavel' }),
-                                        'Kontumácia'
-                                    )
+                                            React.createElement('i', { className: 'fa-solid fa-gavel' }),
+                                            'Kontumácia'
+                                        )
+                                    ),
                 
                                     React.createElement(
                                         'button',
@@ -6188,14 +6214,20 @@ const matchesHallApp = ({ userProfileData }) => {
                 onClose: () => {
                     setForfeitModalOpen(false);
                     setForfeitMatchId(null);
+                    setForfeitTeam(null);
                 },
                 onConfirm: () => {
                     confirmForfeitMatch();
                     setForfeitModalOpen(false);
                     setForfeitMatchId(null);
+                    setForfeitTeam(null);
                 },
+                onTeamSelect: (team) => setForfeitTeam(team),
+                selectedTeam: forfeitTeam,
+                homeTeamName: homeTeamName,
+                awayTeamName: awayTeamName,
                 title: 'Kontumácia zápasu',
-                message: 'Naozaj chcete kontumovať tento zápas výsledkom 10:0 v prospech domácich? Všetky doterajšie udalosti budú vymazané.'
+                message: 'Vyberte, ktorý tím vyhráva kontumačne 10:0:'
             })
         );
     }
@@ -6816,7 +6848,7 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message }) => {
     );
 };
 
-const ForfeitMatchModal = ({ isOpen, onClose, onConfirm, title, message }) => {
+const ForfeitMatchModal = ({ isOpen, onClose, onConfirm, title, message, homeTeamName, awayTeamName, selectedTeam, onTeamSelect }) => {
     if (!isOpen) return null;
 
     return React.createElement(
@@ -6847,8 +6879,42 @@ const ForfeitMatchModal = ({ isOpen, onClose, onConfirm, title, message }) => {
 
             React.createElement(
                 'p',
-                { className: 'text-gray-600 mb-6' },
-                message || 'Naozaj chcete kontumovať tento zápas výsledkom 10:0 v prospech domácich? Táto akcia je nenávratná.'
+                { className: 'text-gray-600 mb-4' },
+                message || 'Vyberte, ktorý tím vyhráva kontumačne 10:0:'
+            ),
+            
+            // Výber tímu
+            React.createElement(
+                'div',
+                { className: 'grid grid-cols-2 gap-4 mb-6' },
+                React.createElement(
+                    'button',
+                    {
+                        className: `p-4 rounded-lg border-2 text-center transition-all ${
+                            selectedTeam === 'home' 
+                                ? 'border-green-500 bg-green-50' 
+                                : 'border-gray-200 hover:border-green-300'
+                        }`,
+                        onClick: () => onTeamSelect('home')
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-house text-2xl mb-2 block text-gray-600' }),
+                    React.createElement('div', { className: 'font-semibold' }, homeTeamName || 'Domáci'),
+                    React.createElement('div', { className: 'text-xs text-gray-500 mt-1' }, '10 : 0')
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        className: `p-4 rounded-lg border-2 text-center transition-all ${
+                            selectedTeam === 'away' 
+                                ? 'border-green-500 bg-green-50' 
+                                : 'border-gray-200 hover:border-green-300'
+                        }`,
+                        onClick: () => onTeamSelect('away')
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-plane text-2xl mb-2 block text-gray-600' }),
+                    React.createElement('div', { className: 'font-semibold' }, awayTeamName || 'Hostia'),
+                    React.createElement('div', { className: 'text-xs text-gray-500 mt-1' }, '10 : 0')
+                )
             ),
 
             React.createElement(
@@ -6866,10 +6932,18 @@ const ForfeitMatchModal = ({ isOpen, onClose, onConfirm, title, message }) => {
                     'button',
                     {
                         onClick: () => {
+                            if (!selectedTeam) {
+                                window.showGlobalNotification('Vyberte tím, ktorý vyhráva kontumačne', 'error');
+                                return;
+                            }
                             onConfirm();
-                            onClose();
                         },
-                        className: 'px-4 py-2 text-white bg-red-800 hover:bg-red-900 rounded-lg transition-colors flex items-center gap-2'
+                        className: `px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                            selectedTeam 
+                                ? 'bg-red-800 hover:bg-red-900 text-white' 
+                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`,
+                        disabled: !selectedTeam
                     },
                     React.createElement('i', { className: 'fa-solid fa-gavel' }),
                     'Potvrdiť kontumáciu'
