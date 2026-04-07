@@ -336,6 +336,7 @@ const matchesHallApp = ({ userProfileData }) => {
     const [forfeitMatchId, setForfeitMatchId] = useState(null);
     const [forfeitTeam, setForfeitTeam] = useState(null);
     const [groupsData, setGroupsData] = useState({});
+    const [categoryIdMap, setCategoryIdMap] = useState({});
 
     // Funkcia na otvorenie modálneho okna pre úpravu člena realizačného tímu
     const openEditStaffModal = (member, team, teamDetails, staffType, staffIndex) => {
@@ -2735,12 +2736,14 @@ const matchesHallApp = ({ userProfileData }) => {
                 if (catSnap.exists()) {
                     const data = catSnap.data() || {};
                     const categoriesList = [];
+                    const idMap = {}; // { categoryName: categoryId }
                     
                     Object.entries(data).forEach(([id, obj]) => {
+                        const categoryName = obj.name || `Kategória ${id}`;
                         categoriesList.push({
                             id: id,
-                            name: obj.name || `Kategória ${id}`,
-                            // Pridáme všetky potrebné vlastnosti z nastavení kategórie
+                            name: categoryName,
+                            // ... ostatné vlastnosti
                             maxTeams: obj.maxTeams ?? 12,
                             maxPlayers: obj.maxPlayers ?? 12,
                             maxImplementationTeam: obj.maxImplementationTeam ?? 3,
@@ -2758,40 +2761,26 @@ const matchesHallApp = ({ userProfileData }) => {
                             timeoutDuration: obj.timeoutDuration ?? 1,
                             exclusionTime: obj.exclusionTime ?? 2
                         });
+                        
+                        // Vytvoríme mapovanie názov -> ID
+                        idMap[categoryName] = id;
                     });
                     
                     setCategories(categoriesList);
-                    
-                    // Voliteľný výpis do konzoly pre ladenie
-//                    console.log('=== NAČÍTANÉ KATEGÓRIE S NASTAVENIAMI ===');
-//                    categoriesList.forEach((cat, index) => {
-//                        console.log(`Kategória #${index + 1}:`, {
-//                            id: cat.id,
-//                            name: cat.name,
-//                            maxTeams: cat.maxTeams,
-//                            maxPlayers: cat.maxPlayers,
-//                            maxImplementationTeam: cat.maxImplementationTeam,
-//                            periods: cat.periods,
-//                            periodDuration: cat.periodDuration,
-//                            breakDuration: cat.breakDuration,
-//                            matchBreak: cat.matchBreak,
-//                            drawColor: cat.drawColor,
-//                            transportColor: cat.transportColor
-//                        });
-//                    });
-//                    console.log('=========================================');
+                    setCategoryIdMap(idMap);
+                    window.categoryIdMap = idMap; // Uložíme aj do window pre debug
                     
                 } else {
-//                    console.log("Neboli nájdené žiadne kategórie");
                     setCategories([]);
+                    setCategoryIdMap({});
                 }
             } catch (error) {
-//                console.error("Chyba pri načítaní kategórií:", error);
+                console.error("Chyba pri načítaní kategórií:", error);
             }
         };
         
         loadCategorySettings();
-    }, []); // Prázdne pole - spustí sa len raz
+    }, []);
 
     // NOVÝ LISTENER: Načítanie všetkých používateľov z kolekcie users
     useEffect(() => {
@@ -4269,24 +4258,21 @@ const matchesHallApp = ({ userProfileData }) => {
                                     let groupTypeClass = '';
                                     
                                     if (selectedMatch.groupName && groupsData && Object.keys(groupsData).length > 0) {
-                                        // Kľúč v groupsData je categoryId (napr. "U12 CH")
-                                        const categoryId = selectedMatch.categoryName;
+                                        // Získame ID kategórie podľa názvu
+                                        const categoryId = categoryIdMap[selectedMatch.categoryName];
                                         
-                                        // Skúsime nájsť skupinu v groupsData podľa categoryId
-                                        if (groupsData[categoryId] && Array.isArray(groupsData[categoryId])) {
+                                        if (categoryId && groupsData[categoryId] && Array.isArray(groupsData[categoryId])) {
                                             const foundGroup = groupsData[categoryId].find(g => g.name === selectedMatch.groupName);
                                             if (foundGroup && foundGroup.type) {
                                                 groupTypeText = foundGroup.type === 'základná skupina' ? 'Základná' : 'Nadstavbová';
                                                 groupTypeClass = foundGroup.type === 'základná skupina' ? 'text-green-600' : 'text-blue-600';
-                                                console.log(`✅ Nájdený typ skupiny: ${foundGroup.type} pre skupinu ${selectedMatch.groupName}`);
                                             } else {
                                                 console.log(`⚠️ Skupina ${selectedMatch.groupName} nebola nájdená v groupsData[${categoryId}]`);
                                             }
                                         } else {
-                                            console.log(`⚠️ Kategória ${categoryId} nebola nájdená v groupsData. Dostupné kategórie:`, Object.keys(groupsData));
+                                            console.log(`⚠️ Kategória ${selectedMatch.categoryName} (ID: ${categoryId}) nebola nájdená v groupsData.`);
+                                            console.log('Dostupné kategórie v groupsData:', Object.keys(groupsData));
                                         }
-                                    } else {
-                                        console.log(`ℹ️ groupsData nie je k dispozícii alebo je prázdne. selectedMatch.groupName: ${selectedMatch.groupName}`);
                                     }
                                     
                                     return React.createElement(
