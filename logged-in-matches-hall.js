@@ -335,6 +335,7 @@ const matchesHallApp = ({ userProfileData }) => {
     const [forfeitModalOpen, setForfeitModalOpen] = useState(false);
     const [forfeitMatchId, setForfeitMatchId] = useState(null);
     const [forfeitTeam, setForfeitTeam] = useState(null);
+    const [groupsData, setGroupsData] = useState({});
 
     // Funkcia na otvorenie modálneho okna pre úpravu člena realizačného tímu
     const openEditStaffModal = (member, team, teamDetails, staffType, staffIndex) => {
@@ -1929,6 +1930,28 @@ const matchesHallApp = ({ userProfileData }) => {
         // Povolené len pre zápasy v stave 'scheduled' (Naplánované)
         return selectedMatch.status === 'scheduled';
     };
+
+    // Načítanie skupín z databázy
+    useEffect(() => {
+        if (!window.db) return;
+    
+        const groupsRef = doc(window.db, 'settings', 'groups');
+        const unsubscribe = onSnapshot(groupsRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setGroupsData(data);
+                // Uložíme aj do window pre prístup z iných častí
+                window.groupsData = data;
+            } else {
+                setGroupsData({});
+                window.groupsData = {};
+            }
+        }, (error) => {
+            console.error('Chyba pri načítaní skupín:', error);
+        });
+        
+        return () => unsubscribe();
+    }, []);
 
     // Pridajte tento useEffect do matchesHallApp komponentu -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     useEffect(() => {
@@ -4238,12 +4261,37 @@ const matchesHallApp = ({ userProfileData }) => {
                                     React.createElement('div', { className: 'font-medium text-purple-700' },
                                         selectedMatch.isPlacementMatch ? `Zápas o ${selectedMatch.placementRank}. miesto` : selectedMatch.matchType
                                     )
-                                ) : React.createElement(
-                                    'div',
-                                    { className: 'bg-gray-50 p-3 rounded-lg text-center' },
-                                    React.createElement('div', { className: 'text-xs text-gray-500 mb-1' }, 'Skupina'),
-                                    React.createElement('div', { className: 'font-medium' }, selectedMatch.groupName || 'neurčená')
-                                )
+                                ) : (() => {
+                                    // Získame typ skupiny z globálnych groups dát
+                                    let groupTypeText = '';
+                                    let groupTypeClass = '';
+                                    
+                                    if (selectedMatch.groupName && window.groupsData) {
+                                        // Nájdeme kategóriu podľa názvu
+                                        const categoryId = selectedMatch.categoryName;
+                                        
+                                        // Skúsime nájsť skupinu v groupsData
+                                        if (window.groupsData && window.groupsData[categoryId]) {
+                                            const foundGroup = window.groupsData[categoryId].find(g => g.name === selectedMatch.groupName);
+                                            if (foundGroup && foundGroup.type) {
+                                                groupTypeText = foundGroup.type === 'základná skupina' ? 'Základná' : 'Nadstavbová';
+                                                groupTypeClass = foundGroup.type === 'základná skupina' ? 'text-green-600' : 'text-blue-600';
+                                            }
+                                        }
+                                    }
+                                    
+                                    return React.createElement(
+                                        'div',
+                                        { className: 'bg-gray-50 p-3 rounded-lg text-center' },
+                                        React.createElement('div', { className: 'text-xs text-gray-500 mb-1' }, 'Skupina'),
+                                        React.createElement('div', { className: 'font-medium' }, selectedMatch.groupName || 'neurčená'),
+                                        groupTypeText && React.createElement(
+                                            'div',
+                                            { className: `text-xs ${groupTypeClass} mt-1` },
+                                            groupTypeText
+                                        )
+                                    );
+                                })()
                             ),
                             
                             // Status a ovládacie prvky
