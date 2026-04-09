@@ -465,6 +465,109 @@ function error(...args) {
             completionPercentage: totalMatches > 0 ? (completedMatches / totalMatches * 100).toFixed(1) : 0
         };
     }
+
+    // Funkcia na vytvorenie tabuľky nadstavbovej skupiny s prenášaním bodov
+    function createAdvancedGroupTable(categoryName, groupName, baseGroupName) {
+        // 1. Získame tabuľku základnej skupiny
+        const baseGroupTable = createGroupTable(categoryName, baseGroupName);
+        if (!baseGroupTable || !baseGroupTable.teams || baseGroupTable.teams.length === 0) {
+            log(`❌ Základná skupina ${baseGroupName} neexistuje alebo nemá dáta`);
+            return null;
+        }
+        
+        // 2. Získame nastavenie carryOverPoints
+        const categorySetting = categorySettingsCache[categoryName];
+        const carryOverPoints = categorySetting?.carryOverPoints ?? false;
+        
+        // 3. Získame všetky zápasy v nadstavbovej skupine
+        const advancedMatches = getGroupMatches(categoryName, groupName);
+        if (advancedMatches.length === 0) {
+            log(`❌ Žiadne zápasy pre nadstavbovú skupinu ${groupName}`);
+            return null;
+        }
+        
+        // 4. Získame tímy v nadstavbovej skupine
+        const teamsInAdvanced = getTeamsInGroupFromAllMatches(advancedMatches);
+        
+        // 5. Vytvoríme mapovanie bodov zo základnej skupiny
+        const basePointsMap = new Map();
+        if (carryOverPoints) {
+            baseGroupTable.teams.forEach(team => {
+                basePointsMap.set(team.name, team.points);
+            });
+            log(`📊 Prenášam body zo základnej skupiny ${baseGroupName}:`, Object.fromEntries(basePointsMap));
+        } else {
+            log(`ℹ️ carryOverPoints = false, body sa NEPRENÁŠAJú`);
+        }
+        
+        // 6. Spracujeme ODOHRANÉ zápasy v nadstavbovej skupine
+        const completedAdvancedMatches = advancedMatches.filter(m => m.status === 'completed');
+        
+        completedAdvancedMatches.forEach(match => {
+            const events = eventsData[match.id] || [];
+            const { home: homeScore, away: awayScore } = getCurrentScore(events);
+            
+            const homeTeamStats = teamsInAdvanced.find(t => t.id === match.homeTeamIdentifier);
+            const awayTeamStats = teamsInAdvanced.find(t => t.id === match.awayTeamIdentifier);
+            
+            if (homeTeamStats && awayTeamStats) {
+                homeTeamStats.played++;
+                awayTeamStats.played++;
+                
+                homeTeamStats.goalsFor += homeScore;
+                homeTeamStats.goalsAgainst += awayScore;
+                awayTeamStats.goalsFor += awayScore;
+                awayTeamStats.goalsAgainst += homeScore;
+                
+                if (homeScore > awayScore) {
+                    homeTeamStats.wins++;
+                    awayTeamStats.losses++;
+                } else if (awayScore > homeScore) {
+                    awayTeamStats.wins++;
+                    homeTeamStats.losses++;
+                } else {
+                    homeTeamStats.draws++;
+                    awayTeamStats.draws++;
+                }
+            }
+        });
+        
+        // 7. PRIDANIE BODOV ZO ZÁKLADNEJ SKUPINY
+        teamsInAdvanced.forEach(team => {
+            let advancedPoints = (team.wins * 2) + team.draws;
+            team.advancedOnlyPoints = advancedPoints;
+            
+            const basePoints = basePointsMap.get(team.name) || 0;
+            team.basePoints = basePoints;
+            
+            if (carryOverPoints) {
+                team.points = advancedPoints + basePoints;
+            } else {
+                team.points = advancedPoints;
+            }
+            
+            team.goalDifference = team.goalsFor - team.goalsAgainst;
+        });
+        
+        // 8. Zoradenie a výsledok
+        const sortedTeams = [...teamsInAdvanced].sort((a, b) => {
+            return compareTeams(a, b, advancedMatches, tableSettings.sortingConditions);
+        });
+        
+        return {
+            category: categoryName,
+            group: groupName,
+            baseGroup: baseGroupName,
+            carryOverPoints: carryOverPoints,
+            teams: sortedTeams,
+            matches: advancedMatches,
+            completedMatches: completedAdvancedMatches,
+            totalMatches: advancedMatches.length,
+            completedCount: completedAdvancedMatches.length,
+            remainingCount: advancedMatches.length - completedAdvancedMatches.length,
+            completionPercentage: advancedMatches.length > 0 ? (completedAdvancedMatches.length / advancedMatches.length * 100).toFixed(1) : 0
+        };
+    }
     
     // Funkcia na načítanie nastavení poradia z Firestore
     async function loadTableSettings() {
