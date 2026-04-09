@@ -908,7 +908,7 @@ export function CategorySettings({
             changes.push(`Čas vylúčenia z '${oldValues.exclusionTime} min' na '${newValues.exclusionTime} min'`);
         }
         if (newValues.carryOverPoints !== oldValues.carryOverPoints) {
-            changes.push(`Započítavanie vzájomných zápasov základnej skupiny v nadstvabovej skupine z '${oldValues.carryOverPoints ? 'Áno' : 'Nie'}' na '${newValues.carryOverPoints ? 'Áno' : 'Nie'}'`);
+            changes.push(`Započítavanie vzájomných zápasov základnej skupiny v nadstavbovej skupine z '${oldValues.carryOverPoints ? 'Áno' : 'Nie'}' na '${newValues.carryOverPoints ? 'Áno' : 'Nie'}'`);
         }
         
         return changes;
