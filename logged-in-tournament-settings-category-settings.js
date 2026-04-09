@@ -1732,8 +1732,7 @@ export function CategorySettings({
                                                         [selectedCategory.id]: e.target.checked 
                                                     }));
                                                 },
-//                                                disabled: hasExistingMatchesForCategory(selectedCategory.id),
-                                                disabled: false,
+                                                disabled: hasExistingMatchesForCategory(selectedCategory.id),
                                                 className: `w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 ${
                                                     hasExistingMatchesForCategory(selectedCategory.id) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                                                 }`
@@ -1747,12 +1746,12 @@ export function CategorySettings({
                                                 'Zápas zo základnej skupiny sa započítava v nadstavbovej skupine'
                                             )
                                         ),
-//                                        hasExistingMatchesForCategory(selectedCategory.id) && React.createElement(
-//                                            'p',
-//                                            { className: 'text-xs text-orange-600 mt-1 flex items-center gap-1' },
-//                                            React.createElement('i', { className: 'fa-solid fa-lock' }),
-//                                            'Toto nastavenie nie je možné meniť, pretože pre túto kategóriu už existujú zápasy.'
-//                                        )
+                                        hasExistingMatchesForCategory(selectedCategory.id) && React.createElement(
+                                            'p',
+                                            { className: 'text-xs text-orange-600 mt-1 flex items-center gap-1' },
+                                            React.createElement('i', { className: 'fa-solid fa-lock' }),
+                                            'Toto nastavenie nie je možné meniť, pretože pre túto kategóriu už existujú zápasy.'
+                                        )
                                     ),
                                     
                                     // Farba pre rozlosovanie - ZABLOKOVANÁ ak existujú zápasy
