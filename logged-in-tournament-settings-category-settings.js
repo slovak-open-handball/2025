@@ -1730,7 +1730,8 @@ export function CategorySettings({
                                                         [selectedCategory.id]: e.target.checked 
                                                     }));
                                                 },
-                                                disabled: hasExistingMatchesForCategory(selectedCategory.id),
+//                                                disabled: hasExistingMatchesForCategory(selectedCategory.id),
+                                                disabled: false,
                                                 className: `w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 ${
                                                     hasExistingMatchesForCategory(selectedCategory.id) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                                                 }`
