@@ -3189,11 +3189,6 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                         className: 'w-4 h-4 text-blue-600 rounded'
                     }),
                     React.createElement('span', { className: 'text-gray-700' }, 'Kombinácie s opakovaním (každý s každým doma/vonku)')
-                ),
-                !withRepetitions && React.createElement(
-                    'p',
-                    { className: 'text-xs text-gray-500 mt-1 ml-6' },
-                    'Vygenerujú sa jedinečné dvojice, každý tím sa stretne s každým práve raz'
                 )
             ),
 
@@ -3218,6 +3213,11 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                             'Nebudú sa generovať zápasy medzi tímami, ktoré majú rovnaký posledný znak v názve (t.j. pochádzajú z rovnakej základnej/nadstavbovej skupiny)'
                         )
                     )
+                ),
+                !withRepetitions && React.createElement(
+                    'p',
+                    { className: 'text-xs text-gray-500 mt-1 ml-6' },
+                    'Vygenerujú sa jedinečné dvojice, každý tím sa stretne s každým práve raz'
                 )
             ),
 
