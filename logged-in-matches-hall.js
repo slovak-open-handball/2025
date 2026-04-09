@@ -6453,7 +6453,47 @@ const matchesHallApp = ({ userProfileData }) => {
                                         React.createElement(
                                             'span',
                                             { 
-                                                className: `px-3 py-1 text-xs font-medium rounded-full ${groupOrTypeClass}`,
+                                                className: `px-3 py-1 text-xs font-medium rounded-full`,
+                                                style: (() => {
+                                                    // Získame typ skupiny z groupsData pre dynamické farby
+                                                    let bgColor = '#f3f4f6'; // Svetlo šedá pre fallback
+                                                    let textColor = '#6b7280'; // Šedá pre fallback
+            
+                                                    if (hasMatchType) {
+                                                        // Typ zápasu (finále, semifinále, o umiestnenie) - fialová
+                                                        bgColor = '#f3e8ff';
+                                                        textColor = '#6b21a5';
+                                                    } else if (match.groupName && groupsData && Object.keys(groupsData).length > 0) {
+                                                        // Získame ID kategórie podľa názvu
+                                                        const categoryId = categoryIdMap[match.categoryName];
+                                                        
+                                                        if (categoryId && groupsData[categoryId] && Array.isArray(groupsData[categoryId])) {
+                                                            const foundGroup = groupsData[categoryId].find(g => g.name === match.groupName);
+                                                            if (foundGroup && foundGroup.type) {
+                                                                if (foundGroup.type === 'základná skupina') {
+                                                                    bgColor = '#dcfce7'; // Svetlo zelená
+                                                                    textColor = '#166534'; // Tmavo zelená
+                                                                } else if (foundGroup.type === 'nadstavbová skupina') {
+                                                                    bgColor = '#dbeafe'; // Svetlo modrá
+                                                                    textColor = '#1e40af'; // Tmavo modrá
+                                                                }
+                                                            }
+                                                        }
+                                                    } else if (groupOrTypeClass.includes('bg-purple')) {
+                                                        // Fallback pre typ zápasu ak nemáme groupsData
+                                                        bgColor = '#f3e8ff';
+                                                        textColor = '#6b21a5';
+                                                    } else if (groupOrTypeClass.includes('bg-green')) {
+                                                        // Fallback pre skupinu
+                                                        bgColor = '#dcfce7';
+                                                        textColor = '#166534';
+                                                    }
+                                                    
+                                                    return {
+                                                        backgroundColor: bgColor,
+                                                        color: textColor
+                                                    };
+                                                })()
                                             },
                                             groupOrTypeText
                                         ),
