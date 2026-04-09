@@ -467,23 +467,31 @@ function error(...args) {
     }
 
     // Pomocná funkcia na získanie názvu tímu cez getTeamNameByDisplayId
-    function getTeamNameForAdvancedGroup(teamId, category, groupLetter, position) {
-        // Vytvoríme identifikátor v tvare "kategória pozíciaSkupina" (napr. "U12 D 1A")
-        const cleanCat = cleanCategoryName(category);
-        const displayId = `${cleanCat} ${position}${groupLetter.toUpperCase()}`;
+    function getTeamNameForAdvancedGroup(teamNameFromGroup, category, groupLetter, position) {
+        // 🔥 KĽÚČOVÉ: Použijeme priamo názov tímu, ktorý je v skupine
+        // Nemusíme vytvárať žiadny identifikátor, lebo teamNameFromGroup už je správny názov
+        // (napr. "Slovan Bratislava", "Trenčín", atď.)
         
-        // Odovzdáme funkcii getTeamNameByDisplayId
-        const teamName = window.matchTracker.getTeamNameByDisplayId(displayId);
+        log(`   📛 Spracovávam tím: "${teamNameFromGroup}"`);
+        log(`   📍 Volám window.matchTracker.getTeamNameByDisplayId("${teamNameFromGroup}")...`);
         
-        if (teamName && teamName !== displayId) {
-            log(`   📛 Mapovanie tímu: "${displayId}" → "${teamName}"`);
-            return teamName;
+        // Odovzdáme priamo názov tímu funkcii
+        const mappedName = window.matchTracker.getTeamNameByDisplayId(teamNameFromGroup);
+        
+        if (mappedName && mappedName !== teamNameFromGroup) {
+            log(`   ✅ Mapovanie tímu: "${teamNameFromGroup}" → "${mappedName}"`);
+            return mappedName;
         }
         
-        // Fallback - ak funkcia vráti null, použijeme pôvodný identifikátor
-        log(`   ⚠️ Tím nebol nájdený pre: ${displayId}, používam pôvodný identifikátor`);
-        return teamId;
+        // Ak sa názov nezmenil alebo funkcia vrátila null, použijeme pôvodný názov
+        if (mappedName === teamNameFromGroup) {
+            log(`   ℹ️ Názov zostáva rovnaký: "${teamNameFromGroup}"`);
+        } else {
+            log(`   ⚠️ Žiadna zmena pre: "${teamNameFromGroup}", používam pôvodný názov`);
+        }
+        return teamNameFromGroup;
     }
+
 
     function createAdvancedGroupTable(categoryName, groupName, baseGroupName) {
         // 1. Získame tabuľku základnej skupiny
@@ -507,46 +515,23 @@ function error(...args) {
         // 4. Získame tímy v nadstavbovej skupine
         const teamsInAdvanced = getTeamsInGroupFromAllMatches(advancedMatches);
         
-        // ============================================================
-        // 🔥 PRED SPRACOVANÍM NADSTAVBOVEJ SKUPINY - MAPUJEME NÁZVY TÍMOV
-        // ============================================================
         log(`\n📋 MAPOVANIE TÍMOV PRE NADSTAVBOVÚ SKUPINU: ${categoryName} - ${groupName}`);
         log('='.repeat(80));
         
-        // Pre každý tím v nadstavbovej skupine zavoláme getTeamNameByDisplayId
+        // Pre každý tím v nadstavbovej skupine zavoláme getTeamNameByDisplayId s jeho názvom
         const mappedTeams = new Map(); // Mapovanie pôvodného ID -> nový názov
         
         for (const team of teamsInAdvanced) {
-            // Potrebujeme zistiť, akú pozíciu a skupinu mal tím v základnej skupine
-            // Vyhľadáme tím v základnej tabuľke
-            const baseTeam = baseGroupTable.teams.find(t => t.id === team.id);
-            
-            if (baseTeam) {
-                // Zistíme pozíciu tímu v základnej skupine
-                const position = baseGroupTable.teams.findIndex(t => t.id === team.id) + 1;
-                // Získame písmeno základnej skupiny (napr. z názvu "skupina A" -> "A")
-                const baseGroupLetter = baseGroupName.replace('skupina ', '').toUpperCase();
-                
-                log(`\n🔄 Spracovávam tím: ${team.name}`);
-                log(`   📍 Pôvodný identifikátor: ${team.id}`);
-                log(`   📍 Pozícia v základnej skupine ${baseGroupName}: ${position}. miesto`);
-                log(`   📍 Volám window.matchTracker.getTeamNameByDisplayId("${cleanCategoryName(categoryName)} ${position}${baseGroupLetter}")...`);
-                
-                // 🔥 KĽÚČOVÉ: Odovzdáme identifikátor funkcii getTeamNameByDisplayId
-                const mappedName = window.matchTracker.getTeamNameByDisplayId(
-                    `${cleanCategoryName(categoryName)} ${position}${baseGroupLetter}`
-                );
-                
-                if (mappedName && mappedName !== team.name) {
-                    log(`   ✅ MAPOVANÝ NÁZOV: "${team.name}" → "${mappedName}"`);
-                    mappedTeams.set(team.id, mappedName);
-                } else if (mappedName === team.name) {
-                    log(`   ℹ️ Názov zostáva rovnaký: "${team.name}"`);
-                } else {
-                    log(`   ⚠️ Žiadna zmena, používam pôvodný názov: "${team.name}"`);
-                }
+            const originalTeamName = team.name;
+    
+            // 🔥 KĽÚČOVÉ: Zavoláme getTeamNameByDisplayId s PRIAMYM NÁZVOM TÍMU
+            const mappedName = window.matchTracker.getTeamNameByDisplayId(originalTeamName);
+    
+            if (mappedName && mappedName !== originalTeamName) {
+                log(`   ✅ Mapovanie: "${originalTeamName}" → "${mappedName}"`);
+                team.name = mappedName;
             } else {
-                log(`   ⚠️ Tím ${team.name} nebol nájdený v základnej skupine, používam pôvodný názov`);
+                log(`   ℹ️ Žiadna zmena pre: "${originalTeamName}"`);
             }
         }
         
@@ -561,7 +546,6 @@ function error(...args) {
         
         log('\n' + '='.repeat(80));
         log('✅ MAPOVANIE TÍMOV DOKONČENÉ\n');
-        // ============================================================
         
         // 5. Vytvoríme mapovanie bodov zo základnej skupiny
         const basePointsMap = new Map();
