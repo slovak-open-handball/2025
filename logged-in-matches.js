@@ -5815,7 +5815,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                             transportColor: obj.transportColor ?? '#10B981',
                             timeoutCount: obj.timeoutCount ?? 2,
                             timeoutDuration: obj.timeoutDuration ?? 1,
-                            exclusionTime: obj.exclusionTime ?? 2
+                            exclusionTime: obj.exclusionTime ?? 2,
+                            carryOverPoints: obj.carryOverPoints ?? false
                         };
                         
                         categoriesList.push(category);
