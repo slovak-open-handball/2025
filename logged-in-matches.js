@@ -96,7 +96,6 @@ window.showGlobalNotification = (message, type = 'success') => {
     }, 5000);
 };
 
-// Funkcia na generovanie zápasov pre skupinu - OPRAVENÁ
 const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferFromBasicGroup = false) => {
 
     console.log('generateMatchesForGroup - parameter transferFromBasicGroup:', transferFromBasicGroup);
@@ -115,7 +114,7 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferF
         const order = t.order || '?';
         const teamIdentifier = `${category} ${groupName}${order}`;
         
-        // --- NOVÉ: Extrahujeme posledný znak z názvu tímu ---
+        // Extrahujeme posledný znak z názvu tímu
         let lastCharFromTeamName = '';
         if (t.teamName) {
             // Extrahujeme posledný znak z názvu tímu (napr. "U12 D 1A" -> "A")
@@ -128,9 +127,8 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferF
                 lastCharFromTeamName = '';
             }
         }
-        // --- KONIEC NOVEJ ČASTI ---
         
-        // VÝPIS CELÉHO DOKUMENTU TÍMU PRE NADSTAVBOVÚ SKUPINU
+        // Výpis celého dokumentu tímu pre nadstavbovú skupinu
         if (transferFromBasicGroup) {
             console.log('=== CELÝ DOKUMENT TÍMU Z DATABÁZY (nadstavbová skupina) ===');
             console.log('Tím:', t);
@@ -153,7 +151,6 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferF
                 createdBy: t.createdBy,
                 createdByUid: t.createdByUid,
                 createdAt: t.createdAt,
-                // Všetky ostatné vlastnosti
                 ...t
             });
             console.log('===========================================');
@@ -164,8 +161,8 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferF
             category: category,
             groupName: groupName,
             order: order,
-            lastChar: lastCharFromTeamName, // TERAZ POUŽÍVAME POSLEDNÝ ZNAK Z NÁZVU TÍMU
-            teamName: t.teamName // Pridáme pre debug
+            lastChar: lastCharFromTeamName,
+            teamName: t.teamName
         };
     });
     
@@ -180,7 +177,6 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferF
                     if (transferFromBasicGroup) {
                         // Ak je transferFromBasicGroup true, preskočíme zápasy s rovnakým posledným znakom
                         if (teamIdentifiers[i].lastChar !== teamIdentifiers[j].lastChar) {
-                            // VÝPIS PRE KAŽDÝ GENEROVANÝ ZÁPAS
                             console.log(`Generujem zápas: ${teamIdentifiers[i].identifier} (${teamIdentifiers[i].teamName}, lastChar: ${teamIdentifiers[i].lastChar}) vs ${teamIdentifiers[j].identifier} (${teamIdentifiers[j].teamName}, lastChar: ${teamIdentifiers[j].lastChar})`);
                             console.log(`  Kontrola znakov: ${teamIdentifiers[i].lastChar} vs ${teamIdentifiers[j].lastChar}`);
                             
@@ -206,7 +202,6 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferF
             for (let j = i + 1; j < teamIdentifiers.length; j++) {
                 if (transferFromBasicGroup) {
                     if (teamIdentifiers[i].lastChar !== teamIdentifiers[j].lastChar) {
-                        // VÝPIS PRE KAŽDÝ GENEROVANÝ ZÁPAS
                         console.log(`Generujem zápas: ${teamIdentifiers[i].identifier} (${teamIdentifiers[i].teamName}, lastChar: ${teamIdentifiers[i].lastChar}) vs ${teamIdentifiers[j].identifier} (${teamIdentifiers[j].teamName}, lastChar: ${teamIdentifiers[j].lastChar})`);
                         console.log(`  Kontrola znakov: ${teamIdentifiers[i].lastChar} vs ${teamIdentifiers[j].lastChar}`);
                         
