@@ -273,12 +273,18 @@ function error(...args) {
         return teamA.name.localeCompare(teamB.name);
     }
 
+    // ============================================================
+    // OPRAVENÁ FUNKCIA: findMatchBetweenTeamsInOtherGroup - hľadá zápasy v akejkoľvek inej skupine
+    // ============================================================
     function findMatchBetweenTeamsInOtherGroup(teamAId, teamBId, currentCategory, currentGroupName, excludeGroupName) {
         if (!window.matchTracker) return null;
         
         const allMatches = window.matchTracker.getAllMatches?.() || [];
         
-        // Hľadáme zápas medzi týmito dvoma tímami v inej skupine (ale rovnakej kategórii)
+        log(`   🔍 Hľadám zápas medzi tímami ${teamAId} a ${teamBId} v iných skupinách (okrem ${excludeGroupName})...`);
+        
+        let foundMatches = [];
+        
         for (const match of allMatches) {
             // Preskočíme zápasy o umiestnenie
             if (match.isPlacementMatch) continue;
@@ -286,37 +292,56 @@ function error(...args) {
             // Preskočíme aktuálnu skupinu
             if (match.categoryName === currentCategory && match.groupName === excludeGroupName) continue;
             
-            // Kontrola, či ide o rovnakú kategóriu
-            if (match.categoryName !== currentCategory) continue;
-            
             // Kontrola, či zápas obsahuje oba tímy
             const hasTeamA = (match.homeTeamIdentifier === teamAId || match.awayTeamIdentifier === teamAId);
             const hasTeamB = (match.homeTeamIdentifier === teamBId || match.awayTeamIdentifier === teamBId);
             
-            if (hasTeamA && hasTeamB && match.status === 'completed') {
-                // Našli sme zápas medzi týmito tímami v inej skupine
-                const events = window.matchTracker.getEvents?.(match.id) || [];
-                const { home: homeScore, away: awayScore } = getCurrentScore(events);
+            if (hasTeamA && hasTeamB) {
+                log(`      📍 Nájdený zápas v skupine: ${match.groupName} (stav: ${match.status})`);
                 
-                let teamAScore = 0;
-                let teamBScore = 0;
-                
-                if (match.homeTeamIdentifier === teamAId) {
-                    teamAScore = homeScore;
-                    teamBScore = awayScore;
+                // Ak je zápas dokončený, použijeme ho
+                if (match.status === 'completed') {
+                    const events = window.matchTracker.getEvents?.(match.id) || [];
+                    const { home: homeScore, away: awayScore } = getCurrentScore(events);
+                    
+                    let teamAScore = 0;
+                    let teamBScore = 0;
+                    
+                    if (match.homeTeamIdentifier === teamAId) {
+                        teamAScore = homeScore;
+                        teamBScore = awayScore;
+                    } else {
+                        teamAScore = awayScore;
+                        teamBScore = homeScore;
+                    }
+                    
+                    log(`      ✅ POUŽITÝ výsledok: ${teamAScore}:${teamBScore} (dokončený zápas)`);
+                    
+                    return {
+                        matchId: match.id,
+                        fromGroup: match.groupName,
+                        homeScore: teamAScore,
+                        awayScore: teamBScore,
+                        isTransferred: true
+                    };
                 } else {
-                    teamAScore = awayScore;
-                    teamBScore = homeScore;
+                    // Zápas nie je dokončený, ale zaznamenáme ho pre prípad, že by sme chceli neskôr použiť
+                    foundMatches.push({
+                        matchId: match.id,
+                        fromGroup: match.groupName,
+                        status: match.status,
+                        homeTeam: match.homeTeamIdentifier,
+                        awayTeam: match.awayTeamIdentifier
+                    });
+                    log(`      ⏳ Zápas nie je dokončený (stav: ${match.status}), čakám...`);
                 }
-                
-                return {
-                    matchId: match.id,
-                    fromGroup: match.groupName,
-                    homeScore: teamAScore,
-                    awayScore: teamBScore,
-                    isTransferred: true
-                };
             }
+        }
+        
+        if (foundMatches.length > 0) {
+            log(`      ⚠️ Nájdených ${foundMatches.length} zápasov, ale žiadny nie je dokončený.`);
+        } else {
+            log(`      ❌ Žiadny zápas medzi týmito tímami nebol nájdený v iných skupinách.`);
         }
         
         return null;
@@ -571,6 +596,7 @@ function error(...args) {
         if (carryOverMatches && missingPairs.length > 0) {
             log(`\n🔄 PRENÁŠAM VÝSLEDKY Z INÝCH SKUPÍN (${categoryName} - ${groupName}):`);
             log('='.repeat(80));
+            log(`   ⚠️ Poznámka: Prenášajú sa len DOKONČENÉ zápasy z iných skupín.`);
             
             for (const pair of missingPairs) {
                 const teamA = teamsInGroup.find(t => t.id === pair.teamA);
@@ -578,7 +604,7 @@ function error(...args) {
                 
                 if (!teamA || !teamB) continue;
                 
-                // Hľadáme zápas medzi týmito tímami v inej skupine
+                // Hľadáme zápas medzi týmito tímami v akejkoľvek inej skupine
                 const transferredMatch = findMatchBetweenTeamsInOtherGroup(
                     teamA.id, teamB.id, categoryName, groupName, groupName
                 );
