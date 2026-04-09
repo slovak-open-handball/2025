@@ -72,6 +72,8 @@ export function CategorySettings({
     const [registrationStartDate, setRegistrationStartDate] = React.useState(null);
     const [isRegistrationFrozen, setIsRegistrationFrozen] = React.useState(false);
 
+    const [editedCarryOverPoints, setEditedCarryOverPoints] = React.useState({});
+
     // REF pre uloženie pôvodných hodnôt kategórií
     const originalCategoriesRef = React.useRef({});
 
@@ -252,7 +254,8 @@ export function CategorySettings({
                         dateToActive: cat.dateToActive,
                         timeoutCount: cat.timeoutCount,
                         timeoutDuration: cat.timeoutDuration,
-                        exclusionTime: cat.exclusionTime
+                        exclusionTime: cat.exclusionTime,
+                        carryOverPoints: cat.carryOverPoints ?? false
                     };
                 });
                 originalCategoriesRef.current = originalValues;
@@ -275,6 +278,7 @@ export function CategorySettings({
                 const initialTimeoutDuration = {};
                 const initialExclusionTime = {};
                 const initialPreviousValues = {};
+                const initialCarryOverPoints = {};
                 
                 list.forEach(cat => {
                     initialMaxTeams[cat.id] = cat.maxTeams;
@@ -294,6 +298,7 @@ export function CategorySettings({
                     initialTimeoutDuration[cat.id] = cat.timeoutDuration;
                     initialExclusionTime[cat.id] = cat.exclusionTime;
                     initialPreviousValues[cat.id] = { ...cat };
+                    initialCarryOverPoints[cat.id] = cat.carryOverPoints ?? false;
                 });
                 
                 setEditedMaxTeams(prev => {
@@ -455,6 +460,16 @@ export function CategorySettings({
                     const newState = { ...initialExclusionTime };
                     Object.keys(prev).forEach(key => {
                         if (prev[key] !== initialExclusionTime[key]) {
+                            newState[key] = prev[key];
+                        }
+                    });
+                    return newState;
+                });
+
+                setEditedCarryOverPoints(prev => {
+                    const newState = { ...initialCarryOverPoints };
+                    Object.keys(prev).forEach(key => {
+                        if (prev[key] !== initialCarryOverPoints[key]) {
                             newState[key] = prev[key];
                         }
                     });
@@ -694,13 +709,14 @@ export function CategorySettings({
             // Kontrola timeout a exclusion zmien
             editedTimeoutCount[cat.id] !== cat.timeoutCount ||
             editedTimeoutDuration[cat.id] !== cat.timeoutDuration ||
-            editedExclusionTime[cat.id] !== cat.exclusionTime
+            editedExclusionTime[cat.id] !== cat.exclusionTime ||
+            editedCarryOverPoints[cat.id] !== (cat.carryOverPoints ?? false)
         );
     }, [categories, editedMaxTeams, editedMaxPlayers, editedMaxImplementationTeam, 
         editedPeriods, editedPeriodDuration, editedBreakDuration, editedMatchBreak, 
         editedDrawColor, editedTransportColor, editedDateFrom, editedDateTo, 
         editedDateFromActive, editedDateToActive, editedTimeoutCount, 
-        editedTimeoutDuration, editedExclusionTime, isRegistrationFrozen]);
+        editedTimeoutDuration, editedExclusionTime, editedCarryOverPoints, isRegistrationFrozen]);
 
     // Hlásime zmeny nadradenému komponentu
     React.useEffect(() => {
@@ -780,6 +796,7 @@ export function CategorySettings({
             initialTimeoutCount[catId] = original.timeoutCount ?? 2;
             initialTimeoutDuration[catId] = original.timeoutDuration ?? 1;
             initialExclusionTime[catId] = original.exclusionTime ?? 2;
+            initialCarryOverPoints[catId] = original.carryOverPoints ?? false;
         });
         
         setEditedMaxTeams(initialMaxTeams);
@@ -798,6 +815,7 @@ export function CategorySettings({
         setEditedTimeoutCount(initialTimeoutCount);
         setEditedTimeoutDuration(initialTimeoutDuration);
         setEditedExclusionTime(initialExclusionTime);
+        setEditedCarryOverPoints(initialCarryOverPoints);
         
         console.log("resetAllChanges - reset dokončený");
     }, []);
@@ -888,6 +906,9 @@ export function CategorySettings({
         // Zmeny pre vylúčenie
         if (newValues.exclusionTime !== oldValues.exclusionTime) {
             changes.push(`Čas vylúčenia z '${oldValues.exclusionTime} min' na '${newValues.exclusionTime} min'`);
+        }
+        if (newValues.carryOverPoints !== oldValues.carryOverPoints) {
+            changes.push(`Započítavanie bodov zo základnej skupiny z '${oldValues.carryOverPoints ? 'Áno' : 'Nie'}' na '${newValues.carryOverPoints ? 'Áno' : 'Nie'}'`);
         }
         
         return changes;
@@ -984,6 +1005,10 @@ export function CategorySettings({
                     updatedData.exclusionTime = Number(editedExclusionTime[cat.id]);
                     hasUpdates = true;
                 }
+                if (editedCarryOverPoints[cat.id] !== (cat.carryOverPoints ?? false)) {
+                    updatedData.carryOverPoints = editedCarryOverPoints[cat.id] ?? false;
+                    hasUpdates = true;
+                }
 
                 if (hasUpdates) {
                     updates[cat.id] = {
@@ -1009,7 +1034,8 @@ export function CategorySettings({
                         dateToActive: isRegistrationFrozen ? cat.dateToActive : (editedDateToActive[cat.id] ?? cat.dateToActive),
                         timeoutCount: editedTimeoutCount[cat.id] ?? cat.timeoutCount,
                         timeoutDuration: editedTimeoutDuration[cat.id] ?? cat.timeoutDuration,
-                        exclusionTime: editedExclusionTime[cat.id] ?? cat.exclusionTime
+                        exclusionTime: editedExclusionTime[cat.id] ?? cat.exclusionTime,
+                        carryOverPoints: editedCarryOverPoints[cat.id] ?? (cat.carryOverPoints ?? false)
                     };
                     
                     categoriesWithChanges.push({
@@ -1685,6 +1711,45 @@ export function CategorySettings({
                                             React.createElement('i', { className: 'fa-solid fa-lock' }),
                                             'Toto nastavenie nie je možné meniť, pretože pre túto kategóriu už existujú zápasy.'
                                         )
+                                    ),
+
+                                    // Checkbox pre započítavanie bodov zo základnej skupiny
+                                    React.createElement(
+                                        'div',
+                                        { className: 'space-y-2 pt-2' },
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex items-center gap-3' },
+                                            React.createElement('input', {
+                                                type: 'checkbox',
+                                                id: `carryOverPoints_${selectedCategory.id}`,
+                                                checked: editedCarryOverPoints[selectedCategory.id] ?? (selectedCategory.carryOverPoints ?? false),
+                                                onChange: (e) => {
+                                                    setEditedCarryOverPoints(prev => ({ 
+                                                        ...prev, 
+                                                        [selectedCategory.id]: e.target.checked 
+                                                    }));
+                                                },
+                                                disabled: hasExistingMatchesForCategory(selectedCategory.id),
+                                                className: `w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 ${
+                                                    hasExistingMatchesForCategory(selectedCategory.id) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                                                }`
+                                            }),
+                                            React.createElement(
+                                                'label', 
+                                                { 
+                                                    htmlFor: `carryOverPoints_${selectedCategory.id}`,
+                                                    className: `text-sm font-medium ${hasExistingMatchesForCategory(selectedCategory.id) ? 'text-gray-500' : 'text-gray-700'} cursor-pointer`
+                                                },
+                                                'Zápas zo základnej skupiny sa započítava v nadstavbovej skupine'
+                                            )
+                                        ),
+//                                        hasExistingMatchesForCategory(selectedCategory.id) && React.createElement(
+//                                            'p',
+//                                            { className: 'text-xs text-orange-600 mt-1 flex items-center gap-1' },
+//                                            React.createElement('i', { className: 'fa-solid fa-lock' }),
+//                                            'Toto nastavenie nie je možné meniť, pretože pre túto kategóriu už existujú zápasy.'
+//                                        )
                                     ),
                                     
                                     // Farba pre rozlosovanie - ZABLOKOVANÁ ak existujú zápasy
