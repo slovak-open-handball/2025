@@ -274,13 +274,48 @@ function error(...args) {
     }
 
     // ============================================================
-    // OPRAVENÁ FUNKCIA: findMatchBetweenTeamsInOtherGroup - hľadá podľa názvov tímov
+    // OPRAVENÁ FUNKCIA: findMatchBetweenTeamsInOtherGroup - najprv mapuje názvy, potom hľadá
     // ============================================================
     function findMatchBetweenTeamsInOtherGroup(teamAName, teamBName, currentCategory, currentGroupName, excludeGroupName) {
         if (!window.matchTracker) return null;
         
         // ============================================================
-        // OPTIMALIZÁCIA: Kontrola, či tímy majú rovnaké posledné písmeno v pôvodných ID
+        // KROK 1: MAPOVANIE NÁZVOV TÍMOV NA SKUTOČNÉ NÁZVY
+        // ============================================================
+        // Zistíme, či ide o identifikátory (obsahujú číslo a písmeno)
+        const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
+        
+        let mappedTeamAName = teamAName;
+        let mappedTeamBName = teamBName;
+        
+        // Ak tím A vyzerá ako identifikátor, mapujeme ho na skutočný názov
+        if (looksLikeIdentifier(teamAName)) {
+            const mappedName = window.matchTracker.getTeamNameByDisplayId?.(teamAName);
+            if (mappedName && mappedName !== teamAName) {
+                mappedTeamAName = mappedName;
+                log(`   🔄 Mapovanie tímu A: "${teamAName}" → "${mappedTeamAName}"`);
+            }
+        }
+        
+        // Ak tím B vyzerá ako identifikátor, mapujeme ho na skutočný názov
+        if (looksLikeIdentifier(teamBName)) {
+            const mappedName = window.matchTracker.getTeamNameByDisplayId?.(teamBName);
+            if (mappedName && mappedName !== teamBName) {
+                mappedTeamBName = mappedName;
+                log(`   🔄 Mapovanie tímu B: "${teamBName}" → "${mappedTeamBName}"`);
+            }
+        }
+        
+        // Ak po mapovaní máme stále identifikátory, nemôžeme nájsť zápas
+        if (looksLikeIdentifier(mappedTeamAName) || looksLikeIdentifier(mappedTeamBName)) {
+            log(`   ⚠️ Nepodarilo sa namapovať tímy na skutočné názvy: A=${mappedTeamAName}, B=${mappedTeamBName}`);
+            return null;
+        }
+        
+        log(`   🔍 Hľadám zápas medzi mapovanými tímami: "${mappedTeamAName}" vs "${mappedTeamBName}"`);
+        
+        // ============================================================
+        // KROK 2: OPTIMALIZÁCIA - KONTROLA POSLEDNÉHO PÍSMENA
         // ============================================================
         // Získame pôvodné ID tímov (ak sú dostupné)
         let teamAOriginalId = teamAName;
@@ -292,10 +327,10 @@ function error(...args) {
             const originalId = element.getAttribute('data-original-identifier');
             const teamName = element.getAttribute('data-team-name');
             if (originalId && teamName) {
-                if (teamName === teamAName) {
+                if (teamName === mappedTeamAName) {
                     teamAOriginalId = originalId;
                 }
-                if (teamName === teamBName) {
+                if (teamName === mappedTeamBName) {
                     teamBOriginalId = originalId;
                 }
             }
@@ -304,10 +339,10 @@ function error(...args) {
         // Ak nemáme mapovanie z DOM, skúsime použiť globálne mapovanie
         if (window.__teamNameMapping) {
             for (const [originalId, data] of Object.entries(window.__teamNameMapping)) {
-                if (data.teamName === teamAName) {
+                if (data.teamName === mappedTeamAName) {
                     teamAOriginalId = originalId;
                 }
-                if (data.teamName === teamBName) {
+                if (data.teamName === mappedTeamBName) {
                     teamBOriginalId = originalId;
                 }
             }
@@ -316,10 +351,8 @@ function error(...args) {
         // Extrahujeme posledné písmeno z pôvodných ID (ak existuje)
         const extractLastLetter = (str) => {
             if (!str) return null;
-            // Hľadáme posledné písmeno v reťazci (napr. "U12 D 1A" -> "A")
             const letterMatch = str.match(/[A-Za-z](?=[^A-Za-z]*$)/);
             if (letterMatch) return letterMatch[0].toUpperCase();
-            // Ak nie je písmeno na konci, skúsime nájsť akékoľvek písmeno
             const anyLetter = str.match(/[A-Za-z]/);
             return anyLetter ? anyLetter[0].toUpperCase() : null;
         };
@@ -339,9 +372,10 @@ function error(...args) {
             log(`   ℹ️ Nepodarilo sa zistiť posledné písmená, pokračujem v hľadaní...`);
         }
         
+        // ============================================================
+        // KROK 3: VYHĽADÁVANIE ZÁPASU V DATABÁZE
+        // ============================================================
         const allMatches = window.matchTracker.getAllMatches?.() || [];
-        
-        log(`   🔍 Hľadám zápas medzi tímami "${teamAName}" a "${teamBName}" v iných skupinách (okrem ${excludeGroupName})...`);
         
         let foundMatches = [];
         
@@ -352,13 +386,11 @@ function error(...args) {
             // Preskočíme aktuálnu skupinu
             if (match.categoryName === currentCategory && match.groupName === excludeGroupName) continue;
             
-            // Získame názvy tímov pre tento zápas
+            // Získame názvy tímov pre tento zápas (už sú to skutočné názvy)
             let homeTeamName = window.teamManager?.getTeamNameByDisplayIdSync?.(match.homeTeamIdentifier) || match.homeTeamIdentifier;
             let awayTeamName = window.teamManager?.getTeamNameByDisplayIdSync?.(match.awayTeamIdentifier) || match.awayTeamIdentifier;
             
-            // Ak názvy vyzerajú ako identifikátory, skúsime ich mapovať
-            const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
-            
+            // Ak sú to ešte identifikátory, mapujeme ich
             if (looksLikeIdentifier(homeTeamName)) {
                 const mappedName = window.matchTracker.getTeamNameByDisplayId?.(homeTeamName);
                 if (mappedName && mappedName !== homeTeamName) {
@@ -373,9 +405,9 @@ function error(...args) {
                 }
             }
             
-            // Kontrola, či zápas obsahuje oba tímy (podľa názvov)
-            const hasTeamA = (homeTeamName === teamAName || awayTeamName === teamAName);
-            const hasTeamB = (homeTeamName === teamBName || awayTeamName === teamBName);
+            // Kontrola, či zápas obsahuje oba mapované tímy
+            const hasTeamA = (homeTeamName === mappedTeamAName || awayTeamName === mappedTeamAName);
+            const hasTeamB = (homeTeamName === mappedTeamBName || awayTeamName === mappedTeamBName);
             
             if (hasTeamA && hasTeamB) {
                 log(`      📍 Nájdený zápas v skupine: ${match.groupName} (stav: ${match.status})`);
@@ -390,7 +422,7 @@ function error(...args) {
                     let teamBScore = 0;
                     
                     // Zistíme skóre z pohľadu hľadaných tímov
-                    if (homeTeamName === teamAName) {
+                    if (homeTeamName === mappedTeamAName) {
                         teamAScore = homeScore;
                         teamBScore = awayScore;
                     } else {
@@ -426,7 +458,7 @@ function error(...args) {
         if (foundMatches.length > 0) {
             log(`      ⚠️ Nájdených ${foundMatches.length} zápasov, ale žiadny nie je dokončený.`);
         } else {
-            log(`      ❌ Žiadny zápas medzi týmito tímami nebol nájdený v iných skupinách.`);
+            log(`      ❌ Žiadny zápas medzi tímami "${mappedTeamAName}" a "${mappedTeamBName}" nebol nájdený v iných skupinách.`);
         }
         
         return null;
