@@ -748,13 +748,14 @@ export function CategorySettings({
             )) ||
             editedTimeoutCount[cat.id] !== cat.timeoutCount ||
             editedTimeoutDuration[cat.id] !== cat.timeoutDuration ||
-            editedExclusionTime[cat.id] !== cat.exclusionTime
+            editedExclusionTime[cat.id] !== cat.exclusionTime ||
+            editedCarryOverPoints[cat.id] !== (cat.carryOverPoints ?? false)
         ).length;
     }, [categories, editedMaxTeams, editedMaxPlayers, editedMaxImplementationTeam,
         editedPeriods, editedPeriodDuration, editedBreakDuration, editedMatchBreak, 
         editedDrawColor, editedTransportColor, editedDateFrom, editedDateTo, 
         editedDateFromActive, editedDateToActive, editedTimeoutCount, 
-        editedTimeoutDuration, editedExclusionTime, isRegistrationFrozen]);
+        editedTimeoutDuration, editedExclusionTime, editedCarryOverPoints, isRegistrationFrozen]);
 
     // RESET VŠETKÝCH NEULOŽENÝCH ZMIEN
     const resetAllChanges = React.useCallback(() => {
