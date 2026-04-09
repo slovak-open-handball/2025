@@ -693,7 +693,7 @@ function error(...args) {
         });
     }
     
-    // UPRAVENÁ FUNKCIA: printGroupTable - pre nadstavbové skupiny používa upravenú verziu
+    // UPRAVENÁ FUNKCIA: printGroupTable - mapuje názvy pre VŠETKY tabuľky
     function printGroupTable(categoryName, groupName, baseGroupName = null) {
         let table;
     
@@ -707,25 +707,25 @@ function error(...args) {
         if (!table) return;
         
         // ============================================================
-        // 🔥 PRED VÝPISOM DO KONZOLY - MAPUJEME NÁZVY TÍMOV
+        // 🔥 MAPOVANIE NÁZVOV TÍMOV PRE VŠETKY TABUĽKY (nielen nadstavbové)
         // ============================================================
-        if (table.baseGroup) {
-            log(`\n📋 MAPOVANIE NÁZVOV PRED VÝPISOM TABUĽKY: ${table.category} - ${table.group}`);
+        log(`\n📋 MAPOVANIE NÁZVOV PRED VÝPISOM TABUĽKY: ${table.category} - ${table.group}`);
     
-            // Pomocná funkcia na kontrolu, či ide o identifikátor
-            const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
-            
-            for (const team of table.teams) {
-                // Iba ak to vyzerá ako identifikátor, skúsime mapovať
-                if (looksLikeIdentifier(team.name)) {
-                    const mappedName = window.matchTracker.getTeamNameByDisplayId(team.name);
-                    if (mappedName && mappedName !== team.name) {
-                        log(`   🔄 Mapovanie pre výpis: "${team.name}" → "${mappedName}"`);
-                        team.name = mappedName;
-                    }
-                } else {
-                    log(`   ℹ️ "${team.name}" nie je identifikátor, preskakujem mapovanie`);
+        // Pomocná funkcia na kontrolu, či ide o identifikátor
+        const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
+        
+        for (const team of table.teams) {
+            // Iba ak to vyzerá ako identifikátor, skúsime mapovať
+            if (looksLikeIdentifier(team.name)) {
+                const mappedName = window.matchTracker.getTeamNameByDisplayId(team.name);
+                if (mappedName && mappedName !== team.name) {
+                    log(`   🔄 Mapovanie pre výpis: "${team.name}" → "${mappedName}"`);
+                    team.name = mappedName;
+                } else if (!mappedName) {
+                    log(`   ⚠️ Žiadne mapovanie pre: "${team.name}" (funkcia vrátila null)`);
                 }
+            } else {
+                log(`   ℹ️ "${team.name}" nie je identifikátor, preskakujem mapovanie`);
             }
         }
         // ============================================================
