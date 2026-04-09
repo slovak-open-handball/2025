@@ -282,35 +282,35 @@ function error(...args) {
         // ============================================================
         // OPTIMALIZÁCIA: Kontrola, či tímy majú rovnaké posledné písmeno v pôvodných ID
         // ============================================================
-        // Získame pôvodné ID tímov (ak sú dostupné v matchTracker)
+        // Získame pôvodné ID tímov (ak sú dostupné)
         let teamAOriginalId = teamAName;
         let teamBOriginalId = teamBName;
         
-        // Skúsime nájsť pôvodné identifikátory z cache alebo z mapovania
-        const originalIdsMap = new Map();
-        
-        // Prehľadáme prvky s atribútom data-original-identifier
+        // Skúsime nájsť pôvodné identifikátory z DOM elementov
         const elementsWithOriginalId = document.querySelectorAll('[data-original-identifier]');
         for (const element of elementsWithOriginalId) {
             const originalId = element.getAttribute('data-original-identifier');
             const teamName = element.getAttribute('data-team-name');
             if (originalId && teamName) {
-                teamNameToOriginalId.set(teamName, originalId);
-            }
-        }
-
-        if (teamNameToOriginalId.size === 0 && window.__teamNameMapping) {
-            for (const [originalId, data] of Object.entries(window.__teamNameMapping)) {
-                teamNameToOriginalId.set(data.teamName, originalId);
+                if (teamName === teamAName) {
+                    teamAOriginalId = originalId;
+                }
+                if (teamName === teamBName) {
+                    teamBOriginalId = originalId;
+                }
             }
         }
         
-        // Ak máme mapovanie, použijeme ho
-        if (originalIdsMap.has(teamAName)) {
-            teamAOriginalId = originalIdsMap.get(teamAName);
-        }
-        if (originalIdsMap.has(teamBName)) {
-            teamBOriginalId = originalIdsMap.get(teamBName);
+        // Ak nemáme mapovanie z DOM, skúsime použiť globálne mapovanie
+        if (window.__teamNameMapping) {
+            for (const [originalId, data] of Object.entries(window.__teamNameMapping)) {
+                if (data.teamName === teamAName) {
+                    teamAOriginalId = originalId;
+                }
+                if (data.teamName === teamBName) {
+                    teamBOriginalId = originalId;
+                }
+            }
         }
         
         // Extrahujeme posledné písmeno z pôvodných ID (ak existuje)
