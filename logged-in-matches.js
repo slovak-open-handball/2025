@@ -3248,8 +3248,8 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                         disabled: !selectedCategory,
                         className: `px-4 py-2 text-white rounded-lg transition-colors ${
                             selectedCategory 
-                                ? 'bg-green-600 hover:bg-green-700 cursor-pointer' 
-                                : 'bg-gray-400 cursor-not-allowed'
+                                ? 'bg-green-600 hover:bg-green-700 text-white cursor-pointer' 
+                                : 'bg-white border-2 border-green-600 text-green-600 cursor-not-allowed'
                         }`
                     },
                     'Generovať'
