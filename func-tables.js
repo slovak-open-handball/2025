@@ -395,13 +395,19 @@ function error(...args) {
         const teamsInGroup = getTeamsInGroupFromAllMatches(allGroupMatches);
         
         // Spracujeme výsledky LEN z ODOHRANÝCH ZÁPASOV
+        const categorySetting = categorySettingsCache[categoryName];
+        const carryOverPoints = categorySetting?.carryOverPoints ?? false;
+
+        log(`📋 Kategória ${categoryName}: carryOverPoints = ${carryOverPoints}`);
+
+        // Spracujeme výsledky LEN z ODOHRANÝCH ZÁPASOV
         completedGroupMatches.forEach(match => {
             const events = eventsData[match.id] || [];
             const { home: homeScore, away: awayScore } = getCurrentScore(events);
             
             const homeTeamStats = teamsInGroup.find(t => t.id === match.homeTeamIdentifier);
             const awayTeamStats = teamsInGroup.find(t => t.id === match.awayTeamIdentifier);
-            
+    
             if (homeTeamStats && awayTeamStats) {
                 homeTeamStats.played++;
                 awayTeamStats.played++;
@@ -427,6 +433,10 @@ function error(...args) {
                 }
             }
         });
+
+        if (!carryOverPoints && groupName.toLowerCase().includes('nadstavbová')) {
+            log(`⚠️ Pre kategóriu ${categoryName} je carryOverPoints = false, body zo základnej skupiny sa NEBUDÚ prenášať do nadstavbovej`);
+        }
         
         // Vypočítame rozdiel skóre
         teamsInGroup.forEach(team => {
@@ -480,6 +490,31 @@ function error(...args) {
             tableSettings.sortingConditions = [];
         }
     }
+
+    // Cache pre nastavenia kategórií (vrátane carryOverPoints)
+    let categorySettingsCache = {};
+
+    // Funkcia na načítanie nastavení kategórie z Firestore
+    async function loadCategorySettings() {
+        if (!window.db) return;
+        try {
+            const { doc, getDoc } = window.firebaseModules || await importFirebaseModules();
+            const categoriesRef = doc(window.db, 'settings', 'categories');
+            const categoriesSnap = await getDoc(categoriesRef);
+            if (categoriesSnap.exists()) {
+                const data = categoriesSnap.data();
+                for (const [catId, catData] of Object.entries(data)) {
+                    categorySettingsCache[catData.name] = {
+                        carryOverPoints: catData.carryOverPoints ?? false,
+                        id: catId
+                    };
+                }
+                log('📋 Načítané nastavenia kategórií (carryOverPoints):', categorySettingsCache);
+            }
+        } catch (error) {
+            console.error('❌ Chyba pri načítaní nastavení kategórií:', error);
+        }
+    }
     
     // Funkcia na sledovanie zmien nastavení poradia v reálnom čase
     function subscribeToTableSettings() {
@@ -504,13 +539,24 @@ function error(...args) {
     }
     
     // Funkcia na výpis tabuľky skupiny
-    function printGroupTable(categoryName, groupName) {
-        const table = createGroupTable(categoryName, groupName);
-        
+    function printGroupTable(categoryName, groupName, baseGroupName = null) {
+        let table;
+    
+        // Ak je zadaná základná skupina, použijeme špeciálnu funkciu pre nadstavbovú
+        if (baseGroupName && groupName.toLowerCase().includes('nadstavbová')) {
+            table = createAdvancedGroupTable(categoryName, groupName, baseGroupName);
+        } else {
+            table = createGroupTable(categoryName, groupName);
+        }
+    
         if (!table) return;
         
         log('\n' + '='.repeat(120));
         log(`📊 TABUĽKA SKUPINY: ${table.category} - ${table.group}`);
+        if (table.baseGroup) {
+            log(`   📌 Základná skupina: ${table.baseGroup}`);
+            log(`   📌 Prenášanie bodov: ${table.carryOverPoints ? 'ZAPNUTÉ ✅' : 'VYPNUTÉ ❌'}`);
+        }
         log('='.repeat(120));
         
         // Informácia o počte odohraných zápasov
@@ -535,6 +581,11 @@ function error(...args) {
             const points = team.points.toString().padEnd(4);
             
             log(`${position}${name}${played}${wins}${draws}${losses}${score}${diffDisplay}${points}`);
+            
+            // Výpis detailu bodov pre nadstavbové skupiny
+            if (table.baseGroup && table.carryOverPoints && team.basePoints !== undefined) {
+                log(`       └─ body: ${team.basePoints} (zákl.) + ${team.advancedOnlyPoints} (nadst.) = ${team.points}`);
+            }
         });
         
         log('-'.repeat(120));
@@ -653,7 +704,7 @@ function error(...args) {
         });
         
         log('\n' + '='.repeat(90) + '\n');
-    }
+    }    
     
     // Funkcia na výpis prehľadu všetkých skupín
     function printGroupsOverview() {
@@ -820,6 +871,8 @@ function error(...args) {
         
         // Uložíme unsubscribe pre prípad potreby
         window.__unsubscribeTableSettings = unsubscribeSettings;
+
+        await loadCategorySettings();
     }
     
     // Sledovanie udalostí pre konkrétny zápas
@@ -924,7 +977,10 @@ function error(...args) {
         getAllMatches: getAllMatches,
         getSortingConditions: () => tableSettings.sortingConditions,
         getMatches: () => matchesData,
-        getEvents: (matchId) => eventsData[matchId] || []
+        getEvents: (matchId) => eventsData[matchId] || [],
+        createAdvancedGroupTable: createAdvancedGroupTable,
+        getCategorySettings: () => categorySettingsCache,
+        getCarryOverPoints: (categoryName) => categorySettingsCache[categoryName]?.carryOverPoints ?? false
     };
     
     // Spustenie sledovania
