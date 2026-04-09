@@ -229,7 +229,8 @@ export function CategorySettings({
                     timeoutCount: obj.timeoutCount ?? 2,
                     timeoutDuration: obj.timeoutDuration ?? 1,
                     // Čas pre vylúčenie
-                    exclusionTime: obj.exclusionTime ?? 2
+                    exclusionTime: obj.exclusionTime ?? 2,
+                    carryOverPoints: obj.carryOverPoints ?? false 
                 })).sort((a, b) => a.name.localeCompare(b.name));
 
                 setCategories(list);
