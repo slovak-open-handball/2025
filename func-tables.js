@@ -527,15 +527,22 @@ function error(...args) {
         // 5. Vytvoríme mapovanie bodov zo základnej skupiny (POUŽÍVAME MAPOVANÉ NÁZVY)
         const basePointsMap = new Map();
         if (carryOverPoints) {
-            // 🔥 DÔLEŽITÉ: Pre každý tím v základnej skupine tiež zavoláme mapovanie
             for (const baseTeam of baseGroupTable.teams) {
                 const baseTeamIndex = baseGroupTable.teams.findIndex(t => t.id === baseTeam.id);
                 const position = baseTeamIndex + 1;
                 const baseGroupLetter = baseGroupName.replace('skupina ', '').toUpperCase();
                 const displayId = `${cleanCategoryName(categoryName)} ${position}${baseGroupLetter}`;
                 
-                const mappedBaseName = window.matchTracker.getTeamNameByDisplayId(displayId);
-                const finalBaseName = (mappedBaseName && mappedBaseName !== displayId) ? mappedBaseName : baseTeam.name;
+                // 🔥 KONTROLA: Či displayId vyzerá ako identifikátor
+                const looksLikeIdentifier = /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(displayId);
+                let finalBaseName = baseTeam.name;
+                
+                if (looksLikeIdentifier) {
+                    const mappedBaseName = window.matchTracker.getTeamNameByDisplayId(displayId);
+                    finalBaseName = (mappedBaseName && mappedBaseName !== displayId) ? mappedBaseName : baseTeam.name;
+                } else {
+                    finalBaseName = baseTeam.name;
+                }
                 
                 basePointsMap.set(finalBaseName, baseTeam.points);
                 log(`   📊 Základný tím: "${baseTeam.name}" → mapovaný: "${finalBaseName}" (body: ${baseTeam.points})`);
