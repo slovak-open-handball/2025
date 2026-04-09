@@ -1020,7 +1020,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                                     );
                                 },
                                 className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none mr-2'
-                            }, '⚙️'),
+                            }, '✏️'),
                             member.type || '-'
                         ),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.firstName || '-'),
@@ -1101,7 +1101,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
             );
         },
         className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
-    }, '⚙️');
+    }, '✏️');
 
     if (showDetailsAsCollapsible) {
         return React.createElement(
@@ -4849,7 +4849,7 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                             React.createElement('button', {
                                                 onClick: (e) => { e.stopPropagation(); openFilterModal(col.id); },
                                                 className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${activeFilters[col.id] && activeFilters[col.id].length > 0 ? 'opacity-100 text-blue-500' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200`
-                                            }, '⚙️')
+                                            }, '✏️')
                                             // Removed right move button
                                         )
                                         ,
@@ -4909,7 +4909,7 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                                         );
                                                     },
                                                     className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
-                                                }, '⚙️')
+                                                }, '✏️')
                                             ),
                                             React.createElement('td', { className: 'py-3 px-2 text-center whitespace-nowrap min-w-max' }, team._category || '-'),
                                             React.createElement('td', { className: 'py-3 px-2 text-left whitespace-nowrap min-w-max' }, team.teamName || `Tím`),
@@ -5046,7 +5046,7 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                                     );
                                                 },
                                                 className: 'text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-200 focus:outline-none'
-                                            }, '⚙️')
+                                            }, '✏️')
                                         ),
                                         columnOrder.map(col => (
                                             React.createElement('td', { key: col.id, className: 'py-3 px-6 text-left whitespace-nowrap min-w-max' },
