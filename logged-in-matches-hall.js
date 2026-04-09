@@ -6464,8 +6464,8 @@ const matchesHallApp = ({ userProfileData }) => {
                                             { 
                                                 className: 'px-3 py-1 text-xs font-medium rounded-full mr-2',
                                                 style: { 
-                                                    backgroundColor: '#EFF6FF',
-                                                    color: '#1E40AF'
+                                                    backgroundColor: `${category.drawColor}20`, // Farba z DB s 20% priehľadnosťou pre svetlé pozadie
+                                                    color: category.drawColor
                                                 }
                                             },
                                             category.name
