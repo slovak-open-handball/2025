@@ -1741,7 +1741,11 @@ export function CategorySettings({
                                                 'label', 
                                                 { 
                                                     htmlFor: `carryOverPoints_${selectedCategory.id}`,
-                                                    className: `text-sm font-medium ${hasExistingMatchesForCategory(selectedCategory.id) ? 'text-gray-500' : 'text-gray-700'} cursor-pointer`
+                                                        className: `text-sm font-medium ${
+                                                        hasExistingMatchesForCategory(selectedCategory.id) 
+                                                            ? 'text-gray-500 cursor-not-allowed' 
+                                                            : 'text-gray-700 cursor-pointer'
+                                                        }`
                                                 },
                                                 'Zápas zo základnej skupiny sa započítava v nadstavbovej skupine'
                                             )
