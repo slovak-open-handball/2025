@@ -4849,7 +4849,7 @@ const formatTableCellValue = (value, columnId, userObject) => {
                                             React.createElement('button', {
                                                 onClick: (e) => { e.stopPropagation(); openFilterModal(col.id); },
                                                 className: `text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 ${activeFilters[col.id] && activeFilters[col.id].length > 0 ? 'opacity-100 text-blue-500' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200`
-                                            }, '✏️')
+                                            }, '⚙️')
                                             // Removed right move button
                                         )
                                         ,
