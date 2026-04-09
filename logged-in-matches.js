@@ -3012,23 +3012,25 @@ const HallDayStartTimeModal = ({ isOpen, onClose, onConfirm, hallName, date, cur
     );
 };
 
-// Modálne okno pre výber typu generovania - PRIDANÝ CHECKBOX PRE NADSTAVBOVÉ SKUPINY
+// Modálne okno pre výber typu generovania - ZMENENÉ: checkbox nahradený info textom
 const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCategory }) => {
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedGroup, setSelectedGroup] = useState('');
     const [withRepetitions, setWithRepetitions] = useState(false);
-    const [transferFromBasicGroup, setTransferFromBasicGroup] = useState(false);
     const [availableGroups, setAvailableGroups] = useState([]);
     const [selectedGroupType, setSelectedGroupType] = useState('');
+    
+    // Nový stav pre carryOverPoints z nastavení kategórie
+    const [carryOverPoints, setCarryOverPoints] = useState(false);
 
     useEffect(() => {
         if (!isOpen) {
             setSelectedCategory('');
             setSelectedGroup('');
             setWithRepetitions(false);
-            setTransferFromBasicGroup(false);
             setAvailableGroups([]);
             setSelectedGroupType('');
+            setCarryOverPoints(false);
         }
     }, [isOpen]);
 
@@ -3046,34 +3048,47 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
             setAvailableGroups(sortedGroups);
             setSelectedGroup('');
             setSelectedGroupType('');
-            setTransferFromBasicGroup(false);
         } else {
             setAvailableGroups([]);
             setSelectedGroup('');
             setSelectedGroupType('');
-            setTransferFromBasicGroup(false);
         }
     }, [selectedCategory, groupsByCategory]);
 
-    // Zistenie typu vybranej skupiny
+    // Zistenie typu vybranej skupiny a načítanie carryOverPoints z kategórie
     useEffect(() => {
         if (selectedGroup && availableGroups.length > 0) {
             const group = availableGroups.find(g => g.name === selectedGroup);
             if (group) {
                 if (group.type === 'základná skupina') {
                     setSelectedGroupType('Základná skupina');
+                    setCarryOverPoints(false); // Pre základnú skupinu je to irelevantné
                 } else if (group.type === 'nadstavbová skupina') {
                     setSelectedGroupType('Nadstavbová skupina');
+                    
+                    // Načítame carryOverPoints z nastavení kategórie
+                    const category = categories.find(c => c.id === selectedCategory);
+                    if (category) {
+                        // carryOverPoints je vlastnosť kategórie z CategorySettings
+                        const carryOver = category.carryOverPoints ?? false;
+                        setCarryOverPoints(carryOver);
+                        console.log(`Nadstavbová skupina - carryOverPoints: ${carryOver}`);
+                    } else {
+                        setCarryOverPoints(false);
+                    }
                 } else {
                     setSelectedGroupType('');
+                    setCarryOverPoints(false);
                 }
             } else {
                 setSelectedGroupType('');
+                setCarryOverPoints(false);
             }
         } else {
             setSelectedGroupType('');
+            setCarryOverPoints(false);
         }
-    }, [selectedGroup, availableGroups]);
+    }, [selectedGroup, availableGroups, selectedCategory, categories]);
 
     if (!isOpen) return null;
 
@@ -3173,7 +3188,7 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
             // Checkbox pre kombinácie s opakovaním
             React.createElement(
                 'div',
-                { className: 'mb-6' },
+                { className: 'mb-4' },
                 React.createElement(
                     'label',
                     { className: 'flex items-center gap-2 cursor-pointer' },
@@ -3187,25 +3202,51 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                 )
             ),
 
-            // NOVÝ: Checkbox pre prenos zo základnej skupiny (len pre nadstavbové skupiny)
+            // ZMENENÉ: Namiesto checkboxu zobrazujeme INFO o stave prenosu zápasov (len pre nadstavbové skupiny)
             selectedGroup && selectedGroupType === 'Nadstavbová skupina' && React.createElement(
                 'div',
-                { className: 'mb-6 p-3 bg-purple-50 rounded-lg border border-purple-200' },
+                { 
+                    className: `mb-6 p-3 rounded-lg border ${
+                        carryOverPoints 
+                            ? 'bg-blue-50 border-blue-200' 
+                            : 'bg-gray-50 border-gray-200'
+                    }` 
+                },
                 React.createElement(
-                    'label',
-                    { className: 'flex items-start gap-2 cursor-pointer' },
-                    React.createElement('input', {
-                        type: 'checkbox',
-                        checked: transferFromBasicGroup,
-                        onChange: (e) => setTransferFromBasicGroup(e.target.checked),
-                        className: 'w-4 h-4 text-purple-600 rounded mt-0.5'
-                    }),
+                    'div',
+                    { className: 'flex items-start gap-2' },
+                    React.createElement(
+                        'i', 
+                        { 
+                            className: `fa-solid fa-info-circle mt-0.5 ${
+                                carryOverPoints ? 'text-blue-500' : 'text-gray-400'
+                            }` 
+                        }
+                    ),
                     React.createElement(
                         'div',
                         null,
-                        React.createElement('span', { className: 'text-gray-700 font-medium' }, 'Vzájomný zápas sa prenáša'),
-                        React.createElement('p', { className: 'text-xs text-gray-500 mt-1' },
-                            'Nebudú sa generovať zápasy medzi tímami, ktoré majú rovnaký posledný znak v názve (t.j. pochádzajú z rovnakej základnej/nadstavbovej skupiny)'
+                        React.createElement(
+                            'p', 
+                            { 
+                                className: `text-sm font-medium ${
+                                    carryOverPoints ? 'text-blue-700' : 'text-gray-600'
+                                }` 
+                            },
+                            carryOverPoints 
+                                ? 'Zápasy zo základnej skupiny SA PRENÁŠAJÚ'
+                                : 'Zápasy zo základnej skupiny SA NEPRENÁŠAJÚ'
+                        ),
+                        React.createElement(
+                            'p', 
+                            { 
+                                className: `text-xs mt-1 ${
+                                    carryOverPoints ? 'text-blue-600' : 'text-gray-500'
+                                }` 
+                            },
+                            carryOverPoints 
+                                ? 'Nebudú sa generovať zápasy medzi tímami, ktoré majú rovnaký posledný znak v názve (t.j. pochádzajú z rovnakej základnej skupiny)'
+                                : 'Budú sa generovať všetky zápasy medzi všetkými tímami v tejto nadstavbovej skupine'
                         )
                     )
                 )
@@ -3220,7 +3261,7 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
             // Tlačidlá
             React.createElement(
                 'div',
-                { className: 'flex justify-end gap-3' },
+                { className: 'flex justify-end gap-3 mt-2' },
                 React.createElement(
                     'button',
                     {
@@ -3237,7 +3278,7 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                                 categoryId: selectedCategory,
                                 groupName: selectedGroup || null,
                                 withRepetitions,
-                                transferFromBasicGroup
+                                transferFromBasicGroup: carryOverPoints // Prenášame hodnotu z nastavení kategórie
                             });
                             onClose();
                         },
