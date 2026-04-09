@@ -672,6 +672,28 @@ function error(...args) {
         });
         
         // ============================================================
+        // PRIDANÉ: Mapovanie názvov tímov na pôvodné ID
+        // ============================================================
+        const teamNameToOriginalId = new Map();
+        
+        // Prehľadáme prvky s atribútom data-original-identifier
+        const elementsWithOriginalId = document.querySelectorAll('[data-original-identifier]');
+        for (const element of elementsWithOriginalId) {
+            const originalId = element.getAttribute('data-original-identifier');
+            const teamName = element.getAttribute('data-team-name');
+            if (originalId && teamName) {
+                teamNameToOriginalId.set(teamName, originalId);
+            }
+        }
+        
+        // Ak nemáme mapovanie z DOM, skúsime použiť globálne mapovanie
+        if (teamNameToOriginalId.size === 0 && window.__teamNameMapping) {
+            for (const [originalId, data] of Object.entries(window.__teamNameMapping)) {
+                teamNameToOriginalId.set(data.teamName, originalId);
+            }
+        }
+        
+        // ============================================================
         // PRIDANÉ: PRENÁŠANIE VÝSLEDKOV Z INÝCH SKUPÍN
         // ============================================================
         const categorySetting = categorySettingsCache[categoryName];
@@ -711,7 +733,7 @@ function error(...args) {
                     continue;
                 }
                 
-                // 🔥 POUŽIJEME NÁZVY TÍMOV (teamA.name, teamB.name) namiesto ID
+                // 🔥 POUŽIJEME NÁZVY TÍMOV (teamA.name, teamB.name)
                 const transferredMatch = findMatchBetweenTeamsInOtherGroup(
                     teamA.name, teamB.name, categoryName, groupName, groupName
                 );
