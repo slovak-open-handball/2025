@@ -279,6 +279,66 @@ function error(...args) {
     function findMatchBetweenTeamsInOtherGroup(teamAName, teamBName, currentCategory, currentGroupName, excludeGroupName) {
         if (!window.matchTracker) return null;
         
+        // ============================================================
+        // OPTIMALIZÁCIA: Kontrola, či tímy majú rovnaké posledné písmeno v pôvodných ID
+        // ============================================================
+        // Získame pôvodné ID tímov (ak sú dostupné v matchTracker)
+        let teamAOriginalId = teamAName;
+        let teamBOriginalId = teamBName;
+        
+        // Skúsime nájsť pôvodné identifikátory z cache alebo z mapovania
+        const originalIdsMap = new Map();
+        
+        // Prehľadáme prvky s atribútom data-original-identifier
+        const elementsWithOriginalId = document.querySelectorAll('[data-original-identifier]');
+        for (const element of elementsWithOriginalId) {
+            const originalId = element.getAttribute('data-original-identifier');
+            const teamName = element.getAttribute('data-team-name');
+            if (originalId && teamName) {
+                teamNameToOriginalId.set(teamName, originalId);
+            }
+        }
+
+        if (teamNameToOriginalId.size === 0 && window.__teamNameMapping) {
+            for (const [originalId, data] of Object.entries(window.__teamNameMapping)) {
+                teamNameToOriginalId.set(data.teamName, originalId);
+            }
+        }
+        
+        // Ak máme mapovanie, použijeme ho
+        if (originalIdsMap.has(teamAName)) {
+            teamAOriginalId = originalIdsMap.get(teamAName);
+        }
+        if (originalIdsMap.has(teamBName)) {
+            teamBOriginalId = originalIdsMap.get(teamBName);
+        }
+        
+        // Extrahujeme posledné písmeno z pôvodných ID (ak existuje)
+        const extractLastLetter = (str) => {
+            if (!str) return null;
+            // Hľadáme posledné písmeno v reťazci (napr. "U12 D 1A" -> "A")
+            const letterMatch = str.match(/[A-Za-z](?=[^A-Za-z]*$)/);
+            if (letterMatch) return letterMatch[0].toUpperCase();
+            // Ak nie je písmeno na konci, skúsime nájsť akékoľvek písmeno
+            const anyLetter = str.match(/[A-Za-z]/);
+            return anyLetter ? anyLetter[0].toUpperCase() : null;
+        };
+        
+        const lastLetterA = extractLastLetter(teamAOriginalId);
+        const lastLetterB = extractLastLetter(teamBOriginalId);
+        
+        // Kontrola: Ak posledné písmená nie sú rovnaké, zápas nemôže existovať
+        if (lastLetterA && lastLetterB && lastLetterA !== lastLetterB) {
+            log(`   ⏭️ PRESKAKUJEM: Tímy majú rôzne posledné písmená (${lastLetterA} vs ${lastLetterB}) - nemôžu spolu hrať v inej skupine`);
+            return null;
+        }
+        
+        if (lastLetterA && lastLetterB) {
+            log(`   ✅ Tímy majú rovnaké posledné písmeno: ${lastLetterA} - pokračujem v hľadaní`);
+        } else {
+            log(`   ℹ️ Nepodarilo sa zistiť posledné písmená, pokračujem v hľadaní...`);
+        }
+        
         const allMatches = window.matchTracker.getAllMatches?.() || [];
         
         log(`   🔍 Hľadám zápas medzi tímami "${teamAName}" a "${teamBName}" v iných skupinách (okrem ${excludeGroupName})...`);
@@ -628,6 +688,28 @@ function error(...args) {
                 const teamB = teamsInGroup.find(t => t.id === pair.teamB);
                 
                 if (!teamA || !teamB) continue;
+                
+                // Získame pôvodné ID tímov (ak existujú)
+                const teamAOriginalId = teamNameToOriginalId.get(teamA.name) || teamA.name;
+                const teamBOriginalId = teamNameToOriginalId.get(teamB.name) || teamB.name;
+                
+                // Extrahujeme posledné písmeno
+                const extractLastLetter = (str) => {
+                    if (!str) return null;
+                    const letterMatch = str.match(/[A-Za-z](?=[^A-Za-z]*$)/);
+                    if (letterMatch) return letterMatch[0].toUpperCase();
+                    const anyLetter = str.match(/[A-Za-z]/);
+                    return anyLetter ? anyLetter[0].toUpperCase() : null;
+                };
+                
+                const lastLetterA = extractLastLetter(teamAOriginalId);
+                const lastLetterB = extractLastLetter(teamBOriginalId);
+                
+                // Ak posledné písmená nie sú rovnaké, preskočíme
+                if (lastLetterA && lastLetterB && lastLetterA !== lastLetterB) {
+                    log(`   ⏭️ PRESKAKUJEM: ${teamA.name} (${lastLetterA}) vs ${teamB.name} (${lastLetterB}) - rôzne skupiny`);
+                    continue;
+                }
                 
                 // 🔥 POUŽIJEME NÁZVY TÍMOV (teamA.name, teamB.name) namiesto ID
                 const transferredMatch = findMatchBetweenTeamsInOtherGroup(
