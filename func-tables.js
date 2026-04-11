@@ -1521,7 +1521,12 @@ function error(...args) {
         log('\n' + '='.repeat(80) + '\n');
     }
     
-    // Hlavná funkcia na inicializáciu sledovania
+    // ========== UPRAVENÁ ČASŤ: GLOBÁLNE PREMENNÉ PRE SLEDOVANIE ZMIEN ==========
+    let pendingCompletedMatches = new Set(); // Sledujeme zápasy, ktoré čakajú na dokončenie
+    let initialProcessingDone = false; // Či už prebehlo prvé spracovanie
+    let isProcessingMatches = false; // Či práve prebieha spracovanie
+    
+    // ========== UPRAVENÁ FUNKCIA: initializeMatchTracker ==========
     async function initializeMatchTracker() {
         if (!window.db) {
             log('⏳ Čakám na inicializáciu Firebase...');
@@ -1545,45 +1550,56 @@ function error(...args) {
             return;
         }
         
-        // Načítame nastavenia poradia
         await loadTableSettings();
-        
-        // Spustíme sledovanie zmien nastavení poradia
         const unsubscribeSettings = subscribeToTableSettings();
         
         const matchesRef = collection(window.db, 'matches');
         
-        // Nahraďte existujúcu funkciu onSnapshot v initializeMatchTracker touto verziou
-
+        // NAHRADENIE EXISTUJÚCEJ FUNKCIE onSnapshot
         unsubscribeMatches = onSnapshot(matchesRef, (snapshot) => {
             log(`🔄 Zmena v databáze: ${snapshot.size} zápasov celkom`);
             
-            let completedMatchChanged = false; // <- PRIDANÉ: Flag pre zmenu na "completed"
-        
+            let completedMatchChanged = false;
+            let newCompletedMatches = []; // Zoznam nových dokončených zápasov
+            
             snapshot.docChanges().forEach(change => {
                 const match = { id: change.doc.id, ...change.doc.data() };
                 
                 if (change.type === 'added') {
-//                  log(`➕ Pridaný zápas: ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier} (${match.status})`);
                     matchesData[match.id] = match;
                     subscribeToMatchEvents(match.id);
+                    
+                    // AK PRIDANÝ ZÁPAS JE UŽ DOKONČENÝ
+                    if (match.status === 'completed') {
+                        newCompletedMatches.push(match.id);
+                    } else {
+                        // Zápas nie je dokončený - pridáme do sledovania
+                        pendingCompletedMatches.add(match.id);
+                        log(`⏳ Zápas ${match.id} nie je dokončený, zaradený do čakacej fronty`);
+                    }
                     
                 } else if (change.type === 'modified') {
                     const oldMatch = matchesData[match.id];
                     matchesData[match.id] = match;
                     
-                    // ========== UPRAVENÉ: Kontrola zmeny na "completed" ==========
+                    // KONTROLA: Zmena na "completed"
                     if (oldMatch && oldMatch.status !== match.status && match.status === 'completed') {
-                      log(`✅ Zápas DOHRANÝ! Zmena stavu: ${getStatusText(oldMatch.status)} → ${getStatusText(match.status)}`);
-                        completedMatchChanged = true; // <- PRIDANÉ: Nastavíme flag
+                        log(`✅ Zápas DOHRANÝ! Zmena stavu: ${getStatusText(oldMatch.status)} → ${getStatusText(match.status)}`);
+                        completedMatchChanged = true;
+                        newCompletedMatches.push(match.id);
+                        
+                        // Odstránime z čakacej fronty
+                        if (pendingCompletedMatches.has(match.id)) {
+                            pendingCompletedMatches.delete(match.id);
+                        }
                     } else if (oldMatch && oldMatch.status !== match.status) {
-                      log(`🔄 Zmena stavu zápasu: ${getStatusText(oldMatch.status)} → ${getStatusText(match.status)} (nie je completed, ignorujem)`);
+                        log(`🔄 Zmena stavu zápasu: ${getStatusText(oldMatch.status)} → ${getStatusText(match.status)}`);
                     }
-                    // ===========================================================
                     
                 } else if (change.type === 'removed') {
-                  log(`❌ Odstránený zápas: ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`);
+                    log(`❌ Odstránený zápas: ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`);
                     delete matchesData[match.id];
+                    pendingCompletedMatches.delete(match.id);
                     
                     if (unsubscribeEvents[match.id]) {
                         unsubscribeEvents[match.id]();
@@ -1593,19 +1609,58 @@ function error(...args) {
                 }
             });
             
-            // ========== UPRAVENÉ: IBA ak sa zmenil zápas na "completed" ==========
-            if (completedMatchChanged) {
-                log('🏁 Spúšťam prepočet tabuliek skupín (zápas bol dohraný)...');
-                printAllGroupTables();
+            // ========== PRVÉ SPRACOVANIE (LEN RAZ) ==========
+            if (!initialProcessingDone && !isProcessingMatches) {
+                isProcessingMatches = true;
                 
-                // 🔥 VYŠLEME UDALOSŤ PRE teamNameReplacer
-                if (window.dispatchEvent) {
-                    window.dispatchEvent(new CustomEvent('groupTablesUpdated', {
-                        detail: { reason: 'match_completed', timestamp: Date.now() }
-                    }));
+                // Získame všetky zápasy
+                const allMatches = Object.values(matchesData);
+                
+                // Zistíme, ktoré zápasy NIE SÚ dokončené
+                const incompleteMatches = allMatches.filter(m => m.status !== 'completed');
+                
+                if (incompleteMatches.length === 0) {
+                    // VŠETKY ZÁPASY SÚ DOKONČENÉ -> môžeme spracovať hneď
+                    log('🎉 Všetky zápasy sú dokončené, spúšťam tabuľky skupín...');
+                    printAllGroupTables();
+                    initialProcessingDone = true;
+                    isProcessingMatches = false;
+                } else {
+                    // NIEKTORÉ ZÁPASY NIE SÚ DOKONČENÉ -> počkáme na ich dokončenie
+                    log(`⏳ Čakám na dokončenie ${incompleteMatches.length} zápasov:`);
+                    incompleteMatches.forEach(match => {
+                        log(`   - ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier} (${match.status})`);
+                        pendingCompletedMatches.add(match.id);
+                    });
+                    log('📌 Tabuľky skupín sa zobrazia až po dokončení VŠETKÝCH zápasov.');
+                    isProcessingMatches = false;
                 }
             }
-            // ====================================================================
+            
+            // ========== SPRACOVANIE IBA KEĎ SA ZMENIL ZÁPAS NA "completed" ==========
+            if (completedMatchChanged && newCompletedMatches.length > 0) {
+                // Odstránime dokončené zápasy z čakacej fronty
+                newCompletedMatches.forEach(matchId => {
+                    if (pendingCompletedMatches.has(matchId)) {
+                        pendingCompletedMatches.delete(matchId);
+                    }
+                });
+                
+                log(`📊 Aktuálny stav: ${pendingCompletedMatches.size} zápasov čaká na dokončenie`);
+                
+                // SKONTROLUJEME, ČI UŽ NIE JE ŽIADNY ČAKAJÚCI ZÁPAS
+                if (pendingCompletedMatches.size === 0 && !initialProcessingDone) {
+                    log('🎉 VŠETKY ZÁPASY SÚ DOKONČENÉ! Spúšťam tabuľky skupín...');
+                    printAllGroupTables();
+                    initialProcessingDone = true;
+                } else if (pendingCompletedMatches.size === 0 && initialProcessingDone) {
+                    // Už sme spracovaní, ale prišla ďalšia zmena - obnovíme tabuľky
+                    log('🔄 Obnovujem tabuľky skupín (ďalší zápas bol dokončený)...');
+                    printAllGroupTables();
+                } else {
+                    log(`⏳ Stále čakám na ${pendingCompletedMatches.size} zápasov...`);
+                }
+            }
             
         }, (error) => {
             console.error('❌ Chyba pri sledovaní zápasov:', error);
@@ -1617,13 +1672,6 @@ function error(...args) {
             subscribeToMatchEvents(matchId);
         }
         
-        setTimeout(() => {
-            printAllGroupTables();
-        }, 2000);
-        
-        // Uložíme unsubscribe pre prípad potreby
-        window.__unsubscribeTableSettings = unsubscribeSettings;
-
         await loadCategorySettings();
     }
     
