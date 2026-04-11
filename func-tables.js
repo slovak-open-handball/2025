@@ -1527,11 +1527,55 @@ function error(...args) {
     let isProcessingMatches = false; // Či práve prebieha spracovanie
     let silentMode = false; // TICHÝ REŽIM - keď čakáme na dokončenie zápasov, nevypisujeme nič
     let waitingMessagePrinted = false; // Či už bola vypísaná čakacia správa
+    let readyGroupsPrinted = false; // Či už boli vypísané hotové skupiny
     
     // Pomocná funkcia pre tichý režim - loguje len ak nie sme v silent mode
     function silentLog(...args) {
         if (!silentMode) {
             log(...args);
+        }
+    }
+
+    // ========== NOVÁ FUNKCIA: Vypíše len hotové skupiny (100% odohrané) ==========
+    function printReadyGroupsOnly() {
+        const allMatches = getAllMatches();
+        
+        if (allMatches.length === 0) {
+            return;
+        }
+        
+        // Získame unikátne kombinácie kategória + skupina
+        const uniqueGroups = new Set();
+        allMatches.forEach(match => {
+            if (match.isPlacementMatch) return;
+            if (match.categoryName && match.groupName) {
+                uniqueGroups.add(`${match.categoryName}|${match.groupName}`);
+            }
+        });
+        
+        if (uniqueGroups.size === 0) return;
+        
+        let hasPrintedAny = false;
+        const sortedGroups = Array.from(uniqueGroups).sort();
+        
+        for (const groupKey of sortedGroups) {
+            const [category, group] = groupKey.split('|');
+            const groupTable = createGroupTable(category, group);
+            
+            if (groupTable && groupTable.completionPercentage === 100) {
+                // Táto skupina má 100% odohraných zápasov - vypíšeme ju
+                if (!hasPrintedAny) {
+                    console.log('\n' + '='.repeat(120));
+                    console.log(`📊 TABUĽKY SKUPÍN (100% DOKONČENÉ):`);
+                    console.log('='.repeat(120));
+                    hasPrintedAny = true;
+                }
+                printGroupTable(category, group);
+            }
+        }
+        
+        if (hasPrintedAny) {
+            readyGroupsPrinted = true;
         }
     }
     
@@ -1564,15 +1608,14 @@ function error(...args) {
         
         const matchesRef = collection(window.db, 'matches');
         
-        // NAHRADENIE EXISTUJÚCEJ FUNKCIE onSnapshot
         unsubscribeMatches = onSnapshot(matchesRef, (snapshot) => {
-            // V TICHOM REŽIME NELOGUJEME ZMENY (okrem dokončenia zápasu)
+            // V TICHOM REŽIME NELOGUJEME ZMENY
             if (!silentMode && !waitingMessagePrinted) {
                 silentLog(`🔄 Zmena v databáze: ${snapshot.size} zápasov celkom`);
             }
             
             let completedMatchChanged = false;
-            let newCompletedMatches = []; // Zoznam nových dokončených zápasov
+            let newCompletedMatches = [];
             
             snapshot.docChanges().forEach(change => {
                 const match = { id: change.doc.id, ...change.doc.data() };
@@ -1581,11 +1624,7 @@ function error(...args) {
                     matchesData[match.id] = match;
                     subscribeToMatchEvents(match.id);
                     
-                    // AK PRIDANÝ ZÁPAS JE UŽ DOKONČENÝ
-                    if (match.status === 'completed') {
-                        newCompletedMatches.push(match.id);
-                    } else {
-                        // Zápas nie je dokončený - pridáme do sledovania
+                    if (match.status !== 'completed') {
                         pendingCompletedMatches.add(match.id);
                     }
                     
@@ -1593,12 +1632,10 @@ function error(...args) {
                     const oldMatch = matchesData[match.id];
                     matchesData[match.id] = match;
                     
-                    // KONTROLA: Zmena na "completed"
                     if (oldMatch && oldMatch.status !== match.status && match.status === 'completed') {
                         completedMatchChanged = true;
                         newCompletedMatches.push(match.id);
                         
-                        // Odstránime z čakacej fronty
                         if (pendingCompletedMatches.has(match.id)) {
                             pendingCompletedMatches.delete(match.id);
                         }
@@ -1616,31 +1653,34 @@ function error(...args) {
                 }
             });
             
-            // ========== PRVÉ SPRACOVANIE (LEN RAZ) ==========
+            // ========== PRVÉ SPRACOVANIE ==========
             if (!initialProcessingDone && !isProcessingMatches) {
                 isProcessingMatches = true;
                 
-                // Získame všetky zápasy
+                // NAJPRV VYPRACUJEME VŠETKY ZÁPASY
                 const allMatches = Object.values(matchesData);
-                
-                // Zistíme, ktoré zápasy NIE SÚ dokončené
                 const incompleteMatches = allMatches.filter(m => m.status !== 'completed');
                 
+                // VYPNEME LOGOVANIE (aby sme nerušili)
+                silentMode = true;
+                
                 if (incompleteMatches.length === 0) {
-                    // VŠETKY ZÁPASY SÚ DOKONČENÉ -> môžeme spracovať hneď
+                    // VŠETKY ZÁPASY SÚ DOKONČENÉ
+                    silentMode = false;
                     console.log('🎉 Všetky zápasy sú dokončené, spúšťam tabuľky skupín...');
                     printAllGroupTables();
                     initialProcessingDone = true;
-                    isProcessingMatches = false;
-                    waitingMessagePrinted = true; // Značíme, že už máme výsledok
+                    readyGroupsPrinted = true;
                 } else {
-                    // NIEKTORÉ ZÁPASY NIE SÚ DOKONČENÉ -> tichý režim
-                    silentMode = true;
+                    // NIEKTORÉ ZÁPASY NIE SÚ DOKONČENÉ
+                    // NAJPRV VYPIŠEME HOTOVÉ SKUPINY (100%)
+                    printReadyGroupsOnly();
                     
-                    // Vypíšeme LEN JEDNU správu a potom už nič
+                    // POTOM ODOŠLEME SPRÁVU O ČAKANÍ NA ZVYŠNÉ ZÁPASY
                     if (!waitingMessagePrinted) {
                         const remainingCount = incompleteMatches.length;
-                        console.log(`⏳ Čakám na dokončenie ${remainingCount} zápasov. Tabuľky skupín sa zobrazia po dokončení VŠETKÝCH zápasov.`);
+                        console.log(`\n⏳ Čakám na dokončenie zvyšných ${remainingCount} zápasov.`);
+                        console.log(`   (Hotové skupiny už sú vypísané vyššie.)`);
                         waitingMessagePrinted = true;
                     }
                     
@@ -1648,14 +1688,13 @@ function error(...args) {
                     incompleteMatches.forEach(match => {
                         pendingCompletedMatches.add(match.id);
                     });
-                    
-                    isProcessingMatches = false;
                 }
+                
+                isProcessingMatches = false;
             }
             
-            // ========== SPRACOVANIE IBA KEĎ SA ZMENIL ZÁPAS NA "completed" ==========
+            // ========== SPRACOVANIE KEĎ SA ZMENIL ZÁPAS NA "completed" ==========
             if (completedMatchChanged && newCompletedMatches.length > 0) {
-                // Odstránime dokončené zápasy z čakacej fronty
                 newCompletedMatches.forEach(matchId => {
                     if (pendingCompletedMatches.has(matchId)) {
                         pendingCompletedMatches.delete(matchId);
@@ -1664,19 +1703,16 @@ function error(...args) {
                 
                 // SKONTROLUJEME, ČI UŽ NIE JE ŽIADNY ČAKAJÚCI ZÁPAS
                 if (pendingCompletedMatches.size === 0 && !initialProcessingDone) {
-                    // VŠETKY ZÁPASY SÚ DOKONČENÉ - vypneme tichý režim a vypíšeme výsledky
                     silentMode = false;
                     console.log('\n🎉 VŠETKY ZÁPASY SÚ DOKONČENÉ! Spúšťam tabuľky skupín...');
                     printAllGroupTables();
                     initialProcessingDone = true;
                 } else if (pendingCompletedMatches.size === 0 && initialProcessingDone) {
-                    // Už sme spracovaní, ale prišla ďalšia zmena - obnovíme tabuľky
                     silentMode = false;
                     console.log('🔄 Obnovujem tabuľky skupín (ďalší zápas bol dokončený)...');
                     printAllGroupTables();
                 } else {
-                    // Stále čakáme - NEDÁVAME ŽIADNU SPRÁVU, aby sme nerušili
-                    // (prvá správa už bola vypísaná)
+                    // Stále čakáme - žiadne ďalšie logy (tichý režim)
                 }
             }
             
