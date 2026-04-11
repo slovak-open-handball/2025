@@ -1,5 +1,5 @@
 // ========== GLOBÁLNY PREPÍNAČ PRE LOGOVANIE ==========
-const DEBUG_MODE = false;  // false = nevypisuje sa (len tento skript), true = vypisuje sa
+const DEBUG_MODE = true;  // false = nevypisuje sa (len tento skript), true = vypisuje sa
 
 // Uložíme pôvodné konzolové funkcie
 const originalConsoleLog = console.log;
@@ -1521,68 +1521,10 @@ function error(...args) {
         log('\n' + '='.repeat(80) + '\n');
     }
     
-    // ========== UPRAVENÁ ČASŤ: GLOBÁLNE PREMENNÉ PRE SLEDOVANIE ZMIEN ==========
-    let pendingCompletedMatches = new Set(); // Sledujeme zápasy, ktoré čakajú na dokončenie
-    let initialProcessingDone = false; // Či už prebehlo prvé spracovanie
-    let isProcessingMatches = false; // Či práve prebieha spracovanie
-    let silentMode = false; // TICHÝ REŽIM - keď čakáme na dokončenie zápasov, nevypisujeme nič
-    let waitingMessagePrinted = false; // Či už bola vypísaná čakacia správa
-    let readyGroupsPrinted = false; // Či už boli vypísané hotové skupiny
-    
-    // Pomocná funkcia pre tichý režim - loguje len ak nie sme v silent mode
-    function silentLog(...args) {
-        if (!silentMode) {
-            log(...args);
-        }
-    }
-
-    // ========== NOVÁ FUNKCIA: Vypíše len hotové skupiny (100% odohrané) ==========
-    function printReadyGroupsOnly() {
-        const allMatches = getAllMatches();
-        
-        if (allMatches.length === 0) {
-            return;
-        }
-        
-        // Získame unikátne kombinácie kategória + skupina
-        const uniqueGroups = new Set();
-        allMatches.forEach(match => {
-            if (match.isPlacementMatch) return;
-            if (match.categoryName && match.groupName) {
-                uniqueGroups.add(`${match.categoryName}|${match.groupName}`);
-            }
-        });
-        
-        if (uniqueGroups.size === 0) return;
-        
-        let hasPrintedAny = false;
-        const sortedGroups = Array.from(uniqueGroups).sort();
-        
-        for (const groupKey of sortedGroups) {
-            const [category, group] = groupKey.split('|');
-            const groupTable = createGroupTable(category, group);
-            
-            if (groupTable && groupTable.completionPercentage === 100) {
-                // Táto skupina má 100% odohraných zápasov - vypíšeme ju
-                if (!hasPrintedAny) {
-                    console.log('\n' + '='.repeat(120));
-                    console.log(`📊 TABUĽKY SKUPÍN (100% DOKONČENÉ):`);
-                    console.log('='.repeat(120));
-                    hasPrintedAny = true;
-                }
-                printGroupTable(category, group);
-            }
-        }
-        
-        if (hasPrintedAny) {
-            readyGroupsPrinted = true;
-        }
-    }
-    
-    // ========== UPRAVENÁ FUNKCIA: initializeMatchTracker ==========
+    // Hlavná funkcia na inicializáciu sledovania
     async function initializeMatchTracker() {
         if (!window.db) {
-            silentLog('⏳ Čakám na inicializáciu Firebase...');
+            log('⏳ Čakám na inicializáciu Firebase...');
             for (let i = 0; i < 50; i++) {
                 await new Promise(resolve => setTimeout(resolve, 100));
                 if (window.db) break;
@@ -1593,7 +1535,7 @@ function error(...args) {
             }
         }
         
-        silentLog('✅ Firebase inicializovaný, spúšťam sledovanie...');
+        log('✅ Firebase inicializovaný, spúšťam sledovanie...');
         
         const { collection, query, where, onSnapshot, getDocs } = window.firebaseModules || 
             await importFirebaseModules();
@@ -1603,47 +1545,45 @@ function error(...args) {
             return;
         }
         
+        // Načítame nastavenia poradia
         await loadTableSettings();
+        
+        // Spustíme sledovanie zmien nastavení poradia
         const unsubscribeSettings = subscribeToTableSettings();
         
         const matchesRef = collection(window.db, 'matches');
         
+        // Nahraďte existujúcu funkciu onSnapshot v initializeMatchTracker touto verziou
+
         unsubscribeMatches = onSnapshot(matchesRef, (snapshot) => {
-            // V TICHOM REŽIME NELOGUJEME ZMENY
-            if (!silentMode && !waitingMessagePrinted) {
-                silentLog(`🔄 Zmena v databáze: ${snapshot.size} zápasov celkom`);
-            }
+            log(`🔄 Zmena v databáze: ${snapshot.size} zápasov celkom`);
             
-            let completedMatchChanged = false;
-            let newCompletedMatches = [];
-            
+            let completedMatchChanged = false; // <- PRIDANÉ: Flag pre zmenu na "completed"
+        
             snapshot.docChanges().forEach(change => {
                 const match = { id: change.doc.id, ...change.doc.data() };
                 
                 if (change.type === 'added') {
+//                  log(`➕ Pridaný zápas: ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier} (${match.status})`);
                     matchesData[match.id] = match;
                     subscribeToMatchEvents(match.id);
-                    
-                    if (match.status !== 'completed') {
-                        pendingCompletedMatches.add(match.id);
-                    }
                     
                 } else if (change.type === 'modified') {
                     const oldMatch = matchesData[match.id];
                     matchesData[match.id] = match;
                     
+                    // ========== UPRAVENÉ: Kontrola zmeny na "completed" ==========
                     if (oldMatch && oldMatch.status !== match.status && match.status === 'completed') {
-                        completedMatchChanged = true;
-                        newCompletedMatches.push(match.id);
-                        
-                        if (pendingCompletedMatches.has(match.id)) {
-                            pendingCompletedMatches.delete(match.id);
-                        }
+                      log(`✅ Zápas DOHRANÝ! Zmena stavu: ${getStatusText(oldMatch.status)} → ${getStatusText(match.status)}`);
+                        completedMatchChanged = true; // <- PRIDANÉ: Nastavíme flag
+                    } else if (oldMatch && oldMatch.status !== match.status) {
+                      log(`🔄 Zmena stavu zápasu: ${getStatusText(oldMatch.status)} → ${getStatusText(match.status)} (nie je completed, ignorujem)`);
                     }
+                    // ===========================================================
                     
                 } else if (change.type === 'removed') {
+                  log(`❌ Odstránený zápas: ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`);
                     delete matchesData[match.id];
-                    pendingCompletedMatches.delete(match.id);
                     
                     if (unsubscribeEvents[match.id]) {
                         unsubscribeEvents[match.id]();
@@ -1653,68 +1593,19 @@ function error(...args) {
                 }
             });
             
-            // ========== PRVÉ SPRACOVANIE ==========
-            if (!initialProcessingDone && !isProcessingMatches) {
-                isProcessingMatches = true;
+            // ========== UPRAVENÉ: IBA ak sa zmenil zápas na "completed" ==========
+            if (completedMatchChanged) {
+                log('🏁 Spúšťam prepočet tabuliek skupín (zápas bol dohraný)...');
+                printAllGroupTables();
                 
-                // NAJPRV VYPRACUJEME VŠETKY ZÁPASY
-                const allMatches = Object.values(matchesData);
-                const incompleteMatches = allMatches.filter(m => m.status !== 'completed');
-                
-                // VYPNEME LOGOVANIE (aby sme nerušili)
-                silentMode = true;
-                
-                if (incompleteMatches.length === 0) {
-                    // VŠETKY ZÁPASY SÚ DOKONČENÉ
-                    silentMode = false;
-                    console.log('🎉 Všetky zápasy sú dokončené, spúšťam tabuľky skupín...');
-                    printAllGroupTables();
-                    initialProcessingDone = true;
-                    readyGroupsPrinted = true;
-                } else {
-                    // NIEKTORÉ ZÁPASY NIE SÚ DOKONČENÉ
-                    // NAJPRV VYPIŠEME HOTOVÉ SKUPINY (100%)
-                    printReadyGroupsOnly();
-                    
-                    // POTOM ODOŠLEME SPRÁVU O ČAKANÍ NA ZVYŠNÉ ZÁPASY
-                    if (!waitingMessagePrinted) {
-                        const remainingCount = incompleteMatches.length;
-                        console.log(`\n⏳ Čakám na dokončenie zvyšných ${remainingCount} zápasov.`);
-                        console.log(`   (Hotové skupiny už sú vypísané vyššie.)`);
-                        waitingMessagePrinted = true;
-                    }
-                    
-                    // Pridáme všetky nekompletné zápasy do fronty
-                    incompleteMatches.forEach(match => {
-                        pendingCompletedMatches.add(match.id);
-                    });
-                }
-                
-                isProcessingMatches = false;
-            }
-            
-            // ========== SPRACOVANIE KEĎ SA ZMENIL ZÁPAS NA "completed" ==========
-            if (completedMatchChanged && newCompletedMatches.length > 0) {
-                newCompletedMatches.forEach(matchId => {
-                    if (pendingCompletedMatches.has(matchId)) {
-                        pendingCompletedMatches.delete(matchId);
-                    }
-                });
-                
-                // SKONTROLUJEME, ČI UŽ NIE JE ŽIADNY ČAKAJÚCI ZÁPAS
-                if (pendingCompletedMatches.size === 0 && !initialProcessingDone) {
-                    silentMode = false;
-                    console.log('\n🎉 VŠETKY ZÁPASY SÚ DOKONČENÉ! Spúšťam tabuľky skupín...');
-                    printAllGroupTables();
-                    initialProcessingDone = true;
-                } else if (pendingCompletedMatches.size === 0 && initialProcessingDone) {
-                    silentMode = false;
-                    console.log('🔄 Obnovujem tabuľky skupín (ďalší zápas bol dokončený)...');
-                    printAllGroupTables();
-                } else {
-                    // Stále čakáme - žiadne ďalšie logy (tichý režim)
+                // 🔥 VYŠLEME UDALOSŤ PRE teamNameReplacer
+                if (window.dispatchEvent) {
+                    window.dispatchEvent(new CustomEvent('groupTablesUpdated', {
+                        detail: { reason: 'match_completed', timestamp: Date.now() }
+                    }));
                 }
             }
+            // ====================================================================
             
         }, (error) => {
             console.error('❌ Chyba pri sledovaní zápasov:', error);
@@ -1726,10 +1617,17 @@ function error(...args) {
             subscribeToMatchEvents(matchId);
         }
         
+        setTimeout(() => {
+            printAllGroupTables();
+        }, 2000);
+        
+        // Uložíme unsubscribe pre prípad potreby
+        window.__unsubscribeTableSettings = unsubscribeSettings;
+
         await loadCategorySettings();
     }
-        
-    // ========== UPRAVENÁ FUNKCIA: subscribeToMatchEvents (žiadne logy v tichom režime) ==========
+    
+    // Sledovanie udalostí pre konkrétny zápas
     function subscribeToMatchEvents(matchId) {
         if (!window.db) return;
         
@@ -1760,35 +1658,13 @@ function error(...args) {
             
             const match = matchesData[matchId];
             if (match && match.status === 'completed' && events.length !== oldEventsCount) {
-                // V TICHOM REŽIME NELOGUJEME
-                if (!silentMode) {
-                    silentLog(`🔄 Aktualizácia udalostí pre zápas ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`);
-                }
+                log(`🔄 Aktualizácia udalostí pre zápas ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`);
                 printAllGroupTables();
             }
             
         }, (error) => {
             console.error(`❌ Chyba pri sledovaní udalostí pre zápas ${matchId}:`, error);
         });
-    }
-
-    // ========== PRIDANÁ FUNKCIA: getWaitingStatus (pre externé zistenie stavu) ==========
-    function getWaitingStatus() {
-        return {
-            isWaiting: pendingCompletedMatches.size > 0 && !initialProcessingDone,
-            pendingCount: pendingCompletedMatches.size,
-            isSilent: silentMode,
-            isDone: initialProcessingDone
-        };
-    }
-
-    // ========== PRIDANÁ FUNKCIA: forcePrintTables (manuálne vynútenie výpisu) ==========
-    function forcePrintTables() {
-        if (silentMode) {
-            silentMode = false;
-            console.log('🔊 Tichý režim vypnutý manuálne, vypisujem tabuľky...');
-        }
-        printAllGroupTables();
     }
     
     // Pomocná funkcia na import Firebase modulov
@@ -1856,9 +1732,7 @@ function error(...args) {
         getEvents: (matchId) => eventsData[matchId] || [],
         createAdvancedGroupTable: createAdvancedGroupTable,
         getCategorySettings: () => categorySettingsCache,
-        getCarryOverPoints: (categoryName) => categorySettingsCache[categoryName]?.carryOverPoints ?? false,
-        getWaitingStatus: getWaitingStatus,
-        forcePrintTables: forcePrintTables
+        getCarryOverPoints: (categoryName) => categorySettingsCache[categoryName]?.carryOverPoints ?? false
     };
     
     // Spustenie sledovania
