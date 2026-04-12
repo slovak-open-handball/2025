@@ -1710,6 +1710,56 @@ let groupCheckCache = new Set();
         
         console.log('⏹️ Sledovanie zápasov zastavené');
     }
+
+    function subscribeToCategorySettingsChanges() {
+        if (!window.db) return;
+        
+        const { doc, onSnapshot } = window.firebaseModules;
+        if (!doc || !onSnapshot) return;
+        
+        const categoriesRef = doc(window.db, 'settings', 'categories');
+        
+        return onSnapshot(categoriesRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                let cacheResetNeeded = false;
+                
+                for (const [catId, catData] of Object.entries(data)) {
+                    const categoryName = catData.name;
+                    const oldSetting = categorySettingsCache[categoryName]?.carryOverMatches;
+                    const newSetting = catData.carryOverPoints ?? false;
+                    
+                    if (oldSetting !== undefined && oldSetting !== newSetting) {
+                        console.log(`🔄 Zmena carryOverPoints pre kategóriu ${categoryName}: ${oldSetting} → ${newSetting}`);
+                        cacheResetNeeded = true;
+                        
+                        // Vynulujeme cache pre všetky skupiny v tejto kategórii
+                        for (const groupKey of processedCarryOverGroups) {
+                            if (groupKey.startsWith(`${categoryName}|`)) {
+                                processedCarryOverGroups.delete(groupKey);
+                                console.log(`   🗑️ Vymazaná cache pre ${groupKey}`);
+                            }
+                        }
+                    }
+                    
+                    // Aktualizujeme cache
+                    categorySettingsCache[categoryName] = {
+                        carryOverPoints: newSetting,
+                        carryOverMatches: newSetting,
+                        id: catId
+                    };
+                }
+                
+                if (cacheResetNeeded) {
+                    console.log('🔄 Cache prenášania bola vynulovaná kvôli zmene nastavení');
+                    // Spustíme opätovné vyhodnotenie tabuliek
+                    printAllGroupTables();
+                }
+            }
+        }, (error) => {
+            console.error('❌ Chyba pri sledovaní zmien kategórií:', error);
+        });
+    }
     
     // Export funkcií do window
     window.matchTracker = {
@@ -2743,56 +2793,6 @@ window.matchTracker.resetCarryOverCache = () => {
     processedCarryOverGroups.clear();
     console.log('🗑️ Celá cache prenášania výsledkov bola vymazaná');
 };
-
-function subscribeToCategorySettingsChanges() {
-    if (!window.db) return;
-    
-    const { doc, onSnapshot } = window.firebaseModules;
-    if (!doc || !onSnapshot) return;
-    
-    const categoriesRef = doc(window.db, 'settings', 'categories');
-    
-    return onSnapshot(categoriesRef, (docSnap) => {
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            let cacheResetNeeded = false;
-            
-            for (const [catId, catData] of Object.entries(data)) {
-                const categoryName = catData.name;
-                const oldSetting = categorySettingsCache[categoryName]?.carryOverMatches;
-                const newSetting = catData.carryOverPoints ?? false;
-                
-                if (oldSetting !== undefined && oldSetting !== newSetting) {
-                    console.log(`🔄 Zmena carryOverPoints pre kategóriu ${categoryName}: ${oldSetting} → ${newSetting}`);
-                    cacheResetNeeded = true;
-                    
-                    // Vynulujeme cache pre všetky skupiny v tejto kategórii
-                    for (const groupKey of processedCarryOverGroups) {
-                        if (groupKey.startsWith(`${categoryName}|`)) {
-                            processedCarryOverGroups.delete(groupKey);
-                            console.log(`   🗑️ Vymazaná cache pre ${groupKey}`);
-                        }
-                    }
-                }
-                
-                // Aktualizujeme cache
-                categorySettingsCache[categoryName] = {
-                    carryOverPoints: newSetting,
-                    carryOverMatches: newSetting,
-                    id: catId
-                };
-            }
-            
-            if (cacheResetNeeded) {
-                console.log('🔄 Cache prenášania bola vynulovaná kvôli zmene nastavení');
-                // Spustíme opätovné vyhodnotenie tabuliek
-                printAllGroupTables();
-            }
-        }
-    }, (error) => {
-        console.error('❌ Chyba pri sledovaní zmien kategórií:', error);
-    });
-}
 
 // Úplné nahradenie
 function performFullReplacement() {
