@@ -777,7 +777,7 @@ let groupCheckCache = new Set();
             console.log(`   🔄 Prenášam výsledky vzájomných zápasov zo základných skupín...`);
             
             // Vytvoríme mapu pre rýchle vyhľadanie výsledkov základných zápasov
-            // Kľúč: "TeamAName|TeamBName" (abecedne zoradené)
+            // Kľúč: "TeamAName|TeamBName" (abecedne zoradené) - používame ZMAPOVANÉ názvy
             const baseMatchResults = new Map();
             
             // Prechádzame všetky základné skupiny
@@ -789,7 +789,7 @@ let groupCheckCache = new Set();
                     const events = eventsData[match.id] || [];
                     const { home: homeScore, away: awayScore } = getCurrentScore(events);
                     
-                    // Získame názvy tímov pre tento zápas
+                    // Získame názvy tímov pre tento zápas a hneď ich zmapujeme
                     let homeTeamName = match.homeTeamIdentifier;
                     let awayTeamName = match.awayTeamIdentifier;
                     
@@ -798,11 +798,11 @@ let groupCheckCache = new Set();
                     
                     if (looksLikeIdentifier(homeTeamName)) {
                         const mapped = getTeamNameByDisplayId(homeTeamName);
-                        if (mapped) homeTeamName = mapped;
+                        if (mapped && mapped !== homeTeamName) homeTeamName = mapped;
                     }
                     if (looksLikeIdentifier(awayTeamName)) {
                         const mapped = getTeamNameByDisplayId(awayTeamName);
-                        if (mapped) awayTeamName = mapped;
+                        if (mapped && mapped !== awayTeamName) awayTeamName = mapped;
                     }
                     
                     // Uložíme výsledok do mapy (abecedne zoradený kľúč)
@@ -827,11 +827,11 @@ let groupCheckCache = new Set();
                         fromGroup: baseGroupTable.group
                     });
                     
-                    console.log(`   📋 Základný zápas: ${teamA} ${teamAScore}:${teamBScore} ${teamB} (skupina ${baseGroupTable.group})`);
+                    console.log(`   📋 Základný zápas (mapovaný): ${teamA} ${teamAScore}:${teamBScore} ${teamB} (skupina ${baseGroupTable.group})`);
                 }
             }
             
-            // Teraz pre každú dvojicu tímov v nadstavbovej skupine
+            // Teraz pre každú dvojicu tímov v nadstavbovej skupine (už majú zmapované názvy)
             for (let i = 0; i < teamsInAdvanced.length; i++) {
                 for (let j = i + 1; j < teamsInAdvanced.length; j++) {
                     const teamA = teamsInAdvanced[i];
@@ -840,10 +840,11 @@ let groupCheckCache = new Set();
                     const pairKey = `${teamA.id}|${teamB.id}`;
                     if (processedPairs.has(pairKey)) continue;
                     
-                    // Hľadáme výsledok v základných skupinách
+                    // 🔥 POUŽIJEME ZMAPOVANÉ NÁZVY pre vyhľadávanie
                     const searchKey = teamA.name < teamB.name ? 
                         `${teamA.name}|${teamB.name}` : `${teamB.name}|${teamA.name}`;
                     
+                    console.log(`   🔍 Hľadám zápas: ${searchKey}`);
                     const baseResult = baseMatchResults.get(searchKey);
                     
                     if (baseResult) {
