@@ -558,7 +558,7 @@ let groupCheckCache = new Set();
         
         // 🔥 PRIDANÉ: VYNULOVANIE CACHE PRE SKUPINU F (alebo inú, ktorá potrebuje preniesť výsledky)
         // Toto je dôležité pre skupinu F, ktorá má 0% odohraných zápasov
-        if (carryOverMatches && completionPercentage === 100) {
+        if (carryOverMatches) { 
             if (!processedCarryOverGroups.has(groupCarryKey)) {
                 console.log(`🔄 PRENÁŠAM VÝSLEDKY Z INÝCH SKUPÍN (${categoryName} - ${groupName}) - skupina je 100% dokončená:`);
                 
