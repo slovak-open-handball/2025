@@ -1007,7 +1007,7 @@ let groupCheckCache = new Set();
             carryOverPoints: carryOverEnabled,
             teams: sortedTeams,
             matches: allMatchesForDisplay,
-            completedMatches: [...completedAdvancedMatches, ...transferredMatches],
+            completedMatches: [...completedAdvancedMatches],
             totalMatches: totalMatches,
             completedCount: completedCount,
             remainingCount: totalMatches - completedAdvancedMatches.length,
