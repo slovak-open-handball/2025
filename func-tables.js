@@ -992,7 +992,7 @@ let groupCheckCache = new Set();
         }
         
         const totalMatches = advancedMatches.length;
-        const completedCount = completedAdvancedMatches.length + transferredMatches.length;
+        const completedCount = completedAdvancedMatches.length;
         const completionPercentage = totalMatches > 0 ? (completedCount / totalMatches * 100) : 0;
         
         console.log(`\n📊 VÝSLEDOK NADSTAVBOVEJ SKUPINY ${groupName}:`);
