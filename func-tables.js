@@ -777,7 +777,7 @@ let groupCheckCache = new Set();
             console.log(`   🔄 Prenášam výsledky vzájomných zápasov zo základných skupín...`);
             
             // Vytvoríme mapu pre rýchle vyhľadanie výsledkov základných zápasov
-            // Kľúč: "TeamAName|TeamBName" (abecedne zoradené) - používame ZMAPOVANÉ názvy
+            // KĽÚČ: "TeamAName|TeamBName" (abecedne zoradené) - používame ZMAPOVANÉ názvy
             const baseMatchResults = new Map();
             
             // Prechádzame všetky základné skupiny
@@ -789,21 +789,19 @@ let groupCheckCache = new Set();
                     const events = eventsData[match.id] || [];
                     const { home: homeScore, away: awayScore } = getCurrentScore(events);
                     
-                    // Získame názvy tímov pre tento zápas a hneď ich zmapujeme
-                    let homeTeamName = match.homeTeamIdentifier;
-                    let awayTeamName = match.awayTeamIdentifier;
+                    // Získame pôvodné identifikátory
+                    let homeId = match.homeTeamIdentifier;
+                    let awayId = match.awayTeamIdentifier;
                     
-                    // Mapujeme na reálne názvy (ak sú to identifikátory)
-                    const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
+                    // MAPUJEME na reálne názvy tímov
+                    let homeTeamName = homeId;
+                    let awayTeamName = awayId;
                     
-                    if (looksLikeIdentifier(homeTeamName)) {
-                        const mapped = getTeamNameByDisplayId(homeTeamName);
-                        if (mapped && mapped !== homeTeamName) homeTeamName = mapped;
-                    }
-                    if (looksLikeIdentifier(awayTeamName)) {
-                        const mapped = getTeamNameByDisplayId(awayTeamName);
-                        if (mapped && mapped !== awayTeamName) awayTeamName = mapped;
-                    }
+                    const mappedHome = getTeamNameByDisplayId(homeId);
+                    if (mappedHome && mappedHome !== homeId) homeTeamName = mappedHome;
+                    
+                    const mappedAway = getTeamNameByDisplayId(awayId);
+                    if (mappedAway && mappedAway !== awayId) awayTeamName = mappedAway;
                     
                     // Uložíme výsledok do mapy (abecedne zoradený kľúč)
                     const teamA = homeTeamName;
@@ -915,16 +913,11 @@ let groupCheckCache = new Set();
             let homeTeamName = match.homeTeamIdentifier;
             let awayTeamName = match.awayTeamIdentifier;
             
-            const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
+            const mappedHome = getTeamNameByDisplayId(homeTeamName);
+            if (mappedHome && mappedHome !== homeTeamName) homeTeamName = mappedHome;
             
-            if (looksLikeIdentifier(homeTeamName)) {
-                const mapped = getTeamNameByDisplayId(homeTeamName);
-                if (mapped) homeTeamName = mapped;
-            }
-            if (looksLikeIdentifier(awayTeamName)) {
-                const mapped = getTeamNameByDisplayId(awayTeamName);
-                if (mapped) awayTeamName = mapped;
-            }
+            const mappedAway = getTeamNameByDisplayId(awayTeamName);
+            if (mappedAway && mappedAway !== awayTeamName) awayTeamName = mappedAway;
             
             const homeTeamStats = teamsInAdvanced.find(t => t.name === homeTeamName);
             const awayTeamStats = teamsInAdvanced.find(t => t.name === awayTeamName);
