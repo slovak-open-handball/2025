@@ -482,7 +482,6 @@ let groupCheckCache = new Set();
         return Array.from(teamsMap.values());
     }
         
-        // HLAVNÁ FUNKCIA: createGroupTable
     function createGroupTable(categoryName, groupName) {
         // Získame VŠETKY zápasy v skupine (aj neodohrané)
         const allGroupMatches = getGroupMatches(categoryName, groupName);
@@ -503,7 +502,7 @@ let groupCheckCache = new Set();
         
         for (const team of teamsInGroup) {
             if (looksLikeIdentifier(team.name)) {
-                const mappedName = window.matchTracker?.getTeamNameByDisplayId?.(team.name);
+                const mappedName = window.matchTracker?.getTeamNameByDisplayIdSync?.(team.name);
                 if (mappedName && mappedName !== team.name) {
                     team.name = mappedName;
                 }
@@ -548,12 +547,17 @@ let groupCheckCache = new Set();
         const completedMatches = completedGroupMatches.length;
         const completionPercentage = totalMatches > 0 ? (completedMatches / totalMatches * 100) : 0;
         
+        // ============================================================
+        // 🔥 OPRAVENÉ: Správne načítanie carryOverMatches z cache
+        // ============================================================
         const categorySetting = categorySettingsCache[categoryName];
-        const carryOverMatches = categorySetting?.carryOverMatches ?? true;
-        const transferredMatchesList = [];
+        const carryOverMatches = categorySetting?.carryOverMatches ?? false;  // ← POUŽÍVA carryOverMatches
         
+        const transferredMatchesList = [];
         const groupCarryKey = `${categoryName}|${groupName}`;
         
+        // 🔥 PRIDANÉ: VYNULOVANIE CACHE PRE SKUPINU F (alebo inú, ktorá potrebuje preniesť výsledky)
+        // Toto je dôležité pre skupinu F, ktorá má 0% odohraných zápasov
         if (carryOverMatches && completionPercentage === 100) {
             if (!processedCarryOverGroups.has(groupCarryKey)) {
                 console.log(`🔄 PRENÁŠAM VÝSLEDKY Z INÝCH SKUPÍN (${categoryName} - ${groupName}) - skupina je 100% dokončená:`);
@@ -585,6 +589,7 @@ let groupCheckCache = new Set();
                         
                         if (!teamA || !teamB) continue;
                         
+                        // 🔥 DÔLEŽITÉ: Hľadáme zápasy v INÝCH skupinách (základných)
                         const transferredMatch = findMatchBetweenTeamsInOtherGroup(
                             teamA.name, teamB.name, categoryName, groupName, groupName
                         );
@@ -621,6 +626,8 @@ let groupCheckCache = new Set();
                                 awayScore: transferredMatch.awayScore,
                                 fromGroup: transferredMatch.fromGroup
                             });
+                        } else {
+                            console.log(`   ⚠️ Nenašiel sa zápas medzi ${teamA.name} a ${teamB.name} v iných skupinách`);
                         }
                     }
                 }
@@ -633,7 +640,7 @@ let groupCheckCache = new Set();
         } else if (carryOverMatches && completionPercentage < 100) {
             if (!processedCarryOverGroups.has(groupCarryKey)) {
                 console.log(`ℹ️ ${categoryName} - ${groupName}: Prenášanie výsledkov až po dosiahnutí 100% (aktuálne ${completionPercentage}%)`);
-                processedCarryOverGroups.add(groupCarryKey);
+                // Neoznačujeme ako spracovanú, aby sme ju spracovali neskôr
             }
         }
         
@@ -971,7 +978,8 @@ let groupCheckCache = new Set();
                 const data = categoriesSnap.data();
                 for (const [catId, catData] of Object.entries(data)) {
                     categorySettingsCache[catData.name] = {
-                        carryOverPoints: catData.carryOverPoints ?? false,
+                        carryOverPoints: catData.carryOverPoints ?? false,  // ← TOTO JE SPRÁVNY NÁZOV
+                        carryOverMatches: catData.carryOverPoints ?? false, // ← PRIDANÉ AJ PRE KOMPATIBILITU
                         id: catId
                     };
                 }
@@ -1590,6 +1598,8 @@ let groupCheckCache = new Set();
         
         window.__unsubscribeTableSettings = unsubscribeSettings;
         await loadCategorySettings();
+        const unsubscribeCategorySettings = subscribeToCategorySettingsChanges();
+        window.__unsubscribeCategorySettings = unsubscribeCategorySettings;
     }
 
     // ========== POMOCNÁ FUNKCIA: Nájdenie nadstavbových skupín závislých na základnej ==========
@@ -2717,6 +2727,71 @@ if (window.matchTracker && !window.matchTracker.getEvents) {
         // Toto by malo byť dostupné z pôvodného matchTracker
         return window.matchTracker._getEvents?.(matchId) || [];
     };
+}
+
+function resetCarryOverCacheForGroup(categoryName, groupName) {
+    const groupKey = `${categoryName}|${groupName}`;
+    if (processedCarryOverGroups.has(groupKey)) {
+        processedCarryOverGroups.delete(groupKey);
+        console.log(`🗑️ Cache prenášania pre skupinu ${groupKey} bola vymazaná`);
+    }
+}
+
+// Export funkcie
+window.matchTracker.resetCarryOverCacheForGroup = resetCarryOverCacheForGroup;
+window.matchTracker.resetCarryOverCache = () => {
+    processedCarryOverGroups.clear();
+    console.log('🗑️ Celá cache prenášania výsledkov bola vymazaná');
+};
+
+function subscribeToCategorySettingsChanges() {
+    if (!window.db) return;
+    
+    const { doc, onSnapshot } = window.firebaseModules;
+    if (!doc || !onSnapshot) return;
+    
+    const categoriesRef = doc(window.db, 'settings', 'categories');
+    
+    return onSnapshot(categoriesRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            let cacheResetNeeded = false;
+            
+            for (const [catId, catData] of Object.entries(data)) {
+                const categoryName = catData.name;
+                const oldSetting = categorySettingsCache[categoryName]?.carryOverMatches;
+                const newSetting = catData.carryOverPoints ?? false;
+                
+                if (oldSetting !== undefined && oldSetting !== newSetting) {
+                    console.log(`🔄 Zmena carryOverPoints pre kategóriu ${categoryName}: ${oldSetting} → ${newSetting}`);
+                    cacheResetNeeded = true;
+                    
+                    // Vynulujeme cache pre všetky skupiny v tejto kategórii
+                    for (const groupKey of processedCarryOverGroups) {
+                        if (groupKey.startsWith(`${categoryName}|`)) {
+                            processedCarryOverGroups.delete(groupKey);
+                            console.log(`   🗑️ Vymazaná cache pre ${groupKey}`);
+                        }
+                    }
+                }
+                
+                // Aktualizujeme cache
+                categorySettingsCache[categoryName] = {
+                    carryOverPoints: newSetting,
+                    carryOverMatches: newSetting,
+                    id: catId
+                };
+            }
+            
+            if (cacheResetNeeded) {
+                console.log('🔄 Cache prenášania bola vynulovaná kvôli zmene nastavení');
+                // Spustíme opätovné vyhodnotenie tabuliek
+                printAllGroupTables();
+            }
+        }
+    }, (error) => {
+        console.error('❌ Chyba pri sledovaní zmien kategórií:', error);
+    });
 }
 
 // Úplné nahradenie
