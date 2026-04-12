@@ -1533,8 +1533,6 @@ function error(...args) {
                         }
                     }
                 }
-                
-                printAllGroupTables();
             }
             
             // ========== SPRACOVANIE ZMENY: IBA KEĎ SA ZÁPAS UKONČIL ==========
@@ -1676,7 +1674,6 @@ function error(...args) {
             const match = matchesData[matchId];
             if (match && match.status === 'completed' && events.length !== oldEventsCount) {
                 log(`🔄 Aktualizácia udalostí pre zápas ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`);
-                printAllGroupTables();
             }
             
         }, (error) => {
