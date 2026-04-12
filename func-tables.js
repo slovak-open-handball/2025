@@ -2408,9 +2408,6 @@ let groupStabilityCheck = new Map(); // Ukladá timeouty pre každú skupinu
 let lastGroupMatchCount = new Map(); // Ukladá posledný počet zápasov pre každú skupinu
 let notReadyGroupsLogged = new Set();
 
-// Sledovanie, ktoré skupiny už boli ohlásené ako nepripravené
-let notReadyGroupsLogged = new Set();
-
 function isGroupReadyForReplacement(category, groupLetter) {
     const cleanCategory = cleanCategoryName(category);
     const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
