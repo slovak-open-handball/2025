@@ -2406,16 +2406,25 @@ function extractIdentifiersFromText(text) {
 
 let groupStabilityCheck = new Map(); // Ukladá timeouty pre každú skupinu
 let lastGroupMatchCount = new Map(); // Ukladá posledný počet zápasov pre každú skupinu
+let notReadyGroupsLogged = new Set();
+
+// Sledovanie, ktoré skupiny už boli ohlásené ako nepripravené
+let notReadyGroupsLogged = new Set();
 
 function isGroupReadyForReplacement(category, groupLetter) {
     const cleanCategory = cleanCategoryName(category);
     const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
+    const groupKey = `${cleanCategory}|${groupLetter.toUpperCase()}`;
     
     // 1. Skúsime získať tabuľku skupiny
     let groupTable = window.matchTracker?.createGroupTable(cleanCategory, fullGroupName);
     
     if (!groupTable) {
-        log(`⏳ [${cleanCategory} - ${fullGroupName}] Tabuľka neexistuje → NIE JE PRIpravená`);
+        // Iba raz vypíšeme, že tabuľka neexistuje
+        if (!notReadyGroupsLogged.has(`${groupKey}_no_table`)) {
+            log(`⏳ [${cleanCategory} - ${fullGroupName}] Tabuľka neexistuje → NIE JE PRIpravená`);
+            notReadyGroupsLogged.add(`${groupKey}_no_table`);
+        }
         return false;
     }
     
@@ -2425,48 +2434,66 @@ function isGroupReadyForReplacement(category, groupLetter) {
     
     // 2. Podmienka 1: Všetky zápasy musia byť odohrané (100%)
     if (completionPercentage < 100) {
-//        log(`⏳ [${cleanCategory} - ${fullGroupName}] Len ${completedMatches}/${totalMatches} (${completionPercentage}%) odohraných → NIE JE PRIpravená`);
+        // Iba raz vypíšeme aktuálne percento
+        const logKey = `${groupKey}_${Math.floor(completionPercentage)}`;
+        if (!notReadyGroupsLogged.has(logKey)) {
+            log(`⏳ [${cleanCategory} - ${fullGroupName}] Len ${completedMatches}/${totalMatches} (${completionPercentage}%) odohraných → NIE JE PRIpravená (čakám na dokončenie...)`);
+            notReadyGroupsLogged.add(logKey);
+        }
         return false;
     }
-    
-    log(`✅ [${cleanCategory} - ${fullGroupName}] 100% zápasov odohraných (${completedMatches}/${totalMatches})`);
     
     // 3. Podmienka 2: Všetky zápasy musia mať načítané udalosti (events)
     const allGroupMatches = window.matchTracker?.getGroupMatches?.(cleanCategory, fullGroupName) || [];
     const completedMatchesList = allGroupMatches.filter(m => m.status === 'completed');
     
     let allEventsLoaded = true;
+    let missingEventsMatchId = null;
+    
     for (const match of completedMatchesList) {
         const events = window.matchTracker?.getEvents?.(match.id) || [];
         if (events.length === 0) {
-            log(`⏳ [${cleanCategory} - ${fullGroupName}] Zápas ${match.id} nemá načítané udalosti → NIE JE PRIpravená`);
             allEventsLoaded = false;
+            missingEventsMatchId = match.id;
             break;
         }
         
         const { home, away } = getCurrentScoreFromEvents(events);
         if (home === 0 && away === 0 && events.length > 0) {
-            log(`⏳ [${cleanCategory} - ${fullGroupName}] Zápas ${match.id} má udalosti ale skóre je 0:0 → NIE JE PRIpravená`);
             allEventsLoaded = false;
+            missingEventsMatchId = match.id;
             break;
         }
     }
     
     if (!allEventsLoaded) {
+        // Iba raz vypíšeme, že chýbajú udalosti
+        if (!notReadyGroupsLogged.has(`${groupKey}_no_events`)) {
+            log(`⏳ [${cleanCategory} - ${fullGroupName}] Zápas ${missingEventsMatchId} nemá načítané udalosti → NIE JE PRIpravená (čakám na načítanie...)`);
+            notReadyGroupsLogged.add(`${groupKey}_no_events`);
+        }
         return false;
     }
-    
-    log(`✅ [${cleanCategory} - ${fullGroupName}] Všetky udalosti načítané`);
     
     // 4. Dodatočná kontrola: Žiadny zápas by nemal byť v stave 'in-progress' alebo 'paused'
     const hasInProgressMatches = allGroupMatches.some(m => m.status === 'in-progress' || m.status === 'paused');
     if (hasInProgressMatches) {
-        log(`⏳ [${cleanCategory} - ${fullGroupName}] Sú tam zápasy, ktoré ešte prebiehajú → NIE JE PRIpravenÁ`);
+        if (!notReadyGroupsLogged.has(`${groupKey}_in_progress`)) {
+            log(`⏳ [${cleanCategory} - ${fullGroupName}] Sú tam zápasy, ktoré ešte prebiehajú → NIE JE PRIpravenÁ`);
+            notReadyGroupsLogged.add(`${groupKey}_in_progress`);
+        }
         return false;
     }
     
-    // 🔴 ODSTRÁNENÁ KONTROLA STABILITY - OKAMŽITÁ PRIPRAVENOSŤ
-    const groupKey = `${cleanCategory}|${groupLetter.toUpperCase()}`;
+    // ========== SKUPINA JE PRIPRAVENÁ ==========
+    log(`✅ [${cleanCategory} - ${fullGroupName}] SKUPINA JE PRIPRAVENÁ! 100% zápasov odohraných, všetky udalosti načítané.`);
+    
+    // Vyčistíme záznamy o nepripravenosti pre túto skupinu
+    for (const key of notReadyGroupsLogged) {
+        if (key.startsWith(groupKey)) {
+            notReadyGroupsLogged.delete(key);
+        }
+    }
     
     if (!processedGroups.has(groupKey) || !processedGroups.get(groupKey).isReady) {
         processedGroups.set(groupKey, {
@@ -2478,9 +2505,7 @@ function isGroupReadyForReplacement(category, groupLetter) {
             allEventsLoaded: true
         });
         
-        log(`✅ [${cleanCategory} - ${fullGroupName}] Skupina JE PRIpravenÁ OKAMŽITE!`);
-        
-        // Spustíme nahradenie pre túto skupinu
+        // Spustíme nahradenie pre túto skupinu IBA RAZ
         const allText = document.body.innerText;
         const identifiers = extractIdentifiersFromText(allText);
         const readyForThisGroup = identifiers.filter(id => 
@@ -2488,7 +2513,7 @@ function isGroupReadyForReplacement(category, groupLetter) {
         );
         
         if (readyForThisGroup.length > 0) {
-            log(`🎉 Spúšťam OKAMŽITÉ nahradenie pre skupinu ${fullGroupName}...`);
+            log(`🎉 Spúšťam nahradenie pre skupinu ${fullGroupName}...`);
             performPartialReplacement(readyForThisGroup);
         }
     }
@@ -2636,6 +2661,17 @@ function performPartialReplacement(identifiersToReplace) {
         failed: failedCount,
         failedIdentifiers: failedIdentifiers
     };
+}
+
+// Funkcia na manuálne vymazanie logov nepripravených skupín (napr. po obnovení stránky)
+function clearNotReadyGroupsLog() {
+    notReadyGroupsLogged.clear();
+    log('🗑️ Vyčistený záznam nepripravených skupín');
+}
+
+// Pridajte do window.teamNameReplacer
+if (window.teamNameReplacer) {
+    window.teamNameReplacer.clearNotReadyGroupsLog = clearNotReadyGroupsLog;
 }
 
 // Pomocná funkcia na získanie udalostí pre zápas (pridáme do matchTracker)
