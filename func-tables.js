@@ -695,7 +695,7 @@ let groupCheckCache = new Set();
     function createAdvancedGroupTable(categoryName, groupName, baseGroupName) {
         const groupsData = window.groupsData || {};
         const categoryId = window.categoryIdMap?.[categoryName] || null;
-    
+        
         let allBaseGroups = [];
         
         // Ak je zadaný baseGroupName, použijeme ho
@@ -710,59 +710,25 @@ let groupCheckCache = new Set();
             console.log(`🎯 Nadstavbová skupina ${groupName} - základné skupiny: ${allBaseGroups.join(', ')}`);
         }
         
-        // Zistíme, či je aktuálna skupina nadstavbová a nájdeme všetky základné skupiny
-        if (categoryId && groupsData[categoryId]) {
-            const groupsInCategory = groupsData[categoryId];
-            
-            // Zistíme typ aktuálnej skupiny
-            const currentGroupInfo = groupsInCategory.find(g => g.name === groupName);
-            if (currentGroupInfo && currentGroupInfo.type === 'nadstavbová skupina') {
-                isAdvancedGroup = true;
-                console.log(`🎯 Skupina ${groupName} je NADSTAVBOVÁ, vyhľadávam základné skupiny...`);
-                
-                // Nájdeme všetky základné skupiny v tejto kategórii
-                allBaseGroups = groupsInCategory
-                    .filter(g => g.type === 'základná skupina')
-                    .map(g => g.name);
-                
-                console.log(`   📋 Nájdené základné skupiny: ${allBaseGroups.join(', ')}`);
-            }
+        // Ak sme nenašli žiadne základné skupiny, skúsime použiť baseGroupName ako fallback
+        if (allBaseGroups.length === 0 && baseGroupName) {
+            allBaseGroups = [baseGroupName];
         }
         
-        // Ak sme nenašli groupsData, použijeme pôvodnú logiku
-        if (!isAdvancedGroup && baseGroupName) {
-            // Pôvodná logika pre jednu základnú skupinu
-            const baseGroupTable = createGroupTable(categoryName, baseGroupName);
-            if (!baseGroupTable || !baseGroupTable.teams || baseGroupTable.teams.length === 0) {
-                console.log(`❌ Základná skupina ${baseGroupName} neexistuje alebo nemá dáta`);
-                return null;
-            }
-            
-            if (baseGroupTable.completionPercentage < 100) {
-                console.log(`⏳ Nadstavbová skupina ${groupName} čaká na dokončenie základnej skupiny ${baseGroupName} (${baseGroupTable.completionPercentage}%)`);
-                return null;
-            }
-            
-            allBaseGroups = [baseGroupName];
-        } else if (isAdvancedGroup && allBaseGroups.length === 0) {
+        if (allBaseGroups.length === 0) {
             console.log(`❌ Žiadne základné skupiny neboli nájdené pre nadstavbovú skupinu ${groupName}`);
-            return null;
-        } else if (!isAdvancedGroup && !baseGroupName) {
-            console.log(`❌ Skupina ${groupName} nie je nadstavbová a nebol zadaný baseGroupName`);
             return null;
         }
         
         // Načítame všetky základné skupiny, ktoré sú 100% dokončené
         const completedBaseGroups = [];
         const allBaseGroupTables = [];
-        const allBaseTeams = [];
         
         for (const baseGroup of allBaseGroups) {
             const baseGroupTable = createGroupTable(categoryName, baseGroup);
             if (baseGroupTable && baseGroupTable.completionPercentage === 100) {
                 completedBaseGroups.push(baseGroup);
                 allBaseGroupTables.push(baseGroupTable);
-                allBaseTeams.push(...baseGroupTable.teams);
                 console.log(`   ✅ Základná skupina ${baseGroup} je 100% dokončená, načítaných ${baseGroupTable.teams.length} tímov`);
             } else if (baseGroupTable) {
                 console.log(`   ⏳ Základná skupina ${baseGroup} má len ${baseGroupTable.completionPercentage}% dokončených`);
