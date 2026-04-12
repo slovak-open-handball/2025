@@ -1,55 +1,27 @@
 // ========== GLOBÁLNY PREPÍNAČ PRE LOGOVANIE ==========
-const DEBUG_MODE = true;  // false = nevypisuje sa (len tento skript), true = vypisuje sa
+const DEBUG_MODE = true;  // false = nevypisuje sa, true = vypisuje sa
 
-// Uložíme pôvodné konzolové funkcie
+// Prepíšeme console.log globálne podľa DEBUG_MODE
+if (!DEBUG_MODE) {
+    console.log = function() {};
+    console.debug = function() {};
+    console.info = function() {};
+    // console.warn a console.error nechávame pre dôležité chyby
+    // ak chcete vypnúť aj ich, odkomentujte:
+    // console.warn = function() {};
+    // console.error = function() {};
+}
+
+// Uložíme pôvodné funkcie pre prípad, že by ich niekto potreboval obnoviť
 const originalConsoleLog = console.log;
 const originalConsoleDebug = console.debug;
 const originalConsoleInfo = console.info;
 const originalConsoleWarn = console.warn;
 const originalConsoleError = console.error;
 
-// Vytvoríme vlastné funkcie pre tento skript
-let myConsoleLog = originalConsoleLog;
-let myConsoleDebug = originalConsoleDebug;
-let myConsoleInfo = originalConsoleInfo;
-let myConsoleWarn = originalConsoleWarn;
-let myConsoleError = originalConsoleError;
 let isInitialDataLoaded = false;
 let processedGroupsInitial = new Set();
 let processedCarryOverGroups = new Set();
-
-// Ak je DEBUG_MODE vypnutý, prepíšeme lokálne funkcie na noop
-if (!DEBUG_MODE) {
-    const noop = () => {};
-    myConsoleLog = noop;
-    myConsoleDebug = noop;
-    myConsoleInfo = noop;
-    // myConsoleWarn a myConsoleError nechávame pre dôležité upozornenia
-    // ale môžeme ich tiež vypnúť odkomentovaním:
-    // myConsoleWarn = noop;
-    // myConsoleError = noop;
-}
-
-// Pomocné funkcie pre lokálne logovanie
-function log(...args) {
-    myConsoleLog(...args);
-}
-
-function debug(...args) {
-    myConsoleDebug(...args);
-}
-
-function info(...args) {
-    myConsoleInfo(...args);
-}
-
-function warn(...args) {
-    myConsoleWarn(...args);
-}
-
-function error(...args) {
-    myConsoleError(...args);
-}
 
 // Teraz v celom kóde používame tieto funkcie namiesto priamo console.log ---------------- všetko pred týmto riadkom vymaž
 
