@@ -693,14 +693,22 @@ let groupCheckCache = new Set();
     }
 
     function createAdvancedGroupTable(categoryName, groupName, baseGroupName) {
-        // ============================================================
-        // 🔥 Získanie typov skupín z groupsData
-        // ============================================================
         const groupsData = window.groupsData || {};
         const categoryId = window.categoryIdMap?.[categoryName] || null;
-        
-        let isAdvancedGroup = false;
+    
         let allBaseGroups = [];
+        
+        // Ak je zadaný baseGroupName, použijeme ho
+        if (baseGroupName) {
+            allBaseGroups = [baseGroupName];
+        } 
+        // Inak nájdeme všetky základné skupiny v tejto kategórii
+        else if (categoryId && groupsData[categoryId]) {
+            allBaseGroups = groupsData[categoryId]
+                .filter(g => g.type === 'základná skupina')
+                .map(g => g.name);
+            console.log(`🎯 Nadstavbová skupina ${groupName} - základné skupiny: ${allBaseGroups.join(', ')}`);
+        }
         
         // Zistíme, či je aktuálna skupina nadstavbová a nájdeme všetky základné skupiny
         if (categoryId && groupsData[categoryId]) {
@@ -1151,14 +1159,28 @@ let groupCheckCache = new Set();
     function printGroupTable(categoryName, groupName, baseGroupName = null) {
         let table;
     
-        // Ak je zadaná základná skupina, použijeme špeciálnu funkciu pre nadstavbovú
-        if (baseGroupName && groupName.toLowerCase().includes('nadstavbová')) {
-            table = createAdvancedGroupTable(categoryName, groupName, baseGroupName);
+        // 🔥 NOVÉ: Zistíme, či je skupina nadstavbová podľa groupsData
+        const groupsData = window.groupsData || {};
+        const categoryId = window.categoryIdMap?.[categoryName] || null;
+        let isAdvancedGroup = false;
+        
+    if (categoryId && groupsData[categoryId]) {
+            const groupInfo = groupsData[categoryId].find(g => g.name === groupName);
+            if (groupInfo && groupInfo.type === 'nadstavbová skupina') {
+                isAdvancedGroup = true;
+            }
+        }
+        
+        // Ak je skupina nadstavbová, použijeme createAdvancedGroupTable
+        if (isAdvancedGroup) {
+            // Pre nadstavbovú skupinu potrebujeme baseGroupName - zistíme ho z groupsData?
+            // Alebo použijeme createAdvancedGroupTable bez baseGroupName, ktoré si nájde samo
+            table = createAdvancedGroupTable(categoryName, groupName, null);
         } else {
             table = createGroupTable(categoryName, groupName);
         }
     
-        if (!table) return;
+    if (!table) return;
         
         // ============================================================
         // 🔥 MAPOVANIE NÁZVOV TÍMOV PRE VŠETKY TABUĽKY (nielen nadstavbové)
