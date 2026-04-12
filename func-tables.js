@@ -1202,11 +1202,7 @@ let groupCheckCache = new Set();
             const points = team.points.toString().padEnd(4);
             
             console.log(`${position}${name}${played}${wins}${draws}${losses}${score}${diffDisplay}${points}`);
-            
-            // Výpis detailu bodov pre nadstavbové skupiny
-            if (table.baseGroup && table.carryOverPoints && team.basePoints !== undefined) {
-                console.log(`       └─ body: ${team.basePoints} (zákl.) + ${team.advancedOnlyPoints} (nadst.) = ${team.points}`);
-            }
+
         });
         
         console.log('-'.repeat(120));
