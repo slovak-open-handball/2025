@@ -1034,8 +1034,7 @@ let groupCheckCache = new Set();
                 console.log(`   📍 Pozícia v základnej skupine ${foundGroupLetter}: ${foundPosition}. miesto`);
                 console.log(`   📍 Volám window.matchTracker.getTeamNameByDisplayId("${displayId}")...`);
                 
-                const mappedName0 = window.matchTracker.getTeamNameByDisplayId(displayId);
-                const mappedName = window.matchTracker.getTeamNameByDisplayId(mappedName0);
+                const mappedName = window.matchTracker.getTeamNameByDisplayId(displayId);
                 
                 if (mappedName && mappedName !== team.name && mappedName !== displayId) {
                     console.log(`   ✅ MAPOVANÝ NÁZOV: "${team.name}" → "${mappedName}"`);
