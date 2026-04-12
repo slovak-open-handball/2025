@@ -262,7 +262,7 @@ let groupCheckCache = new Set();
         // Získame všetky zápasy
         const allMatches = window.matchTracker.getAllMatches?.() || [];
         
-        // Prehľadávame všetky zápasy
+        // Pre každý zápas si predpočítame mapované názvy tímov
         for (const match of allMatches) {
             // Preskočíme zápasy o umiestnenie
             if (match.isPlacementMatch) continue;
@@ -270,16 +270,96 @@ let groupCheckCache = new Set();
             // Preskočíme aktuálnu skupinu
             if (match.categoryName === currentCategory && match.groupName === excludeGroupName) continue;
             
-            // Získame názvy tímov z match objektu (sú to identifikátory ako "U12 D 3A")
+            // Získame pôvodné identifikátory
             let homeIdentifier = match.homeTeamIdentifier;
             let awayIdentifier = match.awayTeamIdentifier;
             
-            // 🔥 DÔLEŽITÉ: Prevedieme identifikátory na zobrazovacie názvy pomocou getTeamNameByDisplayId
-            let homeTeamName = window.matchTracker.getTeamNameByDisplayId?.(homeIdentifier) || homeIdentifier;
-            let awayTeamName = window.matchTracker.getTeamNameByDisplayId?.(awayIdentifier) || awayIdentifier;
+            // 🔥 SPRÁVNE MAPOVANIE: Použijeme getTeamNameByDisplayId na získanie názvu tímu
+            // DÔLEŽITÉ: Musíme poslať celý identifikátor vrátane kategórie!
+            // Napr. "U12 D 3A" - to už obsahuje kategóriu, skupinu a poradie
             
-            // Kontrola, či zápas obsahuje oba hľadané tímy
-            // Porovnávame zobrazovacie názvy (už mapované)
+            let homeTeamName = homeIdentifier;
+            let awayTeamName = awayIdentifier;
+            
+            // Skúsime mapovať pomocou getTeamNameByDisplayId (ak existuje)
+            if (window.matchTracker.getTeamNameByDisplayId) {
+                const mappedHome = window.matchTracker.getTeamNameByDisplayId(homeIdentifier);
+                if (mappedHome && mappedHome !== homeIdentifier) {
+                    homeTeamName = mappedHome;
+                }
+                
+                const mappedAway = window.matchTracker.getTeamNameByDisplayId(awayIdentifier);
+                if (mappedAway && mappedAway !== awayIdentifier) {
+                    awayTeamName = mappedAway;
+                }
+            }
+            
+            // Alternatívne mapovanie cez createGroupTable (ak getTeamNameByDisplayId nefunguje)
+            if (homeTeamName === homeIdentifier || awayTeamName === awayIdentifier) {
+                // Pokúsime sa získať názov z tabuľky skupiny
+                const parts = homeIdentifier.split(' ');
+                if (parts.length >= 2) {
+                    const positionAndGroup = parts.pop();
+                    const category = parts.join(' ');
+                    
+                    let position = '';
+                    let groupLetter = '';
+                    for (let i = 0; i < positionAndGroup.length; i++) {
+                        const char = positionAndGroup[i];
+                        if (char >= '0' && char <= '9') {
+                            position += char;
+                        } else if (/[A-Za-z]/.test(char)) {
+                            groupLetter += char;
+                        }
+                    }
+                    
+                    if (position && groupLetter) {
+                        const positionNum = parseInt(position, 10);
+                        const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
+                        const groupTable = window.matchTracker.createGroupTable?.(category, fullGroupName);
+                        
+                        if (groupTable && groupTable.teams && groupTable.teams.length >= positionNum) {
+                            const team = groupTable.teams[positionNum - 1];
+                            if (team && team.name && team.name !== homeIdentifier) {
+                                homeTeamName = team.name;
+                            }
+                        }
+                    }
+                }
+                
+                // Rovnaký proces pre hosťovský tím
+                const awayParts = awayIdentifier.split(' ');
+                if (awayParts.length >= 2) {
+                    const awayPositionAndGroup = awayParts.pop();
+                    const awayCategory = awayParts.join(' ');
+                    
+                    let awayPosition = '';
+                    let awayGroupLetter = '';
+                    for (let i = 0; i < awayPositionAndGroup.length; i++) {
+                        const char = awayPositionAndGroup[i];
+                        if (char >= '0' && char <= '9') {
+                            awayPosition += char;
+                        } else if (/[A-Za-z]/.test(char)) {
+                            awayGroupLetter += char;
+                        }
+                    }
+                    
+                    if (awayPosition && awayGroupLetter) {
+                        const awayPositionNum = parseInt(awayPosition, 10);
+                        const awayFullGroupName = `skupina ${awayGroupLetter.toUpperCase()}`;
+                        const awayGroupTable = window.matchTracker.createGroupTable?.(awayCategory, awayFullGroupName);
+                        
+                        if (awayGroupTable && awayGroupTable.teams && awayGroupTable.teams.length >= awayPositionNum) {
+                            const awayTeam = awayGroupTable.teams[awayPositionNum - 1];
+                            if (awayTeam && awayTeam.name && awayTeam.name !== awayIdentifier) {
+                                awayTeamName = awayTeam.name;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Teraz porovnávame mapované názvy
             const hasTeamA = (homeTeamName === teamAName || awayTeamName === teamAName);
             const hasTeamB = (homeTeamName === teamBName || awayTeamName === teamBName);
             
@@ -316,6 +396,8 @@ let groupCheckCache = new Set();
                     };
                 } else {
                     console.log(`      ⏳ Zápas nie je dokončený (stav: ${match.status})`);
+                    // Vrátime null, ale zaznamenáme, že zápas existuje ale nie je dokončený
+                    return null;
                 }
             }
         }
