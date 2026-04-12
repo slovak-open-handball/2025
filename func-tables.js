@@ -677,9 +677,71 @@ let groupCheckCache = new Set();
                         
                         if (!teamA || !teamB) continue;
                         
-                        // 🔥 DÔLEŽITÉ: Hľadáme zápasy v INÝCH skupinách (základných)
+                        // 🔥 DÔLEŽITÉ: Najprv mapujeme názvy tímov na zobrazovacie názvy
+                        let teamANameMapped = teamA.name;
+                        let teamBNameMapped = teamB.name;
+                        
+                        // Mapovanie pomocou getTeamNameByDisplayId (ak je k dispozícii)
+                        if (window.matchTracker && window.matchTracker.getTeamNameByDisplayId) {
+                            const mappedA = window.matchTracker.getTeamNameByDisplayId(teamA.name);
+                            if (mappedA && mappedA !== teamA.name) {
+                                teamANameMapped = mappedA;
+                            }
+                            const mappedB = window.matchTracker.getTeamNameByDisplayId(teamB.name);
+                            if (mappedB && mappedB !== teamB.name) {
+                                teamBNameMapped = mappedB;
+                            }
+                        }
+                        
+                        // Ak getTeamNameByDisplayId nefunguje, skúsime cez createGroupTable
+                        if (teamANameMapped === teamA.name) {
+                            const parts = teamA.name.split(' ');
+                            if (parts.length >= 2) {
+                                const positionAndGroup = parts.pop();
+                                const category = parts.join(' ');
+                                let position = '';
+                                let groupLetter = '';
+                                for (let i = 0; i < positionAndGroup.length; i++) {
+                                    const char = positionAndGroup[i];
+                                    if (char >= '0' && char <= '9') position += char;
+                                    else if (/[A-Za-z]/.test(char)) groupLetter += char;
+                                }
+                                if (position && groupLetter) {
+                                    const groupTable = createGroupTable(category, `skupina ${groupLetter.toUpperCase()}`);
+                                    const idx = parseInt(position, 10) - 1;
+                                    if (groupTable && groupTable.teams && groupTable.teams[idx]) {
+                                        teamANameMapped = groupTable.teams[idx].name;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (teamBNameMapped === teamB.name) {
+                            const parts = teamB.name.split(' ');
+                            if (parts.length >= 2) {
+                                const positionAndGroup = parts.pop();
+                                const category = parts.join(' ');
+                                let position = '';
+                                let groupLetter = '';
+                                for (let i = 0; i < positionAndGroup.length; i++) {
+                                    const char = positionAndGroup[i];
+                                    if (char >= '0' && char <= '9') position += char;
+                                    else if (/[A-Za-z]/.test(char)) groupLetter += char;
+                                }
+                                if (position && groupLetter) {
+                                    const groupTable = createGroupTable(category, `skupina ${groupLetter.toUpperCase()}`);
+                                    const idx = parseInt(position, 10) - 1;
+                                    if (groupTable && groupTable.teams && groupTable.teams[idx]) {
+                                        teamBNameMapped = groupTable.teams[idx].name;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        console.log(`   🔍 Hľadám zápas medzi mapovanými názvami: "${teamANameMapped}" vs "${teamBNameMapped}"`);
+                        
                         const transferredMatch = findMatchBetweenTeamsInOtherGroup(
-                            teamA.name, teamB.name, categoryName, groupName, groupName
+                            teamANameMapped, teamBNameMapped, categoryName, groupName, groupName
                         );
                         
                         if (transferredMatch && transferredMatch.isTransferred) {
