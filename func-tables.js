@@ -2020,6 +2020,8 @@ function getTeamNameFromDatabase(displayId) {
 // OPRAVENÁ FUNKCIA: getTeamNameByDisplayId - rozpoznáva dva formáty
 // ============================================================
 
+let checkedGroupsCache = new Set();
+
 function getTeamNameByDisplayId(displayId) {
     if (!displayId) {
         console.log('❌ Nebol zadaný identifikátor tímu');
@@ -2034,55 +2036,82 @@ function getTeamNameByDisplayId(displayId) {
         return null;
     }
     
-    const lastPart = parts[parts.length - 1]; // napr. "A2" alebo "2A"
+    const lastPart = parts[parts.length - 1];
     let category = parts.slice(0, -1).join(' ');
     category = cleanCategoryName(category);
     
     // ============================================================
-    // ROZPOZNANIE FORMÁTU: PÍSMENO PRED ČÍSLICOU (napr. "A2")
+    // FORMÁT: PÍSMENO PRED ČÍSLICOU (napr. "A2")
     // ============================================================
-    // Formát: písmeno, potom číslice (napr. "A2", "B12", "C1")
     const letterFirstMatch = lastPart.match(/^([A-Za-z]+)(\d+)$/);
     
     if (letterFirstMatch) {
         const groupLetter = letterFirstMatch[1].toUpperCase();
         const order = parseInt(letterFirstMatch[2], 10);
         
-        console.log(`🔍 Formát "písmeno+číslo" (${lastPart}) → skupina: ${groupLetter}, poradie: ${order}`);
-        console.log(`   Hľadám tím v používateľských dátach (users)...`);
+        // 🔥 KONTROLA CACHE - ak sme už túto skupinu kontrolovali, preskočíme logy
+        const groupKey = `${category}|${groupLetter}`;
+        if (!checkedGroupsCache.has(groupKey)) {
+            console.log(`🔍 Formát "písmeno+číslo" (${lastPart}) → skupina: ${groupLetter}, poradie: ${order}`);
+            console.log(`   Hľadám tím v používateľských dátach (users)...`);
+            checkedGroupsCache.add(groupKey);
+        }
         
-        // Vyhľadáme tím v používateľských dátach
         const teamInfo = findTeamInUsersByGroupAndOrder(category, groupLetter, order);
         
         if (teamInfo && teamInfo.teamName) {
-            console.log(`✅ Nájdený tím v users: "${teamInfo.teamName}" (kategória: ${category}, skupina: ${groupLetter}, poradie: ${order})`);
+            if (!checkedGroupsCache.has(`${groupKey}_found`)) {
+                console.log(`✅ Nájdený tím v users: "${teamInfo.teamName}"`);
+                checkedGroupsCache.add(`${groupKey}_found`);
+            }
             return teamInfo.teamName;
         } else {
-            console.log(`❌ Tím nebol nájdený v users: ${category} skupina ${groupLetter} poradie ${order}`);
+            if (!checkedGroupsCache.has(`${groupKey}_not_found`)) {
+                console.log(`❌ Tím nebol nájdený v users: ${category} skupina ${groupLetter} poradie ${order}`);
+                checkedGroupsCache.add(`${groupKey}_not_found`);
+            }
             return null;
         }
     }
     
     // ============================================================
-    // ROZPOZNANIE FORMÁTU: ČÍSLICA PRED PÍSMENOM (napr. "2A")
+    // FORMÁT: ČÍSLICA PRED PÍSMENOM (napr. "2A")
     // ============================================================
-    // Formát: číslice, potom písmeno (napr. "2A", "12B", "1C")
     const numberFirstMatch = lastPart.match(/^(\d+)([A-Za-z]+)$/);
     
     if (numberFirstMatch) {
         const order = parseInt(numberFirstMatch[1], 10);
         const groupLetter = numberFirstMatch[2].toUpperCase();
         
-        console.log(`🔍 Formát "číslo+písmeno" (${lastPart}) → poradie: ${order}, skupina: ${groupLetter}`);
-        console.log(`   Kontrolujem tabuľku skupiny (vyžaduje 100% odohraných zápasov)...`);
+        // 🔥 KONTROLA CACHE - ak sme už túto skupinu kontrolovali, preskočíme logy
+        const groupKey = `${category}|${groupLetter}`;
+        if (!checkedGroupsCache.has(groupKey)) {
+            console.log(`🔍 Formát "číslo+písmeno" (${lastPart}) → poradie: ${order}, skupina: ${groupLetter}`);
+            console.log(`   Kontrolujem tabuľku skupiny (vyžaduje 100% odohraných zápasov)...`);
+        }
         
         const fullGroupName = `skupina ${groupLetter}`;
         
-        // Kontrola pripravenosti skupiny (100% odohraných zápasov)
-        const isReady = isGroupReadyForReplacement(category, groupLetter);
+        // 🔥 POUŽIJEME CACHE PRE KONTROLU PRIPRAVENOSTI
+        let isReady;
+        if (checkedGroupsCache.has(`${groupKey}_ready`)) {
+            isReady = true;
+        } else if (checkedGroupsCache.has(`${groupKey}_not_ready`)) {
+            isReady = false;
+        } else {
+            isReady = isGroupReadyForReplacement(category, groupLetter);
+            if (isReady) {
+                checkedGroupsCache.add(`${groupKey}_ready`);
+            } else {
+                checkedGroupsCache.add(`${groupKey}_not_ready`);
+            }
+        }
         
         if (!isReady) {
-            console.log(`⛔ Skupina ${category} - ${fullGroupName} NIE JE pripravená (nemá 100% odohraných zápasov)`);
+            if (!checkedGroupsCache.has(`${groupKey}_not_ready_logged`)) {
+                console.log(`⛔ Skupina ${category} - ${fullGroupName} NIE JE pripravená (nemá 100% odohraných zápasov)`);
+                checkedGroupsCache.add(`${groupKey}_not_ready_logged`);
+            }
             return null;
         }
         
@@ -2090,7 +2119,10 @@ function getTeamNameByDisplayId(displayId) {
         const groupTable = window.matchTracker?.createGroupTable(category, fullGroupName);
         
         if (!groupTable || !groupTable.teams || groupTable.teams.length === 0) {
-            console.log(`❌ Tabuľka pre skupinu ${fullGroupName} neexistuje`);
+            if (!checkedGroupsCache.has(`${groupKey}_no_table`)) {
+                console.log(`❌ Tabuľka pre skupinu ${fullGroupName} neexistuje`);
+                checkedGroupsCache.add(`${groupKey}_no_table`);
+            }
             return null;
         }
         
@@ -2098,19 +2130,27 @@ function getTeamNameByDisplayId(displayId) {
         
         if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
             const team = groupTable.teams[teamIndex];
-            console.log(`✅ Nájdený v tabuľke: "${team.name}" (pozícia ${order} v skupine ${groupLetter})`);
+            if (!checkedGroupsCache.has(`${groupKey}_team_found_${order}`)) {
+                console.log(`✅ Nájdený v tabuľke: "${team.name}" (pozícia ${order} v skupine ${groupLetter})`);
+                checkedGroupsCache.add(`${groupKey}_team_found_${order}`);
+            }
             return team.name;
         } else {
-            console.log(`❌ Pozícia ${order} neexistuje (skupina má ${groupTable.teams.length} tímov)`);
+            if (!checkedGroupsCache.has(`${groupKey}_invalid_position_${order}`)) {
+                console.log(`❌ Pozícia ${order} neexistuje (skupina má ${groupTable.teams.length} tímov)`);
+                checkedGroupsCache.add(`${groupKey}_invalid_position_${order}`);
+            }
             return null;
         }
     }
     
-    // ============================================================
-    // NEZNÁMY FORMÁT
-    // ============================================================
     console.log(`❌ Neznámy formát poslednej časti: ${lastPart} (očakáva sa "A2" alebo "2A")`);
     return null;
+}
+
+function clearCheckedGroupsCache() {
+    checkedGroupsCache.clear();
+    console.log('🗑️ Cache kontrolovaných skupín bola vymazaná');
 }
 
 // ============================================================
@@ -2648,6 +2688,7 @@ function clearNotReadyGroupsLog() {
 // Pridajte do window.teamNameReplacer
 if (window.teamNameReplacer) {
     window.teamNameReplacer.clearNotReadyGroupsLog = clearNotReadyGroupsLog;
+    window.teamNameReplacer.clearCheckedGroupsCache = clearCheckedGroupsCache;
 }
 
 // Pomocná funkcia na získanie udalostí pre zápas (pridáme do matchTracker)
