@@ -250,7 +250,7 @@ let groupCheckCache = new Set();
     }
 
     // ============================================================
-    // OPRAVENÁ FUNKCIA: findMatchBetweenTeamsInOtherGroup - S DVOJITÝM MAPOVANÍM
+    // OPRAVENÁ FUNKCIA: findMatchBetweenTeamsInOtherGroup - S KONTROLOU SKUPINY
     // ============================================================
     function findMatchBetweenTeamsInOtherGroup(teamAName, teamBName, currentCategory, currentGroupName, excludeGroupName) {
         if (!window.matchTracker) {
@@ -259,12 +259,49 @@ let groupCheckCache = new Set();
         
         console.log(`   🔍 Hľadám zápas medzi: "${teamAName}" vs "${teamBName}"`);
         
+        // 🔥 KROK 0: Extrahujeme písmeno skupiny z názvov tímov
+        // Očakávaný formát: "Kategória X Y" kde posledná časť je "3A" alebo "A3"
+        function extractGroupLetter(teamName) {
+            if (!teamName) return null;
+            
+            const parts = teamName.trim().split(' ');
+            if (parts.length < 2) return null;
+            
+            const lastPart = parts[parts.length - 1];
+            
+            // Formát "3A" (číslo + písmeno)
+            const numberFirstMatch = lastPart.match(/^(\d+)([A-Za-z]+)$/);
+            if (numberFirstMatch) {
+                return numberFirstMatch[2].toUpperCase();
+            }
+            
+            // Formát "A3" (písmeno + číslo)
+            const letterFirstMatch = lastPart.match(/^([A-Za-z]+)(\d+)$/);
+            if (letterFirstMatch) {
+                return letterFirstMatch[1].toUpperCase();
+            }
+            
+            return null;
+        }
+        
+        const groupLetterA = extractGroupLetter(teamAName);
+        const groupLetterB = extractGroupLetter(teamBName);
+        
+        console.log(`   📍 Skupina A: "${groupLetterA}", Skupina B: "${groupLetterB}"`);
+        
+        // 🔥 KONTROLA: Ak tímy pochádzajú z rôznych základných skupín, nemôže medzi nimi byť zápas
+        if (groupLetterA && groupLetterB && groupLetterA !== groupLetterB) {
+            console.log(`   ⚠️ Tímy pochádzajú z RÔZNYCH základných skupín (${groupLetterA} vs ${groupLetterB}) - zápas neexistuje!`);
+            return null;
+        }
+        
+        // Ak je skupina rovnaká alebo nevieme určiť, pokračujeme v hľadaní
+        console.log(`   ✅ Tímy pochádzajú z rovnakej skupiny (${groupLetterA || 'neznáma'}), pokračujem v hľadaní...`);
+        
         // 🔥 KROK 1: Najprv zmapujeme vstupné názvy na reálne názvy tímov
-        // Toto je KĽÚČOVÉ! "U12 D 1A" sa musí zmapovať na "HK Slovan Duslo Šaľa B"
         let mappedTeamA = teamAName;
         let mappedTeamB = teamBName;
         
-        // Pokúsime sa zmapovať vstupné názvy (ak sú to identifikátory ako "U12 D 1A")
         const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
         
         if (looksLikeIdentifier(teamAName)) {
@@ -298,11 +335,10 @@ let groupCheckCache = new Set();
             let homeIdentifier = match.homeTeamIdentifier;
             let awayIdentifier = match.awayTeamIdentifier;
             
-            // 🔥 KROK 2: Mapujeme na reálne názvy pre porovnanie
+            // Mapujeme na reálne názvy pre porovnanie
             let homeTeamName = homeIdentifier;
             let awayTeamName = awayIdentifier;
             
-            // Skúsime mapovať pomocou getTeamNameByDisplayId
             if (window.matchTracker.getTeamNameByDisplayId) {
                 const mappedHome = window.matchTracker.getTeamNameByDisplayId(homeIdentifier);
                 if (mappedHome && mappedHome !== homeIdentifier) {
@@ -315,8 +351,7 @@ let groupCheckCache = new Set();
                 }
             }
             
-            // 🔥 KROK 3: Porovnávame pomocou ZMAPOVANÝCH názvov
-            // Používame mappedTeamA a mappedTeamB (čo sú už reálne názvy)
+            // Porovnávame pomocou zmapovaných názvov
             const hasTeamA = (homeTeamName === mappedTeamA || awayTeamName === mappedTeamA);
             const hasTeamB = (homeTeamName === mappedTeamB || awayTeamName === mappedTeamB);
             
@@ -332,7 +367,6 @@ let groupCheckCache = new Set();
                     let teamAScore = 0;
                     let teamBScore = 0;
                     
-                    // Určíme, ktorý tím je ktorý
                     if (homeTeamName === mappedTeamA) {
                         teamAScore = homeScore;
                         teamBScore = awayScore;
@@ -354,7 +388,6 @@ let groupCheckCache = new Set();
                     };
                 } else {
                     console.log(`      ⏳ Zápas nie je dokončený (stav: ${match.status})`);
-                    // Vrátime null, ale nezaznamenávame ako chybu
                     return null;
                 }
             }
