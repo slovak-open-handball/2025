@@ -607,8 +607,6 @@ function error(...args) {
                 // Pridáme do setu, aby sme to už neopakovali (ale nie ako spracované)
                 processedCarryOverGroups.add(groupCarryKey);
             }
-        } else if (carryOverMatches && completionPercentage < 100) {
-            log(`ℹ️ ${categoryName} - ${groupName}: Prenášanie výsledkov až po dosiahnutí 100% (aktuálne ${completionPercentage}%)`);
         }
         
         // Vypočítame rozdiel skóre
@@ -1191,7 +1189,7 @@ function error(...args) {
         return `[${filled}${empty}]`;
     }
     
-        // Funkcia na výpis všetkých tabuliek skupín
+    // Funkcia na výpis všetkých tabuliek skupín
     function printAllGroupTables() {
         const allMatches = getAllMatches();
         
