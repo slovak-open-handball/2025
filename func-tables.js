@@ -22,6 +22,7 @@ const originalConsoleError = console.error;
 let isInitialDataLoaded = false;
 let processedGroupsInitial = new Set();
 let processedCarryOverGroups = new Set();
+let groupCheckCache = new Set();
 
 // Teraz v celom kóde používame tieto funkcie namiesto priamo console.log ---------------- všetko pred týmto riadkom vymaž
 
@@ -2432,15 +2433,23 @@ function isGroupReadyForReplacement(category, groupLetter) {
     const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
     const groupKey = `${cleanCategory}|${groupLetter.toUpperCase()}`;
     
+    // 🔥 KONTROLA CACHE - ak sme už túto skupinu kontrolovali, vrátime rovnaký výsledok
+    if (groupCheckCache.has(groupKey)) {
+        return true;
+    }
+    if (groupCheckCache.has(`${groupKey}_false`)) {
+        return false;
+    }
+    
     // 1. Skúsime získať tabuľku skupiny
     let groupTable = window.matchTracker?.createGroupTable(cleanCategory, fullGroupName);
     
     if (!groupTable) {
-        // Iba raz vypíšeme, že tabuľka neexistuje
         if (!notReadyGroupsLogged.has(`${groupKey}_no_table`)) {
             console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Tabuľka neexistuje → NIE JE PRIpravená`);
             notReadyGroupsLogged.add(`${groupKey}_no_table`);
         }
+        groupCheckCache.add(`${groupKey}_false`);
         return false;
     }
     
@@ -2450,12 +2459,12 @@ function isGroupReadyForReplacement(category, groupLetter) {
     
     // 2. Podmienka 1: Všetky zápasy musia byť odohrané (100%)
     if (completionPercentage < 100) {
-        // Iba raz vypíšeme aktuálne percento
         const logKey = `${groupKey}_${Math.floor(completionPercentage)}`;
         if (!notReadyGroupsLogged.has(logKey)) {
             console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Len ${completedMatches}/${totalMatches} (${completionPercentage}%) odohraných → NIE JE PRIpravená (čakám na dokončenie...)`);
             notReadyGroupsLogged.add(logKey);
         }
+        groupCheckCache.add(`${groupKey}_false`);
         return false;
     }
     
@@ -2483,11 +2492,11 @@ function isGroupReadyForReplacement(category, groupLetter) {
     }
     
     if (!allEventsLoaded) {
-        // Iba raz vypíšeme, že chýbajú udalosti
         if (!notReadyGroupsLogged.has(`${groupKey}_no_events`)) {
             console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Zápas ${missingEventsMatchId} nemá načítané udalosti → NIE JE PRIpravená (čakám na načítanie...)`);
             notReadyGroupsLogged.add(`${groupKey}_no_events`);
         }
+        groupCheckCache.add(`${groupKey}_false`);
         return false;
     }
     
@@ -2498,11 +2507,16 @@ function isGroupReadyForReplacement(category, groupLetter) {
             console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Sú tam zápasy, ktoré ešte prebiehajú → NIE JE PRIpravenÁ`);
             notReadyGroupsLogged.add(`${groupKey}_in_progress`);
         }
+        groupCheckCache.add(`${groupKey}_false`);
         return false;
     }
     
     // ========== SKUPINA JE PRIPRAVENÁ ==========
-    console.log(`✅ [${cleanCategory} - ${fullGroupName}] SKUPINA JE PRIPRAVENÁ! 100% zápasov odohraných, všetky udalosti načítané.`);
+    // 🔥 TENTO LOG SA VYPIŠE IBA RAZ!
+    if (!groupCheckCache.has(groupKey)) {
+        console.log(`✅ [${cleanCategory} - ${fullGroupName}] SKUPINA JE PRIPRAVENÁ! 100% zápasov odohraných, všetky udalosti načítané.`);
+        groupCheckCache.add(groupKey);
+    }
     
     // Vyčistíme záznamy o nepripravenosti pre túto skupinu
     for (const key of notReadyGroupsLogged) {
@@ -2685,10 +2699,16 @@ function clearNotReadyGroupsLog() {
     console.log('🗑️ Vyčistený záznam nepripravených skupín');
 }
 
+function clearGroupCheckCache() {
+    groupCheckCache.clear();
+    console.log('🗑️ Cache kontrolovaných skupín (isGroupReadyForReplacement) bola vymazaná');
+}
+
 // Pridajte do window.teamNameReplacer
 if (window.teamNameReplacer) {
     window.teamNameReplacer.clearNotReadyGroupsLog = clearNotReadyGroupsLog;
     window.teamNameReplacer.clearCheckedGroupsCache = clearCheckedGroupsCache;
+    window.teamNameReplacer.clearGroupCheckCache = clearGroupCheckCache;
 }
 
 // Pomocná funkcia na získanie udalostí pre zápas (pridáme do matchTracker)
