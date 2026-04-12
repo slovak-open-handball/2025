@@ -1740,7 +1740,12 @@ function error(...args) {
         getEvents: (matchId) => eventsData[matchId] || [],
         createAdvancedGroupTable: createAdvancedGroupTable,
         getCategorySettings: () => categorySettingsCache,
-        getCarryOverPoints: (categoryName) => categorySettingsCache[categoryName]?.carryOverPoints ?? false
+        getCarryOverPoints: (categoryName) => categorySettingsCache[categoryName]?.carryOverPoints ?? false,
+        getTeamNameByDisplayId: getTeamNameByDisplayId,
+        findTeamInUsers: findTeamInUsersByGroupAndOrder,
+        isGroupFullyCompleted: isGroupFullyCompleted,
+        findAdvancedGroupsDependingOn: findAdvancedGroupsDependingOn,
+        isInitialDataLoaded: () => isInitialDataLoaded
     };
     
     // Spustenie sledovania
@@ -2690,15 +2695,6 @@ function observePageChanges() {
     });
     
     return observer;
-}
-
-// Pridáme funkciu getTeamNameByDisplayId do matchTracker pre prístup z iných častí
-if (window.matchTracker) {
-    window.matchTracker.getTeamNameByDisplayId = getTeamNameByDisplayId;
-    window.matchTracker.findTeamInUsers = findTeamInUsersByGroupAndOrder;
-    window.matchTracker.isGroupFullyCompleted = isGroupFullyCompleted;
-    window.matchTracker.findAdvancedGroupsDependingOn = findAdvancedGroupsDependingOn;
-    window.matchTracker.isInitialDataLoaded = () => isInitialDataLoaded;
 }
 
 window.getTeamNameByDisplayId = getTeamNameByDisplayId;
