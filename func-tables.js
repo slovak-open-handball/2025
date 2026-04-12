@@ -256,7 +256,7 @@ let processedCarryOverGroups = new Set();
             return null;
         }
         
-        log(`   🔍 Hľadám zápas medzi: "${teamAName}" vs "${teamBName}"`);
+        console.log(`   🔍 Hľadám zápas medzi: "${teamAName}" vs "${teamBName}"`);
         
         // Získame všetky zápasy
         const allMatches = window.matchTracker.getAllMatches?.() || [];
@@ -279,7 +279,7 @@ let processedCarryOverGroups = new Set();
             const hasTeamB = (homeTeamName === teamBName || awayTeamName === teamBName);
             
             if (hasTeamA && hasTeamB) {
-                log(`      ✅ Nájdený zápas v skupine: ${match.groupName} (stav: ${match.status})`);
+                console.log(`      ✅ Nájdený zápas v skupine: ${match.groupName} (stav: ${match.status})`);
                 
                 if (match.status === 'completed') {
                     const events = window.matchTracker.getEvents?.(match.id) || [];
@@ -296,7 +296,7 @@ let processedCarryOverGroups = new Set();
                         teamBScore = homeScore;
                     }
                     
-                    log(`      ✅ POUŽITÝ výsledok: ${teamAScore}:${teamBScore}`);
+                    console.log(`      ✅ POUŽITÝ výsledok: ${teamAScore}:${teamBScore}`);
                     
                     return {
                         matchId: match.id,
@@ -308,12 +308,12 @@ let processedCarryOverGroups = new Set();
                         isTransferred: true
                     };
                 } else {
-                    log(`      ⏳ Zápas nie je dokončený (stav: ${match.status})`);
+                    console.log(`      ⏳ Zápas nie je dokončený (stav: ${match.status})`);
                 }
             }
         }
         
-        log(`      ❌ Žiadny dokončený zápas medzi "${teamAName}" a "${teamBName}" nebol nájdený.`);
+        console.log(`      ❌ Žiadny dokončený zápas medzi "${teamAName}" a "${teamBName}" nebol nájdený.`);
         return null;
     }
 
@@ -487,7 +487,7 @@ let processedCarryOverGroups = new Set();
         const allGroupMatches = getGroupMatches(categoryName, groupName);
         
         if (allGroupMatches.length === 0) {
-            log(`Žiadne zápasy pre skupinu ${groupName} v kategórii ${categoryName}`);
+            console.log(`Žiadne zápasy pre skupinu ${groupName} v kategórii ${categoryName}`);
             return null;
         }
         
@@ -555,7 +555,7 @@ let processedCarryOverGroups = new Set();
         
         if (carryOverMatches && completionPercentage === 100) {
             if (!processedCarryOverGroups.has(groupCarryKey)) {
-                log(`🔄 PRENÁŠAM VÝSLEDKY Z INÝCH SKUPÍN (${categoryName} - ${groupName}) - skupina je 100% dokončená:`);
+                console.log(`🔄 PRENÁŠAM VÝSLEDKY Z INÝCH SKUPÍN (${categoryName} - ${groupName}) - skupina je 100% dokončená:`);
                 
                 const teamPairsPlayed = new Set();
                 allGroupMatches.forEach(match => {
@@ -589,7 +589,7 @@ let processedCarryOverGroups = new Set();
                         );
                         
                         if (transferredMatch && transferredMatch.isTransferred) {
-                            log(`   ✅ Prenesený výsledok: ${teamA.name} ${transferredMatch.homeScore}:${transferredMatch.awayScore} ${teamB.name}`);
+                            console.log(`   ✅ Prenesený výsledok: ${teamA.name} ${transferredMatch.homeScore}:${transferredMatch.awayScore} ${teamB.name}`);
                             
                             teamA.played++;
                             teamB.played++;
@@ -625,13 +625,13 @@ let processedCarryOverGroups = new Set();
                 }
                 
                 processedCarryOverGroups.add(groupCarryKey);
-                log(`✅ Skupina ${categoryName} - ${groupName} označená ako spracovaná`);
+                console.log(`✅ Skupina ${categoryName} - ${groupName} označená ako spracovaná`);
             } else {
-                log(`ℹ️ Skupina ${categoryName} - ${groupName} už bola spracovaná, preskakujem prenášanie výsledkov`);
+                console.log(`ℹ️ Skupina ${categoryName} - ${groupName} už bola spracovaná, preskakujem prenášanie výsledkov`);
             }
         } else if (carryOverMatches && completionPercentage < 100) {
             if (!processedCarryOverGroups.has(groupCarryKey)) {
-                log(`ℹ️ ${categoryName} - ${groupName}: Prenášanie výsledkov až po dosiahnutí 100% (aktuálne ${completionPercentage}%)`);
+                console.log(`ℹ️ ${categoryName} - ${groupName}: Prenášanie výsledkov až po dosiahnutí 100% (aktuálne ${completionPercentage}%)`);
                 processedCarryOverGroups.add(groupCarryKey);
             }
         }
@@ -682,25 +682,25 @@ let processedCarryOverGroups = new Set();
         
         if (!looksLikeIdentifier) {
             // Toto nie je identifikátor, ale normálny názov tímu
-            log(`   ℹ️ "${teamNameFromGroup}" nie je identifikátor (nemá formát A2 alebo 2A), používam pôvodný názov`);
+            console.log(`   ℹ️ "${teamNameFromGroup}" nie je identifikátor (nemá formát A2 alebo 2A), používam pôvodný názov`);
             return teamNameFromGroup;
         }
         
-        log(`   📛 Spracovávam identifikátor: "${teamNameFromGroup}"`);
-        log(`   📍 Volám window.matchTracker.getTeamNameByDisplayId("${teamNameFromGroup}")...`);
+        console.log(`   📛 Spracovávam identifikátor: "${teamNameFromGroup}"`);
+        console.log(`   📍 Volám window.matchTracker.getTeamNameByDisplayId("${teamNameFromGroup}")...`);
         
         const mappedName = window.matchTracker.getTeamNameByDisplayId(teamNameFromGroup);
         
         if (mappedName && mappedName !== teamNameFromGroup) {
-            log(`   ✅ Mapovanie tímu: "${teamNameFromGroup}" → "${mappedName}"`);
+            console.log(`   ✅ Mapovanie tímu: "${teamNameFromGroup}" → "${mappedName}"`);
             return mappedName;
         }
         
         // Ak funkcia vrátila null alebo rovnaký názov, použijeme pôvodný
         if (!mappedName) {
-            log(`   ⚠️ getTeamNameByDisplayId vrátila null pre "${teamNameFromGroup}", používam pôvodný názov`);
+            console.log(`   ⚠️ getTeamNameByDisplayId vrátila null pre "${teamNameFromGroup}", používam pôvodný názov`);
         } else if (mappedName === teamNameFromGroup) {
-            log(`   ℹ️ Názov zostáva rovnaký: "${teamNameFromGroup}"`);
+            console.log(`   ℹ️ Názov zostáva rovnaký: "${teamNameFromGroup}"`);
         }
         return teamNameFromGroup;
     }
@@ -709,17 +709,17 @@ let processedCarryOverGroups = new Set();
         // 1. Najprv skontrolujeme, či je základná skupina 100% dokončená
         const baseGroupTable = createGroupTable(categoryName, baseGroupName);
         if (!baseGroupTable || !baseGroupTable.teams || baseGroupTable.teams.length === 0) {
-            log(`❌ Základná skupina ${baseGroupName} neexistuje alebo nemá dáta`);
+            console.log(`❌ Základná skupina ${baseGroupName} neexistuje alebo nemá dáta`);
             return null;
         }
         
         // Kontrola: Základná skupina musí mať 100% dokončených zápasov
         if (baseGroupTable.completionPercentage < 100) {
-            log(`⏳ Nadstavbová skupina ${groupName} čaká na dokončenie základnej skupiny ${baseGroupName} (${baseGroupTable.completionPercentage}%)`);
+            console.log(`⏳ Nadstavbová skupina ${groupName} čaká na dokončenie základnej skupiny ${baseGroupName} (${baseGroupTable.completionPercentage}%)`);
             return null;
         }
         
-        log(`✅ Základná skupina ${baseGroupName} je 100% dokončená, vyhodnocujem nadstavbovú skupinu ${groupName}...`);
+        console.log(`✅ Základná skupina ${baseGroupName} je 100% dokončená, vyhodnocujem nadstavbovú skupinu ${groupName}...`);
         
         // Zvyšok funkcie zostáva rovnaký...
         const categorySetting = categorySettingsCache[categoryName];
@@ -728,7 +728,7 @@ let processedCarryOverGroups = new Set();
         
         const advancedMatches = getGroupMatches(categoryName, groupName);
         if (advancedMatches.length === 0) {
-            log(`❌ Žiadne zápasy pre nadstavbovú skupinu ${groupName}`);
+            console.log(`❌ Žiadne zápasy pre nadstavbovú skupinu ${groupName}`);
             return null;
         }
         
@@ -1019,7 +1019,7 @@ let processedCarryOverGroups = new Set();
         // ============================================================
         // 🔥 MAPOVANIE NÁZVOV TÍMOV PRE VŠETKY TABUĽKY (nielen nadstavbové)
         // ============================================================
-        log(`\n📋 MAPOVANIE NÁZVOV PRED VÝPISOM TABUĽKY: ${table.category} - ${table.group}`);
+        console.log(`\n📋 MAPOVANIE NÁZVOV PRED VÝPISOM TABUĽKY: ${table.category} - ${table.group}`);
     
         // Pomocná funkcia na kontrolu, či ide o identifikátor
         const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
@@ -1029,28 +1029,28 @@ let processedCarryOverGroups = new Set();
             if (looksLikeIdentifier(team.name)) {
                 const mappedName = window.matchTracker.getTeamNameByDisplayId(team.name);
                 if (mappedName && mappedName !== team.name) {
-                    log(`   🔄 Mapovanie pre výpis: "${team.name}" → "${mappedName}"`);
+                    console.log(`   🔄 Mapovanie pre výpis: "${team.name}" → "${mappedName}"`);
                     team.name = mappedName;
                 } else if (!mappedName) {
-                    log(`   ⚠️ Žiadne mapovanie pre: "${team.name}" (funkcia vrátila null)`);
+                    console.log(`   ⚠️ Žiadne mapovanie pre: "${team.name}" (funkcia vrátila null)`);
                 }
             } else {
-                log(`   ℹ️ "${team.name}" nie je identifikátor, preskakujem mapovanie`);
+                console.log(`   ℹ️ "${team.name}" nie je identifikátor, preskakujem mapovanie`);
             }
         }
         // ============================================================
         
         console.log('\n' + '='.repeat(120));
-        log(`📊 TABUĽKA SKUPINY: ${table.category} - ${table.group}`);
+        console.log(`📊 TABUĽKA SKUPINY: ${table.category} - ${table.group}`);
         if (table.baseGroup) {
-            log(`   📌 Základná skupina: ${table.baseGroup}`);
-            log(`   📌 Prenášanie bodov: ${table.carryOverPoints ? 'ZAPNUTÉ ✅' : 'VYPNUTÉ ❌'}`);
+            console.log(`   📌 Základná skupina: ${table.baseGroup}`);
+            console.log(`   📌 Prenášanie bodov: ${table.carryOverPoints ? 'ZAPNUTÉ ✅' : 'VYPNUTÉ ❌'}`);
         }
         console.log('='.repeat(120));
         
         // Informácia o počte odohraných zápasov
         const progressBar = generateProgressBar(table.completionPercentage);
-        log(`📋 Zápasy: ${table.completedCount} / ${table.totalMatches} odohraných (${table.completionPercentage}%)`);
+        console.log(`📋 Zápasy: ${table.completedCount} / ${table.totalMatches} odohraných (${table.completionPercentage}%)`);
         console.log('-'.repeat(120));
         console.log(' '.padEnd(4) + 'TÍM'.padEnd(30) + 'Z'.padEnd(5) + 'V'.padEnd(5) + 'R'.padEnd(5) + 'P'.padEnd(5) + 'Skóre'.padEnd(12) + '+/-'.padEnd(6) + 'Body');
         console.log('-'.repeat(120));
@@ -1069,11 +1069,11 @@ let processedCarryOverGroups = new Set();
             }
             const points = team.points.toString().padEnd(4);
             
-            log(`${position}${name}${played}${wins}${draws}${losses}${score}${diffDisplay}${points}`);
+            console.log(`${position}${name}${played}${wins}${draws}${losses}${score}${diffDisplay}${points}`);
             
             // Výpis detailu bodov pre nadstavbové skupiny
             if (table.baseGroup && table.carryOverPoints && team.basePoints !== undefined) {
-                log(`       └─ body: ${team.basePoints} (zákl.) + ${team.advancedOnlyPoints} (nadst.) = ${team.points}`);
+                console.log(`       └─ body: ${team.basePoints} (zákl.) + ${team.advancedOnlyPoints} (nadst.) = ${team.points}`);
             }
         });
         
@@ -1082,7 +1082,7 @@ let processedCarryOverGroups = new Set();
         // Výpis neodohraných zápasov - aj tu mapujeme názvy
         const upcomingMatches = table.matches.filter(m => m.status !== 'completed');
         if (upcomingMatches.length > 0) {
-            log(`\n📅 NEODOHRANÉ ZÁPASY (${upcomingMatches.length}):`);
+            console.log(`\n📅 NEODOHRANÉ ZÁPASY (${upcomingMatches.length}):`);
             upcomingMatches.forEach((match, idx) => {
                 let homeTeam = window.teamManager?.getTeamNameByDisplayIdSync?.(match.homeTeamIdentifier) || match.homeTeamIdentifier;
                 let awayTeam = window.teamManager?.getTeamNameByDisplayIdSync?.(match.awayTeamIdentifier) || match.awayTeamIdentifier;
@@ -1105,18 +1105,18 @@ let processedCarryOverGroups = new Set();
                 
                 const matchDate = match.scheduledTime ? match.scheduledTime.toDate() : null;
                 const dateStr = matchDate ? matchDate.toLocaleDateString('sk-SK') : 'neurčený';
-                log(`   ${idx+1}. ${mappedHome} vs ${mappedAway} (${dateStr}) - ${getStatusText(match.status)}`);
+                console.log(`   ${idx+1}. ${mappedHome} vs ${mappedAway} (${dateStr}) - ${getStatusText(match.status)}`);
             });
         }
         if (table.transferredMatches && table.transferredMatches.length > 0) {
-            log(`\n🔄 PRENESENÉ ZÁPASY (zo základnej skupiny ${table.baseGroup}):`);
+            console.log(`\n🔄 PRENESENÉ ZÁPASY (zo základnej skupiny ${table.baseGroup}):`);
             table.transferredMatches.forEach((match, idx) => {
-                log(`   ${idx+1}. ${match.homeTeam} ${match.homeScore}:${match.awayScore} ${match.awayTeam} (prenesené)`);
+                console.log(`   ${idx+1}. ${match.homeTeam} ${match.homeScore}:${match.awayScore} ${match.awayTeam} (prenesené)`);
             });
         }
         // Výpis použitých kritérií poradia
         if (tableSettings.sortingConditions.length > 0) {
-            log(`\n📋 Kritériá poradia: ${tableSettings.sortingConditions.map((c, i) => {
+            console.log(`\n📋 Kritériá poradia: ${tableSettings.sortingConditions.map((c, i) => {
                 const param = c.parameter === 'headToHead' ? 'vzájomný zápas' :
                              c.parameter === 'scoreDifference' ? '+/-' :
                              c.parameter === 'goalsScored' ? 'strelené góly' :
@@ -1128,7 +1128,7 @@ let processedCarryOverGroups = new Set();
                 return `${i+1}. ${param}${c.parameter !== 'draw' && c.parameter !== 'headToHead' ? ` (${dir})` : ''}`;
             }).join(', ')}`);
         } else {
-            log(`\n📋 Kritériá poradia: predvolené (body, +/-, strelené góly, abeceda)`);
+            console.log(`\n📋 Kritériá poradia: predvolené (body, +/-, strelené góly, abeceda)`);
         }
         
         console.log('='.repeat(120) + '\n');
@@ -1139,7 +1139,7 @@ let processedCarryOverGroups = new Set();
         const cleanCategory = cleanCategoryName(categoryName);
         const baseGroupLetter = baseGroupName.replace('skupina ', '').toUpperCase();
         
-        log(`\n📋 MAPOVANIE TÍMOV PRE NADSTAVBOVÚ SKUPINU: ${categoryName} - ${baseGroupName}`);
+        console.log(`\n📋 MAPOVANIE TÍMOV PRE NADSTAVBOVÚ SKUPINU: ${categoryName} - ${baseGroupName}`);
         console.log('='.repeat(80));
         
         const mappedTeams = new Map();
@@ -1152,22 +1152,22 @@ let processedCarryOverGroups = new Set();
             // Vytvoríme identifikátor v tvare "kategória pozíciaSkupina"
             const displayId = `${cleanCategory} ${position}${baseGroupLetter}`;
             
-            log(`\n🔄 Spracovávam tím: "${team.name}"`);
-            log(`   📍 Pozícia v základnej skupine ${baseGroupName}: ${position}. miesto`);
-            log(`   📍 Volám window.matchTracker.getTeamNameByDisplayId("${displayId}")...`);
+            console.log(`\n🔄 Spracovávam tím: "${team.name}"`);
+            console.log(`   📍 Pozícia v základnej skupine ${baseGroupName}: ${position}. miesto`);
+            console.log(`   📍 Volám window.matchTracker.getTeamNameByDisplayId("${displayId}")...`);
             
             const mappedName = window.matchTracker.getTeamNameByDisplayId(displayId);
             
             // 🔥 KONTROLA: Ak mappedName je null alebo undefined, použijeme pôvodný názov
             if (mappedName && mappedName !== team.name && mappedName !== displayId) {
-                log(`   ✅ MAPOVANÝ NÁZOV: "${team.name}" → "${mappedName}"`);
+                console.log(`   ✅ MAPOVANÝ NÁZOV: "${team.name}" → "${mappedName}"`);
                 mappedTeams.set(team.id, mappedName);
             } else if (!mappedName) {
-                log(`   ⚠️ getTeamNameByDisplayId vrátila null pre "${displayId}", používam pôvodný názov: "${team.name}"`);
+                console.log(`   ⚠️ getTeamNameByDisplayId vrátila null pre "${displayId}", používam pôvodný názov: "${team.name}"`);
             } else if (mappedName === team.name) {
-                log(`   ℹ️ Názov zostáva rovnaký: "${team.name}"`);
+                console.log(`   ℹ️ Názov zostáva rovnaký: "${team.name}"`);
             } else {
-                log(`   ⚠️ Žiadna zmena pre: "${team.name}" (funkcia vrátila: ${mappedName})`);
+                console.log(`   ⚠️ Žiadna zmena pre: "${team.name}" (funkcia vrátila: ${mappedName})`);
             }
         }
         
@@ -1176,7 +1176,7 @@ let processedCarryOverGroups = new Set();
             if (mappedTeams.has(team.id)) {
                 const oldName = team.name;
                 team.name = mappedTeams.get(team.id);
-                log(`\n📛 PREMAPOVANIE: "${oldName}" → "${team.name}"`);
+                console.log(`\n📛 PREMAPOVANIE: "${oldName}" → "${team.name}"`);
             }
         }
         
@@ -1192,16 +1192,16 @@ let processedCarryOverGroups = new Set();
         const baseGroupLetter = baseGroupName.replace('skupina ', '').toUpperCase();
         const displayId = `${cleanCategory} ${position}${baseGroupLetter}`;
     
-        log(`🔄 Mapujem tím na pozícii ${position} v skupine ${baseGroupName}: ${displayId}`);
+        console.log(`🔄 Mapujem tím na pozícii ${position} v skupine ${baseGroupName}: ${displayId}`);
         
         const mappedName = window.matchTracker.getTeamNameByDisplayId(displayId);
         
         if (mappedName && mappedName !== displayId) {
-            log(`   ✅ Výsledok mapovania: "${displayId}" → "${mappedName}"`);
+            console.log(`   ✅ Výsledok mapovania: "${displayId}" → "${mappedName}"`);
             return mappedName;
         }
         
-        log(`   ⚠️ Mapovanie zlyhalo, používam pôvodný identifikátor: ${teamId}`);
+        console.log(`   ⚠️ Mapovanie zlyhalo, používam pôvodný identifikátor: ${teamId}`);
         return teamId;
     }
     
@@ -1241,7 +1241,7 @@ let processedCarryOverGroups = new Set();
         }
         
         console.log('\n' + '='.repeat(100));
-        log(`📊 VŠETKY TABUĽKY SKUPÍN (${uniqueGroups.size} skupín)`);
+        console.log(`📊 VŠETKY TABUĽKY SKUPÍN (${uniqueGroups.size} skupín)`);
         console.log('='.repeat(100));
         
         const sortedGroups = Array.from(uniqueGroups).sort();
@@ -1262,7 +1262,7 @@ let processedCarryOverGroups = new Set();
         }
         
         console.log('\n' + '='.repeat(90));
-        log(`✅ ODOHRANÉ ZÁPASY (${completedMatches.length}) - ${new Date().toLocaleTimeString()}`);
+        console.log(`✅ ODOHRANÉ ZÁPASY (${completedMatches.length}) - ${new Date().toLocaleTimeString()}`);
         console.log('='.repeat(90));
         
         const sortedMatches = [...completedMatches].sort((a, b) => {
@@ -1276,13 +1276,13 @@ let processedCarryOverGroups = new Set();
             const details = getMatchDetails(match.id);
             if (!details) return;
             
-            log(`\n${index + 1}. 🏁 ${details.homeTeamName} vs ${details.awayTeamName}`);
-            log(`   📅 ${details.dateStr}`);
-            log(`   🏷️ Kategória: ${details.category}`);
-            log(`   👥 Skupina: ${details.group}`);
-            log(`   🥅 Konečné skóre: ${details.homeScore} : ${details.awayScore}`);
-            log(`   🆔 Domáci ID: ${details.homeTeamId}`);
-            log(`   🆔 Hostia ID: ${details.awayTeamId}`);
+            console.log(`\n${index + 1}. 🏁 ${details.homeTeamName} vs ${details.awayTeamName}`);
+            console.log(`   📅 ${details.dateStr}`);
+            console.log(`   🏷️ Kategória: ${details.category}`);
+            console.log(`   👥 Skupina: ${details.group}`);
+            console.log(`   🥅 Konečné skóre: ${details.homeScore} : ${details.awayScore}`);
+            console.log(`   🆔 Domáci ID: ${details.homeTeamId}`);
+            console.log(`   🆔 Hostia ID: ${details.awayTeamId}`);
         });
         
         console.log('\n' + '='.repeat(90) + '\n');
@@ -1343,9 +1343,9 @@ let processedCarryOverGroups = new Set();
         sortedGroups.forEach(group => {
             const completedPercent = group.total > 0 ? (group.completed / group.total * 100).toFixed(1) : 0;
             const progressBar = generateProgressBar(completedPercent);
-            log(`\n📌 ${group.category} - ${group.group}`);
-            log(`   Zápasy: ${group.completed}/${group.total} odohraných (${completedPercent}%) ${progressBar}`);
-            log(`   📅 Naplánované: ${group.scheduled} | ▶️ Prebieha: ${group.inProgress} | ✅ Odohrané: ${group.completed}`);
+            console.log(`\n📌 ${group.category} - ${group.group}`);
+            console.log(`   Zápasy: ${group.completed}/${group.total} odohraných (${completedPercent}%) ${progressBar}`);
+            console.log(`   📅 Naplánované: ${group.scheduled} | ▶️ Prebieha: ${group.inProgress} | ✅ Odohrané: ${group.completed}`);
         });
         
         console.log('\n' + '='.repeat(80) + '\n');
@@ -1391,10 +1391,10 @@ let processedCarryOverGroups = new Set();
         const totalMatchesCount = initialSnapshot.size;
         let loadedMatchesCount = 0;
         
-        log(`📊 Celkový počet zápasov v databáze: ${totalMatchesCount}`);
+        console.log(`📊 Celkový počet zápasov v databáze: ${totalMatchesCount}`);
         
         unsubscribeMatches = onSnapshot(matchesRef, (snapshot) => {
-            log(`🔄 Zmena v databáze: ${snapshot.size} zápasov celkom`);
+            console.log(`🔄 Zmena v databáze: ${snapshot.size} zápasov celkom`);
             
             let completedMatchChanged = false;
             let changedMatches = []; // Ukladá zmenené zápasy pre neskoršie spracovanie
@@ -1406,7 +1406,7 @@ let processedCarryOverGroups = new Set();
                     matchesData[match.id] = match;
                     subscribeToMatchEvents(match.id);
                     loadedMatchesCount++;
-                    log(`📊 Priebeh načítavania: ${loadedMatchesCount}/${totalMatchesCount} zápasov`);
+                    console.log(`📊 Priebeh načítavania: ${loadedMatchesCount}/${totalMatchesCount} zápasov`);
                     
                 } else if (change.type === 'modified') {
                     const oldMatch = matchesData[match.id];
@@ -1414,7 +1414,7 @@ let processedCarryOverGroups = new Set();
                     
                     // 🔥 KĽÚČOVÉ: Sledujeme zmenu stavu na "completed"
                     if (oldMatch && oldMatch.status !== match.status && match.status === 'completed') {
-                        log(`✅ Zápas DOHRANÝ! Zmena stavu: ${getStatusText(oldMatch.status)} → ${getStatusText(match.status)}`);
+                        console.log(`✅ Zápas DOHRANÝ! Zmena stavu: ${getStatusText(oldMatch.status)} → ${getStatusText(match.status)}`);
                         completedMatchChanged = true;
                         changedMatches.push({
                             matchId: match.id,
@@ -1424,11 +1424,11 @@ let processedCarryOverGroups = new Set();
                             awayTeam: match.awayTeamIdentifier
                         });
                     } else if (oldMatch && oldMatch.status !== match.status) {
-                        log(`🔄 Zmena stavu zápasu: ${getStatusText(oldMatch.status)} → ${getStatusText(match.status)} (nie je completed, ignorujem)`);
+                        console.log(`🔄 Zmena stavu zápasu: ${getStatusText(oldMatch.status)} → ${getStatusText(match.status)} (nie je completed, ignorujem)`);
                     }
                     
                 } else if (change.type === 'removed') {
-                    log(`❌ Odstránený zápas: ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`);
+                    console.log(`❌ Odstránený zápas: ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`);
                     delete matchesData[match.id];
                     
                     if (unsubscribeEvents[match.id]) {
@@ -1457,16 +1457,16 @@ let processedCarryOverGroups = new Set();
                     }
                 });
                 
-                log(`📊 Nájdených ${baseGroups.size} základných skupín`);
+                console.log(`📊 Nájdených ${baseGroups.size} základných skupín`);
                 
                 for (const groupKey of baseGroups) {
                     const [category, group] = groupKey.split('|');
                     const groupTable = createGroupTable(category, group);
                     if (groupTable) {
                         const completionPercentage = groupTable.completionPercentage;
-                        log(`   📊 ${category} - ${group}: ${completionPercentage}% dokončených`);
+                        console.log(`   📊 ${category} - ${group}: ${completionPercentage}% dokončených`);
                         if (completionPercentage == 100) {
-                            log(`   ✅ ${category} - ${group} je KOMPLETNÁ (100%)`);
+                            console.log(`   ✅ ${category} - ${group} je KOMPLETNÁ (100%)`);
                             processedGroupsInitial.add(groupKey);
                         }
                     }
@@ -1483,7 +1483,7 @@ let processedCarryOverGroups = new Set();
                     }
                 });
                 
-                log(`📊 Nájdených ${advancedGroups.size} nadstavbových skupín`);
+                console.log(`📊 Nájdených ${advancedGroups.size} nadstavbových skupín`);
                 
                 for (const groupKey of advancedGroups) {
                     const [category, group] = groupKey.split('|');
@@ -1498,10 +1498,10 @@ let processedCarryOverGroups = new Set();
                     if (baseGroupName) {
                         const baseGroupKey = `${category}|${baseGroupName}`;
                         if (processedGroupsInitial.has(baseGroupKey)) {
-                            log(`   ✅ ${category} - ${group} (základná ${baseGroupName} je hotová) - vyhodnocujem...`);
+                            console.log(`   ✅ ${category} - ${group} (základná ${baseGroupName} je hotová) - vyhodnocujem...`);
                             createAdvancedGroupTable(category, group, baseGroupName);
                         } else {
-                            log(`   ⏳ ${category} - ${group} čaká na dokončenie základnej skupiny ${baseGroupName}`);
+                            console.log(`   ⏳ ${category} - ${group} čaká na dokončenie základnej skupiny ${baseGroupName}`);
                         }
                     }
                 }
@@ -1509,7 +1509,7 @@ let processedCarryOverGroups = new Set();
             
             // ========== SPRACOVANIE ZMENY: IBA KEĎ SA ZÁPAS UKONČIL ==========
             if (isInitialDataLoaded && completedMatchChanged && changedMatches.length > 0) {
-                log(`🏁 Spúšťam prepočet tabuliek (${changedMatches.length} zápasov bolo dohraných)...`);
+                console.log(`🏁 Spúšťam prepočet tabuliek (${changedMatches.length} zápasov bolo dohraných)...`);
                 
                 const affectedGroups = new Set();
                 const affectedCategories = new Set();
@@ -1522,7 +1522,7 @@ let processedCarryOverGroups = new Set();
                     }
                 }
                 
-                log(`📋 Ovplyvnené skupiny: ${Array.from(affectedGroups).join(', ')}`);
+                console.log(`📋 Ovplyvnené skupiny: ${Array.from(affectedGroups).join(', ')}`);
                 
                 // 1. Najprv prepočítame ovplyvnené ZÁKLADNÉ SKUPINY
                 for (const groupKey of affectedGroups) {
@@ -1530,16 +1530,16 @@ let processedCarryOverGroups = new Set();
                     const isAdvancedGroup = group.toLowerCase().includes('nadstavbová');
                     
                     if (!isAdvancedGroup) {
-                        log(`   🔄 Prepočítavam základnú skupinu: ${category} - ${group}`);
+                        console.log(`   🔄 Prepočítavam základnú skupinu: ${category} - ${group}`);
                         const groupTable = createGroupTable(category, group);
                         
                         if (groupTable && groupTable.completionPercentage == 100) {
-                            log(`   ✅ ${category} - ${group} je teraz KOMPLETNÁ (100%)`);
+                            console.log(`   ✅ ${category} - ${group} je teraz KOMPLETNÁ (100%)`);
                             processedGroupsInitial.add(groupKey);
                             
                             const advancedDependentGroups = findAdvancedGroupsDependingOn(category, group);
                             for (const advGroup of advancedDependentGroups) {
-                                log(`   🔄 Prepočítavam nadstavbovú skupinu (závisí na ${group}): ${category} - ${advGroup}`);
+                                console.log(`   🔄 Prepočítavam nadstavbovú skupinu (závisí na ${group}): ${category} - ${advGroup}`);
                                 createAdvancedGroupTable(category, advGroup, group);
                             }
                         }
@@ -1557,7 +1557,7 @@ let processedCarryOverGroups = new Set();
                         const baseGroupKey = `${category}|${baseGroupName}`;
                         
                         if (processedGroupsInitial.has(baseGroupKey)) {
-                            log(`   🔄 Prepočítavam nadstavbovú skupinu: ${category} - ${group}`);
+                            console.log(`   🔄 Prepočítavam nadstavbovú skupinu: ${category} - ${group}`);
                             createAdvancedGroupTable(category, group, baseGroupName);
                         }
                     }
@@ -1645,7 +1645,7 @@ let processedCarryOverGroups = new Set();
             
             const match = matchesData[matchId];
             if (match && match.status === 'completed' && events.length !== oldEventsCount) {
-                log(`🔄 Aktualizácia udalostí pre zápas ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`);
+                console.log(`🔄 Aktualizácia udalostí pre zápas ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`);
             }
             
         }, (error) => {
@@ -1774,7 +1774,7 @@ function loadReplacementCache() {
         if (cached) {
             const data = JSON.parse(cached);
             if (data.version === CACHE_VERSION) {
-                log(`📦 Načítaná cache z localStorage: ${Object.keys(data.mappings).length} položiek`);
+                console.log(`📦 Načítaná cache z localStorage: ${Object.keys(data.mappings).length} položiek`);
                 return new Map(Object.entries(data.mappings));
             } else {
                 console.log('🔄 Verzia cache sa líši, vytváram novú...');
@@ -1796,7 +1796,7 @@ function saveReplacementCache(cacheMap) {
             lastUpdated: Date.now()
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-        log(`💾 Uložená cache do localStorage: ${cacheMap.size} položiek`);
+        console.log(`💾 Uložená cache do localStorage: ${cacheMap.size} položiek`);
     } catch (error) {
         console.error('❌ Chyba pri ukladaní cache:', error);
     }
@@ -1820,12 +1820,12 @@ function getTeamNameWithCache(displayId, category, groupLetter, position) {
     // 1. Skúsime nájsť v cache
     if (replacementCache.has(cacheKey)) {
         const cached = replacementCache.get(cacheKey);
-        log(`💿 POUŽITÉ Z CACHE: "${displayId}" → "${cached.teamName}" (uložené ${new Date(cached.timestamp).toLocaleTimeString()})`);
+        console.log(`💿 POUŽITÉ Z CACHE: "${displayId}" → "${cached.teamName}" (uložené ${new Date(cached.timestamp).toLocaleTimeString()})`);
         return cached.teamName;
     }
     
     // 2. Nie je v cache - načítame z databázy
-    log(`🔄 NAČÍTAM Z DATABÁZY: "${displayId}"`);
+    console.log(`🔄 NAČÍTAM Z DATABÁZY: "${displayId}"`);
     const teamName = getTeamNameByDisplayIdFromDB(displayId);
     
     // 3. Ak sa podarilo načítať, uložíme do cache
@@ -1839,7 +1839,7 @@ function getTeamNameWithCache(displayId, category, groupLetter, position) {
             timestamp: Date.now()
         });
         saveReplacementCache(replacementCache);
-        log(`💾 ULOŽENÉ DO CACHE: "${displayId}" → "${teamName}"`);
+        console.log(`💾 ULOŽENÉ DO CACHE: "${displayId}" → "${teamName}"`);
     }
     
     return teamName;
@@ -1856,7 +1856,7 @@ function getTeamNameByDisplayIdFromDB(displayId) {
     const parts = displayId.trim().split(' ');
     
     if (parts.length < 2) {
-        log(`❌ Neplatný formát identifikátora: ${displayId}`);
+        console.log(`❌ Neplatný formát identifikátora: ${displayId}`);
         return null;
     }
     
@@ -1879,7 +1879,7 @@ function getTeamNameByDisplayIdFromDB(displayId) {
     }
     
     if (!position || !groupLetter) {
-        log(`❌ Neplatný formát pozície/skupiny: ${positionAndGroup}`);
+        console.log(`❌ Neplatný formát pozície/skupiny: ${positionAndGroup}`);
         return null;
     }
     
@@ -1890,16 +1890,16 @@ function getTeamNameByDisplayIdFromDB(displayId) {
     const isReady = isGroupReadyForReplacement(category, groupLetter);
     
     if (!isReady) {
-        log(`⛔ [${category} - ${fullGroupName}] Skupina NIE JE pripravená`);
+        console.log(`⛔ [${category} - ${fullGroupName}] Skupina NIE JE pripravená`);
         return null;
     }
     
-    log(`✅ [${category} - ${fullGroupName}] Skupina je pripravená, hľadám tím na pozícii ${positionNum}`);
+    console.log(`✅ [${category} - ${fullGroupName}] Skupina je pripravená, hľadám tím na pozícii ${positionNum}`);
     
     const groupTable = window.matchTracker?.createGroupTable(category, fullGroupName);
     
     if (!groupTable || !groupTable.teams || groupTable.teams.length === 0) {
-        log(`❌ Tabuľka pre skupinu ${fullGroupName} neexistuje`);
+        console.log(`❌ Tabuľka pre skupinu ${fullGroupName} neexistuje`);
         return null;
     }
     
@@ -1907,10 +1907,10 @@ function getTeamNameByDisplayIdFromDB(displayId) {
     
     if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
         const team = groupTable.teams[teamIndex];
-        log(`🎉 NAJDENÝ V DB: "${displayId}" → "${team.name}"`);
+        console.log(`🎉 NAJDENÝ V DB: "${displayId}" → "${team.name}"`);
         return team.name;
     } else {
-        log(`❌ Pozícia ${positionNum} neexistuje (skupina má ${groupTable.teams.length} tímov)`);
+        console.log(`❌ Pozícia ${positionNum} neexistuje (skupina má ${groupTable.teams.length} tímov)`);
         return null;
     }
 }
@@ -1945,7 +1945,7 @@ function getTeamNameFromCacheOnly(displayId) {
     // Iba z cache, žiadne volanie do databázy
     if (replacementCache.has(cacheKey)) {
         const cached = replacementCache.get(cacheKey);
-//        log(`💿 POUŽITÉ Z CACHE (rýchle): "${displayId}" → "${cached.teamName}"`);
+//        console.log(`💿 POUŽITÉ Z CACHE (rýchle): "${displayId}" → "${cached.teamName}"`);
         return cached.teamName;
     }
     
@@ -1954,7 +1954,7 @@ function getTeamNameFromCacheOnly(displayId) {
 
 // Funkcia na získanie názvu tímu z databázy (s kontrolou pripravenosti)
 function getTeamNameFromDatabase(displayId) {
-    log(`🔄 NAČÍTAM Z DATABÁZY: "${displayId}"`);
+    console.log(`🔄 NAČÍTAM Z DATABÁZY: "${displayId}"`);
     
     // Parsovanie identifikátora
     const parts = displayId.trim().split(' ');
@@ -1982,20 +1982,20 @@ function getTeamNameFromDatabase(displayId) {
     // 🔴 KONTROLA PRIPRAVENOSTI - BEZ TOHO NENAČÍTAME Z DB
     const isReady = isGroupReadyForReplacement(category, groupLetter);
     if (!isReady) {
-        log(`⛔ [${category} - ${fullGroupName}] Skupina NIE JE pripravená, nenačítam z DB`);
+        console.log(`⛔ [${category} - ${fullGroupName}] Skupina NIE JE pripravená, nenačítam z DB`);
         return null;
     }
     
     const groupTable = window.matchTracker?.createGroupTable(category, fullGroupName);
     if (!groupTable || !groupTable.teams || groupTable.teams.length === 0) {
-        log(`❌ Tabuľka pre skupinu ${fullGroupName} neexistuje`);
+        console.log(`❌ Tabuľka pre skupinu ${fullGroupName} neexistuje`);
         return null;
     }
     
     const teamIndex = positionNum - 1;
     if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
         const team = groupTable.teams[teamIndex];
-        log(`🎉 NAJDENÝ V DB: "${displayId}" → "${team.name}"`);
+        console.log(`🎉 NAJDENÝ V DB: "${displayId}" → "${team.name}"`);
         
         // Uložíme do cache
         const cacheKey = `${category}|${groupLetter.toUpperCase()}|${positionNum}`;
@@ -2030,7 +2030,7 @@ function getTeamNameByDisplayId(displayId) {
     const parts = displayId.trim().split(' ');
     
     if (parts.length < 2) {
-        log(`❌ Neplatný formát identifikátora: ${displayId}`);
+        console.log(`❌ Neplatný formát identifikátora: ${displayId}`);
         return null;
     }
     
@@ -2048,17 +2048,17 @@ function getTeamNameByDisplayId(displayId) {
         const groupLetter = letterFirstMatch[1].toUpperCase();
         const order = parseInt(letterFirstMatch[2], 10);
         
-        log(`🔍 Formát "písmeno+číslo" (${lastPart}) → skupina: ${groupLetter}, poradie: ${order}`);
-        log(`   Hľadám tím v používateľských dátach (users)...`);
+        console.log(`🔍 Formát "písmeno+číslo" (${lastPart}) → skupina: ${groupLetter}, poradie: ${order}`);
+        console.log(`   Hľadám tím v používateľských dátach (users)...`);
         
         // Vyhľadáme tím v používateľských dátach
         const teamInfo = findTeamInUsersByGroupAndOrder(category, groupLetter, order);
         
         if (teamInfo && teamInfo.teamName) {
-            log(`✅ Nájdený tím v users: "${teamInfo.teamName}" (kategória: ${category}, skupina: ${groupLetter}, poradie: ${order})`);
+            console.log(`✅ Nájdený tím v users: "${teamInfo.teamName}" (kategória: ${category}, skupina: ${groupLetter}, poradie: ${order})`);
             return teamInfo.teamName;
         } else {
-            log(`❌ Tím nebol nájdený v users: ${category} skupina ${groupLetter} poradie ${order}`);
+            console.log(`❌ Tím nebol nájdený v users: ${category} skupina ${groupLetter} poradie ${order}`);
             return null;
         }
     }
@@ -2073,8 +2073,8 @@ function getTeamNameByDisplayId(displayId) {
         const order = parseInt(numberFirstMatch[1], 10);
         const groupLetter = numberFirstMatch[2].toUpperCase();
         
-        log(`🔍 Formát "číslo+písmeno" (${lastPart}) → poradie: ${order}, skupina: ${groupLetter}`);
-        log(`   Kontrolujem tabuľku skupiny (vyžaduje 100% odohraných zápasov)...`);
+        console.log(`🔍 Formát "číslo+písmeno" (${lastPart}) → poradie: ${order}, skupina: ${groupLetter}`);
+        console.log(`   Kontrolujem tabuľku skupiny (vyžaduje 100% odohraných zápasov)...`);
         
         const fullGroupName = `skupina ${groupLetter}`;
         
@@ -2082,7 +2082,7 @@ function getTeamNameByDisplayId(displayId) {
         const isReady = isGroupReadyForReplacement(category, groupLetter);
         
         if (!isReady) {
-            log(`⛔ Skupina ${category} - ${fullGroupName} NIE JE pripravená (nemá 100% odohraných zápasov)`);
+            console.log(`⛔ Skupina ${category} - ${fullGroupName} NIE JE pripravená (nemá 100% odohraných zápasov)`);
             return null;
         }
         
@@ -2090,7 +2090,7 @@ function getTeamNameByDisplayId(displayId) {
         const groupTable = window.matchTracker?.createGroupTable(category, fullGroupName);
         
         if (!groupTable || !groupTable.teams || groupTable.teams.length === 0) {
-            log(`❌ Tabuľka pre skupinu ${fullGroupName} neexistuje`);
+            console.log(`❌ Tabuľka pre skupinu ${fullGroupName} neexistuje`);
             return null;
         }
         
@@ -2098,10 +2098,10 @@ function getTeamNameByDisplayId(displayId) {
         
         if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
             const team = groupTable.teams[teamIndex];
-            log(`✅ Nájdený v tabuľke: "${team.name}" (pozícia ${order} v skupine ${groupLetter})`);
+            console.log(`✅ Nájdený v tabuľke: "${team.name}" (pozícia ${order} v skupine ${groupLetter})`);
             return team.name;
         } else {
-            log(`❌ Pozícia ${order} neexistuje (skupina má ${groupTable.teams.length} tímov)`);
+            console.log(`❌ Pozícia ${order} neexistuje (skupina má ${groupTable.teams.length} tímov)`);
             return null;
         }
     }
@@ -2109,7 +2109,7 @@ function getTeamNameByDisplayId(displayId) {
     // ============================================================
     // NEZNÁMY FORMÁT
     // ============================================================
-    log(`❌ Neznámy formát poslednej časti: ${lastPart} (očakáva sa "A2" alebo "2A")`);
+    console.log(`❌ Neznámy formát poslednej časti: ${lastPart} (očakáva sa "A2" alebo "2A")`);
     return null;
 }
 
@@ -2161,12 +2161,12 @@ function showCache() {
     console.log('\n📦 OBSAH CACHE:');
     console.log('='.repeat(60));
     for (const [key, value] of replacementCache.entries()) {
-        log(`   ${key}:`);
-        log(`      → ${value.teamName}`);
-        log(`      📅 Uložené: ${new Date(value.timestamp).toLocaleString()}`);
+        console.log(`   ${key}:`);
+        console.log(`      → ${value.teamName}`);
+        console.log(`      📅 Uložené: ${new Date(value.timestamp).toLocaleString()}`);
     }
     console.log('='.repeat(60));
-    log(`Celkom: ${replacementCache.size} položiek\n`);
+    console.log(`Celkom: ${replacementCache.size} položiek\n`);
 }
 
 // Funkcia na aktualizáciu cache z aktuálneho stavu stránky
@@ -2200,7 +2200,7 @@ function updateCacheFromPage() {
     
     if (updated > 0) {
         saveReplacementCache(replacementCache);
-        log(`✅ Aktualizovaných ${updated} položiek v cache`);
+        console.log(`✅ Aktualizovaných ${updated} položiek v cache`);
     } else {
         console.log('ℹ️ Žiadne nové položky na aktualizáciu');
     }
@@ -2223,7 +2223,7 @@ function getTeamInfoByDisplayId(displayId) {
     
     const parts = displayId.trim().split(' ');
     if (parts.length < 2) {
-        log(`❌ Neplatný formát identifikátora: ${displayId}`);
+        console.log(`❌ Neplatný formát identifikátora: ${displayId}`);
         return null;
     }
     
@@ -2235,7 +2235,7 @@ function getTeamInfoByDisplayId(displayId) {
     category = cleanCategoryName(category);
     
     if (category !== originalCategory) {
-        log(`🔧 Upravený názov kategórie: "${originalCategory}" → "${category}"`);
+        console.log(`🔧 Upravený názov kategórie: "${originalCategory}" → "${category}"`);
     }
     
     let position = '';
@@ -2251,7 +2251,7 @@ function getTeamInfoByDisplayId(displayId) {
     }
     
     if (!position || !groupLetter) {
-        log(`❌ Neplatný formát pozície/skupiny: ${positionAndGroup}`);
+        console.log(`❌ Neplatný formát pozície/skupiny: ${positionAndGroup}`);
         return null;
     }
     
@@ -2265,26 +2265,26 @@ function getTeamInfoByDisplayId(displayId) {
         const completedMatches = groupTable.completedCount || 0;
         const completionPercentage = totalMatches > 0 ? (completedMatches / totalMatches * 100) : 0;
         
-        log(`📊 Stav skupiny: ${completedMatches}/${totalMatches} odohraných (${completionPercentage}%)`);
+        console.log(`📊 Stav skupiny: ${completedMatches}/${totalMatches} odohraných (${completionPercentage}%)`);
         
         if (completionPercentage < 100) {
-            log(`❌ Zápasy v skupine nie sú kompletne odohrané! (${completionPercentage}% dokončených)`);
-            log(`   Pre zobrazenie konečného poradia je potrebné odohrať všetkých ${totalMatches} zápasov.`);
+            console.log(`❌ Zápasy v skupine nie sú kompletne odohrané! (${completionPercentage}% dokončených)`);
+            console.log(`   Pre zobrazenie konečného poradia je potrebné odohrať všetkých ${totalMatches} zápasov.`);
             return null;
         }
         
         const teamIndex = positionNum - 1;
         if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
             const team = groupTable.teams[teamIndex];
-            log(`✅ Nájdený tím: ${team.name}`);
-            log(`   📊 Štatistiky: Zápasy: ${team.played}, Výhry: ${team.wins}, Remízy: ${team.draws}, Prehry: ${team.losses}`);
-            log(`   🥅 Skóre: ${team.goalsFor}:${team.goalsAgainst} (${team.goalDifference > 0 ? '+' : ''}${team.goalDifference})`);
-            log(`   📈 Body: ${team.points}`);
+            console.log(`✅ Nájdený tím: ${team.name}`);
+            console.log(`   📊 Štatistiky: Zápasy: ${team.played}, Výhry: ${team.wins}, Remízy: ${team.draws}, Prehry: ${team.losses}`);
+            console.log(`   🥅 Skóre: ${team.goalsFor}:${team.goalsAgainst} (${team.goalDifference > 0 ? '+' : ''}${team.goalDifference})`);
+            console.log(`   📈 Body: ${team.points}`);
             return team;
         }
     }
     
-    log(`❌ Tím nebol nájdený: ${displayId}`);
+    console.log(`❌ Tím nebol nájdený: ${displayId}`);
     return null;
 }
 
@@ -2398,7 +2398,7 @@ function isGroupReadyForReplacement(category, groupLetter) {
     if (!groupTable) {
         // Iba raz vypíšeme, že tabuľka neexistuje
         if (!notReadyGroupsLogged.has(`${groupKey}_no_table`)) {
-            log(`⏳ [${cleanCategory} - ${fullGroupName}] Tabuľka neexistuje → NIE JE PRIpravená`);
+            console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Tabuľka neexistuje → NIE JE PRIpravená`);
             notReadyGroupsLogged.add(`${groupKey}_no_table`);
         }
         return false;
@@ -2413,7 +2413,7 @@ function isGroupReadyForReplacement(category, groupLetter) {
         // Iba raz vypíšeme aktuálne percento
         const logKey = `${groupKey}_${Math.floor(completionPercentage)}`;
         if (!notReadyGroupsLogged.has(logKey)) {
-            log(`⏳ [${cleanCategory} - ${fullGroupName}] Len ${completedMatches}/${totalMatches} (${completionPercentage}%) odohraných → NIE JE PRIpravená (čakám na dokončenie...)`);
+            console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Len ${completedMatches}/${totalMatches} (${completionPercentage}%) odohraných → NIE JE PRIpravená (čakám na dokončenie...)`);
             notReadyGroupsLogged.add(logKey);
         }
         return false;
@@ -2445,7 +2445,7 @@ function isGroupReadyForReplacement(category, groupLetter) {
     if (!allEventsLoaded) {
         // Iba raz vypíšeme, že chýbajú udalosti
         if (!notReadyGroupsLogged.has(`${groupKey}_no_events`)) {
-            log(`⏳ [${cleanCategory} - ${fullGroupName}] Zápas ${missingEventsMatchId} nemá načítané udalosti → NIE JE PRIpravená (čakám na načítanie...)`);
+            console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Zápas ${missingEventsMatchId} nemá načítané udalosti → NIE JE PRIpravená (čakám na načítanie...)`);
             notReadyGroupsLogged.add(`${groupKey}_no_events`);
         }
         return false;
@@ -2455,14 +2455,14 @@ function isGroupReadyForReplacement(category, groupLetter) {
     const hasInProgressMatches = allGroupMatches.some(m => m.status === 'in-progress' || m.status === 'paused');
     if (hasInProgressMatches) {
         if (!notReadyGroupsLogged.has(`${groupKey}_in_progress`)) {
-            log(`⏳ [${cleanCategory} - ${fullGroupName}] Sú tam zápasy, ktoré ešte prebiehajú → NIE JE PRIpravenÁ`);
+            console.log(`⏳ [${cleanCategory} - ${fullGroupName}] Sú tam zápasy, ktoré ešte prebiehajú → NIE JE PRIpravenÁ`);
             notReadyGroupsLogged.add(`${groupKey}_in_progress`);
         }
         return false;
     }
     
     // ========== SKUPINA JE PRIPRAVENÁ ==========
-    log(`✅ [${cleanCategory} - ${fullGroupName}] SKUPINA JE PRIPRAVENÁ! 100% zápasov odohraných, všetky udalosti načítané.`);
+    console.log(`✅ [${cleanCategory} - ${fullGroupName}] SKUPINA JE PRIPRAVENÁ! 100% zápasov odohraných, všetky udalosti načítané.`);
     
     // Vyčistíme záznamy o nepripravenosti pre túto skupinu
     for (const key of notReadyGroupsLogged) {
@@ -2489,7 +2489,7 @@ function isGroupReadyForReplacement(category, groupLetter) {
         );
         
         if (readyForThisGroup.length > 0) {
-            log(`🎉 Spúšťam nahradenie pre skupinu ${fullGroupName}...`);
+            console.log(`🎉 Spúšťam nahradenie pre skupinu ${fullGroupName}...`);
             performPartialReplacement(readyForThisGroup);
         }
     }
@@ -2541,7 +2541,7 @@ function performPartialReplacement(identifiersToReplace) {
     
     isReplacingInProgress = true;
     
-    log(`🔍 Spúšťam čiastočné nahrádzanie (${identifiersToReplace.length} identifikátorov)...`);
+    console.log(`🔍 Spúšťam čiastočné nahrádzanie (${identifiersToReplace.length} identifikátorov)...`);
     
     let replacedCount = 0;
     let failedCount = 0;
@@ -2588,7 +2588,7 @@ function performPartialReplacement(identifiersToReplace) {
                         const source = fromCache ? 'CACHE' : 'DB';
                         if (fromCache) fromCacheCount++;
                         else fromDbCount++;
-                        log(`✅ NAHRADENÝ (${source}): "${idInfo.originalIdentifier}" → "${teamName}" v elemente: ${element.tagName}`);
+                        console.log(`✅ NAHRADENÝ (${source}): "${idInfo.originalIdentifier}" → "${teamName}" v elemente: ${element.tagName}`);
                         
                         // Uložíme atribúty pre prípadnú potrebu
                         element.setAttribute('data-original-identifier', idInfo.identifier);
@@ -2606,25 +2606,25 @@ function performPartialReplacement(identifiersToReplace) {
             if (anyFound) {
                 replacedCount++;
                 // 🔴 ODSTRÁNILI SME replacedIdentifiers.add(replaceKey)
-                log(`🎉 Kompletne nahradený identifikátor: "${idInfo.originalIdentifier}" (všetky výskyty)`);
+                console.log(`🎉 Kompletne nahradený identifikátor: "${idInfo.originalIdentifier}" (všetky výskyty)`);
             } else {
                 failedCount++;
                 failedIdentifiers.push(idInfo.originalIdentifier);
-                log(`❌ NENAHRADENÝ: "${idInfo.originalIdentifier}" (žiadny element neobsahoval tento text)`);
+                console.log(`❌ NENAHRADENÝ: "${idInfo.originalIdentifier}" (žiadny element neobsahoval tento text)`);
             }
         } else if (!teamName) {
             failedCount++;
             failedIdentifiers.push(idInfo.originalIdentifier);
-            log(`❌ NENAHRADENÝ: "${idInfo.originalIdentifier}" (tím nebol nájdený - skupina nie je na 100%)`);
+            console.log(`❌ NENAHRADENÝ: "${idInfo.originalIdentifier}" (tím nebol nájdený - skupina nie je na 100%)`);
         }
     }
     
     console.log('\n' + '='.repeat(60));
     console.log('📊 SÚHRN NAHRADENIA:');
-    log(`   ✅ Úspešne nahradených: ${replacedCount} (z cache: ${fromCacheCount}, z DB: ${fromDbCount})`);
-    log(`   ❌ Neúspešných: ${failedCount}`);
+    console.log(`   ✅ Úspešne nahradených: ${replacedCount} (z cache: ${fromCacheCount}, z DB: ${fromDbCount})`);
+    console.log(`   ❌ Neúspešných: ${failedCount}`);
     if (failedIdentifiers.length > 0) {
-        log(`   ❌ Neúspešné identifikátory: ${failedIdentifiers.join(', ')}`);
+        console.log(`   ❌ Neúspešné identifikátory: ${failedIdentifiers.join(', ')}`);
     }
     console.log('='.repeat(60) + '\n');
     
@@ -2721,13 +2721,13 @@ function startPeriodicReplacement(intervalSeconds = 1) {
         clearInterval(periodicReplaceInterval);
     }
     
-    log(`🔄 Spúšťam periodické nahrádzanie každých ${intervalSeconds} sekúnd...`);
+    console.log(`🔄 Spúšťam periodické nahrádzanie každých ${intervalSeconds} sekúnd...`);
     
     periodicReplaceInterval = setInterval(() => {
         if (!periodicReplaceActive) return;
         
         // Tichšie logovanie (voliteľné)
-        // log(`⏰ Periodické nahrádzanie (každých ${intervalSeconds}s)...`);
+        // console.log(`⏰ Periodické nahrádzanie (každých ${intervalSeconds}s)...`);
         
         const allText = document.body.innerText;
         const identifiers = extractIdentifiersFromText(allText);
@@ -2746,7 +2746,7 @@ function startPeriodicReplacement(intervalSeconds = 1) {
         }
         
         if (readyIdentifiers.length > 0) {
-            log(`🔄 Periodické nahrádzanie: ${readyIdentifiers.length} identifikátorov`);
+            console.log(`🔄 Periodické nahrádzanie: ${readyIdentifiers.length} identifikátorov`);
             performPartialReplacement(readyIdentifiers);
         }
     }, intervalSeconds * 1000);
@@ -2764,7 +2764,7 @@ function replaceAllIdentifiersNow() {
         return;
     }
     
-    log(`📋 Nájdených ${identifiers.length} identifikátorov`);
+    console.log(`📋 Nájdených ${identifiers.length} identifikátorov`);
     
     // Rozdelíme na pripravené a nepripravené
     const readyIdentifiers = [];
@@ -2782,16 +2782,16 @@ function replaceAllIdentifiersNow() {
     }
     
     if (readyIdentifiers.length > 0) {
-        log(`✅ Nahrádzam ${readyIdentifiers.length} pripravených identifikátorov...`);
+        console.log(`✅ Nahrádzam ${readyIdentifiers.length} pripravených identifikátorov...`);
         performPartialReplacement(readyIdentifiers);
     } else {
-        log(`ℹ️ Žiadne identifikátory nie sú pripravené na nahradenie`);
+        console.log(`ℹ️ Žiadne identifikátory nie sú pripravené na nahradenie`);
     }
     
     if (notReadyIdentifiers.length > 0) {
-        log(`⏳ ${notReadyIdentifiers.length} identifikátorov nie je pripravených (skupiny nemajú 100%):`);
+        console.log(`⏳ ${notReadyIdentifiers.length} identifikátorov nie je pripravených (skupiny nemajú 100%):`);
         notReadyIdentifiers.forEach(id => {
-            log(`   - ${id.originalIdentifier} (skupina ${id.groupLetter})`);
+            console.log(`   - ${id.originalIdentifier} (skupina ${id.groupLetter})`);
         });
     }
 }
@@ -2836,9 +2836,9 @@ function replaceTeamIdentifiersWhenReady() {
         }
     }
     
-    log(`📋 Nájdených identifikátorov: ${identifiers.length}`);
-    log(`   ✅ Pripravené na nahradenie: ${readyIdentifiers.map(i => i.identifier).join(', ') || 'žiadne'}`);
-    log(`   ⏳ Čakajú na dokončenie: ${notReadyIdentifiers.map(i => i.identifier).join(', ') || 'žiadne'}`);
+    console.log(`📋 Nájdených identifikátorov: ${identifiers.length}`);
+    console.log(`   ✅ Pripravené na nahradenie: ${readyIdentifiers.map(i => i.identifier).join(', ') || 'žiadne'}`);
+    console.log(`   ⏳ Čakajú na dokončenie: ${notReadyIdentifiers.map(i => i.identifier).join(', ') || 'žiadne'}`);
     
     if (readyIdentifiers.length > 0) {
         // PRIDANÉ ONESKORENIE - počkáme ešte 2 sekundy pre istotu, že všetky dáta sú stabilné
@@ -2850,7 +2850,7 @@ function replaceTeamIdentifiersWhenReady() {
     
     // Pokračujeme v kontrolách pre nepripravené skupiny...
     if (notReadyIdentifiers.length > 0) {
-        log(`⏳ Nastavujem pravidelné kontroly pre ${notReadyIdentifiers.length} skupín...`);
+        console.log(`⏳ Nastavujem pravidelné kontroly pre ${notReadyIdentifiers.length} skupín...`);
         
         if (window._readyCheckInterval) {
             clearInterval(window._readyCheckInterval);
@@ -2866,7 +2866,7 @@ function replaceTeamIdentifiersWhenReady() {
             }
             
             if (nowReady.length > 0) {
-                log(`✅ Ďalších ${nowReady.length} skupín je pripravených, vykonávam nahradenie...`);
+                console.log(`✅ Ďalších ${nowReady.length} skupín je pripravených, vykonávam nahradenie...`);
                 clearInterval(window._readyCheckInterval);
                 window._readyCheckInterval = null;
                 performPartialReplacement(nowReady);
@@ -3050,7 +3050,7 @@ window.teamNameReplacer = {
         } else {
             startPeriodicReplacement(intervalSeconds);
         }
-        log(`📊 Interval periodického nahrádzania nastavený na ${intervalSeconds} sekúnd`);
+        console.log(`📊 Interval periodického nahrádzania nastavený na ${intervalSeconds} sekúnd`);
     },
     isPeriodicActive: () => periodicReplaceInterval !== null && periodicReplaceActive
 };
@@ -3103,7 +3103,7 @@ function addToCache(displayId, teamName) {
         timestamp: Date.now()
     });
     saveReplacementCache(replacementCache);
-    log(`💾 Manuálne pridané do cache: "${displayId}" → "${teamName}"`);
+    console.log(`💾 Manuálne pridané do cache: "${displayId}" → "${teamName}"`);
     return true;
 }
 
@@ -3597,7 +3597,7 @@ function notifyMappingReady() {
     mappingCompleted = true;
     const mappings = getAllTeamMappings();
     const mappingsCount = Object.keys(mappings).length;
-    log(`🎉 MAPOVANIE DOKONČENÉ! Počet mapovaní: ${mappingsCount}`);
+    console.log(`🎉 MAPOVANIE DOKONČENÉ! Počet mapovaní: ${mappingsCount}`);
     const event = new CustomEvent('teamNameMappingReady', {
         detail: { mappings, mappingsCount, timestamp: Date.now(), ready: true }
     });
