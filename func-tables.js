@@ -270,17 +270,23 @@ let groupCheckCache = new Set();
             // Preskočíme aktuálnu skupinu
             if (match.categoryName === currentCategory && match.groupName === excludeGroupName) continue;
             
-            // Získame názvy tímov priamo z match objektu (už by mali byť správne)
-            // Použijeme window.teamManager na získanie názvov podľa ID
-            let homeTeamName = window.teamManager?.getTeamNameByDisplayIdSync?.(match.homeTeamIdentifier) || match.homeTeamIdentifier;
-            let awayTeamName = window.teamManager?.getTeamNameByDisplayIdSync?.(match.awayTeamIdentifier) || match.awayTeamIdentifier;
+            // Získame názvy tímov z match objektu (sú to identifikátory ako "U12 D 3A")
+            let homeIdentifier = match.homeTeamIdentifier;
+            let awayIdentifier = match.awayTeamIdentifier;
             
-            // Kontrola, či zápas obsahuje oba hľadané tímy (priamo porovnanie reťazcov)
+            // 🔥 DÔLEŽITÉ: Prevedieme identifikátory na zobrazovacie názvy pomocou getTeamNameByDisplayId
+            let homeTeamName = window.matchTracker.getTeamNameByDisplayId?.(homeIdentifier) || homeIdentifier;
+            let awayTeamName = window.matchTracker.getTeamNameByDisplayId?.(awayIdentifier) || awayIdentifier;
+            
+            // Kontrola, či zápas obsahuje oba hľadané tímy
+            // Porovnávame zobrazovacie názvy (už mapované)
             const hasTeamA = (homeTeamName === teamAName || awayTeamName === teamAName);
             const hasTeamB = (homeTeamName === teamBName || awayTeamName === teamBName);
             
             if (hasTeamA && hasTeamB) {
                 console.log(`      ✅ Nájdený zápas v skupine: ${match.groupName} (stav: ${match.status})`);
+                console.log(`         Domáci: ${homeTeamName} (${homeIdentifier})`);
+                console.log(`         Hostia: ${awayTeamName} (${awayIdentifier})`);
                 
                 if (match.status === 'completed') {
                     const events = window.matchTracker.getEvents?.(match.id) || [];
