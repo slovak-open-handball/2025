@@ -1983,23 +1983,10 @@ function getTeamNameWithCache(displayId, category, groupLetter, position) {
     return teamName;
 }
 
-function looksLikeTeamIdentifier(str) {
-    if (!str || typeof str !== 'string') return false;
-    // Vzory: "U12 D 2A", "U12 D 1B", "U12 D 3C" atď.
-    // Alebo "U12 D A2", "U12 D B1"
-    return /[A-Za-z]+\s+[A-Za-z]+\s+\d+[A-Za-z]/.test(str) || 
-           /[A-Za-z]+\s+[A-Za-z]+\s+[A-Za-z]+\d+/.test(str) ||
-           /[A-Za-z]+\d+\s+[A-Za-z]+/.test(str) ||
-           /\d+[A-Za-z]/.test(str) && /[A-Za-z]/.test(str);
-}
-
-function getTeamNameByDisplayIdFromDB(displayId, recursionDepth = 0) {
-    if (recursionDepth > 5) {
-        console.log(`⚠️ Dosiahnutá maximálna hĺbka rekurzie (5) pre "${displayId}"`);
-        return null;
-    }
-    
+// Pôvodná funkcia getTeamNameByDisplayId premenovaná na getTeamNameByDisplayIdFromDB
+function getTeamNameByDisplayIdFromDB(displayId) {
     if (!displayId) {
+        console.log('❌ Nebol zadaný identifikátor tímu');
         return null;
     }
     
@@ -2007,6 +1994,7 @@ function getTeamNameByDisplayIdFromDB(displayId, recursionDepth = 0) {
     const parts = displayId.trim().split(' ');
     
     if (parts.length < 2) {
+        console.log(`❌ Neplatný formát identifikátora: ${displayId}`);
         return null;
     }
     
@@ -2029,6 +2017,7 @@ function getTeamNameByDisplayIdFromDB(displayId, recursionDepth = 0) {
     }
     
     if (!position || !groupLetter) {
+        console.log(`❌ Neplatný formát pozície/skupiny: ${positionAndGroup}`);
         return null;
     }
     
@@ -2057,13 +2046,6 @@ function getTeamNameByDisplayIdFromDB(displayId, recursionDepth = 0) {
     if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
         const team = groupTable.teams[teamIndex];
         console.log(`🎉 NAJDENÝ V DB: "${displayId}" → "${team.name}"`);
-        
-        // REKURZÍVNE MAPOVANIE
-        if (looksLikeTeamIdentifier(team.name)) {
-            console.log(`   🔄 Výsledok "${team.name}" stále vyzerá ako identifikátor, pokračujem v mapovaní...`);
-            return getTeamNameByDisplayId(team.name, recursionDepth + 1);
-        }
-        
         return team.name;
     } else {
         console.log(`❌ Pozícia ${positionNum} neexistuje (skupina má ${groupTable.teams.length} tímov)`);
@@ -2071,109 +2053,11 @@ function getTeamNameByDisplayIdFromDB(displayId, recursionDepth = 0) {
     }
 }
 
-function getTeamNameByDisplayId(displayId, recursionDepth = 0) {
-    // Ochrana proti nekonečnej rekurzii (max 5 úrovní)
-    if (recursionDepth > 5) {
-        console.log(`⚠️ Dosiahnutá maximálna hĺbka rekurzie (5) pre "${displayId}"`);
-        return null;
-    }
-    
-    if (!displayId) {
-        return null;
-    }
-    
-    // Ak už je to čistý názov (nevyzerá ako identifikátor), vrátime ho
-    if (!looksLikeTeamIdentifier(displayId)) {
-        if (recursionDepth > 0) {
-            console.log(`   ✅ Rekurzívne mapovanie (úroveň ${recursionDepth}): "${displayId}" je čistý názov`);
-        }
-        return displayId;
-    }
-    
-    // Parsovanie identifikátora
-    const parts = displayId.trim().split(' ');
-    
-    if (parts.length < 2) {
-        // Možno je to už čiastočne zmapovaný názov?
-        if (!looksLikeTeamIdentifier(displayId)) {
-            return displayId;
-        }
-        return null;
-    }
-    
-    const lastPart = parts[parts.length - 1];
-    let category = parts.slice(0, -1).join(' ');
-    category = cleanCategoryName(category);
-    
-    // ============================================================
-    // FORMÁT: PÍSMENO PRED ČÍSLICOU (napr. "A2")
-    // ============================================================
-    const letterFirstMatch = lastPart.match(/^([A-Za-z]+)(\d+)$/);
-    
-    if (letterFirstMatch) {
-        const groupLetter = letterFirstMatch[1].toUpperCase();
-        const order = parseInt(letterFirstMatch[2], 10);
-        
-        const teamInfo = findTeamInUsersByGroupAndOrder(category, groupLetter, order);
-        
-        if (teamInfo && teamInfo.teamName) {
-            console.log(`   🔄 Mapovanie (úroveň ${recursionDepth}): "${displayId}" → "${teamInfo.teamName}"`);
-            // REKURZÍVNE ZAVOLANIE - skontrolujeme, či výsledok nie je ďalší identifikátor
-            return getTeamNameByDisplayId(teamInfo.teamName, recursionDepth + 1);
-        }
-        return null;
-    }
-    
-    // ============================================================
-    // FORMÁT: ČÍSLICA PRED PÍSMENOM (napr. "2A")
-    // ============================================================
-    const numberFirstMatch = lastPart.match(/^(\d+)([A-Za-z]+)$/);
-    
-    if (numberFirstMatch) {
-        const order = parseInt(numberFirstMatch[1], 10);
-        const groupLetter = numberFirstMatch[2].toUpperCase();
-        const fullGroupName = `skupina ${groupLetter}`;
-        
-        // Kontrola pripravenosti skupiny
-        const isReady = isGroupReadyForReplacement(category, groupLetter);
-        
-        if (!isReady) {
-            if (recursionDepth === 0) {
-                console.log(`⛔ [${category} - ${fullGroupName}] Skupina NIE JE pripravená (nemá 100% odohraných zápasov)`);
-            }
-            return null;
-        }
-        
-        const groupTable = window.matchTracker?.createGroupTable(category, fullGroupName);
-        
-        if (!groupTable || !groupTable.teams || groupTable.teams.length === 0) {
-            return null;
-        }
-        
-        const teamIndex = order - 1;
-        
-        if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
-            const team = groupTable.teams[teamIndex];
-            console.log(`   🔄 Mapovanie (úroveň ${recursionDepth}): "${displayId}" → "${team.name}"`);
-            // REKURZÍVNE ZAVOLANIE - skontrolujeme, či výsledok nie je ďalší identifikátor
-            return getTeamNameByDisplayId(team.name, recursionDepth + 1);
-        }
-        return null;
-    }
-    
-    // Ak formát nesedí, ale nevyzerá to ako identifikátor, vrátime pôvodný reťazec
-    if (!looksLikeTeamIdentifier(displayId)) {
-        return displayId;
-    }
-    
-    return null;
-}
+
 
 // Prepíšeme pôvodnú getTeamNameByDisplayId na verziu s cache
 // Funkcia na získanie názvu tímu LEN Z CACHE (bez kontroly pripravenosti)
-function getTeamNameFromCacheOnly(displayId, recursionDepth = 0) {
-    if (recursionDepth > 5) return null;
-    
+function getTeamNameFromCacheOnly(displayId) {
     const parts = displayId.trim().split(' ');
     if (parts.length < 2) return null;
     
@@ -2196,30 +2080,19 @@ function getTeamNameFromCacheOnly(displayId, recursionDepth = 0) {
     const positionNum = parseInt(position, 10);
     const cacheKey = `${category}|${groupLetter.toUpperCase()}|${positionNum}`;
     
+    // Iba z cache, žiadne volanie do databázy
     if (replacementCache.has(cacheKey)) {
         const cached = replacementCache.get(cacheKey);
-        const teamName = cached.teamName;
-        
-        // REKURZÍVNE MAPOVANIE - ak výsledok stále vyzerá ako identifikátor
-        if (looksLikeTeamIdentifier(teamName)) {
-            console.log(`   🔄 Z cache: "${teamName}" stále vyzerá ako identifikátor, pokračujem v mapovaní...`);
-            return getTeamNameByDisplayId(teamName, recursionDepth + 1);
-        }
-        
-        return teamName;
+//        console.log(`💿 POUŽITÉ Z CACHE (rýchle): "${displayId}" → "${cached.teamName}"`);
+        return cached.teamName;
     }
     
     return null;
 }
 
-
-function getTeamNameFromDatabase(displayId, recursionDepth = 0) {
-    if (recursionDepth > 5) {
-        console.log(`⚠️ Dosiahnutá maximálna hĺbka rekurzie (5) pre "${displayId}"`);
-        return null;
-    }
-    
-    console.log(`🔄 NAČÍTAM Z DATABÁZY: "${displayId}" (úroveň ${recursionDepth})`);
+// Funkcia na získanie názvu tímu z databázy (s kontrolou pripravenosti)
+function getTeamNameFromDatabase(displayId) {
+    console.log(`🔄 NAČÍTAM Z DATABÁZY: "${displayId}"`);
     
     // Parsovanie identifikátora
     const parts = displayId.trim().split(' ');
@@ -2273,12 +2146,6 @@ function getTeamNameFromDatabase(displayId, recursionDepth = 0) {
             timestamp: Date.now()
         });
         saveReplacementCache(replacementCache);
-        
-        // REKURZÍVNE MAPOVANIE - ak výsledok stále vyzerá ako identifikátor
-        if (looksLikeTeamIdentifier(team.name)) {
-            console.log(`   🔄 Výsledok "${team.name}" stále vyzerá ako identifikátor, pokračujem v mapovaní...`);
-            return getTeamNameByDisplayId(team.name, recursionDepth + 1);
-        }
         
         return team.name;
     }
@@ -2428,9 +2295,7 @@ function clearCheckedGroupsCache() {
 // POMOCNÁ FUNKCIA: Vyhľadanie tímu v používateľských dátach
 // ============================================================
 
-function findTeamInUsersByGroupAndOrder(category, groupLetter, order, recursionDepth = 0) {
-    if (recursionDepth > 5) return null;
-    
+function findTeamInUsersByGroupAndOrder(category, groupLetter, order) {
     if (!window.db) return null;
     
     // Získame všetkých používateľov z globálneho stavu
@@ -2450,18 +2315,8 @@ function findTeamInUsersByGroupAndOrder(category, groupLetter, order, recursionD
         );
         
         if (team && team.teamName) {
-            // REKURZÍVNE MAPOVANIE - ak názov tímu stále vyzerá ako identifikátor
-            let teamName = team.teamName;
-            if (looksLikeTeamIdentifier(teamName)) {
-                console.log(`   🔄 Názov z users "${teamName}" vyzerá ako identifikátor, mapujem ďalej...`);
-                const mappedName = getTeamNameByDisplayId(teamName, recursionDepth + 1);
-                if (mappedName && mappedName !== teamName) {
-                    teamName = mappedName;
-                }
-            }
-            
             return {
-                teamName: teamName,
+                teamName: team.teamName,
                 userId: user.id,
                 userEmail: user.email,
                 teamData: team
@@ -2984,6 +2839,13 @@ function clearNotReadyGroupsLog() {
 function clearGroupCheckCache() {
     groupCheckCache.clear();
     console.log('🗑️ Cache kontrolovaných skupín (isGroupReadyForReplacement) bola vymazaná');
+}
+
+// Pridajte do window.teamNameReplacer
+if (window.teamNameReplacer) {
+    window.teamNameReplacer.clearNotReadyGroupsLog = clearNotReadyGroupsLog;
+    window.teamNameReplacer.clearCheckedGroupsCache = clearCheckedGroupsCache;
+    window.teamNameReplacer.clearGroupCheckCache = clearGroupCheckCache;
 }
 
 // Pomocná funkcia na získanie udalostí pre zápas (pridáme do matchTracker)
@@ -3755,7 +3617,7 @@ window.performPartialReplacement = function(identifiersToReplace) {
     const failedIdentifiers = [];
     
     for (const idInfo of identifiersToReplace) {
-        // Najprv skúsime cache (rýchle) - TERAZ S REKURZÍVNYM MAPOVANÍM
+        // Najprv skúsime cache (rýchle)
         let teamName = getTeamNameFromCacheOnly(idInfo.identifier);
         let fromCache = true;
         
@@ -3763,22 +3625,12 @@ window.performPartialReplacement = function(identifiersToReplace) {
             teamName = getTeamNameFromCacheOnly(idInfo.originalIdentifier);
         }
         
-        // Ak nie je v cache, načítame z databázy - TERAZ S REKURZÍVNYM MAPOVANÍM
+        // Ak nie je v cache, načítame z databázy
         if (!teamName) {
             fromCache = false;
             teamName = getTeamNameFromDatabase(idInfo.identifier);
             if (!teamName) {
                 teamName = getTeamNameFromDatabase(idInfo.originalIdentifier);
-            }
-        }
-        
-        // FINÁLNA KONTROLA - ak výsledok stále vyzerá ako identifikátor, skúsime ešte raz
-        if (teamName && looksLikeTeamIdentifier(teamName)) {
-            console.log(`   🔄 Konečná kontrola: "${teamName}" stále vyzerá ako identifikátor, posledné mapovanie...`);
-            const finalName = getTeamNameByDisplayId(teamName);
-            if (finalName && finalName !== teamName) {
-                teamName = finalName;
-                console.log(`   ✅ Posledné mapovanie: "${teamName}"`);
             }
         }
         
@@ -3865,9 +3717,6 @@ window.performPartialReplacement = function(identifiersToReplace) {
                         break;
                     }
                 }
-            } else {
-                // Aj keď sme nenašli text na stránke, mapovanie už máme uložené
-                console.log(`📝 Mapovanie uložené: "${idInfo.originalIdentifier}" → "${teamName}" (text nenájdený)`);
             }
         } else if (!teamName) {
             failedCount++;
@@ -3918,33 +3767,6 @@ window.performPartialReplacement = function(identifiersToReplace) {
         failedIdentifiers: failedIdentifiers
     };
 };
-
-function recursiveMapTeamName(identifier, maxDepth = 5) {
-    console.log(`\n🔄 REKURZÍVNE MAPOVANIE: "${identifier}"`);
-    console.log('='.repeat(60));
-    
-    let current = identifier;
-    let depth = 0;
-    const mappingHistory = [];
-    
-    while (depth < maxDepth && looksLikeTeamIdentifier(current)) {
-        mappingHistory.push(current);
-        const mapped = getTeamNameByDisplayId(current);
-        if (!mapped || mapped === current) {
-            console.log(`   ❌ Žiadne ďalšie mapovanie pre: "${current}"`);
-            break;
-        }
-        console.log(`   📍 Úroveň ${depth + 1}: "${current}" → "${mapped}"`);
-        current = mapped;
-        depth++;
-    }
-    
-    console.log('='.repeat(60));
-    console.log(`✅ KONEČNÝ VÝSLEDOK: "${current}" (po ${depth} mapovaniach)`);
-    console.log(`   História: ${mappingHistory.join(' → ')} → ${current}\n`);
-    
-    return current;
-}
 
 // Nahradíme pôvodnú funkciu novou
 const originalPerformPartialReplacementFunc = performPartialReplacement;
@@ -4104,26 +3926,11 @@ if (window.teamNameReplacer) {
     window.teamNameReplacer.getMappings = () => window.__teamNameMapping;
     window.teamNameReplacer.announceReady = announceMappingReady;
     window.teamNameReplacer.forceNotify = notifyMappingReady;
+    // NOVÉ FUNKCIE PRE SLEDOVANIE SKUPÍN
     window.teamNameReplacer.startGroupMonitoring = startGroupMonitoring;
     window.teamNameReplacer.stopGroupMonitoring = stopGroupMonitoring;
     window.teamNameReplacer.getGroupCompletionStatus = getGroupCompletionStatus;
     window.teamNameReplacer.clearAllTeamNameCache = clearAllTeamNameCache;
-    window.teamNameReplacer.clearNotReadyGroupsLog = clearNotReadyGroupsLog;
-    window.teamNameReplacer.clearCheckedGroupsCache = clearCheckedGroupsCache;
-    window.teamNameReplacer.clearGroupCheckCache = clearGroupCheckCache;
-    window.teamNameReplacer.looksLikeTeamIdentifier = looksLikeTeamIdentifier;
-    window.teamNameReplacer.recursiveMapTeamName = recursiveMapTeamName;
-    window.teamNameReplacer.getMappingDepth = (identifier) => {
-        let depth = 0;
-        let current = identifier;
-        while (depth < 10 && looksLikeTeamIdentifier(current)) {
-            const mapped = getTeamNameFromCacheOnly(current);
-            if (!mapped || mapped === current) break;
-            current = mapped;
-            depth++;
-        }
-        return depth;
-    };
 } else {
     window.teamNameReplacer = {
         ...window.teamNameReplacer,
@@ -4141,12 +3948,7 @@ if (window.teamNameReplacer) {
         startGroupMonitoring: startGroupMonitoring,
         stopGroupMonitoring: stopGroupMonitoring,
         getGroupCompletionStatus: getGroupCompletionStatus,
-        clearAllTeamNameCache: clearAllTeamNameCache,
-        window.teamNameReplacer = {
-            ...window.teamNameReplacer,
-            looksLikeTeamIdentifier: looksLikeTeamIdentifier,
-            recursiveMapTeamName: recursiveMapTeamName
-        };
+        clearAllTeamNameCache: clearAllTeamNameCache
     };
 }
 
