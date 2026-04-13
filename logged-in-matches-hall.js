@@ -1367,7 +1367,6 @@ const matchesHallApp = ({ userProfileData }) => {
                     away: awayScore,
                     isForfeit: true
                 },
-                // ULOŽÍME AJ KONEČNÉ SKÓRE PRIAMO DO DOKUMENTU ZÁPASU
                 finalScore: {
                     home: homeScore,
                     away: awayScore
@@ -1418,6 +1417,14 @@ const matchesHallApp = ({ userProfileData }) => {
             setMatchScore({ home: homeScore, away: awayScore });
             setMatchEvents([]);
             
+            // Aktualizujeme selectedMatch v React stave
+            if (window.__reactSelectedMatchSetter && typeof window.__reactSelectedMatchSetter === 'function') {
+                const updatedMatchSnap = await getDoc(matchRef);
+                if (updatedMatchSnap.exists()) {
+                    window.__reactSelectedMatchSetter({ id: forfeitMatchId, ...updatedMatchSnap.data() });
+                }
+            }
+            
         } catch (error) {
             console.error('Chyba pri kontumácii zápasu:', error);
             window.showGlobalNotification('Chyba pri kontumácii zápasu', 'error');
@@ -1445,18 +1452,38 @@ const matchesHallApp = ({ userProfileData }) => {
         
         try {
             const matchRef = doc(window.db, 'matches', matchId);
-            await updateDoc(matchRef, {
+            
+            // Získame aktuálne dáta zápasu pred resetom
+            const matchSnap = await getDoc(matchRef);
+            const matchData = matchSnap.exists() ? matchSnap.data() : {};
+            
+            // Príprava update dát - základné resetovanie
+            const updateData = {
                 status: 'scheduled',
                 startedAt: null,
                 endedAt: null,
                 pausedAt: null,
                 currentPeriod: 1,
-                manualTimeOffset: 0
-            });
+                manualTimeOffset: 0,
+                updatedAt: Timestamp.now()
+            };
             
-            // Vynulujeme čas
+            // AK BOL ZÁPAS KONTUMOVANÝ, ODSTRÁNIME KONTUMAČNÉ POLIA
+            if (matchData.forfeitResult) {
+                updateData.forfeitResult = null;
+            }
+            
+            // Odstránime aj finalScore ak existuje (kontumácia ho vytvorila)
+            if (matchData.finalScore) {
+                updateData.finalScore = null;
+            }
+            
+            await updateDoc(matchRef, updateData);
+            
+            // Vynulujeme lokálne stavy
             setMatchTime(0);
-            setManualTimeOffset(0); // PRIDAŤ TENTO RIADOK
+            setManualTimeOffset(0);
+            setMatchScore({ home: 0, away: 0 });
             
             // Zastavíme interval
             if (timerInterval) {
@@ -1480,9 +1507,18 @@ const matchesHallApp = ({ userProfileData }) => {
             }
             
             setMatchPaused(false);
-            window.showGlobalNotification('Čas zápasu resetovaný', 'success');
+            window.showGlobalNotification('Čas zápasu resetovaný' + (matchData.forfeitResult ? ' (kontumácia zrušená)' : ''), 'success');
+            
+            // Ak máme React setter pre selectedMatch, aktualizujeme ho
+            if (window.__reactSelectedMatchSetter && typeof window.__reactSelectedMatchSetter === 'function') {
+                const updatedMatchSnap = await getDoc(matchRef);
+                if (updatedMatchSnap.exists()) {
+                    window.__reactSelectedMatchSetter({ id: matchId, ...updatedMatchSnap.data() });
+                }
+            }
+            
         } catch (error) {
-//            console.error('Chyba pri resetovaní časovača:', error);
+            console.error('Chyba pri resetovaní časovača:', error);
             window.showGlobalNotification('Chyba pri resetovaní časovača', 'error');
         }
     };
