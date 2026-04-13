@@ -6933,6 +6933,20 @@ const EditPlayerModal = ({ isOpen, onClose, onSave, onRemove, player, firstName,
                 React.createElement(
                     'div',
                     null,
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Číslo dresu'),
+                    React.createElement(
+                        'input',
+                        {
+                            type: 'text',
+                            value: jerseyNumber,
+                            onChange: (e) => onJerseyNumberChange(e.target.value),
+                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
+                        }
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    null,
                     React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Meno'),
                     React.createElement(
                         'input',
@@ -6954,20 +6968,6 @@ const EditPlayerModal = ({ isOpen, onClose, onSave, onRemove, player, firstName,
                             type: 'text',
                             value: lastName,
                             onChange: (e) => onLastNameChange(e.target.value),
-                            className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
-                        }
-                    )
-                ),
-                React.createElement(
-                    'div',
-                    null,
-                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Číslo dresu'),
-                    React.createElement(
-                        'input',
-                        {
-                            type: 'text',
-                            value: jerseyNumber,
-                            onChange: (e) => onJerseyNumberChange(e.target.value),
                             className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
                         }
                     )
