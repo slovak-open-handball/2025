@@ -2678,7 +2678,7 @@ const MapApp = ({ userProfileData }) => {
                          !!priceError ||
                          !!mealPriceError ||
                          (editType === 'ubytovanie' && !editAccommodationType),
-                className: 'px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition font-medium'
+                className: 'px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-white disabled:text-blue-600 disabled:border-2 disabled:border-blue-600 disabled:hover:bg-white transition font-medium'
               }, 'Uložiť zmeny')
             )
           )
