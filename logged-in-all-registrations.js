@@ -499,8 +499,6 @@ const formatDateToDMMYYYY = (dateString) => {
     return dateString;
 };
 
-
-// TeamDetailsContent Component - zobrazuje len vnútorné detaily jedného tímu (bez vonkajšieho CollapsibleSection)
 // TeamDetailsContent Component - zobrazuje len vnútorné detaily jedného tímu (bez vonkajšieho CollapsibleSection)
 function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, showUsersChecked, showTeamsChecked, openEditModal, db, setUserNotificationMessage, onAddMember, allTeamsData }) {
     if (!team) {
@@ -565,6 +563,26 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
         const regNumStr = String(regNumber).trim();
         const entry = getAllRegistrationNumbers.get(regNumStr);
         return entry && entry.count > 1;
+    };
+
+    const jerseyNumberCounts = React.useMemo(() => {
+        const counts = new Map();
+        if (team && team.playerDetails) {
+            team.playerDetails.forEach(player => {
+                const jerseyNum = player.jerseyNumber;
+                if (jerseyNum && jerseyNum.toString().trim() !== '') {
+                    const key = jerseyNum.toString().trim();
+                    counts.set(key, (counts.get(key) || 0) + 1);
+                }
+            });
+        }
+        return counts;
+    }, [team]);
+
+    const isJerseyNumberDuplicate = (jerseyNumber) => {
+        if (!jerseyNumber) return false;
+        const key = jerseyNumber.toString().trim();
+        return jerseyNumberCounts.get(key) > 1;
     };
 
     // Moved definitions to the top of the component
@@ -993,6 +1011,12 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                         ? 'px-4 py-2 whitespace-nowrap min-w-max font-bold text-red-600' 
                         : 'px-4 py-2 whitespace-nowrap min-w-max';
                     
+                    // 🆕 3. Kontrola duplicity čísla dresu (platí len pre hráčov)
+                    const isJerseyDuplicate = member.type === 'Hráč' && isJerseyNumberDuplicate(member.jerseyNumber);
+                    const jerseyNumberCellClass = isJerseyDuplicate 
+                        ? 'px-4 py-2 whitespace-nowrap min-w-max font-bold text-red-600' 
+                        : 'px-4 py-2 whitespace-nowrap min-w-max';
+
                     return React.createElement(
                         'tr',
                         {
@@ -1026,7 +1050,7 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.firstName || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.lastName || '-'),
                         React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, formatDateToDMMYYYY(member.dateOfBirth)),
-                        React.createElement('td', { className: 'px-4 py-2 whitespace-nowrap min-w-max' }, member.jerseyNumber || '-'),
+                        React.createElement('td', { className: jerseyNumberCellClass }, member.jerseyNumber || '-'),
                         React.createElement('td', { className: regNumberCellClass }, 
                             member.registrationNumber || '-'
                         ),
