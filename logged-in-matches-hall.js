@@ -1336,6 +1336,10 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     };
 
+    // ============================================================================
+    // OPRAVA 1: UPRAVIŤ FUNKCIU confirmForfeitMatch
+    // ============================================================================
+    
     const confirmForfeitMatch = async () => {
         if (!window.db || !forfeitMatchId || !forfeitTeam) return;
         
@@ -1362,6 +1366,11 @@ const matchesHallApp = ({ userProfileData }) => {
                     home: homeScore,
                     away: awayScore,
                     isForfeit: true
+                },
+                // ULOŽÍME AJ KONEČNÉ SKÓRE PRIAMO DO DOKUMENTU ZÁPASU
+                finalScore: {
+                    home: homeScore,
+                    away: awayScore
                 }
             });
             
@@ -2225,7 +2234,10 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     }, [matchEvents]);
 
-    // NOVÝ useEffect PRE SLEDOVANIE UKONČENÝCH ZÁPASOV
+    // ============================================================================
+    // OPRAVA 3: UPRAVIŤ useEffect PRE SLEDOVANIE UKONČENÝCH ZÁPASOV (v zozname)
+    // ============================================================================
+    
     useEffect(() => {
         if (!window.db || matches.length === 0) return;
     
@@ -2242,6 +2254,18 @@ const matchesHallApp = ({ userProfileData }) => {
             const newData = {};
             
             for (const match of completedMatches) {
+                // KONTROLA NA KONTUMÁCIU - ak má forfeitResult, použijeme ho
+                if (match.forfeitResult && match.forfeitResult.isForfeit) {
+                    newData[match.id] = {
+                        time: 0,
+                        homeScore: match.forfeitResult.home,
+                        awayScore: match.forfeitResult.away,
+                        status: 'completed',
+                        isForfeit: true
+                    };
+                    continue;
+                }
+                
                 try {
                     const eventsRef = collection(window.db, 'matchEvents');
                     const q = query(eventsRef, where("matchId", "==", match.id));
@@ -2284,7 +2308,7 @@ const matchesHallApp = ({ userProfileData }) => {
         };
         
         fetchCompletedMatches();
-    }, [matches]); // Spustí sa pri zmene matches
+    }, [matches]);
 
     // NOVÝ useEffect PRE SLEDOVANIE ŽIVÝCH ZÁPASOV
     useEffect(() => {
@@ -2499,9 +2523,23 @@ const matchesHallApp = ({ userProfileData }) => {
         fetchHallName();
     }, [hallId]);
 
-    // 🔴 NOVÝ useEffect PRE NAČÍTANIE UDALOSTÍ ZÁPASU - PRIDAŤ SEM
+    // ============================================================================
+    // OPRAVA 2: UPRAVIŤ useEffect PRE NAČÍTANIE UDALOSTÍ ZÁPASU
+    // ============================================================================
+    
     useEffect(() => {
         if (!selectedMatch || !window.db) return;
+    
+        // AK JE ZÁPAS KONTUMOVANÝ, NASTAVÍME SKÓRE PODĽA forfeitResult
+        if (selectedMatch.forfeitResult && selectedMatch.forfeitResult.isForfeit) {
+            setMatchScore({ 
+                home: selectedMatch.forfeitResult.home, 
+                away: selectedMatch.forfeitResult.away 
+            });
+            setMatchEvents([]);
+            setLoadingEvents(false);
+            return;
+        }
     
         const eventsRef = collection(window.db, 'matchEvents');
         const q = query(eventsRef, where("matchId", "==", selectedMatch.id));
@@ -2516,18 +2554,13 @@ const matchesHallApp = ({ userProfileData }) => {
             snapshot.forEach((doc) => {
                 const event = { id: doc.id, ...doc.data() };
                 loadedEvents.push(event);
-                
-                // Výpočet skóre podľa udalostí v chronologickom poradí
-                // (ale zachováme pôvodné poradie pre zobrazenie)
             });
             
             // Zoradenie od najnovšej po najstaršiu (zostupne podľa času)
             loadedEvents.sort((a, b) => {
-                // Najprv podľa minúty (zostupne)
                 if (a.minute !== b.minute) {
                     return (b.minute || 0) - (a.minute || 0);
                 }
-                // Potom podľa sekundy (zostupne)
                 return (b.second || 0) - (a.second || 0);
             });
             
@@ -2553,7 +2586,7 @@ const matchesHallApp = ({ userProfileData }) => {
             setMatchScore({ home: homeScore, away: awayScore });
             setLoadingEvents(false);
         }, (error) => {
-//            console.error("Chyba pri načítaní udalostí zápasu:", error);
+            console.error("Chyba pri načítaní udalostí zápasu:", error);
             setLoadingEvents(false);
         });
     
@@ -4543,6 +4576,17 @@ const matchesHallApp = ({ userProfileData }) => {
                                             'Kontumácia'
                                         )
                                     ),
+
+                                    (selectedMatch.forfeitResult && selectedMatch.forfeitResult.isForfeit) && React.createElement(
+                                        'button',
+                                        {
+                                            className: 'px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
+                                            onClick: () => revertMatchFromForfeit(selectedMatch.id),
+                                            title: 'Zrušiť kontumáciu a vrátiť zápas do stavu Naplánované'
+                                        },
+                                        React.createElement('i', { className: 'fa-solid fa-undo' }),
+                                        'Zrušiť kontumáciu'
+                                    ),
                 
                                     React.createElement(
                                         'button',
@@ -6423,19 +6467,44 @@ const matchesHallApp = ({ userProfileData }) => {
                                                         `${liveMatchData[match.id].homeScore} : ${liveMatchData[match.id].awayScore}`
                                                     )
                                                 ) :
-                                                match.status === 'completed' && completedMatchData[match.id] ?
-                                                    React.createElement(
-                                                        'div',
-                                                        { 
-                                                            className: 'flex items-center justify-center gap-2 px-3 py-1 min-w-[100px]',
-                                                            title: 'Konečný výsledok'
-                                                        },
-                                                        React.createElement(
+                                                match.status === 'completed' ? 
+                                                    (() => {
+                                                        // NAJPRV SKONTROLUJEME, ČI IDE O KONTUMÁCIU
+                                                        if (match.forfeitResult && match.forfeitResult.isForfeit) {
+                                                            return React.createElement(
+                                                                'div',
+                                                                { 
+                                                                    className: 'flex items-center justify-center gap-2 px-3 py-1 min-w-[100px]',
+                                                                    title: 'Kontumovaný výsledok'
+                                                                },
+                                                                React.createElement(
+                                                                    'span',
+                                                                    { className: 'font-mono font-bold text-red-600 text-sm' },
+                                                                    `${match.forfeitResult.home} : ${match.forfeitResult.away}`
+                                                                )
+                                                            );
+                                                        }
+                                                        // INÁK POUŽIJEME NORMÁLNE VÝSLEDKY Z completedMatchData
+                                                        if (completedMatchData[match.id]) {
+                                                            return React.createElement(
+                                                                'div',
+                                                                { 
+                                                                    className: 'flex items-center justify-center gap-2 px-3 py-1 min-w-[100px]',
+                                                                    title: 'Konečný výsledok'
+                                                                },
+                                                                React.createElement(
+                                                                    'span',
+                                                                    { className: 'font-mono font-bold text-green-600 text-sm' },
+                                                                    `${completedMatchData[match.id].homeScore} : ${completedMatchData[match.id].awayScore}`
+                                                                )
+                                                            );
+                                                        }
+                                                        return React.createElement(
                                                             'span',
-                                                            { className: 'font-mono font-bold text-green-600 text-sm' },
-                                                            `${completedMatchData[match.id].homeScore} : ${completedMatchData[match.id].awayScore}`
-                                                        )
-                                                    ) :
+                                                            { className: 'text-xs font-bold text-gray-400 px-2' },
+                                                            '-- : --'
+                                                        );
+                                                    })() :
                                                     React.createElement(
                                                         'span',
                                                         { className: 'text-xs font-bold text-gray-400 px-2' },
