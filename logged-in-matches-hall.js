@@ -337,6 +337,20 @@ const matchesHallApp = ({ userProfileData }) => {
     const [forfeitTeam, setForfeitTeam] = useState(null);
     const [groupsData, setGroupsData] = useState({});
     const [categoryIdMap, setCategoryIdMap] = useState({});
+    const [forceUpdate, setForceUpdate] = useState(0);
+
+    // Tento useEffect zabezpečí, že keď sa zmenia users, selectedMatch sa prekreslí
+    useEffect(() => {
+        // Ak máme vybraný zápas, vynútime prekreslenie detailu
+        if (selectedMatch && users.length > 0) {
+            // Malé oneskorenie, aby sa stihli načítať dáta
+            const timer = setTimeout(() => {
+                // Vynútime aktualizáciu selectedMatch (prekopírujeme ho)
+                setSelectedMatch(prev => ({ ...prev }));
+            }, 50);
+            return () => clearTimeout(timer);
+        }
+    }, [users]); // Tento useEffect sa spustí pri každej zmene users
 
     // Funkcia na otvorenie modálneho okna pre úpravu člena realizačného tímu
     const openEditStaffModal = (member, team, teamDetails, staffType, staffIndex) => {
@@ -364,7 +378,7 @@ const matchesHallApp = ({ userProfileData }) => {
         setEditStaffModalOpen(true);
     };
 
-    // Funkcia na uloženie úprav člena realizačného tímu (OPRAVENÁ - bez duplicít)
+    // Funkcia na uloženie úprav člena realizačného tímu (OPRAVENÁ)
     const saveStaffEdit = async () => {
         if (!staffToEdit || !staffTeamDetails || !staffTeam) return;
         
@@ -381,7 +395,6 @@ const matchesHallApp = ({ userProfileData }) => {
             const teams = userData.teams || {};
             const category = selectedMatch.categoryName;
             
-            // Nájdeme správny tím podľa identifikátora
             const teamIdentifier = staffTeam === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
             const parts = teamIdentifier.split(' ');
             const groupAndOrder = parts.pop();
@@ -409,20 +422,18 @@ const matchesHallApp = ({ userProfileData }) => {
                 return;
             }
             
-            const updatedTeams = [...userTeams];
-            const team = { ...updatedTeams[teamIndex] };
+            // 🔥 Vytvoríme hlbokú kópiu
+            const updatedTeams = JSON.parse(JSON.stringify(userTeams));
+            const team = updatedTeams[teamIndex];
             
-            // 🔥 OPRAVA: Ktoré pole použijeme?
             const staffArrayName = editStaffIsMen ? 'menTeamMemberDetails' : 'womenTeamMemberDetails';
             const currentStaffArray = team[staffArrayName] || [];
             let staffIndex = -1;
             
-            // 1. Najprv skúsime nájsť podľa unikátneho ID
             if (staffToEdit.id) {
                 staffIndex = currentStaffArray.findIndex(m => m.id === staffToEdit.id);
             }
             
-            // 2. Skúsime podľa kombinácie mena a priezviska
             if (staffIndex === -1) {
                 staffIndex = currentStaffArray.findIndex(m => 
                     (m.firstName || '') === (editStaffFirstName || '') && 
@@ -430,9 +441,11 @@ const matchesHallApp = ({ userProfileData }) => {
                 );
             }
             
-            // 3. Ak stále nenašli a máme uložený odkaz na pôvodný objekt
             if (staffIndex === -1 && staffToEdit.originalMember) {
-                staffIndex = currentStaffArray.findIndex(m => m === staffToEdit.originalMember);
+                staffIndex = currentStaffArray.findIndex(m => 
+                    m.firstName === staffToEdit.originalMember.firstName &&
+                    m.lastName === staffToEdit.originalMember.lastName
+                );
             }
             
             if (staffIndex === -1) {
@@ -440,10 +453,8 @@ const matchesHallApp = ({ userProfileData }) => {
                 return;
             }
             
-            // 🔥 Vytvoríme novú kópiu poľa a aktualizujeme člena
-            const existingMember = currentStaffArray[staffIndex];
             const updatedMember = {
-                ...existingMember,
+                ...currentStaffArray[staffIndex],
                 firstName: editStaffFirstName,
                 lastName: editStaffLastName
             };
@@ -452,25 +463,21 @@ const matchesHallApp = ({ userProfileData }) => {
                 updatedMember.id = `staff_${Date.now()}_${Math.random()}`;
             }
             
-            // 🔥 Vytvoríme NOVÉ pole, nie modifikujeme existujúce
-            const newStaffArray = [...currentStaffArray];
-            newStaffArray[staffIndex] = updatedMember;
-            team[staffArrayName] = newStaffArray;
-            
+            team[staffArrayName][staffIndex] = updatedMember;
             updatedTeams[teamIndex] = team;
-            teams[categoryName] = updatedTeams;
             
-            await updateDoc(userRef, { teams });
+            const newTeams = { ...teams };
+            newTeams[categoryName] = updatedTeams;
             
-            // 🔥 DÔLEŽITÉ: Úplne nahradíme používateľa v stave
+            await updateDoc(userRef, { teams: newTeams });
+            
             setUsers(prevUsers => {
                 return prevUsers.map(user => {
                     if (user.id === staffTeamDetails.userId) {
-                        const updatedUser = {
+                        return {
                             ...user,
-                            teams: { ...teams }
+                            teams: JSON.parse(JSON.stringify(newTeams))
                         };
-                        return updatedUser;
                     }
                     return user;
                 });
@@ -525,7 +532,7 @@ const matchesHallApp = ({ userProfileData }) => {
         setEditPlayerModalOpen(true);
     };
     
-    // Funkcia na uloženie úprav hráča (OPRAVENÁ - bez duplicít)
+    // Funkcia na uloženie úprav hráča (OPRAVENÁ - používa funkčnú aktualizáciu)
     const savePlayerEdit = async () => {
         if (!playerToEdit || !playerTeamDetails || !playerTeam) return;
         
@@ -570,18 +577,17 @@ const matchesHallApp = ({ userProfileData }) => {
                 return;
             }
             
-            const updatedTeams = [...userTeams];
-            const team = { ...updatedTeams[teamIndex] };
+            // 🔥 Vytvoríme hlbokú kópiu teams
+            const updatedTeams = JSON.parse(JSON.stringify(userTeams));
+            const team = updatedTeams[teamIndex];
             
-            // 🔥 OPRAVA: Vytvoríme nové pole playerDetails, aby sme predišli duplicitám
+            // Nájdeme hráča podľa ID alebo vlastností
             let playerIndex = -1;
             
-            // 1. Najprv skúsime nájsť podľa unikátneho ID
             if (playerToEdit.id) {
                 playerIndex = team.playerDetails.findIndex(p => p.id === playerToEdit.id);
             }
             
-            // 2. Ak nemá ID, skúsime podľa kombinácie vlastností
             if (playerIndex === -1) {
                 playerIndex = team.playerDetails.findIndex(p => 
                     (p.firstName || '') === (playerToEdit.firstName || '') && 
@@ -590,9 +596,12 @@ const matchesHallApp = ({ userProfileData }) => {
                 );
             }
             
-            // 3. Ak stále nenašli, skúsime podľa pôvodného objektu
             if (playerIndex === -1 && playerToEdit.originalPlayer) {
-                playerIndex = team.playerDetails.findIndex(p => p === playerToEdit.originalPlayer);
+                playerIndex = team.playerDetails.findIndex(p => 
+                    p.firstName === playerToEdit.originalPlayer.firstName &&
+                    p.lastName === playerToEdit.originalPlayer.lastName &&
+                    p.jerseyNumber === playerToEdit.originalPlayer.jerseyNumber
+                );
             }
             
             if (playerIndex === -1) {
@@ -600,7 +609,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 return;
             }
             
-            // 🔥 DÔLEŽITÉ: Zachováme ID ak existuje, inak vytvoríme nové
+            // Aktualizujeme hráča
             const existingPlayer = team.playerDetails[playerIndex];
             const updatedPlayer = {
                 ...existingPlayer,
@@ -613,26 +622,24 @@ const matchesHallApp = ({ userProfileData }) => {
                 updatedPlayer.id = `player_${Date.now()}_${Math.random()}`;
             }
             
-            // 🔥 Vytvoríme NOVÉ pole, nie modifikujeme existujúce
-            const newPlayerDetails = [...team.playerDetails];
-            newPlayerDetails[playerIndex] = updatedPlayer;
-            team.playerDetails = newPlayerDetails;
-            
+            team.playerDetails[playerIndex] = updatedPlayer;
             updatedTeams[teamIndex] = team;
-            teams[categoryName] = updatedTeams;
             
-            await updateDoc(userRef, { teams });
+            // 🔥 DÔLEŽITÉ: Vytvoríme úplne nový objekt teams
+            const newTeams = { ...teams };
+            newTeams[categoryName] = updatedTeams;
             
-            // 🔥 DÔLEŽITÉ: Úplne nahradíme používateľa v stave, nie len čiastočne
+            await updateDoc(userRef, { teams: newTeams });
+            
+            // 🔥 AKTUALIZÁCIA STAVU - použitie funkčnej aktualizácie
             setUsers(prevUsers => {
                 return prevUsers.map(user => {
                     if (user.id === playerTeamDetails.userId) {
-                        // Vytvoríme kompletnú kópiu používateľa s novými tímami
-                        const updatedUser = {
+                        // Vytvoríme úplne nový objekt používateľa
+                        return {
                             ...user,
-                            teams: { ...teams }  // Vytvoríme nový objekt, nie referenciu
+                            teams: JSON.parse(JSON.stringify(newTeams))
                         };
-                        return updatedUser;
                     }
                     return user;
                 });
@@ -3990,7 +3997,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     return React.createElement(
                                         'div',
                                         { 
-                                            key: `${teamType}-player-${player.originalIndex}`, 
+                                            key: `${teamType}-player-${player.id || player.originalIndex}-${player.firstName}-${player.lastName}`, 
                                             className: `grid grid-cols-12 gap-1 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${cursorClass}`,
                                             onClick: onClickHandler,
                                             title: isMatchCompleted ? 'Zápas je ukončený' : (isMatchScheduled ? 'Kliknite pre úpravu hráča' : '')
@@ -4039,7 +4046,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     return React.createElement(
                                         'div',
                                         { 
-                                            key: `${teamType}-player-${player.originalIndex}`, 
+                                            key: `${teamType}-player-${player.id || player.originalIndex}-${player.firstName}-${player.lastName}`, 
                                             className: `flex items-center justify-between gap-2 p-2 rounded border border-gray-200 text-sm group relative transition-colors ${cursorClass}`,
                                             onClick: onClickHandler,
                                             title: isMatchCompleted ? 'Zápas je ukončený' : (!isMatchActionAllowed() && !isMatchScheduled ? 'Zápas je ukončený' : '')
