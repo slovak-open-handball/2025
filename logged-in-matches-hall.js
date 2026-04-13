@@ -344,8 +344,18 @@ const matchesHallApp = ({ userProfileData }) => {
             window.showGlobalNotification('Úprava členov RT je možná len pri naplánovaných zápasoch', 'error');
             return;
         }
+    
+        // 🔥 ULOŽÍME SI ORIGINÁLNY OBJEKT PRE PRÍPAD, ŽE BY SME HO POTREBOVALI NÁJSŤ NESKÔR
+        const staffArray = staffType === 'men' ? teamDetails.team.menTeamMemberDetails : teamDetails.team.womenTeamMemberDetails;
+        const originalMember = staffIndex !== undefined && staffIndex < staffArray.length ? staffArray[staffIndex] : null;
         
-        setStaffToEdit(member);
+        const memberWithIndex = {
+            ...member,
+            tempIndex: staffIndex,
+            originalMember: originalMember
+        };
+        
+        setStaffToEdit(memberWithIndex);
         setStaffTeam(team);
         setStaffTeamDetails(teamDetails);
         setEditStaffFirstName(member.firstName || '');
@@ -402,26 +412,49 @@ const matchesHallApp = ({ userProfileData }) => {
             const updatedTeams = [...userTeams];
             const team = updatedTeams[teamIndex];
             
-            // Nájdeme index člena v príslušnom poli podľa vlastností
-            let staffArray = editStaffIsMen ? team.menTeamMemberDetails : team.womenTeamMemberDetails;
+            // 🔥 OPRAVA: Ktoré pole použijeme?
+            const staffArray = editStaffIsMen ? team.menTeamMemberDetails : team.womenTeamMemberDetails;
             let staffIndex = -1;
             
-            // 🔥 OPRAVA: Použijeme unikátne ID ak existuje
+            // 1. Najprv skúsime nájsť podľa unikátneho ID
             if (staffToEdit.id) {
                 staffIndex = staffArray.findIndex(m => m.id === staffToEdit.id);
             }
             
-            // Ak nemá ID, skúsime podľa mena a priezviska
+            // 2. Ak nemá ID, skúsime podľa dočasného indexu
+            if (staffIndex === -1 && staffToEdit.tempIndex !== undefined && staffToEdit.tempIndex >= 0) {
+                if (staffToEdit.tempIndex < staffArray.length) {
+                    const memberAtPosition = staffArray[staffToEdit.tempIndex];
+                    if (memberAtPosition && 
+                        memberAtPosition.firstName === staffToEdit.firstName && 
+                        memberAtPosition.lastName === staffToEdit.lastName) {
+                        staffIndex = staffToEdit.tempIndex;
+                    }
+                }
+            }
+            
+            // 3. Skúsime podľa kombinácie mena a priezviska (aj prázdnych)
             if (staffIndex === -1) {
                 staffIndex = staffArray.findIndex(m => 
-                    m.firstName === staffToEdit.firstName && 
-                    m.lastName === staffToEdit.lastName
+                    (m.firstName || '') === (editStaffFirstName || '') && 
+                    (m.lastName || '') === (editStaffLastName || '')
                 );
             }
             
-            // Ak stále nenašli, skúsime podľa pozície
-            if (staffIndex === -1 && staffToEdit.tempIndex !== undefined) {
-                staffIndex = staffToEdit.tempIndex;
+            // 4. Ak stále nenašli a máme uložený odkaz na pôvodný objekt
+            if (staffIndex === -1 && staffToEdit.originalMember) {
+                staffIndex = staffArray.findIndex(m => m === staffToEdit.originalMember);
+            }
+            
+            // 5. POSLEDNÁ MOŽNOSŤ: Ak máme len jedného člena s prázdnymi údajmi
+            if (staffIndex === -1) {
+                const emptyMembers = staffArray.filter(m => 
+                    (!m.firstName || m.firstName === '') && 
+                    (!m.lastName || m.lastName === '')
+                );
+                if (emptyMembers.length === 1) {
+                    staffIndex = staffArray.findIndex(m => m === emptyMembers[0]);
+                }
             }
             
             if (staffIndex === -1) {
@@ -438,7 +471,7 @@ const matchesHallApp = ({ userProfileData }) => {
             
             // Pridáme ID ak nemá
             if (!updatedStaff.id) {
-                updatedStaff.id = `temp_${Date.now()}_${Math.random()}`;
+                updatedStaff.id = `staff_${Date.now()}_${Math.random()}`;
             }
             
             if (editStaffIsMen) {
@@ -491,16 +524,17 @@ const matchesHallApp = ({ userProfileData }) => {
         }
         if (playerIndex === -1) {
             playerIndex = teamData.playerDetails.findIndex(p => 
-                p.firstName === player.firstName && 
-                p.lastName === player.lastName && 
-                p.jerseyNumber === player.jerseyNumber
+                (p.firstName || '') === (player.firstName || '') && 
+                (p.lastName || '') === (player.lastName || '') && 
+                (p.jerseyNumber || '') === (player.jerseyNumber || '')
             );
         }
         
-        // Uložíme si index pre prípad, že by sme ho potrebovali
+        // 🔥 ULOŽÍME SI ORIGINÁLNY OBJEKT PRE PRÍPAD, ŽE BY SME HO POTREBOVALI NÁJSŤ NESKÔR
         const playerWithIndex = {
             ...player,
-            tempIndex: playerIndex
+            tempIndex: playerIndex,
+            originalPlayer: playerIndex !== -1 ? teamData.playerDetails[playerIndex] : null
         };
         
         setPlayerToEdit(playerWithIndex);
@@ -513,7 +547,7 @@ const matchesHallApp = ({ userProfileData }) => {
         setEditPlayerModalOpen(true);
     };
     
-    // Funkcia na uloženie úprav hráča
+    // Funkcia na uloženie úprav hráča (OPRAVENÁ)
     const savePlayerEdit = async () => {
         if (!playerToEdit || !playerTeamDetails || !playerTeam) return;
         
@@ -561,31 +595,65 @@ const matchesHallApp = ({ userProfileData }) => {
             const updatedTeams = [...userTeams];
             const team = updatedTeams[teamIndex];
             
-            // 🔥 OPRAVA: Použijeme unikátne ID alebo dočasné ID na identifikáciu hráča
-            // Ak hráč nemá vytvorené unikátne ID, vytvoríme ho na základe kombinácie vlastností
+            // 🔥 OPRAVA: Použijeme dočasné ID alebo kombináciu vlastností na identifikáciu
             let playerIndex = -1;
             
-            // Najprv skúsime nájsť podľa existujúceho unikátneho ID (ak ho máme)
+            // 1. Najprv skúsime nájsť podľa unikátneho ID (ak existuje)
             if (playerToEdit.id) {
                 playerIndex = team.playerDetails.findIndex(p => p.id === playerToEdit.id);
             }
             
-            // Ak nemá ID, skúsime podľa kombinácie mena, priezviska a čísla dresu
+            // 2. Ak nemá ID, skúsime podľa dočasného indexu (ak sme si ho uložili)
+            if (playerIndex === -1 && playerToEdit.tempIndex !== undefined && playerToEdit.tempIndex >= 0) {
+                if (playerToEdit.tempIndex < team.playerDetails.length) {
+                    // Skontrolujeme, či na tej pozícii nie je už iný hráč
+                    const playerAtPosition = team.playerDetails[playerToEdit.tempIndex];
+                    // Ak je na tej pozícii hráč s rovnakými (prázdnymi) údajmi, použijeme ho
+                    if (playerAtPosition && 
+                        playerAtPosition.firstName === playerToEdit.firstName && 
+                        playerAtPosition.lastName === playerToEdit.lastName &&
+                        playerAtPosition.jerseyNumber === playerToEdit.jerseyNumber) {
+                        playerIndex = playerToEdit.tempIndex;
+                    }
+                }
+            }
+            
+            // 3. Skúsime podľa kombinácie mena, priezviska a čísla dresu (aj prázdnych)
             if (playerIndex === -1) {
                 playerIndex = team.playerDetails.findIndex(p => 
-                    p.firstName === playerToEdit.firstName && 
-                    p.lastName === playerToEdit.lastName && 
-                    p.jerseyNumber === playerToEdit.jerseyNumber
+                    (p.firstName || '') === (editPlayerFirstName || '') && 
+                    (p.lastName || '') === (editPlayerLastName || '') && 
+                    (p.jerseyNumber || '') === (editPlayerJerseyNumber || '')
                 );
             }
             
-            // Ak stále nenašli, skúsime podľa pozície v poli (posledná možnosť)
-            if (playerIndex === -1 && playerToEdit.tempIndex !== undefined) {
-                playerIndex = playerToEdit.tempIndex;
+            // 4. Ak stále nenašli a máme uložený odkaz na pôvodný objekt, skúsime podľa referencie
+            if (playerIndex === -1 && playerToEdit.originalPlayer) {
+                playerIndex = team.playerDetails.findIndex(p => p === playerToEdit.originalPlayer);
+            }
+            
+            // 5. POSLEDNÁ MOŽNOSŤ: Ak máme len jedného hráča s prázdnymi údajmi, použijeme ho
+            if (playerIndex === -1) {
+                const emptyPlayers = team.playerDetails.filter(p => 
+                    (!p.firstName || p.firstName === '') && 
+                    (!p.lastName || p.lastName === '') && 
+                    (!p.jerseyNumber || p.jerseyNumber === '')
+                );
+                if (emptyPlayers.length === 1) {
+                    playerIndex = team.playerDetails.findIndex(p => p === emptyPlayers[0]);
+                    console.log('🔍 Nájdený prázdny hráč na indexe:', playerIndex);
+                }
             }
             
             if (playerIndex === -1) {
                 window.showGlobalNotification('Hráč nebol nájdený v súpiske', 'error');
+                console.error('❌ Hráč nebol nájdený. Hľadal som:', {
+                    id: playerToEdit.id,
+                    tempIndex: playerToEdit.tempIndex,
+                    firstName: editPlayerFirstName,
+                    lastName: editPlayerLastName,
+                    jerseyNumber: editPlayerJerseyNumber
+                });
                 return;
             }
             
@@ -597,9 +665,9 @@ const matchesHallApp = ({ userProfileData }) => {
                 jerseyNumber: editPlayerJerseyNumber
             };
             
-            // Ak hráč nemá ID, pridáme mu dočasné ID pre budúce úpravy
+            // Ak hráč nemá ID, pridáme mu unikátne ID pre budúce úpravy
             if (!updatedPlayer.id) {
-                updatedPlayer.id = `temp_${Date.now()}_${Math.random()}`;
+                updatedPlayer.id = `player_${Date.now()}_${Math.random()}`;
             }
             
             team.playerDetails[playerIndex] = updatedPlayer;
