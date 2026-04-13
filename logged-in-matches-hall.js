@@ -352,6 +352,52 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     }, [users]); // Tento useEffect sa spustí pri každej zmene users
 
+    // Funkcia na pridanie unikátnych ID pre všetkých hráčov a členov RT, ktorí ich nemajú
+    const ensureUniqueIds = (teamData) => {
+        if (!teamData) return teamData;
+        
+        // Pridanie ID pre hráčov
+        if (teamData.playerDetails && Array.isArray(teamData.playerDetails)) {
+            teamData.playerDetails = teamData.playerDetails.map(player => {
+                if (!player.id) {
+                    return {
+                        ...player,
+                        id: `player_${Date.now()}_${Math.random()}_${Math.random()}`
+                    };
+                }
+                return player;
+            });
+        }
+        
+        // Pridanie ID pre mužov v RT
+        if (teamData.menTeamMemberDetails && Array.isArray(teamData.menTeamMemberDetails)) {
+            teamData.menTeamMemberDetails = teamData.menTeamMemberDetails.map(member => {
+                if (!member.id) {
+                    return {
+                        ...member,
+                        id: `staff_men_${Date.now()}_${Math.random()}_${Math.random()}`
+                    };
+                }
+                return member;
+            });
+        }
+        
+        // Pridanie ID pre ženy v RT
+        if (teamData.womenTeamMemberDetails && Array.isArray(teamData.womenTeamMemberDetails)) {
+            teamData.womenTeamMemberDetails = teamData.womenTeamMemberDetails.map(member => {
+                if (!member.id) {
+                    return {
+                        ...member,
+                        id: `staff_women_${Date.now()}_${Math.random()}_${Math.random()}`
+                    };
+                }
+                return member;
+            });
+        }
+        
+        return teamData;
+    };
+
     // Funkcia na otvorenie modálneho okna pre úpravu člena realizačného tímu
     const openEditStaffModal = (member, team, teamDetails, staffType, staffIndex) => {
         if (selectedMatch?.status !== 'scheduled') {
@@ -378,7 +424,7 @@ const matchesHallApp = ({ userProfileData }) => {
         setEditStaffModalOpen(true);
     };
 
-    // Funkcia na uloženie úprav člena realizačného tímu (OPRAVENÁ)
+    // Funkcia na uloženie úprav člena RT (OPRAVENÁ)
     const saveStaffEdit = async () => {
         if (!staffToEdit || !staffTeamDetails || !staffTeam) return;
         
@@ -392,7 +438,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
             
             const userData = userSnap.data();
-            const teams = userData.teams || {};
+            let teams = userData.teams || {};
             const category = selectedMatch.categoryName;
             
             const teamIdentifier = staffTeam === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier;
@@ -422,61 +468,75 @@ const matchesHallApp = ({ userProfileData }) => {
                 return;
             }
             
-            // 🔥 Vytvoríme hlbokú kópiu
             const updatedTeams = JSON.parse(JSON.stringify(userTeams));
-            const team = updatedTeams[teamIndex];
+            let team = updatedTeams[teamIndex];
+            
+            // 🔥 DÔLEŽITÉ: Pridáme ID všetkým členom RT, ktorí ich nemajú
+            team = ensureUniqueIds(team);
             
             const staffArrayName = editStaffIsMen ? 'menTeamMemberDetails' : 'womenTeamMemberDetails';
-            const currentStaffArray = team[staffArrayName] || [];
             let staffIndex = -1;
             
+            // 1. Najprv podľa ID
             if (staffToEdit.id) {
-                staffIndex = currentStaffArray.findIndex(m => m.id === staffToEdit.id);
+                staffIndex = team[staffArrayName].findIndex(m => m.id === staffToEdit.id);
             }
             
+            // 2. Skúsime podľa dočasného indexu
+            if (staffIndex === -1 && staffToEdit.tempIndex !== undefined && staffToEdit.tempIndex >= 0) {
+                if (staffToEdit.tempIndex < team[staffArrayName].length) {
+                    const memberAtPosition = team[staffArrayName][staffToEdit.tempIndex];
+                    if (memberAtPosition && (!memberAtPosition.id ||
+                        (memberAtPosition.firstName === staffToEdit.firstName && 
+                         memberAtPosition.lastName === staffToEdit.lastName))) {
+                        staffIndex = staffToEdit.tempIndex;
+                    }
+                }
+            }
+            
+            // 3. Skúsime podľa mena a priezviska
             if (staffIndex === -1) {
-                staffIndex = currentStaffArray.findIndex(m => 
+                staffIndex = team[staffArrayName].findIndex(m => 
                     (m.firstName || '') === (editStaffFirstName || '') && 
                     (m.lastName || '') === (editStaffLastName || '')
                 );
             }
             
-            if (staffIndex === -1 && staffToEdit.originalMember) {
-                staffIndex = currentStaffArray.findIndex(m => 
-                    m.firstName === staffToEdit.originalMember.firstName &&
-                    m.lastName === staffToEdit.originalMember.lastName
-                );
-            }
-            
+            // 4. Ak nenašli, pridáme nového
             if (staffIndex === -1) {
-                window.showGlobalNotification('Člen RT nebol nájdený v súpiske', 'error');
-                return;
+                const newMember = {
+                    id: `staff_${editStaffIsMen ? 'men' : 'women'}_${Date.now()}_${Math.random()}`,
+                    firstName: editStaffFirstName,
+                    lastName: editStaffLastName
+                };
+                team[staffArrayName].push(newMember);
+                staffIndex = team[staffArrayName].length - 1;
+            } else {
+                // Aktualizujeme existujúceho
+                const updatedMember = {
+                    ...team[staffArrayName][staffIndex],
+                    firstName: editStaffFirstName,
+                    lastName: editStaffLastName
+                };
+                
+                if (!updatedMember.id) {
+                    updatedMember.id = `staff_${editStaffIsMen ? 'men' : 'women'}_${Date.now()}_${Math.random()}`;
+                }
+                
+                team[staffArrayName][staffIndex] = updatedMember;
             }
             
-            const updatedMember = {
-                ...currentStaffArray[staffIndex],
-                firstName: editStaffFirstName,
-                lastName: editStaffLastName
-            };
-            
-            if (!updatedMember.id) {
-                updatedMember.id = `staff_${Date.now()}_${Math.random()}`;
-            }
-            
-            team[staffArrayName][staffIndex] = updatedMember;
             updatedTeams[teamIndex] = team;
+            teams[categoryName] = updatedTeams;
             
-            const newTeams = { ...teams };
-            newTeams[categoryName] = updatedTeams;
-            
-            await updateDoc(userRef, { teams: newTeams });
+            await updateDoc(userRef, { teams });
             
             setUsers(prevUsers => {
                 return prevUsers.map(user => {
                     if (user.id === staffTeamDetails.userId) {
                         return {
                             ...user,
-                            teams: JSON.parse(JSON.stringify(newTeams))
+                            teams: JSON.parse(JSON.stringify(teams))
                         };
                     }
                     return user;
@@ -532,7 +592,7 @@ const matchesHallApp = ({ userProfileData }) => {
         setEditPlayerModalOpen(true);
     };
     
-    // Funkcia na uloženie úprav hráča (OPRAVENÁ - používa funkčnú aktualizáciu)
+    // Funkcia na uloženie úprav hráča (OPRAVENÁ - používa ID)
     const savePlayerEdit = async () => {
         if (!playerToEdit || !playerTeamDetails || !playerTeam) return;
         
@@ -546,7 +606,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
             
             const userData = userSnap.data();
-            const teams = userData.teams || {};
+            let teams = userData.teams || {};
             const category = selectedMatch.categoryName;
             
             // Nájdeme správny tím podľa identifikátora
@@ -577,17 +637,36 @@ const matchesHallApp = ({ userProfileData }) => {
                 return;
             }
             
-            // 🔥 Vytvoríme hlbokú kópiu teams
+            // Vytvoríme hlbokú kópiu
             const updatedTeams = JSON.parse(JSON.stringify(userTeams));
-            const team = updatedTeams[teamIndex];
+            let team = updatedTeams[teamIndex];
             
-            // Nájdeme hráča podľa ID alebo vlastností
+            // 🔥 DÔLEŽITÉ: Najprv pridáme ID všetkým hráčom, ktorí ho nemajú
+            team = ensureUniqueIds(team);
+            
+            // Nájdeme hráča podľa ID (priorita) alebo podľa kombinácie
             let playerIndex = -1;
             
+            // 1. Najprv skúsime podľa ID (ak existuje)
             if (playerToEdit.id) {
                 playerIndex = team.playerDetails.findIndex(p => p.id === playerToEdit.id);
             }
             
+            // 2. Ak nemá ID, skúsime podľa dočasného indexu (len pre prázdnych hráčov)
+            if (playerIndex === -1 && playerToEdit.tempIndex !== undefined && playerToEdit.tempIndex >= 0) {
+                if (playerToEdit.tempIndex < team.playerDetails.length) {
+                    const playerAtPosition = team.playerDetails[playerToEdit.tempIndex];
+                    // Ak je na tej pozícii hráč bez ID alebo s rovnakými údajmi
+                    if (playerAtPosition && (!playerAtPosition.id || 
+                        (playerAtPosition.firstName === playerToEdit.firstName && 
+                         playerAtPosition.lastName === playerToEdit.lastName &&
+                         playerAtPosition.jerseyNumber === playerToEdit.jerseyNumber))) {
+                        playerIndex = playerToEdit.tempIndex;
+                    }
+                }
+            }
+            
+            // 3. Skúsime podľa kombinácie vlastností
             if (playerIndex === -1) {
                 playerIndex = team.playerDetails.findIndex(p => 
                     (p.firstName || '') === (playerToEdit.firstName || '') && 
@@ -596,49 +675,47 @@ const matchesHallApp = ({ userProfileData }) => {
                 );
             }
             
-            if (playerIndex === -1 && playerToEdit.originalPlayer) {
-                playerIndex = team.playerDetails.findIndex(p => 
-                    p.firstName === playerToEdit.originalPlayer.firstName &&
-                    p.lastName === playerToEdit.originalPlayer.lastName &&
-                    p.jerseyNumber === playerToEdit.originalPlayer.jerseyNumber
-                );
-            }
-            
+            // 4. Ak stále nenašli, vytvoríme nového hráča
             if (playerIndex === -1) {
-                window.showGlobalNotification('Hráč nebol nájdený v súpiske', 'error');
-                return;
+                // Pridáme nového hráča na koniec
+                const newPlayer = {
+                    id: `player_${Date.now()}_${Math.random()}`,
+                    firstName: editPlayerFirstName,
+                    lastName: editPlayerLastName,
+                    jerseyNumber: editPlayerJerseyNumber
+                };
+                team.playerDetails.push(newPlayer);
+                playerIndex = team.playerDetails.length - 1;
+            } else {
+                // Aktualizujeme existujúceho hráča
+                const existingPlayer = team.playerDetails[playerIndex];
+                const updatedPlayer = {
+                    ...existingPlayer,
+                    firstName: editPlayerFirstName,
+                    lastName: editPlayerLastName,
+                    jerseyNumber: editPlayerJerseyNumber
+                };
+                
+                // Zachováme pôvodné ID ak existuje
+                if (!updatedPlayer.id) {
+                    updatedPlayer.id = `player_${Date.now()}_${Math.random()}`;
+                }
+                
+                team.playerDetails[playerIndex] = updatedPlayer;
             }
             
-            // Aktualizujeme hráča
-            const existingPlayer = team.playerDetails[playerIndex];
-            const updatedPlayer = {
-                ...existingPlayer,
-                firstName: editPlayerFirstName,
-                lastName: editPlayerLastName,
-                jerseyNumber: editPlayerJerseyNumber
-            };
-            
-            if (!updatedPlayer.id) {
-                updatedPlayer.id = `player_${Date.now()}_${Math.random()}`;
-            }
-            
-            team.playerDetails[playerIndex] = updatedPlayer;
             updatedTeams[teamIndex] = team;
+            teams[categoryName] = updatedTeams;
             
-            // 🔥 DÔLEŽITÉ: Vytvoríme úplne nový objekt teams
-            const newTeams = { ...teams };
-            newTeams[categoryName] = updatedTeams;
+            await updateDoc(userRef, { teams });
             
-            await updateDoc(userRef, { teams: newTeams });
-            
-            // 🔥 AKTUALIZÁCIA STAVU - použitie funkčnej aktualizácie
+            // Aktualizácia stavu
             setUsers(prevUsers => {
                 return prevUsers.map(user => {
                     if (user.id === playerTeamDetails.userId) {
-                        // Vytvoríme úplne nový objekt používateľa
                         return {
                             ...user,
-                            teams: JSON.parse(JSON.stringify(newTeams))
+                            teams: JSON.parse(JSON.stringify(teams))
                         };
                     }
                     return user;
@@ -2939,12 +3016,21 @@ const matchesHallApp = ({ userProfileData }) => {
     // NOVÝ LISTENER: Načítanie všetkých používateľov z kolekcie users
     useEffect(() => {
         if (!window.db) return;
-
+    
         const unsubscribeUsers = onSnapshot(query(collection(window.db, 'users')), (querySnapshot) => {
             const usersList = [];
             
             querySnapshot.forEach((doc) => {
                 const userData = doc.data();
+                const teams = userData.teams || {};
+                
+                // 🔥 Pridáme unikátne ID pre všetkých hráčov a členov RT
+                Object.keys(teams).forEach(category => {
+                    if (Array.isArray(teams[category])) {
+                        teams[category] = teams[category].map(team => ensureUniqueIds(team));
+                    }
+                });
+                
                 usersList.push({
                     id: doc.id,
                     email: userData.email,
@@ -2952,19 +3038,18 @@ const matchesHallApp = ({ userProfileData }) => {
                     role: userData.role,
                     approved: userData.approved,
                     createdAt: userData.createdAt,
-                    teams: userData.teams || {},
+                    teams: teams,
                     hallId: userData.hallId,
-                    // ďalšie polia podľa potreby
                 });
             });
             
             setUsers(usersList);
         }, (error) => {
-//            console.error('Chyba pri načítaní používateľov:', error);
+            // console.error('Chyba pri načítaní používateľov:', error);
         });
-
+    
         return () => unsubscribeUsers();
-    }, []); // Prázdne pole závislostí - spustí sa raz pri načítaní
+    }, []);
 
 
     // PRIDAJTE TÚTO FUNKCIU NA ZAČIATOK KÓDU (napr. za importy) -------------------------------------------------------------------------------------------------------------------------------------- Odstran funkciu, iba vypisuje
