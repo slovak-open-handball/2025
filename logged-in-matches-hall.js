@@ -4605,8 +4605,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     setForfeitMatchId(selectedMatch.id);
                                                     setForfeitTeam(null);
                                                     setForfeitModalOpen(true);
-                                                },
-                                                title: 'Kontumovať zápas 10:0 v prospech vybraného tímu'
+                                                }
                                             },
                                             React.createElement('i', { className: 'fa-solid fa-gavel' }),
                                             'Kontumácia'
