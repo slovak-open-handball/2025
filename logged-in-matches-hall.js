@@ -4576,17 +4576,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                             'Kontumácia'
                                         )
                                     ),
-
-                                    (selectedMatch.forfeitResult && selectedMatch.forfeitResult.isForfeit) && React.createElement(
-                                        'button',
-                                        {
-                                            className: 'px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
-                                            onClick: () => revertMatchFromForfeit(selectedMatch.id),
-                                            title: 'Zrušiť kontumáciu a vrátiť zápas do stavu Naplánované'
-                                        },
-                                        React.createElement('i', { className: 'fa-solid fa-undo' }),
-                                        'Zrušiť kontumáciu'
-                                    ),
                 
                                     React.createElement(
                                         'button',
