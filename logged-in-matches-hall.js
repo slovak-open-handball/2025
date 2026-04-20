@@ -342,7 +342,146 @@ const matchesHallApp = ({ userProfileData }) => {
     const [manualScoreModalOpen, setManualScoreModalOpen] = useState(false);
     const [manualHomeScore, setManualHomeScore] = useState('');
     const [manualAwayScore, setManualAwayScore] = useState('');
-    const [manualScoreMatchId, setManualScoreMatchId] = useState(null);
+    const [manualScoreMatchId, setManualScoreMatchId] = useState(null);    
+
+    // ============================================================================
+    // SLEDOVANIE ZMIEN V TABUĽKÁCH A AKTUALIZÁCIA NÁZVOV TÍMOV V REACT STATE
+    // ============================================================================
+    useEffect(() => {
+        // Funkcia na aktualizáciu názvov tímov v matches (zoznam zápasov)
+        const updateTeamNamesInMatches = () => {
+            if (!matches.length) return;
+            
+            console.log('🔄 Aktualizujem názvy tímov v zozname zápasov...');
+            
+            // Vytvoríme nové pole matches s aktualizovanými názvami
+            const updatedMatches = matches.map(match => {
+                const newHomeName = getTeamNameByIdentifier(match.homeTeamIdentifier);
+                const newAwayName = getTeamNameByIdentifier(match.awayTeamIdentifier);
+                
+                // Vytvoríme nový objekt zápasu (nemeníme pôvodný)
+                return {
+                    ...match,
+                    // Neprepisujeme celý match, len si uložíme prekreslenie
+                    _forceUpdate: Date.now()
+                };
+            });
+            
+            // Vynútime prekreslenie zoznamu zápasov
+            setMatches(prevMatches => {
+                // Zachováme referencie, ale vynútime re-render
+                return [...prevMatches];
+            });
+            
+            // Aktualizujeme aj groupedMatches
+            setGroupedMatches(prev => {
+                const newGrouped = { ...prev };
+                Object.keys(newGrouped).forEach(dateStr => {
+                    if (newGrouped[dateStr] && newGrouped[dateStr].matches) {
+                        newGrouped[dateStr].matches = newGrouped[dateStr].matches.map(match => ({
+                            ...match,
+                            _forceUpdate: Date.now()
+                        }));
+                    }
+                });
+                return newGrouped;
+            });
+            
+            // Aktualizujeme selectedMatch ak existuje
+            if (selectedMatch) {
+                setSelectedMatch(prev => ({ ...prev, _forceUpdate: Date.now() }));
+            }
+            
+            setForceUpdate(prev => prev + 1);
+        };
+        
+        // Funkcia na aktualizáciu názvov v DOM elementoch (fallback)
+        const updateTeamNamesInDOM = () => {
+            console.log('🔄 Aktualizujem názvy tímov v DOM elementoch...');
+            
+            // Aktualizácia v zozname zápasov
+            const matchRows = document.querySelectorAll('[data-match-id]');
+            matchRows.forEach(row => {
+                const homeTeamEl = row.querySelector('[data-team-side="home"]');
+                const awayTeamEl = row.querySelector('[data-team-side="away"]');
+                const matchId = row.getAttribute('data-match-id');
+                
+                if (matchId) {
+                    const match = matches.find(m => m.id === matchId);
+                    if (match) {
+                        if (homeTeamEl) {
+                            const newHomeName = getTeamNameByIdentifier(match.homeTeamIdentifier);
+                            if (homeTeamEl.textContent !== newHomeName) {
+                                homeTeamEl.textContent = newHomeName;
+                            }
+                        }
+                        if (awayTeamEl) {
+                            const newAwayName = getTeamNameByIdentifier(match.awayTeamIdentifier);
+                            if (awayTeamEl.textContent !== newAwayName) {
+                                awayTeamEl.textContent = newAwayName;
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Aktualizácia v detaile zápasu
+            if (selectedMatch) {
+                const homeDetailEl = document.querySelector('[data-team-detail="home"]');
+                const awayDetailEl = document.querySelector('[data-team-detail="away"]');
+                
+                if (homeDetailEl) {
+                    const newHomeName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
+                    if (homeDetailEl.textContent !== newHomeName) {
+                        homeDetailEl.textContent = newHomeName;
+                    }
+                }
+                if (awayDetailEl) {
+                    const newAwayName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
+                    if (awayDetailEl.textContent !== newAwayName) {
+                        awayDetailEl.textContent = newAwayName;
+                    }
+                }
+            }
+        };
+        
+        // Poslúchač na udalosť, že boli nahradené názvy tímov
+        const handleTeamNamesReplaced = (event) => {
+            console.log('📢 teamNamesReplaced - aktualizujem UI');
+            const mappings = event.detail?.mappings || window.__teamNameMapping || {};
+            console.log(`   Mapovaní: ${Object.keys(mappings).length}`);
+            
+            // Vymažeme cache aby sa načítali nové názvy
+            teamNameCache.clear();
+            
+            // Aktualizujeme React state
+            updateTeamNamesInMatches();
+            
+            // Aktualizujeme DOM (fallback)
+            setTimeout(() => {
+                updateTeamNamesInDOM();
+                setForceUpdate(prev => prev + 1);
+            }, 50);
+        };
+        
+        // Poslúchač na udalosť, že boli aktualizované tabuľky skupín
+        const handleGroupTablesUpdated = (event) => {
+            console.log('📢 groupTablesUpdated - kontrolujem pripravenosť na aktualizáciu...');
+            setTimeout(() => {
+                updateTeamNamesInMatches();
+                updateTeamNamesInDOM();
+                setForceUpdate(prev => prev + 1);
+            }, 100);
+        };
+        
+        window.addEventListener('teamNamesReplaced', handleTeamNamesReplaced);
+        window.addEventListener('groupTablesUpdated', handleGroupTablesUpdated);
+        
+        return () => {
+            window.removeEventListener('teamNamesReplaced', handleTeamNamesReplaced);
+            window.removeEventListener('groupTablesUpdated', handleGroupTablesUpdated);
+        };
+    }, [matches, selectedMatch]);
 
     // ============================================================================
     // NOVÝ useEffect PRE SLEDOVANIE VŠETKÝCH ZMIEN V TABUĽKÁCH A AKTUALIZÁCIU NÁZVOV
