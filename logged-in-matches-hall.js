@@ -6972,7 +6972,8 @@ const ManualScoreModal = ({ isOpen, onClose, onConfirm, homeScore, awayScore, on
         },
         React.createElement(
             'div',
-            { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
+            { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-[458px] w-full mx-4' },  // Zmenené z max-w-md (448px) na 458px
+            // alebo použi: className: 'bg-white rounded-xl shadow-2xl p-6 w-[458px] mx-4'
             
             React.createElement(
                 'div',
@@ -6994,14 +6995,21 @@ const ManualScoreModal = ({ isOpen, onClose, onConfirm, homeScore, awayScore, on
                 'Zadajte konečný výsledok zápasu:'
             ),
             
-            // Zadanie výsledku
+            // Zadanie výsledku - PRIDANÉ whitespace-nowrap pre názvy tímov
             React.createElement(
                 'div',
                 { className: 'grid grid-cols-2 gap-4 mb-6' },
                 React.createElement(
                     'div',
                     { className: 'text-center' },
-                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, homeTeamName || 'Domáci'),
+                    React.createElement(
+                        'label', 
+                        { 
+                            className: 'block text-sm font-medium text-gray-700 mb-2 whitespace-nowrap overflow-hidden text-ellipsis max-w-full',
+                            title: homeTeamName || 'Domáci'  // Tooltip pre celý názov pri hover
+                        }, 
+                        homeTeamName || 'Domáci'
+                    ),
                     React.createElement(
                         'input',
                         {
@@ -7016,7 +7024,14 @@ const ManualScoreModal = ({ isOpen, onClose, onConfirm, homeScore, awayScore, on
                 React.createElement(
                     'div',
                     { className: 'text-center' },
-                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, awayTeamName || 'Hostia'),
+                    React.createElement(
+                        'label', 
+                        { 
+                            className: 'block text-sm font-medium text-gray-700 mb-2 whitespace-nowrap overflow-hidden text-ellipsis max-w-full',
+                            title: awayTeamName || 'Hostia'  // Tooltip pre celý názov pri hover
+                        }, 
+                        awayTeamName || 'Hostia'
+                    ),
                     React.createElement(
                         'input',
                         {
