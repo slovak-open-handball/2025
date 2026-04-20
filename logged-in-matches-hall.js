@@ -3735,10 +3735,12 @@ const matchesHallApp = ({ userProfileData }) => {
         // Ak nič nenašlo, vrátime pôvodný identifikátor
         return identifier;
     };
-    
-    // ============================================================================
-    // OPRAVENÁ FUNKCIA NA ZÍSKANIE NÁZVU TÍMU - REŠPEKTUJE UŽ NAHRADENÉ NÁZVY
-    // ============================================================================
+
+    const looksLikeIdentifier = (str) => {
+        if (!str || typeof str !== 'string') return false;
+        // Kontroluje, či reťazec obsahuje číslo aj písmeno (napr. "2B" alebo "B2")
+        return /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
+    };
     
     // Cache pre už získané názvy tímov
     let teamNameCache = new Map();
@@ -3748,6 +3750,12 @@ const matchesHallApp = ({ userProfileData }) => {
     // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA (JEDNODUCHÁ VERZIA)
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
+        
+        // 🔥 KONTROLA: Ak to nevyzerá ako identifikátor, vrátime pôvodný názov
+        if (!looksLikeIdentifier(identifier)) {
+            // Toto už nie je identifikátor, ale normálny názov tímu
+            return identifier;
+        }
         
         // Kontrola expirácie cache
         if (Date.now() - cacheTimestamp > CACHE_TTL) {
