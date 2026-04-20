@@ -7051,14 +7051,13 @@ const ManualScoreModal = ({ isOpen, onClose, onConfirm, homeScore, awayScore, on
                 React.createElement(
                     'button',
                     {
-                        onClick: onConfirm,
+                        onClick: isValid ? onConfirm : undefined,
                         disabled: !isValid,
                         className: `px-4 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium ${
                             isValid 
                                 ? 'bg-purple-600 hover:bg-purple-700 text-white cursor-pointer' 
                                 : 'bg-white text-purple-600 border-2 border-purple-600 cursor-not-allowed'
-                        }`,
-                        style: isValid ? {} : { pointerEvents: 'none' }
+                        }`
                     },
                     React.createElement('i', { className: `fa-solid fa-save ${isValid ? '' : 'text-purple-600'}` }),
                     'Uložiť výsledok'
