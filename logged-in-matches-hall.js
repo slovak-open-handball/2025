@@ -5293,7 +5293,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                         React.createElement(
                                             'h3',
                                             { className: 'font-bold text-lg text-gray-800 mb-3 text-center border-b border-gray-200 pb-2' },
-                                            window.matchTracker.getTeamNameByDisplayId(homeTeamName) ?? homeTeamName
+                                            homeTeamName
                                         ),
                                         
                                         // Realizačný tím pre domáci tím
@@ -5882,7 +5882,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                         React.createElement(
                                             'h3',
                                             { className: 'font-bold text-lg text-gray-800 mb-3 text-center border-b border-gray-200 pb-2' },
-                                            window.matchTracker.getTeamNameByDisplayId(awayTeamName) ?? awayTeamName
+                                            awayTeamName
                                         ),
                                         
                                         // Realizačný tím pre hosťovský tím
