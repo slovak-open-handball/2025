@@ -339,341 +339,6 @@ const matchesHallApp = ({ userProfileData }) => {
     const [categoryIdMap, setCategoryIdMap] = useState({});
     const [forceUpdate, setForceUpdate] = useState(0);
 
-    const [manualScoreModalOpen, setManualScoreModalOpen] = useState(false);
-    const [manualHomeScore, setManualHomeScore] = useState('');
-    const [manualAwayScore, setManualAwayScore] = useState('');
-    const [manualScoreMatchId, setManualScoreMatchId] = useState(null);    
-
-    useEffect(() => {
-        if (users.length > 0) {
-            window.__reactUsersState = users;
-            console.log(`📋 window.__reactUsersState nastavený s ${users.length} používateľmi`);
-            
-            // Ak už existujú mapovania, aktualizujeme UI
-            if (window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0) {
-                console.log('🔄 Mapovania už existujú, aktualizujem UI...');
-                setForceUpdate(prev => prev + 1);
-                if (selectedMatch) {
-                    setSelectedMatch(prev => ({ ...prev }));
-                }
-            }
-        }
-    }, [users]);
-
-    // ============================================================================
-    // SLEDOVANIE ZMIEN V TABUĽKÁCH A AKTUALIZÁCIA NÁZVOV TÍMOV V REACT STATE
-    // ============================================================================
-    useEffect(() => {
-        // Funkcia na aktualizáciu názvov tímov v matches (zoznam zápasov) - LEN AK SA ZMENILI
-        const updateTeamNamesInMatches = () => {
-            if (!matches.length) return;
-            
-            console.log('🔄 Aktualizujem názvy tímov v zozname zápasov...');
-            let updated = false;
-            
-            // Kontrola, či sa niečo zmenilo - prejdeme všetky zápasy
-            for (const match of matches) {
-                const newHomeName = getTeamNameByIdentifier(match.homeTeamIdentifier);
-                const newAwayName = getTeamNameByIdentifier(match.awayTeamIdentifier);
-                
-                // Tu by sme potrebovali porovnať s aktuálnymi názvami v DOM
-                // Pre jednoduchosť vynútime prekreslenie len ak je to potrebné
-                // Použijeme localStorage na uloženie posledných názvov
-            }
-            
-            // Vynútime prekreslenie zoznamu zápasov
-            setMatches(prevMatches => [...prevMatches]);
-            setGroupedMatches(prev => ({ ...prev }));
-            
-            if (selectedMatch) {
-                setSelectedMatch(prev => ({ ...prev, _forceUpdate: Date.now() }));
-            }
-            
-            setForceUpdate(prev => prev + 1);
-        };
-        
-        // Funkcia na aktualizáciu názvov v DOM elementoch (fallback) - LEN AK SA ZMENILI
-        const updateTeamNamesInDOM = () => {
-            console.log('🔄 Aktualizujem názvy tímov v DOM elementoch...');
-            let updated = false;
-            
-            const matchRows = document.querySelectorAll('[data-match-id]');
-            matchRows.forEach(row => {
-                const homeTeamEl = row.querySelector('[data-team-side="home"]');
-                const awayTeamEl = row.querySelector('[data-team-side="away"]');
-                const matchId = row.getAttribute('data-match-id');
-                
-                if (matchId) {
-                    const match = matches.find(m => m.id === matchId);
-                    if (match) {
-                        if (homeTeamEl) {
-                            const newHomeName = getTeamNameByIdentifier(match.homeTeamIdentifier);
-                            if (homeTeamEl.textContent !== newHomeName) {
-                                homeTeamEl.textContent = newHomeName;
-                                updated = true;
-                            }
-                        }
-                        if (awayTeamEl) {
-                            const newAwayName = getTeamNameByIdentifier(match.awayTeamIdentifier);
-                            if (awayTeamEl.textContent !== newAwayName) {
-                                awayTeamEl.textContent = newAwayName;
-                                updated = true;
-                            }
-                        }
-                    }
-                }
-            });
-            
-            if (selectedMatch) {
-                const homeDetailEl = document.querySelector('[data-team-detail="home"]');
-                const awayDetailEl = document.querySelector('[data-team-detail="away"]');
-                
-                if (homeDetailEl) {
-                    const newHomeName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
-                    if (homeDetailEl.textContent !== newHomeName) {
-                        homeDetailEl.textContent = newHomeName;
-                        updated = true;
-                    }
-                }
-                if (awayDetailEl) {
-                    const newAwayName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
-                    if (awayDetailEl.textContent !== newAwayName) {
-                        awayDetailEl.textContent = newAwayName;
-                        updated = true;
-                    }
-                }
-            }
-            
-            if (updated) {
-                console.log('✅ DOM elementy boli aktualizované');
-                setForceUpdate(prev => prev + 1);
-            }
-        };
-        
-        // Poslúchač na udalosť, že boli nahradené názvy tímov
-        const handleTeamNamesReplaced = (event) => {
-            console.log('📢 teamNamesReplaced - aktualizujem UI');
-            const mappings = event.detail?.mappings || window.__teamNameMapping || {};
-            console.log(`   Mapovaní: ${Object.keys(mappings).length}`);
-            
-            // Vymažeme cache aby sa načítali nové názvy
-            teamNameCache.clear();
-            
-            // Aktualizujeme React state
-            updateTeamNamesInMatches();
-            
-            // Aktualizujeme DOM (fallback)
-            setTimeout(() => {
-                updateTeamNamesInDOM();
-                setForceUpdate(prev => prev + 1);
-            }, 50);
-        };
-        
-        // Poslúchač na udalosť, že boli aktualizované tabuľky skupín
-        const handleGroupTablesUpdated = (event) => {
-            console.log('📢 groupTablesUpdated - kontrolujem pripravenosť na aktualizáciu...');
-            setTimeout(() => {
-                updateTeamNamesInMatches();
-                updateTeamNamesInDOM();
-                setForceUpdate(prev => prev + 1);
-            }, 100);
-        };
-        
-        window.addEventListener('teamNamesReplaced', handleTeamNamesReplaced);
-        window.addEventListener('groupTablesUpdated', handleGroupTablesUpdated);
-        
-        return () => {
-            window.removeEventListener('teamNamesReplaced', handleTeamNamesReplaced);
-            window.removeEventListener('groupTablesUpdated', handleGroupTablesUpdated);
-        };
-    }, [matches, selectedMatch]);
-
-    // ============================================================================
-    // NOVÝ useEffect PRE SLEDOVANIE VŠETKÝCH ZMIEN V TABUĽKÁCH A AKTUALIZÁCIU NÁZVOV
-    // ============================================================================
-    useEffect(() => {
-        if (!window.matchTracker) return;
-        
-        // Funkcia na aktualizáciu názvov tímov v celom UI (LEN AK SA ZMENILI)
-        const updateAllTeamNamesInUI = () => {
-            console.log('🔄 Aktualizujem všetky názvy tímov v UI...');
-            let updated = false;
-            
-            // 1. Aktualizácia v zozname zápasov - použijeme React state "matches"
-            const matchRows = document.querySelectorAll('[data-match-id]');
-            matchRows.forEach(row => {
-                const homeTeamEl = row.querySelector('[data-team-side="home"]');
-                const awayTeamEl = row.querySelector('[data-team-side="away"]');
-                const matchId = row.getAttribute('data-match-id');
-                
-                // Nájdeme zápas v React state matches
-                if (matchId) {
-                    const match = matches.find(m => m.id === matchId);
-                    if (match) {
-                        if (homeTeamEl) {
-                            const newHomeName = getTeamNameByIdentifier(match.homeTeamIdentifier);
-                            if (homeTeamEl.textContent !== newHomeName) {
-                                homeTeamEl.textContent = newHomeName;
-                                updated = true;
-                            }
-                        }
-                        if (awayTeamEl) {
-                            const newAwayName = getTeamNameByIdentifier(match.awayTeamIdentifier);
-                            if (awayTeamEl.textContent !== newAwayName) {
-                                awayTeamEl.textContent = newAwayName;
-                                updated = true;
-                            }
-                        }
-                    }
-                }
-            });
-            
-            // 2. Aktualizácia v detaile zápasu (ak je vybraný)
-            if (selectedMatch) {
-                const homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
-                const awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
-                
-                const homeDetailElements = document.querySelectorAll('[data-team-detail="home"]');
-                const awayDetailElements = document.querySelectorAll('[data-team-detail="away"]');
-                
-                homeDetailElements.forEach(el => {
-                    if (el.textContent !== homeTeamName) {
-                        el.textContent = homeTeamName;
-                        updated = true;
-                    }
-                });
-                
-                awayDetailElements.forEach(el => {
-                    if (el.textContent !== awayTeamName) {
-                        el.textContent = awayTeamName;
-                        updated = true;
-                    }
-                });
-            }
-            
-            // 3. Vynútime prekreslenie React stavu LEN AK SA NIEČO ZMENILO
-            if (updated) {
-                console.log('✅ Názvy tímov boli aktualizované');
-                setForceUpdate(prev => prev + 1);
-                if (selectedMatch) {
-                    setSelectedMatch(prev => ({ ...prev }));
-                }
-            } else {
-                console.log('ℹ️ Žiadne zmeny názvov tímov');
-            }
-        };
-        
-        // Poslúchač na udalosť, že boli aktualizované tabuľky skupín
-        const handleGroupTablesUpdated = (event) => {
-            console.log('📢 groupTablesUpdated - aktualizujem všetky názvy tímov v UI');
-            setTimeout(() => {
-                updateAllTeamNamesInUI();
-                if (window.teamNameReplacer && window.teamNameReplacer.replaceAllNow) {
-                    window.teamNameReplacer.replaceAllNow();
-                }
-            }, 100);
-        };
-        
-        // Poslúchač na udalosť, že boli nahradené názvy tímov
-        const handleTeamNamesReplaced = (event) => {
-            console.log('📢 teamNamesReplaced - aktualizujem UI');
-            setForceUpdate(prev => prev + 1);
-            if (selectedMatch) {
-                setSelectedMatch(prev => ({ ...prev }));
-            }
-        };
-        
-        // Zjednodušené sledovanie zmien v matches - len keď sa zmení počet
-        let lastMatchesLength = matches.length;
-        let lastMatchesHash = '';
-        
-        const checkMatchesChanges = setInterval(() => {
-            if (matches.length !== lastMatchesLength) {
-                lastMatchesLength = matches.length;
-                updateAllTeamNamesInUI();
-            } else {
-                // Skontrolujeme či sa nezmenil nejaký zápas
-                const currentHash = JSON.stringify(matches.map(m => ({ 
-                    id: m.id, 
-                    homeId: m.homeTeamIdentifier, 
-                    awayId: m.awayTeamIdentifier,
-                    status: m.status 
-                })));
-                if (currentHash !== lastMatchesHash) {
-                    lastMatchesHash = currentHash;
-                    updateAllTeamNamesInUI();
-                }
-            }
-        }, 3000);
-        
-        window.addEventListener('groupTablesUpdated', handleGroupTablesUpdated);
-        window.addEventListener('teamNamesReplaced', handleTeamNamesReplaced);
-        
-        return () => {
-            window.removeEventListener('groupTablesUpdated', handleGroupTablesUpdated);
-            window.removeEventListener('teamNamesReplaced', handleTeamNamesReplaced);
-            clearInterval(checkMatchesChanges);
-        };
-    }, [selectedMatch, matches]);
-
-    // ============================================================================
-    // SLEDOVANIE DOKONČENÝCH SKUPÍN A AKTUALIZÁCIA NÁZVOV TÍMOV
-    // ============================================================================
-    useEffect(() => {
-        if (!window.matchTracker) return;
-        
-        const updateTeamNamesInUI = () => {
-            if (!selectedMatch) return;
-            
-            const homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
-            const awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
-            
-            const homeTeamElements = document.querySelectorAll('[data-team-detail="home"], [data-team-side="home"]');
-            const awayTeamElements = document.querySelectorAll('[data-team-detail="away"], [data-team-side="away"]');
-            
-            homeTeamElements.forEach(el => {
-                if (el.textContent !== homeTeamName) {
-                    el.textContent = homeTeamName;
-                }
-            });
-            
-            awayTeamElements.forEach(el => {
-                if (el.textContent !== awayTeamName) {
-                    el.textContent = awayTeamName;
-                }
-            });
-            
-            setSelectedMatch(prev => ({ ...prev }));
-            setForceUpdate(prev => prev + 1);
-        };
-        
-        const handleGroupTablesUpdated = (event) => {
-            console.log('📢 groupTablesUpdated - aktualizujem názvy tímov v UI');
-            setTimeout(() => {
-                updateTeamNamesInUI();
-                if (window.teamNameReplacer && window.teamNameReplacer.replaceAllNow) {
-                    window.teamNameReplacer.replaceAllNow();
-                }
-            }, 100);
-        };
-        
-        const handleTeamNamesReplaced = (event) => {
-            console.log('📢 teamNamesReplaced - aktualizujem UI');
-            setForceUpdate(prev => prev + 1);
-            if (selectedMatch) {
-                setSelectedMatch(prev => ({ ...prev }));
-            }
-        };
-        
-        window.addEventListener('groupTablesUpdated', handleGroupTablesUpdated);
-        window.addEventListener('teamNamesReplaced', handleTeamNamesReplaced);
-        
-        return () => {
-            window.removeEventListener('groupTablesUpdated', handleGroupTablesUpdated);
-            window.removeEventListener('teamNamesReplaced', handleTeamNamesReplaced);
-        };
-    }, [selectedMatch]);
-
     // Tento useEffect zabezpečí, že keď sa zmenia users, selectedMatch sa prekreslí
     useEffect(() => {
         // Ak máme vybraný zápas, vynútime prekreslenie detailu
@@ -685,7 +350,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }, 50);
             return () => clearTimeout(timer);
         }
-    }, [users, forceUpdate]); // Tento useEffect sa spustí pri každej zmene users
+    }, [users]); // Tento useEffect sa spustí pri každej zmene users
 
     // Funkcia na pridanie unikátnych ID pre všetkých hráčov a členov RT, ktorí ich nemajú
     const ensureUniqueIds = (teamData) => {
@@ -1928,83 +1593,6 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     };
 
-    const confirmManualScore = async () => {
-        if (!window.db || !manualScoreMatchId) return;
-        
-        const homeScoreNum = parseInt(manualHomeScore, 10);
-        const awayScoreNum = parseInt(manualAwayScore, 10);
-        
-        if (isNaN(homeScoreNum) || isNaN(awayScoreNum)) {
-            window.showGlobalNotification('Zadajte platné čísla pre výsledok', 'error');
-            return;
-        }
-        
-        if (homeScoreNum < 0 || awayScoreNum < 0) {
-            window.showGlobalNotification('Skóre nemôže byť záporné', 'error');
-            return;
-        }
-        
-        try {
-            const matchRef = doc(window.db, 'matches', manualScoreMatchId);
-            
-            // Získame aktuálne dáta zápasu
-            const matchSnap = await getDoc(matchRef);
-            const matchData = matchSnap.exists() ? matchSnap.data() : {};
-            
-            // Ak už zápas má udalosti, nezabudneme na ne
-            const hasEvents = matchEvents.length > 0;
-            
-            // Aktualizujeme zápas
-            await updateDoc(matchRef, {
-                status: 'completed',
-                endedAt: Timestamp.now(),
-                finalScore: {
-                    home: homeScoreNum,
-                    away: awayScoreNum
-                },
-                // Ak bol zápas kontumovaný, odstránime kontumačné polia
-                forfeitResult: null,
-                updatedAt: Timestamp.now()
-            });
-            
-            // Ak nemáme udalosti, vytvoríme aspoň základnú udalosť o výsledku
-            if (!hasEvents) {
-                const eventsRef = collection(window.db, 'matchEvents');
-                await addDoc(eventsRef, {
-                    matchId: manualScoreMatchId,
-                    type: 'manual_result',
-                    minute: 0,
-                    second: 0,
-                    formattedTime: '00:00',
-                    timestamp: Timestamp.now(),
-                    createdBy: userProfileData?.email || 'unknown',
-                    createdByUid: userProfileData?.uid || null,
-                    manualResult: {
-                        home: homeScoreNum,
-                        away: awayScoreNum
-                    }
-                });
-            }
-            
-            // Aktualizujeme lokálny stav
-            setMatchScore({ home: homeScoreNum, away: awayScoreNum });
-            
-            // Aktualizujeme selectedMatch v React stave
-            if (window.__reactSelectedMatchSetter && typeof window.__reactSelectedMatchSetter === 'function') {
-                const updatedMatchSnap = await getDoc(matchRef);
-                if (updatedMatchSnap.exists()) {
-                    window.__reactSelectedMatchSetter({ id: manualScoreMatchId, ...updatedMatchSnap.data() });
-                }
-            }
-            
-            window.showGlobalNotification(`Výsledok ${homeScoreNum}:${awayScoreNum} bol uložený`, 'success');
-            
-        } catch (error) {
-            console.error('Chyba pri ukladaní manuálneho výsledku:', error);
-            window.showGlobalNotification('Chyba pri ukladaní výsledku', 'error');
-        }
-    };
-
     const confirmEndMatch = async () => {
         if (!window.db || !endMatchId) return;
         
@@ -2851,6 +2439,7 @@ const matchesHallApp = ({ userProfileData }) => {
     useEffect(() => {
         if (!window.db || matches.length === 0) return;
     
+        // Filtrujeme ukončené zápasy
         const completedMatches = matches.filter(m => m.status === 'completed');
         
         if (completedMatches.length === 0) {
@@ -2858,12 +2447,12 @@ const matchesHallApp = ({ userProfileData }) => {
             return;
         }
     
+        // Pre každý ukončený zápas načítame udalosti (stačí raz, nie onSnapshot)
         const fetchCompletedMatches = async () => {
             const newData = {};
-            let hasNewCompletion = false;  // ✅ PRIDANÉ - definovanie premennej
             
             for (const match of completedMatches) {
-                // KONTROLA NA KONTUMÁCIU
+                // KONTROLA NA KONTUMÁCIU - ak má forfeitResult, použijeme ho
                 if (match.forfeitResult && match.forfeitResult.isForfeit) {
                     newData[match.id] = {
                         time: 0,
@@ -2872,30 +2461,6 @@ const matchesHallApp = ({ userProfileData }) => {
                         status: 'completed',
                         isForfeit: true
                     };
-                    // Ak ide o nový výsledok, nastavíme príznak
-                    if (!completedMatchData[match.id] || 
-                        completedMatchData[match.id].homeScore !== match.forfeitResult.home ||
-                        completedMatchData[match.id].awayScore !== match.forfeitResult.away) {
-                        hasNewCompletion = true;
-                    }
-                    continue;
-                }
-                
-                // KONTROLA NA MANUÁLNY VÝSLEDOK (finalScore)
-                if (match.finalScore && !match.forfeitResult) {
-                    newData[match.id] = {
-                        time: 0,
-                        homeScore: match.finalScore.home,
-                        awayScore: match.finalScore.away,
-                        status: 'completed',
-                        isManual: true
-                    };
-                    // Ak ide o nový výsledok, nastavíme príznak
-                    if (!completedMatchData[match.id] || 
-                        completedMatchData[match.id].homeScore !== match.finalScore.home ||
-                        completedMatchData[match.id].awayScore !== match.finalScore.away) {
-                        hasNewCompletion = true;
-                    }
                     continue;
                 }
                 
@@ -2911,11 +2476,13 @@ const matchesHallApp = ({ userProfileData }) => {
                     querySnapshot.forEach((doc) => {
                         const event = doc.data();
                         
+                        // Výpočet skóre
                         if (event.type === 'goal' || (event.type === 'penalty' && event.subType === 'scored')) {
                             if (event.team === 'home') homeScore++;
                             else if (event.team === 'away') awayScore++;
                         }
                         
+                        // Získame najvyšší čas udalosti (koniec zápasu)
                         if (event.minute !== undefined && event.second !== undefined) {
                             const eventTimeInSeconds = event.minute * 60 + (event.second || 0);
                             if (eventTimeInSeconds > matchTime) {
@@ -2923,12 +2490,6 @@ const matchesHallApp = ({ userProfileData }) => {
                             }
                         }
                     });
-                    
-                    // Kontrola, či sa skóre zmenilo oproti predchádzajúcemu stavu
-                    const oldData = completedMatchData[match.id];
-                    if (!oldData || oldData.homeScore !== homeScore || oldData.awayScore !== awayScore) {
-                        hasNewCompletion = true;
-                    }
                     
                     newData[match.id] = {
                         time: matchTime,
@@ -2942,19 +2503,10 @@ const matchesHallApp = ({ userProfileData }) => {
             }
             
             setCompletedMatchData(newData);
-    
-            // Ak pribudol nový výsledok, aktualizujeme názvy tímov
-            if (hasNewCompletion && selectedMatch) {
-                setTimeout(() => {
-                    const homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
-                    const awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
-                    setForceUpdate(prev => prev + 1);
-                }, 500);
-            }
         };
         
         fetchCompletedMatches();
-    }, [matches, completedMatchData]); // ✅ PRIDANÉ completedMatchData do závislostí
+    }, [matches]);
 
     // NOVÝ useEffect PRE SLEDOVANIE ŽIVÝCH ZÁPASOV
     useEffect(() => {
@@ -3176,7 +2728,7 @@ const matchesHallApp = ({ userProfileData }) => {
     useEffect(() => {
         if (!selectedMatch || !window.db) return;
     
-        // AK JE ZÁPAS KONTUMOVANÝ
+        // AK JE ZÁPAS KONTUMOVANÝ, NASTAVÍME SKÓRE PODĽA forfeitResult
         if (selectedMatch.forfeitResult && selectedMatch.forfeitResult.isForfeit) {
             setMatchScore({ 
                 home: selectedMatch.forfeitResult.home, 
@@ -3185,16 +2737,6 @@ const matchesHallApp = ({ userProfileData }) => {
             setMatchEvents([]);
             setLoadingEvents(false);
             return;
-        }
-        
-        // AK MÁ ZÁPAS MANUÁLNY VÝSLEDOK (finalScore)
-        if (selectedMatch.finalScore && selectedMatch.status === 'completed' && !selectedMatch.forfeitResult) {
-            setMatchScore({ 
-                home: selectedMatch.finalScore.home, 
-                away: selectedMatch.finalScore.away 
-            });
-            // Stále načítame udalosti, ak existujú
-            // ale necháme pokračovať ďalej
         }
     
         const eventsRef = collection(window.db, 'matchEvents');
@@ -3212,6 +2754,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 loadedEvents.push(event);
             });
             
+            // Zoradenie od najnovšej po najstaršiu (zostupne podľa času)
             loadedEvents.sort((a, b) => {
                 if (a.minute !== b.minute) {
                     return (b.minute || 0) - (a.minute || 0);
@@ -3219,6 +2762,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 return (b.second || 0) - (a.second || 0);
             });
             
+            // Pre výpočet aktuálneho skóre ideme od najstaršej po najnovšiu
             const sortedAsc = [...loadedEvents].sort((a, b) => {
                 if (a.minute !== b.minute) {
                     return (a.minute || 0) - (b.minute || 0);
@@ -3237,17 +2781,7 @@ const matchesHallApp = ({ userProfileData }) => {
             });
             
             setMatchEvents(loadedEvents);
-            
-            // AK MÁME MANUÁLNY VÝSLEDOK, POUŽIJEME HO (prepíše vypočítané skóre)
-            if (selectedMatch.finalScore && selectedMatch.status === 'completed' && !selectedMatch.forfeitResult) {
-                setMatchScore({ 
-                    home: selectedMatch.finalScore.home, 
-                    away: selectedMatch.finalScore.away 
-                });
-            } else {
-                setMatchScore({ home: homeScore, away: awayScore });
-            }
-            
+            setMatchScore({ home: homeScore, away: awayScore });
             setLoadingEvents(false);
         }, (error) => {
             console.error("Chyba pri načítaní udalostí zápasu:", error);
@@ -3683,11 +3217,6 @@ const matchesHallApp = ({ userProfileData }) => {
     const getTeamNameSafe = (identifier) => {
         if (!identifier) return 'Neznámy tím';
         
-        // 🔥 KONTROLA: Ak to nevyzerá ako identifikátor, vrátime pôvodný názov
-        if (!looksLikeIdentifier(identifier)) {
-            return identifier;
-        }
-        
         // Ak je teamManager dostupný, použijeme ho
         if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
             const teamName = window.teamManager.getTeamNameByDisplayIdSync(identifier);
@@ -3734,19 +3263,8 @@ const matchesHallApp = ({ userProfileData }) => {
         
         // Ak nič nenašlo, vrátime pôvodný identifikátor
         return identifier;
-    };
+    };   
 
-    const looksLikeIdentifier = (str) => {
-        if (!str || typeof str !== 'string') return false;
-        // Kontroluje, či reťazec obsahuje číslo aj písmeno (napr. "2B" alebo "B2")
-        return /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
-    };
-    
-    // Cache pre už získané názvy tímov
-    let teamNameCache = new Map();
-    let cacheTimestamp = Date.now();
-    const CACHE_TTL = 30000; // 30 sekúnd
-    
     // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA (UPRAVENÁ)
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
@@ -3767,6 +3285,7 @@ const matchesHallApp = ({ userProfileData }) => {
         if (resolvedTeamName) {
             // Skúsime vyhľadať tím podľa vyriešeného názvu v superstructureTeams
             if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
+                // Prehľadáme všetky kategórie v superstructureTeams
                 for (const [category, teamsArray] of Object.entries(superstructureTeams)) {
                     if (Array.isArray(teamsArray)) {
                         const foundTeam = teamsArray.find(t => t.teamName === resolvedTeamName);
@@ -3878,13 +3397,6 @@ const matchesHallApp = ({ userProfileData }) => {
         
         // 5. Ak nič nenašlo, vrátime pôvodný identifikátor
         return identifier;
-    };
-    
-    // Funkcia na vymazanie cache (volať pri zmene dát)
-    const clearTeamNameCache = () => {
-        teamNameCache.clear();
-        cacheTimestamp = Date.now();
-        console.log('🗑️ Cache názvov tímov bola vymazaná');
     };
 
     const getTeamDetailsByName = (teamName, categoryName) => {
@@ -4936,11 +4448,10 @@ const matchesHallApp = ({ userProfileData }) => {
                                 React.createElement(
                                     'div',
                                     { className: 'flex-1 text-center' },
-                                    React.createElement('div', { 
-                                        className: 'text-xl font-bold text-gray-800',
-                                        'data-team-detail': 'home',
-                                        'data-team-identifier': selectedMatch.homeTeamIdentifier
-                                    }, homeTeamName)
+        //                            React.createElement('div', { className: 'text-sm text-gray-500 mb-2' }, 'DOMÁCI'),
+                                    React.createElement('div', { className: 'text-xl font-bold text-gray-800' }, 
+                                      window.matchTracker.getTeamNameByDisplayId(homeTeamName) ?? homeTeamName
+                                    )
                                 ),
                                 
                                 // VS
@@ -4954,11 +4465,10 @@ const matchesHallApp = ({ userProfileData }) => {
                                 React.createElement(
                                     'div',
                                     { className: 'flex-1 text-center' },
-                                    React.createElement('div', { 
-                                        className: 'text-xl font-bold text-gray-800',
-                                        'data-team-detail': 'away',
-                                        'data-team-identifier': selectedMatch.awayTeamIdentifier
-                                    }, awayTeamName)
+        //                            React.createElement('div', { className: 'text-sm text-gray-500 mb-2' }, 'HOSTIA'),
+                                    React.createElement('div', { className: 'text-xl font-bold text-gray-800' }, 
+                                      window.matchTracker.getTeamNameByDisplayId(awayTeamName) ?? awayTeamName
+                                    )
                                 )
                             ),
                             
@@ -5253,21 +4763,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                         selectedMatch.status === 'completed' ? 'Obnoviť zápas' : 'Ukončiť zápas'
                                     ),
 
-                                    (selectedMatch.status !== 'completed') && React.createElement(
-                                        'button',
-                                        {
-                                            className: 'px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
-                                            onClick: () => {
-                                                setManualScoreMatchId(selectedMatch.id);
-                                                setManualHomeScore('');
-                                                setManualAwayScore('');
-                                                setManualScoreModalOpen(true);
-                                            }
-                                        },
-                                        React.createElement('i', { className: 'fa-solid fa-pen-to-square' }),
-                                        'Zadať výsledok manuálne'
-                                    ),
-
                                     // Tlačidlo Kontumácia zápasu (len pre neukončené zápasy)
                                     (selectedMatch.status !== 'completed') && React.createElement(
                                         'div',
@@ -5321,7 +4816,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                         React.createElement(
                                             'h3',
                                             { className: 'font-bold text-lg text-gray-800 mb-3 text-center border-b border-gray-200 pb-2' },
-                                            homeTeamName
+                                            window.matchTracker.getTeamNameByDisplayId(homeTeamName) ?? homeTeamName
                                         ),
                                         
                                         // Realizačný tím pre domáci tím
@@ -5910,7 +5405,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                         React.createElement(
                                             'h3',
                                             { className: 'font-bold text-lg text-gray-800 mb-3 text-center border-b border-gray-200 pb-2' },
-                                            awayTeamName
+                                            window.matchTracker.getTeamNameByDisplayId(awayTeamName) ?? awayTeamName
                                         ),
                                         
                                         // Realizačný tím pre hosťovský tím
@@ -7014,29 +6509,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 awayTeamName: awayTeamName,
                 title: 'Kontumácia zápasu',
                 message: 'Vyberte, ktorý tím vyhráva kontumačne 10:0'
-            }),
-            React.createElement(ManualScoreModal, {
-                isOpen: manualScoreModalOpen,
-                onClose: () => {
-                    setManualScoreModalOpen(false);
-                    setManualScoreMatchId(null);
-                    setManualHomeScore('');
-                    setManualAwayScore('');
-                },
-                onConfirm: () => {
-                    confirmManualScore();
-                    setManualScoreModalOpen(false);
-                    setManualScoreMatchId(null);
-                    setManualHomeScore('');
-                    setManualAwayScore('');
-                },
-                homeScore: manualHomeScore,
-                awayScore: manualAwayScore,
-                onHomeScoreChange: setManualHomeScore,
-                onAwayScoreChange: setManualAwayScore,
-                homeTeamName: homeTeamName,
-                awayTeamName: awayTeamName
-            }),
+            })
         );
     }
     
@@ -7151,8 +6624,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     { 
                                         key: match.id, 
                                         className: 'px-6 py-4 hover:bg-blue-50 transition-colors cursor-pointer',
-                                        onClick: () => selectMatch(match),
-                                        'data-match-id': match.id 
+                                        onClick: () => selectMatch(match)
                                     },
                                     React.createElement(
                                         'div',
@@ -7172,12 +6644,8 @@ const matchesHallApp = ({ userProfileData }) => {
                                             { className: 'flex items-center gap-3 flex-1' },
                                             React.createElement(
                                                 'span',
-                                                { 
-                                                    className: 'font-medium text-gray-800 text-right flex-1',
-                                                    'data-team-side': 'home', 
-                                                    'data-team-identifier': match.homeTeamIdentifier 
-                                                },
-                                                homeTeamName
+                                                { className: 'font-medium text-gray-800 text-right flex-1' },
+                                                window.matchTracker.getTeamNameByDisplayId(homeTeamName) ?? homeTeamName
                                             ),
                                             
                                             // Zobrazenie stavu zápasu
@@ -7239,12 +6707,8 @@ const matchesHallApp = ({ userProfileData }) => {
                                             
                                             React.createElement(
                                                 'span',
-                                                { 
-                                                    className: 'font-medium text-gray-800 flex-1',
-                                                    'data-team-side': 'away',
-                                                    'data-team-identifier': match.awayTeamIdentifier
-                                                },
-                                                awayTeamName
+                                                { className: 'font-medium text-gray-800 flex-1' },
+                                                window.matchTracker.getTeamNameByDisplayId(awayTeamName) ?? awayTeamName
                                             )
                                         ),
                                         
@@ -7333,140 +6797,6 @@ const matchesHallApp = ({ userProfileData }) => {
                             })
                         )
                     )
-                )
-            )
-        )
-    );
-};
-
-// Komponent pre manuálne zadanie výsledku
-const ManualScoreModal = ({ isOpen, onClose, onConfirm, homeScore, awayScore, onHomeScoreChange, onAwayScoreChange, homeTeamName, awayTeamName }) => {
-    if (!isOpen) return null;
-
-    // Validácia vstupov
-    const homeScoreNum = parseInt(homeScore, 10);
-    const awayScoreNum = parseInt(awayScore, 10);
-    const isValid = homeScore !== '' && 
-                    awayScore !== '' && 
-                    !isNaN(homeScoreNum) && 
-                    !isNaN(awayScoreNum) && 
-                    homeScoreNum >= 0 && 
-                    awayScoreNum >= 0;
-
-    return React.createElement(
-        'div',
-        {
-            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[145]',
-            onClick: (e) => {
-                if (e.target === e.currentTarget) onClose();
-            }
-        },
-        React.createElement(
-            'div',
-            { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-[458px] w-full mx-4' },  // Zmenené z max-w-md (448px) na 458px
-            // alebo použi: className: 'bg-white rounded-xl shadow-2xl p-6 w-[458px] mx-4'
-            
-            React.createElement(
-                'div',
-                { className: 'flex justify-between items-center mb-4' },
-                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 'Manuálne zadanie výsledku'),
-                React.createElement(
-                    'button',
-                    {
-                        onClick: onClose,
-                        className: 'text-gray-500 hover:text-gray-700'
-                    },
-                    React.createElement('i', { className: 'fa-solid fa-times text-xl' })
-                )
-            ),
-
-            React.createElement(
-                'p',
-                { className: 'text-gray-600 mb-4' },
-                'Zadajte konečný výsledok zápasu:'
-            ),
-            
-            // Zadanie výsledku - PRIDANÉ whitespace-nowrap pre názvy tímov
-            React.createElement(
-                'div',
-                { className: 'grid grid-cols-2 gap-4 mb-6' },
-                React.createElement(
-                    'div',
-                    { className: 'text-center' },
-                    React.createElement(
-                        'label', 
-                        { 
-                            className: 'block text-sm font-medium text-gray-700 mb-2 whitespace-nowrap overflow-hidden text-ellipsis max-w-full',
-                            title: homeTeamName || 'Domáci'  // Tooltip pre celý názov pri hover
-                        }, 
-                        homeTeamName || 'Domáci'
-                    ),
-                    React.createElement(
-                        'input',
-                        {
-                            type: 'number',
-                            value: homeScore,
-                            onChange: (e) => onHomeScoreChange(e.target.value),
-                            min: 0,
-                            className: 'w-full px-3 py-2 text-center text-2xl font-bold border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
-                        }
-                    )
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'text-center' },
-                    React.createElement(
-                        'label', 
-                        { 
-                            className: 'block text-sm font-medium text-gray-700 mb-2 whitespace-nowrap overflow-hidden text-ellipsis max-w-full',
-                            title: awayTeamName || 'Hostia'  // Tooltip pre celý názov pri hover
-                        }, 
-                        awayTeamName || 'Hostia'
-                    ),
-                    React.createElement(
-                        'input',
-                        {
-                            type: 'number',
-                            value: awayScore,
-                            onChange: (e) => onAwayScoreChange(e.target.value),
-                            min: 0,
-                            className: 'w-full px-3 py-2 text-center text-2xl font-bold border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
-                        }
-                    )
-                )
-            ),
-
-            // Zobrazenie chybovej správy pri neplatnom vstupe
-            !isValid && homeScore !== '' && awayScore !== '' && React.createElement(
-                'p',
-                { className: 'text-red-500 text-sm text-center mb-4' },
-                'Prosím, zadajte platné nezáporné čísla'
-            ),
-
-            React.createElement(
-                'div',
-                { className: 'flex justify-end gap-3' },
-                React.createElement(
-                    'button',
-                    {
-                        onClick: onClose,
-                        className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
-                    },
-                    'Zrušiť'
-                ),
-                React.createElement(
-                    'button',
-                    {
-                        onClick: isValid ? onConfirm : undefined,
-                        disabled: !isValid,
-                        className: `px-4 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium ${
-                            isValid 
-                                ? 'bg-purple-600 hover:bg-purple-700 text-white cursor-pointer' 
-                                : 'bg-white text-purple-600 border-2 border-purple-600 cursor-not-allowed'
-                        }`
-                    },
-                    React.createElement('i', { className: `fa-solid fa-save ${isValid ? '' : 'text-purple-600'}` }),
-                    'Uložiť výsledok'
                 )
             )
         )
