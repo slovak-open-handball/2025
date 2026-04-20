@@ -590,8 +590,29 @@ let groupCheckCache = new Set();
         
         // Spracujeme výsledky LEN z ODOHRANÝCH ZÁPASOV v tejto skupine
         completedGroupMatches.forEach(match => {
-            const events = eventsData[match.id] || [];
-            const { home: homeScore, away: awayScore } = getCurrentScore(events);
+            let homeScore = 0;
+            let awayScore = 0;
+            
+            // 🔥 PRIDANÉ: KONTROLA NA MANUÁLNY VÝSLEDOK (finalScore)
+            if (match.finalScore && !match.forfeitResult) {
+                // Manuálne zadaný výsledok
+                homeScore = match.finalScore.home || 0;
+                awayScore = match.finalScore.away || 0;
+                console.log(`📋 Manuálny výsledok pre ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}: ${homeScore}:${awayScore}`);
+            } 
+            // 🔥 KONTROLA NA KONTUMÁCIU
+            else if (match.forfeitResult && match.forfeitResult.isForfeit) {
+                homeScore = match.forfeitResult.home || 0;
+                awayScore = match.forfeitResult.away || 0;
+                console.log(`📋 Kontumovaný výsledok pre ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}: ${homeScore}:${awayScore}`);
+            }
+            // Inak normálne udalosti
+            else {
+                const events = eventsData[match.id] || [];
+                const score = getCurrentScore(events);
+                homeScore = score.home;
+                awayScore = score.away;
+            }
             
             const homeTeamStats = teamsInGroup.find(t => t.id === match.homeTeamIdentifier);
             const awayTeamStats = teamsInGroup.find(t => t.id === match.awayTeamIdentifier);
@@ -748,15 +769,10 @@ let groupCheckCache = new Set();
         // Získame tímy v nadstavbovej skupine (pôvodné ID)
         let teamsInAdvanced = getTeamsInGroupFromAllMatches(advancedMatches);
         
-        // ============================================================
-        // 🔥 DÔLEŽITÉ: Najprv zmapujeme názvy tímov
-        // ============================================================
+        // Mapovanie názvov tímov
         teamsInAdvanced = mapAdvancedGroupTeamsGeneral(teamsInAdvanced, categoryName, allBaseGroupTables);
         
-        // ============================================================
-        // 🔥 PRENÁŠANIE VÝSLEDKOV - použijeme ZMAPOVANÉ názvy a DVOJITÉ MAPOVANIE
-        // ============================================================
-        
+        // PRENÁŠANIE VÝSLEDKOV
         const transferredMatches = [];
         const processedPairs = new Set();
         
@@ -772,8 +788,22 @@ let groupCheckCache = new Set();
                 const completedBaseMatches = baseGroupMatches.filter(m => m.status === 'completed');
                 
                 for (const match of completedBaseMatches) {
-                    const events = eventsData[match.id] || [];
-                    const { home: homeScore, away: awayScore } = getCurrentScore(events);
+                    // 🔥 ZÍSKAME SKÓRE (aj z manuálneho výsledku)
+                    let homeScore = 0;
+                    let awayScore = 0;
+                    
+                    if (match.finalScore && !match.forfeitResult) {
+                        homeScore = match.finalScore.home || 0;
+                        awayScore = match.finalScore.away || 0;
+                    } else if (match.forfeitResult && match.forfeitResult.isForfeit) {
+                        homeScore = match.forfeitResult.home || 0;
+                        awayScore = match.forfeitResult.away || 0;
+                    } else {
+                        const events = eventsData[match.id] || [];
+                        const score = getCurrentScore(events);
+                        homeScore = score.home;
+                        awayScore = score.away;
+                    }
                     
                     // Získame pôvodné identifikátory
                     let homeId = match.homeTeamIdentifier;
@@ -826,15 +856,12 @@ let groupCheckCache = new Set();
                     const pairKey = `${teamA.id}|${teamB.id}`;
                     if (processedPairs.has(pairKey)) continue;
                     
-                    // 🔥 KROK 1: Použijeme ZMAPOVANÉ názvy pre vyhľadávanie v základných výsledkoch
                     const searchKey = teamA.name < teamB.name ? 
                         `${teamA.name}|${teamB.name}` : `${teamB.name}|${teamA.name}`;
                     
                     console.log(`   🔍 Hľadám zápas medzi: "${teamA.name}" a "${teamB.name}"`);
                     let baseResult = baseMatchResults.get(searchKey);
                     
-                    // 🔥 KROK 2: Ak sa nenašiel, skúsime vyhľadať cez findMatchBetweenTeamsInOtherGroup
-                    // (táto funkcia už obsahuje dvojité mapovanie)
                     if (!baseResult) {
                         console.log(`   🔄 Nenašiel sa v základných výsledkoch, skúšam cez findMatchBetweenTeamsInOtherGroup...`);
                         const foundMatch = findMatchBetweenTeamsInOtherGroup(
@@ -842,7 +869,7 @@ let groupCheckCache = new Set();
                             teamB.name, 
                             categoryName, 
                             groupName, 
-                            null  // excludeGroupName - necháme null, lebo hľadáme vo všetkých skupinách
+                            null
                         );
                         
                         if (foundMatch && foundMatch.isTransferred) {
@@ -877,7 +904,6 @@ let groupCheckCache = new Set();
                         teamB.goalsFor += teamBScore;
                         teamB.goalsAgainst += teamAScore;
                         
-                        // PRIDELENIE BODOV PODĽA VÝSLEDKU ZÁPASU
                         if (teamAScore > teamBScore) {
                             teamA.wins++;
                             teamB.losses++;
@@ -911,15 +937,28 @@ let groupCheckCache = new Set();
             console.log(`   ❌ Prenášanie výsledkov je VYPNUTÉ, používam iba zápasy z nadstavbovej skupiny`);
         }
         
-        // ============================================================
         // SPRACOVANIE ZÁPASOV V NADSTAVBOVEJ SKUPINE
-        // ============================================================
-        
         const completedAdvancedMatches = advancedMatches.filter(m => m.status === 'completed');
         
         for (const match of completedAdvancedMatches) {
-            const events = eventsData[match.id] || [];
-            const { home: homeScore, away: awayScore } = getCurrentScore(events);
+            // 🔥 ZÍSKAME SKÓRE (aj z manuálneho výsledku)
+            let homeScore = 0;
+            let awayScore = 0;
+            
+            if (match.finalScore && !match.forfeitResult) {
+                homeScore = match.finalScore.home || 0;
+                awayScore = match.finalScore.away || 0;
+                console.log(`📋 Manuálny výsledok v nadstavbe pre ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}: ${homeScore}:${awayScore}`);
+            } else if (match.forfeitResult && match.forfeitResult.isForfeit) {
+                homeScore = match.forfeitResult.home || 0;
+                awayScore = match.forfeitResult.away || 0;
+                console.log(`📋 Kontumovaný výsledok v nadstavbe: ${homeScore}:${awayScore}`);
+            } else {
+                const events = eventsData[match.id] || [];
+                const score = getCurrentScore(events);
+                homeScore = score.home;
+                awayScore = score.away;
+            }
             
             // Mapujeme názvy tímov pre tento zápas
             let homeTeamName = match.homeTeamIdentifier;
@@ -961,10 +1000,7 @@ let groupCheckCache = new Set();
             }
         }
         
-        // ============================================================
         // VÝPOČET ROZDIELU SKÓRE A ZORADENIE
-        // ============================================================
-        
         teamsInAdvanced.forEach(team => {
             team.goalDifference = team.goalsFor - team.goalsAgainst;
         });
@@ -973,10 +1009,7 @@ let groupCheckCache = new Set();
             return compareTeams(a, b, advancedMatches, tableSettings.sortingConditions);
         });
         
-        // ============================================================
         // PRÍPRAVA ZÁPASOV NA ZOBRAZENIE
-        // ============================================================
-        
         const allMatchesForDisplay = [...advancedMatches];
         for (const transferred of transferredMatches) {
             allMatchesForDisplay.push({
