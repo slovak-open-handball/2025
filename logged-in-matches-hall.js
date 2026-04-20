@@ -344,6 +344,69 @@ const matchesHallApp = ({ userProfileData }) => {
     const [manualAwayScore, setManualAwayScore] = useState('');
     const [manualScoreMatchId, setManualScoreMatchId] = useState(null);
 
+    // ============================================================================
+    // NOVÝ useEffect PRE SLEDOVANIE DOKONČENÝCH SKUPÍN A AKTUALIZÁCIU NÁZVOV TÍMOV
+    // ============================================================================
+    useEffect(() => {
+        if (!window.matchTracker) return;
+        
+        // Funkcia na aktualizáciu názvov tímov v UI
+        const updateTeamNamesInUI = () => {
+            if (!selectedMatch) return;
+            
+            // Získame aktuálne názvy tímov
+            const homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
+            const awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
+            
+            // Aktualizujeme DOM elementy priamo
+            const homeTeamElements = document.querySelectorAll('[data-team-side="home"]');
+            const awayTeamElements = document.querySelectorAll('[data-team-side="away"]');
+            
+            homeTeamElements.forEach(el => {
+                if (el.textContent !== homeTeamName) {
+                    el.textContent = homeTeamName;
+                }
+            });
+            
+            awayTeamElements.forEach(el => {
+                if (el.textContent !== awayTeamName) {
+                    el.textContent = awayTeamName;
+                }
+            });
+            
+            // Vynútime prekreslenie React stavu
+            setSelectedMatch(prev => ({ ...prev }));
+            setForceUpdate(prev => prev + 1);
+        };
+        
+        // Poslúchač na udalosť, že boli aktualizované tabuľky skupín
+        const handleGroupTablesUpdated = (event) => {
+            console.log('📢 groupTablesUpdated - aktualizujem názvy tímov v UI');
+            // Malé oneskorenie pre istotu, že sa dáta načítali
+            setTimeout(() => {
+                updateTeamNamesInUI();
+                // Spustíme aj nahrádzanie identifikátorov
+                if (window.teamNameReplacer && window.teamNameReplacer.replaceNow) {
+                    window.teamNameReplacer.replaceNow();
+                }
+            }, 100);
+        };
+        
+        // Poslúchač na udalosť, že boli nahradené názvy tímov
+        const handleTeamNamesReplaced = (event) => {
+            console.log('📢 teamNamesReplaced - aktualizujem UI');
+            setForceUpdate(prev => prev + 1);
+        };
+        
+        window.addEventListener('groupTablesUpdated', handleGroupTablesUpdated);
+        window.addEventListener('teamNamesReplaced', handleTeamNamesReplaced);
+        
+        return () => {
+            window.removeEventListener('groupTablesUpdated', handleGroupTablesUpdated);
+            window.removeEventListener('teamNamesReplaced', handleTeamNamesReplaced);
+        };
+    }, [selectedMatch]);
+
     // Tento useEffect zabezpečí, že keď sa zmenia users, selectedMatch sa prekreslí
     useEffect(() => {
         // Ak máme vybraný zápas, vynútime prekreslenie detailu
@@ -355,7 +418,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }, 50);
             return () => clearTimeout(timer);
         }
-    }, [users]); // Tento useEffect sa spustí pri každej zmene users
+    }, [users, forceUpdate]); // Tento useEffect sa spustí pri každej zmene users
 
     // Funkcia na pridanie unikátnych ID pre všetkých hráčov a členov RT, ktorí ich nemajú
     const ensureUniqueIds = (teamData) => {
@@ -2593,6 +2656,14 @@ const matchesHallApp = ({ userProfileData }) => {
             }
             
             setCompletedMatchData(newData);
+
+            if (hasNewCompletion && selectedMatch) {
+                setTimeout(() => {
+                    const homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
+                    const awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
+                    setForceUpdate(prev => prev + 1);
+                }, 500);
+            }
         };
         
         fetchCompletedMatches();
@@ -3373,11 +3444,19 @@ const matchesHallApp = ({ userProfileData }) => {
         return identifier;
     };   
 
-    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA (UPRAVENÁ)
+    // Cache pre už získané názvy tímov
+    let teamNameCache = new Map();
+    
+    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA (UPRAVENÁ S CACHE)
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
         
-        // 1. NAJPRV SKÚSIME ZÍSKAť SPRÁVNY NÁZOV TÍMU CEZ matchTracker
+        // Skontrolujeme cache
+        if (teamNameCache.has(identifier)) {
+            return teamNameCache.get(identifier);
+        }
+        
+        // 1. NAJPRV SKÚSIME ZÍSKAŤ SPRÁVNY NÁZOV TÍMU CEZ matchTracker
         let resolvedTeamName = null;
         let originalIdentifier = identifier;
         
@@ -3393,12 +3472,12 @@ const matchesHallApp = ({ userProfileData }) => {
         if (resolvedTeamName) {
             // Skúsime vyhľadať tím podľa vyriešeného názvu v superstructureTeams
             if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
-                // Prehľadáme všetky kategórie v superstructureTeams
                 for (const [category, teamsArray] of Object.entries(superstructureTeams)) {
                     if (Array.isArray(teamsArray)) {
                         const foundTeam = teamsArray.find(t => t.teamName === resolvedTeamName);
                         if (foundTeam && foundTeam.teamName) {
-                            console.log(`✅ Nájdený tím v superstructureTeams: "${foundTeam.teamName}" (kategória: ${category})`);
+                            console.log(`✅ Nájdený tím v superstructureTeams: "${foundTeam.teamName}"`);
+                            teamNameCache.set(identifier, foundTeam.teamName);
                             return foundTeam.teamName;
                         }
                     }
@@ -3414,7 +3493,8 @@ const matchesHallApp = ({ userProfileData }) => {
                         if (Array.isArray(teamsArray)) {
                             const foundTeam = teamsArray.find(t => t.teamName === resolvedTeamName);
                             if (foundTeam && foundTeam.teamName) {
-                                console.log(`✅ Nájdený tím v používateľských dátach: "${foundTeam.teamName}" (kategória: ${category})`);
+                                console.log(`✅ Nájdený tím v používateľských dátach: "${foundTeam.teamName}"`);
+                                teamNameCache.set(identifier, foundTeam.teamName);
                                 return foundTeam.teamName;
                             }
                         }
@@ -3422,8 +3502,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 }
             }
             
-            // Ak sme nenašli podľa vyriešeného názvu, vrátime ho ako taký
-            console.log(`⚠️ Tím "${resolvedTeamName}" nebol nájdený v databáze, vraciam vyriešený názov.`);
+            teamNameCache.set(identifier, resolvedTeamName);
             return resolvedTeamName;
         }
         
@@ -3456,6 +3535,7 @@ const matchesHallApp = ({ userProfileData }) => {
                             t.order === orderNum
                         );
                         if (team && team.teamName) {
+                            teamNameCache.set(identifier, team.teamName);
                             return team.teamName;
                         }
                     }
@@ -3496,6 +3576,7 @@ const matchesHallApp = ({ userProfileData }) => {
                         );
                         
                         if (team && team.teamName) {
+                            teamNameCache.set(identifier, team.teamName);
                             return team.teamName;
                         }
                     }
@@ -3504,6 +3585,7 @@ const matchesHallApp = ({ userProfileData }) => {
         }
         
         // 5. Ak nič nenašlo, vrátime pôvodný identifikátor
+        teamNameCache.set(identifier, identifier);
         return identifier;
     };
 
