@@ -509,25 +509,28 @@ const matchesHallApp = ({ userProfileData }) => {
         const updateAllTeamNamesInUI = () => {
             console.log('🔄 Aktualizujem všetky názvy tímov v UI...');
             
-            // 1. Aktualizácia v zozname zápasov
+            // 1. Aktualizácia v zozname zápasov - použijeme React state "matches"
             const matchRows = document.querySelectorAll('[data-match-id]');
             matchRows.forEach(row => {
                 const homeTeamEl = row.querySelector('[data-team-side="home"]');
                 const awayTeamEl = row.querySelector('[data-team-side="away"]');
                 const matchId = row.getAttribute('data-match-id');
                 
-                if (matchId && matchesData[matchId]) {
-                    const match = matchesData[matchId];
-                    if (homeTeamEl) {
-                        const newHomeName = getTeamNameByIdentifier(match.homeTeamIdentifier);
-                        if (homeTeamEl.textContent !== newHomeName) {
-                            homeTeamEl.textContent = newHomeName;
+                // Nájdeme zápas v React state matches
+                if (matchId) {
+                    const match = matches.find(m => m.id === matchId);
+                    if (match) {
+                        if (homeTeamEl) {
+                            const newHomeName = getTeamNameByIdentifier(match.homeTeamIdentifier);
+                            if (homeTeamEl.textContent !== newHomeName) {
+                                homeTeamEl.textContent = newHomeName;
+                            }
                         }
-                    }
-                    if (awayTeamEl) {
-                        const newAwayName = getTeamNameByIdentifier(match.awayTeamIdentifier);
-                        if (awayTeamEl.textContent !== newAwayName) {
-                            awayTeamEl.textContent = newAwayName;
+                        if (awayTeamEl) {
+                            const newAwayName = getTeamNameByIdentifier(match.awayTeamIdentifier);
+                            if (awayTeamEl.textContent !== newAwayName) {
+                                awayTeamEl.textContent = newAwayName;
+                            }
                         }
                     }
                 }
@@ -563,7 +566,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         };
         
-        // Poslúchač na udalosť, že boli aktualizované tabuľky skupín (vždy, nielen pri 100%)
+        // Poslúchač na udalosť, že boli aktualizované tabuľky skupín
         const handleGroupTablesUpdated = (event) => {
             console.log('📢 groupTablesUpdated - aktualizujem všetky názvy tímov v UI');
             setTimeout(() => {
@@ -584,9 +587,9 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         };
         
-        // Poslúchač na zmenu v matchesData (nový zápas, úprava výsledku)
+        // Poslúchač na zmenu v matches (React state)
         const handleMatchesUpdated = () => {
-            console.log('📢 matchesData sa zmenili - aktualizujem názvy...');
+            console.log('📢 matches sa zmenili - aktualizujem názvy...');
             setTimeout(() => {
                 updateAllTeamNamesInUI();
             }, 50);
@@ -595,16 +598,12 @@ const matchesHallApp = ({ userProfileData }) => {
         window.addEventListener('groupTablesUpdated', handleGroupTablesUpdated);
         window.addEventListener('teamNamesReplaced', handleTeamNamesReplaced);
         
-        // Sledujeme zmeny v matchesData cez interval (fallback)
-        let lastMatchesHash = '';
+        // Sledujeme zmeny v matches (React state) - jednoduchšie
+        let lastMatchesLength = matches.length;
         const checkMatchesChanges = setInterval(() => {
-            if (window.matchTracker && window.matchTracker.getMatches) {
-                const currentMatches = window.matchTracker.getMatches();
-                const currentHash = JSON.stringify(Object.keys(currentMatches || {}));
-                if (currentHash !== lastMatchesHash) {
-                    lastMatchesHash = currentHash;
-                    handleMatchesUpdated();
-                }
+            if (matches.length !== lastMatchesLength) {
+                lastMatchesLength = matches.length;
+                handleMatchesUpdated();
             }
         }, 2000);
         
@@ -613,7 +612,7 @@ const matchesHallApp = ({ userProfileData }) => {
             window.removeEventListener('teamNamesReplaced', handleTeamNamesReplaced);
             clearInterval(checkMatchesChanges);
         };
-    }, [selectedMatch]);
+    }, [selectedMatch, matches]); // PRIDAJ matches do závislostí
 
     // ============================================================================
     // SLEDOVANIE DOKONČENÝCH SKUPÍN A AKTUALIZÁCIA NÁZVOV TÍMOV
