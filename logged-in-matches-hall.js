@@ -6952,6 +6952,16 @@ const matchesHallApp = ({ userProfileData }) => {
 const ManualScoreModal = ({ isOpen, onClose, onConfirm, homeScore, awayScore, onHomeScoreChange, onAwayScoreChange, homeTeamName, awayTeamName }) => {
     if (!isOpen) return null;
 
+    // Validácia vstupov
+    const homeScoreNum = parseInt(homeScore, 10);
+    const awayScoreNum = parseInt(awayScore, 10);
+    const isValid = homeScore !== '' && 
+                    awayScore !== '' && 
+                    !isNaN(homeScoreNum) && 
+                    !isNaN(awayScoreNum) && 
+                    homeScoreNum >= 0 && 
+                    awayScoreNum >= 0;
+
     return React.createElement(
         'div',
         {
@@ -6998,6 +7008,7 @@ const ManualScoreModal = ({ isOpen, onClose, onConfirm, homeScore, awayScore, on
                             type: 'number',
                             value: homeScore,
                             onChange: (e) => onHomeScoreChange(e.target.value),
+                            min: 0,
                             className: 'w-full px-3 py-2 text-center text-2xl font-bold border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
                         }
                     )
@@ -7012,10 +7023,18 @@ const ManualScoreModal = ({ isOpen, onClose, onConfirm, homeScore, awayScore, on
                             type: 'number',
                             value: awayScore,
                             onChange: (e) => onAwayScoreChange(e.target.value),
+                            min: 0,
                             className: 'w-full px-3 py-2 text-center text-2xl font-bold border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
                         }
                     )
                 )
+            ),
+
+            // Zobrazenie chybovej správy pri neplatnom vstupe
+            !isValid && homeScore !== '' && awayScore !== '' && React.createElement(
+                'p',
+                { className: 'text-red-500 text-sm text-center mb-4' },
+                'Prosím, zadajte platné nezáporné čísla'
             ),
 
             React.createElement(
