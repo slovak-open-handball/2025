@@ -3683,6 +3683,11 @@ const matchesHallApp = ({ userProfileData }) => {
     const getTeamNameSafe = (identifier) => {
         if (!identifier) return 'Neznámy tím';
         
+        // 🔥 KONTROLA: Ak to nevyzerá ako identifikátor, vrátime pôvodný názov
+        if (!looksLikeIdentifier(identifier)) {
+            return identifier;
+        }
+        
         // Ak je teamManager dostupný, použijeme ho
         if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
             const teamName = window.teamManager.getTeamNameByDisplayIdSync(identifier);
@@ -3729,16 +3734,33 @@ const matchesHallApp = ({ userProfileData }) => {
         
         // Ak nič nenašlo, vrátime pôvodný identifikátor
         return identifier;
-    };   
-
+    };
+    
+    // ============================================================================
+    // OPRAVENÁ FUNKCIA NA ZÍSKANIE NÁZVU TÍMU - REŠPEKTUJE UŽ NAHRADENÉ NÁZVY
+    // ============================================================================
+    
     // Cache pre už získané názvy tímov
     let teamNameCache = new Map();
     let cacheTimestamp = Date.now();
     const CACHE_TTL = 30000; // 30 sekúnd
     
+    // Pomocná funkcia na kontrolu, či ide o identifikátor (obsahuje číslo a písmeno)
+    const looksLikeIdentifier = (str) => {
+        if (!str || typeof str !== 'string') return false;
+        return /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
+    };
+    
     // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA (S KRÁTKOU CACHE)
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
+        
+        // 🔥 KONTROLA: Ak to nevyzerá ako identifikátor, vrátime pôvodný názov (už je to správny názov)
+        if (!looksLikeIdentifier(identifier)) {
+            // Toto už nie je identifikátor, ale normálny názov tímu
+            // Neprepisujeme ho späť!
+            return identifier;
+        }
         
         // Kontrola expirácie cache
         if (Date.now() - cacheTimestamp > CACHE_TTL) {
@@ -3751,25 +3773,32 @@ const matchesHallApp = ({ userProfileData }) => {
             return teamNameCache.get(identifier);
         }
         
-        // 1. NAJPRV SKÚSIME ZÍSKAŤ SPRÁVNY NÁZOV TÍMU CEZ matchTracker
+        // 1. NAJPRV SKÚSIME ZÍSKAŤ NÁZOV Z MAPOVANIA (ak už bolo nahradené)
         let resolvedTeamName = null;
         
+        // Skúsime z globálneho mapovania (najrýchlejšie)
+        if (window.__teamNameMapping && window.__teamNameMapping[identifier]) {
+            resolvedTeamName = window.__teamNameMapping[identifier].teamName;
+            if (resolvedTeamName) {
+                console.log(`🔍 Pre identifikátor "${identifier}" bol nájdený názov v mapovaní: "${resolvedTeamName}"`);
+                teamNameCache.set(identifier, resolvedTeamName);
+                return resolvedTeamName;
+            }
+        }
+        
+        // 2. Skúsime získať názov cez matchTracker (ak je skupina 100% dokončená)
         if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
             const teamNameFromTracker = window.matchTracker.getTeamNameByDisplayId(identifier);
             if (teamNameFromTracker && teamNameFromTracker !== identifier) {
                 resolvedTeamName = teamNameFromTracker;
-                console.log(`🔍 Pre identifikátor "${identifier}" bol nájdený názov tímu: "${resolvedTeamName}"`);
+                console.log(`🔍 Pre identifikátor "${identifier}" bol nájdený názov tímu cez matchTracker: "${resolvedTeamName}"`);
+                teamNameCache.set(identifier, resolvedTeamName);
+                return resolvedTeamName;
             }
         }
         
-        // 2. AK MÁME VYRIEŠENÝ NÁZOV TÍMU, SKÚSIME HO NAJPRV POUŽIŤ
-        if (resolvedTeamName) {
-            teamNameCache.set(identifier, resolvedTeamName);
-            return resolvedTeamName;
-        }
-        
-        // 3. PÔVODNÁ LOGIKA - vyhľadávanie podľa identifikátora v superstructureTeams
-        if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
+        // 3. PÔVODNÁ LOGIKA - vyhľadávanie v superstructureTeams (len ak to vyzerá ako identifikátor)
+        if (looksLikeIdentifier(identifier) && superstructureTeams && Object.keys(superstructureTeams).length > 0) {
             const parts = identifier.split(' ');
             if (parts.length >= 2) {
                 const groupAndOrder = parts.pop();
@@ -3805,8 +3834,8 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        // 4. PÔVODNÁ LOGIKA - vyhľadávanie v používateľoch
-        if (users && users.length > 0) {
+        // 4. PÔVODNÁ LOGIKA - vyhľadávanie v používateľoch (len ak to vyzerá ako identifikátor)
+        if (looksLikeIdentifier(identifier) && users && users.length > 0) {
             const parts = identifier.split(' ');
             if (parts.length >= 2) {
                 const groupAndOrder = parts.pop();
