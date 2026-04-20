@@ -339,6 +339,11 @@ const matchesHallApp = ({ userProfileData }) => {
     const [categoryIdMap, setCategoryIdMap] = useState({});
     const [forceUpdate, setForceUpdate] = useState(0);
 
+    const [manualScoreModalOpen, setManualScoreModalOpen] = useState(false);
+    const [manualHomeScore, setManualHomeScore] = useState('');
+    const [manualAwayScore, setManualAwayScore] = useState('');
+    const [manualScoreMatchId, setManualScoreMatchId] = useState(null);
+
     // Tento useEffect zabezpečí, že keď sa zmenia users, selectedMatch sa prekreslí
     useEffect(() => {
         // Ak máme vybraný zápas, vynútime prekreslenie detailu
@@ -1593,6 +1598,83 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     };
 
+    const confirmManualScore = async () => {
+        if (!window.db || !manualScoreMatchId) return;
+        
+        const homeScoreNum = parseInt(manualHomeScore, 10);
+        const awayScoreNum = parseInt(manualAwayScore, 10);
+        
+        if (isNaN(homeScoreNum) || isNaN(awayScoreNum)) {
+            window.showGlobalNotification('Zadajte platné čísla pre výsledok', 'error');
+            return;
+        }
+        
+        if (homeScoreNum < 0 || awayScoreNum < 0) {
+            window.showGlobalNotification('Skóre nemôže byť záporné', 'error');
+            return;
+        }
+        
+        try {
+            const matchRef = doc(window.db, 'matches', manualScoreMatchId);
+            
+            // Získame aktuálne dáta zápasu
+            const matchSnap = await getDoc(matchRef);
+            const matchData = matchSnap.exists() ? matchSnap.data() : {};
+            
+            // Ak už zápas má udalosti, nezabudneme na ne
+            const hasEvents = matchEvents.length > 0;
+            
+            // Aktualizujeme zápas
+            await updateDoc(matchRef, {
+                status: 'completed',
+                endedAt: Timestamp.now(),
+                finalScore: {
+                    home: homeScoreNum,
+                    away: awayScoreNum
+                },
+                // Ak bol zápas kontumovaný, odstránime kontumačné polia
+                forfeitResult: null,
+                updatedAt: Timestamp.now()
+            });
+            
+            // Ak nemáme udalosti, vytvoríme aspoň základnú udalosť o výsledku
+            if (!hasEvents) {
+                const eventsRef = collection(window.db, 'matchEvents');
+                await addDoc(eventsRef, {
+                    matchId: manualScoreMatchId,
+                    type: 'manual_result',
+                    minute: 0,
+                    second: 0,
+                    formattedTime: '00:00',
+                    timestamp: Timestamp.now(),
+                    createdBy: userProfileData?.email || 'unknown',
+                    createdByUid: userProfileData?.uid || null,
+                    manualResult: {
+                        home: homeScoreNum,
+                        away: awayScoreNum
+                    }
+                });
+            }
+            
+            // Aktualizujeme lokálny stav
+            setMatchScore({ home: homeScoreNum, away: awayScoreNum });
+            
+            // Aktualizujeme selectedMatch v React stave
+            if (window.__reactSelectedMatchSetter && typeof window.__reactSelectedMatchSetter === 'function') {
+                const updatedMatchSnap = await getDoc(matchRef);
+                if (updatedMatchSnap.exists()) {
+                    window.__reactSelectedMatchSetter({ id: manualScoreMatchId, ...updatedMatchSnap.data() });
+                }
+            }
+            
+            window.showGlobalNotification(`Výsledok ${homeScoreNum}:${awayScoreNum} bol uložený`, 'success');
+            
+        } catch (error) {
+            console.error('Chyba pri ukladaní manuálneho výsledku:', error);
+            window.showGlobalNotification('Chyba pri ukladaní výsledku', 'error');
+        }
+    };
+
     const confirmEndMatch = async () => {
         if (!window.db || !endMatchId) return;
         
@@ -2439,7 +2521,6 @@ const matchesHallApp = ({ userProfileData }) => {
     useEffect(() => {
         if (!window.db || matches.length === 0) return;
     
-        // Filtrujeme ukončené zápasy
         const completedMatches = matches.filter(m => m.status === 'completed');
         
         if (completedMatches.length === 0) {
@@ -2447,12 +2528,11 @@ const matchesHallApp = ({ userProfileData }) => {
             return;
         }
     
-        // Pre každý ukončený zápas načítame udalosti (stačí raz, nie onSnapshot)
         const fetchCompletedMatches = async () => {
             const newData = {};
             
             for (const match of completedMatches) {
-                // KONTROLA NA KONTUMÁCIU - ak má forfeitResult, použijeme ho
+                // KONTROLA NA KONTUMÁCIU
                 if (match.forfeitResult && match.forfeitResult.isForfeit) {
                     newData[match.id] = {
                         time: 0,
@@ -2460,6 +2540,18 @@ const matchesHallApp = ({ userProfileData }) => {
                         awayScore: match.forfeitResult.away,
                         status: 'completed',
                         isForfeit: true
+                    };
+                    continue;
+                }
+                
+                // KONTROLA NA MANUÁLNY VÝSLEDOK (finalScore)
+                if (match.finalScore && !match.forfeitResult) {
+                    newData[match.id] = {
+                        time: 0,
+                        homeScore: match.finalScore.home,
+                        awayScore: match.finalScore.away,
+                        status: 'completed',
+                        isManual: true
                     };
                     continue;
                 }
@@ -2476,13 +2568,11 @@ const matchesHallApp = ({ userProfileData }) => {
                     querySnapshot.forEach((doc) => {
                         const event = doc.data();
                         
-                        // Výpočet skóre
                         if (event.type === 'goal' || (event.type === 'penalty' && event.subType === 'scored')) {
                             if (event.team === 'home') homeScore++;
                             else if (event.team === 'away') awayScore++;
                         }
                         
-                        // Získame najvyšší čas udalosti (koniec zápasu)
                         if (event.minute !== undefined && event.second !== undefined) {
                             const eventTimeInSeconds = event.minute * 60 + (event.second || 0);
                             if (eventTimeInSeconds > matchTime) {
@@ -2728,7 +2818,7 @@ const matchesHallApp = ({ userProfileData }) => {
     useEffect(() => {
         if (!selectedMatch || !window.db) return;
     
-        // AK JE ZÁPAS KONTUMOVANÝ, NASTAVÍME SKÓRE PODĽA forfeitResult
+        // AK JE ZÁPAS KONTUMOVANÝ
         if (selectedMatch.forfeitResult && selectedMatch.forfeitResult.isForfeit) {
             setMatchScore({ 
                 home: selectedMatch.forfeitResult.home, 
@@ -2737,6 +2827,16 @@ const matchesHallApp = ({ userProfileData }) => {
             setMatchEvents([]);
             setLoadingEvents(false);
             return;
+        }
+        
+        // AK MÁ ZÁPAS MANUÁLNY VÝSLEDOK (finalScore)
+        if (selectedMatch.finalScore && selectedMatch.status === 'completed' && !selectedMatch.forfeitResult) {
+            setMatchScore({ 
+                home: selectedMatch.finalScore.home, 
+                away: selectedMatch.finalScore.away 
+            });
+            // Stále načítame udalosti, ak existujú
+            // ale necháme pokračovať ďalej
         }
     
         const eventsRef = collection(window.db, 'matchEvents');
@@ -2754,7 +2854,6 @@ const matchesHallApp = ({ userProfileData }) => {
                 loadedEvents.push(event);
             });
             
-            // Zoradenie od najnovšej po najstaršiu (zostupne podľa času)
             loadedEvents.sort((a, b) => {
                 if (a.minute !== b.minute) {
                     return (b.minute || 0) - (a.minute || 0);
@@ -2762,7 +2861,6 @@ const matchesHallApp = ({ userProfileData }) => {
                 return (b.second || 0) - (a.second || 0);
             });
             
-            // Pre výpočet aktuálneho skóre ideme od najstaršej po najnovšiu
             const sortedAsc = [...loadedEvents].sort((a, b) => {
                 if (a.minute !== b.minute) {
                     return (a.minute || 0) - (b.minute || 0);
@@ -2781,7 +2879,17 @@ const matchesHallApp = ({ userProfileData }) => {
             });
             
             setMatchEvents(loadedEvents);
-            setMatchScore({ home: homeScore, away: awayScore });
+            
+            // AK MÁME MANUÁLNY VÝSLEDOK, POUŽIJEME HO (prepíše vypočítané skóre)
+            if (selectedMatch.finalScore && selectedMatch.status === 'completed' && !selectedMatch.forfeitResult) {
+                setMatchScore({ 
+                    home: selectedMatch.finalScore.home, 
+                    away: selectedMatch.finalScore.away 
+                });
+            } else {
+                setMatchScore({ home: homeScore, away: awayScore });
+            }
+            
             setLoadingEvents(false);
         }, (error) => {
             console.error("Chyba pri načítaní udalostí zápasu:", error);
@@ -4763,6 +4871,21 @@ const matchesHallApp = ({ userProfileData }) => {
                                         selectedMatch.status === 'completed' ? 'Obnoviť zápas' : 'Ukončiť zápas'
                                     ),
 
+                                    (selectedMatch.status !== 'completed') && React.createElement(
+                                        'button',
+                                        {
+                                            className: 'px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
+                                            onClick: () => {
+                                                setManualScoreMatchId(selectedMatch.id);
+                                                setManualHomeScore('');
+                                                setManualAwayScore('');
+                                                setManualScoreModalOpen(true);
+                                            }
+                                        },
+                                        React.createElement('i', { className: 'fa-solid fa-pen-to-square' }),
+                                        'Zadať výsledok manuálne'
+                                    ),
+
                                     // Tlačidlo Kontumácia zápasu (len pre neukončené zápasy)
                                     (selectedMatch.status !== 'completed') && React.createElement(
                                         'div',
@@ -6509,7 +6632,29 @@ const matchesHallApp = ({ userProfileData }) => {
                 awayTeamName: awayTeamName,
                 title: 'Kontumácia zápasu',
                 message: 'Vyberte, ktorý tím vyhráva kontumačne 10:0'
-            })
+            }),
+            React.createElement(ManualScoreModal, {
+                isOpen: manualScoreModalOpen,
+                onClose: () => {
+                    setManualScoreModalOpen(false);
+                    setManualScoreMatchId(null);
+                    setManualHomeScore('');
+                    setManualAwayScore('');
+                },
+                onConfirm: () => {
+                    confirmManualScore();
+                    setManualScoreModalOpen(false);
+                    setManualScoreMatchId(null);
+                    setManualHomeScore('');
+                    setManualAwayScore('');
+                },
+                homeScore: manualHomeScore,
+                awayScore: manualAwayScore,
+                onHomeScoreChange: setManualHomeScore,
+                onAwayScoreChange: setManualAwayScore,
+                homeTeamName: homeTeamName,
+                awayTeamName: awayTeamName
+            }),
         );
     }
     
@@ -6797,6 +6942,101 @@ const matchesHallApp = ({ userProfileData }) => {
                             })
                         )
                     )
+                )
+            )
+        )
+    );
+};
+
+// Komponent pre manuálne zadanie výsledku
+const ManualScoreModal = ({ isOpen, onClose, onConfirm, homeScore, awayScore, onHomeScoreChange, onAwayScoreChange, homeTeamName, awayTeamName }) => {
+    if (!isOpen) return null;
+
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[145]',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) onClose();
+            }
+        },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
+            
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center mb-4' },
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 'Manuálne zadanie výsledku'),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'text-gray-500 hover:text-gray-700'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-times text-xl' })
+                )
+            ),
+
+            React.createElement(
+                'p',
+                { className: 'text-gray-600 mb-4' },
+                'Zadajte konečný výsledok zápasu:'
+            ),
+            
+            // Zadanie výsledku
+            React.createElement(
+                'div',
+                { className: 'grid grid-cols-2 gap-4 mb-6' },
+                React.createElement(
+                    'div',
+                    { className: 'text-center' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, homeTeamName || 'Domáci'),
+                    React.createElement(
+                        'input',
+                        {
+                            type: 'number',
+                            value: homeScore,
+                            onChange: (e) => onHomeScoreChange(e.target.value),
+                            className: 'w-full px-3 py-2 text-center text-2xl font-bold border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
+                        }
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'text-center' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' }, awayTeamName || 'Hostia'),
+                    React.createElement(
+                        'input',
+                        {
+                            type: 'number',
+                            value: awayScore,
+                            onChange: (e) => onAwayScoreChange(e.target.value),
+                            className: 'w-full px-3 py-2 text-center text-2xl font-bold border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
+                        }
+                    )
+                )
+            ),
+
+            React.createElement(
+                'div',
+                { className: 'flex justify-end gap-3' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
+                    },
+                    'Zrušiť'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onConfirm,
+                        className: 'px-4 py-2 text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors flex items-center gap-2'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-save' }),
+                    'Uložiť výsledok'
                 )
             )
         )
