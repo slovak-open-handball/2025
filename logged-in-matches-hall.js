@@ -3745,22 +3745,9 @@ const matchesHallApp = ({ userProfileData }) => {
     let cacheTimestamp = Date.now();
     const CACHE_TTL = 30000; // 30 sekúnd
     
-    // Pomocná funkcia na kontrolu, či ide o identifikátor (obsahuje číslo a písmeno)
-    const looksLikeIdentifier = (str) => {
-        if (!str || typeof str !== 'string') return false;
-        return /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
-    };
-    
-    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA (S KRÁTKOU CACHE)
+    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA (JEDNODUCHÁ VERZIA)
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
-        
-        // 🔥 KONTROLA: Ak to nevyzerá ako identifikátor, vrátime pôvodný názov (už je to správny názov)
-        if (!looksLikeIdentifier(identifier)) {
-            // Toto už nie je identifikátor, ale normálny názov tímu
-            // Neprepisujeme ho späť!
-            return identifier;
-        }
         
         // Kontrola expirácie cache
         if (Date.now() - cacheTimestamp > CACHE_TTL) {
@@ -3774,31 +3761,16 @@ const matchesHallApp = ({ userProfileData }) => {
         }
         
         // 1. NAJPRV SKÚSIME ZÍSKAŤ NÁZOV Z MAPOVANIA (ak už bolo nahradené)
-        let resolvedTeamName = null;
-        
-        // Skúsime z globálneho mapovania (najrýchlejšie)
         if (window.__teamNameMapping && window.__teamNameMapping[identifier]) {
-            resolvedTeamName = window.__teamNameMapping[identifier].teamName;
-            if (resolvedTeamName) {
-                console.log(`🔍 Pre identifikátor "${identifier}" bol nájdený názov v mapovaní: "${resolvedTeamName}"`);
-                teamNameCache.set(identifier, resolvedTeamName);
-                return resolvedTeamName;
+            const mappedName = window.__teamNameMapping[identifier].teamName;
+            if (mappedName) {
+                teamNameCache.set(identifier, mappedName);
+                return mappedName;
             }
         }
         
-        // 2. Skúsime získať názov cez matchTracker (ak je skupina 100% dokončená)
-        if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-            const teamNameFromTracker = window.matchTracker.getTeamNameByDisplayId(identifier);
-            if (teamNameFromTracker && teamNameFromTracker !== identifier) {
-                resolvedTeamName = teamNameFromTracker;
-                console.log(`🔍 Pre identifikátor "${identifier}" bol nájdený názov tímu cez matchTracker: "${resolvedTeamName}"`);
-                teamNameCache.set(identifier, resolvedTeamName);
-                return resolvedTeamName;
-            }
-        }
-        
-        // 3. PÔVODNÁ LOGIKA - vyhľadávanie v superstructureTeams (len ak to vyzerá ako identifikátor)
-        if (looksLikeIdentifier(identifier) && superstructureTeams && Object.keys(superstructureTeams).length > 0) {
+        // 2. PÔVODNÁ LOGIKA - vyhľadávanie v superstructureTeams
+        if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
             const parts = identifier.split(' ');
             if (parts.length >= 2) {
                 const groupAndOrder = parts.pop();
@@ -3834,8 +3806,8 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        // 4. PÔVODNÁ LOGIKA - vyhľadávanie v používateľoch (len ak to vyzerá ako identifikátor)
-        if (looksLikeIdentifier(identifier) && users && users.length > 0) {
+        // 3. PÔVODNÁ LOGIKA - vyhľadávanie v používateľoch
+        if (users && users.length > 0) {
             const parts = identifier.split(' ');
             if (parts.length >= 2) {
                 const groupAndOrder = parts.pop();
@@ -3875,7 +3847,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        // 5. Ak nič nenašlo, vrátime pôvodný identifikátor
+        // 4. Ak nič nenašlo, vrátime pôvodný identifikátor
         teamNameCache.set(identifier, identifier);
         return identifier;
     };
