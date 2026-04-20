@@ -2859,6 +2859,7 @@ const matchesHallApp = ({ userProfileData }) => {
     
         const fetchCompletedMatches = async () => {
             const newData = {};
+            let hasNewCompletion = false;  // ✅ PRIDANÉ - definovanie premennej
             
             for (const match of completedMatches) {
                 // KONTROLA NA KONTUMÁCIU
@@ -2870,6 +2871,12 @@ const matchesHallApp = ({ userProfileData }) => {
                         status: 'completed',
                         isForfeit: true
                     };
+                    // Ak ide o nový výsledok, nastavíme príznak
+                    if (!completedMatchData[match.id] || 
+                        completedMatchData[match.id].homeScore !== match.forfeitResult.home ||
+                        completedMatchData[match.id].awayScore !== match.forfeitResult.away) {
+                        hasNewCompletion = true;
+                    }
                     continue;
                 }
                 
@@ -2882,6 +2889,12 @@ const matchesHallApp = ({ userProfileData }) => {
                         status: 'completed',
                         isManual: true
                     };
+                    // Ak ide o nový výsledok, nastavíme príznak
+                    if (!completedMatchData[match.id] || 
+                        completedMatchData[match.id].homeScore !== match.finalScore.home ||
+                        completedMatchData[match.id].awayScore !== match.finalScore.away) {
+                        hasNewCompletion = true;
+                    }
                     continue;
                 }
                 
@@ -2910,6 +2923,12 @@ const matchesHallApp = ({ userProfileData }) => {
                         }
                     });
                     
+                    // Kontrola, či sa skóre zmenilo oproti predchádzajúcemu stavu
+                    const oldData = completedMatchData[match.id];
+                    if (!oldData || oldData.homeScore !== homeScore || oldData.awayScore !== awayScore) {
+                        hasNewCompletion = true;
+                    }
+                    
                     newData[match.id] = {
                         time: matchTime,
                         homeScore,
@@ -2922,7 +2941,8 @@ const matchesHallApp = ({ userProfileData }) => {
             }
             
             setCompletedMatchData(newData);
-
+    
+            // Ak pribudol nový výsledok, aktualizujeme názvy tímov
             if (hasNewCompletion && selectedMatch) {
                 setTimeout(() => {
                     const homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
@@ -2933,7 +2953,7 @@ const matchesHallApp = ({ userProfileData }) => {
         };
         
         fetchCompletedMatches();
-    }, [matches]);
+    }, [matches, completedMatchData]); // ✅ PRIDANÉ completedMatchData do závislostí
 
     // NOVÝ useEffect PRE SLEDOVANIE ŽIVÝCH ZÁPASOV
     useEffect(() => {
