@@ -344,6 +344,22 @@ const matchesHallApp = ({ userProfileData }) => {
     const [manualAwayScore, setManualAwayScore] = useState('');
     const [manualScoreMatchId, setManualScoreMatchId] = useState(null);    
 
+    useEffect(() => {
+        if (users.length > 0) {
+            window.__reactUsersState = users;
+            console.log(`📋 window.__reactUsersState nastavený s ${users.length} používateľmi`);
+            
+            // Ak už existujú mapovania, aktualizujeme UI
+            if (window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0) {
+                console.log('🔄 Mapovania už existujú, aktualizujem UI...');
+                setForceUpdate(prev => prev + 1);
+                if (selectedMatch) {
+                    setSelectedMatch(prev => ({ ...prev }));
+                }
+            }
+        }
+    }, [users]);
+
     // ============================================================================
     // SLEDOVANIE ZMIEN V TABUĽKÁCH A AKTUALIZÁCIA NÁZVOV TÍMOV V REACT STATE
     // ============================================================================
