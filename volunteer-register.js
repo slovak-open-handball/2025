@@ -221,6 +221,11 @@ const App = () => {
                     if (data.tournamentStart && data.tournamentEnd) {
                         const dates = generateDatesBetween(data.tournamentStart.toDate(), data.tournamentEnd.toDate());
                         setAvailableDates(dates);
+                        const allDates = dates.map(date => date.toISOString().split('T')[0]);
+                        setFormData(prev => ({
+                            ...prev,
+                            selectedDates: allDates
+                        }));
                     }
                 }
                 setIsDatesLoading(false);
