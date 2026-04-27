@@ -11,6 +11,7 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
   const [showConfirmDeleteAccommodationModal, setShowConfirmDeleteAccommodationModal] = React.useState(false);
   const [accommodationToDelete, setAccommodationToDelete] = React.useState(null);
   const [isUpdating, setIsUpdating] = React.useState(false);
+  const [globalIsPublic, setGlobalIsPublic] = React.useState(true); // Globální stav pro všechny ubytovny
 
   React.useEffect(() => {
     let unsubscribeAccommodation;
@@ -25,7 +26,12 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
           if (docSnapshot.exists()) {
             const data = docSnapshot.data();
             const sortedAccommodations = (data.types || []).sort((a, b) => a.type.localeCompare(b.type));
-            setAccommodations(sortedAccommodations); 
+            setAccommodations(sortedAccommodations);
+            
+            // Nastavení globálního stavu podle první ubytovny (všechny by měly mít stejný isPublic)
+            if (sortedAccommodations.length > 0 && sortedAccommodations[0].isPublic !== undefined) {
+              setGlobalIsPublic(sortedAccommodations[0].isPublic);
+            }
           } else {
             setDoc(accommodationDocRef, {
               types: []
@@ -51,11 +57,55 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
     fetchAccommodation();
   }, [db, userProfileData, showNotification]);
 
+  // Globální funkce pro změnu zveřejnění všech ubytoven
+  const handleGlobalToggleAccommodationPublic = async (isPublic) => {
+    if (!db || !userProfileData || userProfileData.role !== 'admin') {
+      showNotification("Nemáte oprávnenie na zmenu nastavení ubytovania.", 'error');
+      return;
+    }
+
+    if (isUpdating || accommodations.length === 0) return;
+    setIsUpdating(true);
+
+    try {
+      const accommodationDocRef = doc(db, 'settings', 'accommodation');
+      
+      // Aktualizace všech ubytoven v databázi
+      for (const accommodation of accommodations) {
+        await updateDoc(accommodationDocRef, {
+          types: arrayRemove(accommodation)
+        });
+        
+        await updateDoc(accommodationDocRef, {
+          types: arrayUnion({
+            ...accommodation,
+            isPublic: isPublic
+          })
+        });
+      }
+      
+      setGlobalIsPublic(isPublic);
+      showNotification(`Všetky ubytovne boli ${isPublic ? 'zverejnené' : 'skryté'}.`, 'success');
+      
+      if (sendAdminNotification) {
+        await sendAdminNotification({
+          type: 'globalToggleAccommodationPublic',
+          isPublic: isPublic,
+          count: accommodations.length
+        });
+      }
+    } catch (e) {
+      showNotification(`Chyba pri zmene viditeľnosti ubytovní: ${e.message}`, 'error');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const handleOpenAddAccommodationModal = () => {
     setAccommodationModalMode('add');
     setNewAccommodationType('');
     setNewAccommodationCapacity(0);
-    setNewAccommodationIsPublic(true);
+    setNewAccommodationIsPublic(globalIsPublic); // Použije se globální hodnota
     setCurrentAccommodationEdit(null);
     setShowAccommodationModal(true);
   };
@@ -64,7 +114,7 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
     setAccommodationModalMode('edit');
     setNewAccommodationType(accommodation.type);
     setNewAccommodationCapacity(accommodation.capacity);
-    setNewAccommodationIsPublic(accommodation.isPublic !== undefined ? accommodation.isPublic : true);
+    setNewAccommodationIsPublic(accommodation.isPublic !== undefined ? accommodation.isPublic : globalIsPublic);
     setCurrentAccommodationEdit(accommodation);
     setShowAccommodationModal(true);
   };
@@ -73,7 +123,7 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
     setShowAccommodationModal(false);
     setNewAccommodationType('');
     setNewAccommodationCapacity(0);
-    setNewAccommodationIsPublic(true);
+    setNewAccommodationIsPublic(globalIsPublic);
     setCurrentAccommodationEdit(null);
     setAccommodationModalMode('add');
   };
@@ -106,7 +156,7 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
           types: arrayUnion({ 
             type: trimmedType, 
             capacity: newAccommodationCapacity,
-            isPublic: newAccommodationIsPublic
+            isPublic: globalIsPublic // Použije se globální hodnota
           })
         });
         showNotification(`Typ ubytovania ${trimmedType} pridaný!`, 'success');
@@ -116,7 +166,7 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
             type: 'createAccommodation',
             accommodationType: trimmedType,
             capacity: newAccommodationCapacity,
-            isPublic: newAccommodationIsPublic
+            isPublic: globalIsPublic
           });
         }
       } else if (accommodationModalMode === 'edit') {
@@ -131,7 +181,7 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
           types: arrayUnion({ 
             type: trimmedType, 
             capacity: newAccommodationCapacity,
-            isPublic: newAccommodationIsPublic
+            isPublic: globalIsPublic // Použije se globální hodnota
           })
         });
         showNotification(`Typ ubytovania ${currentAccommodationEdit.type} zmenený na ${trimmedType}.`, 'success');
@@ -143,7 +193,7 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
             originalCapacity: currentAccommodationEdit.capacity,
             newType: trimmedType,
             newCapacity: newAccommodationCapacity,
-            isPublic: newAccommodationIsPublic
+            isPublic: globalIsPublic
           });
         }
       }
@@ -190,65 +240,31 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
     }
   };
 
-  const handleToggleAccommodationPublic = async (accommodation, isPublic) => {
-    if (!db || !userProfileData || userProfileData.role !== 'admin') {
-      showNotification("Nemáte oprávnenie na zmenu nastavení ubytovania.", 'error');
-      return;
-    }
-
-    if (isUpdating) return;
-    setIsUpdating(true);
-
-    try {
-      const accommodationDocRef = doc(db, 'settings', 'accommodation');
-      
-      await updateDoc(accommodationDocRef, {
-        types: arrayRemove(accommodation)
-      });
-      
-      await updateDoc(accommodationDocRef, {
-        types: arrayUnion({
-          ...accommodation,
-          isPublic: isPublic
-        })
-      });
-      
-      showNotification(`Ubytovna ${accommodation.type} ${isPublic ? 'zverejnená' : 'skrytá'}.`, 'success');
-      
-      if (sendAdminNotification) {
-        await sendAdminNotification({
-          type: 'toggleAccommodationPublic',
-          accommodationType: accommodation.type,
-          isPublic: isPublic
-        });
-      }
-    } catch (e) {
-      showNotification(`Chyba pri zmene viditeľnosti ubytovne: ${e.message}`, 'error');
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
   // Komponenta pro toggle switch
-  const ToggleSwitch = ({ isOn, onToggle, disabled }) => {
+  const ToggleSwitch = ({ isOn, onToggle, disabled, label }) => {
     return React.createElement(
-      'button',
-      {
-        type: 'button',
-        onClick: onToggle,
-        disabled: disabled,
-        className: `
-          relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-          ${isOn ? 'bg-green-500' : 'bg-gray-300'}
-          ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-        `,
-      },
-      React.createElement('span', {
-        className: `
-          inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200
-          ${isOn ? 'translate-x-6' : 'translate-x-1'}
-        `,
-      })
+      'div',
+      { className: 'flex items-center space-x-3' },
+      label && React.createElement('span', { className: 'text-sm text-gray-600' }, label),
+      React.createElement(
+        'button',
+        {
+          type: 'button',
+          onClick: onToggle,
+          disabled: disabled,
+          className: `
+            relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+            ${isOn ? 'bg-green-500' : 'bg-gray-300'}
+            ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+          `,
+        },
+        React.createElement('span', {
+          className: `
+            inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200
+            ${isOn ? 'translate-x-6' : 'translate-x-1'}
+          `,
+        })
+      )
     );
   };
 
@@ -259,6 +275,28 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
       'div',
       { className: 'space-y-4 p-6 border border-gray-200 rounded-lg shadow-sm mt-8' },
       React.createElement('h2', { className: 'text-2xl font-semibold text-gray-700 mb-4' }, 'Nastavenia ubytovania'),
+      
+      // Globální toggle switch
+      React.createElement(
+        'div',
+        { className: 'flex items-center justify-between p-4 bg-blue-50 rounded-lg mb-6' },
+        React.createElement(
+          'div',
+          { className: 'flex items-center space-x-3' },
+          React.createElement('span', { className: 'text-gray-700 font-medium' }, 'Globálne zverejnenie všetkých ubytovní'),
+          React.createElement(ToggleSwitch, {
+            isOn: globalIsPublic,
+            onToggle: () => handleGlobalToggleAccommodationPublic(!globalIsPublic),
+            disabled: isUpdating || accommodations.length === 0
+          })
+        ),
+        React.createElement(
+          'span',
+          { className: 'text-sm text-gray-500' },
+          globalIsPublic ? 'Všetky ubytovne sú viditeľné pre všetkých' : 'Všetky ubytovne sú skryté'
+        )
+      ),
+      
       React.createElement(
         'div',
         { className: 'space-y-3' },
@@ -275,16 +313,6 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
               React.createElement(
                 'div',
                 { className: 'flex items-center space-x-2' },
-                React.createElement(
-                  'div',
-                  { className: 'flex items-center space-x-2 mr-2' },
-                  React.createElement('span', { className: 'text-sm text-gray-600' }, 'Zverejnenie'),
-                  React.createElement(ToggleSwitch, {
-                    isOn: acc.isPublic !== undefined ? acc.isPublic : true,
-                    onToggle: () => handleToggleAccommodationPublic(acc, !(acc.isPublic !== undefined ? acc.isPublic : true)),
-                    disabled: isUpdating
-                  })
-                ),
                 React.createElement(
                   'button',
                   {
