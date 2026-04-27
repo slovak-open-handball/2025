@@ -6,9 +6,11 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
   const [currentAccommodationEdit, setCurrentAccommodationEdit] = React.useState(null); 
   const [newAccommodationType, setNewAccommodationType] = React.useState('');
   const [newAccommodationCapacity, setNewAccommodationCapacity] = React.useState(0);
+  const [newAccommodationIsPublic, setNewAccommodationIsPublic] = React.useState(true); // Nový stav pro toggle
   const [accommodationModalMode, setAccommodationModalMode] = React.useState('add'); 
   const [showConfirmDeleteAccommodationModal, setShowConfirmDeleteAccommodationModal] = React.useState(false);
   const [accommodationToDelete, setAccommodationToDelete] = React.useState(null);
+  const [isUpdating, setIsUpdating] = React.useState(false); // Stav pro prevenci duplicitních update
 
   React.useEffect(() => {
     let unsubscribeAccommodation;
@@ -27,7 +29,8 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
             setAccommodations(sortedAccommodations); 
           } else {
             setDoc(accommodationDocRef, {
-              types: []
+              types: [],
+              isPublic: false // Výchozí hodnota pro zveřejnění
             }).then(() => {
             }).catch(e => {
               showNotification(`Chyba pri vytváraní predvolených typov ubytovania: ${e.message}`, 'error');
@@ -49,12 +52,13 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
     };
 
     fetchAccommodation();
-  }, [db, userProfileData, showNotification]); // Pridané showNotification do závislostí
+  }, [db, userProfileData, showNotification]);
 
   const handleOpenAddAccommodationModal = () => {
     setAccommodationModalMode('add');
     setNewAccommodationType('');
     setNewAccommodationCapacity(0);
+    setNewAccommodationIsPublic(true); // Výchozí hodnota při přidávání
     setCurrentAccommodationEdit(null);
     setShowAccommodationModal(true);
   };
@@ -63,6 +67,7 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
     setAccommodationModalMode('edit');
     setNewAccommodationType(accommodation.type);
     setNewAccommodationCapacity(accommodation.capacity);
+    setNewAccommodationIsPublic(accommodation.isPublic !== undefined ? accommodation.isPublic : true); // Načtení existující hodnoty
     setCurrentAccommodationEdit(accommodation);
     setShowAccommodationModal(true);
   };
@@ -71,6 +76,7 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
     setShowAccommodationModal(false);
     setNewAccommodationType('');
     setNewAccommodationCapacity(0);
+    setNewAccommodationIsPublic(true);
     setCurrentAccommodationEdit(null);
     setAccommodationModalMode('add');
   };
@@ -100,10 +106,21 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
           return;
         }
         await updateDoc(accommodationDocRef, {
-          types: arrayUnion({ type: trimmedType, capacity: newAccommodationCapacity })
+          types: arrayUnion({ 
+            type: trimmedType, 
+            capacity: newAccommodationCapacity,
+            isPublic: newAccommodationIsPublic // Uložení hodnoty toggle
+          })
         });
         showNotification(`Typ ubytovania ${trimmedType} pridaný!`, 'success');
-        await sendAdminNotification({ type: 'createAccommodation', data: { type: trimmedType, capacity: newAccommodationCapacity } });
+        await sendAdminNotification({ 
+          type: 'createAccommodation', 
+          data: { 
+            type: trimmedType, 
+            capacity: newAccommodationCapacity,
+            isPublic: newAccommodationIsPublic 
+          } 
+        });
       } else if (accommodationModalMode === 'edit') {
         if (trimmedType !== currentAccommodationEdit.type && accommodations.some(acc => acc.type === trimmedType)) {
             showNotification(`Typ ubytovania "${trimmedType}" už existuje.`, 'error');
@@ -113,10 +130,24 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
           types: arrayRemove(currentAccommodationEdit)
         });
         await updateDoc(accommodationDocRef, {
-          types: arrayUnion({ type: trimmedType, capacity: newAccommodationCapacity })
+          types: arrayUnion({ 
+            type: trimmedType, 
+            capacity: newAccommodationCapacity,
+            isPublic: newAccommodationIsPublic // Uložení aktualizované hodnoty toggle
+          })
         });
         showNotification(`Typ ubytovania ${currentAccommodationEdit.type} zmenený na ${trimmedType}.`, 'success');
-        await sendAdminNotification({ type: 'editAccommodation', data: { originalType: currentAccommodationEdit.type, originalCapacity: currentAccommodationEdit.capacity, newType: trimmedType, newCapacity: newAccommodationCapacity } });
+        await sendAdminNotification({ 
+          type: 'editAccommodation', 
+          data: { 
+            originalType: currentAccommodationEdit.type, 
+            originalCapacity: currentAccommodationEdit.capacity,
+            originalIsPublic: currentAccommodationEdit.isPublic,
+            newType: trimmedType, 
+            newCapacity: newAccommodationCapacity,
+            newIsPublic: newAccommodationIsPublic
+          } 
+        });
       }
       handleCloseAccommodationModal();
     } catch (e) {
@@ -147,70 +178,155 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
         types: arrayRemove(accommodationToDelete)
       });
       showNotification(`Typ ubytovania ${accommodationToDelete.type} bol zmazaný.`, 'success');
-      await sendAdminNotification({ type: 'deleteAccommodation', data: { deletedType: accommodationToDelete.type, deletedCapacity: accommodationToDelete.capacity } });
+      await sendAdminNotification({ 
+        type: 'deleteAccommodation', 
+        data: { 
+          deletedType: accommodationToDelete.type, 
+          deletedCapacity: accommodationToDelete.capacity,
+          deletedIsPublic: accommodationToDelete.isPublic
+        } 
+      });
       handleCloseConfirmDeleteAccommodationModal();
     } catch (e) {
       showNotification(`Chyba pri mazaní ubytovania: ${e.message}`, 'error');
     }
   };
 
+  // Nová funkce pro toggle zveřejnění ubytovny
+  const handleToggleAccommodationPublic = async (accommodation, isPublic) => {
+    if (!db || !userProfileData || userProfileData.role !== 'admin') {
+      showNotification("Nemáte oprávnenie na zmenu nastavení ubytovania.", 'error');
+      return;
+    }
+
+    if (isUpdating) return;
+    setIsUpdating(true);
+
+    try {
+      const accommodationDocRef = doc(db, 'settings', 'accommodation');
+      
+      // Odstranění staré verze
+      await updateDoc(accommodationDocRef, {
+        types: arrayRemove(accommodation)
+      });
+      
+      // Přidání nové verze s aktualizovaným isPublic
+      await updateDoc(accommodationDocRef, {
+        types: arrayUnion({
+          ...accommodation,
+          isPublic: isPublic
+        })
+      });
+      
+      showNotification(`Ubytovna ${accommodation.type} ${isPublic ? 'zverejnená' : 'skrytá'}.`, 'success');
+      await sendAdminNotification({
+        type: 'toggleAccommodationPublic',
+        data: {
+          type: accommodation.type,
+          isPublic: isPublic
+        }
+      });
+    } catch (e) {
+      showNotification(`Chyba pri zmene viditeľnosti ubytovne: ${e.message}`, 'error');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Komponenta pro toggle switch
+  const ToggleSwitch = ({ isOn, onToggle, disabled }) => {
+    return React.createElement(
+      'button',
+      {
+        type: 'button',
+        onClick: onToggle,
+        disabled: disabled,
+        className: `
+          relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+          ${isOn ? 'bg-green-500' : 'bg-gray-300'}
+          ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+        `,
+      },
+      React.createElement('span', {
+        className: `
+          inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200
+          ${isOn ? 'translate-x-6' : 'translate-x-1'}
+        `,
+      })
+    );
+  };
+
   return React.createElement(
     React.Fragment,
     null,
     React.createElement(
+      'div',
+      { className: 'space-y-4 p-6 border border-gray-200 rounded-lg shadow-sm mt-8' },
+      React.createElement('h2', { className: 'text-2xl font-semibold text-gray-700 mb-4' }, 'Nastavenia ubytovania'),
+      React.createElement(
         'div',
-        { className: 'space-y-4 p-6 border border-gray-200 rounded-lg shadow-sm mt-8' }, 
-        React.createElement('h2', { className: 'text-2xl font-semibold text-gray-700 mb-4' }, 'Nastavenia ubytovania'),
-        React.createElement(
-            'div',
-            { className: 'space-y-3' }, 
-            accommodations.length > 0 ? (
-                accommodations.map((acc, index) => (
-                    React.createElement(
-                        'div',
-                        { key: acc.type, className: 'flex justify-between items-center bg-gray-50 p-3 rounded-md shadow-sm' },
-                        React.createElement('span', { className: 'text-gray-800 font-medium' }, `${acc.type} (kapacita: ${acc.capacity})`),
-                        React.createElement(
-                            'div',
-                            { className: 'flex space-x-2' },
-                            React.createElement(
-                                'button',
-                                {
-                                    type: 'button',
-                                    onClick: () => handleOpenEditAccommodationModal(acc),
-                                    className: 'bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-bold py-1 px-3 rounded-lg transition-colors duration-200 focus:outline-none focus:shadow-outline'
-                                },
-                                'Upraviť'
-                            ),
-                            React.createElement(
-                                'button',
-                                {
-                                    type: 'button',
-                                    onClick: () => handleOpenConfirmDeleteAccommodationModal(acc),
-                                    className: 'bg-red-500 hover:bg-red-600 text-white text-sm font-bold py-1 px-3 rounded-lg transition-colors duration-200 focus:outline-none focus:shadow-outline'
-                                },
-                                'Vymazať'
-                            )
-                        )
-                    )
-                ))
-            ) : (
-                React.createElement('p', { className: 'text-gray-500 text-center' }, 'Zatiaľ nie sú definované žiadne typy ubytovania.')
-            )
-        ),
-        React.createElement(
-            'div',
-            { className: 'flex justify-center mt-4' }, 
+        { className: 'space-y-3' },
+        accommodations.length > 0 ? (
+          accommodations.map((acc, index) => (
             React.createElement(
-                'button',
-                {
+              'div',
+              { key: acc.type, className: 'flex justify-between items-center bg-gray-50 p-3 rounded-md shadow-sm' },
+              React.createElement(
+                'div',
+                { className: 'flex items-center space-x-3 flex-1' },
+                React.createElement('span', { className: 'text-gray-800 font-medium' }, `${acc.type} (kapacita: ${acc.capacity})`),
+                React.createElement(
+                  'div',
+                  { className: 'flex items-center space-x-2 ml-auto mr-4' },
+                  React.createElement('span', { className: 'text-sm text-gray-600' }, 'Zverejniť'),
+                  React.createElement(ToggleSwitch, {
+                    isOn: acc.isPublic !== undefined ? acc.isPublic : true,
+                    onToggle: () => handleToggleAccommodationPublic(acc, !(acc.isPublic !== undefined ? acc.isPublic : true)),
+                    disabled: isUpdating
+                  })
+                )
+              ),
+              React.createElement(
+                'div',
+                { className: 'flex space-x-2' },
+                React.createElement(
+                  'button',
+                  {
                     type: 'button',
-                    onClick: handleOpenAddAccommodationModal,
-                    className: 'bg-green-500 hover:bg-green-600 text-white font-bold p-3 rounded-full shadow-lg transition-colors duration-200 focus:outline-none focus:shadow-outline w-12 h-12 flex items-center justify-center'
-                },
-                React.createElement('span', { className: 'text-xl' }, '+')
+                    onClick: () => handleOpenEditAccommodationModal(acc),
+                    className: 'bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-bold py-1 px-3 rounded-lg transition-colors duration-200 focus:outline-none focus:shadow-outline'
+                  },
+                  'Upraviť'
+                ),
+                React.createElement(
+                  'button',
+                  {
+                    type: 'button',
+                    onClick: () => handleOpenConfirmDeleteAccommodationModal(acc),
+                    className: 'bg-red-500 hover:bg-red-600 text-white text-sm font-bold py-1 px-3 rounded-lg transition-colors duration-200 focus:outline-none focus:shadow-outline'
+                  },
+                  'Vymazať'
+                )
+              )
             )
+          ))
+        ) : (
+          React.createElement('p', { className: 'text-gray-500 text-center' }, 'Zatiaľ nie sú definované žiadne typy ubytovania.')
         )
+      ),
+      React.createElement(
+        'div',
+        { className: 'flex justify-center mt-4' },
+        React.createElement(
+          'button',
+          {
+            type: 'button',
+            onClick: handleOpenAddAccommodationModal,
+            className: 'bg-green-500 hover:bg-green-600 text-white font-bold p-3 rounded-full shadow-lg transition-colors duration-200 focus:outline-none focus:shadow-outline w-12 h-12 flex items-center justify-center'
+          },
+          React.createElement('span', { className: 'text-xl' }, '+')
+        )
+      )
     ),
 
     showAccommodationModal && React.createElement(
@@ -231,16 +347,35 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
           }
         ),
         React.createElement(
-            'input',
-            {
-              type: 'number',
-              className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mb-4',
-              placeholder: 'Zadajte kapacitu',
-              value: newAccommodationCapacity,
-              onChange: (e) => setNewAccommodationCapacity(parseInt(e.target.value) || 0), 
-              min: 0,
-            }
+          'input',
+          {
+            type: 'number',
+            className: 'shadow appearance-none border rounded-lg w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 mb-4',
+            placeholder: 'Zadajte kapacitu',
+            value: newAccommodationCapacity,
+            onChange: (e) => setNewAccommodationCapacity(parseInt(e.target.value) || 0),
+            min: 0,
+          }
+        ),
+        React.createElement(
+          'div',
+          { className: 'flex items-center justify-between mb-4 p-3 bg-blue-50 rounded-lg' },
+          React.createElement(
+            'div',
+            { className: 'flex items-center space-x-3' },
+            React.createElement('span', { className: 'text-gray-700 font-medium' }, 'Zverejniť ubytovňu'),
+            React.createElement(ToggleSwitch, {
+              isOn: newAccommodationIsPublic,
+              onToggle: () => setNewAccommodationIsPublic(!newAccommodationIsPublic),
+              disabled: false
+            })
           ),
+          React.createElement(
+            'span',
+            { className: 'text-sm text-gray-500' },
+            newAccommodationIsPublic ? 'Ubytovňa bude viditeľná pre všetkých' : 'Ubytovňa bude skrytá'
+          )
+        ),
         React.createElement(
           'div',
           { className: 'flex justify-end space-x-3' },
