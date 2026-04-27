@@ -84,12 +84,13 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
       setGlobalIsPublic(isPublic);
       showNotification(`Všetky ubytovne boli ${isPublic ? 'zverejnené' : 'skryté'}.`, 'success');
       
+      // Notifikácia pre globálne zverejnenie - používame existujúci typ 'updateSettings'
       if (sendAdminNotification) {
+        const changesMade = `Globálne ${isPublic ? 'zverejnenie' : 'skrytie'} všetkých ${accommodations.length} ubytovní`;
         await sendAdminNotification({
-          type: 'globalToggleAccommodationPublic',
+          type: 'updateSettings',
           data: {
-            isPublic: isPublic,
-            count: accommodations.length
+            changesMade: changesMade
           }
         });
       }
@@ -165,8 +166,7 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
             type: 'createAccommodation',
             data: {
               type: trimmedType,
-              capacity: newAccommodationCapacity,
-              isPublic: globalIsPublic
+              capacity: newAccommodationCapacity
             }
           });
         }
@@ -194,8 +194,7 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
               originalType: currentAccommodationEdit.type,
               originalCapacity: currentAccommodationEdit.capacity,
               newType: trimmedType,
-              newCapacity: newAccommodationCapacity,
-              isPublic: globalIsPublic
+              newCapacity: newAccommodationCapacity
             }
           });
         }
