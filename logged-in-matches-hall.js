@@ -3115,8 +3115,6 @@ const matchesHallApp = ({ userProfileData }) => {
         return 'Neznámy hráč';
     };
 
-    const { useState, useEffect } = React;
-
     const getRemainingExclusionTime = (event, currentMatchTime, exclusionDurationSeconds) => {
         if (!event || !event.minute !== undefined || !event.second !== undefined) return null;
         
