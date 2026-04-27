@@ -3092,8 +3092,9 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                                 (!currentAccommodationObject || currentAccommodationObject.isPublic !== false);
                         
                             if (shouldShowAccommodationName) {
-                                return React.createElement('p', { className: 'text-md text-gray-700' }, 
-                                    `Typ ubytovania: ${accommodationType} - Ubytovňa: ${accommodationName || 'nepriradená'}`
+                                return React.createElement('div', { className: 'flex justify-between items-center' },
+                                    React.createElement('span', { className: 'text-md text-gray-700' }, `Typ ubytovania: ${accommodationType}`),
+                                    React.createElement('span', { className: 'text-md text-gray-700 text-right' }, `Ubytovňa: ${accommodationName || 'nepriradená'}`)
                                 );
                             }
                             return React.createElement('p', { className: 'text-md text-gray-700' }, `Typ ubytovania: ${accommodationType}`);
