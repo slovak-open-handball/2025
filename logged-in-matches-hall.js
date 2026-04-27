@@ -144,7 +144,129 @@ floatingBoxStyle.textContent = `
 `;
 document.head.appendChild(floatingBoxStyle);
 
+const exclusionTimerStyle = document.createElement('style');
+exclusionTimerStyle.textContent = `
+    .exclusion-timer {
+        font-size: 10px;
+        font-family: monospace;
+        background: #fed7aa;
+        color: #9b2c1d;
+        padding: 2px 6px;
+        border-radius: 12px;
+        font-weight: bold;
+        animation: pulse 1s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+    
+    .excluded-player {
+        background-color: #fff7ed;
+        border-left: 3px solid #ea580c;
+    }
+    
+    .excluded-player .excluded-label {
+        color: #ea580c;
+        font-weight: bold;
+        font-size: 11px;
+    }
+`;
+document.head.appendChild(exclusionTimerStyle);
+
 const { useState, useEffect } = React;
+
+const getRemainingExclusionTime = (event, currentMatchTime, exclusionDurationSeconds) => {
+    if (!event || !event.minute !== undefined || !event.second !== undefined) return null;
+    
+    const eventTimeInSeconds = (event.minute || 0) * 60 + (event.second || 0);
+    const elapsedSinceExclusion = currentMatchTime - eventTimeInSeconds;
+    const remaining = exclusionDurationSeconds - elapsedSinceExclusion;
+    
+    if (remaining <= 0) return 0;
+    return remaining;
+};
+
+// Funkcia na formátovanie zostávajúceho času
+const formatRemainingTime = (seconds) => {
+    if (seconds === null || seconds === undefined) return '';
+    if (seconds <= 0) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
+// Funkcia na získanie aktívnych vylúčení pre tím
+const getActiveExclusions = (teamDetails, team, currentMatchTime, exclusionDurationSeconds) => {
+    if (!matchEvents || matchEvents.length === 0) return [];
+    
+    const activeExclusions = [];
+    
+    matchEvents.forEach(event => {
+        // Hľadáme vylúčenia (exclusion) pre daný tím
+        if (event.type === 'exclusion' && event.team === team && event.playerRef) {
+            const eventTimeInSeconds = (event.minute || 0) * 60 + (event.second || 0);
+            const elapsedSinceExclusion = currentMatchTime - eventTimeInSeconds;
+            
+            // Ak ešte neuplynul čas vylúčenia
+            if (elapsedSinceExclusion < exclusionDurationSeconds) {
+                const playerName = getPlayerNameFromRef(event.playerRef);
+                const remaining = exclusionDurationSeconds - elapsedSinceExclusion;
+                
+                // Získame číslo dresu
+                let jerseyNumber = '';
+                if (!event.playerRef.staffType) {
+                    const user = users.find(u => u.id === event.playerRef.userId);
+                    if (user && teamDetails) {
+                        const parts = event.playerRef.teamIdentifier?.split(' ') || [];
+                        if (parts.length >= 2) {
+                            const groupAndOrder = parts.pop();
+                            const category = parts.join(' ');
+                            
+                            let groupLetter = '', order = '';
+                            for (let i = 0; i < groupAndOrder.length; i++) {
+                                const char = groupAndOrder[i];
+                                if (char >= '0' && char <= '9') {
+                                    order = groupAndOrder.substring(i);
+                                    groupLetter = groupAndOrder.substring(0, i);
+                                    break;
+                                }
+                            }
+                            
+                            const fullGroupName = `skupina ${groupLetter}`;
+                            const orderNum = parseInt(order, 10);
+                            
+                            const userTeams = user.teams?.[category];
+                            if (userTeams && Array.isArray(userTeams)) {
+                                const teamObj = userTeams.find(t => t.groupName === fullGroupName && t.order === orderNum);
+                                if (teamObj && teamObj.playerDetails && event.playerRef.playerIndex !== undefined) {
+                                    const player = teamObj.playerDetails[event.playerRef.playerIndex];
+                                    if (player && player.jerseyNumber) {
+                                        jerseyNumber = player.jerseyNumber;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                activeExclusions.push({
+                    playerName: playerName,
+                    jerseyNumber: jerseyNumber,
+                    remainingTime: remaining,
+                    eventId: event.id,
+                    eventTime: eventTimeInSeconds
+                });
+            }
+        }
+    });
+    
+    // Zoradenie podľa zostávajúceho času (najskôr tí, ktorým to najskôr vyprší)
+    activeExclusions.sort((a, b) => a.remainingTime - b.remainingTime);
+    
+    return activeExclusions;
+};
 
 // Funkcia na formátovanie dátumu s dňom v týždni
 const getDayName = (date) => {
@@ -3048,25 +3170,23 @@ const matchesHallApp = ({ userProfileData }) => {
             return 'Neznámy člen RT';
         }
         
-        // Pre hráča - OPRAVA: Vyhľadávanie podľa unikátneho identifikátora
+        // Pre hráča - OPRAVENÉ VYHĽADÁVANIE
         if (playerRef.playerIndex !== undefined) {
             // Získame detail tímu podľa identifikátora
             const teamDetails = getTeamDetailsFromIdentifier(playerRef.teamIdentifier);
             if (!teamDetails || !teamDetails.team.playerDetails) return 'Neznámy hráč';
             
-            // 🔴 OPRAVA: Namiesto indexu hľadáme podľa kombinácie mena a priezviska
-            // alebo podľa nejakého unikátneho ID, ak existuje
             const players = teamDetails.team.playerDetails;
             
-            // Prvý pokus: Ak máme uložené aj meno v referencii, použijeme ho
-            if (playerRef.playerName) {
-                const player = players.find(p => 
-                    `${p.lastName} ${p.firstName}` === playerRef.playerName
-                );
-                if (player) return `${player.lastName} ${player.firstName}`;
+            // Skúsime nájsť hráča podľa uloženého ID (ak existuje)
+            if (playerRef.playerId) {
+                const player = players.find(p => p.id === playerRef.playerId);
+                if (player && player.firstName && player.lastName) {
+                    return `${player.lastName} ${player.firstName}`;
+                }
             }
             
-            // Druhý pokus: Skúsime podľa indexu (ale to je nespoľahlivé)
+            // Skúsime podľa indexu (ale to je nespoľahlivé)
             if (playerRef.playerIndex < players.length) {
                 const player = players[playerRef.playerIndex];
                 if (player && player.firstName && player.lastName) {
@@ -3074,10 +3194,10 @@ const matchesHallApp = ({ userProfileData }) => {
                 }
             }
             
-            // Tretí pokus: Prehľadáme všetkých hráčov v tíme
+            // Posledná možnosť - prehľadáme všetkých hráčov
             for (const player of players) {
                 if (player.firstName && player.lastName) {
-                    // Ak máme v referencii uložené číslo dresu, môžeme podľa neho hľadať
+                    // Ak máme uložené číslo dresu v referencii
                     if (playerRef.jerseyNumber && player.jerseyNumber === playerRef.jerseyNumber) {
                         return `${player.lastName} ${player.firstName}`;
                     }
@@ -3086,6 +3206,44 @@ const matchesHallApp = ({ userProfileData }) => {
         }
         
         return 'Neznámy hráč';
+    };
+    
+    // PRIDAJTE NOVÚ FUNKCIU NA ZÍSKANIE ČÍSLA DRESU
+    const getJerseyNumberFromRef = (playerRef) => {
+        if (!playerRef || !playerRef.userId || playerRef.staffType) return '';
+        
+        const user = users.find(u => u.id === playerRef.userId);
+        if (!user) return '';
+        
+        // Získame detail tímu podľa identifikátora
+        const teamDetails = getTeamDetailsFromIdentifier(playerRef.teamIdentifier);
+        if (!teamDetails || !teamDetails.team.playerDetails) return '';
+        
+        const players = teamDetails.team.playerDetails;
+        
+        // Skúsime nájsť hráča podľa uloženého ID
+        if (playerRef.playerId) {
+            const player = players.find(p => p.id === playerRef.playerId);
+            if (player && player.jerseyNumber) return player.jerseyNumber;
+        }
+        
+        // Skúsime podľa indexu
+        if (playerRef.playerIndex !== undefined && playerRef.playerIndex < players.length) {
+            const player = players[playerRef.playerIndex];
+            if (player && player.jerseyNumber) return player.jerseyNumber;
+        }
+        
+        // Prehľadáme všetkých hráčov
+        for (const player of players) {
+            if (player.firstName && player.lastName) {
+                const playerFullName = `${player.lastName} ${player.firstName}`;
+                if (playerRef.playerName === playerFullName) {
+                    return player.jerseyNumber || '';
+                }
+            }
+        }
+        
+        return '';
     };
 
     // Načítanie kategórií z databázy
@@ -4062,12 +4220,25 @@ const matchesHallApp = ({ userProfileData }) => {
                         'Nedostupné'
                     )
                 );
-            }        
+            }
             
-            // Získame aktívnych hráčov (ktorí nie sú odstránení pre tento zápas)
-            const activePlayers = teamData.playerDetails?.filter(p => p && !p.removedForMatch) || [];
+            // Získanie dĺžky vylúčenia z kategórie (v sekundách)
+            const currentCategory = categories.find(c => c.name === selectedMatch?.categoryName);
+            const exclusionDurationSeconds = (currentCategory?.exclusionTime || 2) * 60;
             
-            // 🔥 DÔLEŽITÉ: Pre každého aktívneho hráča si zapamätáme jeho PÔVODNÝ index v playerDetails
+            // Získanie aktívnych vylúčení pre tento tím
+            const activeExclusions = getActiveExclusions(teamDetails, teamType, matchTime, exclusionDurationSeconds);
+            
+            // Získame aktívnych hráčov (ktorí nie sú odstránení pre tento zápas A NIE SÚ VYLÚČENÍ)
+            const allActivePlayers = teamData.playerDetails?.filter(p => p && !p.removedForMatch) || [];
+            
+            // Odfiltrujeme hráčov, ktorí sú momentálne vylúčení
+            const excludedPlayerNames = activeExclusions.map(e => e.playerName);
+            const activePlayers = allActivePlayers.filter(p => {
+                const playerFullName = `${p.lastName} ${p.firstName}`;
+                return !excludedPlayerNames.includes(playerFullName);
+            });
+            
             const activePlayersWithOriginalIndex = activePlayers.map(player => ({
                 ...player,
                 originalIndex: teamData.playerDetails.findIndex(p => 
@@ -4077,64 +4248,89 @@ const matchesHallApp = ({ userProfileData }) => {
                 )
             }));
             
-            // Získame odstránených hráčov pre tento zápas
             const removedPlayers = teamData.matchSpecificRemovals?.[selectedMatch.id]?.removedPlayersForMatch || [];
-            
-            // Získame odstránených členov RT pre tento zápas
             const removedStaff = teamData.matchSpecificRemovals?.[selectedMatch.id]?.removedStaff || [];
             
-            // Získame AKTÍVNYCH členov RT (ktorí NIE sú odstránení pre tento zápas)
             const activeMenStaff = teamData.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
             const activeWomenStaff = teamData.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
             
-            // Pre členov RT si tiež musíme zapamätať pôvodné indexy
-            const activeMenStaffWithOriginalIndex = activeMenStaff.map(member => ({
-                ...member,
-                originalIndex: teamData.menTeamMemberDetails.findIndex(m => 
-                    m.firstName === member.firstName && m.lastName === member.lastName
-                )
-            }));
+            const totalRemoved = removedPlayers.length + removedStaff.length;
             
-            const activeWomenStaffWithOriginalIndex = activeWomenStaff.map(member => ({
-                ...member,
-                originalIndex: teamData.womenTeamMemberDetails.findIndex(m => 
-                    m.firstName === member.firstName && m.lastName === member.lastName
-                )
-            }));
-            
-            // Získame odstránených členov RT podľa typu
-            const removedMenStaff = removedStaff.filter(s => s.staffType === 'men');
-            const removedWomenStaff = removedStaff.filter(s => s.staffType === 'women');
-            
-            // Celkový počet odstránených
-            const totalRemoved = removedPlayers.length + removedMenStaff.length + removedWomenStaff.length;
-            
-            // Zistíme, či je zápas ukončený alebo prebieha
             const isMatchCompleted = selectedMatch?.status === 'completed';
             const isMatchInProgress = selectedMatch?.status === 'in-progress' || selectedMatch?.status === 'paused';
             const isMatchScheduled = selectedMatch?.status === 'scheduled';
-            
-            // Zistíme, či sa má sekcia "Ostatní" zobraziť (vždy, ak je aspoň jeden odstránený člen)
             const showRemovedSection = totalRemoved > 0;
+            const showExclusionsSection = activeExclusions.length > 0 && (selectedMatch?.status === 'in-progress' || selectedMatch?.status === 'paused');
             
-            // DEBUG výpis
-            console.log(`📋 Render tímu ${teamType} (${teamName}):`);
-            console.log(`   - Hráčov aktívnych: ${activePlayers.length}`);
-            console.log(`   - Hráčov odstránených: ${removedPlayers.length}`);
-            console.log(`   - RT muži aktívni: ${activeMenStaff.length}`);
-            console.log(`   - RT ženy aktívne: ${activeWomenStaff.length}`);
+            // Automatická aktualizácia každú sekundu pre vylúčenia
+            React.useEffect(() => {
+                if (!showExclusionsSection) return;
+                
+                const interval = setInterval(() => {
+                    setForceUpdate(prev => prev + 1);
+                }, 1000);
+                
+                return () => clearInterval(interval);
+            }, [showExclusionsSection]);
             
             return React.createElement(
                 'div',
                 null,
-                // Nadpis sekcie Hráči
+                
+                // Sekcia VYLÚČENÍ HRÁČI (zobrazuje sa len počas prebiehajúceho zápasu)
+                showExclusionsSection && React.createElement(
+                    'div',
+                    { className: 'mb-4 p-3 bg-orange-50 rounded-lg border border-orange-200' },
+                    React.createElement(
+                        'h4',
+                        { className: 'font-semibold text-sm text-orange-700 mb-2 flex items-center gap-2' },
+                        React.createElement('i', { className: 'fa-solid fa-hourglass-half text-xs' }),
+                        `Vylúčení hráči (${activeExclusions.length})`
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'space-y-2' },
+                        activeExclusions.map((exclusion, idx) => 
+                            React.createElement(
+                                'div',
+                                { 
+                                    key: `${teamType}-exclusion-${exclusion.eventId}-${idx}`,
+                                    className: 'flex items-center justify-between gap-2 p-2 rounded bg-white border border-orange-200 text-sm'
+                                },
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex items-center gap-2' },
+                                    React.createElement('i', { className: 'fa-solid fa-user-slash text-orange-500 text-xs' }),
+                                    exclusion.jerseyNumber && React.createElement(
+                                        'span',
+                                        { className: 'font-bold text-gray-700 text-xs bg-gray-100 px-1.5 py-0.5 rounded' },
+                                        `${exclusion.jerseyNumber}`
+                                    ),
+                                    React.createElement(
+                                        'span',
+                                        { className: 'font-medium text-gray-700' },
+                                        exclusion.playerName
+                                    )
+                                ),
+                                React.createElement(
+                                    'div',
+                                    { className: 'exclusion-timer' },
+                                    React.createElement('i', { className: 'fa-solid fa-clock mr-1' }),
+                                    formatRemainingTime(Math.ceil(exclusion.remainingTime))
+                                )
+                            )
+                        )
+                    )
+                ),
+                
+                // Sekcia Hráči
                 React.createElement(
                     'h4',
-                    { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1' },
+                    { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1 mt-3' },
                     React.createElement('i', { className: 'fa-solid fa-users text-xs text-gray-500' }),
                     `Hráči (${activePlayers.length})`
                 ),
-        
+                
                 showPlayerStats && React.createElement(
                     'div',
                     { className: 'grid grid-cols-12 gap-1 mb-2 px-2 text-xs font-semibold text-gray-600 bg-gray-100 py-2 rounded' },
@@ -4147,7 +4343,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     React.createElement('div', { className: 'col-span-1 text-center' }, '2\'')
                 ),
                 
-                // Zoznam aktívnych hráčov - POUŽÍVAME activePlayersWithOriginalIndex
+                // Zoznam aktívnych hráčov (bez vylúčených)
                 React.createElement(
                     'div',
                     { className: showPlayerStats ? 'space-y-1' : 'space-y-1' },
@@ -4163,14 +4359,12 @@ const matchesHallApp = ({ userProfileData }) => {
                                     userId: teamDetails.userId,
                                     teamIdentifier: teamType === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier,
                                     displayName: `${player.lastName} ${player.firstName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`,
-                                    index: player.originalIndex,  // 🔥 POUŽÍVAME PÔVODNÝ INDEX!
+                                    index: player.originalIndex,
                                     isStaff: false
                                 };
                                 
-                                // Štatistiky pre režim zobrazenia štatistík
                                 const stats = showPlayerStats ? getPlayerStats(playerIdentifier) : null;
                                 
-                                // Určenie onClick správania podľa stavu zápasu
                                 let onClickHandler = undefined;
                                 let cursorClass = '';
                                 
@@ -4190,7 +4384,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             setEventTeam(null);
                                             setEventSubType(null);
                                             setSelectedPlayerForEvent(null);
-        
+                                            
                                             if (currentEventType === 'goal' && currentEventSubType === null) {
                                                 addMatchEvent('goal', currentEventTeam, null, playerIdentifier);
                                             } else if (currentEventType === 'penalty' && currentEventSubType === 'scored') {
@@ -4235,27 +4429,21 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 `${player.lastName} ${player.firstName}`
                                             )
                                         ),
-                                        // GÓLY - zobrazí nič ak je 0
                                         React.createElement('div', { className: 'col-span-1 text-center font-bold text-green-600' }, 
                                             totalGoals === 0 ? '' : totalGoals
                                         ),
-                                        // 7M HODY - zobrazí nič ak je 0/0
                                         React.createElement('div', { className: 'col-span-2 text-center font-bold text-blue-600' }, 
                                             penaltiesText
                                         ),
-                                        // ŽLTÉ KARTY
                                         React.createElement('div', { className: 'col-span-1 text-center font-bold text-yellow-600' }, 
                                             (stats?.yellowCards || 0) === 0 ? '' : (stats?.yellowCards || 0)
                                         ),
-                                        // ČERVENÉ KARTY
                                         React.createElement('div', { className: 'col-span-1 text-center font-bold text-red-600' }, 
                                             (stats?.redCards || 0) === 0 ? '' : (stats?.redCards || 0)
                                         ),
-                                        // MODRÉ KARTY (MK)
                                         React.createElement('div', { className: 'col-span-1 text-center font-bold text-blue-800' }, 
                                             (stats?.blueCards || 0) === 0 ? '' : (stats?.blueCards || 0)
                                         ),
-                                        // VYLÚČENIA (2')
                                         React.createElement('div', { className: 'col-span-1 text-center font-bold text-orange-600' }, 
                                             (stats?.exclusions || 0) === 0 ? '' : (stats?.exclusions || 0)
                                         )
@@ -4298,7 +4486,7 @@ const matchesHallApp = ({ userProfileData }) => {
                         )
                 ),
                 
-                // Sekcia Ostatní - odstránení hráči a členovia RT
+                // Sekcia Ostatní (odstránení hráči a členovia RT) - rovnaká ako pôvodná
                 showRemovedSection && React.createElement(
                     'div',
                     { className: 'mt-4 pt-3 border-t border-gray-200' },
@@ -4311,7 +4499,6 @@ const matchesHallApp = ({ userProfileData }) => {
                     React.createElement(
                         'div',
                         { className: 'space-y-1' },
-                        // Odstránení hráči
                         [...removedPlayers]
                             .sort((a, b) => {
                                 const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
@@ -4355,7 +4542,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                     )
                                 );
                             }),
-                        // Odstránení členovia RT (muži)
                         removedMenStaff.map((member, idx) => {
                             let onClickHandler = undefined;
                             let cursorClass = 'cursor-not-allowed opacity-60';
@@ -4388,7 +4574,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                 )
                             );
                         }),
-                        // Odstránení členovia RT (ženy)
                         removedWomenStaff.map((member, idx) => {
                             let onClickHandler = undefined;
                             let cursorClass = 'cursor-not-allowed opacity-60';
@@ -5401,37 +5586,8 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     
                                                     let jerseyNumber = '';
                                                     if (event.playerRef && !event.playerRef.staffType) {
-                                                        const user = users.find(u => u.id === event.playerRef.userId);
-                                                        if (user) {
-                                                            const parts = event.playerRef.teamIdentifier.split(' ');
-                                                            const groupAndOrder = parts.pop();
-                                                            const category = parts.join(' ');
-                                                            
-                                                            let groupLetter = '';
-                                                            let order = '';
-                                                            for (let i = 0; i < groupAndOrder.length; i++) {
-                                                                const char = groupAndOrder[i];
-                                                                if (char >= '0' && char <= '9') {
-                                                                    order = groupAndOrder.substring(i);
-                                                                    groupLetter = groupAndOrder.substring(0, i);
-                                                                    break;
-                                                                }
-                                                            }
-                                                            
-                                                            const fullGroupName = `skupina ${groupLetter}`;
-                                                            const orderNum = parseInt(order, 10);
-                                                            
-                                                            const userTeams = user.teams?.[category];
-                                                            if (userTeams && Array.isArray(userTeams)) {
-                                                                const team = userTeams.find(t => t.groupName === fullGroupName && t.order === orderNum);
-                                                                if (team && team.playerDetails && event.playerRef.playerIndex !== undefined) {
-                                                                    const player = team.playerDetails[event.playerRef.playerIndex];
-                                                                    if (player && player.jerseyNumber) {
-                                                                        jerseyNumber = player.jerseyNumber;
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
+                                                        // Použijeme novú funkciu na získanie čísla dresu
+                                                        jerseyNumber = getJerseyNumberFromRef(event.playerRef);
                                                     }
                                                     
                                                     let eventIcon = '';
@@ -6418,37 +6574,8 @@ const matchesHallApp = ({ userProfileData }) => {
                                                     
                                                     let jerseyNumber = '';
                                                     if (event.playerRef && !event.playerRef.staffType) {
-                                                        const user = users.find(u => u.id === event.playerRef.userId);
-                                                        if (user) {
-                                                            const parts = event.playerRef.teamIdentifier.split(' ');
-                                                            const groupAndOrder = parts.pop();
-                                                            const category = parts.join(' ');
-                                                            
-                                                            let groupLetter = '';
-                                                            let order = '';
-                                                            for (let i = 0; i < groupAndOrder.length; i++) {
-                                                                const char = groupAndOrder[i];
-                                                                if (char >= '0' && char <= '9') {
-                                                                    order = groupAndOrder.substring(i);
-                                                                    groupLetter = groupAndOrder.substring(0, i);
-                                                                    break;
-                                                                }
-                                                            }
-                                                            
-                                                            const fullGroupName = `skupina ${groupLetter}`;
-                                                            const orderNum = parseInt(order, 10);
-                                                            
-                                                            const userTeams = user.teams?.[category];
-                                                            if (userTeams && Array.isArray(userTeams)) {
-                                                                const team = userTeams.find(t => t.groupName === fullGroupName && t.order === orderNum);
-                                                                if (team && team.playerDetails && event.playerRef.playerIndex !== undefined) {
-                                                                    const player = team.playerDetails[event.playerRef.playerIndex];
-                                                                    if (player && player.jerseyNumber) {
-                                                                        jerseyNumber = player.jerseyNumber;
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
+                                                        // Použijeme novú funkciu na získanie čísla dresu
+                                                        jerseyNumber = getJerseyNumberFromRef(event.playerRef);
                                                     }
                                                     
                                                     let eventIcon = '';
