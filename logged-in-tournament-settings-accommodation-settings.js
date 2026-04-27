@@ -111,7 +111,6 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
         });
         showNotification(`Typ ubytovania ${trimmedType} pridaný!`, 'success');
         
-        // Opravené posielanie notifikácie - odstránené undefined hodnoty
         if (sendAdminNotification) {
           await sendAdminNotification({
             type: 'createAccommodation',
@@ -137,7 +136,6 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
         });
         showNotification(`Typ ubytovania ${currentAccommodationEdit.type} zmenený na ${trimmedType}.`, 'success');
         
-        // Opravené posielanie notifikácie - odstránené undefined hodnoty
         if (sendAdminNotification) {
           await sendAdminNotification({
             type: 'editAccommodation',
@@ -179,7 +177,6 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
       });
       showNotification(`Typ ubytovania ${accommodationToDelete.type} bol zmazaný.`, 'success');
       
-      // Opravené posielanie notifikácie - odstránené undefined hodnoty
       if (sendAdminNotification) {
         await sendAdminNotification({
           type: 'deleteAccommodation',
@@ -218,7 +215,6 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
       
       showNotification(`Ubytovna ${accommodation.type} ${isPublic ? 'zverejnená' : 'skrytá'}.`, 'success');
       
-      // Opravené posielanie notifikácie - odstránené undefined hodnoty
       if (sendAdminNotification) {
         await sendAdminNotification({
           type: 'toggleAccommodationPublic',
@@ -274,21 +270,21 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
               React.createElement(
                 'div',
                 { className: 'flex items-center space-x-3 flex-1' },
-                React.createElement('span', { className: 'text-gray-800 font-medium' }, `${acc.type} (kapacita: ${acc.capacity})`),
+                React.createElement('span', { className: 'text-gray-800 font-medium' }, `${acc.type} (kapacita: ${acc.capacity})`)
+              ),
+              React.createElement(
+                'div',
+                { className: 'flex items-center space-x-2' },
                 React.createElement(
                   'div',
-                  { className: 'flex items-center space-x-2 ml-auto mr-4' },
+                  { className: 'flex items-center space-x-2 mr-2' },
                   React.createElement('span', { className: 'text-sm text-gray-600' }, 'Zverejniť'),
                   React.createElement(ToggleSwitch, {
                     isOn: acc.isPublic !== undefined ? acc.isPublic : true,
                     onToggle: () => handleToggleAccommodationPublic(acc, !(acc.isPublic !== undefined ? acc.isPublic : true)),
                     disabled: isUpdating
                   })
-                )
-              ),
-              React.createElement(
-                'div',
-                { className: 'flex space-x-2' },
+                ),
                 React.createElement(
                   'button',
                   {
