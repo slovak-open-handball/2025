@@ -3149,7 +3149,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                                     React.createElement(
                                         'div',
                                         { className: 'w-1/2' },
-                                        React.createElement('span', { className: 'text-md text-gray-700 font-semibold' }, `Celkom: ${totalPrice} €`)
+                                        React.createElement('span', { className: 'text-md text-gray-700 ' }, `Celkom: ${totalPrice} €`)
                                     )
                                 ),
                                 React.createElement(
