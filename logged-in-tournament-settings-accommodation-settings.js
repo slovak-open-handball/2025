@@ -6,11 +6,11 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
   const [currentAccommodationEdit, setCurrentAccommodationEdit] = React.useState(null); 
   const [newAccommodationType, setNewAccommodationType] = React.useState('');
   const [newAccommodationCapacity, setNewAccommodationCapacity] = React.useState(0);
-  const [newAccommodationIsPublic, setNewAccommodationIsPublic] = React.useState(true); // Nový stav pro toggle
+  const [newAccommodationIsPublic, setNewAccommodationIsPublic] = React.useState(true);
   const [accommodationModalMode, setAccommodationModalMode] = React.useState('add'); 
   const [showConfirmDeleteAccommodationModal, setShowConfirmDeleteAccommodationModal] = React.useState(false);
   const [accommodationToDelete, setAccommodationToDelete] = React.useState(null);
-  const [isUpdating, setIsUpdating] = React.useState(false); // Stav pro prevenci duplicitních update
+  const [isUpdating, setIsUpdating] = React.useState(false);
 
   React.useEffect(() => {
     let unsubscribeAccommodation;
@@ -24,14 +24,11 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
         unsubscribeAccommodation = onSnapshot(accommodationDocRef, docSnapshot => {
           if (docSnapshot.exists()) {
             const data = docSnapshot.data();
-            // Zoradenie ubytovní abecedne podľa názvu (type)
             const sortedAccommodations = (data.types || []).sort((a, b) => a.type.localeCompare(b.type));
             setAccommodations(sortedAccommodations); 
           } else {
             setDoc(accommodationDocRef, {
-              types: [],
-              isPublic: false // Výchozí hodnota pro zveřejnění
-            }).then(() => {
+              types: []
             }).catch(e => {
               showNotification(`Chyba pri vytváraní predvolených typov ubytovania: ${e.message}`, 'error');
             });
@@ -58,7 +55,7 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
     setAccommodationModalMode('add');
     setNewAccommodationType('');
     setNewAccommodationCapacity(0);
-    setNewAccommodationIsPublic(true); // Výchozí hodnota při přidávání
+    setNewAccommodationIsPublic(true);
     setCurrentAccommodationEdit(null);
     setShowAccommodationModal(true);
   };
@@ -67,7 +64,7 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
     setAccommodationModalMode('edit');
     setNewAccommodationType(accommodation.type);
     setNewAccommodationCapacity(accommodation.capacity);
-    setNewAccommodationIsPublic(accommodation.isPublic !== undefined ? accommodation.isPublic : true); // Načtení existující hodnoty
+    setNewAccommodationIsPublic(accommodation.isPublic !== undefined ? accommodation.isPublic : true);
     setCurrentAccommodationEdit(accommodation);
     setShowAccommodationModal(true);
   };
@@ -109,18 +106,20 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
           types: arrayUnion({ 
             type: trimmedType, 
             capacity: newAccommodationCapacity,
-            isPublic: newAccommodationIsPublic // Uložení hodnoty toggle
+            isPublic: newAccommodationIsPublic
           })
         });
         showNotification(`Typ ubytovania ${trimmedType} pridaný!`, 'success');
-        await sendAdminNotification({ 
-          type: 'createAccommodation', 
-          data: { 
-            type: trimmedType, 
+        
+        // Opravené posielanie notifikácie - odstránené undefined hodnoty
+        if (sendAdminNotification) {
+          await sendAdminNotification({
+            type: 'createAccommodation',
+            accommodationType: trimmedType,
             capacity: newAccommodationCapacity,
-            isPublic: newAccommodationIsPublic 
-          } 
-        });
+            isPublic: newAccommodationIsPublic
+          });
+        }
       } else if (accommodationModalMode === 'edit') {
         if (trimmedType !== currentAccommodationEdit.type && accommodations.some(acc => acc.type === trimmedType)) {
             showNotification(`Typ ubytovania "${trimmedType}" už existuje.`, 'error');
@@ -133,21 +132,22 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
           types: arrayUnion({ 
             type: trimmedType, 
             capacity: newAccommodationCapacity,
-            isPublic: newAccommodationIsPublic // Uložení aktualizované hodnoty toggle
+            isPublic: newAccommodationIsPublic
           })
         });
         showNotification(`Typ ubytovania ${currentAccommodationEdit.type} zmenený na ${trimmedType}.`, 'success');
-        await sendAdminNotification({ 
-          type: 'editAccommodation', 
-          data: { 
-            originalType: currentAccommodationEdit.type, 
+        
+        // Opravené posielanie notifikácie - odstránené undefined hodnoty
+        if (sendAdminNotification) {
+          await sendAdminNotification({
+            type: 'editAccommodation',
+            originalType: currentAccommodationEdit.type,
             originalCapacity: currentAccommodationEdit.capacity,
-            originalIsPublic: currentAccommodationEdit.isPublic,
-            newType: trimmedType, 
+            newType: trimmedType,
             newCapacity: newAccommodationCapacity,
-            newIsPublic: newAccommodationIsPublic
-          } 
-        });
+            isPublic: newAccommodationIsPublic
+          });
+        }
       }
       handleCloseAccommodationModal();
     } catch (e) {
@@ -178,21 +178,21 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
         types: arrayRemove(accommodationToDelete)
       });
       showNotification(`Typ ubytovania ${accommodationToDelete.type} bol zmazaný.`, 'success');
-      await sendAdminNotification({ 
-        type: 'deleteAccommodation', 
-        data: { 
-          deletedType: accommodationToDelete.type, 
-          deletedCapacity: accommodationToDelete.capacity,
-          deletedIsPublic: accommodationToDelete.isPublic
-        } 
-      });
+      
+      // Opravené posielanie notifikácie - odstránené undefined hodnoty
+      if (sendAdminNotification) {
+        await sendAdminNotification({
+          type: 'deleteAccommodation',
+          deletedType: accommodationToDelete.type,
+          deletedCapacity: accommodationToDelete.capacity
+        });
+      }
       handleCloseConfirmDeleteAccommodationModal();
     } catch (e) {
       showNotification(`Chyba pri mazaní ubytovania: ${e.message}`, 'error');
     }
   };
 
-  // Nová funkce pro toggle zveřejnění ubytovny
   const handleToggleAccommodationPublic = async (accommodation, isPublic) => {
     if (!db || !userProfileData || userProfileData.role !== 'admin') {
       showNotification("Nemáte oprávnenie na zmenu nastavení ubytovania.", 'error');
@@ -205,12 +205,10 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
     try {
       const accommodationDocRef = doc(db, 'settings', 'accommodation');
       
-      // Odstranění staré verze
       await updateDoc(accommodationDocRef, {
         types: arrayRemove(accommodation)
       });
       
-      // Přidání nové verze s aktualizovaným isPublic
       await updateDoc(accommodationDocRef, {
         types: arrayUnion({
           ...accommodation,
@@ -219,13 +217,15 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
       });
       
       showNotification(`Ubytovna ${accommodation.type} ${isPublic ? 'zverejnená' : 'skrytá'}.`, 'success');
-      await sendAdminNotification({
-        type: 'toggleAccommodationPublic',
-        data: {
-          type: accommodation.type,
+      
+      // Opravené posielanie notifikácie - odstránené undefined hodnoty
+      if (sendAdminNotification) {
+        await sendAdminNotification({
+          type: 'toggleAccommodationPublic',
+          accommodationType: accommodation.type,
           isPublic: isPublic
-        }
-      });
+        });
+      }
     } catch (e) {
       showNotification(`Chyba pri zmene viditeľnosti ubytovne: ${e.message}`, 'error');
     } finally {
