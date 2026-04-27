@@ -3142,7 +3142,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                                     'div',
                                     { className: 'flex justify-between items-center' },
                                     React.createElement('p', { className: 'text-md text-gray-700' }, `Balík: ${packageName}`),
-                                    React.createElement('p', { className: 'text-md text-gray-700 font-semibold' }, `Celkom: ${totalPrice} €`)
+                                    React.createElement('p', { className: 'text-md text-gray-700' }, `Celkom: ${totalPrice} €`)
                                 ),
                                 React.createElement(
                                     'div',
