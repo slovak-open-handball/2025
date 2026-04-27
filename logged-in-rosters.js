@@ -1253,9 +1253,12 @@ function EditTeamModal({ show, onClose, teamData, onSaveTeam, onDeleteTeam, user
                         disabled: isDataEditDeadlinePassed
                     },
                     React.createElement('option', { value: 'bez ubytovania' }, 'bez ubytovania'),
-                    availableAccommodationTypes.slice().sort((a,b) => a.localeCompare(b)).map((type, idx) =>
-                        React.createElement('option', { key: idx, value: type }, type)
-                    )
+                    availableAccommodationTypes
+                        .slice()
+                        .sort((a, b) => a.type.localeCompare(b.type))
+                        .map((acc, idx) =>
+                            React.createElement('option', { key: idx, value: acc.type }, acc.type)
+                        )
                     )
                 ),
 
@@ -1766,9 +1769,12 @@ function AddTeamModal({ show, onClose, onAddTeam, userProfileData, availablePack
                         disabled: isDataEditDeadlinePassed
                     },
                     React.createElement('option', { value: 'bez ubytovania' }, 'bez ubytovania'),
-                    availableAccommodationTypes.slice().sort((a,b) => a.localeCompare(b)).map((type, idx) =>
-                        React.createElement('option', { key: idx, value: type }, type)
-                    )
+                    availableAccommodationTypes
+                        .slice()
+                        .sort((a, b) => a.type.localeCompare(b.type))
+                        .map((acc, idx) =>
+                            React.createElement('option', { key: idx, value: acc.type }, acc.type)
+                        )
                     )
                 ),
                 React.createElement(
@@ -2073,32 +2079,33 @@ useEffect(() => {
   };
 }, [db]);
 
-  useEffect(() => {
-      let unsubscribeAccommodation;
-      if (db) {
-          try {
-              const accommodationDocRef = doc(db, 'settings', 'accommodation');
-              unsubscribeAccommodation = onSnapshot(accommodationDocRef, (docSnapshot) => {
-                  if (docSnapshot.exists()) {
-                      const data = docSnapshot.data();
-                      const types = data.types?.map(typeObj => typeObj.type) || [];
-                      setAvailableAccommodationTypes(types);
-                  } else {
-                      setAvailableAccommodationTypes([]);
-                  }
-              }, (error) => {
-                  console.error("RostersApp: Error fetching accommodation types:", error);
-              });
-          } catch (e) {
-              console.error("RostersApp: Error setting up onSnapshot for accommodation types:", e);
-          }
-      }
-      return () => {
-          if (unsubscribeAccommodation) {
-              unsubscribeAccommodation();
-          }
-      };
-  }, [db]);
+useEffect(() => {
+    let unsubscribeAccommodation;
+    if (db) {
+        try {
+            const accommodationDocRef = doc(db, 'settings', 'accommodation');
+            unsubscribeAccommodation = onSnapshot(accommodationDocRef, (docSnapshot) => {
+                if (docSnapshot.exists()) {
+                    const data = docSnapshot.data();
+                    // Ukladáme celé objekty { type, isPublic, capacity }
+                    const accommodationObjects = data.types || [];
+                    setAvailableAccommodationTypes(accommodationObjects);
+                } else {
+                    setAvailableAccommodationTypes([]);
+                }
+            }, (error) => {
+                console.error("RostersApp: Error fetching accommodation types:", error);
+            });
+        } catch (e) {
+            console.error("RostersApp: Error setting up onSnapshot for accommodation types:", e);
+        }
+    }
+    return () => {
+        if (unsubscribeAccommodation) {
+            unsubscribeAccommodation();
+        }
+    };
+}, [db]);
 
   useEffect(() => {
     let unsubscribeTshirtSizes;
