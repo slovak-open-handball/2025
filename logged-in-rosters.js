@@ -3092,11 +3092,12 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                                 (!currentAccommodationObject || currentAccommodationObject.isPublic !== false);
                         
                             if (shouldShowAccommodationName) {
-                                return React.createElement('p', { className: 'text-md text-gray-700 ml-4' }, `Ubytovňa: ${accommodationName || 'nepriradená'}`);
+                                return React.createElement('p', { className: 'text-md text-gray-700' }, 
+                                    `Typ ubytovania: ${accommodationType} - ${accommodationName || 'nepriradená'}`
+                                );
                             }
-                            return null;
+                            return React.createElement('p', { className: 'text-md text-gray-700' }, `Typ ubytovania: ${accommodationType}`);
                         })(),
-
                         // ─── FARBY DRESOV ────────────────────────────────────────────────────────
                         React.createElement(
                           'div',
