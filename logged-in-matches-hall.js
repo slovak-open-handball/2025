@@ -3207,6 +3207,8 @@ const matchesHallApp = ({ userProfileData }) => {
         
         return activeExclusions;
     };
+
+    const getActiveExclusionsForTeam = getActiveExclusions;
     
     // PRIDAJTE NOVÚ FUNKCIU NA ZÍSKANIE ČÍSLA DRESU
     const getJerseyNumberFromRef = (playerRef) => {
@@ -4227,7 +4229,7 @@ const matchesHallApp = ({ userProfileData }) => {
             const exclusionDurationSeconds = (currentCategory?.exclusionTime || 2) * 60;
             
             // Získanie aktívnych vylúčení pre tento tím
-            const activeExclusions = getActiveExclusionsForTeam(teamDetails, teamType, matchTime, exclusionDurationSeconds);
+            const activeExclusions = getActiveExclusions(teamDetails, teamType, matchTime, exclusionDurationSeconds);
             
             // Získame aktívnych hráčov (ktorí nie sú odstránení pre tento zápas A NIE SÚ VYLÚČENÍ)
             const allActivePlayers = teamData.playerDetails?.filter(p => p && !p.removedForMatch) || [];
