@@ -98,7 +98,10 @@ const MapApp = ({ userProfileData }) => {
     // Premenné pre cenu ubytovania
     const [newPricePerNight, setNewPricePerNight] = useState('');
     const [editPricePerNight, setEditPricePerNight] = useState('');
+    const [newCostPerNight, setNewCostPerNight] = useState(''); 
+    const [editCostPerNight, setEditCostPerNight] = useState('');
     const [priceError, setPriceError] = useState(null);
+  
     
     // NOVÉ: Premenné pre ceny stravovania
     const [newBreakfastPrice, setNewBreakfastPrice] = useState('');
@@ -350,6 +353,7 @@ const MapApp = ({ userProfileData }) => {
       setNameTypeError(null);
       setCapacityError(null);
       setNewPricePerNight('');
+      setNewCostPerNight('');
       setPriceError(null);
       // NOVÉ: Vynulovať ceny stravovania
       setNewBreakfastPrice('');
@@ -564,7 +568,7 @@ const MapApp = ({ userProfileData }) => {
                 lng: position.lng,
             };
             
-            // Ubytovanie - cena za noc
+            // Ubytovanie - cena pre kluby a náklady
             if (newPlaceType === 'ubytovanie') {
                 if (!selectedAccommodationType) {
                     window.showGlobalNotification('Vyberte typ ubytovania', 'error');
@@ -578,6 +582,14 @@ const MapApp = ({ userProfileData }) => {
                     return;
                 }
                 placeData.pricePerNight = price;
+                
+                // NOVÉ: Pridanie nákladov
+                const cost = parseFloat(newCostPerNight);
+                if (isNaN(cost) || cost <= 0) {
+                    setPriceError('Náklady musia byť kladné číslo');
+                    return;
+                }
+                placeData.costPerNight = cost;
             }
             
             // Stravovanie - ceny za jedlá
@@ -652,7 +664,10 @@ const MapApp = ({ userProfileData }) => {
             }
             
             if (placeData.pricePerNight != null) {
-                addMessage += `, cena: ${formatPrice(placeData.pricePerNight)} €/os/noc`;
+                addMessage += `, cena pre kluby: ${formatPrice(placeData.pricePerNight)} €/os/noc`;
+            }
+            if (placeData.costPerNight != null) {
+                addMessage += `, náklady: ${formatPrice(placeData.costPerNight)} €/os/noc`;
             }
             
             // NOVÉ: Pridanie cien stravovania do notifikácie
@@ -704,7 +719,54 @@ const MapApp = ({ userProfileData }) => {
             window.showGlobalNotification('Nepodarilo sa pridať miesto', 'error');
         }
     };
+
+    useEffect(() => {
+        if (newPlaceType !== 'ubytovanie') {
+            setPriceError(null);
+            return;
+        }
     
+        const price = parseFloat(newPricePerNight);
+        const cost = parseFloat(newCostPerNight);
+        
+        if (!newPricePerNight || !newCostPerNight) {
+            setPriceError(null);
+            return;
+        }
+      
+        if (isNaN(price) || price <= 0) {
+            setPriceError('Cena pre kluby musí byť kladné číslo');
+        } else if (isNaN(cost) || cost <= 0) {
+            setPriceError('Náklady musia byť kladné číslo');
+        } else {
+            setPriceError(null);
+        }
+    }, [newPricePerNight, newCostPerNight, newPlaceType]);
+
+    // Validácia ceny a nákladov pre ubytovanie (editácia)
+    useEffect(() => {
+        if (!isEditingNameAndType || editType !== 'ubytovanie') {
+            setPriceError(null);
+            return;
+        }
+
+        const price = parseFloat(editPricePerNight);
+        const cost = parseFloat(editCostPerNight);
+    
+        if (!editPricePerNight || !editCostPerNight) {
+            setPriceError(null);
+            return;
+        }
+    
+        if (isNaN(price) || price <= 0) {
+            setPriceError('Cena pre kluby musí byť kladné číslo');
+        } else if (isNaN(cost) || cost <= 0) {
+            setPriceError('Náklady musia byť kladné číslo');
+        } else {
+            setPriceError(null);
+        }
+    }, [editPricePerNight, editCostPerNight, editType, isEditingNameAndType]);
+      
     useEffect(() => {
         if (newPlaceType !== 'ubytovanie' || !selectedAccommodationType || !newCapacity) {
             setCapacityError(null);
@@ -759,36 +821,6 @@ const MapApp = ({ userProfileData }) => {
             setCapacityError(null);
         }
     }, [editCapacity, editAccommodationType, editType, isEditingNameAndType, accommodationAvailabilityEdit]);
-    
-    // Validácia ceny pre ubytovanie (pridávanie)
-    useEffect(() => {
-        if (newPlaceType !== 'ubytovanie' || !newPricePerNight) {
-            setPriceError(null);
-            return;
-        }
- 
-        const price = parseFloat(newPricePerNight);
-        if (isNaN(price) || price <= 0) {
-            setPriceError('Cena musí byť kladné číslo');
-        } else {
-            setPriceError(null);
-        }
-    }, [newPricePerNight, newPlaceType]);
-    
-    // Validácia ceny pre ubytovanie (editácia)
-    useEffect(() => {
-        if (!isEditingNameAndType || editType !== 'ubytovanie' || !editPricePerNight) {
-            setPriceError(null);
-            return;
-        }
- 
-        const price = parseFloat(editPricePerNight);
-        if (isNaN(price) || price <= 0) {
-            setPriceError('Cena musí byť kladné číslo');
-        } else {
-            setPriceError(null);
-        }
-    }, [editPricePerNight, editType, isEditingNameAndType]);
     
     // NOVÉ: Validácia cien pre stravovanie (pridávanie)
     useEffect(() => {
@@ -886,6 +918,7 @@ const MapApp = ({ userProfileData }) => {
             setCapacityError(null);
             setNewPlaceNote('');
             setNewPricePerNight('');
+            setNewCostPerNight('');
             setPriceError(null);
             // NOVÉ: Vynulovať ceny stravovania
             setNewBreakfastPrice('');
@@ -974,7 +1007,7 @@ const MapApp = ({ userProfileData }) => {
         setEditCapacity('');
         setEditNote('');
         setEditPricePerNight('');
-        // NOVÉ: Vynulovať ceny stravovania
+        setEditCostPerNight('');
         setEditBreakfastPrice('');
         setEditLunchPrice('');
         setEditDinnerPrice('');
@@ -1030,8 +1063,14 @@ const MapApp = ({ userProfileData }) => {
         // Validácia ceny pre ubytovanie
         if (editType === 'ubytovanie') {
             const price = parseFloat(editPricePerNight);
+            const cost = parseFloat(editCostPerNight);
+    
             if (isNaN(price) || price <= 0) {
-                setPriceError('Cena musí byť kladné číslo');
+                setPriceError('Cena pre kluby musí byť kladné číslo');
+                return;
+            }
+            if (isNaN(cost) || cost <= 0) {
+                setPriceError('Náklady musia byť kladné číslo');
                 return;
             }
         }
@@ -1124,12 +1163,17 @@ const MapApp = ({ userProfileData }) => {
             if (editType === 'ubytovanie') {
                 updates.accommodationType = editAccommodationType || null;
                 const price = parseFloat(editPricePerNight);
+                const cost = parseFloat(editCostPerNight);
                 if (!isNaN(price) && price > 0) {
                     updates.pricePerNight = price;
+                }
+                if (!isNaN(cost) && cost > 0) {
+                    updates.costPerNight = cost;
                 }
             } else {
                 updates.accommodationType = null;
                 updates.pricePerNight = null;
+                updates.costPerNight = null;
             }
             
             // NOVÉ: Ceny pre stravovanie
@@ -1204,6 +1248,7 @@ const MapApp = ({ userProfileData }) => {
                 capacity: selectedPlace.capacity != null ? selectedPlace.capacity : null,
                 accommodationType: selectedPlace.accommodationType || null,
                 pricePerNight: selectedPlace.pricePerNight != null ? selectedPlace.pricePerNight : null,
+                costPerNight: selectedPlace.costPerNight != null ? selectedPlace.costPerNight : null,
                 breakfastPrice: selectedPlace.breakfastPrice != null ? selectedPlace.breakfastPrice : null,
                 lunchPrice: selectedPlace.lunchPrice != null ? selectedPlace.lunchPrice : null,
                 dinnerPrice: selectedPlace.dinnerPrice != null ? selectedPlace.dinnerPrice : null,
@@ -1256,7 +1301,16 @@ const MapApp = ({ userProfileData }) => {
                 const oldPriceStr = original.pricePerNight != null ? `${formatPrice(original.pricePerNight)}€` : '–'; 
                 const newPriceStr = updates.pricePerNight != null ? `${formatPrice(updates.pricePerNight)}€` : '–';
                 changesList.push(
-                    `Zmena ceny z '${oldPriceStr}/os/noc' na '${newPriceStr}/os/noc'`
+                    `Zmena ceny pre kluby z '${oldPriceStr}/os/noc' na '${newPriceStr}/os/noc'`
+                );
+            }
+            
+            // NOVÉ: Zmena nákladov
+            if (original.costPerNight !== updates.costPerNight) {
+                const oldCostStr = original.costPerNight != null ? `${formatPrice(original.costPerNight)}€` : '–'; 
+                const newCostStr = updates.costPerNight != null ? `${formatPrice(updates.costPerNight)}€` : '–';
+                changesList.push(
+                    `Zmena nákladov z '${oldCostStr}/os/noc' na '${newCostStr}/os/noc'`
                 );
             }
             
@@ -1321,6 +1375,7 @@ const MapApp = ({ userProfileData }) => {
                 capacity: updates.capacity,
                 accommodationType: updates.accommodationType || undefined,
                 pricePerNight: updates.pricePerNight || undefined,
+                costPerNight: updates.costPerNight || undefined,
                 breakfastPrice: updates.breakfastPrice || undefined,
                 lunchPrice: updates.lunchPrice || undefined,
                 dinnerPrice: updates.dinnerPrice || undefined,
@@ -1336,6 +1391,7 @@ const MapApp = ({ userProfileData }) => {
                             capacity: updates.capacity, 
                             accommodationType: updates.accommodationType || undefined,
                             pricePerNight: updates.pricePerNight || undefined,
+                            costPerNight: updates.costPerNight || undefined,
                             breakfastPrice: updates.breakfastPrice || undefined,
                             lunchPrice: updates.lunchPrice || undefined,
                             dinnerPrice: updates.dinnerPrice || undefined,
@@ -1354,6 +1410,7 @@ const MapApp = ({ userProfileData }) => {
                             capacity: updates.capacity, 
                             accommodationType: updates.accommodationType || undefined,
                             pricePerNight: updates.pricePerNight || undefined,
+                            costPerNight: updates.costPerNight || undefined,
                             breakfastPrice: updates.breakfastPrice || undefined,
                             lunchPrice: updates.lunchPrice || undefined,
                             dinnerPrice: updates.dinnerPrice || undefined,
@@ -1373,7 +1430,7 @@ const MapApp = ({ userProfileData }) => {
             setEditCapacity('');
             setEditNote('');
             setEditPricePerNight('');
-            // NOVÉ: Vynulovať ceny stravovania
+            setEditCostPerNight('');
             setEditBreakfastPrice('');
             setEditLunchPrice('');
             setEditDinnerPrice('');
@@ -1793,6 +1850,7 @@ const MapApp = ({ userProfileData }) => {
               capacity: data.capacity || null,
               accommodationType: data.accommodationType || null,
               pricePerNight: data.pricePerNight || null,
+              costPerNight: data.costPerNight || null,
               breakfastPrice: data.breakfastPrice || null,
               lunchPrice: data.lunchPrice || null,
               dinnerPrice: data.dinnerPrice || null,
@@ -2226,8 +2284,15 @@ const MapApp = ({ userProfileData }) => {
                   // Cena ubytovania
                   selectedPlace.pricePerNight && selectedPlace.type === 'ubytovanie' &&
                     React.createElement('p', { className: 'text-gray-600 mb-3 flex items-center gap-2' },
-                      React.createElement('strong', null, 'Cena: '),
+                      React.createElement('strong', null, 'Cena pre kluby: '),
                       `${formatPrice(selectedPlace.pricePerNight)} €/os/noc`
+                    ),
+                  
+                  // NOVÉ: Náklady
+                  selectedPlace.costPerNight && selectedPlace.type === 'ubytovanie' &&
+                    React.createElement('p', { className: 'text-gray-600 mb-3 flex items-center gap-2' },
+                      React.createElement('strong', null, 'Náklady: '),
+                      `${formatPrice(selectedPlace.costPerNight)} €/os/noc`
                     ),
                   
                   // NOVÉ: Ceny stravovania
@@ -2454,8 +2519,15 @@ const MapApp = ({ userProfileData }) => {
                                   
                                   place.type === 'ubytovanie' && place.pricePerNight &&
                                     React.createElement('div', null,
-                                      React.createElement('span', { className: 'font-medium' }, 'Cena: '),
+                                      React.createElement('span', { className: 'font-medium' }, 'Cena pre kluby: '),
                                       `${formatPrice(place.pricePerNight)} €/os/noc`
+                                    ),
+                                  
+                                  // NOVÉ: Náklady v zozname
+                                  place.type === 'ubytovanie' && place.costPerNight &&
+                                    React.createElement('div', null,
+                                      React.createElement('span', { className: 'font-medium' }, 'Náklady: '),
+                                      `${formatPrice(place.costPerNight)} €/os/noc`
                                     ),
                                   
                                   place.type === 'stravovanie' && (
@@ -2580,10 +2652,10 @@ const MapApp = ({ userProfileData }) => {
               }),
               capacityError && React.createElement('p', { className: 'mt-2 text-sm text-red-600' }, capacityError)
             ),
-            // Cena ubytovania
+            // Cena pre kluby
             editType === 'ubytovanie' && React.createElement('div', { className: 'mb-5' },
               React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' },
-                'Cena za osobu/noc (€)'
+                'Cena pre kluby os/noc (€)'
               ),
               React.createElement('div', { className: 'relative' },
                 React.createElement('input', {
@@ -2598,6 +2670,25 @@ const MapApp = ({ userProfileData }) => {
                 React.createElement('span', { className: 'absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium' }, '€')
               ),
               priceError && React.createElement('p', { className: 'mt-2 text-sm text-red-600' }, priceError)
+            ),
+
+            // NOVÉ: Náklady
+            editType === 'ubytovanie' && React.createElement('div', { className: 'mb-5' },
+              React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' },
+                'Cena nákladov os/noc (€)'
+              ),
+              React.createElement('div', { className: 'relative' },
+                React.createElement('input', {
+                  type: 'number',
+                  step: '0.01',
+                  min: '0.01',
+                  value: editCostPerNight,
+                  onChange: e => setEditCostPerNight(e.target.value),
+                  placeholder: 'napr. 20.00',
+                  className: 'w-full px-4 py-3 pl-10 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
+                }),
+                React.createElement('span', { className: 'absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium' }, '€')
+              )
             ),
             // NOVÉ: Ceny stravovania
             editType === 'stravovanie' && React.createElement('div', { className: 'mb-5' },
@@ -2783,7 +2874,7 @@ const MapApp = ({ userProfileData }) => {
             // Cena ubytovania
             newPlaceType === 'ubytovanie' && React.createElement('div', { className: 'mb-5' },
               React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' },
-                'Cena za osobu/noc (€)'
+                'Cena pre kluby os/noc (€)'
               ),
               React.createElement('div', { className: 'relative' },
                 React.createElement('input', {
@@ -2798,6 +2889,25 @@ const MapApp = ({ userProfileData }) => {
                 React.createElement('span', { className: 'absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium' }, '€')
               ),
               priceError && React.createElement('p', { className: 'mt-2 text-sm text-red-600' }, priceError)
+            ),
+
+            // NOVÉ: Náklady
+            newPlaceType === 'ubytovanie' && React.createElement('div', { className: 'mb-5' },
+              React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' },
+                'Cena nákladov os/noc (€)'
+              ),
+              React.createElement('div', { className: 'relative' },
+                React.createElement('input', {
+                  type: 'number',
+                  step: '0.01',
+                  min: '0.01',
+                  value: newCostPerNight,
+                  onChange: e => setNewCostPerNight(e.target.value),
+                  placeholder: 'napr. 20.00',
+                  className: 'w-full px-4 py-3 pl-10 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition'
+                }),
+                React.createElement('span', { className: 'absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium' }, '€')
+              )
             ),
             // NOVÉ: Ceny stravovania
             newPlaceType === 'stravovanie' && React.createElement('div', { className: 'mb-5' },
@@ -2872,18 +2982,19 @@ const MapApp = ({ userProfileData }) => {
               }, 'Zrušiť'),
               React.createElement('button', {
                 onClick: handleAddPlace,
-                disabled: 
-                  !newPlaceName.trim() ||
-                  !newPlaceType ||
-                  !!nameTypeError ||
-                  !!capacityError ||
-                  !!priceError ||
-                  !!mealPriceError ||
-                  (newPlaceType === 'ubytovanie' && !selectedAccommodationType) ||
-                  ((newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') && 
-                   (!newCapacity.trim() || parseInt(newCapacity, 10) <= 0 || isNaN(parseInt(newCapacity, 10)))) ||
-                  (newPlaceType === 'ubytovanie' && 
-                   (!newPricePerNight.trim() || parseFloat(newPricePerNight) <= 0 || isNaN(parseFloat(newPricePerNight)))),
+               disabled: 
+                 !newPlaceName.trim() ||
+                 !newPlaceType ||
+                 !!nameTypeError ||
+                 !!capacityError ||
+                 !!priceError ||
+                 !!mealPriceError ||
+                 (newPlaceType === 'ubytovanie' && !selectedAccommodationType) ||
+                 ((newPlaceType === 'ubytovanie' || newPlaceType === 'stravovanie') && 
+                  (!newCapacity.trim() || parseInt(newCapacity, 10) <= 0 || isNaN(parseInt(newCapacity, 10)))) ||
+                 (newPlaceType === 'ubytovanie' && 
+                  ((!newPricePerNight.trim() || parseFloat(newPricePerNight) <= 0 || isNaN(parseFloat(newPricePerNight))) ||
+                   (!newCostPerNight.trim() || parseFloat(newCostPerNight) <= 0 || isNaN(parseFloat(newCostPerNight))))),
             
                 className: `
                   px-6 py-2.5 rounded-lg font-medium transition duration-150 border-2
