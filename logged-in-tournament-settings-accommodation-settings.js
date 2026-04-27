@@ -278,7 +278,7 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
                 React.createElement(
                   'div',
                   { className: 'flex items-center space-x-2 mr-2' },
-                  React.createElement('span', { className: 'text-sm text-gray-600' }, 'Zverejniť'),
+                  React.createElement('span', { className: 'text-sm text-gray-600' }, 'Zverejnenie'),
                   React.createElement(ToggleSwitch, {
                     isOn: acc.isPublic !== undefined ? acc.isPublic : true,
                     onToggle: () => handleToggleAccommodationPublic(acc, !(acc.isPublic !== undefined ? acc.isPublic : true)),
@@ -359,7 +359,7 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
           React.createElement(
             'div',
             { className: 'flex items-center space-x-3' },
-            React.createElement('span', { className: 'text-gray-700 font-medium' }, 'Zverejniť ubytovňu'),
+            React.createElement('span', { className: 'text-gray-700 font-medium' }, 'Zverejnenie ubytovne'),
             React.createElement(ToggleSwitch, {
               isOn: newAccommodationIsPublic,
               onToggle: () => setNewAccommodationIsPublic(!newAccommodationIsPublic),
