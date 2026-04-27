@@ -175,6 +175,8 @@ exclusionTimerStyle.textContent = `
 `;
 document.head.appendChild(exclusionTimerStyle);
 
+const { useState, useEffect } = React;
+
 // Funkcia na formátovanie dátumu s dňom v týždni
 const getDayName = (date) => {
     const days = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
