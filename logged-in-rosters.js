@@ -3140,9 +3140,17 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                                 { className: 'mt-2 mb-4' },
                                 React.createElement(
                                     'div',
-                                    { className: 'flex justify-between items-center' },
-                                    React.createElement('p', { className: 'text-md text-gray-700' }, `Balík: ${packageName}`),
-                                    React.createElement('p', { className: 'text-md text-gray-700' }, `Celkom: ${totalPrice} €`)
+                                    { className: 'flex items-center' },
+                                    React.createElement(
+                                        'div',
+                                        { className: 'w-1/2' },
+                                        React.createElement('span', { className: 'text-md text-gray-700' }, `Balík: ${packageName}`)
+                                    ),
+                                    React.createElement(
+                                        'div',
+                                        { className: 'w-1/2' },
+                                        React.createElement('span', { className: 'text-md text-gray-700 font-semibold' }, `Celkom: ${totalPrice} €`)
+                                    )
                                 ),
                                 React.createElement(
                                     'div',
@@ -3165,29 +3173,29 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                                                 { className: 'mt-2' },
                                                 React.createElement('p', { className: 'text-sm text-gray-600 font-semibold' }, 'Stravovanie:'),
                                                 activeMealDates.map(date => {
-                                                const dateObj = new Date(date);
-                                                const dayIndex = dateObj.getDay();
-                                                const dayAbbr = dayAbbreviations[dayIndex];
-                    
-                                                const activeMeals = mealOrder
-                                                    .filter(mealType => team.packageDetails.meals[date][mealType] === 1)
-                                                    .map(mealType => mealTypeLabels[mealType]);
-                    
-                                                const activeMealsString = activeMeals.join(', ');
-                    
-                                                return React.createElement(
-                                                    'p',
-                                                    { key: date, className: 'text-sm text-gray-600 ml-2' },
-                                                    `${dayAbbr} ${formatDateToDMMYYYY(date)}: ${activeMealsString}`
-                                                );
-                                            })
-                                        );
-                                    }
-                                    return null;
-                                })()
-                            )
-                        );
-                    })(),
+                                                    const dateObj = new Date(date);
+                                                    const dayIndex = dateObj.getDay();
+                                                    const dayAbbr = dayAbbreviations[dayIndex];
+                        
+                                                    const activeMeals = mealOrder
+                                                        .filter(mealType => team.packageDetails.meals[date][mealType] === 1)
+                                                        .map(mealType => mealTypeLabels[mealType]);
+                        
+                                                    const activeMealsString = activeMeals.join(', ');
+                        
+                                                    return React.createElement(
+                                                        'p',
+                                                        { key: date, className: 'text-sm text-gray-600 ml-2' },
+                                                        `${dayAbbr} ${formatDateToDMMYYYY(date)}: ${activeMealsString}`
+                                                    );
+                                                })
+                                            );
+                                        }
+                                        return null;
+                                    })()
+                                )
+                            );
+                        })(),
                                           
                         team.tshirts && team.tshirts.length > 0 && (
                             React.createElement('div', { className: 'mb-4 w-full' },
