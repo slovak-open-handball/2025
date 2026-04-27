@@ -154,7 +154,6 @@ exclusionTimerStyle.textContent = `
         padding: 2px 6px;
         border-radius: 12px;
         font-weight: bold;
-        animation: pulse 1s infinite;
     }
     
     @keyframes pulse {
