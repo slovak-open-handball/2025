@@ -375,6 +375,56 @@ const matchesHallApp = ({ userProfileData }) => {
     const [manualAwayScore, setManualAwayScore] = useState('');
     const [manualScoreMatchId, setManualScoreMatchId] = useState(null);
 
+    // Automatická aktualizácia každú sekundu pre vylúčenia
+    React.useEffect(() => {
+        if (!showExclusionsSection) return;
+               
+        const interval = setInterval(() => {
+            setForceUpdate(prev => prev + 1);
+        }, 1000);
+               
+        return () => clearInterval(interval);
+    }, [showExclusionsSection]);
+
+    // PRIDAJTE TENTO useEffect do matchesHallApp (napr. vedľa ostatných useEffectov)
+
+    // Automatická aktualizácia vylúčení každú sekundu
+    useEffect(() => {
+        // Skontrolujeme, či máme vybraný zápas a či beží/prebieha
+        if (!selectedMatch) return;
+        
+        const isMatchInProgress = selectedMatch.status === 'in-progress' || selectedMatch.status === 'paused';
+        if (!isMatchInProgress) return;
+        
+        // Získame kategóriu pre aktuálny zápas
+        const currentCategory = categories.find(c => c.name === selectedMatch.categoryName);
+        if (!currentCategory) return;
+        
+        // Skontrolujeme, či existujú aktívne vylúčenia pre niektorý z tímov
+        const excludeDuration = (currentCategory.exclusionTime || 2) * 60;
+        
+        // Pomocná funkcia na kontrolu aktívnych vylúčení
+        const hasActiveExclusions = () => {
+            if (!matchEvents.length) return false;
+            
+            return matchEvents.some(event => {
+                if (event.type !== 'exclusion') return false;
+                const eventTime = (event.minute || 0) * 60 + (event.second || 0);
+                return (matchTime - eventTime) < excludeDuration;
+            });
+        };
+        
+        // Spustíme interval len ak sú aktívne vylúčenia
+        if (!hasActiveExclusions()) return;
+        
+        const interval = setInterval(() => {
+            // Vynútime prekreslenie
+            setForceUpdate(prev => prev + 1);
+        }, 1000);
+        
+        return () => clearInterval(interval);
+    }, [selectedMatch, matchEvents, matchTime, categories]);
+
     // Tento useEffect zabezpečí, že keď sa zmenia users, selectedMatch sa prekreslí
     useEffect(() => {
         // Ak máme vybraný zápas, vynútime prekreslenie detailu
@@ -4263,17 +4313,6 @@ const matchesHallApp = ({ userProfileData }) => {
             const isMatchScheduled = selectedMatch?.status === 'scheduled';
             const showRemovedSection = totalRemoved > 0;
             const showExclusionsSection = activeExclusions.length > 0 && (selectedMatch?.status === 'in-progress' || selectedMatch?.status === 'paused');
-            
-            // Automatická aktualizácia každú sekundu pre vylúčenia
-            React.useEffect(() => {
-                if (!showExclusionsSection) return;
-                
-                const interval = setInterval(() => {
-                    setForceUpdate(prev => prev + 1);
-                }, 1000);
-                
-                return () => clearInterval(interval);
-            }, [showExclusionsSection]);
             
             return React.createElement(
                 'div',
