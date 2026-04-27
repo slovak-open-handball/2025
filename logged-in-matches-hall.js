@@ -175,99 +175,6 @@ exclusionTimerStyle.textContent = `
 `;
 document.head.appendChild(exclusionTimerStyle);
 
-const { useState, useEffect } = React;
-
-const getRemainingExclusionTime = (event, currentMatchTime, exclusionDurationSeconds) => {
-    if (!event || !event.minute !== undefined || !event.second !== undefined) return null;
-    
-    const eventTimeInSeconds = (event.minute || 0) * 60 + (event.second || 0);
-    const elapsedSinceExclusion = currentMatchTime - eventTimeInSeconds;
-    const remaining = exclusionDurationSeconds - elapsedSinceExclusion;
-    
-    if (remaining <= 0) return 0;
-    return remaining;
-};
-
-// Funkcia na formátovanie zostávajúceho času
-const formatRemainingTime = (seconds) => {
-    if (seconds === null || seconds === undefined) return '';
-    if (seconds <= 0) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-};
-
-// Funkcia na získanie aktívnych vylúčení pre tím
-const getActiveExclusions = (teamDetails, team, currentMatchTime, exclusionDurationSeconds) => {
-    if (!matchEvents || matchEvents.length === 0) return [];
-    
-    const activeExclusions = [];
-    
-    matchEvents.forEach(event => {
-        // Hľadáme vylúčenia (exclusion) pre daný tím
-        if (event.type === 'exclusion' && event.team === team && event.playerRef) {
-            const eventTimeInSeconds = (event.minute || 0) * 60 + (event.second || 0);
-            const elapsedSinceExclusion = currentMatchTime - eventTimeInSeconds;
-            
-            // Ak ešte neuplynul čas vylúčenia
-            if (elapsedSinceExclusion < exclusionDurationSeconds) {
-                const playerName = getPlayerNameFromRef(event.playerRef);
-                const remaining = exclusionDurationSeconds - elapsedSinceExclusion;
-                
-                // Získame číslo dresu
-                let jerseyNumber = '';
-                if (!event.playerRef.staffType) {
-                    const user = users.find(u => u.id === event.playerRef.userId);
-                    if (user && teamDetails) {
-                        const parts = event.playerRef.teamIdentifier?.split(' ') || [];
-                        if (parts.length >= 2) {
-                            const groupAndOrder = parts.pop();
-                            const category = parts.join(' ');
-                            
-                            let groupLetter = '', order = '';
-                            for (let i = 0; i < groupAndOrder.length; i++) {
-                                const char = groupAndOrder[i];
-                                if (char >= '0' && char <= '9') {
-                                    order = groupAndOrder.substring(i);
-                                    groupLetter = groupAndOrder.substring(0, i);
-                                    break;
-                                }
-                            }
-                            
-                            const fullGroupName = `skupina ${groupLetter}`;
-                            const orderNum = parseInt(order, 10);
-                            
-                            const userTeams = user.teams?.[category];
-                            if (userTeams && Array.isArray(userTeams)) {
-                                const teamObj = userTeams.find(t => t.groupName === fullGroupName && t.order === orderNum);
-                                if (teamObj && teamObj.playerDetails && event.playerRef.playerIndex !== undefined) {
-                                    const player = teamObj.playerDetails[event.playerRef.playerIndex];
-                                    if (player && player.jerseyNumber) {
-                                        jerseyNumber = player.jerseyNumber;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                activeExclusions.push({
-                    playerName: playerName,
-                    jerseyNumber: jerseyNumber,
-                    remainingTime: remaining,
-                    eventId: event.id,
-                    eventTime: eventTimeInSeconds
-                });
-            }
-        }
-    });
-    
-    // Zoradenie podľa zostávajúceho času (najskôr tí, ktorým to najskôr vyprší)
-    activeExclusions.sort((a, b) => a.remainingTime - b.remainingTime);
-    
-    return activeExclusions;
-};
-
 // Funkcia na formátovanie dátumu s dňom v týždni
 const getDayName = (date) => {
     const days = ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'];
@@ -3207,6 +3114,99 @@ const matchesHallApp = ({ userProfileData }) => {
         
         return 'Neznámy hráč';
     };
+
+    const { useState, useEffect } = React;
+
+    const getRemainingExclusionTime = (event, currentMatchTime, exclusionDurationSeconds) => {
+        if (!event || !event.minute !== undefined || !event.second !== undefined) return null;
+        
+        const eventTimeInSeconds = (event.minute || 0) * 60 + (event.second || 0);
+        const elapsedSinceExclusion = currentMatchTime - eventTimeInSeconds;
+        const remaining = exclusionDurationSeconds - elapsedSinceExclusion;
+        
+        if (remaining <= 0) return 0;
+        return remaining;
+    };
+    
+    // Funkcia na formátovanie zostávajúceho času
+    const formatRemainingTime = (seconds) => {
+        if (seconds === null || seconds === undefined) return '';
+        if (seconds <= 0) return '0:00';
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+    
+    // Funkcia na získanie aktívnych vylúčení pre tím
+    const getActiveExclusions = (teamDetails, team, currentMatchTime, exclusionDurationSeconds) => {
+        if (!matchEvents || matchEvents.length === 0) return [];
+        
+        const activeExclusions = [];
+        
+        matchEvents.forEach(event => {
+            // Hľadáme vylúčenia (exclusion) pre daný tím
+            if (event.type === 'exclusion' && event.team === team && event.playerRef) {
+                const eventTimeInSeconds = (event.minute || 0) * 60 + (event.second || 0);
+                const elapsedSinceExclusion = currentMatchTime - eventTimeInSeconds;
+                
+                // Ak ešte neuplynul čas vylúčenia
+                if (elapsedSinceExclusion < exclusionDurationSeconds) {
+                    const playerName = getPlayerNameFromRef(event.playerRef);
+                    const remaining = exclusionDurationSeconds - elapsedSinceExclusion;
+                    
+                    // Získame číslo dresu
+                    let jerseyNumber = '';
+                    if (!event.playerRef.staffType) {
+                        const user = users.find(u => u.id === event.playerRef.userId);
+                        if (user && teamDetails) {
+                            const parts = event.playerRef.teamIdentifier?.split(' ') || [];
+                            if (parts.length >= 2) {
+                                const groupAndOrder = parts.pop();
+                                const category = parts.join(' ');
+                                
+                                let groupLetter = '', order = '';
+                                for (let i = 0; i < groupAndOrder.length; i++) {
+                                    const char = groupAndOrder[i];
+                                    if (char >= '0' && char <= '9') {
+                                        order = groupAndOrder.substring(i);
+                                        groupLetter = groupAndOrder.substring(0, i);
+                                        break;
+                                    }
+                                }
+                                
+                                const fullGroupName = `skupina ${groupLetter}`;
+                                const orderNum = parseInt(order, 10);
+                                
+                                const userTeams = user.teams?.[category];
+                                if (userTeams && Array.isArray(userTeams)) {
+                                    const teamObj = userTeams.find(t => t.groupName === fullGroupName && t.order === orderNum);
+                                    if (teamObj && teamObj.playerDetails && event.playerRef.playerIndex !== undefined) {
+                                        const player = teamObj.playerDetails[event.playerRef.playerIndex];
+                                        if (player && player.jerseyNumber) {
+                                            jerseyNumber = player.jerseyNumber;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    activeExclusions.push({
+                        playerName: playerName,
+                        jerseyNumber: jerseyNumber,
+                        remainingTime: remaining,
+                        eventId: event.id,
+                        eventTime: eventTimeInSeconds
+                    });
+                }
+            }
+        });
+        
+        // Zoradenie podľa zostávajúceho času (najskôr tí, ktorým to najskôr vyprší)
+        activeExclusions.sort((a, b) => a.remainingTime - b.remainingTime);
+        
+        return activeExclusions;
+    };
     
     // PRIDAJTE NOVÚ FUNKCIU NA ZÍSKANIE ČÍSLA DRESU
     const getJerseyNumberFromRef = (playerRef) => {
@@ -4227,7 +4227,7 @@ const matchesHallApp = ({ userProfileData }) => {
             const exclusionDurationSeconds = (currentCategory?.exclusionTime || 2) * 60;
             
             // Získanie aktívnych vylúčení pre tento tím
-            const activeExclusions = getActiveExclusions(teamDetails, teamType, matchTime, exclusionDurationSeconds);
+            const activeExclusions = getActiveExclusionsForTeam(teamDetails, teamType, matchTime, exclusionDurationSeconds);
             
             // Získame aktívnych hráčov (ktorí nie sú odstránení pre tento zápas A NIE SÚ VYLÚČENÍ)
             const allActivePlayers = teamData.playerDetails?.filter(p => p && !p.removedForMatch) || [];
