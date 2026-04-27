@@ -375,19 +375,6 @@ const matchesHallApp = ({ userProfileData }) => {
     const [manualAwayScore, setManualAwayScore] = useState('');
     const [manualScoreMatchId, setManualScoreMatchId] = useState(null);
 
-    // Automatická aktualizácia každú sekundu pre vylúčenia
-    React.useEffect(() => {
-        if (!showExclusionsSection) return;
-               
-        const interval = setInterval(() => {
-            setForceUpdate(prev => prev + 1);
-        }, 1000);
-               
-        return () => clearInterval(interval);
-    }, [showExclusionsSection]);
-
-    // PRIDAJTE TENTO useEffect do matchesHallApp (napr. vedľa ostatných useEffectov)
-
     // Automatická aktualizácia vylúčení každú sekundu
     useEffect(() => {
         // Skontrolujeme, či máme vybraný zápas a či beží/prebieha
