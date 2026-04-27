@@ -3082,7 +3082,6 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                         React.createElement('p', { className: 'text-md text-gray-700 mb-2' }, `Šofér (muž): ${team.driverDetailsMale?.length || 0}`),
 
                         React.createElement('p', { className: 'text-md text-gray-700' }, `Typ dopravy: ${arrivalType}${arrivalTime}`),
-                        React.createElement('p', { className: 'text-md text-gray-700' }, `Typ ubytovania: ${accommodationType}`),
                         (() => {
                             const currentAccommodationObject = availableAccommodationTypes.find(
                                 acc => acc.type === accommodationType
