@@ -4313,7 +4313,7 @@ const matchesHallApp = ({ userProfileData }) => {
                         'h4',
                         { className: 'font-semibold text-sm text-orange-700 mb-2 flex items-center gap-2' },
                         React.createElement('i', { className: 'fa-solid fa-hourglass-half text-xs' }),
-                        `Vylúčení hráči (${activeExclusions.length})`
+                        `Vylúčenie (${activeExclusions.length})`
                     ),
                     React.createElement(
                         'div',
