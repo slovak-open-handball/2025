@@ -2347,7 +2347,7 @@ const MapApp = ({ userProfileData }) => {
                       setEditCapacity(selectedPlace.capacity != null ? String(selectedPlace.capacity) : '');
                       setEditAccommodationType(selectedPlace.accommodationType || '');
                       setEditPricePerNight(selectedPlace.pricePerNight != null ? String(selectedPlace.pricePerNight) : '');
-                      // NOVÉ: Nastavenie cien stravovania pre editáciu
+                      setEditCostPerNight(selectedPlace.costPerNight != null ? String(selectedPlace.costPerNight) : '');
                       setEditBreakfastPrice(selectedPlace.breakfastPrice != null ? String(selectedPlace.breakfastPrice) : '');
                       setEditLunchPrice(selectedPlace.lunchPrice != null ? String(selectedPlace.lunchPrice) : '');
                       setEditDinnerPrice(selectedPlace.dinnerPrice != null ? String(selectedPlace.dinnerPrice) : '');
