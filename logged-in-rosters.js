@@ -3093,7 +3093,7 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                         
                             if (shouldShowAccommodationName) {
                                 return React.createElement('p', { className: 'text-md text-gray-700' }, 
-                                    `Typ ubytovania: ${accommodationType} - ${accommodationName || 'nepriradená'}`
+                                    `Typ ubytovania: ${accommodationType} - Ubytovňa: ${accommodationName || 'nepriradená'}`
                                 );
                             }
                             return React.createElement('p', { className: 'text-md text-gray-700' }, `Typ ubytovania: ${accommodationType}`);
