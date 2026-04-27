@@ -3128,8 +3128,8 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                         team.packageDetails && (() => {
                             // Výpočet celkového počtu osôb v tíme
                             const totalPersons = (team.players || 0) +
-                                                 (team.menTeamMembers || 0) +
-                                                 (team.womenTeamMembers || 0) +
+                                                 (team.menTeamMemberDetails?.length || 0) +
+                                                 (team.womenTeamMemberDetails?.length || 0) +
                                                  (team.driverDetailsFemale?.length || 0) +
                                                  (team.driverDetailsMale?.length || 0);
                             const pricePerPerson = team.packageDetails.price || 0;
