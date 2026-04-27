@@ -4678,9 +4678,9 @@ const matchesHallApp = ({ userProfileData }) => {
                     ? (window.matchTracker.getTeamNameByDisplayId(homeTeamName) ?? homeTeamName)
                     : homeTeamName)
             ),
-            React.createElement('span', { className: 'score' }, loadingEvents ? '--:--' : `${matchScore.home}`),
+            React.createElement('span', { className: 'score' }, loadingEvents ? '--' : `${matchScore.home}`),
             React.createElement('span', { className: 'vs' }, ':'),
-            React.createElement('span', { className: 'score' }, loadingEvents ? '--:--' : `${matchScore.away}`),
+            React.createElement('span', { className: 'score' }, loadingEvents ? '--' : `${matchScore.away}`),
             React.createElement('span', { className: 'team-name', title: awayTeamName }, 
                 (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function' 
                     ? (window.matchTracker.getTeamNameByDisplayId(awayTeamName) ?? awayTeamName)
