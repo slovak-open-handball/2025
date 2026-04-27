@@ -3125,41 +3125,56 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                           )
                         ),                                  
 
-                        team.packageDetails && React.createElement(
-                            'div',
-                            { className: 'mt-2 mb-4' },
-                            React.createElement('p', { className: 'text-md text-gray-700' }, `Balík: ${packageName}`),
-                            React.createElement(
+                        team.packageDetails && (() => {
+                            // Výpočet celkového počtu osôb v tíme
+                            const totalPersons = (team.players || 0) +
+                                                 (team.menTeamMembers || 0) +
+                                                 (team.womenTeamMembers || 0) +
+                                                 (team.driverDetailsFemale?.length || 0) +
+                                                 (team.driverDetailsMale?.length || 0);
+                            const pricePerPerson = team.packageDetails.price || 0;
+                            const totalPrice = totalPersons * pricePerPerson;
+                            
+                            return React.createElement(
                                 'div',
-                                { className: 'ml-4 mt-2 mb-4 space-y-1' },
-                                React.createElement('p', { className: 'text-sm text-gray-600' }, `Cena balíka: ${team.packageDetails.price || 0} € / osoba`),
-                                team.packageDetails.meals && team.packageDetails.meals.participantCard === 1 && React.createElement(
-                                    'p',
-                                    { className: 'text-sm text-gray-600' },
-                                    `Zahŕňa účastnícku kartu`
+                                { className: 'mt-2 mb-4' },
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex justify-between items-center' },
+                                    React.createElement('p', { className: 'text-md text-gray-700' }, `Balík: ${packageName}`),
+                                    React.createElement('p', { className: 'text-md text-gray-700 font-semibold' }, `Celkom: ${totalPrice} €`)
                                 ),
-                                team.packageDetails.meals && (() => {
-                                    const activeMealDates = Object.keys(team.packageDetails.meals).sort().filter(key => {
-                                        const isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(key);
-                                        return isValidDate && key !== 'participantCard' && Object.values(team.packageDetails.meals[key]).some(status => status === 1);
-                                    });
-
-                                    if (activeMealDates.length > 0) {
-                                        return React.createElement(
-                                            'div',
-                                            { className: 'mt-2' },
-                                            React.createElement('p', { className: 'text-sm text-gray-600 font-semibold' }, 'Stravovanie:'),
-                                            activeMealDates.map(date => {
+                                React.createElement(
+                                    'div',
+                                    { className: 'ml-4 mt-2 mb-4 space-y-1' },
+                                    React.createElement('p', { className: 'text-sm text-gray-600' }, `Cena balíka: ${team.packageDetails.price || 0} € / osoba`),
+                                    team.packageDetails.meals && team.packageDetails.meals.participantCard === 1 && React.createElement(
+                                        'p',
+                                        { className: 'text-sm text-gray-600' },
+                                        `Zahŕňa účastnícku kartu`
+                                    ),
+                                    team.packageDetails.meals && (() => {
+                                        const activeMealDates = Object.keys(team.packageDetails.meals).sort().filter(key => {
+                                            const isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(key);
+                                            return isValidDate && key !== 'participantCard' && Object.values(team.packageDetails.meals[key]).some(status => status === 1);
+                                        });
+                        
+                                        if (activeMealDates.length > 0) {
+                                            return React.createElement(
+                                                'div',
+                                                { className: 'mt-2' },
+                                                React.createElement('p', { className: 'text-sm text-gray-600 font-semibold' }, 'Stravovanie:'),
+                                                activeMealDates.map(date => {
                                                 const dateObj = new Date(date);
                                                 const dayIndex = dateObj.getDay();
                                                 const dayAbbr = dayAbbreviations[dayIndex];
-
+                    
                                                 const activeMeals = mealOrder
                                                     .filter(mealType => team.packageDetails.meals[date][mealType] === 1)
                                                     .map(mealType => mealTypeLabels[mealType]);
-
+                    
                                                 const activeMealsString = activeMeals.join(', ');
-
+                    
                                                 return React.createElement(
                                                     'p',
                                                     { key: date, className: 'text-sm text-gray-600 ml-2' },
@@ -3171,7 +3186,8 @@ const handleSaveEditedMember = async (updatedMemberDetails) => {
                                     return null;
                                 })()
                             )
-                        ),
+                        );
+                    })(),
                                           
                         team.tshirts && team.tshirts.length > 0 && (
                             React.createElement('div', { className: 'mb-4 w-full' },
