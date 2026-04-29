@@ -374,6 +374,49 @@ const matchesHallApp = ({ userProfileData }) => {
     const [manualAwayScore, setManualAwayScore] = useState('');
     const [manualScoreMatchId, setManualScoreMatchId] = useState(null);
 
+    // Načítanie nastavení tabuľky do localStorage pre rýchly prístup
+    useEffect(() => {
+        if (!window.db) return;
+        
+        const loadTableSettings = async () => {
+            try {
+                const settingsDocRef = doc(window.db, 'settings', 'table');
+                const settingsDoc = await getDoc(settingsDocRef);
+                
+                if (settingsDoc.exists()) {
+                    const data = settingsDoc.data();
+                    localStorage.setItem('tableSettings', JSON.stringify({
+                        pointsForWin: data.pointsForWin || 3,
+                        blueCardSuspensionMatches: data.blueCardSuspensionMatches || 1
+                    }));
+                } else {
+                    localStorage.setItem('tableSettings', JSON.stringify({
+                        pointsForWin: 3,
+                        blueCardSuspensionMatches: 1
+                    }));
+                }
+            } catch (error) {
+                console.error('Chyba pri načítaní nastavení tabuľky:', error);
+            }
+        };
+        
+        loadTableSettings();
+        
+        // Nastavíme aj listener na zmeny v nastaveniach
+        const settingsDocRef = doc(window.db, 'settings', 'table');
+        const unsubscribe = onSnapshot(settingsDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                localStorage.setItem('tableSettings', JSON.stringify({
+                    pointsForWin: data.pointsForWin || 3,
+                    blueCardSuspensionMatches: data.blueCardSuspensionMatches || 1
+                }));
+            }
+        });
+        
+        return () => unsubscribe();
+    }, []);
+
     // Automatická aktualizácia vylúčení každú sekundu
     useEffect(() => {
         // Skontrolujeme, či máme vybraný zápas a či beží/prebieha
@@ -4238,7 +4281,147 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         };
 
-        // OPRAVENÁ FUNKCIA PRE ZOBRAZENIE HRÁČOV A ČLENOV RT
+        // Funkcia na získanie počtu zápasov vylúčenia za modrú kartu z Nastavení tabuľky
+        const getBlueCardSuspensionMatches = () => {
+            // Predvolená hodnota, ak nie je v sessionStorage
+            let suspensionMatches = 1;
+            
+            try {
+                // Skúsime načítať z localStorage (rýchlejšie)
+                const storedTableSettings = localStorage.getItem('tableSettings');
+                if (storedTableSettings) {
+                    const settings = JSON.parse(storedTableSettings);
+                    if (settings.blueCardSuspensionMatches !== undefined) {
+                        suspensionMatches = settings.blueCardSuspensionMatches;
+                    }
+                }
+            } catch (e) {
+                console.warn('Chyba pri načítaní nastavení z localStorage:', e);
+            }
+            
+            return suspensionMatches;
+        };
+        
+        // Funkcia na získanie všetkých zápasov pre daný tím (na zistenie histórie modrých kariet)
+        const getTeamMatches = async (teamIdentifier) => {
+            if (!window.db || !teamIdentifier) return [];
+            
+            try {
+                const matchesRef = collection(window.db, 'matches');
+                const q = query(
+                    matchesRef,
+                    where("homeTeamIdentifier", "==", teamIdentifier)
+                );
+                const homeMatchesSnap = await getDocs(q);
+                
+                const q2 = query(
+                    matchesRef,
+                    where("awayTeamIdentifier", "==", teamIdentifier)
+                );
+                const awayMatchesSnap = await getDocs(q2);
+                
+                const allMatches = [];
+                
+                homeMatchesSnap.forEach((doc) => {
+                    allMatches.push({ id: doc.id, ...doc.data(), teamSide: 'home' });
+                });
+                
+                awayMatchesSnap.forEach((doc) => {
+                    allMatches.push({ id: doc.id, ...doc.data(), teamSide: 'away' });
+                });
+                
+                // Zoradenie podľa dátumu (najstaršie prvé)
+                allMatches.sort((a, b) => {
+                    if (!a.scheduledTime) return 1;
+                    if (!b.scheduledTime) return -1;
+                    return a.scheduledTime.toDate() - b.scheduledTime.toDate();
+                });
+                
+                return allMatches;
+            } catch (error) {
+                console.error('Chyba pri načítaní zápasov tímu:', error);
+                return [];
+            }
+        };
+        
+        // Funkcia na získanie udalostí modrej karty pre konkrétneho hráča v zozname zápasov
+        const getBlueCardEventsForPlayer = async (matches, playerIdentifier, currentMatchId) => {
+            if (!window.db || !matches.length || !playerIdentifier) return [];
+            
+            const blueCardEvents = [];
+            
+            for (const match of matches) {
+                // Preskočíme aktuálny zápas (ten, ktorý práve pozeráme)
+                if (match.id === currentMatchId) continue;
+                
+                try {
+                    const eventsRef = collection(window.db, 'matchEvents');
+                    const q = query(eventsRef, where("matchId", "==", match.id));
+                    const eventsSnap = await getDocs(q);
+                    
+                    eventsSnap.forEach((doc) => {
+                        const event = doc.data();
+                        // Hľadáme modré karty (type === 'blue')
+                        if (event.type === 'blue' && event.playerRef) {
+                            // Porovnáme, či ide o toho istého hráča
+                            const isSamePlayer = 
+                                event.playerRef.userId === playerIdentifier.userId &&
+                                event.playerRef.teamIdentifier === playerIdentifier.teamIdentifier &&
+                                ((playerIdentifier.isStaff && event.playerRef.staffType === playerIdentifier.staffType && 
+                                  event.playerRef.staffIndex === playerIdentifier.staffIndex) ||
+                                 (!playerIdentifier.isStaff && event.playerRef.playerIndex === playerIdentifier.playerIndex));
+                            
+                            if (isSamePlayer) {
+                                blueCardEvents.push({
+                                    matchId: match.id,
+                                    matchDate: match.scheduledTime,
+                                    eventTimestamp: event.timestamp,
+                                    matchStatus: match.status,
+                                    matchOrder: matches.findIndex(m => m.id === match.id)
+                                });
+                            }
+                        }
+                    });
+                } catch (error) {
+                    console.error('Chyba pri načítaní udalostí zápasu:', error);
+                }
+            }
+            
+            // Zoradenie podľa dátumu (najnovšie prvé)
+            blueCardEvents.sort((a, b) => {
+                if (!a.matchDate) return 1;
+                if (!b.matchDate) return -1;
+                return b.matchDate.toDate() - a.matchDate.toDate();
+            });
+            
+            return blueCardEvents;
+        };
+        
+        // Funkcia na zistenie, či je hráč v aktívnom treste za modrú kartu
+        const isPlayerSuspendedForBlueCard = (blueCardEvents, suspensionMatchesCount, currentMatchOrder) => {
+            if (!blueCardEvents.length) return false;
+            
+            // Zoberieme najnovšiu modrú kartu
+            const latestBlueCard = blueCardEvents[0];
+            
+            // Zistíme, v ktorom zápase dostal modrú kartu (jeho poradie v zozname)
+            const blueCardMatchOrder = latestBlueCard.matchOrder;
+            
+            // Ak je aktuálny zápas v poradí <= (zápas s modrou kartou + počet zápasov vylúčenia)
+            // tak je hráč stále vylúčený
+            // Poznámka: Musíme počítať s tým, že zápasy sú zoradené chronologicky
+            if (currentMatchOrder !== undefined && blueCardMatchOrder !== undefined) {
+                const matchesPassed = currentMatchOrder - blueCardMatchOrder;
+                // Prvý zápas po modrej karte je matchesPassed = 1
+                // Ak je počet odohraných zápasov po modrej karte menší ako počet zápasov vylúčenia
+                if (matchesPassed > 0 && matchesPassed <= suspensionMatchesCount) {
+                    return true;
+                }
+            }
+            
+            return false;
+        };
+
         const renderPlayersSection = (teamDetails, teamType, teamName) => {
             const teamData = teamDetails?.team;
             
@@ -4260,22 +4443,104 @@ const matchesHallApp = ({ userProfileData }) => {
                 );
             }
             
-            // Získanie dĺžky vylúčenia z kategórie (v sekundách)
+            // Získanie dĺžky vylúčenia z kategórie (v sekundách) - pre 2-minútové vylúčenia
             const currentCategory = categories.find(c => c.name === selectedMatch?.categoryName);
             const exclusionDurationSeconds = (currentCategory?.exclusionTime || 2) * 60;
             
-            // Získanie aktívnych vylúčení pre tento tím
+            // Získanie aktívnych vylúčení pre tento tím (pre 2-minútové vylúčenia počas zápasu)
             const activeExclusions = getActiveExclusions(teamDetails, teamType, matchTime, exclusionDurationSeconds);
             
-            // Získame aktívnych hráčov (ktorí nie sú odstránení pre tento zápas A NIE SÚ VYLÚČENÍ)
+            // ============================================================================
+            // KONTROLA VYLÚČENIA ZA MODRÚ KARTU Z PREDCHÁDZAJÚCICH ZÁPASOV
+            // ============================================================================
+            
+            // Získame počet zápasov vylúčenia z nastavení tabuľky
+            const blueCardSuspensionMatches = getBlueCardSuspensionMatches();
+            
+            // Stav pre ukladanie informácií o suspendovaných hráčoch
+            const [suspendedPlayers, setSuspendedPlayers] = React.useState({});
+            const [isLoadingSuspensions, setIsLoadingSuspensions] = React.useState(true);
+            
+            // Získame všetky zápasy tímu pre kontrolu histórie modrých kariet
+            const teamIdentifier = teamType === 'home' ? selectedMatch?.homeTeamIdentifier : selectedMatch?.awayTeamIdentifier;
+            
+            // Získame aktuálne poradie zápasu v zozname (pre výpočet, koľko zápasov uplynulo)
+            let currentMatchOrder = -1;
+            if (selectedMatch && matches.length > 0) {
+                const sortedMatches = [...matches].sort((a, b) => {
+                    if (!a.scheduledTime) return 1;
+                    if (!b.scheduledTime) return -1;
+                    return a.scheduledTime.toDate() - b.scheduledTime.toDate();
+                });
+                currentMatchOrder = sortedMatches.findIndex(m => m.id === selectedMatch.id);
+            }
+            
+            // Načítanie suspendovaných hráčov
+            React.useEffect(() => {
+                const loadSuspensions = async () => {
+                    if (!teamIdentifier || !selectedMatch || !teamData?.playerDetails?.length) {
+                        setIsLoadingSuspensions(false);
+                        return;
+                    }
+                    
+                    setIsLoadingSuspensions(true);
+                    const newSuspendedPlayers = {};
+                    
+                    // Získame všetky zápasy tímu
+                    const teamMatches = await getTeamMatches(teamIdentifier);
+                    
+                    // Pre každého hráča skontrolujeme, či má modrú kartu v predchádzajúcich zápasoch
+                    for (let i = 0; i < teamData.playerDetails.length; i++) {
+                        const player = teamData.playerDetails[i];
+                        if (!player) continue;
+                        
+                        // Vytvoríme identifikátor hráča
+                        const playerIdentifier = {
+                            userId: teamDetails.userId,
+                            teamIdentifier: teamIdentifier,
+                            playerIndex: i,
+                            isStaff: false
+                        };
+                        
+                        // Získame udalosti modrej karty pre tohto hráča
+                        const blueCardEvents = await getBlueCardEventsForPlayer(teamMatches, playerIdentifier, selectedMatch.id);
+                        
+                        // Skontrolujeme, či je suspendovaný
+                        const isSuspended = isPlayerSuspendedForBlueCard(blueCardEvents, blueCardSuspensionMatches, currentMatchOrder);
+                        
+                        if (isSuspended) {
+                            newSuspendedPlayers[i] = {
+                                player: player,
+                                blueCardEvents: blueCardEvents,
+                                reason: `Vylúčený na ${blueCardSuspensionMatches} ${blueCardSuspensionMatches === 1 ? 'zápas' : (blueCardSuspensionMatches < 5 ? 'zápasy' : 'zápasov')} za modrú kartu`
+                            };
+                        }
+                    }
+                    
+                    setSuspendedPlayers(newSuspendedPlayers);
+                    setIsLoadingSuspensions(false);
+                };
+                
+                loadSuspensions();
+            }, [teamIdentifier, selectedMatch?.id, teamData?.playerDetails?.length]);
+            
+            // Získame všetkých aktívnych hráčov (ktorí nie sú odstránení pre tento zápas A NIE SÚ VYLÚČENÍ počas zápasu)
             const allActivePlayers = teamData.playerDetails?.filter(p => p && !p.removedForMatch) || [];
             
-            // Odfiltrujeme hráčov, ktorí sú momentálne vylúčení
-            const excludedPlayerNames = activeExclusions.map(e => e.playerName);
-            const activePlayers = allActivePlayers.filter(p => {
+            // Odfiltrujeme hráčov, ktorí sú momentálne vylúčení (2-minútové vylúčenie počas zápasu)
+            const activeExclusionPlayerNames = activeExclusions.map(e => e.playerName);
+            const suspendedPlayerIndices = Object.keys(suspendedPlayers).map(Number);
+            
+            // AKTÍVNI HRÁČI = nie sú v 2-minútovom vylúčení a nie sú suspendovaní za modrú kartu
+            const activePlayers = allActivePlayers.filter((p, idx) => {
                 const playerFullName = `${p.lastName} ${p.firstName}`;
-                return !excludedPlayerNames.includes(playerFullName);
+                const isExcluded = activeExclusionPlayerNames.includes(playerFullName);
+                const isSuspended = suspendedPlayerIndices.includes(idx);
+                return !isExcluded && !isSuspended;
             });
+            
+            // OSTATNÍ HRÁČI = suspendovaní za modrú kartu (zobrazia sa v sekcii Ostatní)
+            const suspendedForBlueCard = allActivePlayers.filter((p, idx) => suspendedPlayerIndices.includes(idx));
             
             const activePlayersWithOriginalIndex = activePlayers.map(player => ({
                 ...player,
@@ -4286,13 +4551,16 @@ const matchesHallApp = ({ userProfileData }) => {
                 )
             }));
             
-            const removedPlayers = teamData.matchSpecificRemovals?.[selectedMatch.id]?.removedPlayersForMatch || [];
-            const removedStaff = teamData.matchSpecificRemovals?.[selectedMatch.id]?.removedStaff || [];
+            const removedPlayers = teamData.matchSpecificRemovals?.[selectedMatch?.id]?.removedPlayersForMatch || [];
+            const removedMenStaff = teamData.matchSpecificRemovals?.[selectedMatch?.id]?.removedStaff?.filter(s => s.staffType === 'men') || [];
+            const removedWomenStaff = teamData.matchSpecificRemovals?.[selectedMatch?.id]?.removedStaff?.filter(s => s.staffType === 'women') || [];
             
-            const activeMenStaff = teamData.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
-            const activeWomenStaff = teamData.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch.id]) || [];
+            const activeMenStaff = teamData.menTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch?.id]) || [];
+            const activeWomenStaff = teamData.womenTeamMemberDetails?.filter(m => !m.removedForMatch?.[selectedMatch?.id]) || [];
             
-            const totalRemoved = removedPlayers.length + removedStaff.length;
+            // Do sekcie Ostatní pridáme aj suspendovaných hráčov
+            const allRemovedPlayers = [...removedPlayers, ...suspendedForBlueCard];
+            const totalRemoved = allRemovedPlayers.length + removedMenStaff.length + removedWomenStaff.length;
             
             const isMatchCompleted = selectedMatch?.status === 'completed';
             const isMatchInProgress = selectedMatch?.status === 'in-progress' || selectedMatch?.status === 'paused';
@@ -4304,7 +4572,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 'div',
                 null,
                 
-                // Sekcia VYLÚČENÍ HRÁČI (zobrazuje sa len počas prebiehajúceho zápasu)
+                // Sekcia VYLÚČENÍ HRÁČI (2-minútové vylúčenia počas zápasu)
                 showExclusionsSection && React.createElement(
                     'div',
                     { className: 'mb-4 p-3 bg-orange-50 rounded-lg border border-orange-200' },
@@ -4350,7 +4618,15 @@ const matchesHallApp = ({ userProfileData }) => {
                     )
                 ),
                 
-                // Sekcia Hráči
+                // Indikátor načítavania suspendovaných hráčov
+                isLoadingSuspensions && React.createElement(
+                    'div',
+                    { className: 'text-xs text-gray-400 italic mb-2 flex items-center gap-1' },
+                    React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
+                    'Kontrola vylúčení za modré karty...'
+                ),
+                
+                // Sekcia Hráči (aktívni - nie sú vylúčení počas zápasu ani suspendovaní)
                 React.createElement(
                     'h4',
                     { className: 'font-semibold text-sm text-gray-700 mb-2 flex items-center gap-1 mt-3' },
@@ -4358,6 +4634,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     `Hráči (${activePlayers.length})`
                 ),
                 
+                // Hlavička pre štatistiky (ak sú zapnuté)
                 showPlayerStats && React.createElement(
                     'div',
                     { className: 'grid grid-cols-12 gap-1 mb-2 px-2 text-xs font-semibold text-gray-600 bg-gray-100 py-2 rounded' },
@@ -4370,7 +4647,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     React.createElement('div', { className: 'col-span-1 text-center' }, '2\'')
                 ),
                 
-                // Zoznam aktívnych hráčov (bez vylúčených)
+                // Zoznam aktívnych hráčov
                 React.createElement(
                     'div',
                     { className: showPlayerStats ? 'space-y-1' : 'space-y-1' },
@@ -4509,11 +4786,11 @@ const matchesHallApp = ({ userProfileData }) => {
                         : React.createElement(
                             'div',
                             { className: 'text-sm text-gray-500 italic p-2 text-center' },
-                            'Žiadni hráči'
+                            'Žiadni aktívni hráči'
                         )
                 ),
                 
-                // Sekcia Ostatní (odstránení hráči a členovia RT) - rovnaká ako pôvodná
+                // Sekcia Ostatní (odstránení hráči + suspendovaní za modrú kartu + odstránení členovia RT)
                 showRemovedSection && React.createElement(
                     'div',
                     { className: 'mt-4 pt-3 border-t border-gray-200' },
@@ -4526,7 +4803,51 @@ const matchesHallApp = ({ userProfileData }) => {
                     React.createElement(
                         'div',
                         { className: 'space-y-1' },
-                        [...removedPlayers]
+                        
+                        // Suspendovaní hráči za modrú kartu (s info o dôvode)
+                        suspendedForBlueCard.map((player, idx) => {
+                            const suspensionInfo = suspendedPlayers[teamData.playerDetails.findIndex(p => 
+                                p.firstName === player.firstName && 
+                                p.lastName === player.lastName && 
+                                p.jerseyNumber === player.jerseyNumber
+                            )];
+                            
+                            let titleText = suspensionInfo?.reason || 'Hráč je vylúčený';
+                            
+                            return React.createElement(
+                                'div',
+                                { 
+                                    key: `${teamType}-suspended-blue-${idx}`, 
+                                    className: 'flex items-center justify-between gap-2 p-2 rounded border border-red-200 bg-red-50 text-sm cursor-not-allowed opacity-60',
+                                    title: titleText
+                                },
+                                React.createElement(
+                                    'div',
+                                    { className: 'flex items-center gap-2' },
+                                    React.createElement('i', { className: 'fa-solid fa-shirt text-red-400 text-xs flex-shrink-0' }),
+                                    player.jerseyNumber && React.createElement(
+                                        'span',
+                                        { className: 'font-bold text-red-600 text-xs bg-red-100 px-1.5 py-0.5 rounded flex-shrink-0' },
+                                        `${player.jerseyNumber}`
+                                    ),
+                                    React.createElement(
+                                        'span',
+                                        { className: 'font-medium text-red-700' },
+                                        `${player.lastName} ${player.firstName}`
+                                    ),
+                                    React.createElement(
+                                        'span',
+                                        { className: 'text-xs text-red-500 ml-2' },
+                                        React.createElement('i', { className: 'fa-solid fa-skull-crossbones mr-1' }),
+                                        suspensionInfo?.reason || 'Vylúčený za modrú kartu'
+                                    )
+                                ),
+                                React.createElement('i', { className: 'fa-solid fa-ban text-xs text-red-500' })
+                            );
+                        }),
+                        
+                        // Bežne odstránení hráči (cez modálne okno)
+                        removedPlayers
                             .sort((a, b) => {
                                 const numA = a.jerseyNumber ? parseInt(a.jerseyNumber) || 999 : 999;
                                 const numB = b.jerseyNumber ? parseInt(b.jerseyNumber) || 999 : 999;
@@ -4569,6 +4890,8 @@ const matchesHallApp = ({ userProfileData }) => {
                                     )
                                 );
                             }),
+                        
+                        // Odstránení členovia RT (muži)
                         removedMenStaff.map((member, idx) => {
                             let onClickHandler = undefined;
                             let cursorClass = 'cursor-not-allowed opacity-60';
@@ -4601,6 +4924,8 @@ const matchesHallApp = ({ userProfileData }) => {
                                 )
                             );
                         }),
+                        
+                        // Odstránení členovia RT (ženy)
                         removedWomenStaff.map((member, idx) => {
                             let onClickHandler = undefined;
                             let cursorClass = 'cursor-not-allowed opacity-60';
