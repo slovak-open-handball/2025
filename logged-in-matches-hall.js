@@ -5407,8 +5407,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                         React.createElement('i', { className: 'fa-solid fa-skull-crossbones mr-1' }),
                                         suspensionInfo?.reason || 'Vylúčený za modrú kartu'
                                     )
-                                ),
-                                React.createElement('i', { className: 'fa-solid fa-ban text-xs text-red-500' })
+                                )
                             );
                         }),
                         
