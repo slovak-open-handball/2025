@@ -32,6 +32,10 @@ export function TableSettings({ db, userProfileData, showNotification }) {
     const [pointsForWin, setPointsForWin] = React.useState(3);
     const [originalPointsForWin, setOriginalPointsForWin] = React.useState(3);
     
+    // Stav pre modrú kartu - počet zápasov vylúčenia
+    const [blueCardSuspensionMatches, setBlueCardSuspensionMatches] = React.useState(1);
+    const [originalBlueCardSuspensionMatches, setOriginalBlueCardSuspensionMatches] = React.useState(1);
+    
     const [isLoading, setIsLoading] = React.useState(true);
     const [isSaving, setIsSaving] = React.useState(false);
     const [hasChanges, setHasChanges] = React.useState(false);
@@ -86,12 +90,17 @@ export function TableSettings({ db, userProfileData, showNotification }) {
     };
 
     // Funkcia na generovanie detailných zmien pre každú pozíciu
-    const generateDetailedChanges = (oldConditions, newConditions, oldPoints, newPoints) => {
+    const generateDetailedChanges = (oldConditions, newConditions, oldPoints, newPoints, oldBlueCardSuspension, newBlueCardSuspension) => {
         const changes = [];
         
         // Kontrola zmeny bodov za výhru
         if (oldPoints !== newPoints) {
             changes.push(`Zmena bodov za výhru: z '${oldPoints}' na '${newPoints}'`);
+        }
+        
+        // Kontrola zmeny počtu zápasov vylúčenia za modrú kartu
+        if (oldBlueCardSuspension !== newBlueCardSuspension) {
+            changes.push(`Zmena počtu zápasov vylúčenia za modrú kartu: z '${oldBlueCardSuspension}' na '${newBlueCardSuspension}'`);
         }
         
         // Kontrola zmien v podmienkach poradia
@@ -133,17 +142,22 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                     setOriginalSortingConditions(data.sortingConditions || []);
                     setPointsForWin(data.pointsForWin || 3);
                     setOriginalPointsForWin(data.pointsForWin || 3);
+                    setBlueCardSuspensionMatches(data.blueCardSuspensionMatches || 1);
+                    setOriginalBlueCardSuspensionMatches(data.blueCardSuspensionMatches || 1);
                 } else {
                     // Vytvoríme predvolené nastavenia, ak neexistujú
                     const defaultSettings = {
                         sortingConditions: [],
-                        pointsForWin: 3
+                        pointsForWin: 3,
+                        blueCardSuspensionMatches: 1
                     };
                     await setDoc(settingsDocRef, defaultSettings);
                     setSortingConditions([]);
                     setOriginalSortingConditions([]);
                     setPointsForWin(3);
                     setOriginalPointsForWin(3);
+                    setBlueCardSuspensionMatches(1);
+                    setOriginalBlueCardSuspensionMatches(1);
                 }
             } catch (error) {
                 showNotification(`Chyba pri načítaní nastavení tabuľky: ${error.message}`, 'error');
@@ -163,13 +177,27 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         setPointsForWin(clampedValue);
         
         // Kontrola, či sa hodnota zmenila oproti originálu
-        if (clampedValue !== originalPointsForWin) {
-            setHasChanges(true);
-        } else {
-            // Ak sa vrátila na pôvodnú hodnotu, skontrolujeme aj ostatné zmeny
-            const conditionsChanged = JSON.stringify(sortingConditions) !== JSON.stringify(originalSortingConditions);
-            setHasChanges(conditionsChanged);
-        }
+        checkForChanges(clampedValue, blueCardSuspensionMatches);
+    };
+
+    // Handler pre zmenu počtu zápasov vylúčenia za modrú kartu
+    const handleBlueCardSuspensionChange = (value) => {
+        const numValue = parseInt(value) || 0;
+        // Obmedzenie na rozumné hodnoty (1-10 zápasov)
+        const clampedValue = Math.max(1, Math.min(10, numValue));
+        setBlueCardSuspensionMatches(clampedValue);
+        
+        // Kontrola, či sa hodnota zmenila oproti originálu
+        checkForChanges(pointsForWin, clampedValue);
+    };
+
+    // Pomocná funkcia na kontrolu zmien
+    const checkForChanges = (currentPoints, currentBlueCardSuspension) => {
+        const pointsChanged = currentPoints !== originalPointsForWin;
+        const blueCardChanged = currentBlueCardSuspension !== originalBlueCardSuspensionMatches;
+        const conditionsChanged = JSON.stringify(sortingConditions) !== JSON.stringify(originalSortingConditions);
+        
+        setHasChanges(pointsChanged || blueCardChanged || conditionsChanged);
     };
 
     // Handler pre zmenu podmienky poradia
@@ -243,17 +271,26 @@ export function TableSettings({ db, userProfileData, showNotification }) {
             
             const dataToSave = {
                 sortingConditions: validConditions,
-                pointsForWin: pointsForWin
+                pointsForWin: pointsForWin,
+                blueCardSuspensionMatches: blueCardSuspensionMatches
             };
 
             // Zistíme, či došlo k zmene
             const conditionsChanged = JSON.stringify(validConditions) !== JSON.stringify(originalSortingConditions);
             const pointsChanged = pointsForWin !== originalPointsForWin;
-            const isChanged = conditionsChanged || pointsChanged;
+            const blueCardChanged = blueCardSuspensionMatches !== originalBlueCardSuspensionMatches;
+            const isChanged = conditionsChanged || pointsChanged || blueCardChanged;
             
             // Ak došlo k zmene, vytvoríme detailnú notifikáciu s jednotlivými zmenami
             if (isChanged) {
-                const changes = generateDetailedChanges(originalSortingConditions, validConditions, originalPointsForWin, pointsForWin);
+                const changes = generateDetailedChanges(
+                    originalSortingConditions, 
+                    validConditions, 
+                    originalPointsForWin, 
+                    pointsForWin,
+                    originalBlueCardSuspensionMatches,
+                    blueCardSuspensionMatches
+                );
                 await createTableSettingsChangeNotification('table_settings_updated', changes);
             }
             
@@ -263,6 +300,7 @@ export function TableSettings({ db, userProfileData, showNotification }) {
             setOriginalSortingConditions(validConditions);
             setSortingConditions(validConditions);
             setOriginalPointsForWin(pointsForWin);
+            setOriginalBlueCardSuspensionMatches(blueCardSuspensionMatches);
             setHasChanges(false);
             
             showNotification('Nastavenia poradia boli uložené.', 'success');
@@ -278,6 +316,7 @@ export function TableSettings({ db, userProfileData, showNotification }) {
     const handleResetToDefault = () => {
         setSortingConditions([]);
         setPointsForWin(3);
+        setBlueCardSuspensionMatches(1);
         setHasChanges(true);
     };
 
@@ -329,7 +368,7 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                     'Nastavenia tabuľky/zápasov'
                 ),
                 React.createElement('p', { className: 'text-gray-600 mt-1 text-sm' },
-                    'Nastavte body za výhru a kritériá pre určenie poradia tímov v tabuľke. Poradie kritérií určuje prioritu.'
+                    'Nastavte body za výhru, tresty za karty a kritériá pre určenie poradia tímov v tabuľke. Poradie kritérií určuje prioritu.'
                 )
             ),
             
@@ -373,6 +412,55 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                         { className: 'text-sm text-gray-600' },
                         React.createElement('span', { className: 'font-medium' }, 'body'),
                         ' za výhru'
+                    )
+                )
+            ),
+            
+            // Sekcia pre modrú kartu
+            React.createElement(
+                'div',
+                { className: 'mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200' },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center space-x-4' },
+                    React.createElement(
+                        'div',
+                        { className: 'flex-1' },
+                        React.createElement(
+                            'label',
+                            { 
+                                htmlFor: 'blueCardSuspension',
+                                className: 'block text-sm font-medium text-gray-700 mb-1'
+                            },
+                            'Počet zápasov vylúčenia za modrú kartu'
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-xs text-gray-500 mt-1' },
+                            'Počet zápasov, na ktoré bude hráč vylúčený po obdržaní modrej karty'
+                        )
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'w-32' },
+                        React.createElement(
+                            'input',
+                            {
+                                id: 'blueCardSuspension',
+                                type: 'number',
+                                min: '1',
+                                max: '10',
+                                value: blueCardSuspensionMatches,
+                                onChange: (e) => handleBlueCardSuspensionChange(e.target.value),
+                                className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-center font-medium'
+                            }
+                        )
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'text-sm text-gray-600' },
+                        React.createElement('span', { className: 'font-medium' }, 'zápasov'),
+                        ' vylúčenia'
                     )
                 )
             ),
