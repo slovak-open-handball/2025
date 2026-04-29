@@ -326,7 +326,7 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                 'div',
                 { className: 'mb-6' },
                 React.createElement('h2', { className: 'text-2xl font-semibold text-gray-800' },
-                    'Nastavenia tabuľky'
+                    'Nastavenia tabuľky/zápasov'
                 ),
                 React.createElement('p', { className: 'text-gray-600 mt-1 text-sm' },
                     'Nastavte body za výhru a kritériá pre určenie poradia tímov v tabuľke. Poradie kritérií určuje prioritu.'
