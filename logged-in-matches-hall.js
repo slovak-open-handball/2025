@@ -295,7 +295,6 @@ const getTeamMatches = async (teamIdentifier) => {
     }
 };
 
-// Funkcia na získanie udalostí modrej karty pre konkrétneho hráča v zozname zápasov
 const getBlueCardEventsForPlayer = async (matches, playerIdentifier, currentMatchId) => {
     if (!window.db || !matches.length || !playerIdentifier) return [];
     
@@ -312,36 +311,36 @@ const getBlueCardEventsForPlayer = async (matches, playerIdentifier, currentMatc
             eventsSnap.forEach((doc) => {
                 const event = doc.data();
                 if (event.type === 'blue' && event.playerRef) {
-                    // POROVNANIE PODĽA UNIKÁTNYCH IDENTIFIKÁTOROV
                     let isSamePlayer = false;
                     
-                    // 1. Skúsime porovnať podľa userId + teamIdentifier + playerId (ak existuje)
+                    // 🔥 1. NAJLEPŠIE: Porovnanie podľa unikátneho ID hráča
                     if (playerIdentifier.playerId && event.playerRef.playerId) {
-                        isSamePlayer = event.playerRef.userId === playerIdentifier.userId &&
-                                       event.playerRef.teamIdentifier === playerIdentifier.teamIdentifier &&
-                                       event.playerRef.playerId === playerIdentifier.playerId;
+                        isSamePlayer = event.playerRef.playerId === playerIdentifier.playerId;
                     }
                     
-                    // 2. Ak nemáme ID, skúsime podľa indexu (ale to je menej spoľahlivé)
+                    // 2. Porovnanie podľa userId + teamIdentifier + playerIndex (ak nemáme ID)
                     if (!isSamePlayer && !playerIdentifier.playerId) {
                         isSamePlayer = event.playerRef.userId === playerIdentifier.userId &&
                                        event.playerRef.teamIdentifier === playerIdentifier.teamIdentifier &&
                                        event.playerRef.playerIndex === playerIdentifier.playerIndex;
                     }
                     
-                    // 3. Ak nemáme ani index, skúsime podľa mena (najmenej spoľahlivé)
+                    // 3. Porovnanie podľa mena (najmenej spoľahlivé)
                     if (!isSamePlayer && playerIdentifier.playerName) {
                         const playerFullName = `${playerIdentifier.lastName} ${playerIdentifier.firstName}`;
                         isSamePlayer = event.playerRef.playerName === playerFullName;
                     }
                     
                     if (isSamePlayer) {
+                        // Získame poradie zápasu (index v zoradenom zozname)
+                        const matchIndex = matches.findIndex(m => m.id === match.id);
+                        
                         blueCardEvents.push({
                             matchId: match.id,
                             matchDate: match.scheduledTime,
                             eventTimestamp: event.timestamp,
                             matchStatus: match.status,
-                            matchOrder: matches.findIndex(m => m.id === match.id)
+                            matchOrder: matchIndex
                         });
                     }
                 }
@@ -351,6 +350,7 @@ const getBlueCardEventsForPlayer = async (matches, playerIdentifier, currentMatc
         }
     }
     
+    // Zoradenie podľa dátumu (najnovšie prvé)
     blueCardEvents.sort((a, b) => {
         if (!a.matchDate) return 1;
         if (!b.matchDate) return -1;
@@ -427,26 +427,23 @@ const createPlayerReference = (teamDetails, teamIdentifier, player, isStaff = fa
     if (!teamDetails || !teamIdentifier || !player) return null;
     
     if (isStaff) {
-        // Pre člena realizačného tímu ukladáme:
-        // - userId: ID používateľa
-        // - teamIdentifier: identifikátor tímu
-        // - staffType: 'men' alebo 'women'
-        // - staffIndex: index v poli
         return {
             userId: teamDetails.userId,
             teamIdentifier: teamIdentifier,
             staffType: staffType,
-            staffIndex: staffIndex !== null ? staffIndex : player.staffIndex
+            staffIndex: staffIndex !== null ? staffIndex : player.staffIndex,
+            // Pridáme aj ID pre realizacny tim ak existuje
+            staffId: player.id || null
         };
     } else {
-        // Pre hráča ukladáme:
-        // - userId: ID používateľa
-        // - teamIdentifier: identifikátor tímu
-        // - playerIndex: index v poli playerDetails
         return {
             userId: teamDetails.userId,
             teamIdentifier: teamIdentifier,
-            playerIndex: player.index
+            playerIndex: player.index,
+            // 🔥 DÔLEŽITÉ: Pridáme unikátne ID hráča
+            playerId: player.id || null,
+            // Pre kompatibilitu so staršími záznamami
+            playerName: `${player.lastName} ${player.firstName}`
         };
     }
 };
@@ -567,7 +564,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     userId: teamDetails.userId,
                     teamIdentifier: teamIdentifier,
                     playerIndex: i,
-                    playerId: player.id,  // DÔLEŽITÉ: Pridáme unikátne ID hráča
+                    playerId: player.id, 
                     firstName: player.firstName,
                     lastName: player.lastName,
                     playerName: `${player.lastName} ${player.firstName}`,
@@ -4654,36 +4651,36 @@ const matchesHallApp = ({ userProfileData }) => {
                     eventsSnap.forEach((doc) => {
                         const event = doc.data();
                         if (event.type === 'blue' && event.playerRef) {
-                            // POROVNANIE PODĽA UNIKÁTNYCH IDENTIFIKÁTOROV
                             let isSamePlayer = false;
                             
-                            // 1. Skúsime porovnať podľa userId + teamIdentifier + playerId (ak existuje)
+                            // 🔥 1. NAJLEPŠIE: Porovnanie podľa unikátneho ID hráča
                             if (playerIdentifier.playerId && event.playerRef.playerId) {
-                                isSamePlayer = event.playerRef.userId === playerIdentifier.userId &&
-                                               event.playerRef.teamIdentifier === playerIdentifier.teamIdentifier &&
-                                               event.playerRef.playerId === playerIdentifier.playerId;
+                                isSamePlayer = event.playerRef.playerId === playerIdentifier.playerId;
                             }
                             
-                            // 2. Ak nemáme ID, skúsime podľa indexu (ale to je menej spoľahlivé)
+                            // 2. Porovnanie podľa userId + teamIdentifier + playerIndex (ak nemáme ID)
                             if (!isSamePlayer && !playerIdentifier.playerId) {
                                 isSamePlayer = event.playerRef.userId === playerIdentifier.userId &&
                                                event.playerRef.teamIdentifier === playerIdentifier.teamIdentifier &&
                                                event.playerRef.playerIndex === playerIdentifier.playerIndex;
                             }
                             
-                            // 3. Ak nemáme ani index, skúsime podľa mena (najmenej spoľahlivé)
+                            // 3. Porovnanie podľa mena (najmenej spoľahlivé)
                             if (!isSamePlayer && playerIdentifier.playerName) {
                                 const playerFullName = `${playerIdentifier.lastName} ${playerIdentifier.firstName}`;
                                 isSamePlayer = event.playerRef.playerName === playerFullName;
                             }
                             
                             if (isSamePlayer) {
+                                // Získame poradie zápasu (index v zoradenom zozname)
+                                const matchIndex = matches.findIndex(m => m.id === match.id);
+                                
                                 blueCardEvents.push({
                                     matchId: match.id,
                                     matchDate: match.scheduledTime,
                                     eventTimestamp: event.timestamp,
                                     matchStatus: match.status,
-                                    matchOrder: matches.findIndex(m => m.id === match.id)
+                                    matchOrder: matchIndex
                                 });
                             }
                         }
@@ -4693,6 +4690,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 }
             }
             
+            // Zoradenie podľa dátumu (najnovšie prvé)
             blueCardEvents.sort((a, b) => {
                 if (!a.matchDate) return 1;
                 if (!b.matchDate) return -1;
