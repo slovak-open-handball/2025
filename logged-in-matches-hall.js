@@ -1430,7 +1430,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     playerName: `${player.lastName} ${player.firstName}`
                 };
                 
-                const blueCardEvents = await getBlueCardEventsForPlayerByNameAndCategory(teamMatches, playerIdentifier, selectedMatch.id);
+                const blueCardEvents = await getBlueCardEventsForPlayerByNameAndCategory(teamMatches, playerIdentifier, selectedMatch.id, getTeamDetailsFromIdentifier);
                 
                 if (blueCardEvents.length > 0) {
                     const latestBlueCard = blueCardEvents[0];
