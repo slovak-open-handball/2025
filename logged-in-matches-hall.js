@@ -5404,7 +5404,6 @@ const matchesHallApp = ({ userProfileData }) => {
                                     React.createElement(
                                         'span',
                                         { className: 'text-xs text-red-500 ml-2' },
-                                        React.createElement('i', { className: 'fa-solid fa-skull-crossbones mr-1' }),
                                         suspensionInfo?.reason || 'Vylúčený za modrú kartu'
                                     )
                                 )
