@@ -40,6 +40,11 @@ function error(...args) { localError(...args); }
 
 // Teraz v celom kóde používame tieto funkcie namiesto priamo log ---------------- všetko pred týmto riadkom vymaž
 
+let groupCheckCache = new Set();  // Cache pre kontrolu pripravenosti skupín
+let processedCarryOverGroups = new Set();  // Cache pre prenášanie výsledkov
+let isInitialDataLoaded = false;  // Prvotné načítanie dát
+let processedGroupsInitial = new Set();  // Spracované skupiny pri inicializácii
+
 (function() {
     'use strict';
     
