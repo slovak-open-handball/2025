@@ -1,5 +1,5 @@
 // ========== GLOBÁLNY PREPÍNAČ PRE LOGOVANIE ==========
-const DEBUG_MODE = false;  // false = nevypisuje sa, true = vypisuje sa
+const DEBUG_MODE = true;  // false = nevypisuje sa, true = vypisuje sa
 
 // Prepíšeme console.log globálne podľa DEBUG_MODE
 if (!DEBUG_MODE) {
