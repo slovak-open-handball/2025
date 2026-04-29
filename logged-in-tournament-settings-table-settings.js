@@ -265,7 +265,7 @@ export function TableSettings({ db, userProfileData, showNotification }) {
             setOriginalPointsForWin(pointsForWin);
             setHasChanges(false);
             
-            showNotification('Nastavenia poradia boli úspešne uložené.', 'success');
+            showNotification('Nastavenia poradia boli uložené.', 'success');
             
         } catch (error) {
             showNotification(`Chyba pri ukladaní nastavení poradia: ${error.message}`, 'error');
