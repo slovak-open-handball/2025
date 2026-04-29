@@ -560,6 +560,59 @@ let groupCheckCache = new Set();
         
         return Array.from(teamsMap.values());
     }
+
+    let pointsForWinCache = 3; // Predvolená hodnota (3 body za výhru)
+
+    async function loadPointsForWin() {
+        if (!window.db) return;
+        
+        try {
+            const { doc, getDoc } = window.firebaseModules || await importFirebaseModules();
+            if (!doc) return;
+            
+            const settingsDocRef = doc(window.db, 'settings', 'table');
+            const settingsDoc = await getDoc(settingsDocRef);
+        
+            if (settingsDoc.exists()) {
+                const data = settingsDoc.data();
+                pointsForWinCache = data.pointsForWin || 3;
+                console.log(`📋 Načítané body za výhru z databázy: ${pointsForWinCache}`);
+            } else {
+                pointsForWinCache = 3;
+                console.log('📋 Nastavenia neexistujú, používam predvolené body za výhru: 3');
+            }
+        } catch (error) {
+            console.error('❌ Chyba pri načítaní bodov za výhru:', error);
+            pointsForWinCache = 3;
+        }
+    }
+
+    // Funkcia na sledovanie zmien bodov za výhru v reálnom čase
+    function subscribeToPointsForWinChanges() {
+        if (!window.db) return;
+        
+        const { doc, onSnapshot } = window.firebaseModules;
+        if (!doc || !onSnapshot) return;
+        
+        const settingsDocRef = doc(window.db, 'settings', 'table');
+        
+        return onSnapshot(settingsDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                const newPointsForWin = data.pointsForWin || 3;
+                
+                if (pointsForWinCache !== newPointsForWin) {
+                    console.log(`🔄 Zmena bodov za výhru: ${pointsForWinCache} → ${newPointsForWin}`);
+                    pointsForWinCache = newPointsForWin;
+                    
+                    // Po zmene bodov za výhru prepočítame tabuľky
+                    printAllGroupTables();
+                }
+            }
+        }, (error) => {
+            console.error('❌ Chyba pri sledovaní bodov za výhru:', error);
+        });
+    }
         
     function createGroupTable(categoryName, groupName) {
         // Získame VŠETKY zápasy v skupine (aj neodohrané)
@@ -593,14 +646,13 @@ let groupCheckCache = new Set();
             let homeScore = 0;
             let awayScore = 0;
             
-            // 🔥 PRIDANÉ: KONTROLA NA MANUÁLNY VÝSLEDOK (finalScore)
+            // Kontrola na manuálny výsledok (finalScore)
             if (match.finalScore && !match.forfeitResult) {
-                // Manuálne zadaný výsledok
                 homeScore = match.finalScore.home || 0;
                 awayScore = match.finalScore.away || 0;
                 console.log(`📋 Manuálny výsledok pre ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}: ${homeScore}:${awayScore}`);
             } 
-            // 🔥 KONTROLA NA KONTUMÁCIU
+            // Kontrola na kontumáciu
             else if (match.forfeitResult && match.forfeitResult.isForfeit) {
                 homeScore = match.forfeitResult.home || 0;
                 awayScore = match.forfeitResult.away || 0;
@@ -628,11 +680,13 @@ let groupCheckCache = new Set();
                 
                 if (homeScore > awayScore) {
                     homeTeamStats.wins++;
-                    homeTeamStats.points += 2;
+                    // 🔥 POUŽIJEME pointsForWinCache NAMIESTO PEVNEJ HODNOTY 2
+                    homeTeamStats.points += pointsForWinCache;
                     awayTeamStats.losses++;
                 } else if (awayScore > homeScore) {
                     awayTeamStats.wins++;
-                    awayTeamStats.points += 2;
+                    // 🔥 POUŽIJEME pointsForWinCache NAMIESTO PEVNEJ HODNOTY 2
+                    awayTeamStats.points += pointsForWinCache;
                     homeTeamStats.losses++;
                 } else {
                     homeTeamStats.draws++;
@@ -673,7 +727,7 @@ let groupCheckCache = new Set();
             transferredMatches: []
         };
     }
-
+    
     // Pomocná funkcia na získanie názvu tímu pre nadstavbovú skupinu
     function getTeamNameForAdvancedGroup(teamNameFromGroup, category, groupLetter, position) {
         // 🔥 KONTROLA: Či vôbec ide o identifikátor (obsahuje číslo a písmeno)
