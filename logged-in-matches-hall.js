@@ -1030,9 +1030,18 @@ const matchesHallApp = ({ userProfileData }) => {
     const [isLoadingSuspensionsHome, setIsLoadingSuspensionsHome] = useState(true);
     const [isLoadingSuspensionsAway, setIsLoadingSuspensionsAway] = useState(true);
 
-    // Načítanie suspendovaných hráčov za modrú kartu pre DOMÁCICH
+    // ============================================================================
+    // NAČÍTANIE SUSPENDOVANÝCH HRÁČOV ZA MODRÚ KARTU PRE DOMÁCICH (S ONESKORENÍM)
+    // ============================================================================
+    
     useEffect(() => {
         const loadSuspensions = async () => {
+            // 🔥 POČKÁME, KÝM SA NENAČÍTAJÚ USERS A SUPERSTRUCTURE TEAMS
+            if (users.length === 0 || Object.keys(superstructureTeams).length === 0) {
+                console.log('⏳ Čakám na načítanie používateľov a superstructureTeams...');
+                return;
+            }
+            
             const teamIdentifier = selectedMatch?.homeTeamIdentifier;
             const teamDetails = getTeamDetailsFromIdentifier(teamIdentifier);
             const teamData = teamDetails?.team;
@@ -1131,15 +1140,27 @@ const matchesHallApp = ({ userProfileData }) => {
             setIsLoadingSuspensionsHome(false);
         };
         
-        loadSuspensions();
-    }, [selectedMatch?.homeTeamIdentifier, selectedMatch?.id]);
+        // 🔥 PRIDÁME ONESKORENIE 500ms, ABY SA NAJPRV VYPÍSALI ÚDAJE O ZÁPASE
+        const timer = setTimeout(() => {
+            loadSuspensions();
+        }, 500);
+        
+        return () => clearTimeout(timer);
+    }, [selectedMatch?.homeTeamIdentifier, selectedMatch?.id, users, superstructureTeams]);
+    // 🔥 PRIDANÉ ZÁVISLOSTI: users, superstructureTeams
     
     // ============================================================================
-    // UPRAVENÝ useEffect PRE NAČÍTANIE SUSPENDOVANÝCH HRÁČOV (HOSŤOVSKÍ)
+    // NAČÍTANIE SUSPENDOVANÝCH HRÁČOV ZA MODRÚ KARTU PRE HOSŤOVSKÝCH (S ONESKORENÍM)
     // ============================================================================
     
     useEffect(() => {
         const loadSuspensions = async () => {
+            // 🔥 POČKÁME, KÝM SA NENAČÍTAJÚ USERS A SUPERSTRUCTURE TEAMS
+            if (users.length === 0 || Object.keys(superstructureTeams).length === 0) {
+                console.log('⏳ Čakám na načítanie používateľov a superstructureTeams...');
+                return;
+            }
+            
             const teamIdentifier = selectedMatch?.awayTeamIdentifier;
             const teamDetails = getTeamDetailsFromIdentifier(teamIdentifier);
             const teamData = teamDetails?.team;
@@ -1238,8 +1259,14 @@ const matchesHallApp = ({ userProfileData }) => {
             setIsLoadingSuspensionsAway(false);
         };
         
-        loadSuspensions();
-    }, [selectedMatch?.awayTeamIdentifier, selectedMatch?.id]);
+        // 🔥 PRIDÁME ONESKORENIE 500ms, ABY SA NAJPRV VYPÍSALI ÚDAJE O ZÁPASE
+        const timer = setTimeout(() => {
+            loadSuspensions();
+        }, 500);
+        
+        return () => clearTimeout(timer);
+    }, [selectedMatch?.awayTeamIdentifier, selectedMatch?.id, users, superstructureTeams]);
+    // 🔥 PRIDANÉ ZÁVISLOSTI: users, superstructureTeams
 
     // Načítanie nastavení tabuľky do localStorage pre rýchly prístup
     useEffect(() => {
