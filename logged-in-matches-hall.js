@@ -545,7 +545,6 @@ const getBlueCardEventsForPlayerByNameAndCategory = async (matches, playerIdenti
     for (const match of matches) {
         if (match.id === currentMatchId) continue;
         
-        // 🔥 FILTER: Preskočíme zápasy, ktoré nie sú ukončené (completed)
         if (match.status !== 'completed') {
             console.log(`      ⏭️ Preskakujem zápas ${match.id} (stav: ${match.status}) - nie je ukončený`);
             continue;
@@ -558,40 +557,48 @@ const getBlueCardEventsForPlayerByNameAndCategory = async (matches, playerIdenti
             
             console.log(`      📋 Zápas ${match.id} (${match.status}) - počet udalostí: ${eventsSnap.size}`);
             
-            // Výpis všetkých udalostí pre tento zápas
-            if (eventsSnap.size > 0) {
-                console.log(`         Všetky udalosti zápasu ${match.id}:`);
-                eventsSnap.forEach((doc) => {
-                    const event = doc.data();
-                    console.log(`            - ${event.type}${event.subType ? ` (${event.subType})` : ''} | tím: ${event.team} | čas: ${event.minute}:${event.second?.toString().padStart(2, '0') || '00'} | hráč: ${event.playerRef?.playerName || 'Neznámy'}`);
-                });
-            }
-            
             for (const doc of eventsSnap.docs) {
                 const event = doc.data();
                 if (event.type === 'blue' && event.playerRef) {
                     let isSamePlayer = false;
                     
-                    // 1. Porovnanie podľa unikátneho ID hráča (najlepšie)
+                    // 🔥 1. NAJPRV SKÚSIME ZÍSKAŤ MENO HRÁČA Z TÍMU (ako v getPlayerNameFromRef)
+                    let actualPlayerName = null;
+                    if (event.playerRef.userId && event.playerRef.teamIdentifier && event.playerRef.playerIndex !== undefined) {
+                        const teamDetails = getTeamDetailsFromIdentifier(event.playerRef.teamIdentifier);
+                        if (teamDetails && teamDetails.team.playerDetails && teamDetails.team.playerDetails[event.playerRef.playerIndex]) {
+                            const player = teamDetails.team.playerDetails[event.playerRef.playerIndex];
+                            if (player && player.firstName && player.lastName) {
+                                actualPlayerName = `${player.lastName} ${player.firstName}`;
+                                console.log(`         🔍 Získané meno hráča z tímu: "${actualPlayerName}" (index: ${event.playerRef.playerIndex})`);
+                            }
+                        }
+                    }
+                    
+                    // 2. Porovnanie podľa unikátneho ID hráča
                     if (playerIdentifier.playerId && event.playerRef.playerId) {
                         isSamePlayer = event.playerRef.playerId === playerIdentifier.playerId;
                         if (isSamePlayer) console.log(`         ✅ Nájdená MK podľa ID v zápase ${match.id}`);
                     }
                     
-                    // 2. Porovnanie podľa userId + teamIdentifier + playerIndex
+                    // 3. Porovnanie podľa userId + teamIdentifier + playerIndex
                     if (!isSamePlayer && !playerIdentifier.playerId) {
                         isSamePlayer = event.playerRef.userId === playerIdentifier.userId &&
                                        event.playerRef.teamIdentifier === playerIdentifier.teamIdentifier &&
                                        event.playerRef.playerIndex === playerIdentifier.playerIndex;
-                        
                         if (isSamePlayer) console.log(`         ✅ Nájdená MK podľa userId+teamIdentifier+index v zápase ${match.id}`);
                     }
                     
-                    // 3. Fallback: Porovnanie podľa mena
-                    if (!isSamePlayer && playerIdentifier.playerName) {
-                        const playerFullName = `${playerIdentifier.lastName} ${playerIdentifier.firstName}`;
-                        isSamePlayer = event.playerRef.playerName === playerFullName;
-                        if (isSamePlayer) console.log(`         ⚠️ Nájdená MK podľa mena v zápase ${match.id} (menej spoľahlivé)`);
+                    // 4. 🔥 NOVÉ: Porovnanie podľa mena získaného z tímu
+                    if (!isSamePlayer && actualPlayerName && playerIdentifier.playerName) {
+                        isSamePlayer = actualPlayerName === playerIdentifier.playerName;
+                        if (isSamePlayer) console.log(`         ✅ Nájdená MK podľa mena (z tímu) v zápase ${match.id}`);
+                    }
+                    
+                    // 5. Fallback: Porovnanie podľa mena z eventu (ale to je "undefined undefined")
+                    if (!isSamePlayer && playerIdentifier.playerName && event.playerRef.playerName && event.playerRef.playerName !== "undefined undefined") {
+                        isSamePlayer = event.playerRef.playerName === playerIdentifier.playerName;
+                        if (isSamePlayer) console.log(`         ⚠️ Nájdená MK podľa mena (z eventu) v zápase ${match.id}`);
                     }
                     
                     if (isSamePlayer) {
@@ -613,7 +620,6 @@ const getBlueCardEventsForPlayerByNameAndCategory = async (matches, playerIdenti
         }
     }
     
-    // Zoradenie podľa poradia (najnovšie prvé)
     blueCardEvents.sort((a, b) => b.matchOrder - a.matchOrder);
     
     if (blueCardEvents.length > 0) {
