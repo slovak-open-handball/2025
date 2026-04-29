@@ -520,32 +520,37 @@ const getTeamNameFromIdentifier = async (identifier) => {
     
     console.log(`🔍 getTeamNameFromIdentifier() volaná s identifikátorom: "${identifier}"`);
     
-    // 1. Získame zobrazovací názov (napr. "U12 CH 3B")
-    let displayName = identifier;
-    
-    // Pokúsime sa previesť identifikátor na zobrazovací názov
+    // 1. Konverzia identifikátora na zobrazovací názov
+    // Identifikátor je v tvare "U12 CH 3B" (kategória + medzera + číslo + písmeno)
+    // Potrebujeme ho previesť na "U12 CH D4" (kategória + medzera + písmeno + číslo)
     const parts = identifier.split(' ');
-    if (parts.length >= 2) {
-        const groupAndOrder = parts.pop();  // napr. "D4"
-        const category = parts.join(' ');   // napr. "U12 CH"
-        
-        let groupLetter = '';
-        let order = '';
-        for (let i = 0; i < groupAndOrder.length; i++) {
-            const char = groupAndOrder[i];
-            if (char >= '0' && char <= '9') {
-                order = groupAndOrder.substring(i);
-                groupLetter = groupAndOrder.substring(0, i);
-                break;
-            }
-        }
-        
-        if (order && groupLetter) {
-            // Konverzia: "D4" -> "4D" (alebo podľa potreby)
-            displayName = `${category} ${order}${groupLetter}`;
+    if (parts.length < 2) {
+        console.log(`   ⚠️ Neplatný formát identifikátora: ${identifier}`);
+        return identifier;
+    }
+    
+    const groupAndOrder = parts.pop();  // napr. "3B"
+    const category = parts.join(' ');   // napr. "U12 CH"
+    
+    // Extrahujeme číslo a písmeno z "3B"
+    let groupLetter = '';
+    let order = '';
+    for (let i = 0; i < groupAndOrder.length; i++) {
+        const char = groupAndOrder[i];
+        if (char >= '0' && char <= '9') {
+            order += char;
+        } else if (char >= 'A' && char <= 'Z') {
+            groupLetter += char;
         }
     }
     
+    if (!order || !groupLetter) {
+        console.log(`   ⚠️ Nepodarilo sa extrahovať číslo a písmeno z: ${groupAndOrder}`);
+        return identifier;
+    }
+    
+    // Vytvoríme zobrazovací názov v tvare "U12 CH 3B" -> "U12 CH D4"
+    const displayName = `${category} ${order}${groupLetter}`;
     console.log(`   Zobrazovací názov: "${displayName}"`);
     
     // 2. Počkáme na matchTracker (max 5 sekúnd)
@@ -555,11 +560,11 @@ const getTeamNameFromIdentifier = async (identifier) => {
         waitCount++;
     }
     
-    // 3. Zavoláme matchTracker.getTeamNameByDisplayId() a počkáme na výsledok
+    // 3. Zavoláme matchTracker.getTeamNameByDisplayId() so zobrazovacím názvom
     let actualTeamName = null;
     
     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-        // 🔥 DÔLEŽITÉ: Posielame displayName (napr. "U12 CH 4D"), NIE identifikátor!
+        // 🔥 DÔLEŽITÉ: Posielame displayName (napr. "U12 CH 3B"), NIE identifikátor!
         const result = window.matchTracker.getTeamNameByDisplayId(displayName);
         
         if (result && typeof result.then === 'function') {
@@ -573,10 +578,10 @@ const getTeamNameFromIdentifier = async (identifier) => {
         console.log(`   window.matchTracker.getTeamNameByDisplayId("${displayName}") vrátil: "${actualTeamName}"`);
     }
     
-    // 4. Ak sa nepodarilo získať názov cez matchTracker, použijeme zobrazovací názov
+    // 4. Ak sa nepodarilo získať názov cez matchTracker, použijeme displayName
     if (!actualTeamName || actualTeamName === displayName) {
         actualTeamName = displayName;
-        console.log(`   ⚠️ Používam zobrazovací názov ako fallback: "${actualTeamName}"`);
+        console.log(`   ⚠️ Používam displayName ako fallback: "${actualTeamName}"`);
     }
     
     return actualTeamName;
