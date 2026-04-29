@@ -535,7 +535,7 @@ const logAllEventsForMatch = async (matchId) => {
  * @param {string} currentMatchId - ID aktuálneho zápasu
  * @returns {Promise<Array>} - Zoznam modrých kariet
  */
-const getBlueCardEventsForPlayerByNameAndCategory = async (matches, playerIdentifier, currentMatchId) => {
+const getBlueCardEventsForPlayerByNameAndCategory = async (matches, playerIdentifier, currentMatchId, getTeamDetailsFromIdentifierFn) => {
     if (!window.db || !matches.length || !playerIdentifier) return [];
     
     const blueCardEvents = [];
@@ -562,10 +562,10 @@ const getBlueCardEventsForPlayerByNameAndCategory = async (matches, playerIdenti
                 if (event.type === 'blue' && event.playerRef) {
                     let isSamePlayer = false;
                     
-                    // 🔥 1. NAJPRV SKÚSIME ZÍSKAŤ MENO HRÁČA Z TÍMU (ako v getPlayerNameFromRef)
+                    // 🔥 1. ZÍSKAME MENO HRÁČA Z TÍMU cez poslanú funkciu
                     let actualPlayerName = null;
                     if (event.playerRef.userId && event.playerRef.teamIdentifier && event.playerRef.playerIndex !== undefined) {
-                        const teamDetails = getTeamDetailsFromIdentifier(event.playerRef.teamIdentifier);
+                        const teamDetails = getTeamDetailsFromIdentifierFn(event.playerRef.teamIdentifier);
                         if (teamDetails && teamDetails.team.playerDetails && teamDetails.team.playerDetails[event.playerRef.playerIndex]) {
                             const player = teamDetails.team.playerDetails[event.playerRef.playerIndex];
                             if (player && player.firstName && player.lastName) {
@@ -589,16 +589,10 @@ const getBlueCardEventsForPlayerByNameAndCategory = async (matches, playerIdenti
                         if (isSamePlayer) console.log(`         ✅ Nájdená MK podľa userId+teamIdentifier+index v zápase ${match.id}`);
                     }
                     
-                    // 4. 🔥 NOVÉ: Porovnanie podľa mena získaného z tímu
+                    // 4. Porovnanie podľa mena získaného z tímu
                     if (!isSamePlayer && actualPlayerName && playerIdentifier.playerName) {
                         isSamePlayer = actualPlayerName === playerIdentifier.playerName;
                         if (isSamePlayer) console.log(`         ✅ Nájdená MK podľa mena (z tímu) v zápase ${match.id}`);
-                    }
-                    
-                    // 5. Fallback: Porovnanie podľa mena z eventu (ale to je "undefined undefined")
-                    if (!isSamePlayer && playerIdentifier.playerName && event.playerRef.playerName && event.playerRef.playerName !== "undefined undefined") {
-                        isSamePlayer = event.playerRef.playerName === playerIdentifier.playerName;
-                        if (isSamePlayer) console.log(`         ⚠️ Nájdená MK podľa mena (z eventu) v zápase ${match.id}`);
                     }
                     
                     if (isSamePlayer) {
@@ -1285,7 +1279,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     playerName: `${player.lastName} ${player.firstName}`
                 };
                 
-                const blueCardEvents = await getBlueCardEventsForPlayerByNameAndCategory(teamMatches, playerIdentifier, selectedMatch.id);
+                const blueCardEvents = await getBlueCardEventsForPlayerByNameAndCategory(teamMatches, playerIdentifier, selectedMatch.id, getTeamDetailsFromIdentifier);
                 
                 if (blueCardEvents.length > 0) {
                     const latestBlueCard = blueCardEvents[0];
