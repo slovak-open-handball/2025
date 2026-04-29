@@ -565,7 +565,7 @@ const getBlueCardEventsForPlayerByNameAndCategory = async (matches, playerIdenti
                     // 🔥 1. ZÍSKAME MENO HRÁČA Z TÍMU cez poslanú funkciu
                     let actualPlayerName = null;
                     if (event.playerRef.userId && event.playerRef.teamIdentifier && event.playerRef.playerIndex !== undefined) {
-                        const teamDetails = getTeamDetailsFromIdentifierFn(event.playerRef.teamIdentifier);
+                        const teamDetails = getTeamDetailsFromIdentifier(event.playerRef.teamIdentifier);
                         if (teamDetails && teamDetails.team.playerDetails && teamDetails.team.playerDetails[event.playerRef.playerIndex]) {
                             const player = teamDetails.team.playerDetails[event.playerRef.playerIndex];
                             if (player && player.firstName && player.lastName) {
