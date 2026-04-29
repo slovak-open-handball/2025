@@ -312,12 +312,28 @@ const getBlueCardEventsForPlayer = async (matches, playerIdentifier, currentMatc
             eventsSnap.forEach((doc) => {
                 const event = doc.data();
                 if (event.type === 'blue' && event.playerRef) {
-                    const isSamePlayer = 
-                        event.playerRef.userId === playerIdentifier.userId &&
-                        event.playerRef.teamIdentifier === playerIdentifier.teamIdentifier &&
-                        ((playerIdentifier.isStaff && event.playerRef.staffType === playerIdentifier.staffType && 
-                          event.playerRef.staffIndex === playerIdentifier.staffIndex) ||
-                         (!playerIdentifier.isStaff && event.playerRef.playerIndex === playerIdentifier.playerIndex));
+                    // POROVNANIE PODĽA UNIKÁTNYCH IDENTIFIKÁTOROV
+                    let isSamePlayer = false;
+                    
+                    // 1. Skúsime porovnať podľa userId + teamIdentifier + playerId (ak existuje)
+                    if (playerIdentifier.playerId && event.playerRef.playerId) {
+                        isSamePlayer = event.playerRef.userId === playerIdentifier.userId &&
+                                       event.playerRef.teamIdentifier === playerIdentifier.teamIdentifier &&
+                                       event.playerRef.playerId === playerIdentifier.playerId;
+                    }
+                    
+                    // 2. Ak nemáme ID, skúsime podľa indexu (ale to je menej spoľahlivé)
+                    if (!isSamePlayer && !playerIdentifier.playerId) {
+                        isSamePlayer = event.playerRef.userId === playerIdentifier.userId &&
+                                       event.playerRef.teamIdentifier === playerIdentifier.teamIdentifier &&
+                                       event.playerRef.playerIndex === playerIdentifier.playerIndex;
+                    }
+                    
+                    // 3. Ak nemáme ani index, skúsime podľa mena (najmenej spoľahlivé)
+                    if (!isSamePlayer && playerIdentifier.playerName) {
+                        const playerFullName = `${playerIdentifier.lastName} ${playerIdentifier.firstName}`;
+                        isSamePlayer = event.playerRef.playerName === playerFullName;
+                    }
                     
                     if (isSamePlayer) {
                         blueCardEvents.push({
@@ -345,16 +361,24 @@ const getBlueCardEventsForPlayer = async (matches, playerIdentifier, currentMatc
 };
 
 // Funkcia na zistenie, či je hráč v aktívnom treste za modrú kartu
+// Funkcia na zistenie, či je hráč v aktívnom treste za modrú kartu
 const isPlayerSuspendedForBlueCard = (blueCardEvents, suspensionMatchesCount, currentMatchOrder) => {
     if (!blueCardEvents.length) return false;
     
     const latestBlueCard = blueCardEvents[0];
     const blueCardMatchOrder = latestBlueCard.matchOrder;
     
+    console.log(`📊 Kontrola suspendovania: currentMatchOrder=${currentMatchOrder}, blueCardMatchOrder=${blueCardMatchOrder}, suspensionMatchesCount=${suspensionMatchesCount}`);
+    
     if (currentMatchOrder !== undefined && blueCardMatchOrder !== undefined) {
         const matchesPassed = currentMatchOrder - blueCardMatchOrder;
+        console.log(`   Zápasy od modrej karty: ${matchesPassed}`);
+        
         if (matchesPassed > 0 && matchesPassed <= suspensionMatchesCount) {
+            console.log(`   ✅ HRÁČ JE SUSPENDOVANÝ (musí odohrať ${suspensionMatchesCount} zápasov, aktuálne ${matchesPassed} odohraných)`);
             return true;
+        } else {
+            console.log(`   ❌ HRÁČ NIE JE SUSPENDOVANÝ (trest vypršal alebo ešte nezačal)`);
         }
     }
     
@@ -520,10 +544,8 @@ const matchesHallApp = ({ userProfileData }) => {
             setIsLoadingSuspensionsHome(true);
             const newSuspendedPlayers = {};
             
-            // Získame všetky zápasy tímu (použijeme globálnu funkciu)
             const teamMatches = await getTeamMatches(teamIdentifier);
             
-            // Získame aktuálne poradie zápasu
             let currentMatchOrder = -1;
             if (matches.length > 0) {
                 const sortedMatches = [...matches].sort((a, b) => {
@@ -540,10 +562,15 @@ const matchesHallApp = ({ userProfileData }) => {
                 const player = teamData.playerDetails[i];
                 if (!player) continue;
                 
+                // Vytvoríme identifikátor hráča S jeho unikátnym ID
                 const playerIdentifier = {
                     userId: teamDetails.userId,
                     teamIdentifier: teamIdentifier,
                     playerIndex: i,
+                    playerId: player.id,  // DÔLEŽITÉ: Pridáme unikátne ID hráča
+                    firstName: player.firstName,
+                    lastName: player.lastName,
+                    playerName: `${player.lastName} ${player.firstName}`,
                     isStaff: false
                 };
                 
@@ -551,6 +578,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 const isSuspended = isPlayerSuspendedForBlueCard(blueCardEvents, blueCardSuspensionMatches, currentMatchOrder);
                 
                 if (isSuspended) {
+                    console.log(`⚠️ Hráč ${player.lastName} ${player.firstName} je suspendovaný. Počet zápasov po modrej karte: ${currentMatchOrder - blueCardEvents[0]?.matchOrder}, požadovaný trest: ${blueCardSuspensionMatches} zápasov`);
                     newSuspendedPlayers[i] = {
                         player: player,
                         reason: `Vylúčený na ${blueCardSuspensionMatches} ${blueCardSuspensionMatches === 1 ? 'zápas' : (blueCardSuspensionMatches < 5 ? 'zápasy' : 'zápasov')} za modrú kartu`
@@ -564,19 +592,17 @@ const matchesHallApp = ({ userProfileData }) => {
         
         loadSuspensions();
     }, [selectedMatch?.homeTeamIdentifier, selectedMatch?.id, matches]);
-
-    // Načítanie suspendovaných hráčov za modrú kartu pre HOSŤOVSKÝCH
+    
+        // Načítanie suspendovaných hráčov za modrú kartu pre HOSŤOVSKÝCH
     useEffect(() => {
         const loadSuspensions = async () => {
             const teamIdentifier = selectedMatch?.awayTeamIdentifier;
             
-            // Skontrolujeme, či máme všetky potrebné dáta
             if (!teamIdentifier || !selectedMatch) {
                 setIsLoadingSuspensionsAway(false);
                 return;
             }
             
-            // Získame detail tímu
             const teamDetails = getTeamDetailsFromIdentifier(teamIdentifier);
             const teamData = teamDetails?.team;
             
@@ -589,10 +615,8 @@ const matchesHallApp = ({ userProfileData }) => {
             const newSuspendedPlayers = {};
             
             try {
-                // Získame všetky zápasy tímu (použijeme globálnu funkciu)
                 const teamMatches = await getTeamMatches(teamIdentifier);
                 
-                // Získame aktuálne poradie zápasu
                 let currentMatchOrder = -1;
                 if (matches.length > 0) {
                     const sortedMatches = [...matches].sort((a, b) => {
@@ -605,15 +629,19 @@ const matchesHallApp = ({ userProfileData }) => {
                 
                 const blueCardSuspensionMatches = getBlueCardSuspensionMatches();
                 
-                // Pre každého hráča skontrolujeme, či má modrú kartu v predchádzajúcich zápasoch
                 for (let i = 0; i < teamData.playerDetails.length; i++) {
                     const player = teamData.playerDetails[i];
                     if (!player) continue;
                     
+                    // Vytvoríme identifikátor hráča S jeho unikátnym ID
                     const playerIdentifier = {
                         userId: teamDetails.userId,
                         teamIdentifier: teamIdentifier,
                         playerIndex: i,
+                        playerId: player.id,  // DÔLEŽITÉ: Pridáme unikátne ID hráča
+                        firstName: player.firstName,
+                        lastName: player.lastName,
+                        playerName: `${player.lastName} ${player.firstName}`,
                         isStaff: false
                     };
                     
@@ -621,6 +649,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     const isSuspended = isPlayerSuspendedForBlueCard(blueCardEvents, blueCardSuspensionMatches, currentMatchOrder);
                     
                     if (isSuspended) {
+                        console.log(`⚠️ Hráč ${player.lastName} ${player.firstName} je suspendovaný.`);
                         newSuspendedPlayers[i] = {
                             player: player,
                             reason: `Vylúčený na ${blueCardSuspensionMatches} ${blueCardSuspensionMatches === 1 ? 'zápas' : (blueCardSuspensionMatches < 5 ? 'zápasy' : 'zápasov')} za modrú kartu`
@@ -4615,7 +4644,6 @@ const matchesHallApp = ({ userProfileData }) => {
             const blueCardEvents = [];
             
             for (const match of matches) {
-                // Preskočíme aktuálny zápas (ten, ktorý práve pozeráme)
                 if (match.id === currentMatchId) continue;
                 
                 try {
@@ -4625,15 +4653,29 @@ const matchesHallApp = ({ userProfileData }) => {
                     
                     eventsSnap.forEach((doc) => {
                         const event = doc.data();
-                        // Hľadáme modré karty (type === 'blue')
                         if (event.type === 'blue' && event.playerRef) {
-                            // Porovnáme, či ide o toho istého hráča
-                            const isSamePlayer = 
-                                event.playerRef.userId === playerIdentifier.userId &&
-                                event.playerRef.teamIdentifier === playerIdentifier.teamIdentifier &&
-                                ((playerIdentifier.isStaff && event.playerRef.staffType === playerIdentifier.staffType && 
-                                  event.playerRef.staffIndex === playerIdentifier.staffIndex) ||
-                                 (!playerIdentifier.isStaff && event.playerRef.playerIndex === playerIdentifier.playerIndex));
+                            // POROVNANIE PODĽA UNIKÁTNYCH IDENTIFIKÁTOROV
+                            let isSamePlayer = false;
+                            
+                            // 1. Skúsime porovnať podľa userId + teamIdentifier + playerId (ak existuje)
+                            if (playerIdentifier.playerId && event.playerRef.playerId) {
+                                isSamePlayer = event.playerRef.userId === playerIdentifier.userId &&
+                                               event.playerRef.teamIdentifier === playerIdentifier.teamIdentifier &&
+                                               event.playerRef.playerId === playerIdentifier.playerId;
+                            }
+                            
+                            // 2. Ak nemáme ID, skúsime podľa indexu (ale to je menej spoľahlivé)
+                            if (!isSamePlayer && !playerIdentifier.playerId) {
+                                isSamePlayer = event.playerRef.userId === playerIdentifier.userId &&
+                                               event.playerRef.teamIdentifier === playerIdentifier.teamIdentifier &&
+                                               event.playerRef.playerIndex === playerIdentifier.playerIndex;
+                            }
+                            
+                            // 3. Ak nemáme ani index, skúsime podľa mena (najmenej spoľahlivé)
+                            if (!isSamePlayer && playerIdentifier.playerName) {
+                                const playerFullName = `${playerIdentifier.lastName} ${playerIdentifier.firstName}`;
+                                isSamePlayer = event.playerRef.playerName === playerFullName;
+                            }
                             
                             if (isSamePlayer) {
                                 blueCardEvents.push({
@@ -4651,7 +4693,6 @@ const matchesHallApp = ({ userProfileData }) => {
                 }
             }
             
-            // Zoradenie podľa dátumu (najnovšie prvé)
             blueCardEvents.sort((a, b) => {
                 if (!a.matchDate) return 1;
                 if (!b.matchDate) return -1;
@@ -4665,21 +4706,20 @@ const matchesHallApp = ({ userProfileData }) => {
         const isPlayerSuspendedForBlueCard = (blueCardEvents, suspensionMatchesCount, currentMatchOrder) => {
             if (!blueCardEvents.length) return false;
             
-            // Zoberieme najnovšiu modrú kartu
             const latestBlueCard = blueCardEvents[0];
-            
-            // Zistíme, v ktorom zápase dostal modrú kartu (jeho poradie v zozname)
             const blueCardMatchOrder = latestBlueCard.matchOrder;
             
-            // Ak je aktuálny zápas v poradí <= (zápas s modrou kartou + počet zápasov vylúčenia)
-            // tak je hráč stále vylúčený
-            // Poznámka: Musíme počítať s tým, že zápasy sú zoradené chronologicky
+            console.log(`📊 Kontrola suspendovania: currentMatchOrder=${currentMatchOrder}, blueCardMatchOrder=${blueCardMatchOrder}, suspensionMatchesCount=${suspensionMatchesCount}`);
+            
             if (currentMatchOrder !== undefined && blueCardMatchOrder !== undefined) {
                 const matchesPassed = currentMatchOrder - blueCardMatchOrder;
-                // Prvý zápas po modrej karte je matchesPassed = 1
-                // Ak je počet odohraných zápasov po modrej karte menší ako počet zápasov vylúčenia
+                console.log(`   Zápasy od modrej karty: ${matchesPassed}`);
+                
                 if (matchesPassed > 0 && matchesPassed <= suspensionMatchesCount) {
+                    console.log(`   ✅ HRÁČ JE SUSPENDOVANÝ (musí odohrať ${suspensionMatchesCount} zápasov, aktuálne ${matchesPassed} odohraných)`);
                     return true;
+                } else {
+                    console.log(`   ❌ HRÁČ NIE JE SUSPENDOVANÝ (trest vypršal alebo ešte nezačal)`);
                 }
             }
             
