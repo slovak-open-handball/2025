@@ -823,11 +823,9 @@ const matchesHallApp = ({ userProfileData }) => {
                     const isSuspended = matchesPassed > 0 && matchesPassed <= blueCardSuspensionMatches;
                     
                     if (isSuspended) {
-                        console.log(`⚠️ [SUSPENSIONS-HOME] HRÁČ ${player.lastName} ${player.firstName} JE SUSPENDOVANÝ!`);
-                        console.log(`   Dôvod: Vylúčený na ${blueCardSuspensionMatches} ${blueCardSuspensionMatches === 1 ? 'zápas' : (blueCardSuspensionMatches < 5 ? 'zápasy' : 'zápasov')} za modrú kartu`);
                         newSuspendedPlayers[i] = {
                             player: player,
-                            reason: `Vylúčený na ${blueCardSuspensionMatches} ${blueCardSuspensionMatches === 1 ? 'zápas' : (blueCardSuspensionMatches < 5 ? 'zápasy' : 'zápasov')} za modrú kartu`,
+                            reason: `Vylúčený za modrú kartu`,
                             blueCardMatchOrder: latestBlueCard.matchOrder,
                             matchesPassed: matchesPassed
                         };
