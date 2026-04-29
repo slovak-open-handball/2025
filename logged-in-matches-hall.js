@@ -518,7 +518,7 @@ const getTeamMatchesByCleanName = async (cleanTeamName) => {
 const getTeamNameFromIdentifier = async (identifier) => {
     if (!identifier) return null;
     
-    console.log(`🔍 getTeamNameFromIdentifierAsync() volaná s identifikátorom: "${identifier}"`);
+    console.log(`🔍 getTeamNameFromIdentifier() volaná s identifikátorom: "${identifier}"`);
     
     // 1. Najprv skúsime získať zobrazovací názov (napr. "U12 CH 3B")
     let displayName = identifier;
@@ -604,8 +604,8 @@ const getTeamMatchesByName = async (teamName) => {
             const match = { id: doc.id, ...doc.data() };
             
             // Asynchrónne získanie názvov pre oba tímy
-            const homeTeamName = await getTeamNameFromIdentifierAsync(match.homeTeamIdentifier);
-            const awayTeamName = await getTeamNameFromIdentifierAsync(match.awayTeamIdentifier);
+            const homeTeamName = await getTeamNameFromIdentifier(match.homeTeamIdentifier);
+            const awayTeamName = await getTeamNameFromIdentifier(match.awayTeamIdentifier);
             
             if (homeTeamName === teamName || awayTeamName === teamName) {
                 teamMatches.push({
