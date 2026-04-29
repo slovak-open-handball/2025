@@ -1,12 +1,12 @@
 // ========== LOKÁLNY PREPÍNAČ PRE LOGOVANIE LEN PRE TENTO SÚBOR ==========
 const DEBUG_MODE = true;  // false = nevypisuje sa, true = vypisuje sa
 
-// Uložíme pôvodné globálne funkcie predtým, než ich niekto prepíše
-const originalConsoleLog = log;
-const originalConsoleDebug = debug;
-const originalConsoleInfo = info;
-const originalConsoleWarn = warn;
-const originalConsoleError = error;
+// Uložíme pôvodné globálne funkcie PREDTÝM, než ich niekto prepíše
+const originalConsoleLog = console.log;
+const originalConsoleDebug = console.debug;
+const originalConsoleInfo = console.info;
+const originalConsoleWarn = console.warn;
+const originalConsoleError = console.error;
 
 // Vytvoríme LOKÁLNE aliasy, ktoré budeme používať v tomto súbore
 let localLog = originalConsoleLog;
@@ -21,17 +21,26 @@ if (!DEBUG_MODE) {
     localDebug = function() {};
     localInfo = function() {};
     // localWarn a localError nechávame pre dôležité chyby
-    // ak chcete vypnúť aj ich, odkomentujte:
-    // localWarn = function() {};
-    // localError = function() {};
 }
 
 // Pomocné funkcie pre jednoduchšie používanie (volajú LOKÁLNE verzie)
-function log(...args) { localLog(...args); }
-function debug(...args) { localDebug(...args); }
-function info(...args) { localInfo(...args); }
-function warn(...args) { localWarn(...args); }
-function error(...args) { localError(...args); }
+// DÔLEŽITÉ: Používame FUNCTION DECLARATIONS, nie ARROW FUNCTIONS
+// a voláme IBA lokálne premenné, nie rekurzívne samých seba
+function log(...args) { 
+    if (localLog) localLog(...args); 
+}
+function debug(...args) { 
+    if (localDebug) localDebug(...args); 
+}
+function info(...args) { 
+    if (localInfo) localInfo(...args); 
+}
+function warn(...args) { 
+    if (localWarn) localWarn(...args); 
+}
+function error(...args) { 
+    if (localError) localError(...args); 
+}
 
 // ============================================================
 // OD TOHTO MIESTA POKRAČUJE PÔVODNÝ KÓD, ALE VŠETKY log
