@@ -3938,7 +3938,7 @@ const matchesHallApp = ({ userProfileData }) => {
             const teamNameFromTracker = window.matchTracker.getTeamNameByDisplayId(identifier);
             if (teamNameFromTracker && teamNameFromTracker !== identifier) {
                 resolvedTeamName = teamNameFromTracker;
-                console.log(`🔍 Pre identifikátor "${identifier}" bol nájdený názov tímu: "${resolvedTeamName}"`);
+//                console.log(`🔍 Pre identifikátor "${identifier}" bol nájdený názov tímu: "${resolvedTeamName}"`);
             }
         }
         
@@ -3967,7 +3967,7 @@ const matchesHallApp = ({ userProfileData }) => {
                         if (Array.isArray(teamsArray)) {
                             const foundTeam = teamsArray.find(t => t.teamName === resolvedTeamName);
                             if (foundTeam && foundTeam.teamName) {
-                                console.log(`✅ Nájdený tím v používateľských dátach: "${foundTeam.teamName}" (kategória: ${category})`);
+//                                console.log(`✅ Nájdený tím v používateľských dátach: "${foundTeam.teamName}" (kategória: ${category})`);
                                 return foundTeam.teamName;
                             }
                         }
