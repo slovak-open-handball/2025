@@ -515,60 +515,72 @@ const getTeamMatchesByCleanName = async (cleanTeamName) => {
     }
 };
 
-const getTeamNameFromIdentifier = (identifier) => {
+const getTeamNameFromIdentifier = async (identifier) => {
     if (!identifier) return null;
     
-    // Skúsime získať názov cez matchTracker (prvý pokus)
-    let teamName = null;
+    console.log(`🔍 getTeamNameFromIdentifierAsync() volaná s identifikátorom: "${identifier}"`);
+    
+    // 1. Najprv skúsime získať zobrazovací názov (napr. "U12 CH 3B")
+    let displayName = identifier;
+    
+    // Pokúsime sa previesť identifikátor na zobrazovací názov
+    const parts = identifier.split(' ');
+    if (parts.length >= 2) {
+        const groupAndOrder = parts.pop();  // napr. "D4"
+        const category = parts.join(' ');   // napr. "U12 CH"
+        
+        let groupLetter = '';
+        let order = '';
+        for (let i = 0; i < groupAndOrder.length; i++) {
+            const char = groupAndOrder[i];
+            if (char >= '0' && char <= '9') {
+                order = groupAndOrder.substring(i);
+                groupLetter = groupAndOrder.substring(0, i);
+                break;
+            }
+        }
+        
+        if (order && groupLetter) {
+            // Konverzia: "D4" -> "4D" (alebo podľa potreby)
+            // V tomto prípade "D4" znamená skupina D, poradie 4
+            displayName = `${category} ${order}${groupLetter}`;
+        }
+    }
+    
+    console.log(`   Zobrazovací názov: "${displayName}"`);
+    
+    // 2. Počkáme na matchTracker (max 5 sekúnd)
+    let waitCount = 0;
+    while ((!window.matchTracker || typeof window.matchTracker.getTeamNameByDisplayId !== 'function') && waitCount < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        waitCount++;
+    }
+    
+    // 3. Zavoláme matchTracker.getTeamNameByDisplayId() a počkáme na výsledok
+    let actualTeamName = null;
+    
     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-        teamName = window.matchTracker.getTeamNameByDisplayId(identifier);
-    }
-    
-    // Ak sa nepodarilo, skúsime vyhľadať v superstructureTeams
-    if (!teamName || teamName === identifier) {
-        const parts = identifier.split(' ');
-        if (parts.length >= 2) {
-            const groupAndOrder = parts.pop();
-            const category = parts.join(' ');
-            
-            let groupLetter = '';
-            let order = '';
-            for (let i = 0; i < groupAndOrder.length; i++) {
-                const char = groupAndOrder[i];
-                if (char >= '0' && char <= '9') {
-                    order = groupAndOrder.substring(i);
-                    groupLetter = groupAndOrder.substring(0, i);
-                    break;
-                }
-            }
-            
-            if (order && groupLetter) {
-                const fullGroupName = `skupina ${groupLetter}`;
-                const orderNum = parseInt(order, 10);
-                
-                const categoryTeams = window.superstructureTeams?.[category];
-                if (categoryTeams && Array.isArray(categoryTeams)) {
-                    const team = categoryTeams.find(t => 
-                        t.groupName === fullGroupName && 
-                        t.order === orderNum
-                    );
-                    if (team && team.teamName) {
-                        teamName = team.teamName;
-                    }
-                }
-            }
+        // Ak je funkcia asynchrónna, počkáme
+        const result = window.matchTracker.getTeamNameByDisplayId(displayName);
+        
+        if (result && typeof result.then === 'function') {
+            // Je to Promise, počkáme
+            actualTeamName = await result;
+        } else {
+            // Je to synchronná hodnota
+            actualTeamName = result;
         }
+        
+        console.log(`   window.matchTracker.getTeamNameByDisplayId("${displayName}") vrátil: "${actualTeamName}"`);
     }
     
-    // Ešte jeden pokus cez druhú konverziu
-    if (teamName && teamName !== identifier && window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-        const secondPass = window.matchTracker.getTeamNameByDisplayId(teamName);
-        if (secondPass && secondPass !== teamName) {
-            teamName = secondPass;
-        }
+    // 4. Ak sa nepodarilo získať názov cez matchTracker, použijeme pôvodný identifikátor
+    if (!actualTeamName || actualTeamName === displayName) {
+        actualTeamName = displayName;
+        console.log(`   ⚠️ Používam zobrazovací názov ako fallback: "${actualTeamName}"`);
     }
     
-    return teamName || identifier;
+    return actualTeamName;
 };
 
 // ============================================================================
@@ -591,33 +603,19 @@ const getTeamMatchesByName = async (teamName) => {
         for (const doc of allMatchesSnap.docs) {
             const match = { id: doc.id, ...doc.data() };
             
-            // Skontrolujeme domáci tím
-            let homeMatch = false;
-            if (match.homeTeamIdentifier) {
-                const homeTeamName = getTeamNameFromIdentifier(match.homeTeamIdentifier);
-                if (homeTeamName === teamName) {
-                    homeMatch = true;
-                }
-            }
+            // Asynchrónne získanie názvov pre oba tímy
+            const homeTeamName = await getTeamNameFromIdentifierAsync(match.homeTeamIdentifier);
+            const awayTeamName = await getTeamNameFromIdentifierAsync(match.awayTeamIdentifier);
             
-            // Skontrolujeme hosťovský tím
-            let awayMatch = false;
-            if (match.awayTeamIdentifier) {
-                const awayTeamName = getTeamNameFromIdentifier(match.awayTeamIdentifier);
-                if (awayTeamName === teamName) {
-                    awayMatch = true;
-                }
-            }
-            
-            if (homeMatch || awayMatch) {
+            if (homeTeamName === teamName || awayTeamName === teamName) {
                 teamMatches.push({
                     ...match,
-                    teamSide: homeMatch ? 'home' : 'away'
+                    teamSide: homeTeamName === teamName ? 'home' : 'away'
                 });
             }
         }
         
-        // Zoradenie podľa dátumu (najstaršie prvé) - DÔLEŽITÉ pre poradie zápasov
+        // Zoradenie podľa dátumu (najstaršie prvé)
         teamMatches.sort((a, b) => {
             if (!a.scheduledTime) return 1;
             if (!b.scheduledTime) return -1;
