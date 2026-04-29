@@ -432,11 +432,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                                 htmlFor: 'blueCardSuspension',
                                 className: 'block text-sm font-medium text-gray-700 mb-1'
                             },
-                            'Počet zápasov vylúčenia za modrú kartu'
-                        ),
-                        React.createElement(
-                            'p',
-                            { className: 'text-xs text-gray-500 mt-1' },
                             'Počet zápasov, na ktoré bude hráč vylúčený po obdržaní modrej karty'
                         )
                     ),
