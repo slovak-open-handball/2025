@@ -28,6 +28,10 @@ export function TableSettings({ db, userProfileData, showNotification }) {
     // Stav pre podmienky poradia
     const [sortingConditions, setSortingConditions] = React.useState([]);
     
+    // Stav pre body za výhru
+    const [pointsForWin, setPointsForWin] = React.useState(3);
+    const [originalPointsForWin, setOriginalPointsForWin] = React.useState(3);
+    
     const [isLoading, setIsLoading] = React.useState(true);
     const [isSaving, setIsSaving] = React.useState(false);
     const [hasChanges, setHasChanges] = React.useState(false);
@@ -82,19 +86,31 @@ export function TableSettings({ db, userProfileData, showNotification }) {
     };
 
     // Funkcia na generovanie detailných zmien pre každú pozíciu
-    const generateDetailedChanges = (oldConditions, newConditions) => {
+    const generateDetailedChanges = (oldConditions, newConditions, oldPoints, newPoints) => {
         const changes = [];
-        changes.push('Zmena nastavení poradia:');
         
-        // Nájdeme maximálny počet podmienok z oboch polí
-        const maxLength = Math.max(oldConditions.length, newConditions.length);
+        // Kontrola zmeny bodov za výhru
+        if (oldPoints !== newPoints) {
+            changes.push(`Zmena bodov za výhru: z '${oldPoints}' na '${newPoints}'`);
+        }
         
-        for (let i = 0; i < maxLength; i++) {
-            const oldValue = i < oldConditions.length ? formatConditionValue(oldConditions[i]) : 'Žiadne';
-            const newValue = i < newConditions.length ? formatConditionValue(newConditions[i]) : 'Žiadne';
+        // Kontrola zmien v podmienkach poradia
+        const oldConditionsStr = JSON.stringify(oldConditions);
+        const newConditionsStr = JSON.stringify(newConditions);
+        
+        if (oldConditionsStr !== newConditionsStr) {
+            changes.push('Zmena nastavení poradia:');
             
-            if (oldValue !== newValue) {
-                changes.push(`${i + 1}. kritérium: Zmena z '${oldValue}' na '${newValue}'`);
+            // Nájdeme maximálny počet podmienok z oboch polí
+            const maxLength = Math.max(oldConditions.length, newConditions.length);
+            
+            for (let i = 0; i < maxLength; i++) {
+                const oldValue = i < oldConditions.length ? formatConditionValue(oldConditions[i]) : 'Žiadne';
+                const newValue = i < newConditions.length ? formatConditionValue(newConditions[i]) : 'Žiadne';
+                
+                if (oldValue !== newValue) {
+                    changes.push(`${i + 1}. kritérium: Zmena z '${oldValue}' na '${newValue}'`);
+                }
             }
         }
         
@@ -115,14 +131,19 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                     const data = settingsDoc.data();
                     setSortingConditions(data.sortingConditions || []);
                     setOriginalSortingConditions(data.sortingConditions || []);
+                    setPointsForWin(data.pointsForWin || 3);
+                    setOriginalPointsForWin(data.pointsForWin || 3);
                 } else {
                     // Vytvoríme predvolené nastavenia, ak neexistujú
                     const defaultSettings = {
-                        sortingConditions: []
+                        sortingConditions: [],
+                        pointsForWin: 3
                     };
                     await setDoc(settingsDocRef, defaultSettings);
                     setSortingConditions([]);
                     setOriginalSortingConditions([]);
+                    setPointsForWin(3);
+                    setOriginalPointsForWin(3);
                 }
             } catch (error) {
                 showNotification(`Chyba pri načítaní nastavení tabuľky: ${error.message}`, 'error');
@@ -133,6 +154,23 @@ export function TableSettings({ db, userProfileData, showNotification }) {
 
         loadTableSettings();
     }, [db, showNotification]);
+
+    // Handler pre zmenu bodov za výhru
+    const handlePointsForWinChange = (value) => {
+        const numValue = parseInt(value) || 0;
+        // Obmedzenie na rozumné hodnoty (1-10 bodov)
+        const clampedValue = Math.max(1, Math.min(10, numValue));
+        setPointsForWin(clampedValue);
+        
+        // Kontrola, či sa hodnota zmenila oproti originálu
+        if (clampedValue !== originalPointsForWin) {
+            setHasChanges(true);
+        } else {
+            // Ak sa vrátila na pôvodnú hodnotu, skontrolujeme aj ostatné zmeny
+            const conditionsChanged = JSON.stringify(sortingConditions) !== JSON.stringify(originalSortingConditions);
+            setHasChanges(conditionsChanged);
+        }
+    };
 
     // Handler pre zmenu podmienky poradia
     const handleSortingConditionChange = (index, field, value) => {
@@ -204,15 +242,18 @@ export function TableSettings({ db, userProfileData, showNotification }) {
             const validConditions = sortingConditions.filter(cond => cond.parameter && cond.parameter.trim() !== '');
             
             const dataToSave = {
-                sortingConditions: validConditions
+                sortingConditions: validConditions,
+                pointsForWin: pointsForWin
             };
 
             // Zistíme, či došlo k zmene
-            const isChanged = JSON.stringify(validConditions) !== JSON.stringify(originalSortingConditions);
+            const conditionsChanged = JSON.stringify(validConditions) !== JSON.stringify(originalSortingConditions);
+            const pointsChanged = pointsForWin !== originalPointsForWin;
+            const isChanged = conditionsChanged || pointsChanged;
             
-            // Ak došlo k zmene, vytvoríme detailnú notifikáciu s jednotlivými zmenami na pozíciách
+            // Ak došlo k zmene, vytvoríme detailnú notifikáciu s jednotlivými zmenami
             if (isChanged) {
-                const changes = generateDetailedChanges(originalSortingConditions, validConditions);
+                const changes = generateDetailedChanges(originalSortingConditions, validConditions, originalPointsForWin, pointsForWin);
                 await createTableSettingsChangeNotification('table_settings_updated', changes);
             }
             
@@ -220,7 +261,8 @@ export function TableSettings({ db, userProfileData, showNotification }) {
             
             // Aktualizujeme pôvodné nastavenia
             setOriginalSortingConditions(validConditions);
-            setSortingConditions(validConditions); // Aktualizujeme stav aby neobsahoval prázdne podmienky
+            setSortingConditions(validConditions);
+            setOriginalPointsForWin(pointsForWin);
             setHasChanges(false);
             
             showNotification('Nastavenia poradia boli úspešne uložené.', 'success');
@@ -235,6 +277,7 @@ export function TableSettings({ db, userProfileData, showNotification }) {
     // Handler pre reset nastavení na predvolené
     const handleResetToDefault = () => {
         setSortingConditions([]);
+        setPointsForWin(3);
         setHasChanges(true);
     };
 
@@ -243,9 +286,8 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         const selectedValues = sortingConditions
             .filter((_, index) => index !== currentIndex)
             .map(cond => cond.parameter)
-            .filter(param => param && param.trim() !== ''); // Iba neprázdne hodnoty
+            .filter(param => param && param.trim() !== '');
         
-        // Pridáme možnosť "Vyberte" ako prvú a potom dostupné parametre
         return [
             { value: '', label: '-- Vyberte parameter --', disabled: true, isPlaceholder: true },
             ...availableParameters.filter(param => !selectedValues.includes(param.value))
@@ -287,7 +329,67 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                     'Nastavenia tabuľky'
                 ),
                 React.createElement('p', { className: 'text-gray-600 mt-1 text-sm' },
-                    'Nastavte kritériá pre určenie poradia tímov v tabuľke. Poradie kritérií určuje prioritu.'
+                    'Nastavte body za výhru a kritériá pre určenie poradia tímov v tabuľke. Poradie kritérií určuje prioritu.'
+                )
+            ),
+            
+            // Sekcia pre body za výhru
+            React.createElement(
+                'div',
+                { className: 'mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200' },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center space-x-4' },
+                    React.createElement(
+                        'div',
+                        { className: 'flex-1' },
+                        React.createElement(
+                            'label',
+                            { 
+                                htmlFor: 'pointsForWin',
+                                className: 'block text-sm font-medium text-gray-700 mb-1'
+                            },
+                            'Počet bodov za výhru'
+                        ),
+                        React.createElement(
+                            'p',
+                            { className: 'text-xs text-gray-500' },
+                            'Nastavte, koľko bodov získa tím za víťazstvo v zápase. Remíza je vždy 1 bod.'
+                        )
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'w-32' },
+                        React.createElement(
+                            'input',
+                            {
+                                id: 'pointsForWin',
+                                type: 'number',
+                                min: '1',
+                                max: '10',
+                                value: pointsForWin,
+                                onChange: (e) => handlePointsForWinChange(e.target.value),
+                                className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-center font-medium'
+                            }
+                        )
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'text-sm text-gray-600' },
+                        React.createElement('span', { className: 'font-medium' }, 'body'),
+                        ' za výhru'
+                    )
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'mt-2 text-xs text-gray-500' },
+                    React.createElement('p', null, 
+                        '• Výhra = ', 
+                        React.createElement('span', { className: 'font-bold text-blue-600' }, pointsForWin),
+                        ' bodov'
+                    ),
+                    React.createElement('p', null, '• Remíza = 1 bod'),
+                    React.createElement('p', null, '• Prehra = 0 bodov')
                 )
             ),
             
@@ -295,6 +397,12 @@ export function TableSettings({ db, userProfileData, showNotification }) {
             React.createElement(
                 'div',
                 { className: 'bg-white rounded-lg' },
+                
+                React.createElement(
+                    'h3',
+                    { className: 'text-lg font-medium text-gray-800 mb-3' },
+                    'Kritériá poradia pri rovnosti bodov'
+                ),
                 
                 // Dynamické riadky podmienok
                 React.createElement(
@@ -403,7 +511,7 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                                     React.createElement('option', { value: 'asc', className: 'text-gray-900' }, 'Vzostupne'),
                                     React.createElement('option', { value: 'desc', className: 'text-gray-900' }, 'Zostupne')
                                 )
-                                : React.createElement('div', { className: 'w-32' }), // Prázdny div pre zachovanie medzery
+                                : React.createElement('div', { className: 'w-32' }),
                             // Tlačidlo pre odstránenie
                             React.createElement(
                                 'button',
