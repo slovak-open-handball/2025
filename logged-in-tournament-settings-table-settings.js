@@ -81,6 +81,12 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         return 'zápasov';
     };
 
+    const getBodText = (count) => {
+        if (count === 1) return 'bod';
+        if (count >= 2 && count <= 4) return 'body';
+        return 'bodov';
+    };
+
     // Pomocná funkcia na formátovanie hodnoty pre porovnanie zmien
     const formatConditionValue = (cond) => {
         if (!cond || !cond.parameter) return 'Žiadne';
@@ -416,7 +422,7 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                     React.createElement(
                         'div',
                         { className: 'text-sm text-gray-600' },
-                        React.createElement('span', { className: 'font-medium' }, 'body'),
+                        React.createElement('span', { className: 'font-medium' }, getBodText(pointsForWin)),
                         ' za výhru'
                     )
                 )
