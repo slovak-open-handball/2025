@@ -496,12 +496,13 @@ const getBlueCardEventsForPlayerByNameAndCategory = async (matches, playerIdenti
             const q = query(eventsRef, where("matchId", "==", match.id));
             const eventsSnap = await getDocs(q);
             
+            // POUŽITE for...of namiesto forEach
             for (const doc of eventsSnap.docs) {
                 const event = doc.data();
                 if (event.type === 'blue' && event.playerRef) {
                     let isSamePlayer = false;
                     
-                    // 1. Porovnanie podľa unikátneho ID hráča (najlepšie)
+                    // 1. Porovnanie podľa unikátneho ID hráča
                     if (playerIdentifier.playerId && event.playerRef.playerId) {
                         isSamePlayer = event.playerRef.playerId === playerIdentifier.playerId;
                         if (isSamePlayer) console.log(`      ✅ Nájdená MK podľa ID v zápase ${match.id}`);
@@ -509,7 +510,6 @@ const getBlueCardEventsForPlayerByNameAndCategory = async (matches, playerIdenti
                     
                     // 2. Porovnanie podľa userId + názov tímu + playerIndex
                     if (!isSamePlayer && !playerIdentifier.playerId) {
-                        // TU JE POTREBNÝ await
                         const eventTeamName = await getTeamNameFromIdentifier(event.playerRef.teamIdentifier);
                         
                         isSamePlayer = event.playerRef.userId === playerIdentifier.userId &&
@@ -546,10 +546,6 @@ const getBlueCardEventsForPlayerByNameAndCategory = async (matches, playerIdenti
     
     // Zoradenie podľa poradia (najnovšie prvé)
     blueCardEvents.sort((a, b) => b.matchOrder - a.matchOrder);
-    
-    if (blueCardEvents.length > 0) {
-        console.log(`      📊 Celkovo nájdených ${blueCardEvents.length} modrých kariet pre hráča ${playerIdentifier.playerName || playerIdentifier.playerId}`);
-    }
     
     return blueCardEvents;
 };
