@@ -3584,7 +3584,7 @@ const matchesHallApp = ({ userProfileData }) => {
             
             // Výpis všetkých dostupných informácií o tímoch z users
             if (users && users.length > 0) {
-                console.log('\n👥 POUŽÍVATELIA S TÍMMI:');
+//                console.log('\n👥 POUŽÍVATELIA S TÍMMI:');
                 for (const user of users) {
                     if (user.teams && Object.keys(user.teams).length > 0) {
 //                        console.log(`\n   📧 ${user.email} (ID: ${user.id})`);
