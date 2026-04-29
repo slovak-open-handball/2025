@@ -1031,15 +1031,33 @@ const matchesHallApp = ({ userProfileData }) => {
     const [isLoadingSuspensionsAway, setIsLoadingSuspensionsAway] = useState(true);
 
     // ============================================================================
-    // NAČÍTANIE SUSPENDOVANÝCH HRÁČOV ZA MODRÚ KARTU PRE DOMÁCICH (S ONESKORENÍM)
+    // NAČÍTANIE SUSPENDOVANÝCH HRÁČOV ZA MODRÚ KARTU PRE DOMÁCICH (S POČKANÍM NA MATCHTRACKER)
     // ============================================================================
     
     useEffect(() => {
         const loadSuspensions = async () => {
-            // 🔥 POČKÁME, KÝM SA NENAČÍTAJÚ USERS A SUPERSTRUCTURE TEAMS
+            // 🔥 1. POČKÁME NA INICIALIZÁCIU matchTracker (max 10 sekúnd)
+            let waitCount = 0;
+            while (!window.matchTracker || !window.matchTracker.isInitialDataLoaded?.()) {
+                if (waitCount >= 100) { // 10 sekúnd (100 * 100ms)
+                    console.warn('⚠️ Timeout: matchTracker sa nenačítal do 10 sekúnd, pokračujem napriek tomu...');
+                    break;
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+                waitCount++;
+            }
+            
+            // 🔥 2. KRÁTKE ONESKORENIE PRE ISTOTU (200ms)
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            // 🔥 3. POČKÁME, KÝM SA NENAČÍTAJÚ USERS A SUPERSTRUCTURE TEAMS
             if (users.length === 0 || Object.keys(superstructureTeams).length === 0) {
                 console.log('⏳ Čakám na načítanie používateľov a superstructureTeams...');
-                return;
+                let userWaitCount = 0;
+                while ((users.length === 0 || Object.keys(superstructureTeams).length === 0) && userWaitCount < 50) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    userWaitCount++;
+                }
             }
             
             const teamIdentifier = selectedMatch?.homeTeamIdentifier;
@@ -1147,18 +1165,35 @@ const matchesHallApp = ({ userProfileData }) => {
         
         return () => clearTimeout(timer);
     }, [selectedMatch?.homeTeamIdentifier, selectedMatch?.id, users, superstructureTeams]);
-    // 🔥 PRIDANÉ ZÁVISLOSTI: users, superstructureTeams
-    
+
     // ============================================================================
-    // NAČÍTANIE SUSPENDOVANÝCH HRÁČOV ZA MODRÚ KARTU PRE HOSŤOVSKÝCH (S ONESKORENÍM)
+    // NAČÍTANIE SUSPENDOVANÝCH HRÁČOV ZA MODRÚ KARTU PRE HOSŤOVSKÝCH (S POČKANÍM NA MATCHTRACKER)
     // ============================================================================
     
     useEffect(() => {
         const loadSuspensions = async () => {
-            // 🔥 POČKÁME, KÝM SA NENAČÍTAJÚ USERS A SUPERSTRUCTURE TEAMS
+            // 🔥 1. POČKÁME NA INICIALIZÁCIU matchTracker (max 10 sekúnd)
+            let waitCount = 0;
+            while (!window.matchTracker || !window.matchTracker.isInitialDataLoaded?.()) {
+                if (waitCount >= 100) { // 10 sekúnd (100 * 100ms)
+                    console.warn('⚠️ Timeout: matchTracker sa nenačítal do 10 sekúnd, pokračujem napriek tomu...');
+                    break;
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+                waitCount++;
+            }
+            
+            // 🔥 2. KRÁTKE ONESKORENIE PRE ISTOTU (200ms)
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            // 🔥 3. POČKÁME, KÝM SA NENAČÍTAJÚ USERS A SUPERSTRUCTURE TEAMS
             if (users.length === 0 || Object.keys(superstructureTeams).length === 0) {
                 console.log('⏳ Čakám na načítanie používateľov a superstructureTeams...');
-                return;
+                let userWaitCount = 0;
+                while ((users.length === 0 || Object.keys(superstructureTeams).length === 0) && userWaitCount < 50) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    userWaitCount++;
+                }
             }
             
             const teamIdentifier = selectedMatch?.awayTeamIdentifier;
@@ -1266,7 +1301,6 @@ const matchesHallApp = ({ userProfileData }) => {
         
         return () => clearTimeout(timer);
     }, [selectedMatch?.awayTeamIdentifier, selectedMatch?.id, users, superstructureTeams]);
-    // 🔥 PRIDANÉ ZÁVISLOSTI: users, superstructureTeams
 
     // Načítanie nastavení tabuľky do localStorage pre rýchly prístup
     useEffect(() => {
