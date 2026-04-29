@@ -350,11 +350,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                                 className: 'block text-sm font-medium text-gray-700 mb-1'
                             },
                             'Počet bodov za výhru'
-                        ),
-                        React.createElement(
-                            'p',
-                            { className: 'text-xs text-gray-500' },
-                            'Nastavte, koľko bodov získa tím za víťazstvo v zápase. Remíza je vždy 1 bod.'
                         )
                     ),
                     React.createElement(
@@ -379,17 +374,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                         React.createElement('span', { className: 'font-medium' }, 'body'),
                         ' za výhru'
                     )
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'mt-2 text-xs text-gray-500' },
-                    React.createElement('p', null, 
-                        '• Výhra = ', 
-                        React.createElement('span', { className: 'font-bold text-blue-600' }, pointsForWin),
-                        ' bodov'
-                    ),
-                    React.createElement('p', null, '• Remíza = 1 bod'),
-                    React.createElement('p', null, '• Prehra = 0 bodov')
                 )
             ),
             
