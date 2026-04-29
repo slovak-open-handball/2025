@@ -86,7 +86,7 @@ export function AccommodationSettings({ db, userProfileData, showNotification, s
       
       // Notifikácia pre globálne zverejnenie - používame existujúci typ 'updateSettings'
       if (sendAdminNotification) {
-        const changesMade = `Používateľ ${isPublic ? 'Zverejnil' : 'zrušil zverejnenie'} názov ubytovne`;
+        const changesMade = `Používateľ ${isPublic ? 'zverejnil názov ubytovne' : 'zrušil zverejnenie názvu ubytovne'}`;
         await sendAdminNotification({
           type: 'updateSettings',
           data: {
