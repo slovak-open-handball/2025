@@ -1069,8 +1069,8 @@ const matchesHallApp = ({ userProfileData }) => {
             setIsLoadingSuspensionsHome(true);
             const newSuspendedPlayers = {};
             
-            // 🔥 DÔLEŽITÉ: ZÍSKAME NÁZOV TÍMU (NIE IDENTIFIKÁTOR)
-            const teamName = getTeamNameFromIdentifier(teamIdentifier);
+            // 🔥 DÔLEŽITÉ: ZÍSKAME NÁZOV TÍMU (NIE IDENTIFIKÁTOR) - POUŽIJEME AWAIT
+            const teamName = await getTeamNameFromIdentifier(teamIdentifier);
             console.log(`🔍 Domáci tím: pôvodný identifikátor="${teamIdentifier}", názov tímu="${teamName}"`);
             
             if (!teamName) {
@@ -1162,7 +1162,7 @@ const matchesHallApp = ({ userProfileData }) => {
         
         return () => clearTimeout(timer);
     }, [selectedMatch?.homeTeamIdentifier, selectedMatch?.id, users, superstructureTeams]);
-
+    
     // ============================================================================
     // NAČÍTANIE SUSPENDOVANÝCH HRÁČOV ZA MODRÚ KARTU PRE HOSŤOVSKÝCH (S POČKANÍM NA MATCHTRACKER)
     // ============================================================================
@@ -1205,8 +1205,8 @@ const matchesHallApp = ({ userProfileData }) => {
             setIsLoadingSuspensionsAway(true);
             const newSuspendedPlayers = {};
             
-            // 🔥 DÔLEŽITÉ: ZÍSKAME NÁZOV TÍMU (NIE IDENTIFIKÁTOR)
-            const teamName = getTeamNameFromIdentifier(teamIdentifier);
+            // 🔥 DÔLEŽITÉ: ZÍSKAME NÁZOV TÍMU (NIE IDENTIFIKÁTOR) - POUŽIJEME AWAIT
+            const teamName = await getTeamNameFromIdentifier(teamIdentifier);
             console.log(`🔍 Hosťovský tím: pôvodný identifikátor="${teamIdentifier}", názov tímu="${teamName}"`);
             
             if (!teamName) {
