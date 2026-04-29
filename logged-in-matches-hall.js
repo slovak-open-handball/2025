@@ -535,7 +535,7 @@ const logAllEventsForMatch = async (matchId) => {
  * @param {string} currentMatchId - ID aktuálneho zápasu
  * @returns {Promise<Array>} - Zoznam modrých kariet
  */
-const getBlueCardEventsForPlayerByNameAndCategory = async (matches, playerIdentifier, currentMatchId, getTeamDetailsFromIdentifierFn) => {
+const getBlueCardEventsForPlayerByNameAndCategory = async (matches, playerIdentifier, currentMatchId, getTeamDetailsFromIdentifier) => {
     if (!window.db || !matches.length || !playerIdentifier) return [];
     
     const blueCardEvents = [];
