@@ -374,6 +374,129 @@ const matchesHallApp = ({ userProfileData }) => {
     const [manualAwayScore, setManualAwayScore] = useState('');
     const [manualScoreMatchId, setManualScoreMatchId] = useState(null);
 
+    const [suspendedPlayersHome, setSuspendedPlayersHome] = useState({});
+    const [suspendedPlayersAway, setSuspendedPlayersAway] = useState({});
+    const [isLoadingSuspensionsHome, setIsLoadingSuspensionsHome] = useState(true);
+    const [isLoadingSuspensionsAway, setIsLoadingSuspensionsAway] = useState(true);
+
+    useEffect(() => {
+        const loadSuspensions = async () => {
+            const teamIdentifier = selectedMatch?.homeTeamIdentifier;
+            const teamDetails = getTeamDetailsFromIdentifier(teamIdentifier);
+            const teamData = teamDetails?.team;
+            
+            if (!teamIdentifier || !selectedMatch || !teamData?.playerDetails?.length) {
+                setIsLoadingSuspensionsHome(false);
+                return;
+            }
+            
+            setIsLoadingSuspensionsHome(true);
+            const newSuspendedPlayers = {};
+            
+            // Získame všetky zápasy tímu
+            const teamMatches = await getTeamMatches(teamIdentifier);
+            
+            // Získame aktuálne poradie zápasu
+            let currentMatchOrder = -1;
+            if (matches.length > 0) {
+                const sortedMatches = [...matches].sort((a, b) => {
+                    if (!a.scheduledTime) return 1;
+                    if (!b.scheduledTime) return -1;
+                    return a.scheduledTime.toDate() - b.scheduledTime.toDate();
+                });
+                currentMatchOrder = sortedMatches.findIndex(m => m.id === selectedMatch.id);
+            }
+            
+            const blueCardSuspensionMatches = getBlueCardSuspensionMatches();
+            
+            // Pre každého hráča skontrolujeme, či má modrú kartu v predchádzajúcich zápasoch
+            for (let i = 0; i < teamData.playerDetails.length; i++) {
+                const player = teamData.playerDetails[i];
+                if (!player) continue;
+                
+                const playerIdentifier = {
+                    userId: teamDetails.userId,
+                    teamIdentifier: teamIdentifier,
+                    playerIndex: i,
+                    isStaff: false
+                };
+                
+                const blueCardEvents = await getBlueCardEventsForPlayer(teamMatches, playerIdentifier, selectedMatch.id);
+                const isSuspended = isPlayerSuspendedForBlueCard(blueCardEvents, blueCardSuspensionMatches, currentMatchOrder);
+                
+                if (isSuspended) {
+                    newSuspendedPlayers[i] = {
+                        player: player,
+                        reason: `Vylúčený na ${blueCardSuspensionMatches} ${blueCardSuspensionMatches === 1 ? 'zápas' : (blueCardSuspensionMatches < 5 ? 'zápasy' : 'zápasov')} za modrú kartu`
+                    };
+                }
+            }
+            
+            setSuspendedPlayersHome(newSuspendedPlayers);
+            setIsLoadingSuspensionsHome(false);
+        };
+        
+        loadSuspensions();
+    }, [selectedMatch?.homeTeamIdentifier, selectedMatch?.id, matches]);
+
+    // Načítanie suspendovaných hráčov za modrú kartu pre HOSŤOVSKÝCH
+    useEffect(() => {
+        const loadSuspensions = async () => {
+            const teamIdentifier = selectedMatch?.awayTeamIdentifier;
+            const teamDetails = getTeamDetailsFromIdentifier(teamIdentifier);
+            const teamData = teamDetails?.team;
+            
+            if (!teamIdentifier || !selectedMatch || !teamData?.playerDetails?.length) {
+                setIsLoadingSuspensionsAway(false);
+                return;
+            }
+            
+            setIsLoadingSuspensionsAway(true);
+            const newSuspendedPlayers = {};
+            
+            const teamMatches = await getTeamMatches(teamIdentifier);
+            
+            let currentMatchOrder = -1;
+            if (matches.length > 0) {
+                const sortedMatches = [...matches].sort((a, b) => {
+                    if (!a.scheduledTime) return 1;
+                    if (!b.scheduledTime) return -1;
+                    return a.scheduledTime.toDate() - b.scheduledTime.toDate();
+                });
+                currentMatchOrder = sortedMatches.findIndex(m => m.id === selectedMatch.id);
+            }
+            
+            const blueCardSuspensionMatches = getBlueCardSuspensionMatches();
+            
+            for (let i = 0; i < teamData.playerDetails.length; i++) {
+                const player = teamData.playerDetails[i];
+                if (!player) continue;
+                
+                const playerIdentifier = {
+                    userId: teamDetails.userId,
+                    teamIdentifier: teamIdentifier,
+                    playerIndex: i,
+                    isStaff: false
+                };
+                
+                const blueCardEvents = await getBlueCardEventsForPlayer(teamMatches, playerIdentifier, selectedMatch.id);
+                const isSuspended = isPlayerSuspendedForBlueCard(blueCardEvents, blueCardSuspensionMatches, currentMatchOrder);
+                
+                if (isSuspended) {
+                    newSuspendedPlayers[i] = {
+                        player: player,
+                        reason: `Vylúčený na ${blueCardSuspensionMatches} ${blueCardSuspensionMatches === 1 ? 'zápas' : (blueCardSuspensionMatches < 5 ? 'zápasy' : 'zápasov')} za modrú kartu`
+                    };
+                }
+            }
+            
+            setSuspendedPlayersAway(newSuspendedPlayers);
+            setIsLoadingSuspensionsAway(false);
+        };
+        
+        loadSuspensions();
+    }, [selectedMatch?.awayTeamIdentifier, selectedMatch?.id, matches]);
+
     // Načítanie nastavení tabuľky do localStorage pre rýchly prístup
     useEffect(() => {
         if (!window.db) return;
@@ -4422,7 +4545,7 @@ const matchesHallApp = ({ userProfileData }) => {
             return false;
         };
 
-        const renderPlayersSection = (teamDetails, teamType, teamName) => {
+        const renderPlayersSection = (teamDetails, teamType, teamName, suspendedPlayers, isLoadingSuspensions) => {
             const teamData = teamDetails?.team;
             
             if (!teamData) {
@@ -5658,7 +5781,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                         ),
                                         
                                         // Hráči pre domáci tím - POUŽITE FUNKCIU renderPlayersSection
-                                        renderPlayersSection(homeTeamDetails, 'home', homeTeamName)
+                                        renderPlayersSection(homeTeamDetails, 'home', homeTeamName, suspendedPlayersHome, isLoadingSuspensionsHome)
                                     ),
                                     
                                     // Box s priebehom zápasu (medzi tímami)
@@ -6218,7 +6341,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                         ),
                                         
                                         // Hráči hosťovského tímu - POUŽITE FUNKCIU renderPlayersSection
-                                        renderPlayersSection(awayTeamDetails, 'away', awayTeamName)
+                                        renderPlayersSection(awayTeamDetails, 'away', awayTeamName, suspendedPlayersAway, isLoadingSuspensionsAway)
                                     ),
                                     
                                     // Prázdny stĺpec pre zarovnanie
@@ -6437,7 +6560,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             ),
                                             
                                             // Hráči pre domáci tím so štatistikami
-                                            renderPlayersSection(homeTeamDetails, 'home', homeTeamName)
+                                            renderPlayersSection(homeTeamDetails, 'home', homeTeamName, suspendedPlayersHome, isLoadingSuspensionsHome)
                                         ),
                                         
                                         // Hosťovský tím - detail so štatistikami (LEN JEDEN!)
@@ -6645,7 +6768,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             ),
                                             
                                             // Hráči hosťovského tímu so štatistikami
-                                            renderPlayersSection(awayTeamDetails, 'away', awayTeamName)
+                                            renderPlayersSection(awayTeamDetails, 'away', awayTeamName, suspendedPlayersAway, isLoadingSuspensionsAway)
                                         )
                                     ),
                                     
