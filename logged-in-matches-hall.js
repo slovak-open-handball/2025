@@ -520,7 +520,7 @@ const getTeamNameFromIdentifier = async (identifier) => {
     
     console.log(`🔍 getTeamNameFromIdentifier() volaná s identifikátorom: "${identifier}"`);
     
-    // 1. Najprv skúsime získať zobrazovací názov (napr. "U12 CH 3B")
+    // 1. Získame zobrazovací názov (napr. "U12 CH 3B")
     let displayName = identifier;
     
     // Pokúsime sa previesť identifikátor na zobrazovací názov
@@ -542,7 +542,6 @@ const getTeamNameFromIdentifier = async (identifier) => {
         
         if (order && groupLetter) {
             // Konverzia: "D4" -> "4D" (alebo podľa potreby)
-            // V tomto prípade "D4" znamená skupina D, poradie 4
             displayName = `${category} ${order}${groupLetter}`;
         }
     }
@@ -560,7 +559,7 @@ const getTeamNameFromIdentifier = async (identifier) => {
     let actualTeamName = null;
     
     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-        // Ak je funkcia asynchrónna, počkáme
+        // 🔥 DÔLEŽITÉ: Posielame displayName (napr. "U12 CH 4D"), NIE identifikátor!
         const result = window.matchTracker.getTeamNameByDisplayId(displayName);
         
         if (result && typeof result.then === 'function') {
@@ -574,7 +573,7 @@ const getTeamNameFromIdentifier = async (identifier) => {
         console.log(`   window.matchTracker.getTeamNameByDisplayId("${displayName}") vrátil: "${actualTeamName}"`);
     }
     
-    // 4. Ak sa nepodarilo získať názov cez matchTracker, použijeme pôvodný identifikátor
+    // 4. Ak sa nepodarilo získať názov cez matchTracker, použijeme zobrazovací názov
     if (!actualTeamName || actualTeamName === displayName) {
         actualTeamName = displayName;
         console.log(`   ⚠️ Používam zobrazovací názov ako fallback: "${actualTeamName}"`);
@@ -603,7 +602,7 @@ const getTeamMatchesByName = async (teamName) => {
         for (const doc of allMatchesSnap.docs) {
             const match = { id: doc.id, ...doc.data() };
             
-            // Asynchrónne získanie názvov pre oba tímy
+            // 🔥 POUŽIJEME ROVNAKÚ FUNKCIU AKO PRE SÚPISKY
             const homeTeamName = await getTeamNameFromIdentifier(match.homeTeamIdentifier);
             const awayTeamName = await getTeamNameFromIdentifier(match.awayTeamIdentifier);
             
