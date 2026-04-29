@@ -1130,8 +1130,8 @@ const matchesHallApp = ({ userProfileData }) => {
                 waitCount++;
             }
             
-            // 🔥 2. KRÁTKE ONESKORENIE PRE ISTOTU (200ms)
-            await new Promise(resolve => setTimeout(resolve, 200));
+            // 🔥 2. KRÁTKE ONESKORENIE PRE ISTOTU (5s)
+            await new Promise(resolve => setTimeout(resolve, 5000));
             
             // 🔥 3. POČKÁME, KÝM SA NENAČÍTAJÚ USERS A SUPERSTRUCTURE TEAMS
             if (users.length === 0 || Object.keys(superstructureTeams).length === 0) {
@@ -1273,8 +1273,8 @@ const matchesHallApp = ({ userProfileData }) => {
                 waitCount++;
             }
             
-            // 🔥 2. KRÁTKE ONESKORENIE PRE ISTOTU (200ms)
-            await new Promise(resolve => setTimeout(resolve, 200));
+            // 🔥 2. KRÁTKE ONESKORENIE PRE ISTOTU (5s)
+            await new Promise(resolve => setTimeout(resolve, 5000));
             
             // 🔥 3. POČKÁME, KÝM SA NENAČÍTAJÚ USERS A SUPERSTRUCTURE TEAMS
             if (users.length === 0 || Object.keys(superstructureTeams).length === 0) {
