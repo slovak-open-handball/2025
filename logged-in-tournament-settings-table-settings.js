@@ -455,7 +455,7 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                             {
                                 id: 'blueCardSuspension',
                                 type: 'number',
-                                min: '1',
+                                min: '0',
                                 value: blueCardSuspensionMatches,
                                 onChange: (e) => handleBlueCardSuspensionChange(e.target.value),
                                 className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-center font-medium'
