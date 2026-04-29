@@ -515,6 +515,186 @@ const getTeamMatchesByCleanName = async (cleanTeamName) => {
     }
 };
 
+const getTeamNameFromIdentifier = (identifier) => {
+    if (!identifier) return null;
+    
+    // Skúsime získať názov cez matchTracker (prvý pokus)
+    let teamName = null;
+    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+        teamName = window.matchTracker.getTeamNameByDisplayId(identifier);
+    }
+    
+    // Ak sa nepodarilo, skúsime vyhľadať v superstructureTeams
+    if (!teamName || teamName === identifier) {
+        const parts = identifier.split(' ');
+        if (parts.length >= 2) {
+            const groupAndOrder = parts.pop();
+            const category = parts.join(' ');
+            
+            let groupLetter = '';
+            let order = '';
+            for (let i = 0; i < groupAndOrder.length; i++) {
+                const char = groupAndOrder[i];
+                if (char >= '0' && char <= '9') {
+                    order = groupAndOrder.substring(i);
+                    groupLetter = groupAndOrder.substring(0, i);
+                    break;
+                }
+            }
+            
+            if (order && groupLetter) {
+                const fullGroupName = `skupina ${groupLetter}`;
+                const orderNum = parseInt(order, 10);
+                
+                const categoryTeams = window.superstructureTeams?.[category];
+                if (categoryTeams && Array.isArray(categoryTeams)) {
+                    const team = categoryTeams.find(t => 
+                        t.groupName === fullGroupName && 
+                        t.order === orderNum
+                    );
+                    if (team && team.teamName) {
+                        teamName = team.teamName;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Ešte jeden pokus cez druhú konverziu
+    if (teamName && teamName !== identifier && window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+        const secondPass = window.matchTracker.getTeamNameByDisplayId(teamName);
+        if (secondPass && secondPass !== teamName) {
+            teamName = secondPass;
+        }
+    }
+    
+    return teamName || identifier;
+};
+
+// ============================================================================
+// FUNKCIA NA ZÍSKANIE VŠETKÝCH ZÁPASOV TÍMU PODĽA NÁZVU (NIE IDENTIFIKÁTORA)
+// ============================================================================
+
+/**
+ * Získa všetky zápasy pre daný tím na základe názvu tímu.
+ * @param {string} teamName - Názov tímu
+ * @returns {Promise<Array>} - Zoznam zápasov tímu
+ */
+const getTeamMatchesByName = async (teamName) => {
+    if (!window.db || !teamName) return [];
+    
+    try {
+        const matchesRef = collection(window.db, 'matches');
+        const allMatchesSnap = await getDocs(matchesRef);
+        const teamMatches = [];
+        
+        for (const doc of allMatchesSnap.docs) {
+            const match = { id: doc.id, ...doc.data() };
+            
+            // Skontrolujeme domáci tím
+            let homeMatch = false;
+            if (match.homeTeamIdentifier) {
+                const homeTeamName = getTeamNameFromIdentifier(match.homeTeamIdentifier);
+                if (homeTeamName === teamName) {
+                    homeMatch = true;
+                }
+            }
+            
+            // Skontrolujeme hosťovský tím
+            let awayMatch = false;
+            if (match.awayTeamIdentifier) {
+                const awayTeamName = getTeamNameFromIdentifier(match.awayTeamIdentifier);
+                if (awayTeamName === teamName) {
+                    awayMatch = true;
+                }
+            }
+            
+            if (homeMatch || awayMatch) {
+                teamMatches.push({
+                    ...match,
+                    teamSide: homeMatch ? 'home' : 'away'
+                });
+            }
+        }
+        
+        // Zoradenie podľa dátumu (najstaršie prvé) - DÔLEŽITÉ pre poradie zápasov
+        teamMatches.sort((a, b) => {
+            if (!a.scheduledTime) return 1;
+            if (!b.scheduledTime) return -1;
+            return a.scheduledTime.toDate() - b.scheduledTime.toDate();
+        });
+        
+        return teamMatches;
+    } catch (error) {
+        console.error('Chyba pri načítaní zápasov tímu:', error);
+        return [];
+    }
+};
+
+const getBlueCardEventsForPlayerByName = async (matches, playerIdentifier, currentMatchId) => {
+    if (!window.db || !matches.length || !playerIdentifier) return [];
+    
+    const blueCardEvents = [];
+    
+    for (const match of matches) {
+        if (match.id === currentMatchId) continue;
+        
+        try {
+            const eventsRef = collection(window.db, 'matchEvents');
+            const q = query(eventsRef, where("matchId", "==", match.id));
+            const eventsSnap = await getDocs(q);
+            
+            eventsSnap.forEach((doc) => {
+                const event = doc.data();
+                if (event.type === 'blue' && event.playerRef) {
+                    let isSamePlayer = false;
+                    
+                    // 1. NAJLEPŠIE: Porovnanie podľa unikátneho ID hráča (ak existuje)
+                    if (playerIdentifier.playerId && event.playerRef.playerId) {
+                        isSamePlayer = event.playerRef.playerId === playerIdentifier.playerId;
+                    }
+                    
+                    // 2. Porovnanie podľa userId + názov tímu + playerIndex
+                    //    TOTO JE KĽÚČOVÉ PRE NADSTAVBOVÉ ZÁPASY A PAVÚK
+                    if (!isSamePlayer && !playerIdentifier.playerId) {
+                        // Získame názov tímu z identifikátora v udalosti
+                        const eventTeamName = getTeamNameFromIdentifier(event.playerRef.teamIdentifier);
+                        
+                        // Porovnáme: userId, názov tímu a playerIndex
+                        isSamePlayer = event.playerRef.userId === playerIdentifier.userId &&
+                                       eventTeamName === playerIdentifier.teamName &&
+                                       event.playerRef.playerIndex === playerIdentifier.playerIndex;
+                    }
+                    
+                    // 3. Fallback: Porovnanie podľa mena (najmenej spoľahlivé)
+                    if (!isSamePlayer && playerIdentifier.playerName) {
+                        const playerFullName = `${playerIdentifier.lastName} ${playerIdentifier.firstName}`;
+                        isSamePlayer = event.playerRef.playerName === playerFullName;
+                    }
+                    
+                    if (isSamePlayer) {
+                        const matchIndex = matches.findIndex(m => m.id === match.id);
+                        blueCardEvents.push({
+                            matchId: match.id,
+                            matchDate: match.scheduledTime,
+                            eventTimestamp: event.timestamp,
+                            matchStatus: match.status,
+                            matchOrder: matchIndex  // Poradie zápasu v histórii tímu
+                        });
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Chyba pri načítaní udalostí zápasu:', error);
+        }
+    }
+    
+    // Zoradenie podľa poradia (najnovšie prvé)
+    blueCardEvents.sort((a, b) => b.matchOrder - a.matchOrder);
+    
+    return blueCardEvents;
+};
+
 const getBlueCardEventsForPlayerByMatches = async (matches, playerIdentifier, currentMatchId) => {
     if (!window.db || !matches.length || !playerIdentifier) return [];
     
@@ -865,19 +1045,26 @@ const matchesHallApp = ({ userProfileData }) => {
             setIsLoadingSuspensionsHome(true);
             const newSuspendedPlayers = {};
             
-            // ZÍSKAME ČISTÝ NÁZOV TÍMU PRE VYHĽADÁVANIE
-            const cleanTeamName = getCleanTeamNameForBlueCardSearch(teamIdentifier);
-            console.log(`🔍 Domáci tím: pôvodný identifikátor="${teamIdentifier}", čistý názov="${cleanTeamName}"`);
+            // 🔥 DÔLEŽITÉ: ZÍSKAME NÁZOV TÍMU (NIE IDENTIFIKÁTOR)
+            const teamName = getTeamNameFromIdentifier(teamIdentifier);
+            console.log(`🔍 Domáci tím: pôvodný identifikátor="${teamIdentifier}", názov tímu="${teamName}"`);
             
-            if (!cleanTeamName) {
-                console.log(`⚠️ Nepodarilo sa získať čistý názov pre domáci tím, preskakujem kontrolu MK`);
+            if (!teamName) {
+                console.log(`⚠️ Nepodarilo sa získať názov pre domáci tím, preskakujem kontrolu MK`);
                 setIsLoadingSuspensionsHome(false);
                 return;
             }
             
-            // ZÍSKAME VŠETKY ZÁPASY TÍMU PODĽA ČISTÉHO NÁZVU
-            const teamMatches = await getTeamMatchesByCleanName(cleanTeamName);
-            console.log(`📊 Nájdených zápasov pre tím: ${teamMatches.length}`);
+            // ZÍSKAME VŠETKY ZÁPASY TÍMU PODĽA NÁZVU
+            const teamMatches = await getTeamMatchesByName(teamName);
+            console.log(`📊 Nájdených zápasov pre tím "${teamName}": ${teamMatches.length}`);
+            
+            // 🔥 VYPNÍŠEME VŠETKY ZÁPASY PRE KONTROLU
+            console.log(`   Zoznam zápasov (zoradených podľa dátumu):`);
+            teamMatches.forEach((match, idx) => {
+                const isCurrent = match.id === selectedMatch.id;
+                console.log(`   ${idx}. ${isCurrent ? '🟢 AKTUÁLNY' : '    '} | ID: ${match.id} | Stav: ${match.status}`);
+            });
             
             // Nájdenie poradia aktuálneho zápasu
             let currentMatchOrder = -1;
@@ -889,6 +1076,8 @@ const matchesHallApp = ({ userProfileData }) => {
             }
             
             const blueCardSuspensionMatches = getBlueCardSuspensionMatches();
+            console.log(`   Aktuálny zápas je na poradí: ${currentMatchOrder}`);
+            console.log(`   Trest trvá ${blueCardSuspensionMatches} zápasov\n`);
             
             // Pre každého hráča v tíme
             for (let i = 0; i < teamData.playerDetails.length; i++) {
@@ -900,11 +1089,11 @@ const matchesHallApp = ({ userProfileData }) => {
                     continue;
                 }
                 
-                // Vytvoríme identifikátor hráča pre vyhľadávanie
+                // 🔥 VYTVORÍME IDENTIFIKÁTOR HRÁČA S NÁZVOM TÍMU (NIE IDENTIFIKÁTOROM)
                 const playerIdentifier = {
                     userId: teamDetails.userId,
-                    teamIdentifier: teamIdentifier,
-                    playerIndex: i,
+                    teamName: teamName,  // 🔥 POUŽÍVAME NÁZOV TÍMU, NIE IDENTIFIKÁTOR
+                    playerIndex: i,      // 🔥 PORADOVÉ ČÍSLO V POLI (KĽÚČOVÉ)
                     playerId: player.id,
                     firstName: player.firstName,
                     lastName: player.lastName,
@@ -912,12 +1101,16 @@ const matchesHallApp = ({ userProfileData }) => {
                 };
                 
                 // Získame všetky modré karty pre tohto hráča
-                const blueCardEvents = await getBlueCardEventsForPlayerByMatches(teamMatches, playerIdentifier, selectedMatch.id);
+                const blueCardEvents = await getBlueCardEventsForPlayerByName(teamMatches, playerIdentifier, selectedMatch.id);
                 
                 if (blueCardEvents.length > 0) {
                     const latestBlueCard = blueCardEvents[0];
                     const matchesPassed = currentMatchOrder - latestBlueCard.matchOrder;
-                    console.log(`   Hráč ${player.lastName} ${player.firstName}: najnovšia MK v zápase č. ${latestBlueCard.matchOrder}, odvtedy prešlo ${matchesPassed} zápasov`);
+                    console.log(`   🃏 Hráč ${player.lastName} ${player.firstName}:`);
+                    console.log(`      - Najnovšia MK v zápase č. ${latestBlueCard.matchOrder} (ID: ${latestBlueCard.matchId})`);
+                    console.log(`      - Zápasov od MK: ${matchesPassed}`);
+                    console.log(`      - Trest: ${blueCardSuspensionMatches} zápasov`);
+                    console.log(`      - Suspendovaný: ${matchesPassed > 0 && matchesPassed <= blueCardSuspensionMatches ? 'ÁNO' : 'NIE'}`);
                     
                     const isSuspended = matchesPassed > 0 && matchesPassed <= blueCardSuspensionMatches;
                     
@@ -929,6 +1122,8 @@ const matchesHallApp = ({ userProfileData }) => {
                             matchesPassed: matchesPassed
                         };
                     }
+                } else {
+                    console.log(`   ✅ Hráč ${player.lastName} ${player.firstName}: žiadne modré karty v histórii`);
                 }
             }
             
@@ -938,8 +1133,11 @@ const matchesHallApp = ({ userProfileData }) => {
         
         loadSuspensions();
     }, [selectedMatch?.homeTeamIdentifier, selectedMatch?.id]);
-        
-    // Načítanie suspendovaných hráčov za modrú kartu pre HOSŤOVSKÝCH
+    
+    // ============================================================================
+    // UPRAVENÝ useEffect PRE NAČÍTANIE SUSPENDOVANÝCH HRÁČOV (HOSŤOVSKÍ)
+    // ============================================================================
+    
     useEffect(() => {
         const loadSuspensions = async () => {
             const teamIdentifier = selectedMatch?.awayTeamIdentifier;
@@ -954,19 +1152,26 @@ const matchesHallApp = ({ userProfileData }) => {
             setIsLoadingSuspensionsAway(true);
             const newSuspendedPlayers = {};
             
-            // ZÍSKAME ČISTÝ NÁZOV TÍMU PRE VYHĽADÁVANIE
-            const cleanTeamName = getCleanTeamNameForBlueCardSearch(teamIdentifier);
-            console.log(`🔍 Hosťovský tím: pôvodný identifikátor="${teamIdentifier}", čistý názov="${cleanTeamName}"`);
+            // 🔥 DÔLEŽITÉ: ZÍSKAME NÁZOV TÍMU (NIE IDENTIFIKÁTOR)
+            const teamName = getTeamNameFromIdentifier(teamIdentifier);
+            console.log(`🔍 Hosťovský tím: pôvodný identifikátor="${teamIdentifier}", názov tímu="${teamName}"`);
             
-            if (!cleanTeamName) {
-                console.log(`⚠️ Nepodarilo sa získať čistý názov pre hosťovský tím, preskakujem kontrolu MK`);
+            if (!teamName) {
+                console.log(`⚠️ Nepodarilo sa získať názov pre hosťovský tím, preskakujem kontrolu MK`);
                 setIsLoadingSuspensionsAway(false);
                 return;
             }
             
-            // ZÍSKAME VŠETKY ZÁPASY TÍMU PODĽA ČISTÉHO NÁZVU
-            const teamMatches = await getTeamMatchesByCleanName(cleanTeamName);
-            console.log(`📊 Nájdených zápasov pre tím: ${teamMatches.length}`);
+            // ZÍSKAME VŠETKY ZÁPASY TÍMU PODĽA NÁZVU
+            const teamMatches = await getTeamMatchesByName(teamName);
+            console.log(`📊 Nájdených zápasov pre tím "${teamName}": ${teamMatches.length}`);
+            
+            // 🔥 VYPNÍŠEME VŠETKY ZÁPASY PRE KONTROLU
+            console.log(`   Zoznam zápasov (zoradených podľa dátumu):`);
+            teamMatches.forEach((match, idx) => {
+                const isCurrent = match.id === selectedMatch.id;
+                console.log(`   ${idx}. ${isCurrent ? '🟢 AKTUÁLNY' : '    '} | ID: ${match.id} | Stav: ${match.status}`);
+            });
             
             // Nájdenie poradia aktuálneho zápasu
             let currentMatchOrder = -1;
@@ -978,6 +1183,8 @@ const matchesHallApp = ({ userProfileData }) => {
             }
             
             const blueCardSuspensionMatches = getBlueCardSuspensionMatches();
+            console.log(`   Aktuálny zápas je na poradí: ${currentMatchOrder}`);
+            console.log(`   Trest trvá ${blueCardSuspensionMatches} zápasov\n`);
             
             // Pre každého hráča v tíme
             for (let i = 0; i < teamData.playerDetails.length; i++) {
@@ -989,11 +1196,11 @@ const matchesHallApp = ({ userProfileData }) => {
                     continue;
                 }
                 
-                // Vytvoríme identifikátor hráča pre vyhľadávanie
+                // 🔥 VYTVORÍME IDENTIFIKÁTOR HRÁČA S NÁZVOM TÍMU (NIE IDENTIFIKÁTOROM)
                 const playerIdentifier = {
                     userId: teamDetails.userId,
-                    teamIdentifier: teamIdentifier,
-                    playerIndex: i,
+                    teamName: teamName,  // 🔥 POUŽÍVAME NÁZOV TÍMU, NIE IDENTIFIKÁTOR
+                    playerIndex: i,      // 🔥 PORADOVÉ ČÍSLO V POLI (KĽÚČOVÉ)
                     playerId: player.id,
                     firstName: player.firstName,
                     lastName: player.lastName,
@@ -1001,12 +1208,16 @@ const matchesHallApp = ({ userProfileData }) => {
                 };
                 
                 // Získame všetky modré karty pre tohto hráča
-                const blueCardEvents = await getBlueCardEventsForPlayerByMatches(teamMatches, playerIdentifier, selectedMatch.id);
+                const blueCardEvents = await getBlueCardEventsForPlayerByName(teamMatches, playerIdentifier, selectedMatch.id);
                 
                 if (blueCardEvents.length > 0) {
                     const latestBlueCard = blueCardEvents[0];
                     const matchesPassed = currentMatchOrder - latestBlueCard.matchOrder;
-                    console.log(`   Hráč ${player.lastName} ${player.firstName}: najnovšia MK v zápase č. ${latestBlueCard.matchOrder}, odvtedy prešlo ${matchesPassed} zápasov`);
+                    console.log(`   🃏 Hráč ${player.lastName} ${player.firstName}:`);
+                    console.log(`      - Najnovšia MK v zápase č. ${latestBlueCard.matchOrder} (ID: ${latestBlueCard.matchId})`);
+                    console.log(`      - Zápasov od MK: ${matchesPassed}`);
+                    console.log(`      - Trest: ${blueCardSuspensionMatches} zápasov`);
+                    console.log(`      - Suspendovaný: ${matchesPassed > 0 && matchesPassed <= blueCardSuspensionMatches ? 'ÁNO' : 'NIE'}`);
                     
                     const isSuspended = matchesPassed > 0 && matchesPassed <= blueCardSuspensionMatches;
                     
@@ -1018,6 +1229,8 @@ const matchesHallApp = ({ userProfileData }) => {
                             matchesPassed: matchesPassed
                         };
                     }
+                } else {
+                    console.log(`   ✅ Hráč ${player.lastName} ${player.firstName}: žiadne modré karty v histórii`);
                 }
             }
             
