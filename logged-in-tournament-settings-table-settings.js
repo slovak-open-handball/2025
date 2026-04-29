@@ -183,8 +183,8 @@ export function TableSettings({ db, userProfileData, showNotification }) {
     // Handler pre zmenu počtu zápasov vylúčenia za modrú kartu
     const handleBlueCardSuspensionChange = (value) => {
         const numValue = parseInt(value) || 0;
-        // Obmedzenie na rozumné hodnoty (1-10 zápasov)
-        const clampedValue = Math.max(1, Math.min(10, numValue));
+        // Obmedzenie len na kladné čísla (minimálne 1)
+        const clampedValue = Math.max(1, numValue);
         setBlueCardSuspensionMatches(clampedValue);
         
         // Kontrola, či sa hodnota zmenila oproti originálu
@@ -449,7 +449,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                                 id: 'blueCardSuspension',
                                 type: 'number',
                                 min: '1',
-                                max: '10',
                                 value: blueCardSuspensionMatches,
                                 onChange: (e) => handleBlueCardSuspensionChange(e.target.value),
                                 className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-center font-medium'
