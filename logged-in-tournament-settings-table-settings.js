@@ -460,7 +460,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                         'div',
                         { className: 'text-sm text-gray-600' },
                         React.createElement('span', { className: 'font-medium' }, getZapasText(blueCardSuspensionMatches)),
-                        ' vylúčenia'
                     )
                 )
             ),
