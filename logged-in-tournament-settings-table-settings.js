@@ -75,6 +75,12 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         }
     };
 
+    const getZapasText = (count) => {
+        if (count === 1) return 'zápas';
+        if (count >= 2 && count <= 4) return 'zápasy';
+        return 'zápasov';
+    };
+
     // Pomocná funkcia na formátovanie hodnoty pre porovnanie zmien
     const formatConditionValue = (cond) => {
         if (!cond || !cond.parameter) return 'Žiadne';
@@ -453,7 +459,8 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                     React.createElement(
                         'div',
                         { className: 'text-sm text-gray-600' },
-                        React.createElement('span', { className: 'font-medium' }, 'zápasov'),
+                        React.createElement('span', { className: 'font-medium' }, getZapasText(blueCardSuspensionMatches)),
+                        ' vylúčenia'
                     )
                 )
             ),
