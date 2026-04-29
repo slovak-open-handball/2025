@@ -961,11 +961,11 @@ let groupCheckCache = new Set();
                         if (teamAScore > teamBScore) {
                             teamA.wins++;
                             teamB.losses++;
-                            teamA.points += 2;
+                            teamA.points += pointsForWinCache;
                         } else if (teamBScore > teamAScore) {
                             teamB.wins++;
                             teamA.losses++;
-                            teamB.points += 2;
+                            teamB.points += pointsForWinCache;
                         } else {
                             teamA.draws++;
                             teamB.draws++;
@@ -1038,11 +1038,11 @@ let groupCheckCache = new Set();
                 if (homeScore > awayScore) {
                     homeTeamStats.wins++;
                     awayTeamStats.losses++;
-                    homeTeamStats.points += 2;
+                    homeTeamStats.points += pointsForWinCache;
                 } else if (awayScore > homeScore) {
                     awayTeamStats.wins++;
                     homeTeamStats.losses++;
-                    awayTeamStats.points += 2;
+                    awayTeamStats.points += pointsForWinCache;
                 } else {
                     homeTeamStats.draws++;
                     awayTeamStats.draws++;
@@ -1562,12 +1562,18 @@ let groupCheckCache = new Set();
             console.error('❌ Firebase moduly neboli načítané!');
             return;
         }
+
+        // 🔥 NAČÍTAME BODY ZA VÝHRU Z DATABÁZY
+        await loadPointsForWin();
         
         // Načítame nastavenia poradia
         await loadTableSettings();
         
         // Spustíme sledovanie zmien nastavení poradia
         const unsubscribeSettings = subscribeToTableSettings();
+
+        // 🔥 SPUSTÍME SLEDOVANIE ZMIEN BODOV ZA VÝHRU
+        const unsubscribePointsForWin = subscribeToPointsForWinChanges();
         
         const matchesRef = collection(window.db, 'matches');
         
@@ -1773,6 +1779,7 @@ let groupCheckCache = new Set();
         }
         
         window.__unsubscribeTableSettings = unsubscribeSettings;
+        window.__unsubscribePointsForWin = unsubscribePointsForWin;
         await loadCategorySettings();
         const unsubscribeCategorySettings = subscribeToCategorySettingsChanges();
         window.__unsubscribeCategorySettings = unsubscribeCategorySettings;
