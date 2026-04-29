@@ -712,11 +712,8 @@ const matchesHallApp = ({ userProfileData }) => {
             const teamIdentifier = selectedMatch?.homeTeamIdentifier;
             const teamDetails = getTeamDetailsFromIdentifier(teamIdentifier);
             const teamData = teamDetails?.team;
-            
-            console.log(`🔵 [SUSPENSIONS-HOME] Spúšťam kontrolu pre tím: ${teamIdentifier}`);
-            
+                        
             if (!teamIdentifier || !selectedMatch || !teamData?.playerDetails?.length) {
-                console.log(`🔵 [SUSPENSIONS-HOME] PREDČASNÝ NÁVRAT - chýbajú dáta`);
                 setIsLoadingSuspensionsHome(false);
                 return;
             }
@@ -724,9 +721,7 @@ const matchesHallApp = ({ userProfileData }) => {
             setIsLoadingSuspensionsHome(true);
             const newSuspendedPlayers = {};
             
-            console.log(`🔵 [SUSPENSIONS-HOME] Načítavam všetky zápasy tímu...`);
             const teamMatches = await getTeamMatches(teamIdentifier);
-            console.log(`🔵 [SUSPENSIONS-HOME] Nájdených zápasov: ${teamMatches.length}`);
             
             // Zoradenie všetkých zápasov podľa dátumu (najstaršie prvé)
             const sortedMatches = [...teamMatches].sort((a, b) => {
@@ -743,10 +738,8 @@ const matchesHallApp = ({ userProfileData }) => {
                     break;
                 }
             }
-            console.log(`🔵 [SUSPENSIONS-HOME] Poradie aktuálneho zápasu: ${currentMatchOrder}`);
             
             const blueCardSuspensionMatches = getBlueCardSuspensionMatches();
-            console.log(`🔵 [SUSPENSIONS-HOME] Počet zápasov trestu za MK: ${blueCardSuspensionMatches}`);
             
             // Pre každého hráča v tíme
             for (let i = 0; i < teamData.playerDetails.length; i++) {
@@ -755,11 +748,8 @@ const matchesHallApp = ({ userProfileData }) => {
                 
                 // Preskočíme hráčov, ktorí sú už odstránení pre tento zápas
                 if (player.removedForMatch === selectedMatch.id) {
-                    console.log(`🔵 [SUSPENSIONS-HOME] Hráč ${player.lastName} ${player.firstName} je už odstránený pre tento zápas`);
                     continue;
-                }
-                
-                console.log(`🔵 [SUSPENSIONS-HOME] Kontrolujem hráča ${i}: ${player.lastName} ${player.firstName} (ID: ${player.id || 'žiadne'})`);
+                }                
                 
                 // Získame všetky modré karty pre tohto hráča
                 const blueCardEvents = [];
@@ -811,9 +801,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 }
                 
                 // Zoradenie podľa poradia (najnovšie prvé)
-                blueCardEvents.sort((a, b) => b.matchOrder - a.matchOrder);
-                
-                console.log(`🔵 [SUSPENSIONS-HOME] Hráč ${player.lastName} má ${blueCardEvents.length} modrých kariet`);
+                blueCardEvents.sort((a, b) => b.matchOrder - a.matchOrder);                
                 
                 if (blueCardEvents.length > 0) {
                     const latestBlueCard = blueCardEvents[0];
@@ -829,13 +817,10 @@ const matchesHallApp = ({ userProfileData }) => {
                             blueCardMatchOrder: latestBlueCard.matchOrder,
                             matchesPassed: matchesPassed
                         };
-                    } else {
-                        console.log(`✅ [SUSPENSIONS-HOME] Hráč ${player.lastName} NIE JE suspendovaný (prešlo ${matchesPassed} zápasov, trest je ${blueCardSuspensionMatches})`);
                     }
                 }
             }
             
-            console.log(`🔵 [SUSPENSIONS-HOME] Celkovo suspendovaných hráčov: ${Object.keys(newSuspendedPlayers).length}`);
             setSuspendedPlayersHome(newSuspendedPlayers);
             setIsLoadingSuspensionsHome(false);
         };
@@ -846,23 +831,17 @@ const matchesHallApp = ({ userProfileData }) => {
     // Načítanie suspendovaných hráčov za modrú kartu pre HOSŤOVSKÝCH
     useEffect(() => {
         const loadSuspensions = async () => {
-            const teamIdentifier = selectedMatch?.awayTeamIdentifier;
-            
-            console.log(`🔵 [SUSPENSIONS-AWAY] Spúšťam kontrolu pre tím: ${teamIdentifier}`);
+            const teamIdentifier = selectedMatch?.awayTeamIdentifier;            
             
             if (!teamIdentifier || !selectedMatch) {
-                console.log(`🔵 [SUSPENSIONS-AWAY] PREDČASNÝ NÁVRAT - chýba identifikátor`);
                 setIsLoadingSuspensionsAway(false);
                 return;
             }
             
             const teamDetails = getTeamDetailsFromIdentifier(teamIdentifier);
-            const teamData = teamDetails?.team;
-            
-            console.log(`🔵 [SUSPENSIONS-AWAY] teamDetails:`, teamDetails ? 'nájdené' : 'NENÁJDENÉ');
-            
+            const teamData = teamDetails?.team;            
+           
             if (!teamData?.playerDetails?.length) {
-                console.log(`🔵 [SUSPENSIONS-AWAY] PREDČASNÝ NÁVRAT - žiadni hráči`);
                 setIsLoadingSuspensionsAway(false);
                 return;
             }
@@ -871,9 +850,7 @@ const matchesHallApp = ({ userProfileData }) => {
             const newSuspendedPlayers = {};
             
             try {
-                console.log(`🔵 [SUSPENSIONS-AWAY] Načítavam všetky zápasy tímu...`);
                 const teamMatches = await getTeamMatches(teamIdentifier);
-                console.log(`🔵 [SUSPENSIONS-AWAY] Nájdených zápasov: ${teamMatches.length}`);
                 
                 // Zoradenie všetkých zápasov podľa dátumu (najstaršie prvé)
                 const sortedMatches = [...teamMatches].sort((a, b) => {
@@ -889,11 +866,9 @@ const matchesHallApp = ({ userProfileData }) => {
                         currentMatchOrder = i;
                         break;
                     }
-                }
-                console.log(`🔵 [SUSPENSIONS-AWAY] Poradie aktuálneho zápasu: ${currentMatchOrder}`);
+                }      
                 
                 const blueCardSuspensionMatches = getBlueCardSuspensionMatches();
-                console.log(`🔵 [SUSPENSIONS-AWAY] Počet zápasov trestu za MK: ${blueCardSuspensionMatches}`);
                 
                 // Pre každého hráča v tíme
                 for (let i = 0; i < teamData.playerDetails.length; i++) {
@@ -902,11 +877,8 @@ const matchesHallApp = ({ userProfileData }) => {
                     
                     // Preskočíme hráčov, ktorí sú už odstránení pre tento zápas
                     if (player.removedForMatch === selectedMatch.id) {
-                        console.log(`🔵 [SUSPENSIONS-AWAY] Hráč ${player.lastName} ${player.firstName} je už odstránený pre tento zápas`);
                         continue;
-                    }
-                    
-                    console.log(`🔵 [SUSPENSIONS-AWAY] Kontrolujem hráča ${i}: ${player.lastName} ${player.firstName} (ID: ${player.id || 'žiadne'})`);
+                    }                    
                     
                     // Získame všetky modré karty pre tohto hráča
                     const blueCardEvents = [];
@@ -959,9 +931,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     
                     // Zoradenie podľa poradia (najnovšie prvé)
                     blueCardEvents.sort((a, b) => b.matchOrder - a.matchOrder);
-                    
-                    console.log(`🔵 [SUSPENSIONS-AWAY] Hráč ${player.lastName} má ${blueCardEvents.length} modrých kariet`);
-                    
+                                        
                     if (blueCardEvents.length > 0) {
                         const latestBlueCard = blueCardEvents[0];
                         const matchesPassed = currentMatchOrder - latestBlueCard.matchOrder;
@@ -970,24 +940,18 @@ const matchesHallApp = ({ userProfileData }) => {
                         const isSuspended = matchesPassed > 0 && matchesPassed <= blueCardSuspensionMatches;
                         
                         if (isSuspended) {
-                            console.log(`⚠️ [SUSPENSIONS-AWAY] HRÁČ ${player.lastName} ${player.firstName} JE SUSPENDOVANÝ!`);
-                            console.log(`   Dôvod: Vylúčený na ${blueCardSuspensionMatches} ${blueCardSuspensionMatches === 1 ? 'zápas' : (blueCardSuspensionMatches < 5 ? 'zápasy' : 'zápasov')} za modrú kartu`);
                             newSuspendedPlayers[i] = {
                                 player: player,
                                 reason: `Vylúčený na ${blueCardSuspensionMatches} ${blueCardSuspensionMatches === 1 ? 'zápas' : (blueCardSuspensionMatches < 5 ? 'zápasy' : 'zápasov')} za modrú kartu`,
                                 blueCardMatchOrder: latestBlueCard.matchOrder,
                                 matchesPassed: matchesPassed
                             };
-                        } else {
-                            console.log(`✅ [SUSPENSIONS-AWAY] Hráč ${player.lastName} NIE JE suspendovaný (prešlo ${matchesPassed} zápasov, trest je ${blueCardSuspensionMatches})`);
                         }
                     }
                 }
             } catch (error) {
-                console.error('🔵 [SUSPENSIONS-AWAY] Chyba pri načítaní suspendovaných hráčov:', error);
             }
             
-            console.log(`🔵 [SUSPENSIONS-AWAY] Celkovo suspendovaných hráčov: ${Object.keys(newSuspendedPlayers).length}`);
             setSuspendedPlayersAway(newSuspendedPlayers);
             setIsLoadingSuspensionsAway(false);
         };
