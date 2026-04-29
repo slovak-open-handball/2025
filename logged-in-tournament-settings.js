@@ -281,7 +281,7 @@ function TournamentSettingsApp() {
     { id: 'accommodation', title: 'Nastavenia ubytovania', component: AccommodationSettings },
     { id: 'package', title: 'Nastavenia balíčkov', component: PackageSettings },
     { id: 'categories', title: 'Nastavenia kategórií', component: CategorySettings },
-    { id: 'table', title: 'Nastavenia tabuľky', component: TableSettings }, // NOVÝ ZÁZNAM
+    { id: 'table', title: 'Nastavenia tabuľky/zápasov', component: TableSettings }, 
   ];
 
   // Funkcia na aktualizáciu URL hashu - HIERARCHICKÝ FORMÁT
