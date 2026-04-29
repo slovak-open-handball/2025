@@ -569,10 +569,18 @@ const matchesHallApp = ({ userProfileData }) => {
     useEffect(() => {
         const loadSuspensions = async () => {
             const teamIdentifier = selectedMatch?.awayTeamIdentifier;
+            
+            // Skontrolujeme, či máme všetky potrebné dáta
+            if (!teamIdentifier || !selectedMatch) {
+                setIsLoadingSuspensionsAway(false);
+                return;
+            }
+            
+            // Získame detail tímu
             const teamDetails = getTeamDetailsFromIdentifier(teamIdentifier);
             const teamData = teamDetails?.team;
             
-            if (!teamIdentifier || !selectedMatch || !teamData?.playerDetails?.length) {
+            if (!teamData?.playerDetails?.length) {
                 setIsLoadingSuspensionsAway(false);
                 return;
             }
@@ -580,40 +588,47 @@ const matchesHallApp = ({ userProfileData }) => {
             setIsLoadingSuspensionsAway(true);
             const newSuspendedPlayers = {};
             
-            const teamMatches = await getTeamMatches(teamIdentifier);
-            
-            let currentMatchOrder = -1;
-            if (matches.length > 0) {
-                const sortedMatches = [...matches].sort((a, b) => {
-                    if (!a.scheduledTime) return 1;
-                    if (!b.scheduledTime) return -1;
-                    return a.scheduledTime.toDate() - b.scheduledTime.toDate();
-                });
-                currentMatchOrder = sortedMatches.findIndex(m => m.id === selectedMatch.id);
-            }
-            
-            const blueCardSuspensionMatches = getBlueCardSuspensionMatches();
-            
-            for (let i = 0; i < teamData.playerDetails.length; i++) {
-                const player = teamData.playerDetails[i];
-                if (!player) continue;
+            try {
+                // Získame všetky zápasy tímu (použijeme globálnu funkciu)
+                const teamMatches = await getTeamMatches(teamIdentifier);
                 
-                const playerIdentifier = {
-                    userId: teamDetails.userId,
-                    teamIdentifier: teamIdentifier,
-                    playerIndex: i,
-                    isStaff: false
-                };
-                
-                const blueCardEvents = await getBlueCardEventsForPlayer(teamMatches, playerIdentifier, selectedMatch.id);
-                const isSuspended = isPlayerSuspendedForBlueCard(blueCardEvents, blueCardSuspensionMatches, currentMatchOrder);
-                
-                if (isSuspended) {
-                    newSuspendedPlayers[i] = {
-                        player: player,
-                        reason: `Vylúčený na ${blueCardSuspensionMatches} ${blueCardSuspensionMatches === 1 ? 'zápas' : (blueCardSuspensionMatches < 5 ? 'zápasy' : 'zápasov')} za modrú kartu`
-                    };
+                // Získame aktuálne poradie zápasu
+                let currentMatchOrder = -1;
+                if (matches.length > 0) {
+                    const sortedMatches = [...matches].sort((a, b) => {
+                        if (!a.scheduledTime) return 1;
+                        if (!b.scheduledTime) return -1;
+                        return a.scheduledTime.toDate() - b.scheduledTime.toDate();
+                    });
+                    currentMatchOrder = sortedMatches.findIndex(m => m.id === selectedMatch.id);
                 }
+                
+                const blueCardSuspensionMatches = getBlueCardSuspensionMatches();
+                
+                // Pre každého hráča skontrolujeme, či má modrú kartu v predchádzajúcich zápasoch
+                for (let i = 0; i < teamData.playerDetails.length; i++) {
+                    const player = teamData.playerDetails[i];
+                    if (!player) continue;
+                    
+                    const playerIdentifier = {
+                        userId: teamDetails.userId,
+                        teamIdentifier: teamIdentifier,
+                        playerIndex: i,
+                        isStaff: false
+                    };
+                    
+                    const blueCardEvents = await getBlueCardEventsForPlayer(teamMatches, playerIdentifier, selectedMatch.id);
+                    const isSuspended = isPlayerSuspendedForBlueCard(blueCardEvents, blueCardSuspensionMatches, currentMatchOrder);
+                    
+                    if (isSuspended) {
+                        newSuspendedPlayers[i] = {
+                            player: player,
+                            reason: `Vylúčený na ${blueCardSuspensionMatches} ${blueCardSuspensionMatches === 1 ? 'zápas' : (blueCardSuspensionMatches < 5 ? 'zápasy' : 'zápasov')} za modrú kartu`
+                        };
+                    }
+                }
+            } catch (error) {
+                console.error('Chyba pri načítaní suspendovaných hráčov (hosťovskí):', error);
             }
             
             setSuspendedPlayersAway(newSuspendedPlayers);
