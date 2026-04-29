@@ -560,59 +560,6 @@ let groupCheckCache = new Set();
         
         return Array.from(teamsMap.values());
     }
-
-    let pointsForWinCache = 3; // Predvolená hodnota (3 body za výhru)
-
-    async function loadPointsForWin() {
-        if (!window.db) return;
-        
-        try {
-            const { doc, getDoc } = window.firebaseModules || await importFirebaseModules();
-            if (!doc) return;
-            
-            const settingsDocRef = doc(window.db, 'settings', 'table');
-            const settingsDoc = await getDoc(settingsDocRef);
-        
-            if (settingsDoc.exists()) {
-                const data = settingsDoc.data();
-                pointsForWinCache = data.pointsForWin || 3;
-                console.log(`📋 Načítané body za výhru z databázy: ${pointsForWinCache}`);
-            } else {
-                pointsForWinCache = 3;
-                console.log('📋 Nastavenia neexistujú, používam predvolené body za výhru: 3');
-            }
-        } catch (error) {
-            console.error('❌ Chyba pri načítaní bodov za výhru:', error);
-            pointsForWinCache = 3;
-        }
-    }
-
-    // Funkcia na sledovanie zmien bodov za výhru v reálnom čase
-    function subscribeToPointsForWinChanges() {
-        if (!window.db) return;
-        
-        const { doc, onSnapshot } = window.firebaseModules;
-        if (!doc || !onSnapshot) return;
-        
-        const settingsDocRef = doc(window.db, 'settings', 'table');
-        
-        return onSnapshot(settingsDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                const newPointsForWin = data.pointsForWin || 3;
-                
-                if (pointsForWinCache !== newPointsForWin) {
-                    console.log(`🔄 Zmena bodov za výhru: ${pointsForWinCache} → ${newPointsForWin}`);
-                    pointsForWinCache = newPointsForWin;
-                    
-                    // Po zmene bodov za výhru prepočítame tabuľky
-                    printAllGroupTables();
-                }
-            }
-        }, (error) => {
-            console.error('❌ Chyba pri sledovaní bodov za výhru:', error);
-        });
-    }
         
     function createGroupTable(categoryName, groupName) {
         // Získame VŠETKY zápasy v skupine (aj neodohrané)
@@ -646,13 +593,14 @@ let groupCheckCache = new Set();
             let homeScore = 0;
             let awayScore = 0;
             
-            // Kontrola na manuálny výsledok (finalScore)
+            // 🔥 PRIDANÉ: KONTROLA NA MANUÁLNY VÝSLEDOK (finalScore)
             if (match.finalScore && !match.forfeitResult) {
+                // Manuálne zadaný výsledok
                 homeScore = match.finalScore.home || 0;
                 awayScore = match.finalScore.away || 0;
                 console.log(`📋 Manuálny výsledok pre ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}: ${homeScore}:${awayScore}`);
             } 
-            // Kontrola na kontumáciu
+            // 🔥 KONTROLA NA KONTUMÁCIU
             else if (match.forfeitResult && match.forfeitResult.isForfeit) {
                 homeScore = match.forfeitResult.home || 0;
                 awayScore = match.forfeitResult.away || 0;
@@ -680,13 +628,11 @@ let groupCheckCache = new Set();
                 
                 if (homeScore > awayScore) {
                     homeTeamStats.wins++;
-                    // 🔥 POUŽIJEME pointsForWinCache NAMIESTO PEVNEJ HODNOTY 2
-                    homeTeamStats.points += pointsForWinCache;
+                    homeTeamStats.points += 2;
                     awayTeamStats.losses++;
                 } else if (awayScore > homeScore) {
                     awayTeamStats.wins++;
-                    // 🔥 POUŽIJEME pointsForWinCache NAMIESTO PEVNEJ HODNOTY 2
-                    awayTeamStats.points += pointsForWinCache;
+                    awayTeamStats.points += 2;
                     homeTeamStats.losses++;
                 } else {
                     homeTeamStats.draws++;
@@ -727,7 +673,7 @@ let groupCheckCache = new Set();
             transferredMatches: []
         };
     }
-    
+
     // Pomocná funkcia na získanie názvu tímu pre nadstavbovú skupinu
     function getTeamNameForAdvancedGroup(teamNameFromGroup, category, groupLetter, position) {
         // 🔥 KONTROLA: Či vôbec ide o identifikátor (obsahuje číslo a písmeno)
@@ -961,11 +907,11 @@ let groupCheckCache = new Set();
                         if (teamAScore > teamBScore) {
                             teamA.wins++;
                             teamB.losses++;
-                            teamA.points += pointsForWinCache;
+                            teamA.points += 2;
                         } else if (teamBScore > teamAScore) {
                             teamB.wins++;
                             teamA.losses++;
-                            teamB.points += pointsForWinCache;
+                            teamB.points += 2;
                         } else {
                             teamA.draws++;
                             teamB.draws++;
@@ -1038,11 +984,11 @@ let groupCheckCache = new Set();
                 if (homeScore > awayScore) {
                     homeTeamStats.wins++;
                     awayTeamStats.losses++;
-                    homeTeamStats.points += pointsForWinCache;
+                    homeTeamStats.points += 2;
                 } else if (awayScore > homeScore) {
                     awayTeamStats.wins++;
                     homeTeamStats.losses++;
-                    awayTeamStats.points += pointsForWinCache;
+                    awayTeamStats.points += 2;
                 } else {
                     homeTeamStats.draws++;
                     awayTeamStats.draws++;
@@ -1562,18 +1508,12 @@ let groupCheckCache = new Set();
             console.error('❌ Firebase moduly neboli načítané!');
             return;
         }
-
-        // 🔥 NAČÍTAME BODY ZA VÝHRU Z DATABÁZY
-        await loadPointsForWin();
         
         // Načítame nastavenia poradia
         await loadTableSettings();
         
         // Spustíme sledovanie zmien nastavení poradia
         const unsubscribeSettings = subscribeToTableSettings();
-
-        // 🔥 SPUSTÍME SLEDOVANIE ZMIEN BODOV ZA VÝHRU
-        const unsubscribePointsForWin = subscribeToPointsForWinChanges();
         
         const matchesRef = collection(window.db, 'matches');
         
@@ -1779,7 +1719,6 @@ let groupCheckCache = new Set();
         }
         
         window.__unsubscribeTableSettings = unsubscribeSettings;
-        window.__unsubscribePointsForWin = unsubscribePointsForWin;
         await loadCategorySettings();
         const unsubscribeCategorySettings = subscribeToCategorySettingsChanges();
         window.__unsubscribeCategorySettings = unsubscribeCategorySettings;
