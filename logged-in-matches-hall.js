@@ -826,7 +826,7 @@ const matchesHallApp = ({ userProfileData }) => {
         };
         
         loadSuspensions();
-    }, [selectedMatch?.homeTeamIdentifier, selectedMatch?.id, matches]);
+    }, [selectedMatch?.homeTeamIdentifier, selectedMatch?.id]);
     
     // Načítanie suspendovaných hráčov za modrú kartu pre HOSŤOVSKÝCH
     useEffect(() => {
@@ -957,7 +957,7 @@ const matchesHallApp = ({ userProfileData }) => {
         };
         
         loadSuspensions();
-    }, [selectedMatch?.awayTeamIdentifier, selectedMatch?.id, matches]);
+    }, [selectedMatch?.awayTeamIdentifier, selectedMatch?.id]);
 
     // Načítanie nastavení tabuľky do localStorage pre rýchly prístup
     useEffect(() => {
@@ -3132,33 +3132,6 @@ const matchesHallApp = ({ userProfileData }) => {
         // Timeout pre prípad, že sa teamManager nenačíta
         const timeout = setTimeout(() => {
             setTeamManagerReady(true);
-        }, 5000);
-        
-        return () => {
-            window.removeEventListener('teamManagerUpdate', handleTeamManagerUpdate);
-            clearTimeout(timeout);
-        };
-    }, []);
-
-    useEffect(() => {
-        // Skontrolujeme, či už je teamManager dostupný
-        if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-            setTeamManagerReady(true);
-            return;
-        }
-        
-        // Počkáme na udalosť teamManagerUpdate
-        const handleTeamManagerUpdate = () => {
-            if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-                setTeamManagerReady(true);
-            }
-        };
-        
-        window.addEventListener('teamManagerUpdate', handleTeamManagerUpdate);
-        
-        // Timeout pre prípad, že sa teamManager nenačíta
-        const timeout = setTimeout(() => {
-            setTeamManagerReady(true); // aj tak pokračujeme
         }, 5000);
         
         return () => {
