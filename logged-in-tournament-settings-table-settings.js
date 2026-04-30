@@ -58,7 +58,8 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         'goalsScored',
         'goalsConceded',
         'wins',
-        'losses'
+        'losses',
+        'headToHead'
     ];
 
     // Pomocná funkcia na formátovanie jednej podmienky pre zobrazenie
@@ -221,9 +222,13 @@ export function TableSettings({ db, userProfileData, showNotification }) {
             }
             updated[index] = { ...updated[index], [field]: value };
             
-            // Ak parameter nepodporuje smer, nastavíme predvolenú hodnotu a zamkneme
-            if (field === 'parameter' && !parametersWithDirection.includes(value)) {
-                updated[index].direction = 'asc';
+            // 🔥 OPRAVA: Pre headToHead nastavíme predvolený smer 'desc'
+            if (field === 'parameter') {
+                if (value === 'headToHead') {
+                    updated[index].direction = 'desc';
+                } else if (!parametersWithDirection.includes(value)) {
+                    updated[index].direction = 'asc';
+                }
             }
             
             return updated;
@@ -259,7 +264,7 @@ export function TableSettings({ db, userProfileData, showNotification }) {
     const handleAddCondition = () => {
         setSortingConditions(prev => [
             ...prev,
-            { parameter: '', direction: 'asc' }
+            { parameter: '', direction: 'desc' }
         ]);
         setHasChanges(true);
     };
