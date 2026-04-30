@@ -4534,86 +4534,92 @@ const matchesHallApp = ({ userProfileData }) => {
     }, [selectedMatch, users, superstructureTeams]);
     
 
-    // Načítanie zápasov pre túto halu
+    // Upravený useEffect pre načítanie zápasov (pridajte čakanie na mapovanie)
     useEffect(() => {
         if (!window.db || !hallId) {
             setLoading(false);
             return;
         }
     
-        const matchesRef = collection(window.db, 'matches');
-        const q = query(matchesRef, where("hallId", "==", hallId));
-        
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const loadedMatches = [];
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-//                console.log('Načítaný zápas:', data); // Pre ladenie
-                
-                loadedMatches.push({
-                    id: doc.id,
-                    ...data,
-                    currentPeriod: data.currentPeriod || 1,
-                    manualTimeOffset: data.manualTimeOffset || 0
-                });
-                if (selectedMatch) {
-                    setMatchPaused(selectedMatch.status === 'paused');
-                }
-            });
+        // Počkáme na pripravenosť mapovania pred zobrazením zápasov
+        const initAndLoadMatches = async () => {
+            await waitForTeamMappingReady();
             
-            // Zoradíme podľa času
-            loadedMatches.sort((a, b) => {
-                if (!a.scheduledTime) return 1;
-                if (!b.scheduledTime) return -1;
-                return a.scheduledTime.toDate() - b.scheduledTime.toDate();
-            });
+            const matchesRef = collection(window.db, 'matches');
+            const q = query(matchesRef, where("hallId", "==", hallId));
             
-            setMatches(loadedMatches);
-            
-            // Zoskupenie podľa dňa
-            const grouped = {};
-            loadedMatches.forEach(match => {
-                if (match.scheduledTime) {
-                    const date = match.scheduledTime.toDate();
-                    const dateStr = getLocalDateStr(date);
-                    
-                    if (!grouped[dateStr]) {
-                        grouped[dateStr] = {
-                            date: date,
-                            dateStr: dateStr,
-                            matches: []
-                        };
+            const unsubscribe = onSnapshot(q, (snapshot) => {
+                const loadedMatches = [];
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    loadedMatches.push({
+                        id: doc.id,
+                        ...data,
+                        currentPeriod: data.currentPeriod || 1,
+                        manualTimeOffset: data.manualTimeOffset || 0
+                    });
+                    if (selectedMatch) {
+                        setMatchPaused(selectedMatch.status === 'paused');
                     }
-                    grouped[dateStr].matches.push(match);
+                });
+                
+                loadedMatches.sort((a, b) => {
+                    if (!a.scheduledTime) return 1;
+                    if (!b.scheduledTime) return -1;
+                    return a.scheduledTime.toDate() - b.scheduledTime.toDate();
+                });
+                
+                setMatches(loadedMatches);
+                
+                const grouped = {};
+                loadedMatches.forEach(match => {
+                    if (match.scheduledTime) {
+                        const date = match.scheduledTime.toDate();
+                        const dateStr = getLocalDateStr(date);
+                        
+                        if (!grouped[dateStr]) {
+                            grouped[dateStr] = {
+                                date: date,
+                                dateStr: dateStr,
+                                matches: []
+                            };
+                        }
+                        grouped[dateStr].matches.push(match);
+                    }
+                });
+                
+                setGroupedMatches(grouped);
+                setLoading(false);
+                
+                const homeIdentifierFromUrl = getUrlParameter('domaci');
+                const awayIdentifierFromUrl = getUrlParameter('hostia');
+                
+                if (homeIdentifierFromUrl && awayIdentifierFromUrl && !selectedMatch) {
+                    const matchFromUrl = loadedMatches.find(m => 
+                        m.homeTeamIdentifier === homeIdentifierFromUrl && 
+                        m.awayTeamIdentifier === awayIdentifierFromUrl
+                    );
+                    
+                    if (matchFromUrl) {
+                        setSelectedMatch(matchFromUrl);
+                        setManualTimeOffset(matchFromUrl.manualTimeOffset || 0);
+                    }
                 }
+            }, (error) => {
+                setLoading(false);
             });
             
-            setGroupedMatches(grouped);
-            setLoading(false);
-            
-            // Skontrolujeme URL parametre pre domácich a hostí
-            const homeIdentifierFromUrl = getUrlParameter('domaci');
-            const awayIdentifierFromUrl = getUrlParameter('hostia');
-            
-            if (homeIdentifierFromUrl && awayIdentifierFromUrl && !selectedMatch) {
-                // Hľadáme zápas, ktorý má oba identifikátory
-                const matchFromUrl = loadedMatches.find(m => 
-                    m.homeTeamIdentifier === homeIdentifierFromUrl && 
-                    m.awayTeamIdentifier === awayIdentifierFromUrl
-                );
-                
-                if (matchFromUrl) {
-                    setSelectedMatch(matchFromUrl);
-                    setManualTimeOffset(matchFromUrl.manualTimeOffset || 0);
-                }
-            }
-            
-        }, (error) => {
-//            console.error("Chyba pri načítaní zápasov:", error);
-            setLoading(false);
+            return unsubscribe;
+        };
+        
+        let unsubscribeFn = null;
+        initAndLoadMatches().then(unsubscribe => {
+            unsubscribeFn = unsubscribe;
         });
-    
-        return () => unsubscribe();
+        
+        return () => {
+            if (unsubscribeFn) unsubscribeFn();
+        };
     }, [hallId]);
     
     // SAMOSTATNÝ useEffect PRE VÝPIS DO KONZOLY - závislý na matches AJ categories
@@ -4704,61 +4710,40 @@ const matchesHallApp = ({ userProfileData }) => {
     };   
 
     // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA (UPRAVENÁ)
-    const getTeamNameByIdentifier = (identifier) => {
+    let identifierMappingReady = false;
+
+    async function getTeamNameByIdentifierAsync(identifier) {
         if (!identifier) return 'Neznámy tím';
         
-        // 1. NAJPRV SKÚSIME ZÍSKAť SPRÁVNY NÁZOV TÍMU CEZ matchTracker
-        let resolvedTeamName = null;
-        let originalIdentifier = identifier;
+        if (!identifierMappingReady) {
+            await waitForTeamMappingReady();
+            identifierMappingReady = true;
+        }
         
-        if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-            const teamNameFromTracker = window.matchTracker.getTeamNameByDisplayId(identifier);
+        return getTeamNameByIdentifier(identifier);
+    }
+    
+    function getTeamNameByIdentifier(identifier) {
+        if (!identifier) return 'Neznámy tím';
+        
+        // 1. NAJPRV SKÚSIME POUŽIŤ MAPOVANIE Z PRVÉHO KÓDU
+        if (window.teamNameReplacer?.getTeamNameFromMapping) {
+            const mappedName = window.teamNameReplacer.getTeamNameFromMapping(identifier);
+            if (mappedName && mappedName !== identifier) {
+                return mappedName;
+            }
+        }
+        
+        // 2. SKÚSIME CEZ matchTracker
+        if (window.matchTracker?.isInitialDataLoaded?.()) {
+            const teamNameFromTracker = window.matchTracker.getTeamNameByDisplayId?.(identifier);
             if (teamNameFromTracker && teamNameFromTracker !== identifier) {
-                resolvedTeamName = teamNameFromTracker;
-//                console.log(`🔍 Pre identifikátor "${identifier}" bol nájdený názov tímu: "${resolvedTeamName}"`);
+                return teamNameFromTracker;
             }
         }
         
-        // 2. AK MÁME VYRIEŠENÝ NÁZOV TÍMU, SKÚSIME HO NAJPRV POUŽIŤ NA VYHĽADÁVANIE
-        if (resolvedTeamName) {
-            // Skúsime vyhľadať tím podľa vyriešeného názvu v superstructureTeams
-            if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
-                // Prehľadáme všetky kategórie v superstructureTeams
-                for (const [category, teamsArray] of Object.entries(superstructureTeams)) {
-                    if (Array.isArray(teamsArray)) {
-                        const foundTeam = teamsArray.find(t => t.teamName === resolvedTeamName);
-                        if (foundTeam && foundTeam.teamName) {
-                            console.log(`✅ Nájdený tím v superstructureTeams: "${foundTeam.teamName}" (kategória: ${category})`);
-                            return foundTeam.teamName;
-                        }
-                    }
-                }
-            }
-            
-            // Skúsime vyhľadať podľa vyriešeného názvu v používateľských dátach
-            if (users && users.length > 0) {
-                for (const user of users) {
-                    if (!user.teams) continue;
-                    
-                    for (const [category, teamsArray] of Object.entries(user.teams)) {
-                        if (Array.isArray(teamsArray)) {
-                            const foundTeam = teamsArray.find(t => t.teamName === resolvedTeamName);
-                            if (foundTeam && foundTeam.teamName) {
-//                                console.log(`✅ Nájdený tím v používateľských dátach: "${foundTeam.teamName}" (kategória: ${category})`);
-                                return foundTeam.teamName;
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // Ak sme nenašli podľa vyriešeného názvu, vrátime ho ako taký
-            console.log(`⚠️ Tím "${resolvedTeamName}" nebol nájdený v databáze, vraciam vyriešený názov.`);
-            return resolvedTeamName;
-        }
-        
-        // 3. PÔVODNÁ LOGIKA - vyhľadávanie podľa identifikátora v superstructureTeams
-        if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
+        // 3. PÔVODNÁ LOGIKA - vyhľadávanie v superstructureTeams
+        if (window.superstructureTeams && Object.keys(window.superstructureTeams).length > 0) {
             const parts = identifier.split(' ');
             if (parts.length >= 2) {
                 const groupAndOrder = parts.pop();
@@ -4779,7 +4764,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     const fullGroupName = `skupina ${groupLetter}`;
                     const orderNum = parseInt(order, 10);
                     
-                    const categoryTeams = superstructureTeams[category];
+                    const categoryTeams = window.superstructureTeams[category];
                     if (categoryTeams && Array.isArray(categoryTeams)) {
                         const team = categoryTeams.find(t => 
                             t.groupName === fullGroupName && 
@@ -4794,7 +4779,7 @@ const matchesHallApp = ({ userProfileData }) => {
         }
         
         // 4. PÔVODNÁ LOGIKA - vyhľadávanie v používateľoch
-        if (users && users.length > 0) {
+        if (window.__reactUsersState && window.__reactUsersState.length > 0) {
             const parts = identifier.split(' ');
             if (parts.length >= 2) {
                 const groupAndOrder = parts.pop();
@@ -4815,7 +4800,7 @@ const matchesHallApp = ({ userProfileData }) => {
                     const fullGroupName = `skupina ${groupLetter}`;
                     const orderNum = parseInt(order, 10);
                     
-                    for (const user of users) {
+                    for (const user of window.__reactUsersState) {
                         if (!user.teams) continue;
                         const userTeams = user.teams[category];
                         if (!userTeams || !Array.isArray(userTeams)) continue;
@@ -4833,7 +4818,6 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        // 5. Ak nič nenašlo, vrátime pôvodný identifikátor
         return identifier;
     };
 
@@ -4870,77 +4854,54 @@ const matchesHallApp = ({ userProfileData }) => {
         return null;
     };
 
-    const getTeamDetailsFromIdentifier = (identifier) => {
+    let teamDetailsReady = false;
+
+    async function getTeamDetailsFromIdentifierAsync(identifier) {
         if (!identifier) return null;
         
-//        console.log(`🔍 getTeamDetailsFromIdentifier() volaná s identifikátorom: "${identifier}"`);
+        if (!teamDetailsReady) {
+            await waitForTeamMappingReady();
+            teamDetailsReady = true;
+        }
         
-        // 1. NAJPRV ZÍSKAME SPRÁVNY NÁZOV TÍMU CEZ window.matchTracker.getTeamNameByDisplayId()
-        //    DÔLEŽITÉ: Musíme poslať NÁZOV tímu, nie identifikátor
-        //    Ale ako získať názov? Potrebujeme najprv previesť identifikátor na zobrazovací názov
+        return getTeamDetailsFromIdentifier(identifier);
+    }
+    
+    function getTeamDetailsFromIdentifier(identifier) {
+        if (!identifier) return null;
         
-        // Získame kategóriu a skupinu z identifikátora
         const parts = identifier.split(' ');
-        if (parts.length < 2) {
-            console.log(`❌ Neplatný formát identifikátora: ${identifier}`);
-            return null;
-        }
+        if (parts.length < 2) return null;
         
-        const groupAndOrder = parts.pop();  // napr. "F4"
-        const categoryName = parts.join(' ');  // napr. "U12 D"
+        const groupAndOrder = parts.pop();
+        const categoryName = parts.join(' ');
         
-        // Potrebujeme previesť "F4" na správny formát "2B"
-        // Toto mapovanie by malo byť definované niekde v superstructureTeams
-        // Pre jednoduchosť použijeme existujúcu funkciu getTeamNameByIdentifier
-        const teamDisplayName = getTeamNameByIdentifier(identifier);
-        
-        if (!teamDisplayName || teamDisplayName === identifier) {
-            console.log(`❌ Nepodarilo sa získať zobrazovací názov pre identifikátor: ${identifier}`);
-            return null;
-        }
-        
-//        console.log(`   Získaný zobrazovací názov: "${teamDisplayName}"`);
-        
-        // 2. TERAZ ZAVOLÁME window.matchTracker.getTeamNameByDisplayId() SO SPRÁVNYM NÁZVOM
+        // 1. NAJPRV SKÚSIME ZÍSKAŤ NÁZOV TÍMU Z MAPOVANIA
         let actualTeamName = null;
         
-        if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-            // DÔLEŽITÉ: Posielame teamDisplayName (napr. "U12 D 2B"), NIE identifikátor!
-            actualTeamName = window.matchTracker.getTeamNameByDisplayId(teamDisplayName);
-//            console.log(`   window.matchTracker.getTeamNameByDisplayId("${teamDisplayName}") vrátil: "${actualTeamName}"`);
+        if (window.teamNameReplacer?.getTeamNameFromMapping) {
+            actualTeamName = window.teamNameReplacer.getTeamNameFromMapping(identifier);
         }
         
-        // Ak sa nepodarilo získať názov cez matchTracker, použijeme zobrazovací názov
+        if (!actualTeamName && window.matchTracker?.isInitialDataLoaded?.()) {
+            actualTeamName = window.matchTracker.getTeamNameByDisplayId?.(identifier);
+        }
+        
         if (!actualTeamName) {
-            actualTeamName = teamDisplayName;
-//            console.log(`   ⚠️ Používam zobrazovací názov ako fallback: "${actualTeamName}"`);
+            actualTeamName = identifier;
         }
         
-        // 3. VYHĽADÁME TÍM PODĽA SKUTOČNÉHO NÁZVU V POUŽÍVATEĽSKÝCH DÁTACH
-        if (users && users.length > 0) {
-            for (const user of users) {
+        // 2. VYHĽADÁME TÍM PODĽA SKUTOČNÉHO NÁZVU
+        if (window.__reactUsersState && window.__reactUsersState.length > 0) {
+            for (const user of window.__reactUsersState) {
                 if (!user.teams) continue;
                 
                 const userTeams = user.teams[categoryName];
                 if (!userTeams || !Array.isArray(userTeams)) continue;
                 
-                // Hľadáme podľa skutočného názvu tímu
                 const team = userTeams.find(t => t.teamName === actualTeamName);
                 
                 if (team) {
-//                    console.log(`   ✅ Nájdený tím: "${team.teamName}" (${user.email})`);
-//                    console.log(`   📊 Počet hráčov: ${team.playerDetails?.length || 0}`);
-//                    console.log(`   👨‍🏫 RT muži: ${team.menTeamMemberDetails?.length || 0}`);
-//                    console.log(`   👩‍🏫 RT ženy: ${team.womenTeamMemberDetails?.length || 0}`);
-                    
-                    // Výpis prvých 5 hráčov pre kontrolu
-                    if (team.playerDetails && team.playerDetails.length > 0) {
-//                        console.log(`   🎽 Hráči (všetci):`);
-                        team.playerDetails.slice(0, team.playerDetails.length).forEach(p => {
-//                            console.log(`      - ${p.lastName} ${p.firstName} (#${p.jerseyNumber || '?'})`);
-                        });
-                    }
-                    
                     return {
                         team,
                         userEmail: user.email,
@@ -4951,7 +4912,6 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-//        console.log(`   ❌ Tím "${actualTeamName}" v kategórii "${categoryName}" nebol nájdený`);
         return null;
     };
     
@@ -9244,32 +9204,114 @@ if (window.globalUserProfileData) {
 
 
 
+// ============================================================================
+// FUNKCIA NA ČAKANIE NA PRIPRAVENOSŤ MAPOVANIA TÍMOV
+// ============================================================================
+
+/**
+ * Počká na dokončenie mapovania tímov z prvého kódu.
+ * @returns {Promise<boolean>} - Vráti true keď je mapovanie pripravené
+ */
+function waitForTeamMappingReady() {
+    return new Promise((resolve) => {
+        // Ak už je mapovanie hotové, vrátime true okamžite
+        if (window.teamNameReplacer?.isMappingReady?.()) {
+            console.log('✅ Mapovanie tímov je už pripravené (okamžite)');
+            resolve(true);
+            return;
+        }
+        
+        // Ak už existujú mapovania, tiež to považujeme za pripravené
+        if (window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0) {
+            console.log('✅ Mapovanie tímov už existuje (okamžite)');
+            resolve(true);
+            return;
+        }
+        
+        // Inak počkáme na udalosť
+        console.log('⏳ Čakám na dokončenie mapovania tímov...');
+        
+        const timeout = setTimeout(() => {
+            console.warn('⚠️ Timeout: Mapovanie tímov sa nenačítalo do 30 sekúnd, pokračujem napriek tomu...');
+            resolve(false);
+        }, 30000);
+        
+        const handleReady = () => {
+            clearTimeout(timeout);
+            console.log('✅ Mapovanie tímov je pripravené (udalosť)');
+            resolve(true);
+            window.removeEventListener('teamNameMappingReady', handleReady);
+        };
+        
+        window.addEventListener('teamNameMappingReady', handleReady);
+        
+        // Taktiež počúvame na udalosť teamNamesReplaced
+        const handleReplaced = () => {
+            clearTimeout(timeout);
+            console.log('✅ Mapovanie tímov je pripravené (po nahradení)');
+            resolve(true);
+            window.removeEventListener('teamNamesReplaced', handleReplaced);
+        };
+        
+        window.addEventListener('teamNamesReplaced', handleReplaced);
+    });
+}
+
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+let teamMappingReady = false;
+
+async function getTeamNameByDisplayIdAsync(displayId) {
+    if (!displayId) return null;
+    
+    // Počkáme na pripravenosť mapovania (len raz)
+    if (!teamMappingReady) {
+        await waitForTeamMappingReady();
+        teamMappingReady = true;
+    }
+    
+    return getTeamNameByDisplayId(displayId);
+}
 
 // Funkcia na získanie názvu tímu podľa displayId z tabuľky skupiny (LEN PRI 100% ODOHRANÝCH ZÁPASOCH)
 function getTeamNameByDisplayId(displayId) {
     if (!displayId) {
-        console.log('❌ Nebol zadaný identifikátor tímu');
         return null;
     }
     
-    // Parsovanie identifikátora: "U12 D 1A" -> kategória: "U12 D", pozícia: "1", skupina: "A"
+    // 1. NAJPRV SKÚSIME POUŽIŤ CACHE Z PRVÉHO KÓDU
+    if (window.teamNameReplacer?.getTeamNameFromMapping) {
+        const cachedName = window.teamNameReplacer.getTeamNameFromMapping(displayId);
+        if (cachedName && cachedName !== displayId) {
+            return cachedName;
+        }
+    }
+    
+    // 2. SKÚSIME CEZ MATCHTRACKER (iba ak je initialDataLoaded)
+    if (window.matchTracker?.isInitialDataLoaded?.()) {
+        const result = window.matchTracker.getTeamNameByDisplayId?.(displayId);
+        if (result && result !== displayId) {
+            return result;
+        }
+    }
+    
+    // 3. SKÚSIME CEZ window.getTeamNameByDisplayId (ak existuje)
+    if (window.getTeamNameByDisplayId && window.getTeamNameByDisplayId !== getTeamNameByDisplayId) {
+        const result = window.getTeamNameByDisplayId(displayId);
+        if (result && result !== displayId) {
+            return result;
+        }
+    }
+    
+    // 4. PÔVODNÁ LOGIKA - vyhľadávanie v používateľských tímoch
     const parts = displayId.trim().split(' ');
+    if (parts.length < 2) return displayId;
     
-    if (parts.length < 2) {
-        console.log(`❌ Neplatný formát identifikátora: ${displayId}`);
-        return null;
-    }
-    
-    // Posledná časť je pozícia + skupina (napr. "1A")
     const positionAndGroup = parts.pop();
-    // Zvyšok je názov kategórie (napr. "U12 D")
     const category = parts.join(' ');
     
-    // Extrahujeme pozíciu a písmeno skupiny
     let position = '';
     let groupLetter = '';
-    
     for (let i = 0; i < positionAndGroup.length; i++) {
         const char = positionAndGroup[i];
         if (char >= '0' && char <= '9') {
@@ -9279,83 +9321,30 @@ function getTeamNameByDisplayId(displayId) {
         }
     }
     
-    if (!position || !groupLetter) {
-        console.log(`❌ Neplatný formát pozície/skupiny: ${positionAndGroup} (očakáva sa napr. "1A")`);
-        return null;
-    }
+    if (!position || !groupLetter) return displayId;
     
     const positionNum = parseInt(position, 10);
     const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
     
-    console.log(`🔍 Hľadám tím: kategória="${category}", skupina="${fullGroupName}", pozícia=${positionNum}`);
-    
-    // 1. NAJPRV SKÚSIME VYHĽADAŤ V POUŽÍVATEĽSKÝCH TÍMOCH (user teams)
-    // Získame všetky tímy z používateľov (cez window.users alebo window.__teamManagerData)
-    let userTeamsList = [];
-    
-    // Skúsime získať z window.__teamManagerData (najspoľahlivejšie)
-    if (window.__teamManagerData?.allTeams) {
-        userTeamsList = window.__teamManagerData.allTeams.filter(t => !t.isSuperstructureTeam);
-    } 
-    // Alebo z globálnej premennej ak je dostupná
-    else if (window.allUsersTeams) {
-        userTeamsList = window.allUsersTeams;
-    }
-    
-    if (userTeamsList.length > 0) {
-        // Hľadáme tím podľa kategórie, skupiny a poradia
-        const userTeam = userTeamsList.find(t => 
-            t.category === category && 
-            t.groupName === fullGroupName && 
-            t.order === positionNum
-        );
-        
-        if (userTeam && userTeam.teamName) {
-            console.log(`✅ Nájdený používateľský tím: ${userTeam.teamName}`);
-            return userTeam.teamName;
-        }
-    }
-    
-    // 2. AK NENÁJDENÝ, SKÚSIME SUPERSTRUCTURE TÍMY
-    const groupTable = window.matchTracker?.createGroupTable(category, fullGroupName);
-    
-    if (groupTable && groupTable.teams && groupTable.teams.length > 0) {
-        const totalMatches = groupTable.totalMatches || 0;
-        const completedMatches = groupTable.completedCount || 0;
-        const completionPercentage = totalMatches > 0 ? (completedMatches / totalMatches * 100) : 0;
-        
-        console.log(`📊 Stav skupiny: ${completedMatches}/${totalMatches} odohraných (${completionPercentage}%)`);
-        
-        if (completionPercentage < 100) {
-            console.log(`❌ Zápasy v skupine nie sú kompletne odohrané! (${completionPercentage}% dokončených)`);
-            console.log(`   Pre zobrazenie konečného poradia je potrebné odohrať všetkých ${totalMatches} zápasov.`);
-            return null;
-        }
-        
-        const teamIndex = positionNum - 1;
-        if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
-            const superstructureTeam = groupTable.teams[teamIndex];
+    // Hľadáme v používateľských tímoch
+    if (window.__reactUsersState && window.__reactUsersState.length > 0) {
+        for (const user of window.__reactUsersState) {
+            if (!user.teams) continue;
+            const userTeams = user.teams[category];
+            if (!userTeams || !Array.isArray(userTeams)) continue;
             
-            // Ak je to superstructure tím, skúsime ešte raz vyhľadať používateľský tím podľa názvu
-            if (superstructureTeam.name && superstructureTeam.name !== displayId) {
-                // Skúsime nájsť používateľský tím s rovnakým názvom
-                const matchingUserTeam = userTeamsList.find(t => 
-                    t.teamName === superstructureTeam.name
-                );
-                
-                if (matchingUserTeam) {
-                    console.log(`✅ Nájdený používateľský tím (podľa názvu): ${matchingUserTeam.teamName}`);
-                    return matchingUserTeam.teamName;
-                }
-                
-                console.log(`✅ Nájdený superstructure tím: ${superstructureTeam.name} (pozícia ${positionNum} v skupine ${fullGroupName})`);
-                return superstructureTeam.name;
+            const team = userTeams.find(t => 
+                t.groupName === fullGroupName && 
+                t.order === positionNum
+            );
+            
+            if (team && team.teamName) {
+                return team.teamName;
             }
         }
     }
     
-    console.log(`❌ Tím nebol nájdený: ${displayId}`);
-    return null;
+    return displayId;
 }
 
 // Pridáme aj funkciu na vyhľadávanie podľa samostatných parametrov
@@ -10288,3 +10277,29 @@ console.log('✅ Pripravené nové funkcie na vkladanie tímov podľa skupiny:')
 console.log('   • window.forceTeamByGroup("U12 D", "skupina B", 2, "home") - vloženie tímu');
 console.log('   • window.getTeamsByGroup("U12 D", "skupina B") - zoznam tímov v skupine');
 console.log('   • window.registerUsersSetter(setUsers) - registrácia settera pre users');
+
+// ============================================================================
+// INICIALIZÁCIA - ČAKANIE NA PRIPRAVENOSŤ MAPOVANIA
+// ============================================================================
+
+// Spustíme čakanie na pripravenosť pred akýmkoľvek vypisovaním do UI
+(async function initializeWithMapping() {
+    console.log('🔄 Čakám na pripravenosť mapovania tímov...');
+    await waitForTeamMappingReady();
+    console.log('✅ Mapovanie tímov je pripravené, UI sa môže vykresliť');
+    
+    // Ak existuje React komponent, môžeme vynútiť prekreslenie
+    if (window.__reactUsersSetter && typeof window.__reactUsersSetter === 'function') {
+        // Malé oneskorenie pre istotu
+        setTimeout(() => {
+            const currentUsers = window.__reactUsersState || [];
+            window.__reactUsersSetter([...currentUsers]);
+            console.log('🔄 Vynútené prekreslenie UI po pripravenosti mapovania');
+        }, 100);
+    }
+})();
+
+console.log('✅ Funkcie boli aktualizované na čakanie na mapovanie tímov:');
+console.log('   • getTeamNameByDisplayIdAsync() - asynchrónna verzia s čakaním');
+console.log('   • getTeamNameByIdentifierAsync() - asynchrónna verzia s čakaním');
+console.log('   • getTeamDetailsFromIdentifierAsync() - asynchrónna verzia s čakaním');
