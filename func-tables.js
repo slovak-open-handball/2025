@@ -179,28 +179,37 @@ let processedGroupsInitial = new Set();  // Spracované skupiny pri inicializác
         let teamAWins = 0;
         let teamBWins = 0;
         
+        // Odstránenie bielych znakov pre porovnanie
+        const cleanA = teamAId.trim();
+        const cleanB = teamBId.trim();
+        
         groupMatches.forEach(match => {
-            if ((match.homeTeamIdentifier === teamAId && match.awayTeamIdentifier === teamBId) ||
-                (match.homeTeamIdentifier === teamBId && match.awayTeamIdentifier === teamAId)) {
-                
-                const events = eventsData[match.id] || [];
-                const { home: homeScore, away: awayScore } = getCurrentScore(events);
-                
-                let teamAGet = 0;
-                let teamBGet = 0;
-                
-                if (match.homeTeamIdentifier === teamAId) {
-                    teamAGet = homeScore;
-                    teamBGet = awayScore;
-                } else {
-                    teamAGet = awayScore;
-                    teamBGet = homeScore;
-                }
+            const homeId = match.homeTeamIdentifier.trim();
+            const awayId = match.awayTeamIdentifier.trim();
             
+            if ((homeId === cleanA && awayId === cleanB) || (homeId === cleanB && awayId === cleanA)) {
+                let homeScore = 0, awayScore = 0;
+                
+                // Najprv skús manuálny výsledok
+                if (match.finalScore && !match.forfeitResult) {
+                    homeScore = match.finalScore.home || 0;
+                    awayScore = match.finalScore.away || 0;
+                } else if (match.forfeitResult?.isForfeit) {
+                    homeScore = match.forfeitResult.home || 0;
+                    awayScore = match.forfeitResult.away || 0;
+                } else {
+                    const events = eventsData[match.id] || [];
+                    const score = getCurrentScore(events);
+                    homeScore = score.home;
+                    awayScore = score.away;
+                }
+                
+                let teamAGet = (homeId === cleanA) ? homeScore : awayScore;
+                let teamBGet = (homeId === cleanA) ? awayScore : homeScore;
+                
                 teamAScore = teamAGet;
                 teamBScore = teamBGet;
                 
-                // 🔥 OPRAVA: Správne počítanie výhier
                 if (teamAGet > teamBGet) {
                     teamAWins = 1;
                     teamBWins = 0;
@@ -233,6 +242,7 @@ let processedGroupsInitial = new Set();  // Spracované skupiny pri inicializác
                 switch (parameter) {
                     case 'headToHead':
                         const { teamAScore, teamBScore, teamAWins, teamBWins } = calculateHeadToHead(teamA.id, teamB.id, groupMatches);
+                        console.log(`🔍 Head-to-head ${teamA.name} vs ${teamB.name}:`, { teamAWins, teamBWins, teamAScore, teamBScore });
                         
                         // 🔥 OPRAVENÁ LOGIKA PRE VZÁJOMNÝ ZÁPAS
                         if (teamAWins !== teamBWins) {
