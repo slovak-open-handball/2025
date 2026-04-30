@@ -223,12 +223,11 @@ let processedGroupsInitial = new Set();  // Spracované skupiny pri inicializác
                 switch (parameter) {
                     case 'headToHead':
                         const { teamAScore, teamBScore, teamAWins, teamBWins } = calculateHeadToHead(teamA.id, teamB.id, groupMatches);
-                        // Najprv podľa výhier vo vzájomných zápasoch
+                        // Podľa smeru (desc = viac výhier je lepšie, asc = menej výhier je lepšie)
                         if (teamAWins !== teamBWins) {
-                            comparison = teamBWins - teamAWins;
+                            comparison = (direction === 'desc' ? teamBWins - teamAWins : teamAWins - teamBWins);
                         } else if (teamAScore !== teamBScore) {
-                            // Potom podľa skóre vo vzájomných zápasoch
-                            comparison = teamBScore - teamAScore;
+                            comparison = (direction === 'desc' ? teamBScore - teamAScore : teamAScore - teamBScore);
                         }
                         break;
                         
@@ -243,7 +242,7 @@ let processedGroupsInitial = new Set();  // Spracované skupiny pri inicializác
                     case 'goalsConceded':
                         comparison = (direction === 'asc' ? teamA.goalsAgainst - teamB.goalsAgainst : teamB.goalsAgainst - teamA.goalsAgainst);
                         break;
-                        
+                    
                     case 'wins':
                         comparison = (direction === 'desc' ? teamB.wins - teamA.wins : teamA.wins - teamB.wins);
                         break;
@@ -253,14 +252,13 @@ let processedGroupsInitial = new Set();  // Spracované skupiny pri inicializác
                         break;
                     
                     case 'draw':
-                        // Losovanie - vrátime 0, čo znamená, že sa tímy považujú za rovnaké
                         comparison = 0;
                         break;
                         
                     default:
                         comparison = 0;
                 }
-                
+            
                 if (comparison !== 0) return comparison;
             }
         }
