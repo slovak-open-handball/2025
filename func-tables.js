@@ -242,7 +242,6 @@ let processedGroupsInitial = new Set();  // Spracované skupiny pri inicializác
                 switch (parameter) {
                     case 'headToHead':
                         const { teamAScore, teamBScore, teamAWins, teamBWins } = calculateHeadToHead(teamA.id, teamB.id, groupMatches);
-                        console.log(`🔍 Head-to-head ${teamA.name} vs ${teamB.name}:`, { teamAWins, teamBWins, teamAScore, teamBScore });
                         
                         // 🔥 OPRAVENÁ LOGIKA PRE VZÁJOMNÝ ZÁPAS
                         if (teamAWins !== teamBWins) {
