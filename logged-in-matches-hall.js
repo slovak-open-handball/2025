@@ -456,28 +456,54 @@ const getTeamMatchesByNameAndCategory = async (teamDisplayName, categoryName) =>
                 continue;
             }
             
-            // 🔥 PRIAMO POUŽIJEME window.matchTracker.getTeamNameByDisplayId()
-            // Pre domáci tím
-            let homeDisplayName = match.homeTeamIdentifier;
+            // ============================================================
+            // 🔥 KONVERZIA NÁZVOV TÍMOV V ZÁPASE
+            // ============================================================
+            
+            // 1. Získame MAPOVANÉ názvy pre domáci tím
+            let homeOriginalName = match.homeTeamIdentifier;
+            let homeMappedName = null;
+            
             if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                 const result = window.matchTracker.getTeamNameByDisplayId(match.homeTeamIdentifier);
-                homeDisplayName = (result && typeof result.then === 'function') ? await result : result;
-                if (!homeDisplayName) homeDisplayName = match.homeTeamIdentifier;
+                homeMappedName = (result && typeof result.then === 'function') ? await result : result;
+                if (homeMappedName && homeMappedName !== match.homeTeamIdentifier) {
+                    console.log(`   🔄 Mapovanie domáceho: "${match.homeTeamIdentifier}" → "${homeMappedName}"`);
+                } else {
+                    homeMappedName = match.homeTeamIdentifier;
+                }
+            } else {
+                homeMappedName = match.homeTeamIdentifier;
             }
             
-            // Pre hosťovský tím
-            let awayDisplayName = match.awayTeamIdentifier;
+            // 2. Získame MAPOVANÉ názvy pre hosťovský tím
+            let awayOriginalName = match.awayTeamIdentifier;
+            let awayMappedName = null;
+            
             if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                 const result = window.matchTracker.getTeamNameByDisplayId(match.awayTeamIdentifier);
-                awayDisplayName = (result && typeof result.then === 'function') ? await result : result;
-                if (!awayDisplayName) awayDisplayName = match.awayTeamIdentifier;
+                awayMappedName = (result && typeof result.then === 'function') ? await result : result;
+                if (awayMappedName && awayMappedName !== match.awayTeamIdentifier) {
+                    console.log(`   🔄 Mapovanie hosťovského: "${match.awayTeamIdentifier}" → "${awayMappedName}"`);
+                } else {
+                    awayMappedName = match.awayTeamIdentifier;
+                }
+            } else {
+                awayMappedName = match.awayTeamIdentifier;
             }
             
-            if (homeDisplayName === teamDisplayName || awayDisplayName === teamDisplayName) {
+            // ============================================================
+            // 🔥 POROVNANIE S HĽADANÝM NÁZVOM TÍMU
+            // ============================================================
+            // Porovnávame CHYTOVÝ NÁZOV z databázy (homeMappedName/awayMappedName)
+            // s hľadaným názvom (teamDisplayName)
+            const isHomeTeam = (homeMappedName === teamDisplayName);
+            const isAwayTeam = (awayMappedName === teamDisplayName);
+            
+            if (isHomeTeam || isAwayTeam) {
                 // ============================================================
                 // 📋 VÝPIS DETAILOV ZÁPASU
                 // ============================================================
-                const isHomeTeam = homeDisplayName === teamDisplayName;
                 const matchDate = match.scheduledTime ? match.scheduledTime.toDate() : null;
                 const formattedDate = matchDate ? matchDate.toLocaleDateString('sk-SK') : 'neurčený';
                 const formattedTime = matchDate ? matchDate.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }) : '--:--';
@@ -489,8 +515,8 @@ const getTeamMatchesByNameAndCategory = async (teamDisplayName, categoryName) =>
                 console.log(`   🆔 ID: ${match.id}`);
                 console.log(`   📅 Dátum: ${dayName} ${formattedDate} ${formattedTime}`);
                 console.log(`   📊 Status: ${match.status === 'completed' ? '✅ ODOHRANÝ' : match.status === 'in-progress' ? '▶️ PREBIEHA' : match.status === 'paused' ? '⏸️ POZASTAVENÝ' : '📅 NAplánOVANÝ'}`);
-                console.log(`   🏠 Domáci: ${homeDisplayName} (${match.homeTeamIdentifier})`);
-                console.log(`   ✈️ Hostia: ${awayDisplayName} (${match.awayTeamIdentifier})`);
+                console.log(`   🏠 Domáci: ${homeMappedName} (pôvodne: ${match.homeTeamIdentifier})`);
+                console.log(`   ✈️ Hostia: ${awayMappedName} (pôvodne: ${match.awayTeamIdentifier})`);
                 console.log(`   🏷️ Kategória: ${match.categoryName || 'neurčená'}`);
                 console.log(`   👥 Skupina: ${match.groupName || 'neurčená'}`);
                 console.log(`   🥅 Naša strana: ${isHomeTeam ? '🏠 DOMÁCI' : '✈️ HOSTIA'}`);
@@ -553,9 +579,14 @@ const getTeamMatchesByNameAndCategory = async (teamDisplayName, categoryName) =>
                 
                 console.log('─'.repeat(60));
                 
+                // 🔥 DO ZOZNAMU UKLADÁME AJ MAPOVANÉ NÁZVY
                 teamMatches.push({
                     ...match,
-                    teamSide: isHomeTeam ? 'home' : 'away'
+                    teamSide: isHomeTeam ? 'home' : 'away',
+                    homeMappedName: homeMappedName,
+                    awayMappedName: awayMappedName,
+                    homeOriginalName: match.homeTeamIdentifier,
+                    awayOriginalName: match.awayTeamIdentifier
                 });
             }
         }
@@ -582,7 +613,9 @@ const getTeamMatchesByNameAndCategory = async (teamDisplayName, categoryName) =>
             const date = match.scheduledTime ? match.scheduledTime.toDate().toLocaleDateString('sk-SK') : 'neznámy';
             const isCurrent = match.id === window.currentMatchId;
             const statusIcon = match.status === 'completed' ? '✅' : match.status === 'in-progress' ? '▶️' : match.status === 'paused' ? '⏸️' : '📅';
-            console.log(`   ${idx.toString().padStart(2, '0')}. ${isCurrent ? '🟢 AKTUÁLNY' : '    '} | ${statusIcon} | ${date} | ID: ${match.id}`);
+            // Zobrazíme mapovaný názov namiesto pôvodného
+            const displayName = match.teamSide === 'home' ? match.homeMappedName : match.awayMappedName;
+            console.log(`   ${idx.toString().padStart(2, '0')}. ${isCurrent ? '🟢 AKTUÁLNY' : '    '} | ${statusIcon} | ${date} | ${displayName} (ID: ${match.id})`);
         });
         console.log('='.repeat(80) + '\n');
         
