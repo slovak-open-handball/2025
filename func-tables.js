@@ -182,6 +182,7 @@ let processedGroupsInitial = new Set();  // Spracované skupiny pri inicializác
         groupMatches.forEach(match => {
             if ((match.homeTeamIdentifier === teamAId && match.awayTeamIdentifier === teamBId) ||
                 (match.homeTeamIdentifier === teamBId && match.awayTeamIdentifier === teamAId)) {
+                
                 const events = eventsData[match.id] || [];
                 const { home: homeScore, away: awayScore } = getCurrentScore(events);
                 
@@ -195,12 +196,21 @@ let processedGroupsInitial = new Set();  // Spracované skupiny pri inicializác
                     teamAGet = awayScore;
                     teamBGet = homeScore;
                 }
-                
+            
                 teamAScore = teamAGet;
                 teamBScore = teamBGet;
                 
-                if (teamAGet > teamBGet) teamAWins++;
-                else if (teamBGet > teamAGet) teamBWins++;
+                // 🔥 OPRAVA: Správne počítanie výhier
+                if (teamAGet > teamBGet) {
+                    teamAWins = 1;
+                    teamBWins = 0;
+                } else if (teamBGet > teamAGet) {
+                    teamAWins = 0;
+                    teamBWins = 1;
+                } else {
+                    teamAWins = 0;
+                    teamBWins = 0;
+                }
             }
         });
         
