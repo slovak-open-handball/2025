@@ -3949,9 +3949,8 @@ function notifyMappingReady() {
     // ============================================================
     // 🔥 HLAVNÝ VÝPIS DO KONZOLY - MAPOVANIE JE PRIPRAVENÉ
     // ============================================================
-    console.log('🎉 ==========================================');
-    console.log('🎉 MAPOVANIE TÍMOV JE PRIPRAVENÉ!');
-    console.log('🎉 ==========================================');
+    console.log('%c🎉 MAPOVANIE TÍMOV JE PRIPRAVENÉ! 🎉', 'color: #00ff00; font-size: 16px; font-weight: bold; background: #1a1a1a; padding: 4px 12px; border-radius: 8px;');
+    console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'color: #888888;');
     console.log(`📊 Počet mapovaní: ${mappingsCount}`);
     
     if (mappingsCount > 0) {
