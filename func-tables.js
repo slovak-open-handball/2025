@@ -3945,7 +3945,23 @@ function notifyMappingReady() {
     mappingCompleted = true;
     const mappings = getAllTeamMappings();
     const mappingsCount = Object.keys(mappings).length;
-    log(`🎉 MAPOVANIE DOKONČENÉ! Počet mapovaní: ${mappingsCount}`);
+    
+    // ============================================================
+    // 🔥 HLAVNÝ VÝPIS DO KONZOLY - MAPOVANIE JE PRIPRAVENÉ
+    // ============================================================
+    console.log('🎉 ==========================================');
+    console.log('🎉 MAPOVANIE TÍMOV JE PRIPRAVENÉ!');
+    console.log('🎉 ==========================================');
+    console.log(`📊 Počet mapovaní: ${mappingsCount}`);
+    
+    if (mappingsCount > 0) {
+        console.log('📋 Zoznam mapovaní:');
+        for (const [id, data] of Object.entries(mappings)) {
+            console.log(`   • ${id} → "${data.teamName}" (kategória: ${data.category || 'N/A'})`);
+        }
+    }
+    console.log('==========================================');
+    
     const event = new CustomEvent('teamNameMappingReady', {
         detail: { mappings, mappingsCount, timestamp: Date.now(), ready: true }
     });
@@ -3954,7 +3970,7 @@ function notifyMappingReady() {
 
 // TOTO JE DÔLEŽITÉ - po načítaní existujúcich mapovaní
 if (Object.keys(window.__teamNameMapping).length > 0) {
-    log('✅ Mapovanie už existuje, odosielam udalosť okamžite...');
+    console.log('✅ Mapovanie už existuje, odosielam udalosť okamžite...');
     notifyMappingReady();
 }
 
