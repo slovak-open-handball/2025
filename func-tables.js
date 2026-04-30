@@ -213,7 +213,7 @@ let processedGroupsInitial = new Set();  // Spracované skupiny pri inicializác
         if (teamA.points !== teamB.points) {
             return teamB.points - teamA.points; // Viac bodov = lepšie
         }
-    
+
         // 2. Ak sú body rovnaké, použijeme nastavené kritériá
         if (sortingConditions && sortingConditions.length > 0) {
             for (const condition of sortingConditions) {
@@ -223,32 +223,74 @@ let processedGroupsInitial = new Set();  // Spracované skupiny pri inicializác
                 switch (parameter) {
                     case 'headToHead':
                         const { teamAScore, teamBScore, teamAWins, teamBWins } = calculateHeadToHead(teamA.id, teamB.id, groupMatches);
-                        // Podľa smeru (desc = viac výhier je lepšie, asc = menej výhier je lepšie)
+                        
+                        // 🔥 OPRAVENÁ LOGIKA PRE VZÁJOMNÝ ZÁPAS
                         if (teamAWins !== teamBWins) {
-                            comparison = (direction === 'desc' ? teamBWins - teamAWins : teamAWins - teamBWins);
+                            // Kto má viac výhier, je lepší (mal by byť vyššie)
+                            // direction 'desc' = viac výhier je lepšie
+                            // Pre správne zoradenie: ak teamA vyhral (teamAWins > teamBWins), vrátime -1 (teamA je lepší)
+                            if (direction === 'desc') {
+                                // Viac výhier = lepšie
+                                comparison = teamBWins - teamAWins;  // Ak teamA vyhral, teamBWins - teamAWins je záporné → teamA je prvý
+                            } else {
+                                // Menej výhier = lepšie (asc)
+                                comparison = teamAWins - teamBWins;
+                            }
                         } else if (teamAScore !== teamBScore) {
-                            comparison = (direction === 'desc' ? teamBScore - teamAScore : teamAScore - teamBScore);
+                            // Pri rovnosti výhier, porovnávame skóre (kto dal viac gólov)
+                            if (direction === 'desc') {
+                                // Viac gólov = lepšie
+                                comparison = teamBScore - teamAScore;
+                            } else {
+                                // Menej gólov = lepšie
+                                comparison = teamAScore - teamBScore;
+                            }
+                        }
+                        break;
+                    
+                    case 'scoreDifference':
+                        // Pre gólový rozdiel: väčší rozdiel = lepšie (desc)
+                        if (direction === 'desc') {
+                            comparison = teamB.goalDifference - teamA.goalDifference;
+                        } else {
+                            comparison = teamA.goalDifference - teamB.goalDifference;
                         }
                         break;
                         
-                    case 'scoreDifference':
-                        comparison = (direction === 'desc' ? teamB.goalDifference - teamA.goalDifference : teamA.goalDifference - teamB.goalDifference);
-                        break;
-                        
                     case 'goalsScored':
-                        comparison = (direction === 'desc' ? teamB.goalsFor - teamA.goalsFor : teamA.goalsFor - teamB.goalsFor);
+                        // Pre strelené góly: viac gólov = lepšie (desc)
+                        if (direction === 'desc') {
+                            comparison = teamB.goalsFor - teamA.goalsFor;
+                        } else {
+                            comparison = teamA.goalsFor - teamB.goalsFor;
+                        }
                         break;
                         
                     case 'goalsConceded':
-                        comparison = (direction === 'asc' ? teamA.goalsAgainst - teamB.goalsAgainst : teamB.goalsAgainst - teamA.goalsAgainst);
+                        // Pre inkasované góly: menej gólov = lepšie (asc)
+                        if (direction === 'asc') {
+                            comparison = teamA.goalsAgainst - teamB.goalsAgainst;
+                        } else {
+                            comparison = teamB.goalsAgainst - teamA.goalsAgainst;
+                        }
                         break;
                     
                     case 'wins':
-                        comparison = (direction === 'desc' ? teamB.wins - teamA.wins : teamA.wins - teamB.wins);
+                        // Pre výhry: viac výhier = lepšie (desc)
+                        if (direction === 'desc') {
+                            comparison = teamB.wins - teamA.wins;
+                        } else {
+                            comparison = teamA.wins - teamB.wins;
+                        }
                         break;
                     
                     case 'losses':
-                        comparison = (direction === 'asc' ? teamA.losses - teamB.losses : teamB.losses - teamA.losses);
+                        // Pre prehry: menej prehier = lepšie (asc)
+                        if (direction === 'asc') {
+                            comparison = teamA.losses - teamB.losses;
+                        } else {
+                            comparison = teamB.losses - teamA.losses;
+                        }
                         break;
                     
                     case 'draw':
