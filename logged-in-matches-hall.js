@@ -1608,7 +1608,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
             
             // 🔥 2. KRÁTKE ONESKORENIE PRE ISTOTU
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 5000));
             
             // 🔥 3. POČKÁME, KÝM SA NENAČÍTAJÚ USERS A SUPERSTRUCTURE TEAMS
             if (users.length === 0 || Object.keys(superstructureTeams).length === 0) {
