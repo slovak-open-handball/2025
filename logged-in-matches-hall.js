@@ -891,6 +891,283 @@ const getTeamMatchesByName = async (teamName) => {
     }
 };
 
+const getTeamMatchesByDisplayName = async (teamDisplayName, categoryName) => {
+    if (!window.db || !teamDisplayName) return [];
+    
+    console.log('\n' + '='.repeat(80));
+    console.log(`🔍 VYHĽADÁVAM ZÁPASY PRE TÍM: "${teamDisplayName}"`);
+    console.log(`📂 Kategória: "${categoryName}"`);
+    console.log('='.repeat(80));
+    
+    try {
+        const matchesRef = collection(window.db, 'matches');
+        const allMatchesSnap = await getDocs(matchesRef);
+        const teamMatches = [];
+        
+        console.log(`📊 Celkový počet zápasov v databáze: ${allMatchesSnap.size}`);
+        console.log('-'.repeat(80));
+        
+        for (const doc of allMatchesSnap.docs) {
+            const match = { id: doc.id, ...doc.data() };
+            
+            // Kontrola kategórie
+            if (match.categoryName !== categoryName) {
+                continue;
+            }
+            
+            // ============================================================
+            // 🔥 ZÍSKAME ZOBRAZOVACIE NÁZVY TÍMOV V ZÁPASE
+            // ============================================================
+            
+            // Pre domáci tím - najprv skúsime získať zobrazovací názov
+            let homeDisplayName = match.homeTeamIdentifier;
+            if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                const result = window.matchTracker.getTeamNameByDisplayId(match.homeTeamIdentifier);
+                homeDisplayName = (result && typeof result.then === 'function') ? await result : result;
+                if (!homeDisplayName) homeDisplayName = match.homeTeamIdentifier;
+            }
+            
+            // Pre hosťovský tím
+            let awayDisplayName = match.awayTeamIdentifier;
+            if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                const result = window.matchTracker.getTeamNameByDisplayId(match.awayTeamIdentifier);
+                awayDisplayName = (result && typeof result.then === 'function') ? await result : result;
+                if (!awayDisplayName) awayDisplayName = match.awayTeamIdentifier;
+            }
+            
+            // 🔥 DÔLEŽITÉ: Porovnávame ZOBRAZOVACIE NÁZVY
+            const isHomeTeam = (homeDisplayName === teamDisplayName);
+            const isAwayTeam = (awayDisplayName === teamDisplayName);
+            
+            if (isHomeTeam || isAwayTeam) {
+                const matchDate = match.scheduledTime ? match.scheduledTime.toDate() : null;
+                const formattedDate = matchDate ? matchDate.toLocaleDateString('sk-SK') : 'neurčený';
+                const formattedTime = matchDate ? matchDate.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+                const dayName = matchDate ? ['Nedeľa', 'Pondelok', 'Utorok', 'Streda', 'Štvrtok', 'Piatok', 'Sobota'][matchDate.getDay()] : '?';
+                
+                console.log('\n' + '─'.repeat(60));
+                console.log(`🏟️ ZÁPAS č. ${teamMatches.length + 1}`);
+                console.log('─'.repeat(60));
+                console.log(`   🆔 ID: ${match.id}`);
+                console.log(`   📅 Dátum: ${dayName} ${formattedDate} ${formattedTime}`);
+                console.log(`   📊 Status: ${match.status === 'completed' ? '✅ ODOHRANÝ' : match.status === 'in-progress' ? '▶️ PREBIEHA' : match.status === 'paused' ? '⏸️ POZASTAVENÝ' : '📅 NAplánOVANÝ'}`);
+                console.log(`   🏠 Domáci (zobrazovací): ${homeDisplayName}`);
+                console.log(`      🔑 Identifikátor: ${match.homeTeamIdentifier}`);
+                console.log(`   ✈️ Hostia (zobrazovací): ${awayDisplayName}`);
+                console.log(`      🔑 Identifikátor: ${match.awayTeamIdentifier}`);
+                console.log(`   🏷️ Kategória: ${match.categoryName || 'neurčená'}`);
+                console.log(`   👥 Skupina: ${match.groupName || 'neurčená'}`);
+                console.log(`   🥅 Naša strana: ${isHomeTeam ? '🏠 DOMÁCI' : '✈️ HOSTIA'}`);
+                
+                // Výpis výsledku ak je zápas odohraný
+                if (match.status === 'completed') {
+                    console.log(`\n   🎯 VÝSLEDOK ZÁPASU:`);
+                    
+                    if (match.forfeitResult && match.forfeitResult.isForfeit) {
+                        console.log(`      ⚠️ KONTUMÁCIA: ${match.forfeitResult.home}:${match.forfeitResult.away}`);
+                    } else if (match.finalScore && !match.forfeitResult) {
+                        console.log(`      ✏️ MANUÁLNY VÝSLEDOK: ${match.finalScore.home}:${match.finalScore.away}`);
+                    } else {
+                        const eventsRef = collection(window.db, 'matchEvents');
+                        const q = query(eventsRef, where("matchId", "==", match.id));
+                        const eventsSnap = await getDocs(q);
+                        
+                        let homeScore = 0, awayScore = 0;
+                        eventsSnap.forEach(eventDoc => {
+                            const event = eventDoc.data();
+                            if (event.type === 'goal' || (event.type === 'penalty' && event.subType === 'scored')) {
+                                if (event.team === 'home') homeScore++;
+                                else if (event.team === 'away') awayScore++;
+                            }
+                        });
+                        console.log(`      🥅 SKÓRE: ${homeScore}:${awayScore}`);
+                    }
+                }
+                
+                // Výpis modrých kariet
+                const eventsRef = collection(window.db, 'matchEvents');
+                const blueQuery = query(eventsRef, where("matchId", "==", match.id), where("type", "==", "blue"));
+                const blueSnap = await getDocs(blueQuery);
+                
+                if (blueSnap.size > 0) {
+                    console.log(`\n   🔵 MODRÉ KARTY V TOMTO ZÁPASE (${blueSnap.size}):`);
+                    blueSnap.forEach((blueDoc, idx) => {
+                        const blueEvent = blueDoc.data();
+                        console.log(`      ${idx + 1}. Hráč: ${blueEvent.playerRef?.playerName || 'Neznámy'}`);
+                        console.log(`         Čas: ${blueEvent.minute}:${blueEvent.second?.toString().padStart(2, '0') || '00'}`);
+                        console.log(`         Tím: ${blueEvent.team === 'home' ? 'DOMÁCI' : 'HOSTIA'}`);
+                        if (blueEvent.playerRef?.userId) {
+                            console.log(`         userId: ${blueEvent.playerRef.userId}`);
+                        }
+                        if (blueEvent.playerRef?.playerIndex !== undefined) {
+                            console.log(`         playerIndex: ${blueEvent.playerRef.playerIndex}`);
+                        }
+                    });
+                } else {
+                    console.log(`\n   ✅ Žiadne modré karty v tomto zápase.`);
+                }
+                
+                console.log('─'.repeat(60));
+                
+                teamMatches.push({
+                    ...match,
+                    teamSide: isHomeTeam ? 'home' : 'away',
+                    homeDisplayName: homeDisplayName,
+                    awayDisplayName: awayDisplayName
+                });
+            }
+        }
+        
+        // Zoradenie podľa dátumu
+        teamMatches.sort((a, b) => {
+            if (!a.scheduledTime) return 1;
+            if (!b.scheduledTime) return -1;
+            return a.scheduledTime.toDate() - b.scheduledTime.toDate();
+        });
+        
+        console.log('\n' + '='.repeat(80));
+        console.log(`📊 SÚHRN PRE TÍM "${teamDisplayName}" v kategórii "${categoryName}":`);
+        console.log('='.repeat(80));
+        console.log(`   ✅ Nájdených zápasov: ${teamMatches.length}`);
+        console.log(`   🏁 Ukončených: ${teamMatches.filter(m => m.status === 'completed').length}`);
+        console.log(`   ▶️ Prebiehajúcich: ${teamMatches.filter(m => m.status === 'in-progress' || m.status === 'paused').length}`);
+        console.log(`   📅 Naplánovaných: ${teamMatches.filter(m => m.status === 'scheduled').length}`);
+        
+        console.log('\n📋 ZOZNAM ZÁPASOV (zoradených podľa dátumu):');
+        console.log('─'.repeat(60));
+        teamMatches.forEach((match, idx) => {
+            const date = match.scheduledTime ? match.scheduledTime.toDate().toLocaleDateString('sk-SK') : 'neznámy';
+            const statusIcon = match.status === 'completed' ? '✅' : match.status === 'in-progress' ? '▶️' : match.status === 'paused' ? '⏸️' : '📅';
+            const ourDisplayName = match.teamSide === 'home' ? match.homeDisplayName : match.awayDisplayName;
+            console.log(`   ${idx.toString().padStart(2, '0')}. ${statusIcon} | ${date} | ${ourDisplayName}`);
+            console.log(`       🆔 ID: ${match.id}`);
+            console.log(`       🏠 ${match.homeDisplayName} vs ✈️ ${match.awayDisplayName}`);
+        });
+        console.log('='.repeat(80) + '\n');
+        
+        return teamMatches;
+    } catch (error) {
+        console.error('❌ Chyba pri načítaní zápasov tímu:', error);
+        return [];
+    }
+};
+
+const getBlueCardEventsForPlayerByDisplayName = async (matches, playerIdentifier, currentMatchId) => {
+    if (!window.db || !matches.length || !playerIdentifier) return [];
+    
+    const blueCardEvents = [];
+    
+    console.log(`\n🔍 Vyhľadávam modré karty pre hráča ${playerIdentifier.playerName || playerIdentifier.playerId}...`);
+    console.log(`   Tím: ${playerIdentifier.teamDisplayName}`);
+    console.log(`   Kategória: ${playerIdentifier.categoryName}`);
+    console.log(`   Celkovo zápasov na kontrolu: ${matches.length}`);
+    console.log('─'.repeat(60));
+    
+    for (let i = 0; i < matches.length; i++) {
+        const match = matches[i];
+        
+        if (match.id === currentMatchId) {
+            console.log(`\n   ⏭️ [${i}] Zápas ${match.id} - PRESKAKUJEM (aktuálny zápas)`);
+            continue;
+        }
+        
+        if (match.status !== 'completed') {
+            console.log(`\n   ⏭️ [${i}] Zápas ${match.id} - PRESKAKUJEM (stav: ${match.status} - nie je ukončený)`);
+            continue;
+        }
+        
+        // 🔥 ZOBRAZÍME DETAIL ZÁPASU PRED KONTROLOU
+        const matchDate = match.scheduledTime ? match.scheduledTime.toDate().toLocaleDateString('sk-SK') : 'neznámy dátum';
+        console.log(`\n   ┌─────────────────────────────────────────────────────────────`);
+        console.log(`   │ [${i}] 📋 KONTROLA ZÁPASU:`);
+        console.log(`   │    🆔 ID: ${match.id}`);
+        console.log(`   │    📅 Dátum: ${matchDate}`);
+        console.log(`   │    🏠 Domáci (zobrazovací): ${match.homeDisplayName || match.homeTeamIdentifier}`);
+        console.log(`   │       🔑 Identifikátor: ${match.homeTeamIdentifier}`);
+        console.log(`   │    ✈️ Hostia (zobrazovací): ${match.awayDisplayName || match.awayTeamIdentifier}`);
+        console.log(`   │       🔑 Identifikátor: ${match.awayTeamIdentifier}`);
+        console.log(`   │    🥅 Naša strana: ${match.teamSide === 'home' ? 'DOMÁCI' : 'HOSTIA'}`);
+        console.log(`   └─────────────────────────────────────────────────────────────`);
+        
+        try {
+            const eventsRef = collection(window.db, 'matchEvents');
+            const q = query(eventsRef, where("matchId", "==", match.id));
+            const eventsSnap = await getDocs(q);
+            
+            console.log(`      📊 Počet udalostí v zápase: ${eventsSnap.size}`);
+            
+            let foundBlueCards = 0;
+            
+            for (const doc of eventsSnap.docs) {
+                const event = doc.data();
+                if (event.type === 'blue' && event.playerRef) {
+                    let isSamePlayer = false;
+                    
+                    // Porovnanie podľa playerId
+                    if (playerIdentifier.playerId && event.playerRef.playerId) {
+                        isSamePlayer = event.playerRef.playerId === playerIdentifier.playerId;
+                        if (isSamePlayer) console.log(`         ✅ Nájdená MK podľa playerId`);
+                    }
+                    
+                    // Porovnanie podľa userId + teamIdentifier + playerIndex
+                    if (!isSamePlayer && !playerIdentifier.playerId) {
+                        isSamePlayer = event.playerRef.userId === playerIdentifier.userId &&
+                                       event.playerRef.teamIdentifier === playerIdentifier.teamIdentifier &&
+                                       event.playerRef.playerIndex === playerIdentifier.playerIndex;
+                        if (isSamePlayer) console.log(`         ✅ Nájdená MK podľa userId+teamIdentifier+index`);
+                    }
+                    
+                    // Porovnanie podľa mena
+                    if (!isSamePlayer && playerIdentifier.playerName) {
+                        const playerFullName = `${playerIdentifier.lastName} ${playerIdentifier.firstName}`;
+                        isSamePlayer = event.playerRef.playerName === playerFullName;
+                        if (isSamePlayer) console.log(`         ✅ Nájdená MK podľa mena`);
+                    }
+                    
+                    if (isSamePlayer) {
+                        foundBlueCards++;
+                        blueCardEvents.push({
+                            matchId: match.id,
+                            matchDate: match.scheduledTime,
+                            matchOrder: i,
+                            match: match
+                        });
+                        console.log(`         🃏 MODRÁ KARTA č. ${foundBlueCards} - ZAZNAMENANÁ!`);
+                    }
+                }
+            }
+            
+            if (foundBlueCards === 0) {
+                console.log(`      ✅ Žiadne modré karty pre tohto hráča v tomto zápase.`);
+            } else {
+                console.log(`      📊 Celkom modrých kariet v tomto zápase pre tohto hráča: ${foundBlueCards}`);
+            }
+            
+        } catch (error) {
+            console.error(`      ❌ Chyba pri načítaní udalostí zápasu ${match.id}:`, error);
+        }
+    }
+    
+    // Zoradenie podľa poradia (najnovšie prvé)
+    blueCardEvents.sort((a, b) => b.matchOrder - a.matchOrder);
+    
+    console.log('\n' + '='.repeat(60));
+    console.log(`📊 SÚHRN MODRÝCH KARIET PRE HRÁČA ${playerIdentifier.playerName || playerIdentifier.playerId}:`);
+    console.log('='.repeat(60));
+    console.log(`   Celkový počet nájdených MK: ${blueCardEvents.length}`);
+    
+    if (blueCardEvents.length > 0) {
+        console.log(`   Zoznam MK (zoradených od najnovšej):`);
+        blueCardEvents.forEach((card, idx) => {
+            const date = card.matchDate ? card.matchDate.toDate().toLocaleDateString('sk-SK') : 'neznámy';
+            console.log(`   ${idx + 1}. Zápas č. ${card.matchOrder} - ${date} (ID: ${card.matchId})`);
+        });
+    }
+    console.log('='.repeat(60) + '\n');
+    
+    return blueCardEvents;
+};
+
 const getBlueCardEventsForPlayerByName = async (matches, playerIdentifier, currentMatchId) => {
     if (!window.db || !matches.length || !playerIdentifier) return [];
     
