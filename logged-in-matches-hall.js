@@ -9310,9 +9310,9 @@ function waitForTeamMappingReady() {
         console.log('⏳ Čakám na dokončenie mapovania tímov...');
         
         const timeout = setTimeout(() => {
-            console.warn('⚠️ Timeout: Mapovanie tímov sa nenačítalo do 30 sekúnd, pokračujem napriek tomu...');
+            console.warn('⚠️ Timeout: Mapovanie tímov sa nenačítalo do 5 sekúnd, pokračujem napriek tomu...');
             resolve(false);
-        }, 30000);
+        }, 5000);
         
         const handleReady = () => {
             clearTimeout(timeout);
