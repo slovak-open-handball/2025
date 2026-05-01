@@ -2,7 +2,6 @@
 
 import { doc, updateDoc, getDoc, setDoc, addDoc, collection, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Funkcia na vytvorenie notifikácie o zmene nastavení tabuľky
 const createTableSettingsChangeNotification = async (actionType, changesArray) => {
     if (!window.db || !changesArray?.length) return;
     
@@ -18,21 +17,15 @@ const createTableSettingsChangeNotification = async (actionType, changesArray) =
             settingsType: 'table_settings'
         });
         
-        console.log("[NOTIFIKÁCIA – zmena nastavení tabuľky]", changesArray);
-    } catch (err) {
-        console.error("[CHYBA pri ukladaní notifikácie nastavení tabuľky]", err);
     }
 };
 
 export function TableSettings({ db, userProfileData, showNotification }) {
-    // Stav pre podmienky poradia
     const [sortingConditions, setSortingConditions] = React.useState([]);
     
-    // Stav pre body za výhru
     const [pointsForWin, setPointsForWin] = React.useState(3);
     const [originalPointsForWin, setOriginalPointsForWin] = React.useState(3);
     
-    // Stav pre modrú kartu - počet zápasov vylúčenia
     const [blueCardSuspensionMatches, setBlueCardSuspensionMatches] = React.useState(1);
     const [originalBlueCardSuspensionMatches, setOriginalBlueCardSuspensionMatches] = React.useState(1);
     
@@ -41,7 +34,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
     const [hasChanges, setHasChanges] = React.useState(false);
     const [originalSortingConditions, setOriginalSortingConditions] = React.useState([]);
 
-    // Dostupné parametre pre selectbox
     const availableParameters = [
         { value: 'headToHead', label: 'Vzájomný zápas' },
         { value: 'scoreDifference', label: '+/-' },
@@ -52,7 +44,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         { value: 'losses', label: 'Počet prehier' }
     ];
 
-    // Parametre, ktoré podporujú voľbu smeru (vzostupne/zostupne)
     const parametersWithDirection = [
         'scoreDifference',
         'goalsScored',
@@ -62,7 +53,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         'headToHead'
     ];
 
-    // Pomocná funkcia na formátovanie jednej podmienky pre zobrazenie
     const formatCondition = (cond, index) => {
         if (!cond || !cond.parameter) return null;
         
@@ -88,7 +78,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         return 'bodov';
     };
 
-    // Pomocná funkcia na formátovanie hodnoty pre porovnanie zmien
     const formatConditionValue = (cond) => {
         if (!cond || !cond.parameter) return 'Žiadne';
         
@@ -102,21 +91,17 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         }
     };
 
-    // Funkcia na generovanie detailných zmien pre každú pozíciu - UPRAVENÁ VERZIA
     const generateDetailedChanges = (oldConditions, newConditions, oldPoints, newPoints, oldBlueCardSuspension, newBlueCardSuspension) => {
         const changes = [];
         
-        // Kontrola zmeny bodov za výhru
         if (oldPoints !== newPoints) {
             changes.push(`Zmena bodov za výhru: z '${oldPoints}' na '${newPoints}'`);
         }
         
-        // Kontrola zmeny počtu zápasov vylúčenia za modrú kartu
         if (oldBlueCardSuspension !== newBlueCardSuspension) {
             changes.push(`Zmena počtu zápasov vylúčenia za modrú kartu: z '${oldBlueCardSuspension}' na '${newBlueCardSuspension}'`);
         }
         
-        // Kontrola zmien v podmienkach poradia
         const oldConditionsStr = JSON.stringify(oldConditions);
         const newConditionsStr = JSON.stringify(newConditions);
         
@@ -125,7 +110,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
 
             changes.push('');
             
-            // Vždy vypíšeme všetky nové podmienky, podľa ktorých sa rozhoduje
             if (newConditions.length > 0) {
                 changes.push(`'''Nové poradie rozhodovania:'`);
                 newConditions.forEach((cond, index) => {
@@ -138,7 +122,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
 
             changes.push('');
             
-            // Pridáme aj informáciu o pôvodnom poradí pre porovnanie
             if (oldConditions.length > 0) {
                 changes.push(`'Pôvodné poradie rozhodovania:'''`);
                 oldConditions.forEach((cond, index) => {
@@ -153,7 +136,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         return changes;
     };
 
-    // Načítanie nastavení poradia z Firestore
     React.useEffect(() => {
         const loadTableSettings = async () => {
             if (!db) return;
@@ -172,7 +154,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                     setBlueCardSuspensionMatches(data.blueCardSuspensionMatches || 1);
                     setOriginalBlueCardSuspensionMatches(data.blueCardSuspensionMatches || 1);
                 } else {
-                    // Vytvoríme predvolené nastavenia, ak neexistujú
                     const defaultSettings = {
                         sortingConditions: [],
                         pointsForWin: 3,
@@ -196,29 +177,22 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         loadTableSettings();
     }, [db, showNotification]);
 
-    // Handler pre zmenu bodov za výhru
     const handlePointsForWinChange = (value) => {
         const numValue = parseInt(value) || 0;
-        // Obmedzenie na rozumné hodnoty (1-10 bodov)
         const clampedValue = Math.max(1, Math.min(10, numValue));
         setPointsForWin(clampedValue);
         
-        // Kontrola, či sa hodnota zmenila oproti originálu
         checkForChanges(clampedValue, blueCardSuspensionMatches);
     };
 
-    // Handler pre zmenu počtu zápasov vylúčenia za modrú kartu
     const handleBlueCardSuspensionChange = (value) => {
         const numValue = parseInt(value) || 0;
-        // Obmedzenie len na kladné čísla (minimálne 1)
         const clampedValue = Math.max(1, numValue);
         setBlueCardSuspensionMatches(clampedValue);
         
-        // Kontrola, či sa hodnota zmenila oproti originálu
         checkForChanges(pointsForWin, clampedValue);
     };
 
-    // Pomocná funkcia na kontrolu zmien
     const checkForChanges = (currentPoints, currentBlueCardSuspension) => {
         const pointsChanged = currentPoints !== originalPointsForWin;
         const blueCardChanged = currentBlueCardSuspension !== originalBlueCardSuspensionMatches;
@@ -227,7 +201,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         setHasChanges(pointsChanged || blueCardChanged || conditionsChanged);
     };
 
-    // Handler pre zmenu podmienky poradia
     const handleSortingConditionChange = (index, field, value) => {
         setSortingConditions(prev => {
             const updated = [...prev];
@@ -249,9 +222,8 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         setHasChanges(true);
     };
 
-    // Handler pre posunutie podmienky nahor
     const handleMoveUp = (index) => {
-        if (index === 0) return; // Už je na začiatku
+        if (index === 0) return;
         
         setSortingConditions(prev => {
             const updated = [...prev];
@@ -261,9 +233,8 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         setHasChanges(true);
     };
 
-    // Handler pre posunutie podmienky nadol
     const handleMoveDown = (index) => {
-        if (index === sortingConditions.length - 1) return; // Už je na konci
+        if (index === sortingConditions.length - 1) return;
         
         setSortingConditions(prev => {
             const updated = [...prev];
@@ -273,7 +244,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         setHasChanges(true);
     };
 
-    // Handler pre pridanie novej podmienky
     const handleAddCondition = () => {
         setSortingConditions(prev => [
             ...prev,
@@ -282,13 +252,11 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         setHasChanges(true);
     };
 
-    // Handler pre odstránenie podmienky
     const handleRemoveCondition = (index) => {
         setSortingConditions(prev => prev.filter((_, i) => i !== index));
         setHasChanges(true);
     };
 
-    // Handler pre uloženie nastavení
     const handleSave = async () => {
         if (!db) return;
         
@@ -296,7 +264,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
             setIsSaving(true);
             const settingsDocRef = doc(db, 'settings', 'table');
             
-            // Pripravíme dáta na uloženie - odstránime prázdne podmienky
             const validConditions = sortingConditions.filter(cond => cond.parameter && cond.parameter.trim() !== '');
             
             const dataToSave = {
@@ -305,13 +272,11 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                 blueCardSuspensionMatches: blueCardSuspensionMatches
             };
 
-            // Zistíme, či došlo k zmene
             const conditionsChanged = JSON.stringify(validConditions) !== JSON.stringify(originalSortingConditions);
             const pointsChanged = pointsForWin !== originalPointsForWin;
             const blueCardChanged = blueCardSuspensionMatches !== originalBlueCardSuspensionMatches;
             const isChanged = conditionsChanged || pointsChanged || blueCardChanged;
             
-            // Ak došlo k zmene, vytvoríme detailnú notifikáciu s jednotlivými zmenami
             if (isChanged) {
                 const changes = generateDetailedChanges(
                     originalSortingConditions, 
@@ -326,7 +291,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
             
             await setDoc(settingsDocRef, dataToSave, { merge: true });
             
-            // Aktualizujeme pôvodné nastavenia
             setOriginalSortingConditions(validConditions);
             setSortingConditions(validConditions);
             setOriginalPointsForWin(pointsForWin);
@@ -342,7 +306,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         }
     };
 
-    // Handler pre reset nastavení na predvolené
     const handleResetToDefault = () => {
         setSortingConditions([]);
         setPointsForWin(3);
@@ -350,7 +313,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         setHasChanges(true);
     };
 
-    // Získanie dostupných parametrov pre selectbox
     const getAvailableParameters = (currentIndex) => {
         const selectedValues = sortingConditions
             .filter((_, index) => index !== currentIndex)
@@ -363,12 +325,10 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         ];
     };
 
-    // Kontrola, či sú všetky podmienky validné
     const areConditionsValid = () => {
         return sortingConditions.every(cond => cond.parameter && cond.parameter.trim() !== '');
     };
 
-    // Zistenie, či parameter podporuje smer
     const supportsDirection = (parameter) => {
         return parametersWithDirection.includes(parameter);
     };
@@ -385,12 +345,10 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         'div',
         { className: 'space-y-6' },
         
-        // Hlavný kontajner s orámovaním
         React.createElement(
             'div',
             { className: 'border border-gray-200 rounded-lg p-6' },
             
-            // Hlavička
             React.createElement(
                 'div',
                 { className: 'mb-6' },
@@ -402,7 +360,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                 )
             ),
             
-            // Sekcia pre body za výhru
             React.createElement(
                 'div',
                 { className: 'mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200' },
@@ -446,7 +403,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                 )
             ),
             
-            // Sekcia pre modrú kartu
             React.createElement(
                 'div',
                 { className: 'mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200' },
@@ -488,7 +444,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                 )
             ),
             
-            // Sekcia pre nastavenie poradia
             React.createElement(
                 'div',
                 { className: 'bg-white rounded-lg' },
@@ -499,7 +454,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                     'Kritériá poradia pri rovnosti bodov'
                 ),
                 
-                // Dynamické riadky podmienok
                 React.createElement(
                     'div',
                     { className: 'space-y-3 mb-4' },
@@ -514,7 +468,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                                 key: index,
                                 className: 'flex items-center space-x-4 bg-gray-50 p-3 rounded-lg'
                             },
-                            // Číslo a šípky
                             React.createElement(
                                 'div',
                                 { className: 'flex items-center space-x-1 w-16' },
@@ -526,7 +479,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                                 React.createElement(
                                     'div',
                                     { className: 'flex flex-col space-y-1' },
-                                    // Šípka nahor
                                     React.createElement(
                                         'button',
                                         {
@@ -543,7 +495,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                                             React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M5 15l7-7 7 7' })
                                         )
                                     ),
-                                    // Šípka nadol
                                     React.createElement(
                                         'button',
                                         {
@@ -562,7 +513,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                                     )
                                 )
                             ),
-                            // Select pre výber parametra
                             React.createElement(
                                 'select',
                                 {
@@ -594,7 +544,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                                     );
                                 })
                             ),
-                            // Select pre smer - zobrazí sa len pre podporované parametre
                             (condition.parameter && supportsDirection(condition.parameter) && condition.parameter !== 'headToHead')
                                 ? React.createElement(
                                     'select',
@@ -614,7 +563,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                                     )
                                     : React.createElement('div', { className: 'w-32' })
                                 ),
-                            // Tlačidlo pre odstránenie
                             React.createElement(
                                 'button',
                                 {
@@ -630,7 +578,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                     })
                 ),
                 
-                // Tlačidlo pre pridanie novej podmienky
                 sortingConditions.length < availableParameters.length &&
                 React.createElement(
                     'button',
@@ -645,7 +592,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                     'Pridať podmienku'
                 ),
                 
-                // Informácia o predvolenom poradí
                 sortingConditions.length === 0 &&
                 React.createElement(
                     'div',
@@ -654,7 +600,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                 )
             ),
             
-            // Akčné tlačidlá
             React.createElement(
                 'div',
                 { className: 'flex justify-end space-x-4 mt-6' },
@@ -687,5 +632,4 @@ export function TableSettings({ db, userProfileData, showNotification }) {
     );
 }
 
-// Pridáme komponent do globálneho scope
 window.TableSettings = TableSettings;
