@@ -1557,6 +1557,49 @@ const matchesHallApp = ({ userProfileData }) => {
         setAwayTeamNameReady(false);
     }, [selectedMatch?.id]);
 
+    useEffect(() => {
+        if (!selectedMatch) return;
+        
+        const syncTeamNamesWithRoster = async () => {
+            // Počkáme, kým sa načítajú team data
+            if (!homeTeamData && !awayTeamData) return;
+            
+            // Pre DOMÁCI TÍM
+            if (homeTeamData && homeTeamData.team && homeTeamData.team.teamName) {
+                const rosterTeamName = homeTeamData.team.teamName;
+                const currentDisplayName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
+                
+                // Ak sa názvy líšia, aktualizujeme selectedMatch
+                if (currentDisplayName !== rosterTeamName) {
+                    console.log(`🔄 [SYNC] Domáci: "${currentDisplayName}" -> "${rosterTeamName}"`);
+                    
+                    // Aktualizujeme selectedMatch v React stave
+                    setSelectedMatch(prev => ({
+                        ...prev,
+                        homeDisplayName: rosterTeamName
+                    }));
+                }
+            }
+            
+            // Pre HOSŤOVSKÝ TÍM
+            if (awayTeamData && awayTeamData.team && awayTeamData.team.teamName) {
+                const rosterTeamName = awayTeamData.team.teamName;
+                const currentDisplayName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
+                
+                if (currentDisplayName !== rosterTeamName) {
+                    console.log(`🔄 [SYNC] Hosťovskí: "${currentDisplayName}" -> "${rosterTeamName}"`);
+                    
+                    setSelectedMatch(prev => ({
+                        ...prev,
+                        awayDisplayName: rosterTeamName
+                    }));
+                }
+            }
+        };
+        
+        syncTeamNamesWithRoster();
+    }, [homeTeamData, awayTeamData, selectedMatch?.id]);
+
     // OPRAVENÝ useEffect PRE NAČÍTANIE SÚPISIEK
     useEffect(() => {
         const loadTeamDetails = async () => {
@@ -1688,12 +1731,12 @@ const matchesHallApp = ({ userProfileData }) => {
         updateTeamNamesInMatches();
     }, [matches.length, teamManagerReady]); // Spustí sa pri zmene dĺžky matches alebo ready stavu
 
-    // OPRAVENÝ useEffect pre mapovanie názvov tímov - s DVOJITOU KONVERZIOU
+    // OPRAVENÝ useEffect pre mapovanie názvov tímov - ukladá do selectedMatch
     useEffect(() => {
         if (!selectedMatch) return;
         
         const mapTeamNames = async () => {
-            // Počkáme na pripravenosť teamManager (max 10 sekúnd)
+            // Počkáme na pripravenosť teamManager
             let waitCount = 0;
             while (!window.teamManager || !window.teamManager.getTeamNameByDisplayIdSync) {
                 if (waitCount >= 100) {
@@ -1704,63 +1747,47 @@ const matchesHallApp = ({ userProfileData }) => {
                 waitCount++;
             }
             
-            // ================================================================
-            // POUŽIJEME window.teamManager.getTeamNameByDisplayIdSync (synchrónna verzia)
-            // S DVOJITOU KONVERZIOU
-            // ================================================================
-            
-            // Získame zmapovaný názov pre domáci tím s dvojitou konverziou
+            // Získame zmapovaný názov pre domáci tím
             let homeResolvedName = selectedMatch.homeTeamIdentifier;
+            let awayResolvedName = selectedMatch.awayTeamIdentifier;
+            
             if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-                // Prvá konverzia
+                // Domáci - dvojitá konverzia
                 let firstPass = window.teamManager.getTeamNameByDisplayIdSync(selectedMatch.homeTeamIdentifier);
                 if (firstPass && firstPass !== selectedMatch.homeTeamIdentifier) {
-                    console.log(`🔄 [DOMÁCI] Prvá konverzia: "${selectedMatch.homeTeamIdentifier}" -> "${firstPass}"`);
-                    
-                    // 🔥 DVOJITÁ KONVERZIA: Výsledok pošleme ešte raz do rovnakej funkcie
                     let secondPass = window.teamManager.getTeamNameByDisplayIdSync(firstPass);
                     if (secondPass && secondPass !== firstPass) {
-                        console.log(`🔄 [DOMÁCI] Druhá konverzia: "${firstPass}" -> "${secondPass}"`);
                         homeResolvedName = secondPass;
                     } else {
                         homeResolvedName = firstPass;
                     }
-                } else if (firstPass && firstPass !== selectedMatch.homeTeamIdentifier) {
-                    homeResolvedName = firstPass;
                 }
-            }
-            
-            // Získame zmapovaný názov pre hosťovský tím s dvojitou konverziou
-            let awayResolvedName = selectedMatch.awayTeamIdentifier;
-            if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-                // Prvá konverzia
-                let firstPass = window.teamManager.getTeamNameByDisplayIdSync(selectedMatch.awayTeamIdentifier);
+                
+                // Hosťovskí - dvojitá konverzia
+                firstPass = window.teamManager.getTeamNameByDisplayIdSync(selectedMatch.awayTeamIdentifier);
                 if (firstPass && firstPass !== selectedMatch.awayTeamIdentifier) {
-                    console.log(`🔄 [HOSŤOVSKÍ] Prvá konverzia: "${selectedMatch.awayTeamIdentifier}" -> "${firstPass}"`);
-                    
-                    // 🔥 DVOJITÁ KONVERZIA: Výsledok pošleme ešte raz do rovnakej funkcie
                     let secondPass = window.teamManager.getTeamNameByDisplayIdSync(firstPass);
                     if (secondPass && secondPass !== firstPass) {
-                        console.log(`🔄 [HOSŤOVSKÍ] Druhá konverzia: "${firstPass}" -> "${secondPass}"`);
                         awayResolvedName = secondPass;
                     } else {
                         awayResolvedName = firstPass;
                     }
-                } else if (firstPass && firstPass !== selectedMatch.awayTeamIdentifier) {
-                    awayResolvedName = firstPass;
                 }
             }
             
-            // ================================================================
-            // ULOŽÍME ZMAPOVANÉ NÁZVY (ak sú k dispozícii)
-            // ================================================================
+            // 🔥 DÔLEŽITÉ: Uložíme názvy do selectedMatch
+            setSelectedMatch(prev => ({
+                ...prev,
+                homeDisplayName: homeResolvedName,
+                awayDisplayName: awayResolvedName
+            }));
+            
             setHomeTeamResolvedName(homeResolvedName);
             setAwayTeamResolvedName(awayResolvedName);
         };
         
         mapTeamNames();
     }, [selectedMatch?.homeTeamIdentifier, selectedMatch?.awayTeamIdentifier, selectedMatch?.id]);
-
     // ============================================================================
     // NAČÍTANIE SUSPENDOVANÝCH HRÁČOV ZA MODRÚ KARTU PRE DOMÁCICH (OPRAVENÉ S ONESKORENÍM)
     // ============================================================================
