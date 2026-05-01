@@ -5405,8 +5405,17 @@ const matchesHallApp = ({ userProfileData }) => {
         // Toto zabráni spusteniu query s undefined hodnotou
         const currentHallId = hallIdRef.current;
         
+        // 🔥 DÔLEŽITÉ: Skontrolujeme, či je currentHallId platný (nie undefined a nie null)
         if (!currentHallId) {
             console.log('⏳ HallId nie je k dispozícii, čakám na jeho načítanie...');
+            setLoading(false);
+            // Nezrušíme unsubscribe, len nastavíme loading na false a čakáme
+            return;
+        }
+        
+        // 🔥 DODATOČNÁ OCHRANA: Skontrolujeme typ currentHallId
+        if (typeof currentHallId !== 'string') {
+            console.error('❌ HallId má nesprávny typ:', typeof currentHallId, currentHallId);
             setLoading(false);
             return;
         }
@@ -5478,7 +5487,7 @@ const matchesHallApp = ({ userProfileData }) => {
         });
         
         return () => unsubscribe();
-    }, []);
+    }, []); // 🔥 DÔLEŽITÉ: Odstránili sme závislosť na hallId, používame len ref
     
     // SAMOSTATNÝ useEffect PRE VÝPIS DO KONZOLY - závislý na matches AJ categories
     useEffect(() => {
@@ -5888,6 +5897,12 @@ const matchesHallApp = ({ userProfileData }) => {
                 // Alebo jednoducho obnovíme stránku
                 window.location.reload();
             }
+            return;
+        }
+        
+        // 🔥 DODATOČNÁ OCHRANA: Skontrolujeme typ
+        if (typeof hallId !== 'string') {
+            console.error('❌ HallId má nesprávny typ:', typeof hallId);
             return;
         }
         
