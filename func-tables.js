@@ -3163,7 +3163,7 @@ async function startTeamNameReplacement() {
                 replaceTeamIdentifiersWhenReady();
             });
         }
-    }, 500);
+    }, 10000);
     
     setTimeout(() => {
         clearInterval(checkInterval);
