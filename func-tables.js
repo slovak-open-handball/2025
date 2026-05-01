@@ -3724,15 +3724,6 @@ function notifyReplacedTeams() {
     }
 }
 
-// ============================================================
-// NOTIFIKÁCIA O DOKONČENÍ MAPOVANIA – OKAMŽITÁ
-// ============================================================
-
-// Premenná na sledovanie, či už bolo mapovanie dokončené
-let mappingCompleted = false;
-let initialMappingDone = false;
-
-// Funkcia na odoslanie udalosti, že mapovanie je pripravené
 function notifyMappingReady() {
     if (mappingCompleted) return;
     mappingCompleted = true;
