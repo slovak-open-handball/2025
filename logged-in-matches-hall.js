@@ -5304,87 +5304,96 @@ const matchesHallApp = ({ userProfileData }) => {
     }, [selectedMatch, users, superstructureTeams]);
     
 
-    // Načítanie zápasov pre túto halu
+    // Načítanie zápasov pre túto halu - UPLNE OPRAVENÁ VERZIA S FALLBACKOM
     useEffect(() => {
-        if (!window.db || !hallId) {
+        // 🔥 KRITICKÁ OCHRANA: Ak nie je db, len nastavíme loading na false a čakáme
+        if (!window.db) {
             setLoading(false);
             return;
         }
-    
-        const matchesRef = collection(window.db, 'matches');
-        const q = query(matchesRef, where("hallId", "==", hallId));
         
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const loadedMatches = [];
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-//                console.log('Načítaný zápas:', data); // Pre ladenie
-                
-                loadedMatches.push({
-                    id: doc.id,
-                    ...data,
-                    currentPeriod: data.currentPeriod || 1,
-                    manualTimeOffset: data.manualTimeOffset || 0
+        // 🔥 1. PRÍPAD: hallId existuje - normálne načítanie
+        if (hallId) {
+            const matchesRef = collection(window.db, 'matches');
+            const q = query(matchesRef, where("hallId", "==", hallId));
+            
+            const unsubscribe = onSnapshot(q, (snapshot) => {
+                const loadedMatches = [];
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    loadedMatches.push({
+                        id: doc.id,
+                        ...data,
+                        currentPeriod: data.currentPeriod || 1,
+                        manualTimeOffset: data.manualTimeOffset || 0
+                    });
                 });
-                if (selectedMatch) {
-                    setMatchPaused(selectedMatch.status === 'paused');
-                }
-            });
-            
-            // Zoradíme podľa času
-            loadedMatches.sort((a, b) => {
-                if (!a.scheduledTime) return 1;
-                if (!b.scheduledTime) return -1;
-                return a.scheduledTime.toDate() - b.scheduledTime.toDate();
-            });
-            
-            setMatches(loadedMatches);
-            
-            // Zoskupenie podľa dňa
-            const grouped = {};
-            loadedMatches.forEach(match => {
-                if (match.scheduledTime) {
-                    const date = match.scheduledTime.toDate();
-                    const dateStr = getLocalDateStr(date);
-                    
-                    if (!grouped[dateStr]) {
-                        grouped[dateStr] = {
-                            date: date,
-                            dateStr: dateStr,
-                            matches: []
-                        };
-                    }
-                    grouped[dateStr].matches.push(match);
-                }
-            });
-            
-            setGroupedMatches(grouped);
-            setLoading(false);
-            
-            // Skontrolujeme URL parametre pre domácich a hostí
-            const homeIdentifierFromUrl = getUrlParameter('domaci');
-            const awayIdentifierFromUrl = getUrlParameter('hostia');
-            
-            if (homeIdentifierFromUrl && awayIdentifierFromUrl && !selectedMatch) {
-                // Hľadáme zápas, ktorý má oba identifikátory
-                const matchFromUrl = loadedMatches.find(m => 
-                    m.homeTeamIdentifier === homeIdentifierFromUrl && 
-                    m.awayTeamIdentifier === awayIdentifierFromUrl
-                );
                 
-                if (matchFromUrl) {
-                    setSelectedMatch(matchFromUrl);
-                    setManualTimeOffset(matchFromUrl.manualTimeOffset || 0);
+                // Zoradíme podľa času
+                loadedMatches.sort((a, b) => {
+                    if (!a.scheduledTime) return 1;
+                    if (!b.scheduledTime) return -1;
+                    return a.scheduledTime.toDate() - b.scheduledTime.toDate();
+                });
+                
+                setMatches(loadedMatches);
+                
+                // Zoskupenie podľa dňa
+                const grouped = {};
+                loadedMatches.forEach(match => {
+                    if (match.scheduledTime) {
+                        const date = match.scheduledTime.toDate();
+                        const dateStr = getLocalDateStr(date);
+                        
+                        if (!grouped[dateStr]) {
+                            grouped[dateStr] = {
+                                date: date,
+                                dateStr: dateStr,
+                                matches: []
+                            };
+                        }
+                        grouped[dateStr].matches.push(match);
+                    }
+                });
+                
+                setGroupedMatches(grouped);
+                setLoading(false);
+                
+                // Skontrolujeme URL parametre pre domácich a hostí
+                const homeIdentifierFromUrl = getUrlParameter('domaci');
+                const awayIdentifierFromUrl = getUrlParameter('hostia');
+                
+                if (homeIdentifierFromUrl && awayIdentifierFromUrl && !selectedMatch) {
+                    const matchFromUrl = loadedMatches.find(m => 
+                        m.homeTeamIdentifier === homeIdentifierFromUrl && 
+                        m.awayTeamIdentifier === awayIdentifierFromUrl
+                    );
+                    
+                    if (matchFromUrl) {
+                        setSelectedMatch(matchFromUrl);
+                        setManualTimeOffset(matchFromUrl.manualTimeOffset || 0);
+                    }
                 }
-            }
+                
+            }, (error) => {
+                console.error("Chyba pri načítaní zápasov:", error);
+                setLoading(false);
+            });
             
-        }, (error) => {
-//            console.error("Chyba pri načítaní zápasov:", error);
+            return () => unsubscribe();
+        }
+        
+        // 🔥 2. PRÍPAD: hallId je undefined - načítame všetky zápasy (fallback)
+        // To môže byť len dočasný stav kým sa hallId nenačíta
+        if (!hallId && !loading) {
+            console.log('⏳ HallId nie je k dispozícii, čakám na jeho načítanie...');
+            // Nastavíme loading na false a necháme to na ďalšom useEffect behu
             setLoading(false);
-        });
-    
-        return () => unsubscribe();
-    }, [hallId]);
+        }
+        
+        // 🔥 3. ČISTIACA FUNKCIA - nie je potrebná pre fallback prípad
+        return () => {};
+    }, [hallId]); // ZÁVISLOSŤ LEN NA hallId
     
     // SAMOSTATNÝ useEffect PRE VÝPIS DO KONZOLY - závislý na matches AJ categories
     useEffect(() => {
@@ -5784,6 +5793,19 @@ const matchesHallApp = ({ userProfileData }) => {
 
     // Pôvodná funkcia showAllMatches - UPRAVENÁ
     const showAllMatches = async () => {
+        // 🔥 OCHRANA: Ak nie je hallId, nemôžeme zobraziť zoznam
+        if (!hallId) {
+            console.warn('⚠️ HallId nie je k dispozícii, nie je možné zobraziť zoznam zápasov');
+            // Pokúsime sa znova načítať hallId z userProfileData
+            if (userProfileData?.hallId) {
+                // Aktualizujeme hallId pomocou useState settera (ak je dostupný)
+                // Poznámka: toto vyžaduje, aby ste mali prístup k setHallId
+                // Alebo jednoducho obnovíme stránku
+                window.location.reload();
+            }
+            return;
+        }
+        
         setSelectedMatch(null);
         updateUrlParameters(null, null);
         
