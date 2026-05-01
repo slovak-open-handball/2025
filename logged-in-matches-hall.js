@@ -5886,55 +5886,36 @@ const matchesHallApp = ({ userProfileData }) => {
         return null;
     };
 
-    // Pôvodná funkcia showAllMatches - UPRAVENÁ
     const showAllMatches = async () => {
-        // 🔥 OCHRANA: Ak nie je hallId, nemôžeme zobraziť zoznam
-        if (!hallId) {
-            console.warn('⚠️ HallId nie je k dispozícii, nie je možné zobraziť zoznam zápasov');
-            // Pokúsime sa znova načítať hallId z userProfileData
+        if (!hallId || typeof hallId !== 'string') {
+            console.warn('⚠️ HallId nie je k dispozícii');
             if (userProfileData?.hallId) {
                 window.location.reload();
             }
             return;
         }
         
-        // 🔥 DODATOČNÁ OCHRANA: Skontrolujeme typ
-        if (typeof hallId !== 'string') {
-            console.error('❌ HallId má nesprávny typ:', typeof hallId);
-            return;
-        }
-        
         setSelectedMatch(null);
         updateUrlParameters(null, null);
-        
-        // Vynútime refresh mapovania pri návrate na zoznam
+    
         if (matches.length > 0 && window.matchTracker) {
             const updatedMatches = [...matches];
             let hasChanges = false;
             
             for (let i = 0; i < updatedMatches.length; i++) {
                 const match = updatedMatches[i];
-                
                 let homeDisplayName = await window.matchTracker.getTeamNameByDisplayId(match.homeTeamIdentifier);
                 let awayDisplayName = await window.matchTracker.getTeamNameByDisplayId(match.awayTeamIdentifier);
-                
                 if (!homeDisplayName) homeDisplayName = match.homeTeamIdentifier;
                 if (!awayDisplayName) awayDisplayName = match.awayTeamIdentifier;
                 
                 if (homeDisplayName !== match.homeDisplayName || awayDisplayName !== match.awayDisplayName) {
-                    updatedMatches[i] = { 
-                        ...updatedMatches[i], 
-                        homeDisplayName: homeDisplayName,
-                        awayDisplayName: awayDisplayName 
-                    };
+                    updatedMatches[i] = { ...updatedMatches[i], homeDisplayName, awayDisplayName };
                     hasChanges = true;
                 }
             }
             
-            if (hasChanges) {
-                setMatches(updatedMatches);
-                console.log('✅ Zoznam zápasov bol aktualizovaný pri návrate na zoznam');
-            }
+            if (hasChanges) setMatches(updatedMatches);
         }
     };
 
