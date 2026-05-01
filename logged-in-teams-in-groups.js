@@ -2075,19 +2075,33 @@ const createTeamAssignmentNotification = async (action, team) => {
             }
             return name;
         };
-        
-        // Pomocná funkcia na vytvorenie identifikátora pre mapovanie
-        const createDisplayId = (team) => {
-            // Pre superstructure tímy v nadstavbovej skupine
-            if (team.isSuperstructureTeam && team.groupName) {
-                const categoryName = team.category;
-                const position = team.order;
-                // Extrahujeme písmeno skupiny (napr. "skupina E" -> "E")
-                const groupLetter = team.groupName.replace('skupina ', '').toUpperCase();
-                // Vytvoríme identifikátor v tvare "Kategória positionGroupLetter" (napr. "U12 D 3E")
-                return `${categoryName} ${position}${groupLetter}`;
+    
+        // Funkcia na získanie mapovaného názvu tímu (s čakaním na matchTracker)
+        const getMappedTeamName = (team, displayName) => {
+            // Iba pre superstructure tímy v nadstavbovej skupine
+            if (!team.isSuperstructureTeam) return displayName;
+            
+            // Kontrola, či je tím v nadstavbovej skupine
+            const isInSuperstructureGroup = team.groupName && 
+                allGroupsByCategoryId[targetCategoryId]?.some(g => 
+                    g.name === team.groupName && g.type === 'nadstavbová skupina'
+                );
+            
+            if (!isInSuperstructureGroup) return displayName;
+            
+            // Skúsime získať mapovaný názov cez matchTracker (ak existuje)
+            if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                try {
+                    const mappedName = window.matchTracker.getTeamNameByDisplayId(team.teamName);
+                    if (mappedName && mappedName !== team.teamName) {
+                        return mappedName;
+                    }
+                } catch(e) {
+                    // Ticho ignorujeme chyby
+                }
             }
-            return null;
+            
+            return displayName;
         };
     
         if (isWithoutGroup) {
@@ -2226,17 +2240,8 @@ const createTeamAssignmentNotification = async (action, team) => {
                     let displayName = getCleanDisplayName(team);
                     const textColor = hasDuplicate ? 'text-red-700 font-semibold' : 'text-gray-800';
                     
-                    // 🔥 VYTVORÍME IDENTIFIKÁTOR PRE MAPOVANIE (len pre superstructure tímy v nadstavbovej skupine)
-                    let mappedDisplayName = displayName;
-                    const displayId = createDisplayId(team);
-                    
-                    if (displayId && window.matchTracker && window.matchTracker.getTeamNameByDisplayId) {
-                        // Skúsime získať mapovaný názov tímu
-                        const mappedName = window.matchTracker.getTeamNameByDisplayId(team.teamName);
-                        if (mappedName && mappedName !== displayId) {
-                            mappedDisplayName = mappedName;
-                        }
-                    }
+                    // 🔥 ZÍSKAME MAPOVANÝ NÁZOV TÍMU (ak je matchTracker dostupný)
+                    let mappedDisplayName = getMappedTeamName(team, displayName);
     
                     // NOVÁ KONTROLA: Je tím v nadstavbovej skupine a chýba v základnej?
                     const isSuperstructureTeam = team.isSuperstructureTeam;
@@ -2333,16 +2338,8 @@ const createTeamAssignmentNotification = async (action, team) => {
             .forEach(team => {
                 let displayName = getCleanDisplayName(team);
                 
-                // 🔥 VYTVORÍME IDENTIFIKÁTOR PRE MAPOVANIE (len pre superstructure tímy v nadstavbovej skupine)
-                let mappedDisplayName = displayName;
-                const displayId = createDisplayId(team);
-                
-                if (displayId && window.matchTracker && window.matchTracker.getTeamNameByDisplayId) {
-                    const mappedName = window.matchTracker.getTeamNameByDisplayId(team.teamName);
-                    if (mappedName && mappedName !== displayId) {
-                        mappedDisplayName = mappedName;
-                    }
-                }
+                // 🔥 ZÍSKAME MAPOVANÝ NÁZOV TÍMU (ak je matchTracker dostupný)
+                let mappedDisplayName = getMappedTeamName(team, displayName);
                 
                 const isSuperstructureTeam = team.isSuperstructureTeam;
                 const isInSuperstructureGroup = team.groupName && 
@@ -2355,7 +2352,6 @@ const createTeamAssignmentNotification = async (action, team) => {
                 let existsInBasic = true; // Predvolene true
                 
                 if (isSuperstructureTeam && isInSuperstructureGroup) {
-                    // PRIDEĽTE hodnotu do existujúcej premennej
                     existsInBasic = teamExistsInBasicGroup(team.teamName, team.category, team.groupName);
                     if (!existsInBasic) {
                         additionalClasses = 'font-bold text-red-600';
@@ -2382,14 +2378,12 @@ const createTeamAssignmentNotification = async (action, team) => {
                             },
                             `${team.order}. ${mappedDisplayName} (vyššie ako aktuálne maximum)`
                         ),
-                        // tlačidlá edit / delete (rovnaké ako vyššie, s kontrolou zápasov)
                         React.createElement(
                             'div',
                             { className: 'flex items-center space-x-1' },
                             React.createElement(
                                 'div',
                                 { className: 'flex items-center space-x-1' },
-                                // UPRAVENÉ: Ceruzka - zakázaná ak už existujú zápasy v skupine
                                 React.createElement(
                                     'button',
                                     {
@@ -2408,7 +2402,6 @@ const createTeamAssignmentNotification = async (action, team) => {
                                         React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' })
                                     )
                                 ),
-                                // UPRAVENÉ: Kôš - zakázaný ak už existujú zápasy v skupine
                                 React.createElement(
                                     'button',
                                     {
