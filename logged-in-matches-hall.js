@@ -1595,10 +1595,7 @@ const matchesHallApp = ({ userProfileData }) => {
     const [homeTeamResolvedName, setHomeTeamResolvedName] = useState(null);
     const [awayTeamResolvedName, setAwayTeamResolvedName] = useState(null);
 
-    // ============================================================================
-    // OPRAVENÝ useEffect PRE NAČÍTANIE SÚPISIEK - používa NÁZOV TÍMU (homeTeamResolvedName)
-    // ============================================================================
-    
+    // OPRAVENÝ useEffect PRE NAČÍTANIE SÚPISIEK - používa ZMAPOVANÉ NÁZVY
     useEffect(() => {
         const loadTeamDetails = async () => {
             // Čakáme na zmapované názvy tímov
@@ -1607,25 +1604,34 @@ const matchesHallApp = ({ userProfileData }) => {
                 return;
             }
             
+            // Kontrola, či už máme zmapované názvy (nemali by byť rovnaké ako identifikátory)
+            if (homeTeamResolvedName === selectedMatch?.homeTeamIdentifier) {
+                console.log(`⚠️ [SÚPISKY] Domáci názov nebol zmapovaný: "${homeTeamResolvedName}" je stále identifikátor`);
+                // Pokračujeme, ale varujeme
+            }
+            if (awayTeamResolvedName === selectedMatch?.awayTeamIdentifier) {
+                console.log(`⚠️ [SÚPISKY] Hosťovský názov nebol zmapovaný: "${awayTeamResolvedName}" je stále identifikátor`);
+            }
+            
             if (!selectedMatch) return;
             
             console.log('⏳ [SÚPISKY] Spúšťam oneskorené načítanie detailov tímov (10 sekúnd)...');
-            console.log(`   Domáci názov: "${homeTeamResolvedName}"`);
-            console.log(`   Hosťovský názov: "${awayTeamResolvedName}"`);
+            console.log(`   Domáci ZMAPOVANÝ názov: "${homeTeamResolvedName}"`);
+            console.log(`   Hosťovský ZMAPOVANÝ názov: "${awayTeamResolvedName}"`);
             
             // Počkáme 10 sekúnd pred samotným načítaním
             await new Promise(resolve => setTimeout(resolve, 10000));
             
             if (!selectedMatch) return;
             
-            console.log('🔄 [SÚPISKY] Začínam načítavať detaily tímov podľa NÁZOV...');
+            console.log('🔄 [SÚPISKY] Začínam načítavať detaily tímov podľa ZMAPOVANÝCH NÁZOV...');
             
             // ====================================================================
             // POUŽIJEME UŽ ZMAPOVANÉ NÁZVY TÍMOV (NIE IDENTIFIKÁTORY!)
             // ====================================================================
             
-            // Získame detaily pre domáci tím - použijeme homeTeamResolvedName
-            if (homeTeamResolvedName) {
+            // Získame detaily pre domáci tím - použijeme homeTeamResolvedName (zmapovaný názov)
+            if (homeTeamResolvedName && homeTeamResolvedName !== selectedMatch.homeTeamIdentifier) {
                 const homeDetails = await getTeamDetailsByDisplayName(homeTeamResolvedName, selectedMatch.categoryName);
                 if (homeDetails && homeDetails.team) {
                     console.log(`✅ [SÚPISKY] Domáci tím načítaný: ${homeDetails.team.teamName}`);
@@ -1634,13 +1640,16 @@ const matchesHallApp = ({ userProfileData }) => {
                     console.log(`   RT ženy: ${homeDetails.team.womenTeamMemberDetails?.length || 0}`);
                     setHomeTeamNameReady(true);
                 } else {
-                    console.log(`⚠️ [SÚPISKY] Domáci tím sa nepodarilo načítať podľa názvu: "${homeTeamResolvedName}"`);
+                    console.log(`⚠️ [SÚPISKY] Domáci tím sa nepodarilo načítať podľa zmapovaného názvu: "${homeTeamResolvedName}"`);
                     setHomeTeamNameReady(true);
                 }
+            } else {
+                console.log(`⚠️ [SÚPISKY] Domáci zmapovaný názov nie je platný: "${homeTeamResolvedName}" (je rovnaký ako identifikátor?)`);
+                setHomeTeamNameReady(true);
             }
             
-            // Získame detaily pre hosťovský tím - použijeme awayTeamResolvedName
-            if (awayTeamResolvedName) {
+            // Získame detaily pre hosťovský tím - použijeme awayTeamResolvedName (zmapovaný názov)
+            if (awayTeamResolvedName && awayTeamResolvedName !== selectedMatch.awayTeamIdentifier) {
                 const awayDetails = await getTeamDetailsByDisplayName(awayTeamResolvedName, selectedMatch.categoryName);
                 if (awayDetails && awayDetails.team) {
                     console.log(`✅ [SÚPISKY] Hosťovský tím načítaný: ${awayDetails.team.teamName}`);
@@ -1649,9 +1658,12 @@ const matchesHallApp = ({ userProfileData }) => {
                     console.log(`   RT ženy: ${awayDetails.team.womenTeamMemberDetails?.length || 0}`);
                     setAwayTeamNameReady(true);
                 } else {
-                    console.log(`⚠️ [SÚPISKY] Hosťovský tím sa nepodarilo načítať podľa názvu: "${awayTeamResolvedName}"`);
+                    console.log(`⚠️ [SÚPISKY] Hosťovský tím sa nepodarilo načítať podľa zmapovaného názvu: "${awayTeamResolvedName}"`);
                     setAwayTeamNameReady(true);
                 }
+            } else {
+                console.log(`⚠️ [SÚPISKY] Hosťovský zmapovaný názov nie je platný: "${awayTeamResolvedName}" (je rovnaký ako identifikátor?)`);
+                setAwayTeamNameReady(true);
             }
             
             console.log('✅ [SÚPISKY] Načítavanie detailov tímov dokončené.');
@@ -1664,7 +1676,7 @@ const matchesHallApp = ({ userProfileData }) => {
         }, 500);
         
         return () => clearTimeout(timer);
-    }, [homeTeamResolvedName, awayTeamResolvedName, selectedMatch?.id, selectedMatch?.categoryName]);
+    }, [homeTeamResolvedName, awayTeamResolvedName, selectedMatch?.id, selectedMatch?.categoryName, selectedMatch?.homeTeamIdentifier, selectedMatch?.awayTeamIdentifier]);
 
     // Pridajte tento useEffect do matchesHallApp komponentu (napr. vedľa existujúcich useEffectov)
     // Tento useEffect zabezpečí, že pri každej zmene matches sa prepočítajú zobrazené názvy tímov
@@ -1735,7 +1747,7 @@ const matchesHallApp = ({ userProfileData }) => {
         updateTeamNamesInMatches();
     }, [matches.length, teamManagerReady]); // Spustí sa pri zmene dĺžky matches alebo ready stavu
 
-    // OPRAVENÝ useEffect pre mapovanie názvov tímov - používa matchTracker
+    // OPRAVENÝ useEffect pre mapovanie názvov tímov - SPRÁVNE UKLADÁ ZMAPOVANÉ NÁZVY
     useEffect(() => {
         if (!selectedMatch) return;
         
@@ -1763,12 +1775,13 @@ const matchesHallApp = ({ userProfileData }) => {
                 awayName = (awayResult && typeof awayResult.then === 'function') ? await awayResult : (awayResult || selectedMatch.awayTeamIdentifier);
             }
             
-            console.log(`🏠 Domáci: "${selectedMatch.homeTeamIdentifier}" -> "${homeName}"`);
-            console.log(`✈️ Hosťovský: "${selectedMatch.awayTeamIdentifier}" -> "${awayName}"`);
+            console.log(`🏠 Domáci: "${selectedMatch.homeTeamIdentifier}" -> ZMAPOVANÝ NÁZOV: "${homeName}"`);
+            console.log(`✈️ Hosťovský: "${selectedMatch.awayTeamIdentifier}" -> ZMAPOVANÝ NÁZOV: "${awayName}"`);
             
+            // 🔥 DÔLEŽITÉ: Uložíme ZMAPOVANÉ NÁZVY (nie identifikátory!)
             setHomeTeamResolvedName(homeName);
             setAwayTeamResolvedName(awayName);
-            // NENASTAVUJEME homeTeamNameReady a awayTeamNameReady - to urobí druhý useEffect
+            // Nenastavujeme homeTeamNameReady - to urobí druhý useEffect
         };
         
         mapTeamNames();
