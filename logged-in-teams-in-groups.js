@@ -512,8 +512,8 @@ const AddTeamsGroupApp = (props) => {
             if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                 console.log('✅ [Mapovanie] window.matchTracker je dostupný, aplikujem mapovanie...');
                 forceRerender();
-            vreturn true;
-        v}
+              return true;
+            }
             return false;
         };
     
