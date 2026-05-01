@@ -1162,6 +1162,23 @@ let processedGroupsInitial = new Set();  // Spracované skupiny pri inicializác
         log(`   Odohraných v nadstavbe: ${completedAdvancedMatches.length}`);
         log(`   Celkom dokončených: ${completedCount}/${totalMatches} (${completionPercentage}%)`);
         log(`   Body za výhru: ${pointsForWin}`);
+
+        if (completedBaseGroups.length > 0) {
+            const groupLetter = groupName.replace('nadstavbová', '').trim().toUpperCase();
+            if (groupLetter) {
+                const cleanCategory = cleanCategoryName(categoryName);
+                const cacheKey = `${cleanCategory}|${groupLetter}`;
+                log(`🗑️ [AUTO] Nadstavbová skupina vytvorená, vymazávam cache pre ${cacheKey}`);
+                groupCheckCache.delete(cacheKey);
+                groupCheckCache.delete(`${cacheKey}_false`);
+                groupCheckCache.delete(`${cacheKey}_ready`);
+                
+                // Vymažeme aj z checkedGroupsCache
+                checkedGroupsCache.delete(cacheKey);
+                checkedGroupsCache.delete(`${cacheKey}_ready`);
+                checkedGroupsCache.delete(`${cacheKey}_not_ready`);
+            }
+        }
         
         return {
             category: categoryName,
