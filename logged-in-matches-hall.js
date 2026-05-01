@@ -6420,7 +6420,7 @@ const matchesHallApp = ({ userProfileData }) => {
                             })
                             .map((player, displayIdx) => {
                                 const playerIdentifier = {
-                                    userId: teamDetails.userId,
+                                    userId: teamData?.userId,
                                     teamIdentifier: teamType === 'home' ? selectedMatch.homeTeamIdentifier : selectedMatch.awayTeamIdentifier,
                                     displayName: `${player.lastName} ${player.firstName}${player.jerseyNumber ? ` (#${player.jerseyNumber})` : ''}`,
                                     index: player.originalIndex,
