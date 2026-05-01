@@ -1560,7 +1560,9 @@ const matchesHallApp = ({ userProfileData }) => {
     // OPRAVENÝ useEffect PRE NAČÍTANIE SÚPISIEK
     useEffect(() => {
         const loadTeamDetails = async () => {
-            // Počkáme na zmapované názvy tímov
+
+            if (homeTeamData && awayTeamData) return;
+            
             if (!homeTeamResolvedName || !awayTeamResolvedName) {
                 console.log('⏳ [SÚPISKY] Čakám na zmapovanie názvov tímov...');
                 return;
@@ -1614,12 +1616,10 @@ const matchesHallApp = ({ userProfileData }) => {
             setForceUpdate(prev => prev + 1);
         };
         
-        const timer = setTimeout(() => {
-            loadTeamDetails();
-        }, 500);
+        loadTeamDetails();
         
         return () => clearTimeout(timer);
-    }, [homeTeamResolvedName, awayTeamResolvedName, selectedMatch?.id, selectedMatch?.categoryName]);
+    }, [homeTeamResolvedName, awayTeamResolvedName, selectedMatch?.id, selectedMatch?.categoryName, homeTeamData, awayTeamData]);
 
     
     useEffect(() => {
@@ -6210,7 +6210,7 @@ const matchesHallApp = ({ userProfileData }) => {
         };
 
         const renderPlayersSection = (teamData, teamType, teamName, suspendedPlayers, isLoadingSuspensions, isNameReady) => {
-            if (!isNameReady) {
+            if (!teamData || !teamData.team) {
                 return React.createElement('div', { className: 'mt-4 p-4 text-center' },
                     React.createElement('div', { className: 'flex items-center justify-center gap-2 text-gray-500' },
                         React.createElement('i', { className: 'fa-solid fa-spinner fa-spin' }),
