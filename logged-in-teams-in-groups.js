@@ -5,9 +5,9 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/fi
 const { useState, useEffect, useRef } = React;
 const SUPERSTRUCTURE_TEAMS_DOC_PATH = 'settings/superstructureGroups';
 const listeners = new Set();
-rming }) => {
+
+const ConfirmDeleteGapModal = ({ isOpen, onClose, onConfirm, position, groupName, categoryName, isConfirming }) => {
   if (!isOpen) return null;
-const ConfirmDeleteGapModal = ({ isOpen, onClose, onConfirm, position, groupName, categoryName, isConfi
   return React.createElement(
     'div',
       {
