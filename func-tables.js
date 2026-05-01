@@ -3401,7 +3401,6 @@ function clearAllTeamNameCache() {
     }
 }
 
-let groupMonitorInterval = null;
 let isReloading = false; 
 
 function stopGroupMonitoring() {
