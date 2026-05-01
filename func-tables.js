@@ -2986,45 +2986,6 @@ function performFullReplacement() {
     }
 }
 
-// Funkcia na sledovanie zmien na stránke
-function observePageChanges() {
-    log('👁️ Spúšťam sledovanie zmien na stránke...');
-    
-    setTimeout(() => {
-        replaceTeamIdentifiersWhenReady();
-    }, 1000);
-    
-    const observer = new MutationObserver((mutations) => {
-        let shouldCheck = false;
-        
-        for (const mutation of mutations) {
-            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                shouldCheck = true;
-                break;
-            }
-            if (mutation.type === 'characterData') {
-                shouldCheck = true;
-                break;
-            }
-        }
-        
-        if (shouldCheck) {
-            clearTimeout(window._replaceTimeout);
-            window._replaceTimeout = setTimeout(() => {
-                replaceTeamIdentifiersWhenReady();
-            }, 1000);
-        }
-    });
-    
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-        characterData: true
-    });
-    
-    return observer;
-}
-
 window.getTeamNameByDisplayId = getTeamNameByDisplayId;
 window.findTeamInUsersByGroupAndOrder = findTeamInUsersByGroupAndOrder;
 
@@ -3112,11 +3073,17 @@ function replaceAllIdentifiersNow() {
     }
 }
 
-// ** OPRAVENÁ FUNKCIA: replaceTeamIdentifiersWhenReady - s oneskorením pre istotu **
+// ** OPRAVENÁ FUNKCIA: replaceTeamIdentifiersWhenReady - BEZ PERIODICKÝCH KONTROL **
 function replaceTeamIdentifiersWhenReady() {
-    log('🔍 Kontrolujem pripravenosť skupín na nahrádzanie...');
+    // Kontrola, či už neprebieha nahrádzanie
+    if (isReplacingInProgress) {
+        log('⏳ Nahrádzanie už prebieha, preskakujem...');
+        return;
+    }
     
-    // Bezpečnostná kontrola - či existuje document.body
+    log('🔍 Kontrolujem pripravenosť skupín na nahrádzanie (spustené kvôli dokončenému zápasu)...');
+    
+    // Bezpečnostná kontrola
     if (!document || !document.body) {
         log('⚠️ document.body nie je dostupný, čakám...');
         return;
@@ -3125,70 +3092,30 @@ function replaceTeamIdentifiersWhenReady() {
     const allText = document.body.innerText;
     const identifiers = extractIdentifiersFromText(allText);
     
-    if (!identifiers || !Array.isArray(identifiers)) {
-        log('⚠️ extractIdentifiersFromText nevrátil platné pole, čakám...');
-        return;
-    }
-    
-    if (identifiers.length === 0) {
+    if (!identifiers || !Array.isArray(identifiers) || identifiers.length === 0) {
         log('ℹ️ Žiadne identifikátory tímov neboli nájdené na stránke');
         return;
     }
     
     const readyIdentifiers = [];
-    const notReadyIdentifiers = [];
     
     for (const id of identifiers) {
-        if (!id || !id.category || !id.groupLetter) {
-            log('⚠️ Neplatný identifikátor, preskakujem:', id);
-            continue;
-        }
+        if (!id || !id.category || !id.groupLetter) continue;
         
         const isReady = isGroupReadyForReplacement(id.category, id.groupLetter);
         if (isReady) {
             readyIdentifiers.push(id);
-        } else {
-            notReadyIdentifiers.push(id);
         }
     }
     
-    log(`📋 Nájdených identifikátorov: ${identifiers.length}`);
-    log(`   ✅ Pripravené na nahradenie: ${readyIdentifiers.map(i => i.identifier).join(', ') || 'žiadne'}`);
-    log(`   ⏳ Čakajú na dokončenie: ${notReadyIdentifiers.map(i => i.identifier).join(', ') || 'žiadne'}`);
-    
     if (readyIdentifiers.length > 0) {
-        // PRIDANÉ ONESKORENIE - počkáme ešte 2 sekundy pre istotu, že všetky dáta sú stabilné
-        log('✅ Vykonávam nahradenie pre pripravené skupiny...');
+        log(`✅ Nahrádzam ${readyIdentifiers.length} pripravených identifikátorov...`);
         performPartialReplacement(readyIdentifiers);
     } else {
         log('ℹ️ Žiadna skupina ešte nie je pripravená na nahradenie');
     }
     
-    // Pokračujeme v kontrolách pre nepripravené skupiny...
-    if (notReadyIdentifiers.length > 0) {
-        log(`⏳ Nastavujem pravidelné kontroly pre ${notReadyIdentifiers.length} skupín...`);
-        
-        if (window._readyCheckInterval) {
-            clearInterval(window._readyCheckInterval);
-        }
-        
-        // Predĺžime interval na 10 sekúnd, aby sme dali čas na načítanie
-        window._readyCheckInterval = setInterval(() => {
-            const nowReady = [];
-            for (const id of notReadyIdentifiers) {
-                if (isGroupReadyForReplacement(id.category, id.groupLetter)) {
-                    nowReady.push(id);
-                }
-            }
-            
-            if (nowReady.length > 0) {
-                log(`✅ Ďalších ${nowReady.length} skupín je pripravených, vykonávam nahradenie...`);
-                clearInterval(window._readyCheckInterval);
-                window._readyCheckInterval = null;
-                performPartialReplacement(nowReady);
-            }
-        }, 1000); // Kontrola každých 1 sekúnd
-    }
+    // ❌ ODSTRÁNENÉ: Žiadne periodické kontroly (window._readyCheckInterval)
 }
 
 function stopPeriodicReplacement() {
@@ -3244,31 +3171,23 @@ async function startTeamNameReplacement() {
     hasReplacedAnyTeams = false;
     
     log('🚀 Spúšťam automatické nahrádzanie identifikátorov tímov...');
-    log('📌 Nahrádzajú sa len skupiny, ktoré majú 100% odohraných zápasov a všetky zápasy sú spracované.');
+    log('📌 Nahrádzanie sa spustí LEN keď sa zápas dokončí (status → completed)');
     
     let checkInterval = setInterval(() => {
         if (window.matchTracker && typeof window.matchTracker.createGroupTable === 'function') {
             clearInterval(checkInterval);
             log('✅ MatchTracker je pripravený');
             
-            // ========== ZMENENÉ: Sledovanie zmien namiesto periodického behu ==========
-            // Spustíme sledovanie zmien na stránke (napr. pri kliknutí)
-            const observer = observePageChanges();
-            window._teamNameObserver = observer;
-            
-            // Jedno úvodné nahradenie (pre prípad, že už sú nejaké skupiny hotové)
-            log('🔄 Spúšťam prvé kolo nahrádzania...');
+            // 🔥 IBA JEDNO ÚVODNÉ NAHRADENIE (pre už existujúce hotové skupiny)
+            log('🔄 Spúšťam prvé (a posledné automatické) kolo nahrádzania...');
             replaceTeamIdentifiersWhenReady();
             
-            // 🔥 NOVÉ: Počúvame na udalosť, že sa zmenili tabuľky (dohraný zápas)
+            // 🔥 HLAVNÉ: Počúvame LEN na udalosť, že sa zmenili tabuľky (dohraný zápas)
             window.addEventListener('groupTablesUpdated', () => {
-                log('📢 Prijatá udalosť: groupTablesUpdated - kontrolujem pripravenosť skupín...');
+                log('📢 Prijatá udalosť: groupTablesUpdated (zápas bol dokončený) - spúšťam nahrádzanie...');
                 replaceTeamIdentifiersWhenReady();
             });
             
-            // 🔥 VOLITEĽNÉ: Môžeme pridať aj počúvanie na kliknutia (pre prípad manuálnej zmeny view)
-            attachClickHandlersForReplacement();
-            // ========================================================================
         }
     }, 500);
     
@@ -3277,14 +3196,12 @@ async function startTeamNameReplacement() {
         if (!window.matchTracker) {
             log('⚠️ MatchTracker nie je dostupný');
             replaceTeamIdentifiersWhenReady();
-            // Namiesto periodického, len raz a potom už len na udalosť
+            // Pridáme len event listener, žiadne periodické kontroly
             window.addEventListener('groupTablesUpdated', () => {
                 replaceTeamIdentifiersWhenReady();
             });
         }
     }, 10000);
-    
-    // attachClickHandlersForReplacement už je volané vyššie
 }
 
 // Jednorazové spustenie
