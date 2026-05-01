@@ -121,7 +121,9 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         const newConditionsStr = JSON.stringify(newConditions);
         
         if (oldConditionsStr !== newConditionsStr) {
-            changes.push('Zmena nastavení poradia:');
+            changes.push('Zmena nastavení poradia');
+
+            changes.push('');
             
             // Vždy vypíšeme všetky nové podmienky, podľa ktorých sa rozhoduje
             if (newConditions.length > 0) {
@@ -133,6 +135,8 @@ export function TableSettings({ db, userProfileData, showNotification }) {
             } else {
                 changes.push('Nové poradie rozhodovania: Žiadne vlastné kritériá (iba podľa bodov)');
             }
+
+            changes.push('');
             
             // Pridáme aj informáciu o pôvodnom poradí pre porovnanie
             if (oldConditions.length > 0) {
