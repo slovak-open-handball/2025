@@ -1731,8 +1731,52 @@ const matchesHallApp = ({ userProfileData }) => {
         updateTeamNamesInMatches();
     }, [matches.length, teamManagerReady]); // Spustí sa pri zmene dĺžky matches alebo ready stavu
 
-    // OPRAVENÝ useEffect pre mapovanie názvov tímov - ukladá do selectedMatch
+    // UPRAVENÝ useEffect pre mapovanie názvov tímov - podpora pre zoznam aj detail
     useEffect(() => {
+        // Ak nie je vybraný žiadny zápas, aktualizujeme názvy v zozname
+        if (!selectedMatch && matches.length > 0 && teamManagerReady) {
+            console.log('🔄 Žiadny vybraný zápas - aktualizujem názvy v zozname...');
+            
+            const updateAllMatchNames = async () => {
+                const updatedMatches = [...matches];
+                let hasChanges = false;
+                
+                for (let i = 0; i < updatedMatches.length; i++) {
+                    const match = updatedMatches[i];
+                    
+                    // Ak už máme displayName, neprepisujeme ho (len ak chýba)
+                    if (match.homeDisplayName && match.awayDisplayName) continue;
+                    
+                    let homeDisplayName = match.homeTeamIdentifier;
+                    let awayDisplayName = match.awayTeamIdentifier;
+                    
+                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                        const homeResult = window.matchTracker.getTeamNameByDisplayId(match.homeTeamIdentifier);
+                        homeDisplayName = (homeResult && typeof homeResult.then === 'function') ? await homeResult : (homeResult || match.homeTeamIdentifier);
+                        
+                        const awayResult = window.matchTracker.getTeamNameByDisplayId(match.awayTeamIdentifier);
+                        awayDisplayName = (awayResult && typeof awayResult.then === 'function') ? await awayResult : (awayResult || match.awayTeamIdentifier);
+                    }
+                    
+                    updatedMatches[i] = {
+                        ...match,
+                        homeDisplayName: homeDisplayName,
+                        awayDisplayName: awayDisplayName
+                    };
+                    hasChanges = true;
+                }
+                
+                if (hasChanges) {
+                    setMatches(updatedMatches);
+                    console.log('✅ Zoznam zápasov bol aktualizovaný');
+                }
+            };
+            
+            updateAllMatchNames();
+            return;
+        }
+        
+        // Pôvodný kód pre vybraný zápas
         if (!selectedMatch) return;
         
         const mapTeamNames = async () => {
@@ -1787,7 +1831,7 @@ const matchesHallApp = ({ userProfileData }) => {
         };
         
         mapTeamNames();
-    }, [selectedMatch?.homeTeamIdentifier, selectedMatch?.awayTeamIdentifier, selectedMatch?.id]);
+    }, [selectedMatch?.homeTeamIdentifier, selectedMatch?.awayTeamIdentifier, selectedMatch?.id, matches.length, teamManagerReady, selectedMatch]);
     // ============================================================================
     // NAČÍTANIE SUSPENDOVANÝCH HRÁČOV ZA MODRÚ KARTU PRE DOMÁCICH (OPRAVENÉ S ONESKORENÍM)
     // ============================================================================
