@@ -3950,31 +3950,6 @@ function resetCarryOverCache() {
 // Uložíme pôvodnú štartovaciu funkciu
 const originalStartTeamNameReplacement = startTeamNameReplacement;
 
-// Prepíšeme štartovaciu funkciu, aby spustila aj monitorovanie skupín
-window.startTeamNameReplacement = async function() {
-    // Spustíme pôvodnú funkcionalitu
-    if (originalStartTeamNameReplacement) {
-        await originalStartTeamNameReplacement();
-    }
-    
-    // Počkáme na matchTracker a potom spustíme monitorovanie skupín
-    let checkInterval = setInterval(() => {
-        if (window.matchTracker && typeof window.matchTracker.getAllMatches === 'function') {
-            clearInterval(checkInterval);
-            log('✅ MatchTracker je pripravený, spúšťam monitorovanie skupín...');
-            
-            // Spustíme monitorovanie zmien v skupinách (kontrola každých 3 sekúnd)
-            startGroupMonitoring(3);
-            
-            // Taktiež sledujeme zmeny v databáze cez matchTracker
-            if (window.matchTracker && window.matchTracker.stop === 'function') {
-                // Uložíme pôvodný unsubscribe
-                const originalUnsubscribe = window.matchTracker.stop;
-            }
-        }
-    }, 500);
-};
-
 // Export funkcií - ROZŠÍRENIE existujúceho objektu
 if (window.teamNameReplacer) {
     window.teamNameReplacer.onTeamNamesReplaced = onTeamNamesReplaced;
