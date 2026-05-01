@@ -127,26 +127,26 @@ export function TableSettings({ db, userProfileData, showNotification }) {
             
             // Vždy vypíšeme všetky nové podmienky, podľa ktorých sa rozhoduje
             if (newConditions.length > 0) {
-                changes.push('Nové poradie rozhodovania:');
+                changes.push(`'''Nové poradie rozhodovania:'`);
                 newConditions.forEach((cond, index) => {
                     const formattedValue = formatConditionValue(cond);
-                    changes.push(`'${index + 1}. ${formattedValue}'''`);
+                    changes.push(`'''${index + 1}. ${formattedValue}'`);
                 });
             } else {
-                changes.push(`'Nové poradie rozhodovania: Žiadne vlastné kritériá (iba podľa bodov)'''`);
+                changes.push(`'''Nové poradie rozhodovania: Žiadne vlastné kritériá (iba podľa bodov)'`);
             }
 
             changes.push('');
             
             // Pridáme aj informáciu o pôvodnom poradí pre porovnanie
             if (oldConditions.length > 0) {
-                changes.push('Pôvodné poradie rozhodovania:');
+                changes.push(`'Pôvodné poradie rozhodovania:'''`);
                 oldConditions.forEach((cond, index) => {
                     const formattedValue = formatConditionValue(cond);
-                    changes.push(`'''${index + 1}. ${formattedValue}'`);
+                    changes.push(`'${index + 1}. ${formattedValue}'''`);
                 });
             } else {
-                changes.push(`'''Pôvodné poradie rozhodovania: Žiadne vlastné kritériá (iba podľa bodov)'`);
+                changes.push(`'Pôvodné poradie rozhodovania: Žiadne vlastné kritériá (iba podľa bodov)'''`);
             }
         }
         
