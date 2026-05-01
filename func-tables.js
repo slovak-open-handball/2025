@@ -2098,11 +2098,6 @@ let groupCompletionSnapshot = new Map();
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-// ** GLOBÁLNE PREMENNÉ PRE SLEDOVANIE PRIPRAVENOSTI SKUPÍN **
-let processedGroups = new Map();
-let pendingReplaceTimeout = null;
-let replacedIdentifiers = new Set();
-let isReplacingInProgress = false;
 
 // Pomocná funkcia na odstránenie "VS" z názvu kategórie
 function cleanCategoryName(categoryName) {
