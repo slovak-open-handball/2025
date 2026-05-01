@@ -4174,3 +4174,92 @@ if (document.readyState === 'loading') {
 } else {
     window.startTeamNameReplacement();
 }
+
+// ============================================================
+// FUNKCIA NA VYMAZANIE CACHE PRE KONKRÉTNU SKUPINU A OPÄTOVNÉ MAPOVANIE
+// ============================================================
+
+function forceRefreshGroupMapping(category, groupLetter) {
+    const cleanCategory = cleanCategoryName(category);
+    const groupKey = `${cleanCategory}|${groupLetter.toUpperCase()}`;
+    
+    console.log(`🔄 [FORCE REFRESH] Vymazávam cache pre skupinu: ${groupKey}`);
+    
+    // 1. Vymažeme cache pre túto skupinu v isGroupReadyForReplacement
+    groupCheckCache.delete(groupKey);
+    groupCheckCache.delete(`${groupKey}_false`);
+    groupCheckCache.delete(`${groupKey}_ready`);
+    
+    // 2. Vymažeme aj logged nepripravenosti
+    for (const key of notReadyGroupsLogged) {
+        if (key.startsWith(groupKey)) {
+            notReadyGroupsLogged.delete(key);
+        }
+    }
+    
+    // 3. Vymažeme checkedGroupsCache
+    checkedGroupsCache.delete(groupKey);
+    checkedGroupsCache.delete(`${groupKey}_found`);
+    checkedGroupsCache.delete(`${groupKey}_not_found`);
+    checkedGroupsCache.delete(`${groupKey}_ready`);
+    checkedGroupsCache.delete(`${groupKey}_not_ready`);
+    checkedGroupsCache.delete(`${groupKey}_team_found_1`);
+    
+    // 4. Vymažeme processedGroups - aby sa znova vyhodnotila
+    processedGroups.delete(groupKey);
+    
+    // 5. Znovu skontrolujeme pripravenosť (tentokrát bez cache)
+    const isReady = isGroupReadyForReplacement(category, groupLetter);
+    
+    if (isReady) {
+        console.log(`✅ [FORCE REFRESH] Skupina ${groupKey} je pripravená, pokúšam sa získať názov...`);
+        
+        const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
+        const groupTable = window.matchTracker?.createGroupTable(cleanCategory, fullGroupName);
+        
+        if (groupTable && groupTable.teams && groupTable.teams.length > 0) {
+            console.log(`📊 Tabuľka skupiny ${fullGroupName}:`);
+            groupTable.teams.forEach((team, idx) => {
+                console.log(`   ${idx + 1}. ${team.name}`);
+            });
+        }
+        
+        // Skúsime získať názov pre konkrétnu pozíciu
+        const testResult = getTeamNameByDisplayId(`${cleanCategory} 1${groupLetter.toUpperCase()}`);
+        console.log(`🧪 Testovací výsledok pre "1${groupLetter}": ${testResult || 'NENAJDENÝ'}`);
+    } else {
+        console.log(`❌ [FORCE REFRESH] Skupina ${groupKey} stále nie je pripravená`);
+        
+        // Vypíšeme detailný stav
+        const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
+        const groupTable = window.matchTracker?.createGroupTable(cleanCategory, fullGroupName);
+        
+        if (groupTable) {
+            console.log(`   Celkom zápasov: ${groupTable.totalMatches}`);
+            console.log(`   Odohraných: ${groupTable.completedCount}`);
+            console.log(`   Percento: ${groupTable.completionPercentage}%`);
+        }
+    }
+    
+    return isReady;
+}
+
+// Pridáme aj funkciu na vynútenie mapovania pre všetky skupiny
+function forceRefreshAllGroups() {
+    console.log(`🔄 [FORCE REFRESH ALL] Vymazávam všetky cache...`);
+    
+    // Vymažeme všetky cache
+    groupCheckCache.clear();
+    notReadyGroupsLogged.clear();
+    checkedGroupsCache.clear();
+    processedGroups.clear();
+    
+    // Znovu spustíme nahrádzanie
+    replaceTeamIdentifiersWhenReady();
+    
+    console.log(`✅ [FORCE REFRESH ALL] Cache vymazané, spúšťam opätovné nahrádzanie...`);
+}
+
+// Export funkcií
+window.teamNameReplacer.forceRefreshGroup = forceRefreshGroupMapping;
+window.teamNameReplacer.forceRefreshAll = forceRefreshAllGroups;
