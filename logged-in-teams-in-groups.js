@@ -2075,22 +2075,36 @@ const createTeamAssignmentNotification = async (action, team) => {
             }
             return name;
         };
-   
+        
+        // Pomocná funkcia na vytvorenie identifikátora pre mapovanie
+        const createDisplayId = (team) => {
+            // Pre superstructure tímy v nadstavbovej skupine
+            if (team.isSuperstructureTeam && team.groupName) {
+                const categoryName = team.category;
+                const position = team.order;
+                // Extrahujeme písmeno skupiny (napr. "skupina E" -> "E")
+                const groupLetter = team.groupName.replace('skupina ', '').toUpperCase();
+                // Vytvoríme identifikátor v tvare "Kategória positionGroupLetter" (napr. "U12 D 3E")
+                return `${categoryName} ${position}${groupLetter}`;
+            }
+            return null;
+        };
+    
         if (isWithoutGroup) {
             // Tímy bez skupiny → triedime len podľa názvu, bez čísel a placeholderov
             const sortedTeams = [...teamsToRender].sort((a, b) =>
                 a.teamName.localeCompare(b.teamName)
             );
-   
+    
             const items = sortedTeams.map((team, idx) => {
                 let display = getCleanDisplayName(team);
                 if (!selectedCategoryId) {
                     // ak zobrazujeme všetky kategórie → ukážeme aj názov kategórie
                     display = `${team.category}: ${display}`;
                 }
-   
+    
                 const showDeleteButton = !isWithoutGroup || team.isSuperstructureTeam;
-   
+    
                 return React.createElement(
                     'li',
                     {
@@ -2098,7 +2112,7 @@ const createTeamAssignmentNotification = async (action, team) => {
                         className: `flex justify-between items-center px-4 py-3 rounded-lg border shadow-sm ${team.isSuperstructureTeam ? 'bg-yellow-50' : 'bg-white'}`
                     },
                     React.createElement('span', { className: 'flex-grow text-gray-800' }, display),
-   
+    
                     React.createElement(
                         'div',
                         { className: 'flex items-center space-x-1' },
@@ -2131,10 +2145,10 @@ const createTeamAssignmentNotification = async (action, team) => {
                     )
                 );
             });
-   
+    
             return React.createElement('ul', { className: 'space-y-2' }, ...items);
         }
-   
+    
         // ────────────────────────────────────────────────
         // Skupina → zoradíme podľa order + doplníme missing placeholder-y
         // ────────────────────────────────────────────────
@@ -2142,29 +2156,29 @@ const createTeamAssignmentNotification = async (action, team) => {
         // NOVÁ KONTROLA: Existujú pre túto skupinu zápasy?
         const categoryName = categoryIdToNameMap[targetCategoryId];
         const groupHasMatches = categoryName && targetGroupId ? hasMatchesInGroup(categoryName, targetGroupId) : false;
-   
+    
         const sortedTeams = [...teamsToRender].sort((a, b) => {
             const oa = typeof a.order === 'number' ? a.order : Infinity;
             const ob = typeof b.order === 'number' ? b.order : Infinity;
             return oa - ob;
         });
-   
+    
         // Zoznam všetkých použitých poradových čísel (iba platné celé čísla ≥ 1)
         const usedOrders = new Set(
             sortedTeams
                 .map(t => t.order)
                 .filter(o => Number.isInteger(o) && o >= 1)
         );
-   
+    
         const maxOrder = usedOrders.size > 0 ? Math.max(...usedOrders) : 0;
-   
+    
         const items = [];
-   
+    
         // Vytvoríme riadky od 1 po maxOrder (vrátane dier)
         for (let pos = 1; pos <= maxOrder; pos++) {
             const teamsAtThisPosition = sortedTeams.filter(t => t.order === pos);
             const hasDuplicate = teamsAtThisPosition.length > 1;
-   
+    
             if (teamsAtThisPosition.length === 0) {
               // CHÝBAJÚCI tím → placeholder + kôš (len ak nie sú zápasy)
               if (!groupHasMatches) {
@@ -2209,8 +2223,20 @@ const createTeamAssignmentNotification = async (action, team) => {
             } else {
                 // Jeden alebo viac tímov na tomto poradovom čísle
                 teamsAtThisPosition.forEach((team, teamIdx) => {
-                    const displayName = getCleanDisplayName(team);
+                    let displayName = getCleanDisplayName(team);
                     const textColor = hasDuplicate ? 'text-red-700 font-semibold' : 'text-gray-800';
+                    
+                    // 🔥 VYTVORÍME IDENTIFIKÁTOR PRE MAPOVANIE (len pre superstructure tímy v nadstavbovej skupine)
+                    let mappedDisplayName = displayName;
+                    const displayId = createDisplayId(team);
+                    
+                    if (displayId && window.matchTracker && window.matchTracker.getTeamNameByDisplayId) {
+                        // Skúsime získať mapovaný názov tímu
+                        const mappedName = window.matchTracker.getTeamNameByDisplayId(team.teamName);
+                        if (mappedName && mappedName !== displayId) {
+                            mappedDisplayName = mappedName;
+                        }
+                    }
     
                     // NOVÁ KONTROLA: Je tím v nadstavbovej skupine a chýba v základnej?
                     const isSuperstructureTeam = team.isSuperstructureTeam;
@@ -2224,7 +2250,6 @@ const createTeamAssignmentNotification = async (action, team) => {
                     let existsInBasic = true; // Predvolene true
                     
                     if (isSuperstructureTeam && isInSuperstructureGroup) {
-                        // PRIDEĽTE hodnotu do existujúcej premennej, nie vytvárajte novú
                         existsInBasic = teamExistsInBasicGroup(team.teamName, team.category, team.groupName);
                         if (!existsInBasic) {
                             additionalClasses = 'font-bold text-red-600';
@@ -2244,12 +2269,12 @@ const createTeamAssignmentNotification = async (action, team) => {
                                 } ${hasDuplicate ? 'border-red-300' : ''}`
                             },
                             React.createElement(
-                                'span',
+                                'span', 
                                 { 
                                     className: `flex-grow ${textColor} ${additionalClasses}`,
                                     title: title
                                 },
-                                `${pos}. ${window.matchTracker.getTeamNameByDisplayId(displayName) ?? displayName}${hasDuplicate ? '' : ''}`
+                                `${pos}. ${mappedDisplayName}${hasDuplicate ? '' : ''}`
                             ),
                             React.createElement(
                                 'div',
@@ -2301,12 +2326,23 @@ const createTeamAssignmentNotification = async (action, team) => {
                 });
             }
         }
-   
+    
         // Extra tímy s order > maxOrder (napr. ručne nastavené vysoké číslo)
         sortedTeams
             .filter(t => typeof t.order === 'number' && t.order > maxOrder)
             .forEach(team => {
-                const displayName = getCleanDisplayName(team);
+                let displayName = getCleanDisplayName(team);
+                
+                // 🔥 VYTVORÍME IDENTIFIKÁTOR PRE MAPOVANIE (len pre superstructure tímy v nadstavbovej skupine)
+                let mappedDisplayName = displayName;
+                const displayId = createDisplayId(team);
+                
+                if (displayId && window.matchTracker && window.matchTracker.getTeamNameByDisplayId) {
+                    const mappedName = window.matchTracker.getTeamNameByDisplayId(team.teamName);
+                    if (mappedName && mappedName !== displayId) {
+                        mappedDisplayName = mappedName;
+                    }
+                }
                 
                 const isSuperstructureTeam = team.isSuperstructureTeam;
                 const isInSuperstructureGroup = team.groupName && 
@@ -2344,7 +2380,7 @@ const createTeamAssignmentNotification = async (action, team) => {
                                 className: `flex-grow text-orange-800 ${additionalClasses}`,
                                 title: title
                             },
-                            `${team.order}. ${displayName} (vyššie ako aktuálne maximum)`
+                            `${team.order}. ${mappedDisplayName} (vyššie ako aktuálne maximum)`
                         ),
                         // tlačidlá edit / delete (rovnaké ako vyššie, s kontrolou zápasov)
                         React.createElement(
@@ -2396,7 +2432,7 @@ const createTeamAssignmentNotification = async (action, team) => {
                     )
                 );
             });
-   
+    
         return React.createElement('ul', { className: 'space-y-2' }, ...items);
     };
   
