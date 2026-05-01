@@ -1595,6 +1595,69 @@ const matchesHallApp = ({ userProfileData }) => {
     const [homeTeamResolvedName, setHomeTeamResolvedName] = useState(null);
     const [awayTeamResolvedName, setAwayTeamResolvedName] = useState(null);
 
+    // ============================================================================
+    // NOVÝ useEffect PRE NAČÍTANIE SÚPISIEK S ONESKORENÍM 10 SEKÚND
+    // ============================================================================
+    
+    useEffect(() => {
+        // Tento useEffect sa stará o oneskorené načítanie detailov tímov (hráčov a RT)
+        // Nie je priamo závislý na kontrole modrých kariet
+        
+        const loadTeamDetails = async () => {
+            if (!selectedMatch) return;
+            
+            console.log('⏳ [SÚPISKY] Spúšťam oneskorené načítanie detailov tímov (10 sekúnd)...');
+            
+            // Počkáme 10 sekúnd pred samotným načítaním
+            await new Promise(resolve => setTimeout(resolve, 10000));
+            
+            // Kontrola, či je zápas stále vybraný (mohol sa medzitým zmeniť)
+            if (!selectedMatch) return;
+            
+            console.log('🔄 [SÚPISKY] Začínam načítavať detaily tímov...');
+            
+            // Získame detaily pre domáci tím
+            if (selectedMatch.homeTeamIdentifier) {
+                const homeDetails = getTeamDetailsFromIdentifier(selectedMatch.homeTeamIdentifier);
+                if (homeDetails) {
+                    console.log(`✅ [SÚPISKY] Domáci tím načítaný: ${homeDetails.team.teamName}`);
+                    console.log(`   Hráčov: ${homeDetails.team.playerDetails?.length || 0}`);
+                    console.log(`   RT muži: ${homeDetails.team.menTeamMemberDetails?.length || 0}`);
+                    console.log(`   RT ženy: ${homeDetails.team.womenTeamMemberDetails?.length || 0}`);
+                } else {
+                    console.log(`⚠️ [SÚPISKY] Domáci tím sa nepodarilo načítať (getTeamDetailsFromIdentifier vrátil null)`);
+                    console.log(`   Identifikátor: ${selectedMatch.homeTeamIdentifier}`);
+                }
+            }
+            
+            // Získame detaily pre hosťovský tím
+            if (selectedMatch.awayTeamIdentifier) {
+                const awayDetails = getTeamDetailsFromIdentifier(selectedMatch.awayTeamIdentifier);
+                if (awayDetails) {
+                    console.log(`✅ [SÚPISKY] Hosťovský tím načítaný: ${awayDetails.team.teamName}`);
+                    console.log(`   Hráčov: ${awayDetails.team.playerDetails?.length || 0}`);
+                    console.log(`   RT muži: ${awayDetails.team.menTeamMemberDetails?.length || 0}`);
+                    console.log(`   RT ženy: ${awayDetails.team.womenTeamMemberDetails?.length || 0}`);
+                } else {
+                    console.log(`⚠️ [SÚPISKY] Hosťovský tím sa nepodarilo načítať (getTeamDetailsFromIdentifier vrátil null)`);
+                    console.log(`   Identifikátor: ${selectedMatch.awayTeamIdentifier}`);
+                }
+            }
+            
+            console.log('✅ [SÚPISKY] Načítavanie detailov tímov dokončené.');
+            
+            // Vynútime prekreslenie UI (ak treba)
+            setForceUpdate(prev => prev + 1);
+        };
+        
+        // Spustíme načítanie s oneskorením
+        const timer = setTimeout(() => {
+            loadTeamDetails();
+        }, 500); // Malé oneskorenie pred 10-sekundovým čakaním (aby sa stihli načítať základné dáta)
+        
+        return () => clearTimeout(timer);
+    }, [selectedMatch?.homeTeamIdentifier, selectedMatch?.awayTeamIdentifier, selectedMatch?.id]);
+
     // Pridajte tento useEffect do matchesHallApp komponentu (napr. vedľa existujúcich useEffectov)
     // Tento useEffect zabezpečí, že pri každej zmene matches sa prepočítajú zobrazené názvy tímov
     
@@ -1766,8 +1829,8 @@ const matchesHallApp = ({ userProfileData }) => {
             }
             
             // 🔥 2. ONESKORENIE 5 SEKÚND PRED SPUSTENÍM KONTROLY
-            console.log('⏳ [DOMÁCI] Čakám 5 sekúnd pred kontrolou modrých kariet...');
-            await new Promise(resolve => setTimeout(resolve, 5000));
+            console.log('⏳ [DOMÁCI] Čakám 10 sekúnd pred kontrolou modrých kariet...');
+            await new Promise(resolve => setTimeout(resolve, 10000));
             
             // 🔥 3. POČKÁME, KÝM SA NENAČÍTAJÚ USERS A SUPERSTRUCTURE TEAMS
             if (users.length === 0 || Object.keys(superstructureTeams).length === 0) {
@@ -1936,8 +1999,8 @@ const matchesHallApp = ({ userProfileData }) => {
             }
             
             // 🔥 2. ONESKORENIE 5 SEKÚND PRED SPUSTENÍM KONTROLY
-            console.log('⏳ [HOSŤOVSKÍ] Čakám 5 sekúnd pred kontrolou modrých kariet...');
-            await new Promise(resolve => setTimeout(resolve, 5000));
+            console.log('⏳ [HOSŤOVSKÍ] Čakám 10 sekúnd pred kontrolou modrých kariet...');
+            await new Promise(resolve => setTimeout(resolve, 10000));
             
             // 🔥 3. POČKÁME, KÝM SA NENAČÍTAJÚ USERS A SUPERSTRUCTURE TEAMS
             if (users.length === 0 || Object.keys(superstructureTeams).length === 0) {
