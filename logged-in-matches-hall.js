@@ -935,7 +935,7 @@ const getTeamMatchesByDisplayName = async (teamDisplayName, categoryName) => {
             }
             
             if (firstPass && firstPass !== teamDisplayName) {
-                console.log(`   🔄 Prvá konverzia názvu tímu: "${teamDisplayName}" -> "${firstPass}"`);
+//                console.log(`   🔄 Prvá konverzia názvu tímu: "${teamDisplayName}" -> "${firstPass}"`);
                 
                 // 🔥 DVOJITÁ KONVERZIA
                 let secondPass = window.matchTracker.getTeamNameByDisplayId(firstPass);
@@ -944,7 +944,7 @@ const getTeamMatchesByDisplayName = async (teamDisplayName, categoryName) => {
                 }
                 
                 if (secondPass && secondPass !== firstPass) {
-                    console.log(`   🔄 Druhá konverzia názvu tímu: "${firstPass}" -> "${secondPass}"`);
+//                    console.log(`   🔄 Druhá konverzia názvu tímu: "${firstPass}" -> "${secondPass}"`);
                     cleanTeamName = secondPass;
                 } else {
                     cleanTeamName = firstPass;
@@ -5438,14 +5438,14 @@ const matchesHallApp = ({ userProfileData }) => {
             const firstPassResult = (firstPass && typeof firstPass.then === 'function') ? null : firstPass;
             
             if (firstPassResult && firstPassResult !== identifier) {
-                console.log(`🔄 Prvá konverzia: "${identifier}" -> "${firstPassResult}"`);
+//                console.log(`🔄 Prvá konverzia: "${identifier}" -> "${firstPassResult}"`);
                 
                 // 🔥 DVOJITÁ KONVERZIA: Výsledok pošleme ešte raz do rovnakej funkcie
                 const secondPass = window.matchTracker.getTeamNameByDisplayId(firstPassResult);
                 const secondPassResult = (secondPass && typeof secondPass.then === 'function') ? null : secondPass;
                 
                 if (secondPassResult && secondPassResult !== firstPassResult) {
-                    console.log(`🔄 Druhá konverzia: "${firstPassResult}" -> "${secondPassResult}"`);
+//                    console.log(`🔄 Druhá konverzia: "${firstPassResult}" -> "${secondPassResult}"`);
                     resolvedTeamName = secondPassResult;
                 } else {
                     resolvedTeamName = firstPassResult;
@@ -5586,7 +5586,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
             
             if (firstPass && firstPass !== teamDisplayName) {
-                console.log(`   🔄 Prvá konverzia: "${teamDisplayName}" -> "${firstPass}"`);
+//                console.log(`   🔄 Prvá konverzia: "${teamDisplayName}" -> "${firstPass}"`);
                 
                 // 🔥 DVOJITÁ KONVERZIA: Výsledok pošleme ešte raz do rovnakej funkcie
                 let secondPass = window.matchTracker.getTeamNameByDisplayId(firstPass);
@@ -5595,7 +5595,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 }
                 
                 if (secondPass && secondPass !== firstPass) {
-                    console.log(`   🔄 Druhá konverzia: "${firstPass}" -> "${secondPass}"`);
+//                    console.log(`   🔄 Druhá konverzia: "${firstPass}" -> "${secondPass}"`);
                     resolvedTeamName = secondPass;
                 } else {
                     resolvedTeamName = firstPass;
