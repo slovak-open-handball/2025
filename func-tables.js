@@ -2391,6 +2391,12 @@ function getTeamNameByDisplayId(displayId) {
     let category = parts.slice(0, -1).join(' ');
     category = cleanCategoryName(category);
     
+    // 🔥 NOVÁ KONTROLA: Ak posledná časť neobsahuje ŽIADNU ČÍSLICU, nie je to platný identifikátor
+    if (!/\d/.test(lastPart)) {
+        // Ticho preskočíme - nevypisujeme žiadny log
+        return null;
+    }
+    
     // ============================================================
     // FORMÁT: PÍSMENO PRED ČÍSLICOU (napr. "A2")
     // ============================================================
@@ -2495,7 +2501,8 @@ function getTeamNameByDisplayId(displayId) {
         }
     }
     
-    log(`❌ Neznámy formát poslednej časti: ${lastPart} (očakáva sa "A2" alebo "2A")`);
+    // 🔥 AK SME SA DOSTALI SEM, TAK LASTPART NEMA PLATNY FORMÁT
+    // Ticho preskočíme - nevypisujeme žiadny log (už sme skontrolovali, že obsahuje číslicu vyššie)
     return null;
 }
 
