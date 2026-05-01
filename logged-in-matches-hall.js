@@ -6975,7 +6975,15 @@ const matchesHallApp = ({ userProfileData }) => {
                             React.createElement(
                                 'button',
                                 { 
-                                    onClick: showAllMatches,
+                                    onClick: () => {
+                                        // Ochrana - ak hallId neexistuje, obnovíme stránku
+                                        if (!hallId) {
+                                            console.warn('HallId nie je dostupné, obnovujem stránku...');
+                                            window.location.reload();
+                                            return;
+                                        }
+                                        showAllMatches();
+                                    },
                                     className: 'absolute left-4 top-4 flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-gray-700 font-medium'
                                 },
                                 React.createElement('i', { className: 'fa-solid fa-arrow-left' }),
