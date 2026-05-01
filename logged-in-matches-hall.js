@@ -1546,6 +1546,17 @@ const matchesHallApp = ({ userProfileData }) => {
     const [homeTeamResolvedName, setHomeTeamResolvedName] = useState(null);
     const [awayTeamResolvedName, setAwayTeamResolvedName] = useState(null);
 
+    const [homeTeamData, setHomeTeamData] = useState(null);
+    const [awayTeamData, setAwayTeamData] = useState(null);
+
+    useEffect(() => {
+        // Resetovanie stavov pri zmene zápasu
+        setHomeTeamData(null);
+        setAwayTeamData(null);
+        setHomeTeamNameReady(false);
+        setAwayTeamNameReady(false);
+    }, [selectedMatch?.id]);
+
     // OPRAVENÝ useEffect PRE NAČÍTANIE SÚPISIEK
     useEffect(() => {
         const loadTeamDetails = async () => {
@@ -1568,11 +1579,14 @@ const matchesHallApp = ({ userProfileData }) => {
                 if (homeDetailsLoaded && homeDetailsLoaded.team) {
                     console.log(`✅ [SÚPISKY] Domáci tím načítaný: ${homeDetailsLoaded.team.teamName}`);
                     console.log(`   Hráčov: ${homeDetailsLoaded.team.playerDetails?.length || 0}`);
+                    setHomeTeamData(homeDetailsLoaded);  // 🔥 DÔLEŽITÉ: NASTAVTE HOME TEAM DATA
                 } else {
                     console.log(`⚠️ [SÚPISKY] Domáci tím sa nepodarilo načítať podľa zmapovaného názvu: "${homeTeamResolvedName}"`);
+                    setHomeTeamData(null);  // 🔥 NASTAVTE NA null, ak sa nepodarilo načítať
                 }
             } else {
                 console.log(`⚠️ [SÚPISKY] Domáci zmapovaný názov nie je platný: "${homeTeamResolvedName}"`);
+                setHomeTeamData(null);
             }
             
             // 🔥 NAČÍTANIE HOSŤOVSKÉHO TÍMU
@@ -1582,17 +1596,17 @@ const matchesHallApp = ({ userProfileData }) => {
                 if (awayDetailsLoaded && awayDetailsLoaded.team) {
                     console.log(`✅ [SÚPISKY] Hosťovský tím načítaný: ${awayDetailsLoaded.team.teamName}`);
                     console.log(`   Hráčov: ${awayDetailsLoaded.team.playerDetails?.length || 0}`);
+                    setAwayTeamData(awayDetailsLoaded);  // 🔥 DÔLEŽITÉ: NASTAVTE AWAY TEAM DATA
                 } else {
                     console.log(`⚠️ [SÚPISKY] Hosťovský tím sa nepodarilo načítať podľa zmapovaného názvu: "${awayTeamResolvedName}"`);
+                    setAwayTeamData(null);  // 🔥 NASTAVTE NA null, ak sa nepodarilo načítať
                 }
+            } else {
+                console.log(`⚠️ [SÚPISKY] Hosťovský zmapovaný názov nie je platný: "${awayTeamResolvedName}"`);
+                setAwayTeamData(null);
             }
             
-            // 🔥 KRITICKÉ: NASTAVÍME STAVY AŽ PO ÚSPEŠNOM NAČÍTANÍ
-            // TU MUSÍTE MAŤ SPRÁVNE NASTAVENIE teamDetails v React stave
-            // Predpokladám, že máte stavy pre homeTeamDetails a awayTeamDetails
-            
             // Po úspešnom načítaní nastavíme príznaky na true
-            // (tieto príznaky by sa mali nastaviť AŽ keď sú dáta naozaj v stave)
             setHomeTeamNameReady(true);
             setAwayTeamNameReady(true);
             
@@ -1607,8 +1621,6 @@ const matchesHallApp = ({ userProfileData }) => {
         return () => clearTimeout(timer);
     }, [homeTeamResolvedName, awayTeamResolvedName, selectedMatch?.id, selectedMatch?.categoryName]);
 
-    // Pridajte tento useEffect do matchesHallApp komponentu (napr. vedľa existujúcich useEffectov)
-    // Tento useEffect zabezpečí, že pri každej zmene matches sa prepočítajú zobrazené názvy tímov
     
     useEffect(() => {
         if (!matches.length || !teamManagerReady) return;
