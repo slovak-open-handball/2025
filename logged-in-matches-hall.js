@@ -5600,20 +5600,6 @@ const matchesHallApp = ({ userProfileData }) => {
     const getTeamDetailsFromIdentifier = (identifier) => {
         if (!identifier) return null;
         
-        // Kontrola, či je názov už zmapovaný
-        const isHomeTeam = identifier === selectedMatch?.homeTeamIdentifier;
-        const isAwayTeam = identifier === selectedMatch?.awayTeamIdentifier;
-        
-        if (isHomeTeam && !homeTeamNameReady) {
-            console.log(`⏳ Čakám na zmapovanie domáceho tímu: ${identifier}`);
-            return null;
-        }
-        
-        if (isAwayTeam && !awayTeamNameReady) {
-            console.log(`⏳ Čakám na zmapovanie hosťovského tímu: ${identifier}`);
-            return null;
-        }
-        
         // Pôvodná logika getTeamDetailsFromIdentifier (ponechajte ju)
         const parts = identifier.split(' ');
         if (parts.length < 2) {
