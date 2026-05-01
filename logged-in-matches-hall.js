@@ -1852,8 +1852,8 @@ const matchesHallApp = ({ userProfileData }) => {
             }
             
             // 🔥 2. ONESKORENIE 5 SEKÚND PRED SPUSTENÍM KONTROLY
-            console.log('⏳ [DOMÁCI] Čakám 10 sekúnd pred kontrolou modrých kariet...');
-            await new Promise(resolve => setTimeout(resolve, 10000));
+            console.log('⏳ [DOMÁCI] Čakám 2 sekundy pred kontrolou modrých kariet...');
+            await new Promise(resolve => setTimeout(resolve, 2000));
             
             // 🔥 3. POČKÁME, KÝM SA NENAČÍTAJÚ USERS A SUPERSTRUCTURE TEAMS
             if (users.length === 0 || Object.keys(superstructureTeams).length === 0) {
@@ -2022,8 +2022,8 @@ const matchesHallApp = ({ userProfileData }) => {
             }
             
             // 🔥 2. ONESKORENIE 5 SEKÚND PRED SPUSTENÍM KONTROLY
-            console.log('⏳ [HOSŤOVSKÍ] Čakám 10 sekúnd pred kontrolou modrých kariet...');
-            await new Promise(resolve => setTimeout(resolve, 10000));
+            console.log('⏳ [HOSŤOVSKÍ] Čakám 2 sekundy pred kontrolou modrých kariet...');
+            await new Promise(resolve => setTimeout(resolve, 2000));
             
             // 🔥 3. POČKÁME, KÝM SA NENAČÍTAJÚ USERS A SUPERSTRUCTURE TEAMS
             if (users.length === 0 || Object.keys(superstructureTeams).length === 0) {
