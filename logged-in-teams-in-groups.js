@@ -3070,20 +3070,12 @@ const renderSingleCategoryView = () => {
         };
     }, []);
 
-    // ============================================================
-    // 🔥 SLEDOVANIE ZMIEN V MAPOVANÍ TÍMOV A NOTIFIKÁCIA O DOKONČENÍ
-    // ============================================================
     useEffect(() => {
         // 🔥 AK SME UŽ NOTIFIKOVALI, PRESKOČÍME
         if (hasNotifiedMapping) return;
         
-        // 🔥 KONTROLA, ČI SA NAOZAJ ZMENIL POČET TÍMOV
-        if (prevAllTeamsLengthRef.current === allTeams.length && Object.keys(window.__teamNameMapping || {}).length === 0) {
-            return;
-        }
-        prevAllTeamsLengthRef.current = allTeams.length;
-    
-        const notifyMappingComplete = () => {
+        // Kontrola, či už existuje mapovanie
+        if (window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0) {
             setHasNotifiedMapping(true);
             
             const currentMappings = window.__teamNameMapping || {};
@@ -3092,7 +3084,6 @@ const renderSingleCategoryView = () => {
             console.log('%c🎉 MAPOVANIE TÍMOV BOLO AKTUALIZOVANÉ! 🎉', 'color: #00ff00; font-size: 14px; font-weight: bold; background: #1a1a1a; padding: 4px 12px; border-radius: 8px;');
             console.log(`📊 Počet mapovaní: ${mappingsCount}`);
             
-            // 🔥 ODOSIELAME UDALOSŤ LEN RAZ
             const event = new CustomEvent('superstructureTeamsMappingReady', {
                 detail: {
                     mappings: currentMappings,
@@ -3102,18 +3093,8 @@ const renderSingleCategoryView = () => {
                 }
             });
             window.dispatchEvent(event);
-        };
-    
-        // 🔥 KONTROLA, ČI UŽ EXISTUJE MAPOVANIE
-        if (window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0) {
-            notifyMappingComplete();
-            return;
         }
-        
-        // 🔥 ODSTRÁNENÉ VŠETKY POSLUCHÁČE UDALOSTÍ - TO JE TO, ČO SPÔSOBUJE CYKLUS!
-        // NEPOČÚVAME NA ŽIADNE UDALOSTI, LEN KONTROLUJEME EXISTUJÚCE MAPOVANIE
-        
-    }, [allTeams, hasNotifiedMapping]); // TENTO EFEKT SA SPUSTÍ LEN PRI ZMENE allTeams
+    }, []); // 🔥 PRÁZDNA ZÁVISLOSŤ - SPUSTÍ SA LEN RAZ PRI MOUNTE
   
     // Pôvodný kód pred return v komponente AddTeamsGroupApp:
 return React.createElement(
