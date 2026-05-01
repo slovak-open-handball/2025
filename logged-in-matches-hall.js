@@ -5892,9 +5892,6 @@ const matchesHallApp = ({ userProfileData }) => {
             console.warn('⚠️ HallId nie je k dispozícii, nie je možné zobraziť zoznam zápasov');
             // Pokúsime sa znova načítať hallId z userProfileData
             if (userProfileData?.hallId) {
-                // Aktualizujeme hallId pomocou useState settera (ak je dostupný)
-                // Poznámka: toto vyžaduje, aby ste mali prístup k setHallId
-                // Alebo jednoducho obnovíme stránku
                 window.location.reload();
             }
             return;
@@ -5917,14 +5914,12 @@ const matchesHallApp = ({ userProfileData }) => {
             for (let i = 0; i < updatedMatches.length; i++) {
                 const match = updatedMatches[i];
                 
-                // Získame aktuálne zmapované názvy
                 let homeDisplayName = await window.matchTracker.getTeamNameByDisplayId(match.homeTeamIdentifier);
                 let awayDisplayName = await window.matchTracker.getTeamNameByDisplayId(match.awayTeamIdentifier);
                 
                 if (!homeDisplayName) homeDisplayName = match.homeTeamIdentifier;
                 if (!awayDisplayName) awayDisplayName = match.awayTeamIdentifier;
                 
-                // Skontrolujeme, či sa zmenili
                 if (homeDisplayName !== match.homeDisplayName || awayDisplayName !== match.awayDisplayName) {
                     updatedMatches[i] = { 
                         ...updatedMatches[i], 
