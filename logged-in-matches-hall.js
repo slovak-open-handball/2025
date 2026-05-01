@@ -789,11 +789,11 @@ const getCleanTeamNameForBlueCardSearch = (identifier) => {
     let firstPass = null;
     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
         firstPass = window.matchTracker.getTeamNameByDisplayId(identifier);
-        console.log(`   🔄 Prvá konverzia: "${identifier}" -> "${firstPass}"`);
+//        console.log(`   🔄 Prvá konverzia: "${identifier}" -> "${firstPass}"`);
     }
     
     if (!firstPass || firstPass === identifier) {
-        console.log(`   ⚠️ Prvá konverzia zlyhala, používam pôvodný identifikátor: "${identifier}"`);
+//        console.log(`   ⚠️ Prvá konverzia zlyhala, používam pôvodný identifikátor: "${identifier}"`);
         return identifier;
     }
     
@@ -801,11 +801,11 @@ const getCleanTeamNameForBlueCardSearch = (identifier) => {
     let cleanName = null;
     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
         cleanName = window.matchTracker.getTeamNameByDisplayId(firstPass);
-        console.log(`   🔄 Druhá konverzia: "${firstPass}" -> "${cleanName}"`);
+//        console.log(`   🔄 Druhá konverzia: "${firstPass}" -> "${cleanName}"`);
     }
     
     if (!cleanName || cleanName === firstPass) {
-        console.log(`   ⚠️ Druhá konverzia zlyhala, používam prvý výsledok: "${firstPass}"`);
+//        console.log(`   ⚠️ Druhá konverzia zlyhala, používam prvý výsledok: "${firstPass}"`);
         return firstPass;
     }
     
