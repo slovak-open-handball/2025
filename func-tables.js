@@ -2827,10 +2827,10 @@ function isGroupReadyForReplacement(category, groupLetter) {
     
     // 2. Podmienka 1: Všetky zápasy musia byť odohrané (100%)
     if (completionPercentage < 100) {
-        const logKey = `${groupKey}_${Math.floor(completionPercentage)}`;
-        if (!notReadyGroupsLogged.has(logKey)) {
+        // Výpis len raz za skupinu
+        if (!notReadyGroupsLogged.has(groupKey)) {
             log(`⏳ [${cleanCategory} - ${fullGroupName}] Len ${completedMatches}/${totalMatches} (${completionPercentage}%) odohraných → NIE JE PRIpravená (čakám na dokončenie...)`);
-            notReadyGroupsLogged.add(logKey);
+            notReadyGroupsLogged.add(groupKey);
         }
         groupCheckCache.add(`${groupKey}_false`);
         return false;
