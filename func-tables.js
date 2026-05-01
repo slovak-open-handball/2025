@@ -2422,8 +2422,8 @@ function getTeamNameByDisplayId(displayId) {
         // 🔥 KONTROLA CACHE - ak sme už túto skupinu kontrolovali, preskočíme logy
         const groupKey = `${category}|${groupLetter}`;
         if (!checkedGroupsCache.has(groupKey)) {
-            log(`🔍 Formát "číslo+písmeno" (${lastPart}) → poradie: ${order}, skupina: ${groupLetter}`);
-            log(`   Kontrolujem tabuľku skupiny (vyžaduje 100% odohraných zápasov)...`);
+//            log(`🔍 Formát "číslo+písmeno" (${lastPart}) → poradie: ${order}, skupina: ${groupLetter}`);
+//            log(`   Kontrolujem tabuľku skupiny (vyžaduje 100% odohraných zápasov)...`);
         }
         
         const fullGroupName = `skupina ${groupLetter}`;
