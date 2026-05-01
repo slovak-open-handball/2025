@@ -2993,6 +2993,85 @@ const renderSingleCategoryView = () => {
             }
         };
     }, []);
+
+    // ============================================================
+    // 🔥 SLEDOVANIE ZMIEN V MAPOVANÍ TÍMOV A NOTIFIKÁCIA O DOKONČENÍ
+    // ============================================================
+    useEffect(() => {
+        // Funkcia na odoslanie globálnej udalosti, že mapovanie je pripravené
+        const notifyMappingComplete = () => {
+            // Získame aktuálne mapovanie z globálneho objektu (ak existuje)
+            const currentMappings = window.__teamNameMapping || {};
+            const mappingsCount = Object.keys(currentMappings).length;
+            
+            // Hlavný výpis do konzoly
+            console.log('%c🎉 MAPOVANIE TÍMOV BOLO AKTUALIZOVANÉ! 🎉', 'color: #00ff00; font-size: 14px; font-weight: bold; background: #1a1a1a; padding: 4px 12px; border-radius: 8px;');
+            console.log(`📊 Počet mapovaní: ${mappingsCount}`);
+            
+            // Odoslanie vlastnej udalosti
+            const event = new CustomEvent('superstructureTeamsMappingReady', {
+                detail: {
+                    mappings: currentMappings,
+                    mappingsCount: mappingsCount,
+                    timestamp: Date.now(),
+                    source: 'AddTeamsGroupApp'
+                }
+            });
+            window.dispatchEvent(event);
+            
+            // Druhá udalosť pre kompatibilitu
+            const secondEvent = new CustomEvent('teamNameMappingReady', {
+                detail: { 
+                    mappings: currentMappings, 
+                    mappingsCount: mappingsCount, 
+                    timestamp: Date.now(), 
+                    ready: true,
+                    source: 'AddTeamsGroupApp'
+                }
+            });
+            window.dispatchEvent(secondEvent);
+        };
+
+        // Funkcia, ktorá skontroluje, či už existujú nejaké mapovania a ak áno, odošle notifikáciu
+        const checkAndNotify = () => {
+            if (window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0) {
+                notifyMappingComplete();
+                return true;
+            }
+            return false;
+        };
+
+        // Najprv skontrolujeme existujúce mapovanie
+        const hasMappings = checkAndNotify();
+
+        // Ak už máme mapovania, nemusíme čakať na ďalšie udalosti
+        if (hasMappings) return;
+
+        // Počúvame na udalosť, keď sú tímy nahradené (z pôvodného kódu)
+        const handleTeamNamesReplaced = (event) => {
+            // Krátke oneskorenie pre istotu, že sa všetky dáta spracovali
+            setTimeout(() => {
+                notifyMappingComplete();
+            }, 100);
+        };
+
+        // Počúvame aj na vlastnú udalosť z nášho kódu
+        const handleCustomMappingReady = () => {
+            notifyMappingComplete();
+        };
+
+        // Registrácia poslucháčov
+        window.addEventListener('teamNamesReplaced', handleTeamNamesReplaced);
+        window.addEventListener('superstructureTeamsMappingReady', handleCustomMappingReady);
+        window.addEventListener('teamNameMappingReady', handleCustomMappingReady);
+
+        // Čistiace funkcie
+        return () => {
+            window.removeEventListener('teamNamesReplaced', handleTeamNamesReplaced);
+            window.removeEventListener('superstructureTeamsMappingReady', handleCustomMappingReady);
+            window.removeEventListener('teamNameMappingReady', handleCustomMappingReady);
+        };
+    }, [allTeams]); // Závislosť na allTeams - spustí sa vždy, keď sa zmení zoznam tímov (pridanie, úprava, odstránenie)
   
     // Pôvodný kód pred return v komponente AddTeamsGroupApp:
 return React.createElement(
