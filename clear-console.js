@@ -1,4 +1,4 @@
-var CLEAR_CONSOLE = 0;
+var CLEAR_CONSOLE = 1;
 // 0 - vypisovanie
 // 1 - mazanie
 
