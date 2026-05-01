@@ -1070,23 +1070,32 @@ let isTeamNameReplacerInitialized = false;
                 awayScore = score.away;
             }
             
-            // 🔥 KĽÚČOVÉ: MAPUJEME NÁZVY TÍMOV Z IDENTIFIKÁTOROV
-            let homeTeamName = getTeamNameByDisplayId(match.homeTeamIdentifier);
-            if (!homeTeamName || homeTeamName === match.homeTeamIdentifier) {
-                homeTeamName = match.homeTeamIdentifier;
+            // 🔥 KĽÚČOVÁ OPRAVA: Hľadáme tímy v už zmapovanom zozname teamsInAdvanced
+            // podľa originalId (pôvodný identifikátor) alebo id
+            let homeTeamStats = teamsInAdvanced.find(t => 
+                t.originalId === match.homeTeamIdentifier || t.id === match.homeTeamIdentifier
+            );
+            let awayTeamStats = teamsInAdvanced.find(t => 
+                t.originalId === match.awayTeamIdentifier || t.id === match.awayTeamIdentifier
+            );
+            
+            // Ak nenájdeme podľa originalId/id, skúsime podľa namapovaného názvu
+            if (!homeTeamStats) {
+                const homeTeamName = getTeamNameByDisplayId(match.homeTeamIdentifier) || match.homeTeamIdentifier;
+                homeTeamStats = teamsInAdvanced.find(t => t.name === homeTeamName);
+            }
+            if (!awayTeamStats) {
+                const awayTeamName = getTeamNameByDisplayId(match.awayTeamIdentifier) || match.awayTeamIdentifier;
+                awayTeamStats = teamsInAdvanced.find(t => t.name === awayTeamName);
             }
             
-            let awayTeamName = getTeamNameByDisplayId(match.awayTeamIdentifier);
-            if (!awayTeamName || awayTeamName === match.awayTeamIdentifier) {
-                awayTeamName = match.awayTeamIdentifier;
-            }
-            
-            // Nájdeme tímy v zozname podľa mapovaných názvov
-            const homeTeamStats = teamsInAdvanced.find(t => t.name === homeTeamName);
-            const awayTeamStats = teamsInAdvanced.find(t => t.name === awayTeamName);
+            // Pre logovanie
+            const homeTeamName = homeTeamStats ? homeTeamStats.name : match.homeTeamIdentifier;
+            const awayTeamName = awayTeamStats ? awayTeamStats.name : match.awayTeamIdentifier;
             
             if (homeTeamStats && awayTeamStats) {
-                const matchKey = homeTeamName < awayTeamName ? `${homeTeamName}|${awayTeamName}` : `${awayTeamName}|${homeTeamName}`;
+                const matchKey = homeTeamName < awayTeamName ? 
+                    `${homeTeamName}|${awayTeamName}` : `${awayTeamName}|${homeTeamName}`;
                 
                 if (!processedPairs.has(matchKey)) {
                     processedPairs.add(matchKey);
