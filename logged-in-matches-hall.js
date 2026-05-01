@@ -4852,11 +4852,9 @@ const matchesHallApp = ({ userProfileData }) => {
                 home: selectedMatch.finalScore.home, 
                 away: selectedMatch.finalScore.away 
             });
-            // Stále načítame udalosti, ak existujú (napr. ak niekto pridal udalosti potom)
-            // Ale necháme loadingEvents false, lebo nemusíme čakať na udalosti
             setLoadingEvents(false);
             
-            // Ak máme udalosti, načítame ich (pre prípad, že existujú)
+            // Stále načítame udalosti, ak existujú (napr. ak niekto pridal udalosti potom)
             const eventsRef = collection(window.db, 'matchEvents');
             const q = query(eventsRef, where("matchId", "==", selectedMatch.id));
             
@@ -4876,6 +4874,22 @@ const matchesHallApp = ({ userProfileData }) => {
                 });
                 
                 setMatchEvents(loadedEvents);
+                // 🔥 DÔLEŽITÉ: Ak máme udalosti, prepíšeme matchScore z udalostí (správnejšie)
+                if (loadedEvents.length > 0) {
+                    let homeScore = 0;
+                    let awayScore = 0;
+                    const sortedAsc = [...loadedEvents].sort((a, b) => {
+                        if (a.minute !== b.minute) return (a.minute || 0) - (b.minute || 0);
+                        return (a.second || 0) - (b.second || 0);
+                    });
+                    sortedAsc.forEach(event => {
+                        if (event.type === 'goal' || (event.type === 'penalty' && event.subType === 'scored')) {
+                            if (event.team === 'home') homeScore++;
+                            else if (event.team === 'away') awayScore++;
+                        }
+                    });
+                    setMatchScore({ home: homeScore, away: awayScore });
+                }
             }, (error) => {
                 console.error("Chyba pri načítaní udalostí zápasu:", error);
             });
@@ -4928,7 +4942,6 @@ const matchesHallApp = ({ userProfileData }) => {
             setMatchEvents(loadedEvents);
             
             // 🔥 DÔLEŽITÉ: PRE UKONČENÝ ZÁPAS S UDALOSŤAMI POUŽIJEME VYPOČÍTANÉ SKÓRE
-            // (toto je správne, lebo udalosti sú zdrojom pravdy)
             setMatchScore({ home: homeScore, away: awayScore });
             setLoadingEvents(false);
         }, (error) => {
@@ -7691,7 +7704,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { className: 'text-3xl font-bold text-gray-800 mb-1' },
-                                                loadingEvents ? '--:--' : `${matchScore.home} : ${matchScore.away}`
+                                                `${matchScore.home} : ${matchScore.away}`
                                             ),
                                             React.createElement(
                                                 'div',
@@ -8679,7 +8692,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             React.createElement(
                                                 'div',
                                                 { className: 'text-3xl font-bold text-gray-800 mb-1' },
-                                                loadingEvents ? '--:--' : `${matchScore.home} : ${matchScore.away}`
+                                                `${matchScore.home} : ${matchScore.away}`
                                             ),
                                             React.createElement(
                                                 'div',
