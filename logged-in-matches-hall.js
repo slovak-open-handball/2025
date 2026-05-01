@@ -5719,11 +5719,21 @@ const matchesHallApp = ({ userProfileData }) => {
 
     // Ak je vybraný zápas, zobrazíme detail
     if (selectedMatch) {
-        const homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
-        const awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
-
-//        console.log(`🏠 Domáci: ${homeTeamName}`);
-//        console.log(`✈️ Hostia: ${awayTeamName}`);
+        // Získanie názvu tímu - PRIORITA: z načítanej súpisky
+        const getTeamDisplayName = (teamSide, identifier) => {
+            if (teamSide === 'home') {
+                if (homeTeamData?.team?.teamName) return homeTeamData.team.teamName;
+                if (selectedMatch.homeDisplayName) return selectedMatch.homeDisplayName;
+                return getTeamNameByIdentifier(identifier);
+            } else {
+                if (awayTeamData?.team?.teamName) return awayTeamData.team.teamName;
+                if (selectedMatch.awayDisplayName) return selectedMatch.awayDisplayName;
+                return getTeamNameByIdentifier(identifier);
+            }
+        };
+    
+        const homeTeamName = getTeamDisplayName('home', selectedMatch.homeTeamIdentifier);
+        const awayTeamName = getTeamDisplayName('away', selectedMatch.awayTeamIdentifier);
         
         const homeTeamDetails = getTeamDetailsFromIdentifier(selectedMatch.homeTeamIdentifier);
         const awayTeamDetails = getTeamDetailsFromIdentifier(selectedMatch.awayTeamIdentifier);
