@@ -3003,11 +3003,6 @@ function performFullReplacement() {
 window.getTeamNameByDisplayId = getTeamNameByDisplayId;
 window.findTeamInUsersByGroupAndOrder = findTeamInUsersByGroupAndOrder;
 
-// ** UPRAVENÁ FUNKCIA: Periodické nahrádzanie - vždy kontroluje všetky identifikátory **
-let periodicReplaceInterval = null;
-let periodicReplaceActive = true;
-
-// ** NOVÁ FUNKCIA: Okamžité nahrádzanie všetkých identifikátorov (bez čakania) **
 function replaceAllIdentifiersNow() {
     log('🔄 Spúšťam okamžité nahrádzanie všetkých identifikátorov...');
     
