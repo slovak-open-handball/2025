@@ -2993,42 +2993,6 @@ window.findTeamInUsersByGroupAndOrder = findTeamInUsersByGroupAndOrder;
 let periodicReplaceInterval = null;
 let periodicReplaceActive = true;
 
-function startPeriodicReplacement(intervalSeconds = 1) {
-    if (periodicReplaceInterval) {
-        clearInterval(periodicReplaceInterval);
-    }
-    
-    log(`🔄 Spúšťam periodické nahrádzanie každých ${intervalSeconds} sekúnd...`);
-    
-    periodicReplaceInterval = setInterval(() => {
-        if (!periodicReplaceActive) return;
-        
-        // Tichšie logovanie (voliteľné)
-        // log(`⏰ Periodické nahrádzanie (každých ${intervalSeconds}s)...`);
-        
-        const allText = document.body.innerText;
-        const identifiers = extractIdentifiersFromText(allText);
-        
-        if (identifiers.length === 0) return;
-        
-        const readyIdentifiers = [];
-        
-        for (const id of identifiers) {
-            if (!id || !id.category || !id.groupLetter) continue;
-            
-            const isReady = isGroupReadyForReplacement(id.category, id.groupLetter);
-            if (isReady) {
-                readyIdentifiers.push(id);
-            }
-        }
-        
-        if (readyIdentifiers.length > 0) {
-            log(`🔄 Periodické nahrádzanie: ${readyIdentifiers.length} identifikátorov`);
-            performPartialReplacement(readyIdentifiers);
-        }
-    }, intervalSeconds * 1000);
-}
-
 // ** NOVÁ FUNKCIA: Okamžité nahrádzanie všetkých identifikátorov (bez čakania) **
 function replaceAllIdentifiersNow() {
     log('🔄 Spúšťam okamžité nahrádzanie všetkých identifikátorov...');
@@ -3459,77 +3423,6 @@ function clearAllTeamNameCache() {
 // ** NOVÉ: Sledovanie zmien v skupinách (napr. pri zmazaní výsledku) **
 let groupMonitorInterval = null;
 let isReloading = false; // Zabráni nekonečnému reštartovaniu
-
-function startGroupMonitoring(intervalSeconds = 5) {
-    if (groupMonitorInterval) {
-        clearInterval(groupMonitorInterval);
-    }
-    
-    // Najprv naplníme snapshot aktuálnymi hodnotami
-    const allMatches = window.matchTracker?.getAllMatches?.() || [];
-    allMatches.forEach(match => {
-        if (match.isPlacementMatch) return;
-        if (match.categoryName && match.groupName) {
-            const key = `${match.categoryName}|${match.groupName}`;
-            if (!groupCompletionSnapshot.has(key)) {
-                groupCompletionSnapshot.set(key, 0);
-            }
-        }
-    });
-    
-    // Prvé naplnenie percentami
-    const initialGroups = new Map();
-    allMatches.forEach(match => {
-        if (match.isPlacementMatch) return;
-        if (match.categoryName && match.groupName) {
-            const key = `${match.categoryName}|${match.groupName}`;
-            if (!initialGroups.has(key)) {
-                initialGroups.set(key, {
-                    total: 0,
-                    completed: 0
-                });
-            }
-            const group = initialGroups.get(key);
-            group.total++;
-            if (match.status === 'completed') {
-                group.completed++;
-            }
-        }
-    });
-    
-    for (const [key, data] of initialGroups.entries()) {
-        const percentage = data.total > 0 ? (data.completed / data.total * 100) : 0;
-        groupCompletionSnapshot.set(key, percentage);
-        groupCompletionSnapshot.set(`${key}_completed`, data.completed);
-        groupCompletionSnapshot.set(`${key}_total`, data.total);
-    }
-    
-    // Spustíme monitorovanie
-    groupMonitorInterval = setInterval(() => {
-        if (isReloading) return; // Už sa reštartuje
-        
-        const groupsWithLoss = checkForCompletionLoss();
-        
-        if (groupsWithLoss && groupsWithLoss.length > 0) {
-            warn('⚠️ VAROVANIE: Skupina(y) stratili 100% dokončených zápasov!');
-            groupsWithLoss.forEach(group => {
-                warn(`   📉 ${group.category} - ${group.group}: 100% → ${group.newPercentage.toFixed(1)}% (bolo ${group.completedBefore}/${group.total}, teraz ${group.completedNow}/${group.total})`);
-            });
-            
-            // 🔥 VYMAŽEME CACHE PRED OBNOVENÍM STRÁNKY
-            clearAllTeamNameCache();
-            
-            // Obnovíme stránku
-            isReloading = true;
-            log('🔄 Obnovujem stránku kvôli zmene stavu skupiny (cache bola vymazaná)...');
-            
-            // Krátke oneskorenie pre istotu, že sa zapíšu logy a vymaže cache
-            setTimeout(() => {
-                location.reload();
-            }, 500);
-        }
-    }, intervalSeconds * 1000);
-}
 
 function stopGroupMonitoring() {
     if (groupMonitorInterval) {
@@ -3973,7 +3866,6 @@ if (window.teamNameReplacer) {
     window.teamNameReplacer.announceReady = announceMappingReady;
     window.teamNameReplacer.forceNotify = notifyMappingReady;
     // NOVÉ FUNKCIE PRE SLEDOVANIE SKUPÍN
-    window.teamNameReplacer.startGroupMonitoring = startGroupMonitoring;
     window.teamNameReplacer.stopGroupMonitoring = stopGroupMonitoring;
     window.teamNameReplacer.getGroupCompletionStatus = getGroupCompletionStatus;
     window.teamNameReplacer.clearAllTeamNameCache = clearAllTeamNameCache;
@@ -3991,7 +3883,6 @@ if (window.teamNameReplacer) {
         getMappings: () => window.__teamNameMapping,
         announceReady: announceMappingReady,
         forceNotify: notifyMappingReady,
-        startGroupMonitoring: startGroupMonitoring,
         stopGroupMonitoring: stopGroupMonitoring,
         getGroupCompletionStatus: getGroupCompletionStatus,
         clearAllTeamNameCache: clearAllTeamNameCache
