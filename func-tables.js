@@ -76,6 +76,9 @@ let checkedGroupsCache = new Set();
 // Snapshot pre sledovanie
 let groupCompletionSnapshot = new Map();
 
+let isMappingNotificationSent = false;
+let isTeamNameReplacerInitialized = false;
+
 (function() {
     'use strict';
     
@@ -3137,6 +3140,12 @@ function attachClickHandlersForReplacement() {
 }
 
 async function startTeamNameReplacement() {
+    if (isTeamNameReplacerInitialized) {
+        log('⚠️ teamNameReplacer už bol inicializovaný, preskakujem...');
+        return;
+    }
+    isTeamNameReplacerInitialized = true;
+    
     mappingCompleted = false;
     initialMappingDone = false;
     window.__mappingNotified = false;
@@ -3727,13 +3736,14 @@ function notifyReplacedTeams() {
 
 function notifyMappingReady() {
     if (mappingCompleted) return;
+    if (isMappingNotificationSent) return;  // 🔥 NOVÁ OCHRANA
+    
     mappingCompleted = true;
+    isMappingNotificationSent = true;  // 🔥 NASTAVÍME FLAG
+    
     const mappings = getAllTeamMappings();
     const mappingsCount = Object.keys(mappings).length;
     
-    // ============================================================
-    // 🔥 HLAVNÝ VÝPIS DO KONZOLY - MAPOVANIE JE PRIPRAVENÉ
-    // ============================================================
     console.log('%c🎉 MAPOVANIE TÍMOV JE PRIPRAVENÉ! 🎉', 'color: #00ff00; font-size: 16px; font-weight: bold; background: #1a1a1a; padding: 4px 12px; border-radius: 8px;');
     console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'color: #888888;');
     console.log(`📊 Počet mapovaní: ${mappingsCount}`);
@@ -3757,21 +3767,6 @@ if (Object.keys(window.__teamNameMapping).length > 0 && !hasReplacedAnyTeams) {
     console.log('✅ Mapovanie už existuje, odosielam udalosť okamžite...');
     notifyMappingReady();
 }
-
-// DÔLEŽITÉ: Po každom úspešnom nahradení skontrolujeme, či už máme mapovanie
-const originalPerformPartialReplacementWrapper = window.performPartialReplacement || performPartialReplacement;
-
-window.performPartialReplacement = function(identifiersToReplace) {
-    const result = originalPerformPartialReplacementWrapper(identifiersToReplace);
-    
-    // Ak máme aspoň jedno mapovanie a ešte sme neodoslali udalosť
-    if (!initialMappingDone && Object.keys(window.__teamNameMapping).length > 0) {
-        initialMappingDone = true;
-        notifyMappingReady();
-    }
-    
-    return result;
-};
 
 // TIEŽ po každom úspešnom načítaní z databázy
 const originalGetTeamNameFromDatabaseWrapper = getTeamNameFromDatabase;
@@ -3849,21 +3844,4 @@ if (window.teamNameReplacer) {
 // OKAMŽITÁ KONTROLA – ak už náhodou máme mapovanie, pošleme udalosť hneď
 if (Object.keys(window.__teamNameMapping).length > 0 && !hasReplacedAnyTeams) {
     notifyMappingReady();
-}
-
-// Spustíme upravenú verziu štartovacej funkcie
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        if (typeof startTeamNameReplacement === 'function') {
-            startTeamNameReplacement();
-        } else {
-            console.error('❌ startTeamNameReplication nie je definovaná!');
-        }
-    });
-} else {
-    if (typeof startTeamNameReplacement === 'function') {
-        startTeamNameReplacement();
-    } else {
-        console.error('❌ startTeamNameReplication nie je definovaná!');
-    }
 }
