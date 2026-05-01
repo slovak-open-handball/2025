@@ -59,6 +59,7 @@ const replacementCallbacks = [];
 let groupCheckCache = new Set();
 let processedCarryOverGroups = new Set();
 let isInitialDataLoaded = false;
+let processedGroupsInitial = new Set();
 
 // Premenné pre periodické úlohy
 let periodicReplaceInterval = null;
