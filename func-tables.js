@@ -3332,27 +3332,12 @@ window.teamNameReplacer.addToCache = addToCache;
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-// ============================================================
-// PRIDAJTE TÚTO ČASŇ NA KONIEC SUBORU func-tables.js
-// ============================================================
-
-// Premenná pre sledovanie, či už boli nahradené nejaké tímy
-let hasReplacedAnyTeams = false;
-
-// Zoznam callback funkcií, ktoré sa majú zavolať po nahradení
-const replacementCallbacks = [];
-
-// ** NOVÉ: Sledovanie percentuálneho zastúpenia skupín **
-let groupCompletionSnapshot = new Map(); // Ukladá posledné známe percentá skupín
-
-// Funkcia na kontrolu, či niektorá skupina stratila 100% (napr. pri zmazaní výsledku)
 function checkForCompletionLoss() {
     if (!window.matchTracker) return false;
     
     const allMatches = window.matchTracker.getAllMatches?.() || [];
     const groupsWithLoss = [];
     
-    // Získame aktuálne percentá pre všetky skupiny
     const currentCompletion = new Map();
     
     allMatches.forEach(match => {
@@ -3375,13 +3360,11 @@ function checkForCompletionLoss() {
         }
     });
     
-    // Vypočítame percentá a porovnáme s posledným známym stavom
     for (const [key, data] of currentCompletion.entries()) {
         const percentage = data.total > 0 ? (data.completed / data.total * 100) : 0;
         const was100 = groupCompletionSnapshot.get(key) === 100;
         const isNow100 = percentage === 100;
         
-        // Ak bola skupina na 100% a teraz už nie je -> treba obnoviť stránku
         if (was100 && !isNow100) {
             groupsWithLoss.push({
                 key: key,
@@ -3395,7 +3378,6 @@ function checkForCompletionLoss() {
             });
         }
         
-        // Aktualizujeme snapshot
         groupCompletionSnapshot.set(key, percentage);
         groupCompletionSnapshot.set(`${key}_completed`, data.completed);
         groupCompletionSnapshot.set(`${key}_total`, data.total);
@@ -3404,33 +3386,23 @@ function checkForCompletionLoss() {
     return groupsWithLoss;
 }
 
-// ** FUNKCIA NA VYMAZANIE CACHE (LOCAL STORAGE + PAMÄŤ) **
-function clearAllTeamNameCache() {
-    log('🗑️ VYMAZÁVAM CACHE názvov tímov...');
-    
-    // 🔥 POUŽIJEME GLOBÁLNY PRÍSTUP K CACHE
+function clearAllTeamNameCache() {    
     if (window.__internalReplacementCache) {
         window.__internalReplacementCache.clear();
-        log('   ✅ replacementCache vymazaná cez window.__internalReplacementCache');
     }
     
     // Pre istotu aj localStorage
     try {
         localStorage.removeItem('teamNameReplacer_cache');
-        log('   ✅ localStorage cache vymazaná');
     } catch (error) {}
     
     if (window.__teamNameMapping) {
         window.__teamNameMapping = {};
-        log('   ✅ Globálne mapovanie vymazané');
     }
-    
-    log('✅ Všetky cache boli úspešne vymazané');
 }
 
-// ** NOVÉ: Sledovanie zmien v skupinách (napr. pri zmazaní výsledku) **
 let groupMonitorInterval = null;
-let isReloading = false; // Zabráni nekonečnému reštartovaniu
+let isReloading = false; 
 
 function stopGroupMonitoring() {
     if (groupMonitorInterval) {
