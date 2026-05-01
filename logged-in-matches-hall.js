@@ -8634,8 +8634,12 @@ const matchesHallApp = ({ userProfileData }) => {
                 awayScore: manualAwayScore,
                 onHomeScoreChange: setManualHomeScore,
                 onAwayScoreChange: setManualAwayScore,
-                homeTeamName: homeTeamName,
-                awayTeamName: awayTeamName
+                homeTeamName: (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function' 
+                    ? (window.matchTracker.getTeamNameByDisplayId(homeTeamName) ?? homeTeamName)
+                    : homeTeamName),
+                awayTeamName: (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function' 
+                    ? (window.matchTracker.getTeamNameByDisplayId(awayTeamName) ?? awayTeamName)
+                    : awayTeamName)
             }),
         );
     }
