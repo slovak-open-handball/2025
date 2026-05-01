@@ -1162,23 +1162,6 @@ let processedGroupsInitial = new Set();  // Spracované skupiny pri inicializác
         log(`   Odohraných v nadstavbe: ${completedAdvancedMatches.length}`);
         log(`   Celkom dokončených: ${completedCount}/${totalMatches} (${completionPercentage}%)`);
         log(`   Body za výhru: ${pointsForWin}`);
-
-        if (completedBaseGroups.length > 0) {
-            const groupLetter = groupName.replace('nadstavbová', '').trim().toUpperCase();
-            if (groupLetter) {
-                const cleanCategory = cleanCategoryName(categoryName);
-                const cacheKey = `${cleanCategory}|${groupLetter}`;
-                log(`🗑️ [AUTO] Nadstavbová skupina vytvorená, vymazávam cache pre ${cacheKey}`);
-                groupCheckCache.delete(cacheKey);
-                groupCheckCache.delete(`${cacheKey}_false`);
-                groupCheckCache.delete(`${cacheKey}_ready`);
-                
-                // Vymažeme aj z checkedGroupsCache
-                checkedGroupsCache.delete(cacheKey);
-                checkedGroupsCache.delete(`${cacheKey}_ready`);
-                checkedGroupsCache.delete(`${cacheKey}_not_ready`);
-            }
-        }
         
         return {
             category: categoryName,
@@ -1810,32 +1793,12 @@ let processedGroupsInitial = new Set();  // Spracované skupiny pri inicializác
                 
                 const affectedGroups = new Set();
                 const affectedCategories = new Set();
-    
+                
                 for (const changedMatch of changedMatches) {
                     if (changedMatch.category && changedMatch.group) {
                         const groupKey = `${changedMatch.category}|${changedMatch.group}`;
                         affectedGroups.add(groupKey);
                         affectedCategories.add(changedMatch.category);
-            
-                        // 🔥 AUTOMATICKY VYMAŽEME CACHE PRE OVPLYVNENÚ SKUPINU
-                        const groupLetter = changedMatch.group.replace('skupina ', '').toUpperCase();
-                        const cleanCategory = cleanCategoryName(changedMatch.category);
-                        const cacheKey = `${cleanCategory}|${groupLetter}`;
-            
-                        log(`   🗑️ [AUTO] Vymazávam cache pre skupinu ${cacheKey}`);
-                        groupCheckCache.delete(cacheKey);
-                        groupCheckCache.delete(`${cacheKey}_false`);
-                        groupCheckCache.delete(`${cacheKey}_ready`);
-                        checkedGroupsCache.delete(cacheKey);
-                        checkedGroupsCache.delete(`${cacheKey}_ready`);
-                        checkedGroupsCache.delete(`${cacheKey}_not_ready`);
-            
-                        // Vymažeme aj notReadyGroupsLogged
-                        for (const key of notReadyGroupsLogged) {
-                            if (key.startsWith(cacheKey)) {
-                                notReadyGroupsLogged.delete(key);
-                            }
-                        }
                     }
                 }
                 
@@ -2827,10 +2790,10 @@ function isGroupReadyForReplacement(category, groupLetter) {
     
     // 2. Podmienka 1: Všetky zápasy musia byť odohrané (100%)
     if (completionPercentage < 100) {
-        // Výpis len raz za skupinu
-        if (!notReadyGroupsLogged.has(groupKey)) {
+        const logKey = `${groupKey}_${Math.floor(completionPercentage)}`;
+        if (!notReadyGroupsLogged.has(logKey)) {
             log(`⏳ [${cleanCategory} - ${fullGroupName}] Len ${completedMatches}/${totalMatches} (${completionPercentage}%) odohraných → NIE JE PRIpravená (čakám na dokončenie...)`);
-            notReadyGroupsLogged.add(groupKey);
+            notReadyGroupsLogged.add(logKey);
         }
         groupCheckCache.add(`${groupKey}_false`);
         return false;
@@ -4211,258 +4174,3 @@ if (document.readyState === 'loading') {
 } else {
     window.startTeamNameReplacement();
 }
-
-// ============================================================
-// FUNKCIA NA VYMAZANIE CACHE PRE KONKRÉTNU SKUPINU A OPÄTOVNÉ MAPOVANIE
-// ============================================================
-
-function forceRefreshGroupMapping(category, groupLetter) {
-    const cleanCategory = cleanCategoryName(category);
-    const groupKey = `${cleanCategory}|${groupLetter.toUpperCase()}`;
-    
-    console.log(`🔄 [FORCE REFRESH] Vymazávam cache pre skupinu: ${groupKey}`);
-    
-    // 1. Vymažeme cache pre túto skupinu v isGroupReadyForReplacement
-    groupCheckCache.delete(groupKey);
-    groupCheckCache.delete(`${groupKey}_false`);
-    groupCheckCache.delete(`${groupKey}_ready`);
-    
-    // 2. Vymažeme aj logged nepripravenosti
-    for (const key of notReadyGroupsLogged) {
-        if (key.startsWith(groupKey)) {
-            notReadyGroupsLogged.delete(key);
-        }
-    }
-    
-    // 3. Vymažeme checkedGroupsCache
-    checkedGroupsCache.delete(groupKey);
-    checkedGroupsCache.delete(`${groupKey}_found`);
-    checkedGroupsCache.delete(`${groupKey}_not_found`);
-    checkedGroupsCache.delete(`${groupKey}_ready`);
-    checkedGroupsCache.delete(`${groupKey}_not_ready`);
-    checkedGroupsCache.delete(`${groupKey}_team_found_1`);
-    
-    // 4. Vymažeme processedGroups - aby sa znova vyhodnotila
-    processedGroups.delete(groupKey);
-    
-    // 5. Znovu skontrolujeme pripravenosť (tentokrát bez cache)
-    const isReady = isGroupReadyForReplacement(category, groupLetter);
-    
-    if (isReady) {
-        console.log(`✅ [FORCE REFRESH] Skupina ${groupKey} je pripravená, pokúšam sa získať názov...`);
-        
-        const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
-        const groupTable = window.matchTracker?.createGroupTable(cleanCategory, fullGroupName);
-        
-        if (groupTable && groupTable.teams && groupTable.teams.length > 0) {
-            console.log(`📊 Tabuľka skupiny ${fullGroupName}:`);
-            groupTable.teams.forEach((team, idx) => {
-                console.log(`   ${idx + 1}. ${team.name}`);
-            });
-        }
-        
-        // Skúsime získať názov pre konkrétnu pozíciu
-        const testResult = getTeamNameByDisplayId(`${cleanCategory} 1${groupLetter.toUpperCase()}`);
-        console.log(`🧪 Testovací výsledok pre "1${groupLetter}": ${testResult || 'NENAJDENÝ'}`);
-    } else {
-        console.log(`❌ [FORCE REFRESH] Skupina ${groupKey} stále nie je pripravená`);
-        
-        // Vypíšeme detailný stav
-        const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
-        const groupTable = window.matchTracker?.createGroupTable(cleanCategory, fullGroupName);
-        
-        if (groupTable) {
-            console.log(`   Celkom zápasov: ${groupTable.totalMatches}`);
-            console.log(`   Odohraných: ${groupTable.completedCount}`);
-            console.log(`   Percento: ${groupTable.completionPercentage}%`);
-        }
-    }
-    
-    return isReady;
-}
-
-// Pridáme aj funkciu na vynútenie mapovania pre všetky skupiny
-function forceRefreshAllGroups() {
-    console.log(`🔄 [FORCE REFRESH ALL] Vymazávam všetky cache...`);
-    
-    // Vymažeme všetky cache
-    groupCheckCache.clear();
-    notReadyGroupsLogged.clear();
-    checkedGroupsCache.clear();
-    processedGroups.clear();
-    
-    // Znovu spustíme nahrádzanie
-    replaceTeamIdentifiersWhenReady();
-    
-    console.log(`✅ [FORCE REFRESH ALL] Cache vymazané, spúšťam opätovné nahrádzanie...`);
-}
-
-// Export funkcií
-window.teamNameReplacer.forceRefreshGroup = forceRefreshGroupMapping;
-window.teamNameReplacer.forceRefreshAll = forceRefreshAllGroups;
-
-// ============================================================
-// AUTOMATICKÉ VYMAZANIE CACHE PRI DOKONČENÍ ZÁPASOV
-// ============================================================
-
-// Pôvodnú funkciu isGroupReadyForReplacement si uložíme
-const originalIsGroupReadyForReplacement = isGroupReadyForReplacement;
-
-// Prepíšeme funkciu s automatickým vymazaním cache
-window.isGroupReadyForReplacement = function(category, groupLetter) {
-    const cleanCategory = cleanCategoryName(category);
-    const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
-    const groupKey = `${cleanCategory}|${groupLetter.toUpperCase()}`;
-    
-    // Najprv skúsime získať aktuálnu tabuľku (bez cache)
-    let currentGroupTable = window.matchTracker?.createGroupTable(cleanCategory, fullGroupName);
-    let currentCompletionPercentage = 0;
-    
-    if (currentGroupTable) {
-        currentCompletionPercentage = currentGroupTable.completionPercentage;
-    }
-    
-    // Ak je tabuľka na 100% a v cache je uložené, že nie je pripravená, vymažeme cache
-    const wasCachedAsNotReady = groupCheckCache.has(`${groupKey}_false`);
-    const wasCachedAsReady = groupCheckCache.has(groupKey);
-    
-    if (currentCompletionPercentage === 100 && wasCachedAsNotReady) {
-        log(`🔄 [AUTO] Skupina ${groupKey} je teraz 100%, vymazávam starú cache...`);
-        groupCheckCache.delete(groupKey);
-        groupCheckCache.delete(`${groupKey}_false`);
-        groupCheckCache.delete(`${groupKey}_ready`);
-        checkedGroupsCache.delete(groupKey);
-        checkedGroupsCache.delete(`${groupKey}_ready`);
-        checkedGroupsCache.delete(`${groupKey}_not_ready`);
-        
-        // Vymažeme aj notReadyGroupsLogged
-        for (const key of notReadyGroupsLogged) {
-            if (key.startsWith(groupKey)) {
-                notReadyGroupsLogged.delete(key);
-            }
-        }
-    }
-    
-    // Ak bola predtým označená ako pripravená, ale teraz už nie je, tiež vymažeme cache
-    if (currentCompletionPercentage < 100 && wasCachedAsReady) {
-        log(`🔄 [AUTO] Skupina ${groupKey} stratila 100%, vymazávam cache...`);
-        groupCheckCache.delete(groupKey);
-        groupCheckCache.delete(`${groupKey}_false`);
-        groupCheckCache.delete(`${groupKey}_ready`);
-    }
-    
-    // Zavoláme pôvodnú funkciu
-    return originalIsGroupReadyForReplacement(category, groupLetter);
-};
-
-// Prepíšeme globálnu funkciu
-isGroupReadyForReplacement = window.isGroupReadyForReplacement;
-
-// ============================================================
-// FUNKCIE NA ZASTAVENIE VŠETKÝCH INTERVALOV A SLEDOVANÍ
-// ============================================================
-
-function stopAllMonitoring() {
-    console.log('🛑 ZASTAVUJEM VŠETKY MONITOROVACIE PROCESY...');
-    
-    // 1. Zastavenie periodického nahrádzania
-    if (periodicReplaceInterval) {
-        clearInterval(periodicReplaceInterval);
-        periodicReplaceInterval = null;
-        console.log('   ✅ Zastavené periodické nahrádzanie');
-    }
-    periodicReplaceActive = false;
-    
-    // 2. Zastavenie monitorovania skupín
-    if (groupMonitorInterval) {
-        clearInterval(groupMonitorInterval);
-        groupMonitorInterval = null;
-        console.log('   ✅ Zastavené monitorovanie skupín');
-    }
-    
-    // 3. Zastavenie readyCheck intervalu
-    if (window._readyCheckInterval) {
-        clearInterval(window._readyCheckInterval);
-        window._readyCheckInterval = null;
-        console.log('   ✅ Zastavený readyCheck interval');
-    }
-    
-    // 4. Zastavenie timeoutov
-    if (window._replaceTimeout) {
-        clearTimeout(window._replaceTimeout);
-        window._replaceTimeout = null;
-        console.log('   ✅ Zastavené replace timeouty');
-    }
-    
-    // 5. Odpojenie MutationObserver
-    if (window._teamNameObserver) {
-        window._teamNameObserver.disconnect();
-        window._teamNameObserver = null;
-        console.log('   ✅ Odpojený MutationObserver');
-    }
-    
-    // 6. Vyčistenie všetkých timeoutov v groupStabilityCheck
-    for (const timeout of groupStabilityCheck.values()) {
-        clearTimeout(timeout);
-    }
-    groupStabilityCheck.clear();
-    
-    console.log('✅ VŠETKY MONITOROVACIE PROCESY BOLI ZASTAVENÉ');
-}
-
-// Jednoduchšia verzia startTeamNameReplacement - BEZ PERIODICKÝCH KONTROL
-async function startTeamNameReplacementSimple() {
-    log('🚀 Spúšťam JEDNORAZOVÉ nahrádzanie identifikátorov tímov...');
-    
-    // Počkáme na matchTracker
-    let checkInterval = setInterval(() => {
-        if (window.matchTracker && typeof window.matchTracker.createGroupTable === 'function') {
-            clearInterval(checkInterval);
-            log('✅ MatchTracker je pripravený');
-            
-            // Jednorazové nahradenie
-            replaceTeamIdentifiersWhenReady();
-            
-            // Počkáme ešte 5 sekúnd pre prípadné oneskorené dáta
-            setTimeout(() => {
-                log('🔄 Druhé kolo nahrádzania (pre oneskorené dáta)...');
-                replaceTeamIdentifiersWhenReady();
-                
-                // Po 10 sekundách zastavíme všetky monitorovacie procesy
-                setTimeout(() => {
-                    log('⏹️ Ukončujem monitorovanie (všetky skupiny by mali byť spracované)...');
-                    stopAllMonitoring();
-                }, 10000);
-            }, 5000);
-        }
-    }, 500);
-    
-    // Timeout pre prípad, že by sa matchTracker nenačítal
-    setTimeout(() => {
-        clearInterval(checkInterval);
-        if (!window.matchTracker) {
-            log('⚠️ MatchTracker nie je dostupný, vykonávam jednorazové nahradenie...');
-            replaceTeamIdentifiersWhenReady();
-            
-            // Zastavíme monitorovanie po 10 sekundách
-            setTimeout(() => {
-                stopAllMonitoring();
-            }, 10000);
-        }
-    }, 10000);
-}
-
-// Prepíšeme pôvodnú funkciu
-window.startTeamNameReplacement = startTeamNameReplacementSimple;
-
-// Spustíme upravenú verziu
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        window.startTeamNameReplacement();
-    });
-} else {
-    window.startTeamNameReplacement();
-}
-
-// Export zastavovacej funkcie do konzoly pre prípad núdze
-window.stopTeamNameReplacement = stopAllMonitoring;
