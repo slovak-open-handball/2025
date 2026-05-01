@@ -2137,7 +2137,7 @@ const AddTeamsGroupApp = (props) => {
             return name;
         };
     
-        // Funkcia na získanie mapovaného názvu tímu (s čakaním na matchTracker)
+        // Funkcia na získanie mapovaného názvu tímu (maximálne 2 iterácie)
         const getMappedTeamName = (team, displayName) => {
             if (!team.isSuperstructureTeam) return displayName;
         
@@ -2145,7 +2145,7 @@ const AddTeamsGroupApp = (props) => {
                 allGroupsByCategoryId[targetCategoryId]?.some(g => 
                     g.name === team.groupName && g.type === 'nadstavbová skupina'
                 );
-    
+        
             if (!isInSuperstructureGroup) return displayName;
             
             // Kontrola, či je matchTracker dostupný
@@ -2154,24 +2154,19 @@ const AddTeamsGroupApp = (props) => {
                     let currentName = team.teamName;
                     let mappedName = window.matchTracker.getTeamNameByDisplayId(currentName);
                     
-                    // REKURZÍVNE VOLANIE: Ak sa výsledok líši od vstupu, skúsime znova
-                    let iterationCount = 0;
-                    const maxIterations = 10; // Bezpečnostný limit proti nekonečnej slučke
-                    
-                    while (mappedName && mappedName !== currentName && iterationCount < maxIterations) {
-                        console.log(`🔄 [Mapovanie] Iterácia ${iterationCount + 1}: "${currentName}" → "${mappedName}"`);
+                    // Iba PRVÉ mapovanie - ak sa líši, použijeme ho
+                    if (mappedName && mappedName !== currentName) {
+                        console.log(`🔄 [Mapovanie] 1. iterácia: "${currentName}" → "${mappedName}"`);
                         currentName = mappedName;
-                        mappedName = window.matchTracker.getTeamNameByDisplayId(currentName);
-                        iterationCount++;
-                    }
-                    
-                    if (iterationCount >= maxIterations) {
-                        console.warn(`⚠️ [Mapovanie] Dosiahnutý maximálny počet iterácií (${maxIterations}) pre tím "${team.teamName}"`);
-                    }
-                    
-                    // Ak sme našli mapovanie, vrátime ho
-                    if (currentName !== team.teamName) {
-                        console.log(`✅ [Mapovanie] Finálny výsledok: "${team.teamName}" → "${currentName}" (po ${iterationCount} iteráciách)`);
+                        
+                        // DRUHÉ mapovanie - maximálne dvakrát
+                        const secondMappedName = window.matchTracker.getTeamNameByDisplayId(currentName);
+                        if (secondMappedName && secondMappedName !== currentName) {
+                            console.log(`🔄 [Mapovanie] 2. iterácia: "${currentName}" → "${secondMappedName}"`);
+                            currentName = secondMappedName;
+                        }
+                        
+                        console.log(`✅ [Mapovanie] Konečný výsledok (max 2 iterácie): "${team.teamName}" → "${currentName}"`);
                         return currentName;
                     }
                 } catch (e) {
@@ -2179,22 +2174,24 @@ const AddTeamsGroupApp = (props) => {
                 }
             }
         
-            // Fallback na globálne mapovanie
+            // Fallback na globálne mapovanie (tiež max 2 iterácie)
             if (window.__teamNameMapping) {
                 let currentName = team.teamName;
                 let mappedName = window.__teamNameMapping[currentName]?.teamName;
                 
-                let iterationCount = 0;
-                const maxIterations = 10;
-        
-                while (mappedName && mappedName !== currentName && iterationCount < maxIterations) {
+                // Prvé mapovanie
+                if (mappedName && mappedName !== currentName) {
                     currentName = mappedName;
-                    mappedName = window.__teamNameMapping[currentName]?.teamName;
-                    iterationCount++;
-                }
-                
-                if (currentName !== team.teamName) {
-                    return currentName;
+                    
+                    // Druhé mapovanie
+                    const secondMappedName = window.__teamNameMapping[currentName]?.teamName;
+                    if (secondMappedName && secondMappedName !== currentName) {
+                        currentName = secondMappedName;
+                    }
+                    
+                    if (currentName !== team.teamName) {
+                        return currentName;
+                    }
                 }
             }
             
