@@ -7969,8 +7969,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 'h4',
                                                 { className: 'font-semibold text-sm text-gray-700 mb-3 flex items-center gap-1' },
                                                 React.createElement('i', { className: 'fa-solid fa-clock text-xs text-gray-500' }),
-                                                'Priebeh zápasu',
-                                                loadingEvents && React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 ml-2' })
+                                                'Priebeh zápasu'
                                             ),
                                             
                                             matchEvents.length === 0 ? React.createElement(
@@ -8957,8 +8956,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                                 'h4',
                                                 { className: 'font-semibold text-sm text-gray-700 mb-3 flex items-center gap-1' },
                                                 React.createElement('i', { className: 'fa-solid fa-clock text-xs text-gray-500' }),
-                                                'Priebeh zápasu',
-                                                loadingEvents && React.createElement('div', { className: 'animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 ml-2' })
+                                                'Priebeh zápasu'
                                             ),
                                             
                                             matchEvents.length === 0 ? React.createElement(
