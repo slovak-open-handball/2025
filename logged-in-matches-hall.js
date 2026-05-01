@@ -1837,6 +1837,11 @@ const matchesHallApp = ({ userProfileData }) => {
     // ============================================================================
     
     useEffect(() => {
+        if (!selectedMatch || selectedMatch.status !== 'in-progress' && selectedMatch.status !== 'paused') {
+            setIsLoadingSuspensionsHome(false); // alebo setIsLoadingSuspensionsAway
+            return;
+        }
+        
         const loadSuspensions = async () => {
             console.log('⏳ [DOMÁCI] Spúšťam kontrolu modrých kariet...');
             
@@ -2007,6 +2012,10 @@ const matchesHallApp = ({ userProfileData }) => {
     // ============================================================================
     
     useEffect(() => {
+        if (!selectedMatch || selectedMatch.status !== 'in-progress' && selectedMatch.status !== 'paused') {
+            setIsLoadingSuspensionsHome(false); // alebo setIsLoadingSuspensionsAway
+            return;
+        }
         const loadSuspensions = async () => {
             console.log('⏳ [HOSŤOVSKÍ] Spúšťam kontrolu modrých kariet...');
             
