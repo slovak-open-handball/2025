@@ -742,13 +742,13 @@ let isTeamNameReplacerInitialized = false;
                 // Manuálne zadaný výsledok
                 homeScore = match.finalScore.home || 0;
                 awayScore = match.finalScore.away || 0;
-                log(`📋 Manuálny výsledok pre ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}: ${homeScore}:${awayScore}`);
+//                log(`📋 Manuálny výsledok pre ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}: ${homeScore}:${awayScore}`);
             } 
             // 🔥 KONTROLA NA KONTUMÁCIU
             else if (match.forfeitResult && match.forfeitResult.isForfeit) {
                 homeScore = match.forfeitResult.home || 0;
                 awayScore = match.forfeitResult.away || 0;
-                log(`📋 Kontumovaný výsledok pre ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}: ${homeScore}:${awayScore}`);
+//                log(`📋 Kontumovaný výsledok pre ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}: ${homeScore}:${awayScore}`);
             }
             // Inak normálne udalosti
             else {
