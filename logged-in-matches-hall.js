@@ -1596,14 +1596,10 @@ const matchesHallApp = ({ userProfileData }) => {
     const [awayTeamResolvedName, setAwayTeamResolvedName] = useState(null);
 
     // ============================================================================
-    // NOVÝ useEffect PRE NAČÍTANIE SÚPISIEK S ONESKORENÍM 10 SEKÚND
-    // Používa NÁZOV TÍMU a mapovanie cez matchTracker (rovnaký prístup ako v zozname zápasov)
+    // OPRAVENÝ useEffect PRE NAČÍTANIE SÚPISIEK - používa NÁZOV TÍMU (nie identifikátor)
     // ============================================================================
     
     useEffect(() => {
-        // Tento useEffect sa stará o oneskorené načítanie detailov tímov (hráčov a RT)
-        // Používa rovnaký prístup ako mapovanie názvov v zozname zápasov
-        
         const loadTeamDetails = async () => {
             if (!selectedMatch) return;
             
@@ -1615,106 +1611,78 @@ const matchesHallApp = ({ userProfileData }) => {
             // Kontrola, či je zápas stále vybraný (mohol sa medzitým zmeniť)
             if (!selectedMatch) return;
             
-            console.log('🔄 [SÚPISKY] Začínam načítavať detaily tímov pomocou názvov...');
+            console.log('🔄 [SÚPISKY] Začínam načítavať detaily tímov podľa NÁZOV...');
             
             // ====================================================================
-            // 1. NAJPRV ZÍSKAME ZOBRAZOVACIE NÁZVY TÍMOV (rovnako ako v zozname zápasov)
+            // 1. NAJPRV ZÍSKAME NÁZVY TÍMOV CEZ matchTracker (rovnako ako v zozname zápasov)
             // ====================================================================
             
-            // Pre domáci tím - získame zobrazovací názov cez getTeamNameByIdentifier
-            let homeDisplayName = selectedMatch.homeTeamIdentifier;
+            // Pre domáci tím - získame názov cez matchTracker.getTeamNameByDisplayId
+            let homeTeamName = selectedMatch.homeTeamIdentifier;
             if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                 const result = window.matchTracker.getTeamNameByDisplayId(selectedMatch.homeTeamIdentifier);
-                homeDisplayName = (result && typeof result.then === 'function') ? await result : (result || selectedMatch.homeTeamIdentifier);
-                console.log(`🏠 [SÚPISKY] Domáci identifikátor: "${selectedMatch.homeTeamIdentifier}" -> zobrazovací názov: "${homeDisplayName}"`);
+                homeTeamName = (result && typeof result.then === 'function') ? await result : (result || selectedMatch.homeTeamIdentifier);
+                console.log(`🏠 [SÚPISKY] Domáci identifikátor: "${selectedMatch.homeTeamIdentifier}" -> názov tímu: "${homeTeamName}"`);
             }
             
-            // Pre hosťovský tím - získame zobrazovací názov cez getTeamNameByIdentifier
-            let awayDisplayName = selectedMatch.awayTeamIdentifier;
+            // Pre hosťovský tím - získame názov cez matchTracker.getTeamNameByDisplayId
+            let awayTeamName = selectedMatch.awayTeamIdentifier;
             if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                 const result = window.matchTracker.getTeamNameByDisplayId(selectedMatch.awayTeamIdentifier);
-                awayDisplayName = (result && typeof result.then === 'function') ? await result : (result || selectedMatch.awayTeamIdentifier);
-                console.log(`✈️ [SÚPISKY] Hosťovský identifikátor: "${selectedMatch.awayTeamIdentifier}" -> zobrazovací názov: "${awayDisplayName}"`);
+                awayTeamName = (result && typeof result.then === 'function') ? await result : (result || selectedMatch.awayTeamIdentifier);
+                console.log(`✈️ [SÚPISKY] Hosťovský identifikátor: "${selectedMatch.awayTeamIdentifier}" -> názov tímu: "${awayTeamName}"`);
             }
             
             // ====================================================================
-            // 2. TERAZ POUŽIJEME ZOBRAZOVACIE NÁZVY NA VYHĽADANIE TÍMOV V POUŽÍVATEĽSKÝCH DÁTACH
+            // 2. TERAZ POUŽIJEME NÁZVY TÍMOV NA VYHĽADANIE DETAILOV V POUŽÍVATEĽSKÝCH DÁTACH
             // ====================================================================
             
-            // Získame detaily pre domáci tím POMOCOU ZOBRAZOVACIEHO NÁZVU (nie identifikátora)
-            if (homeDisplayName && homeDisplayName !== selectedMatch.homeTeamIdentifier) {
-                const homeDetails = await getTeamDetailsByDisplayName(homeDisplayName, selectedMatch.categoryName);
-                if (homeDetails) {
+            // Získame detaily pre domáci tím POMOCOU NÁZVU (nie identifikátora)
+            if (homeTeamName && homeTeamName !== selectedMatch.homeTeamIdentifier) {
+                const homeDetails = await getTeamDetailsByDisplayName(homeTeamName, selectedMatch.categoryName);
+                if (homeDetails && homeDetails.team) {
                     console.log(`✅ [SÚPISKY] Domáci tím načítaný: ${homeDetails.team.teamName}`);
                     console.log(`   Hráčov: ${homeDetails.team.playerDetails?.length || 0}`);
                     console.log(`   RT muži: ${homeDetails.team.menTeamMemberDetails?.length || 0}`);
                     console.log(`   RT ženy: ${homeDetails.team.womenTeamMemberDetails?.length || 0}`);
                     setHomeTeamNameReady(true);
                 } else {
-                    console.log(`⚠️ [SÚPISKY] Domáci tím sa nepodarilo načítať podľa zobrazovacieho názvu: "${homeDisplayName}"`);
-                    console.log(`   Pôvodný identifikátor: ${selectedMatch.homeTeamIdentifier}`);
-                    // Skúsime fallback - priamy lookup podľa identifikátora
-                    const homeDetailsById = getTeamDetailsFromIdentifier(selectedMatch.homeTeamIdentifier);
-                    if (homeDetailsById) {
-                        console.log(`   ✅ Fallback: Tím načítaný podľa identifikátora: ${homeDetailsById.team.teamName}`);
-                        setHomeTeamNameReady(true);
-                    } else {
-                        setHomeTeamNameReady(true); // Nastavíme ready, aby sa UI nezaseklo
-                    }
+                    console.log(`⚠️ [SÚPISKY] Domáci tím sa nepodarilo načítať podľa názvu: "${homeTeamName}"`);
+                    setHomeTeamNameReady(true);
                 }
             } else {
-                console.log(`⚠️ [SÚPISKY] Nepodarilo sa získať zobrazovací názov pre domáci tím: ${selectedMatch.homeTeamIdentifier}`);
-                // Fallback
-                const homeDetailsById = getTeamDetailsFromIdentifier(selectedMatch.homeTeamIdentifier);
-                if (homeDetailsById) {
-                    console.log(`   ✅ Fallback: Domáci tím načítaný podľa identifikátora: ${homeDetailsById.team.teamName}`);
-                    setHomeTeamNameReady(true);
-                } else {
-                    setHomeTeamNameReady(true);
-                }
+                console.log(`⚠️ [SÚPISKY] Nepodarilo sa získať názov pre domáci tím: ${selectedMatch.homeTeamIdentifier}`);
+                setHomeTeamNameReady(true);
             }
             
-            // Získame detaily pre hosťovský tím POMOCOU ZOBRAZOVACIEHO NÁZVU (nie identifikátora)
-            if (awayDisplayName && awayDisplayName !== selectedMatch.awayTeamIdentifier) {
-                const awayDetails = await getTeamDetailsByDisplayName(awayDisplayName, selectedMatch.categoryName);
-                if (awayDetails) {
+            // Získame detaily pre hosťovský tím POMOCOU NÁZVU (nie identifikátora)
+            if (awayTeamName && awayTeamName !== selectedMatch.awayTeamIdentifier) {
+                const awayDetails = await getTeamDetailsByDisplayName(awayTeamName, selectedMatch.categoryName);
+                if (awayDetails && awayDetails.team) {
                     console.log(`✅ [SÚPISKY] Hosťovský tím načítaný: ${awayDetails.team.teamName}`);
                     console.log(`   Hráčov: ${awayDetails.team.playerDetails?.length || 0}`);
                     console.log(`   RT muži: ${awayDetails.team.menTeamMemberDetails?.length || 0}`);
                     console.log(`   RT ženy: ${awayDetails.team.womenTeamMemberDetails?.length || 0}`);
                     setAwayTeamNameReady(true);
                 } else {
-                    console.log(`⚠️ [SÚPISKY] Hosťovský tím sa nepodarilo načítať podľa zobrazovacieho názvu: "${awayDisplayName}"`);
-                    console.log(`   Pôvodný identifikátor: ${selectedMatch.awayTeamIdentifier}`);
-                    const awayDetailsById = getTeamDetailsFromIdentifier(selectedMatch.awayTeamIdentifier);
-                    if (awayDetailsById) {
-                        console.log(`   ✅ Fallback: Hosťovský tím načítaný podľa identifikátora: ${awayDetailsById.team.teamName}`);
-                        setAwayTeamNameReady(true);
-                    } else {
-                        setAwayTeamNameReady(true);
-                    }
+                    console.log(`⚠️ [SÚPISKY] Hosťovský tím sa nepodarilo načítať podľa názvu: "${awayTeamName}"`);
+                    setAwayTeamNameReady(true);
                 }
             } else {
-                console.log(`⚠️ [SÚPISKY] Nepodarilo sa získať zobrazovací názov pre hosťovský tím: ${selectedMatch.awayTeamIdentifier}`);
-                const awayDetailsById = getTeamDetailsFromIdentifier(selectedMatch.awayTeamIdentifier);
-                if (awayDetailsById) {
-                    console.log(`   ✅ Fallback: Hosťovský tím načítaný podľa identifikátora: ${awayDetailsById.team.teamName}`);
-                    setAwayTeamNameReady(true);
-                } else {
-                    setAwayTeamNameReady(true);
-                }
+                console.log(`⚠️ [SÚPISKY] Nepodarilo sa získať názov pre hosťovský tím: ${selectedMatch.awayTeamIdentifier}`);
+                setAwayTeamNameReady(true);
             }
             
             console.log('✅ [SÚPISKY] Načítavanie detailov tímov dokončené.');
             
-            // Vynútime prekreslenie UI (ak treba)
+            // Vynútime prekreslenie UI
             setForceUpdate(prev => prev + 1);
         };
         
         // Spustíme načítanie s oneskorením
         const timer = setTimeout(() => {
             loadTeamDetails();
-        }, 500); // Malé oneskorenie pred 10-sekundovým čakaním (aby sa stihli načítať základné dáta)
+        }, 500);
         
         return () => clearTimeout(timer);
     }, [selectedMatch?.homeTeamIdentifier, selectedMatch?.awayTeamIdentifier, selectedMatch?.id, selectedMatch?.categoryName]);
@@ -1788,7 +1756,7 @@ const matchesHallApp = ({ userProfileData }) => {
         updateTeamNamesInMatches();
     }, [matches.length, teamManagerReady]); // Spustí sa pri zmene dĺžky matches alebo ready stavu
 
-    // OPRAVENÝ useEffect pre mapovanie názvov tímov - používa getTeamNameByIdentifier
+    // OPRAVENÝ useEffect pre mapovanie názvov tímov - používa NÁZOV TÍMU (rovnaký prístup ako v zozname)
     useEffect(() => {
         if (!selectedMatch) return;
         
@@ -1804,61 +1772,44 @@ const matchesHallApp = ({ userProfileData }) => {
                 waitCount++;
             }
             
-            // 🔥 DÔLEŽITÉ: Najprv získame zobrazovací názov pre domáci tím
-            // getTeamNameByIdentifier vráti "U12 CH 3E" z identifikátora "U12 CH G4"
-            const homeDisplayName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
-            console.log(`🏠 Domáci: identifikátor="${selectedMatch.homeTeamIdentifier}" -> zobrazovací názov="${homeDisplayName}"`);
+            // 🔥 DÔLEŽITÉ: Získame ZOBRAZOVACIE NÁZVY priamo z matchTracker
+            // Pre domáci tím - použijeme getTeamNameByDisplayId na identifikátor
+            let homeResolved = null;
+            let homeDisplayName = selectedMatch.homeTeamIdentifier;
             
-            // Mapovanie domáceho tímu - použijeme ZOBRAZOVACÍ NÁZOV, nie identifikátor
-            let homeResolved = homeDisplayName;
             if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                const result = window.matchTracker.getTeamNameByDisplayId(homeDisplayName);
-                if (result && typeof result.then === 'function') {
-                    homeResolved = await result;
+                const result = window.matchTracker.getTeamNameByDisplayId(selectedMatch.homeTeamIdentifier);
+                homeResolved = (result && typeof result.then === 'function') ? await result : result;
+                
+                if (homeResolved && homeResolved !== selectedMatch.homeTeamIdentifier) {
+                    homeDisplayName = homeResolved;
+                    console.log(`🏠 Domáci tím zmapovaný: "${selectedMatch.homeTeamIdentifier}" -> "${homeResolved}"`);
                 } else {
-                    homeResolved = result;
+                    console.log(`⚠️ Domáci tím sa nepodarilo zmapovať: "${selectedMatch.homeTeamIdentifier}"`);
                 }
-                if (homeResolved && homeResolved !== homeDisplayName) {
-                    setHomeTeamResolvedName(homeResolved);
-                    setHomeTeamNameReady(true);
-                    console.log(`✅ Domáci tím zmapovaný: "${homeDisplayName}" -> "${homeResolved}"`);
-                } else {
-                    console.log(`⚠️ Domáci tím sa nepodarilo zmapovať: "${homeDisplayName}"`);
-                    // Aj keď sa nepodarilo zmapovať, nastavíme ako ready, aby sa použil aspoň zobrazovací názov
-                    setHomeTeamResolvedName(homeDisplayName);
-                    setHomeTeamNameReady(true);
-                }
-            } else {
-                // Fallback - použijeme zobrazovací názov
-                setHomeTeamResolvedName(homeDisplayName);
-                setHomeTeamNameReady(true);
             }
             
-            // 🔥 Rovnaký postup pre hosťovský tím
-            const awayDisplayName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
-            console.log(`✈️ Hosťovský: identifikátor="${selectedMatch.awayTeamIdentifier}" -> zobrazovací názov="${awayDisplayName}"`);
+            setHomeTeamResolvedName(homeDisplayName);
+            setHomeTeamNameReady(true);
             
-            let awayResolved = awayDisplayName;
+            // Pre hosťovský tím - použijeme getTeamNameByDisplayId na identifikátor
+            let awayResolved = null;
+            let awayDisplayName = selectedMatch.awayTeamIdentifier;
+            
             if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                const result = window.matchTracker.getTeamNameByDisplayId(awayDisplayName);
-                if (result && typeof result.then === 'function') {
-                    awayResolved = await result;
+                const result = window.matchTracker.getTeamNameByDisplayId(selectedMatch.awayTeamIdentifier);
+                awayResolved = (result && typeof result.then === 'function') ? await result : result;
+                
+                if (awayResolved && awayResolved !== selectedMatch.awayTeamIdentifier) {
+                    awayDisplayName = awayResolved;
+                    console.log(`✈️ Hosťovský tím zmapovaný: "${selectedMatch.awayTeamIdentifier}" -> "${awayResolved}"`);
                 } else {
-                    awayResolved = result;
+                    console.log(`⚠️ Hosťovský tím sa nepodarilo zmapovať: "${selectedMatch.awayTeamIdentifier}"`);
                 }
-                if (awayResolved && awayResolved !== awayDisplayName) {
-                    setAwayTeamResolvedName(awayResolved);
-                    setAwayTeamNameReady(true);
-                    console.log(`✅ Hosťovský tím zmapovaný: "${awayDisplayName}" -> "${awayResolved}"`);
-                } else {
-                    console.log(`⚠️ Hosťovský tím sa nepodarilo zmapovať: "${awayDisplayName}"`);
-                    setAwayTeamResolvedName(awayDisplayName);
-                    setAwayTeamNameReady(true);
-                }
-            } else {
-                setAwayTeamResolvedName(awayDisplayName);
-                setAwayTeamNameReady(true);
             }
+            
+            setAwayTeamResolvedName(awayDisplayName);
+            setAwayTeamNameReady(true);
         };
         
         // Reset stavov pri zmene zápasu
