@@ -1618,7 +1618,7 @@ const matchesHallApp = ({ userProfileData }) => {
         
         loadTeamDetails();
         
-        return () => clearTimeout(timer);
+        return () => {};
     }, [homeTeamResolvedName, awayTeamResolvedName, selectedMatch?.id, selectedMatch?.categoryName, homeTeamData, awayTeamData]);
 
     
