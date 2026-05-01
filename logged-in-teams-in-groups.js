@@ -2137,8 +2137,8 @@ const AddTeamsGroupApp = (props) => {
             return name;
         };
     
-        // Funkcia na získanie mapovaného názvu tímu (maximálne 2 iterácie)
-        const getMappedTeamName = (team, displayName) => {
+        // Funkcia na získanie mapovaného názvu tímu (rekurzívne, kým sa neodstráni prefix kategórie)
+        const getMappedTeamName = (team, displayName, categoryNameForPrefix = null) => {
             if (!team.isSuperstructureTeam) return displayName;
         
             const isInSuperstructureGroup = team.groupName && 
@@ -2148,53 +2148,69 @@ const AddTeamsGroupApp = (props) => {
         
             if (!isInSuperstructureGroup) return displayName;
             
-            // Kontrola, či je matchTracker dostupný
-            if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                try {
-                    let currentName = team.teamName;
-                    let mappedName = window.matchTracker.getTeamNameByDisplayId(currentName);
-                    
-                    // Iba PRVÉ mapovanie - ak sa líši, použijeme ho
-                    if (mappedName && mappedName !== currentName) {
-                        console.log(`🔄 [Mapovanie] 1. iterácia: "${currentName}" → "${mappedName}"`);
-                        currentName = mappedName;
-                        
-                        // DRUHÉ mapovanie - maximálne dvakrát
-                        const secondMappedName = window.matchTracker.getTeamNameByDisplayId(currentName);
-                        if (secondMappedName && secondMappedName !== currentName) {
-                            console.log(`🔄 [Mapovanie] 2. iterácia: "${currentName}" → "${secondMappedName}"`);
-                            currentName = secondMappedName;
-                        }
-                        
-                        console.log(`✅ [Mapovanie] Konečný výsledok (max 2 iterácie): "${team.teamName}" → "${currentName}"`);
-                        return currentName;
-                    }
-                } catch (e) {
-                    console.warn('[Mapovanie] Chyba pri získavaní mapovaného názvu:', e);
-                }
-            }
-        
-            // Fallback na globálne mapovanie (tiež max 2 iterácie)
-            if (window.__teamNameMapping) {
-                let currentName = team.teamName;
-                let mappedName = window.__teamNameMapping[currentName]?.teamName;
+            // Získame názov kategórie pre kontrolu prefixu
+            const targetCategoryName = categoryIdToNameMap[targetCategoryId];
+            
+            // Rekurzívna funkcia na mapovanie
+            const recursiveMap = (nameToMap, depth = 0) => {
+                // Maximálna hĺbka 5, aby sme predišli nekonečnej rekurzii
+                if (depth > 5) return nameToMap;
                 
-                // Prvé mapovanie
-                if (mappedName && mappedName !== currentName) {
-                    currentName = mappedName;
-                    
-                    // Druhé mapovanie
-                    const secondMappedName = window.__teamNameMapping[currentName]?.teamName;
-                    if (secondMappedName && secondMappedName !== currentName) {
-                        currentName = secondMappedName;
-                    }
-                    
-                    if (currentName !== team.teamName) {
-                        return currentName;
+                if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                    try {
+                        let mappedName = window.matchTracker.getTeamNameByDisplayId(nameToMap);
+                        
+                        if (mappedName && mappedName !== nameToMap) {
+                            // Skontrolujeme, či mapovaný názov stále obsahuje názov kategórie
+                            if (targetCategoryName && mappedName.startsWith(targetCategoryName + ' ')) {
+                                // Ak áno, odstránime prefix a pokračujeme v mapovaní
+                                const withoutPrefix = mappedName.substring(targetCategoryName.length + 1).trim();
+                                console.log(`🔄 [Mapovanie] Rekurzia ${depth + 1}: "${mappedName}" → odstránenie prefixu: "${withoutPrefix}"`);
+                                // Pokračujeme v rekurzii s názvom bez prefixu
+                                return recursiveMap(withoutPrefix, depth + 1);
+                            } else {
+                                console.log(`✅ [Mapovanie] Konečný výsledok (hĺbka ${depth + 1}): "${nameToMap}" → "${mappedName}"`);
+                                return mappedName;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[Mapovanie] Chyba pri získavaní mapovaného názvu:', e);
                     }
                 }
+        
+                // Fallback na globálne mapovanie (tiež rekurzívne)
+                if (window.__teamNameMapping) {
+                    let currentName = nameToMap;
+                    let mappedName = window.__teamNameMapping[currentName]?.teamName;
+                    
+                    if (mappedName && mappedName !== currentName) {
+                        // Skontrolujeme, či mapovaný názov stále obsahuje názov kategórie
+                        if (targetCategoryName && mappedName.startsWith(targetCategoryName + ' ')) {
+                            const withoutPrefix = mappedName.substring(targetCategoryName.length + 1).trim();
+                            console.log(`🔄 [Mapovanie] Rekurzia (glob) ${depth + 1}: "${mappedName}" → odstránenie prefixu: "${withoutPrefix}"`);
+                            return recursiveMap(withoutPrefix, depth + 1);
+                        } else {
+                            console.log(`✅ [Mapovanie] Konečný výsledok (glob, hĺbka ${depth + 1}): "${currentName}" → "${mappedName}"`);
+                            return mappedName;
+                        }
+                    }
+                }
+                
+                return nameToMap;
+            };
+            
+            // Spustíme rekurzívne mapovanie
+            const mappedResult = recursiveMap(team.teamName);
+            
+            // Ak sa mapovanie podarilo a výsledok sa líši od pôvodného názvu, vrátime ho
+            if (mappedResult !== team.teamName) {
+                return mappedResult;
             }
             
+            // Inak vrátime pôvodný displayName (s odstráneným prefixom, ak je potrebné)
+            if (targetCategoryName && displayName.startsWith(targetCategoryName + ' ')) {
+                return displayName.substring(targetCategoryName.length + 1).trim();
+            }
             return displayName;
         };
     
