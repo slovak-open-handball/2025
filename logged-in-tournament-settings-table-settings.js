@@ -102,7 +102,7 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         }
     };
 
-    // Funkcia na generovanie detailných zmien pre každú pozíciu
+    // Funkcia na generovanie detailných zmien pre každú pozíciu - UPRAVENÁ VERZIA
     const generateDetailedChanges = (oldConditions, newConditions, oldPoints, newPoints, oldBlueCardSuspension, newBlueCardSuspension) => {
         const changes = [];
         
@@ -123,16 +123,26 @@ export function TableSettings({ db, userProfileData, showNotification }) {
         if (oldConditionsStr !== newConditionsStr) {
             changes.push('Zmena nastavení poradia:');
             
-            // Nájdeme maximálny počet podmienok z oboch polí
-            const maxLength = Math.max(oldConditions.length, newConditions.length);
+            // Vždy vypíšeme všetky nové podmienky, podľa ktorých sa rozhoduje
+            if (newConditions.length > 0) {
+                changes.push('Nové poradie rozhodovania:');
+                newConditions.forEach((cond, index) => {
+                    const formattedValue = formatConditionValue(cond);
+                    changes.push(`${index + 1}. ${formattedValue}`);
+                });
+            } else {
+                changes.push('Nové poradie rozhodovania: Žiadne vlastné kritériá (iba podľa bodov)');
+            }
             
-            for (let i = 0; i < maxLength; i++) {
-                const oldValue = i < oldConditions.length ? formatConditionValue(oldConditions[i]) : 'Žiadne';
-                const newValue = i < newConditions.length ? formatConditionValue(newConditions[i]) : 'Žiadne';
-                
-                if (oldValue !== newValue) {
-                    changes.push(`${i + 1}. kritérium: Zmena z '${oldValue}' na '${newValue}'`);
-                }
+            // Pridáme aj informáciu o pôvodnom poradí pre porovnanie
+            if (oldConditions.length > 0) {
+                changes.push('Pôvodné poradie rozhodovania:');
+                oldConditions.forEach((cond, index) => {
+                    const formattedValue = formatConditionValue(cond);
+                    changes.push(`${index + 1}. ${formattedValue}`);
+                });
+            } else {
+                changes.push('Pôvodné poradie rozhodovania: Žiadne vlastné kritériá (iba podľa bodov)');
             }
         }
         
