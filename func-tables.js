@@ -3249,19 +3249,10 @@ window.teamNameReplacer = {
     replaceAllNow: replaceAllIdentifiersNow,
     startPeriodic: (intervalSeconds = 30) => {
         periodicReplaceActive = true;
-        startPeriodicReplacement(intervalSeconds);
     },
     stopPeriodic: () => {
         periodicReplaceActive = false;
         stopPeriodicReplacement();
-    },
-    setPeriodicInterval: (intervalSeconds) => {
-        if (periodicReplaceInterval) {
-            startPeriodicReplacement(intervalSeconds);
-        } else {
-            startPeriodicReplacement(intervalSeconds);
-        }
-        log(`📊 Interval periodického nahrádzania nastavený na ${intervalSeconds} sekúnd`);
     },
     isPeriodicActive: () => periodicReplaceInterval !== null && periodicReplaceActive
 };
@@ -3808,20 +3799,6 @@ window.getTeamNameFromDatabase = function(displayId) {
     const result = originalGetTeamNameFromDatabaseWrapper(displayId);
     
     if (!initialMappingDone && result && window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0) {
-        initialMappingDone = true;
-        notifyMappingReady();
-    }
-    
-    return result;
-};
-
-// AKTUALIZOVANÁ FUNKCIA pre periodické nahrádzanie – po prvom nahradení odoslať udalosť
-const originalStartPeriodicReplacementWrapper = startPeriodicReplacement;
-window.startPeriodicReplacement = function(intervalSeconds = 1) {
-    const result = originalStartPeriodicReplacementWrapper(intervalSeconds);
-    
-    // Skontrolujeme, či už náhodou nemáme mapovanie
-    if (!initialMappingDone && Object.keys(window.__teamNameMapping).length > 0) {
         initialMappingDone = true;
         notifyMappingReady();
     }
