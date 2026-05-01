@@ -4357,3 +4357,112 @@ window.isGroupReadyForReplacement = function(category, groupLetter) {
 
 // Prepíšeme globálnu funkciu
 isGroupReadyForReplacement = window.isGroupReadyForReplacement;
+
+// ============================================================
+// FUNKCIE NA ZASTAVENIE VŠETKÝCH INTERVALOV A SLEDOVANÍ
+// ============================================================
+
+function stopAllMonitoring() {
+    console.log('🛑 ZASTAVUJEM VŠETKY MONITOROVACIE PROCESY...');
+    
+    // 1. Zastavenie periodického nahrádzania
+    if (periodicReplaceInterval) {
+        clearInterval(periodicReplaceInterval);
+        periodicReplaceInterval = null;
+        console.log('   ✅ Zastavené periodické nahrádzanie');
+    }
+    periodicReplaceActive = false;
+    
+    // 2. Zastavenie monitorovania skupín
+    if (groupMonitorInterval) {
+        clearInterval(groupMonitorInterval);
+        groupMonitorInterval = null;
+        console.log('   ✅ Zastavené monitorovanie skupín');
+    }
+    
+    // 3. Zastavenie readyCheck intervalu
+    if (window._readyCheckInterval) {
+        clearInterval(window._readyCheckInterval);
+        window._readyCheckInterval = null;
+        console.log('   ✅ Zastavený readyCheck interval');
+    }
+    
+    // 4. Zastavenie timeoutov
+    if (window._replaceTimeout) {
+        clearTimeout(window._replaceTimeout);
+        window._replaceTimeout = null;
+        console.log('   ✅ Zastavené replace timeouty');
+    }
+    
+    // 5. Odpojenie MutationObserver
+    if (window._teamNameObserver) {
+        window._teamNameObserver.disconnect();
+        window._teamNameObserver = null;
+        console.log('   ✅ Odpojený MutationObserver');
+    }
+    
+    // 6. Vyčistenie všetkých timeoutov v groupStabilityCheck
+    for (const timeout of groupStabilityCheck.values()) {
+        clearTimeout(timeout);
+    }
+    groupStabilityCheck.clear();
+    
+    console.log('✅ VŠETKY MONITOROVACIE PROCESY BOLI ZASTAVENÉ');
+}
+
+// Jednoduchšia verzia startTeamNameReplacement - BEZ PERIODICKÝCH KONTROL
+async function startTeamNameReplacementSimple() {
+    log('🚀 Spúšťam JEDNORAZOVÉ nahrádzanie identifikátorov tímov...');
+    
+    // Počkáme na matchTracker
+    let checkInterval = setInterval(() => {
+        if (window.matchTracker && typeof window.matchTracker.createGroupTable === 'function') {
+            clearInterval(checkInterval);
+            log('✅ MatchTracker je pripravený');
+            
+            // Jednorazové nahradenie
+            replaceTeamIdentifiersWhenReady();
+            
+            // Počkáme ešte 5 sekúnd pre prípadné oneskorené dáta
+            setTimeout(() => {
+                log('🔄 Druhé kolo nahrádzania (pre oneskorené dáta)...');
+                replaceTeamIdentifiersWhenReady();
+                
+                // Po 10 sekundách zastavíme všetky monitorovacie procesy
+                setTimeout(() => {
+                    log('⏹️ Ukončujem monitorovanie (všetky skupiny by mali byť spracované)...');
+                    stopAllMonitoring();
+                }, 10000);
+            }, 5000);
+        }
+    }, 500);
+    
+    // Timeout pre prípad, že by sa matchTracker nenačítal
+    setTimeout(() => {
+        clearInterval(checkInterval);
+        if (!window.matchTracker) {
+            log('⚠️ MatchTracker nie je dostupný, vykonávam jednorazové nahradenie...');
+            replaceTeamIdentifiersWhenReady();
+            
+            // Zastavíme monitorovanie po 10 sekundách
+            setTimeout(() => {
+                stopAllMonitoring();
+            }, 10000);
+        }
+    }, 10000);
+}
+
+// Prepíšeme pôvodnú funkciu
+window.startTeamNameReplacement = startTeamNameReplacementSimple;
+
+// Spustíme upravenú verziu
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.startTeamNameReplacement();
+    });
+} else {
+    window.startTeamNameReplacement();
+}
+
+// Export zastavovacej funkcie do konzoly pre prípad núdze
+window.stopTeamNameReplacement = stopAllMonitoring;
