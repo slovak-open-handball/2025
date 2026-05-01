@@ -1547,7 +1547,7 @@ const matchesHallApp = ({ userProfileData }) => {
     const [awayTeamResolvedName, setAwayTeamResolvedName] = useState(null);
 
     const [homeTeamData, setHomeTeamData] = useState(null);
-    const [awayTeamData, setAwayTeamData] = useState(null);
+    const [awayTeamData, setAwayTeamData] = useState(null);    
 
     useEffect(() => {
         // Resetovanie stavov pri zmene zápasu
@@ -2218,6 +2218,66 @@ const matchesHallApp = ({ userProfileData }) => {
             return () => clearTimeout(timer);
         }
     }, [users]); // Tento useEffect sa spustí pri každej zmene users
+
+    // NOVÝ useEffect PRE AKTUALIZÁCIU NÁZVOV TÍMOV PRI NÁVRATE NA ZOZNAM
+    useEffect(() => {
+        // Spustí sa vždy, keď sa zmení selectedMatch na null (návrat na zoznam)
+        if (selectedMatch === null && matches.length > 0 && teamManagerReady) {
+            console.log('🔄 Návrat na zoznam - aktualizujem názvy tímov...');
+            
+            const updateTeamNamesForAllMatches = async () => {
+                const updatedMatches = [...matches];
+                let hasChanges = false;
+                
+                for (let i = 0; i < updatedMatches.length; i++) {
+                    const match = updatedMatches[i];
+                    
+                    const homeIdentifier = match.homeTeamIdentifier;
+                    const awayIdentifier = match.awayTeamIdentifier;
+                    
+                    let homeDisplayName = homeIdentifier;
+                    let awayDisplayName = awayIdentifier;
+                    
+                    // Použijeme matchTracker na získanie zmapovaných názvov
+                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                        const homeResult = window.matchTracker.getTeamNameByDisplayId(homeIdentifier);
+                        homeDisplayName = (homeResult && typeof homeResult.then === 'function') ? await homeResult : (homeResult || homeIdentifier);
+                        
+                        const awayResult = window.matchTracker.getTeamNameByDisplayId(awayIdentifier);
+                        awayDisplayName = (awayResult && typeof awayResult.then === 'function') ? await awayResult : (awayResult || awayIdentifier);
+                    } else if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+                        homeDisplayName = window.teamManager.getTeamNameByDisplayIdSync(homeIdentifier) || homeIdentifier;
+                        awayDisplayName = window.teamManager.getTeamNameByDisplayIdSync(awayIdentifier) || awayIdentifier;
+                    }
+                    
+                    // Skontrolujeme, či sa niečo zmenilo
+                    if (homeDisplayName !== match.homeDisplayName || awayDisplayName !== match.awayDisplayName) {
+                        updatedMatches[i] = {
+                            ...match,
+                            homeDisplayName: homeDisplayName,
+                            awayDisplayName: awayDisplayName
+                        };
+                        hasChanges = true;
+                    } else if (!match.homeDisplayName && !match.awayDisplayName) {
+                        // Ak nemáme žiadne displayName, nastavíme aspoň pôvodné
+                        updatedMatches[i] = {
+                            ...match,
+                            homeDisplayName: homeIdentifier,
+                            awayDisplayName: awayIdentifier
+                        };
+                        hasChanges = true;
+                    }
+                }
+                
+                if (hasChanges) {
+                    setMatches(updatedMatches);
+                    console.log('✅ Zoznam zápasov bol aktualizovaný pri návrate na zoznam');
+                }
+            };
+            
+            updateTeamNamesForAllMatches();
+        }
+    }, [selectedMatch, matches.length, teamManagerReady]);
 
     // Funkcia na pridanie unikátnych ID pre všetkých hráčov a členov RT, ktorí ich nemajú
     const ensureUniqueIds = (teamData) => {
