@@ -2369,8 +2369,6 @@ function getTeamNameFromDatabase(displayId) {
 // OPRAVENÁ FUNKCIA: getTeamNameByDisplayId - rozpoznáva dva formáty
 // ============================================================
 
-let checkedGroupsCache = new Set();
-
 function getTeamNameByDisplayId(displayId) {
     if (!displayId) {
         log('❌ Nebol zadaný identifikátor tímu');
