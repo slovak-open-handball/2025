@@ -1837,8 +1837,8 @@ const matchesHallApp = ({ userProfileData }) => {
     // ============================================================================
     
     useEffect(() => {
-        if (!selectedMatch || selectedMatch.status !== 'in-progress' && selectedMatch.status !== 'paused') {
-            setIsLoadingSuspensionsHome(false); // alebo setIsLoadingSuspensionsAway
+        if (!selectedMatch || (selectedMatch.status !== 'in-progress' && selectedMatch.status !== 'paused')) {
+            setIsLoadingSuspensionsHome(false);
             return;
         }
         
@@ -2012,8 +2012,8 @@ const matchesHallApp = ({ userProfileData }) => {
     // ============================================================================
     
     useEffect(() => {
-        if (!selectedMatch || selectedMatch.status !== 'in-progress' && selectedMatch.status !== 'paused') {
-            setIsLoadingSuspensionsHome(false); // alebo setIsLoadingSuspensionsAway
+        if (!selectedMatch || (selectedMatch.status !== 'in-progress' && selectedMatch.status !== 'paused')) {
+            setIsLoadingSuspensionsHome(false);
             return;
         }
         const loadSuspensions = async () => {
