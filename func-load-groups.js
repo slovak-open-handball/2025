@@ -63,7 +63,6 @@
     // NOVÁ FUNKCIA: Výpis všetkých tímov v kategórii
     function printTeamsInCategory(categoryName) {
         if (!window.__teamManagerData?.allTeams) {
-            console.log('TeamManager dáta ešte nie sú načítané');
             return;
         }
         
@@ -72,13 +71,9 @@
         );
         
         if (teamsInCategory.length === 0) {
-            console.log(`V kategórii "${categoryName}" sa nenašli žiadne tímy`);
             return;
         }
-        
-        console.log(`\n=== TÍMY V KATEGÓRII: ${categoryName} ===`);
-        console.log(`Celkový počet tímov: ${teamsInCategory.length}`);
-        
+                
         // Zoradenie tímov podľa skupiny a poradia
         const sortedTeams = [...teamsInCategory].sort((a, b) => {
             // Podľa skupiny
@@ -91,15 +86,12 @@
         
         sortedTeams.forEach((team, index) => {
             const displayId = createTeamDisplayId(team);
-            console.log(`${index + 1}. ${displayId} - "${team.teamName}" (ID: ${team.id})${team.groupName ? ` [Skupina: ${team.groupName}]` : ''}`);
         });
-        console.log('========================\n');
     }
     
     // NOVÁ FUNKCIA: Výpis všetkých tímov v skupine
     function printTeamsInGroup(categoryName, groupName) {
         if (!window.__teamManagerData?.allTeams) {
-            console.log('TeamManager dáta ešte nie sú načítané');
             return;
         }
         
@@ -112,13 +104,9 @@
         );
         
         if (teamsInGroup.length === 0) {
-            console.log(`V skupine "${groupName}" v kategórii "${categoryName}" sa nenašli žiadne tímy`);
             return;
         }
-        
-        console.log(`\n=== TÍMY V SKUPINE: ${categoryName} - ${groupName} ===`);
-        console.log(`Počet tímov v skupine: ${teamsInGroup.length}`);
-        
+                
         // Zoradenie tímov podľa poradia
         const sortedTeams = [...teamsInGroup].sort((a, b) => 
             (a.order || 999) - (b.order || 999)
@@ -126,26 +114,20 @@
         
         sortedTeams.forEach((team, index) => {
             const displayId = createTeamDisplayId(team);
-            console.log(`${index + 1}. ${displayId} - "${team.teamName}" (ID: ${team.id}, poradie: ${team.order || '?'})`);
         });
-        console.log('========================\n');
     }
     
     // NOVÁ FUNKCIA: Výpis všetkých kategórií a ich tímov
     function printAllCategories() {
         if (!window.__teamManagerData?.allTeams) {
-            console.log('TeamManager dáta ešte nie sú načítané');
             return;
         }
         
         // Získame všetky unikátne kategórie
         const categories = [...new Set(window.__teamManagerData.allTeams.map(t => t.category))].sort();
-        
-        console.log('\n=== PREHĽAD VŠETKÝCH KATEGÓRIÍ ===');
-        
+                
         categories.forEach(category => {
             const teamsInCategory = window.__teamManagerData.allTeams.filter(t => t.category === category);
-            console.log(`\n📁 ${category} (${teamsInCategory.length} tímov)`);
             
             // Získame skupiny v tejto kategórii
             const groups = [...new Set(teamsInCategory.map(t => t.groupName).filter(g => g))].sort();
@@ -153,27 +135,22 @@
             if (groups.length > 0) {
                 groups.forEach(group => {
                     const teamsInGroup = teamsInCategory.filter(t => t.groupName === group);
-                    console.log(`   📂 ${group} (${teamsInGroup.length} tímov):`);
                     teamsInGroup.sort((a, b) => (a.order || 999) - (b.order || 999))
                         .forEach(team => {
                             const displayId = createTeamDisplayId(team);
-                            console.log(`      • ${displayId} - "${team.teamName}"`);
                         });
                 });
             } else {
                 // Tímy bez skupiny
                 const teamsWithoutGroup = teamsInCategory.filter(t => !t.groupName);
                 if (teamsWithoutGroup.length > 0) {
-                    console.log(`   📂 Bez skupiny (${teamsWithoutGroup.length} tímov):`);
                     teamsWithoutGroup.sort((a, b) => (a.order || 999) - (b.order || 999))
                         .forEach(team => {
                             const displayId = createTeamDisplayId(team);
-                            console.log(`      • ${displayId} - "${team.teamName}"`);
                         });
                 }
             }
         });
-        console.log('\n========================\n');
     }
     
     function notifyListeners(data) {
