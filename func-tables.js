@@ -49,10 +49,32 @@ function error(...args) {
 
 // Teraz v celom kóde používame tieto funkcie namiesto priamo log ---------------- všetko pred týmto riadkom vymaž
 
-let groupCheckCache = new Set();  // Cache pre kontrolu pripravenosti skupín
-let processedCarryOverGroups = new Set();  // Cache pre prenášanie výsledkov
-let isInitialDataLoaded = false;  // Prvotné načítanie dát
-let processedGroupsInitial = new Set();  // Spracované skupiny pri inicializácii
+// Premenné pre nahrádzanie
+let hasReplacedAnyTeams = false;
+let mappingCompleted = false;
+let initialMappingDone = false;
+const replacementCallbacks = [];
+
+// Cache pre skupiny
+let groupCheckCache = new Set();
+let processedCarryOverGroups = new Set();
+let isInitialDataLoaded = false;
+let processedGroupsInitial = new Set();
+
+// Premenné pre periodické úlohy
+let periodicReplaceInterval = null;
+let periodicReplaceActive = true;
+let groupMonitorInterval = null;
+let isReplacingInProgress = false;
+
+// Cache pre mapovanie
+let processedGroups = new Map();
+let pendingReplaceTimeout = null;
+let replacedIdentifiers = new Set();
+let checkedGroupsCache = new Set();
+
+// Snapshot pre sledovanie
+let groupCompletionSnapshot = new Map();
 
 (function() {
     'use strict';
@@ -3126,8 +3148,6 @@ function attachClickHandlersForReplacement() {
     });
 }
 
-// Nahraďte existujúcu funkciu startTeamNameReplacement touto verziou
-
 async function startTeamNameReplacement() {
     mappingCompleted = false;
     initialMappingDone = false;
@@ -3267,9 +3287,19 @@ log('   • window.matchTracker.getTeamNameByDisplayId("U12 D 1E") - priamy prí
 
 // Automatické spustenie
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startTeamNameReplacement);
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof startTeamNameReplacement === 'function') {
+            startTeamNameReplacement();
+        } else {
+            console.error('❌ startTeamNameReplication nie je definovaná!');
+        }
+    });
 } else {
-    startTeamNameReplacement();
+    if (typeof startTeamNameReplacement === 'function') {
+        startTeamNameReplacement();
+    } else {
+        console.error('❌ startTeamNameReplication nie je definovaná!');
+    }
 }
 
 // Pridanie funkcie na manuálne pridanie do cache
@@ -3874,8 +3904,16 @@ if (Object.keys(window.__teamNameMapping).length > 0 && !hasReplacedAnyTeams) {
 // Spustíme upravenú verziu štartovacej funkcie
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        window.startTeamNameReplacement();
+        if (typeof startTeamNameReplacement === 'function') {
+            startTeamNameReplacement();
+        } else {
+            console.error('❌ startTeamNameReplication nie je definovaná!');
+        }
     });
 } else {
-    window.startTeamNameReplacement();
+    if (typeof startTeamNameReplacement === 'function') {
+        startTeamNameReplacement();
+    } else {
+        console.error('❌ startTeamNameReplication nie je definovaná!');
+    }
 }
