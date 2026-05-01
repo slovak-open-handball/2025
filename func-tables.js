@@ -1793,12 +1793,32 @@ let processedGroupsInitial = new Set();  // Spracované skupiny pri inicializác
                 
                 const affectedGroups = new Set();
                 const affectedCategories = new Set();
-                
+    
                 for (const changedMatch of changedMatches) {
                     if (changedMatch.category && changedMatch.group) {
                         const groupKey = `${changedMatch.category}|${changedMatch.group}`;
                         affectedGroups.add(groupKey);
                         affectedCategories.add(changedMatch.category);
+            
+                        // 🔥 AUTOMATICKY VYMAŽEME CACHE PRE OVPLYVNENÚ SKUPINU
+                        const groupLetter = changedMatch.group.replace('skupina ', '').toUpperCase();
+                        const cleanCategory = cleanCategoryName(changedMatch.category);
+                        const cacheKey = `${cleanCategory}|${groupLetter}`;
+            
+                        log(`   🗑️ [AUTO] Vymazávam cache pre skupinu ${cacheKey}`);
+                        groupCheckCache.delete(cacheKey);
+                        groupCheckCache.delete(`${cacheKey}_false`);
+                        groupCheckCache.delete(`${cacheKey}_ready`);
+                        checkedGroupsCache.delete(cacheKey);
+                        checkedGroupsCache.delete(`${cacheKey}_ready`);
+                        checkedGroupsCache.delete(`${cacheKey}_not_ready`);
+            
+                        // Vymažeme aj notReadyGroupsLogged
+                        for (const key of notReadyGroupsLogged) {
+                            if (key.startsWith(cacheKey)) {
+                                notReadyGroupsLogged.delete(key);
+                            }
+                        }
                     }
                 }
                 
@@ -4263,3 +4283,60 @@ function forceRefreshAllGroups() {
 // Export funkcií
 window.teamNameReplacer.forceRefreshGroup = forceRefreshGroupMapping;
 window.teamNameReplacer.forceRefreshAll = forceRefreshAllGroups;
+
+// ============================================================
+// AUTOMATICKÉ VYMAZANIE CACHE PRI DOKONČENÍ ZÁPASOV
+// ============================================================
+
+// Pôvodnú funkciu isGroupReadyForReplacement si uložíme
+const originalIsGroupReadyForReplacement = isGroupReadyForReplacement;
+
+// Prepíšeme funkciu s automatickým vymazaním cache
+window.isGroupReadyForReplacement = function(category, groupLetter) {
+    const cleanCategory = cleanCategoryName(category);
+    const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
+    const groupKey = `${cleanCategory}|${groupLetter.toUpperCase()}`;
+    
+    // Najprv skúsime získať aktuálnu tabuľku (bez cache)
+    let currentGroupTable = window.matchTracker?.createGroupTable(cleanCategory, fullGroupName);
+    let currentCompletionPercentage = 0;
+    
+    if (currentGroupTable) {
+        currentCompletionPercentage = currentGroupTable.completionPercentage;
+    }
+    
+    // Ak je tabuľka na 100% a v cache je uložené, že nie je pripravená, vymažeme cache
+    const wasCachedAsNotReady = groupCheckCache.has(`${groupKey}_false`);
+    const wasCachedAsReady = groupCheckCache.has(groupKey);
+    
+    if (currentCompletionPercentage === 100 && wasCachedAsNotReady) {
+        log(`🔄 [AUTO] Skupina ${groupKey} je teraz 100%, vymazávam starú cache...`);
+        groupCheckCache.delete(groupKey);
+        groupCheckCache.delete(`${groupKey}_false`);
+        groupCheckCache.delete(`${groupKey}_ready`);
+        checkedGroupsCache.delete(groupKey);
+        checkedGroupsCache.delete(`${groupKey}_ready`);
+        checkedGroupsCache.delete(`${groupKey}_not_ready`);
+        
+        // Vymažeme aj notReadyGroupsLogged
+        for (const key of notReadyGroupsLogged) {
+            if (key.startsWith(groupKey)) {
+                notReadyGroupsLogged.delete(key);
+            }
+        }
+    }
+    
+    // Ak bola predtým označená ako pripravená, ale teraz už nie je, tiež vymažeme cache
+    if (currentCompletionPercentage < 100 && wasCachedAsReady) {
+        log(`🔄 [AUTO] Skupina ${groupKey} stratila 100%, vymazávam cache...`);
+        groupCheckCache.delete(groupKey);
+        groupCheckCache.delete(`${groupKey}_false`);
+        groupCheckCache.delete(`${groupKey}_ready`);
+    }
+    
+    // Zavoláme pôvodnú funkciu
+    return originalIsGroupReadyForReplacement(category, groupLetter);
+};
+
+// Prepíšeme globálnu funkciu
+isGroupReadyForReplacement = window.isGroupReadyForReplacement;
