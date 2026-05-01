@@ -2056,7 +2056,8 @@ let processedGroupsInitial = new Set();  // Spracované skupiny pri inicializác
         isGroupFullyCompleted: isGroupFullyCompleted,
         findAdvancedGroupsDependingOn: findAdvancedGroupsDependingOn,
         isInitialDataLoaded: () => isInitialDataLoaded,
-        resetCarryOverCache: resetCarryOverCache 
+        resetCarryOverCache: resetCarryOverCache,
+        getGroupMatches: getGroupMatches
     };
     
     // Spustenie sledovania
