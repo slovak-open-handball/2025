@@ -1547,7 +1547,13 @@ const matchesHallApp = ({ userProfileData }) => {
     const [awayTeamResolvedName, setAwayTeamResolvedName] = useState(null);
 
     const [homeTeamData, setHomeTeamData] = useState(null);
-    const [awayTeamData, setAwayTeamData] = useState(null);    
+    const [awayTeamData, setAwayTeamData] = useState(null);  
+
+    useEffect(() => {
+        if (!hallId && userProfileData) {
+            console.warn('⚠️ userProfileData existuje, ale hallId je undefined:', userProfileData);
+        }
+    }, [hallId, userProfileData]);
 
     useEffect(() => {
         // Resetovanie stavov pri zmene zápasu
