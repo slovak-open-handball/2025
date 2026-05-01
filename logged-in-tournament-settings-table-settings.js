@@ -17,6 +17,7 @@ const createTableSettingsChangeNotification = async (actionType, changesArray) =
             settingsType: 'table_settings'
         });
         
+    } catch (err) {
     }
 };
 
