@@ -265,218 +265,218 @@ const AddTeamsGroupApp = (props) => {
     };
   
     const handleDeleteGap = async (categoryName, groupName, gapPosition) => {
-    if (!window.db || !categoryName || !groupName || gapPosition == null) return;
-    const trimmedGroup = (groupName || "").trim();
-    try {
-        const categoryId = Object.keys(categoryIdToNameMap).find(
-            id => categoryIdToNameMap[id] === categoryName
-        );
-        const groupInfo = categoryId && allGroupsByCategoryId[categoryId]
-            ? allGroupsByCategoryId[categoryId].find(g => g.name.trim() === trimmedGroup)
-            : null;
-        const isSuperstructureGroup = groupInfo?.type === 'nadstavbová skupina';
-        let affectedCount = 0;
-        if (isSuperstructureGroup) {
-            // Nadstavbová skupina – settings/superstructureGroups
-            const docRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
-            const snap = await getDoc(docRef);
-            if (!snap.exists()) {
-                notify("Nenašli sa nadstavbové skupiny v databáze.", "error");
-                return;
-            }
-            const data = snap.data() || {};
-            let teams = [...(data[categoryName] || [])];
-            const inGroup = teams.filter(t =>
-                t.groupName && t.groupName.trim() === trimmedGroup
+        if (!window.db || !categoryName || !groupName || gapPosition == null) return;
+        const trimmedGroup = (groupName || "").trim();
+        try {
+            const categoryId = Object.keys(categoryIdToNameMap).find(
+                id => categoryIdToNameMap[id] === categoryName
             );
-            if (inGroup.length === 0) {
-                notify(`V nadstavbovej skupine „${trimmedGroup}“ neboli nájdené žiadne tímy.`, "info");
-                return;
-            }
-            // Získame tímy, ktoré treba posunúť (order > gapPosition)
-            const teamsToShift = inGroup
-                .filter(t => typeof t.order === 'number' && t.order > gapPosition)
-                .sort((a, b) => (a.order || 0) - (b.order || 0));
-            affectedCount = teamsToShift.length;
-            // Pre každý tím spustíme logiku manuálnej zmeny poradia
-            for (const team of teamsToShift) {
-                const newOrder = (team.order || 0) - 1;
-                // Tu simulujeme to, čo robí ceruzka/editácia
-                // Predpokladáme, že máš nejakú funkciu na zmenu poradia
-                // Ak nemáš samostatnú funkciu, použijeme podobnú logiku ako v handleUpdateAnyTeam
-                const updatedTeam = { ...team, order: newOrder };
-                // Aktualizujeme tím v poli
-                const teamIndex = teams.findIndex(t =>
-                    t.teamName === team.teamName &&
-                    (t.id && team.id ? t.id === team.id : true)
-                );
-                if (teamIndex !== -1) {
-                    teams[teamIndex] = updatedTeam;
+            const groupInfo = categoryId && allGroupsByCategoryId[categoryId]
+                ? allGroupsByCategoryId[categoryId].find(g => g.name.trim() === trimmedGroup)
+                : null;
+            const isSuperstructureGroup = groupInfo?.type === 'nadstavbová skupina';
+            let affectedCount = 0;
+            if (isSuperstructureGroup) {
+                // Nadstavbová skupina – settings/superstructureGroups
+                const docRef = doc(window.db, ...SUPERSTRUCTURE_TEAMS_DOC_PATH.split('/'));
+                const snap = await getDoc(docRef);
+                if (!snap.exists()) {
+                    notify("Nenašli sa nadstavbové skupiny v databáze.", "error");
+                    return;
                 }
-                // Vytvoríme notifikáciu ako pri zmene poradia
-                await createTeamAssignmentNotification('change_order_global', {
-                    id: team.id,
-                    teamName: team.teamName,
-                    category: categoryName,
-                    groupName: trimmedGroup,
-                    oldOrder: team.order,
-                    newOrder: newOrder
-                });
-            }
-            try {
-                await updateDoc(docRef, { [categoryName]: teams });
-                console.log("[SUCCESS] Nadstavbová skupina aktualizovaná – posunuté tímy");
-            } catch (err) {
-                console.error("[CHYBA superstructure update]:", err);
-            }
-        } else {
-            // Základné skupiny – používatelia
-            const usersSnap = await getDocs(collection(window.db, "users"));
-            for (const userDoc of usersSnap.docs) {
-                const userData = userDoc.data();
-                let teamsInCategory = userData.teams?.[categoryName] || [];
-                if (teamsInCategory.length === 0) continue;
-                const inGroup = teamsInCategory.filter(t =>
+                const data = snap.data() || {};
+                let teams = [...(data[categoryName] || [])];
+                const inGroup = teams.filter(t =>
                     t.groupName && t.groupName.trim() === trimmedGroup
                 );
-                if (inGroup.length === 0) continue;
-                // Tímy na posunutie
+                if (inGroup.length === 0) {
+                    notify(`V nadstavbovej skupine „${trimmedGroup}“ neboli nájdené žiadne tímy.`, "info");
+                    return;
+                }
+                // Získame tímy, ktoré treba posunúť (order > gapPosition)
                 const teamsToShift = inGroup
                     .filter(t => typeof t.order === 'number' && t.order > gapPosition)
                     .sort((a, b) => (a.order || 0) - (b.order || 0));
-                if (teamsToShift.length === 0) continue;
-                affectedCount += teamsToShift.length;
-                // Pre každý tím posunieme order o -1 a uložíme
+                affectedCount = teamsToShift.length;
+                // Pre každý tím spustíme logiku manuálnej zmeny poradia
                 for (const team of teamsToShift) {
                     const newOrder = (team.order || 0) - 1;
-                    // Nájdeme index v poli používateľa
-                    const teamIndex = teamsInCategory.findIndex(t =>
+                    // Tu simulujeme to, čo robí ceruzka/editácia
+                    // Predpokladáme, že máš nejakú funkciu na zmenu poradia
+                    // Ak nemáš samostatnú funkciu, použijeme podobnú logiku ako v handleUpdateAnyTeam
+                    const updatedTeam = { ...team, order: newOrder };
+                    // Aktualizujeme tím v poli
+                    const teamIndex = teams.findIndex(t =>
                         t.teamName === team.teamName &&
-                        (t.order ?? null) === (team.order ?? null)
+                        (t.id && team.id ? t.id === team.id : true)
                     );
                     if (teamIndex !== -1) {
-                        teamsInCategory[teamIndex] = {
-                            ...teamsInCategory[teamIndex],
-                            order: newOrder
-                        };
-                        // Notifikácia ako pri manuálnej zmene
-                        await createTeamAssignmentNotification('change_order_user', {
-                            id: team.id,
-                            teamName: team.teamName,
-                            category: categoryName,
-                            groupName: trimmedGroup,
-                            oldOrder: team.order,
-                            newOrder: newOrder
+                        teams[teamIndex] = updatedTeam;
+                    }
+                    // Vytvoríme notifikáciu ako pri zmene poradia
+                    await createTeamAssignmentNotification('change_order_global', {
+                        id: team.id,
+                        teamName: team.teamName,
+                        category: categoryName,
+                        groupName: trimmedGroup,
+                        oldOrder: team.order,
+                        newOrder: newOrder
+                    });
+                }
+                try {
+                    await updateDoc(docRef, { [categoryName]: teams });
+                    console.log("[SUCCESS] Nadstavbová skupina aktualizovaná – posunuté tímy");
+                } catch (err) {
+                    console.error("[CHYBA superstructure update]:", err);
+                }
+            } else {
+                // Základné skupiny – používatelia
+                const usersSnap = await getDocs(collection(window.db, "users"));
+                for (const userDoc of usersSnap.docs) {
+                    const userData = userDoc.data();
+                    let teamsInCategory = userData.teams?.[categoryName] || [];
+                    if (teamsInCategory.length === 0) continue;
+                    const inGroup = teamsInCategory.filter(t =>
+                        t.groupName && t.groupName.trim() === trimmedGroup
+                    );
+                    if (inGroup.length === 0) continue;
+                    // Tímy na posunutie
+                    const teamsToShift = inGroup
+                        .filter(t => typeof t.order === 'number' && t.order > gapPosition)
+                        .sort((a, b) => (a.order || 0) - (b.order || 0));
+                    if (teamsToShift.length === 0) continue;
+                    affectedCount += teamsToShift.length;
+                    // Pre každý tím posunieme order o -1 a uložíme
+                    for (const team of teamsToShift) {
+                        const newOrder = (team.order || 0) - 1;
+                        // Nájdeme index v poli používateľa
+                        const teamIndex = teamsInCategory.findIndex(t =>
+                            t.teamName === team.teamName &&
+                            (t.order ?? null) === (team.order ?? null)
+                        );
+                        if (teamIndex !== -1) {
+                            teamsInCategory[teamIndex] = {
+                                ...teamsInCategory[teamIndex],
+                                order: newOrder
+                            };
+                            // Notifikácia ako pri manuálnej zmene
+                            await createTeamAssignmentNotification('change_order_user', {
+                                id: team.id,
+                                teamName: team.teamName,
+                                category: categoryName,
+                                groupName: trimmedGroup,
+                                oldOrder: team.order,
+                                newOrder: newOrder
+                            });
+                        }
+                    }
+                    // Uložíme aktualizované pole pre tohto používateľa
+                    try {
+                        const userRef = doc(window.db, "users", userDoc.id);
+                        await updateDoc(userRef, {
+                            [`teams.${categoryName}`]: teamsInCategory
                         });
+                        console.log(`[SUCCESS] Používateľ ${userDoc.id} – posunuté tímy`);
+                    } catch (err) {
+                        console.error(`[CHYBA] Používateľ ${userDoc.id}:`, err);
                     }
                 }
-                // Uložíme aktualizované pole pre tohto používateľa
-                try {
-                    const userRef = doc(window.db, "users", userDoc.id);
-                    await updateDoc(userRef, {
-                        [`teams.${categoryName}`]: teamsInCategory
-                    });
-                    console.log(`[SUCCESS] Používateľ ${userDoc.id} – posunuté tímy`);
-                } catch (err) {
-                    console.error(`[CHYBA] Používateľ ${userDoc.id}:`, err);
-                }
+            }
+            // Finálna notifikácia
+            if (affectedCount > 0) {
+                notify(
+                    `Voľné miesto na pozícii ${gapPosition} v skupine „${trimmedGroup}“ (${categoryName}) bolo odstránené. Posunulo sa ${affectedCount} tímov (ako pri manuálnej editácii).`,
+                    "success"
+                );
+            } else {
+                notify(`V skupine „${trimmedGroup}“ (${categoryName}) neboli nájdené tímy na posunutie.`, "info");
+            }
+        } catch (err) {
+            console.error("Chyba pri odstraňovaní diery:", err);
+            notify("Nepodarilo sa odstrániť voľné miesto v poradí.", "error");
+        }
+    };
+      
+    const createTeamAssignmentNotification = async (action, team) => {
+        if (!window.db) return;
+        if (!currentUserEmail) {
+            console.warn("Nie je dostupný e-mail prihláseného používateľa → notifikácia nebude mať userEmail");
+        }
+    
+        let message = '';
+        let category = team.category || '?';
+        let group = team.groupName || 'bez skupiny';
+        let teamName = team.teamName || 'Neznámy tím';
+    
+        // UPRAVENÉ: Ak už máme správu v dátach, použijeme ju
+        if (team.message) {
+            message = team.message;
+        } else {
+            // Pôvodná logika pre spätnú kompatibilitu
+            let orderText = (team.order != null && group !== 'bez skupiny')
+                ? ` (poradie: ${team.order})`
+                : '';
+    
+            switch (action) {
+                case 'assign_global':
+                    message = `Pre tím ${teamName} zmena: Skupina z 'bez skupiny' na '${group} (poradie: ${team.newOrder})'`;
+                    break;
+                case 'change_group_global':
+                    message = `Pre tím ${teamName} zmena: Skupina z '${team.oldGroup || 'bez skupiny'} (poradie: ${team.oldOrder || '-'})' na '${group} (poradie: ${team.newOrder || '?'})'`;
+                    break;
+                case 'assign_user':
+                    message = `Pre tím ${teamName} zmena: Skupina z 'bez skupiny' na '${group} (poradie: ${team.newOrder})'`;
+                    break;
+                case 'change_group_user':
+                    message = `Pre tím ${teamName} zmena: Skupina z '${team.oldGroup || 'bez skupiny'} (poradie: ${team.oldOrder || '-'})' na '${group} (poradie: ${team.newOrder || '?'})'`;
+                    break;
+                case 'add_new_global':
+                    message = `V kategórii ${category} vytvorený nový tím '${teamName}' a priradený do skupiny '${group} ${team.order ? ` s poradím: ${team.order}` : ''}'`;
+                    break;
+                case 'unassign_global':
+                    message = `Z kategórie ${category} a skupiny '${team.oldGroup || group} (poradie: ${team.order})' bol odstránený tím '${teamName}'`;
+                    break;
+                case 'unassign_user':
+                    message = `Z kategórie ${category} a skupiny '${team.oldGroup || group} (poradie: ${team.oldOrder})' bol odstránený tím '${teamName}'`;
+                    break;
+                case 'change_order_global':
+                    message = `Pre tím ${teamName} zmena: Poradie z '${team.oldOrder || '?'}' na '${team.newOrder || '?'}'`;
+                    break;
+                case 'change_order_user':
+                    message = `Pre tím ${teamName} zmena: Poradie z '${team.oldOrder || '?'}' na '${team.newOrder || '?'}'`;
+                    break;
+                case 'change_team_name':
+                    message = `Pre tím ${teamName} zmena: Názov tímu z '${team.oldTeamName}' na '${teamName}'`;
+                    break;
+                default:
+                    message = `zmena tímu ${teamName} (${action})`;
             }
         }
-        // Finálna notifikácia
-        if (affectedCount > 0) {
-            notify(
-                `Voľné miesto na pozícii ${gapPosition} v skupine „${trimmedGroup}“ (${categoryName}) bolo odstránené. Posunulo sa ${affectedCount} tímov (ako pri manuálnej editácii).`,
-                "success"
-            );
-        } else {
-            notify(`V skupine „${trimmedGroup}“ (${categoryName}) neboli nájdené tímy na posunutie.`, "info");
+    
+        try {
+            const notificationsRef = collection(window.db, 'notifications');
+            await addDoc(notificationsRef, {
+                userEmail: currentUserEmail || "",
+                performedBy: currentUserEmail || null,
+                changes: [message],
+                timestamp: serverTimestamp(),
+                relatedTeamId: team.id ?? null,
+                relatedCategory: category,
+                relatedGroup: group || null,
+                actionType: action,
+                // Pridáme dodatočné informácie pre lepšie sledovanie zmien
+                oldGroup: team.oldGroup || null,
+                newGroup: team.groupName || null,
+                oldOrder: team.oldOrder || null,
+                newOrder: team.newOrder || team.order || null
+            });
+            console.log("[NOTIFIKÁCIA] Uložená:", message);
+        } catch (err) {
+            console.error("[NOTIFIKÁCIA] Chyba pri ukladaní:", err);
         }
-    } catch (err) {
-        console.error("Chyba pri odstraňovaní diery:", err);
-        notify("Nepodarilo sa odstrániť voľné miesto v poradí.", "error");
-    }
-};
-  
-const createTeamAssignmentNotification = async (action, team) => {
-    if (!window.db) return;
-    if (!currentUserEmail) {
-        console.warn("Nie je dostupný e-mail prihláseného používateľa → notifikácia nebude mať userEmail");
-    }
+    };
 
-    let message = '';
-    let category = team.category || '?';
-    let group = team.groupName || 'bez skupiny';
-    let teamName = team.teamName || 'Neznámy tím';
-
-    // UPRAVENÉ: Ak už máme správu v dátach, použijeme ju
-    if (team.message) {
-        message = team.message;
-    } else {
-        // Pôvodná logika pre spätnú kompatibilitu
-        let orderText = (team.order != null && group !== 'bez skupiny')
-            ? ` (poradie: ${team.order})`
-            : '';
-
-        switch (action) {
-            case 'assign_global':
-                message = `Pre tím ${teamName} zmena: Skupina z 'bez skupiny' na '${group} (poradie: ${team.newOrder})'`;
-                break;
-            case 'change_group_global':
-                message = `Pre tím ${teamName} zmena: Skupina z '${team.oldGroup || 'bez skupiny'} (poradie: ${team.oldOrder || '-'})' na '${group} (poradie: ${team.newOrder || '?'})'`;
-                break;
-            case 'assign_user':
-                message = `Pre tím ${teamName} zmena: Skupina z 'bez skupiny' na '${group} (poradie: ${team.newOrder})'`;
-                break;
-            case 'change_group_user':
-                message = `Pre tím ${teamName} zmena: Skupina z '${team.oldGroup || 'bez skupiny'} (poradie: ${team.oldOrder || '-'})' na '${group} (poradie: ${team.newOrder || '?'})'`;
-                break;
-            case 'add_new_global':
-                message = `V kategórii ${category} vytvorený nový tím '${teamName}' a priradený do skupiny '${group} ${team.order ? ` s poradím: ${team.order}` : ''}'`;
-                break;
-            case 'unassign_global':
-                message = `Z kategórie ${category} a skupiny '${team.oldGroup || group} (poradie: ${team.order})' bol odstránený tím '${teamName}'`;
-                break;
-            case 'unassign_user':
-                message = `Z kategórie ${category} a skupiny '${team.oldGroup || group} (poradie: ${team.oldOrder})' bol odstránený tím '${teamName}'`;
-                break;
-            case 'change_order_global':
-                message = `Pre tím ${teamName} zmena: Poradie z '${team.oldOrder || '?'}' na '${team.newOrder || '?'}'`;
-                break;
-            case 'change_order_user':
-                message = `Pre tím ${teamName} zmena: Poradie z '${team.oldOrder || '?'}' na '${team.newOrder || '?'}'`;
-                break;
-            case 'change_team_name':
-                message = `Pre tím ${teamName} zmena: Názov tímu z '${team.oldTeamName}' na '${teamName}'`;
-                break;
-            default:
-                message = `zmena tímu ${teamName} (${action})`;
-        }
-    }
-
-    try {
-        const notificationsRef = collection(window.db, 'notifications');
-        await addDoc(notificationsRef, {
-            userEmail: currentUserEmail || "",
-            performedBy: currentUserEmail || null,
-            changes: [message],
-            timestamp: serverTimestamp(),
-            relatedTeamId: team.id ?? null,
-            relatedCategory: category,
-            relatedGroup: group || null,
-            actionType: action,
-            // Pridáme dodatočné informácie pre lepšie sledovanie zmien
-            oldGroup: team.oldGroup || null,
-            newGroup: team.groupName || null,
-            oldOrder: team.oldOrder || null,
-            newOrder: team.newOrder || team.order || null
-        });
-        console.log("[NOTIFIKÁCIA] Uložená:", message);
-    } catch (err) {
-        console.error("[NOTIFIKÁCIA] Chyba pri ukladaní:", err);
-    }
-};
-
-      useEffect(() => {
+    useEffect(() => {
         const handleResize = () => {
           setAllTeams(prev => [...prev]);
         };
@@ -493,6 +493,85 @@ const createTeamAssignmentNotification = async (action, team) => {
           window.removeEventListener('zoomchange', handleZoomChange);
         };
       }, []);
+
+    // ============================================================
+    // 🔥 AUTOMATICKÉ MAPOVANIE TÍMOV PRE NADSTAVBOVÉ SKUPINY
+    // ============================================================
+    useEffect(() => {
+        // Funkcia na vynútenie prekreslenia všetkých tímov
+        const forceRerender = () => {
+            console.log('🔄 [Mapovanie] Spúšťam aktualizáciu zoznamu tímov...');
+            
+            // Vynútime prekreslenie komponentu
+            setAllTeams(prevTeams => {
+                // Vytvoríme novú referenciu na pole, aby sa React znovu vykreslil
+                return [...prevTeams];
+            });
+            
+            // Malé oneskorenie pre istotu
+            setTimeout(() => {
+                setAllTeams(prevTeams => [...prevTeams]);
+            }, 100);
+        };
+        
+        // Funkcia na kontrolu, či už je matchTracker pripravený
+        const checkAndApplyMapping = () => {
+            if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                console.log('✅ [Mapovanie] window.matchTracker je dostupný, aplikujem mapovanie...');
+                forceRerender();
+                return true;
+            }
+            return false;
+        };
+        
+        // Skúsime okamžite
+        if (checkAndApplyMapping()) {
+            return;
+        }
+        
+        // Počkáme na udalosť, že matchTracker je pripravený
+        const handleTeamNameMappingReady = (event) => {
+            console.log('📢 [Mapovanie] Prijatá udalosť teamNameMappingReady, aplikujem mapovanie...');
+            console.log(`   📊 Počet mapovaní: ${event.detail?.mappingsCount || 0}`);
+            forceRerender();
+        };
+        
+        const handleGroupTablesUpdated = () => {
+            console.log('📢 [Mapovanie] Prijatá udalosť groupTablesUpdated, aktualizujem mapovanie...');
+            forceRerender();
+        };
+        
+        const handleSuperstructureTeamsMappingReady = () => {
+            console.log('📢 [Mapovanie] Prijatá udalosť superstructureTeamsMappingReady, aplikujem mapovanie...');
+            forceRerender();
+        };
+        
+        // Registrácia poslucháčov
+        window.addEventListener('teamNameMappingReady', handleTeamNameMappingReady);
+        window.addEventListener('groupTablesUpdated', handleGroupTablesUpdated);
+        window.addEventListener('superstructureTeamsMappingReady', handleSuperstructureTeamsMappingReady);
+        
+        // Periodická kontrola (pre prípad, že by udalosti neprišli)
+        const interval = setInterval(() => {
+            if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                console.log('🔄 [Mapovanie] Periodická kontrola: matchTracker je dostupný');
+                clearInterval(interval);
+                forceRerender();
+            } else if (window.__teamNameMapping && Object.keys(window.__teamNameMapping).length > 0) {
+                console.log('🔄 [Mapovanie] Periodická kontrola: mapovanie existuje, aplikujem...');
+                clearInterval(interval);
+                forceRerender();
+            }
+        }, 2000);
+        
+        // Čistenie
+        return () => {
+            window.removeEventListener('teamNameMappingReady', handleTeamNameMappingReady);
+            window.removeEventListener('groupTablesUpdated', handleGroupTablesUpdated);
+            window.removeEventListener('superstructureTeamsMappingReady', handleSuperstructureTeamsMappingReady);
+            clearInterval(interval);
+        };
+    }, []); // Prázdne závislosti - spustí sa len raz pri načítaní
   
 
     // Efekt pre manažovanie notifikácií
@@ -2089,11 +2168,21 @@ const createTeamAssignmentNotification = async (action, team) => {
             
             if (!isInSuperstructureGroup) return displayName;
             
-            // Skúsime získať mapovaný názov cez matchTracker (ak existuje)
+            // 🔥 1. SKÚSIME NAJPRV GLOBÁLNE MAPOVANIE (z druhého kódu)
+            if (window.__teamNameMapping && window.__teamNameMapping[team.teamName]) {
+                const mappedName = window.__teamNameMapping[team.teamName].teamName;
+                if (mappedName && mappedName !== team.teamName) {
+                    console.log(`💿 [Mapovanie] Použité globálne mapovanie: "${team.teamName}" → "${mappedName}"`);
+                    return mappedName;
+                }
+            }
+            
+            // 🔥 2. SKÚSIME CEZ matchTracker (ak je dostupný)
             if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                 try {
                     const mappedName = window.matchTracker.getTeamNameByDisplayId(team.teamName);
                     if (mappedName && mappedName !== team.teamName) {
+                        console.log(`🔄 [Mapovanie] MatchTracker: "${team.teamName}" → "${mappedName}"`);
                         return mappedName;
                     }
                 } catch(e) {
