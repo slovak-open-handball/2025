@@ -3170,24 +3170,34 @@ async function startTeamNameReplacement() {
     window.__mappingNotified = false;
     hasReplacedAnyTeams = false;
     
+    // 🔥 VYPNUTIE VŠETKÝCH PERIODICKÝCH ÚLOH PRED ŠTARTOM
+    if (periodicReplaceInterval) {
+        clearInterval(periodicReplaceInterval);
+        periodicReplaceInterval = null;
+    }
+    if (groupMonitorInterval) {
+        clearInterval(groupMonitorInterval);
+        groupMonitorInterval = null;
+    }
+    
     log('🚀 Spúšťam automatické nahrádzanie identifikátorov tímov...');
     log('📌 Nahrádzanie sa spustí LEN keď sa zápas dokončí (status → completed)');
+    log('❌ Žiadne periodické kontroly nebežia!');
     
     let checkInterval = setInterval(() => {
         if (window.matchTracker && typeof window.matchTracker.createGroupTable === 'function') {
             clearInterval(checkInterval);
             log('✅ MatchTracker je pripravený');
             
-            // 🔥 IBA JEDNO ÚVODNÉ NAHRADENIE (pre už existujúce hotové skupiny)
+            // 🔥 IBA JEDNO ÚVODNÉ NAHRADENIE
             log('🔄 Spúšťam prvé (a posledné automatické) kolo nahrádzania...');
             replaceTeamIdentifiersWhenReady();
             
-            // 🔥 HLAVNÉ: Počúvame LEN na udalosť, že sa zmenili tabuľky (dohraný zápas)
+            // 🔥 HLAVNÉ: Počúvame LEN na udalosť, že sa zmenili tabuľky
             window.addEventListener('groupTablesUpdated', () => {
-                log('📢 Prijatá udalosť: groupTablesUpdated (zápas bol dokončený) - spúšťam nahrádzanie...');
+                log('📢 groupTablesUpdated (zápas dokončený) - spúšťam nahrádzanie...');
                 replaceTeamIdentifiersWhenReady();
             });
-            
         }
     }, 500);
     
@@ -3196,7 +3206,6 @@ async function startTeamNameReplacement() {
         if (!window.matchTracker) {
             log('⚠️ MatchTracker nie je dostupný');
             replaceTeamIdentifiersWhenReady();
-            // Pridáme len event listener, žiadne periodické kontroly
             window.addEventListener('groupTablesUpdated', () => {
                 replaceTeamIdentifiersWhenReady();
             });
