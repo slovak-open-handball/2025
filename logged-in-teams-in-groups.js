@@ -478,6 +478,20 @@ const AddTeamsGroupApp = (props) => {
         }
     };
 
+    useEffect(() => {    
+      if (allTeams.length > 0) {
+          setTimeout(() => {
+              setAllTeams(prevTeams => [...prevTeams]);
+              
+              if (window.matchTracker && typeof window.matchTracker.refreshTeamNameMappings === 'function') {
+                  window.matchTracker.refreshTeamNameMappings();
+              } else if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                  console.log('🔄 [Mapovanie] Prekreslenie po zmene výberu');
+              }
+          }, 50);
+      }
+  }, [selectedCategoryId, selectedGroupName, selectedGroupType, showCategoryPrefix]);
+
     useEffect(() => {
         const handleResize = () => {
           setAllTeams(prev => [...prev]);
@@ -2126,7 +2140,7 @@ const AddTeamsGroupApp = (props) => {
         // Funkcia na získanie mapovaného názvu tímu (s čakaním na matchTracker)
         const getMappedTeamName = (team, displayName) => {
             if (!team.isSuperstructureTeam) return displayName;
-    
+        
             const isInSuperstructureGroup = team.groupName && 
                 allGroupsByCategoryId[targetCategoryId]?.some(g => 
                     g.name === team.groupName && g.type === 'nadstavbová skupina'
@@ -2134,16 +2148,23 @@ const AddTeamsGroupApp = (props) => {
             
             if (!isInSuperstructureGroup) return displayName;
             
-            // 🔥 PRIDAJTE CACHE PRE MAPOVANIE, ABY SA NELOGOVALO DOOKOLA
+            // Kontrola, či je matchTracker dostupný
+            if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                try {
+                    const matchTrackerTeamName = window.matchTracker.getTeamNameByDisplayId(team.teamName);
+                    if (matchTrackerTeamName && matchTrackerTeamName !== team.teamName) {
+                        console.log(`🔄 [Mapovanie] "${team.teamName}" → "${matchTrackerTeamName}" (při změně výběru)`);
+                        return matchTrackerTeamName;
+                    }
+                } catch (e) {
+                    console.warn('[Mapovanie] Chyba pri získavaní mapovaného názvu:', e);
+                }
+            }
+    
+            // Fallback na globálne mapovanie
             if (window.__teamNameMapping && window.__teamNameMapping[team.teamName]) {
                 const mappedName = window.__teamNameMapping[team.teamName].teamName;
                 if (mappedName && mappedName !== team.teamName) {
-                    // Log iba prvýkrát
-                    if (!getMappedTeamName.cache) getMappedTeamName.cache = new Set();
-                    if (!getMappedTeamName.cache.has(team.teamName)) {
-                        console.log(`💿 [Mapovanie] Použité globálne mapovanie: "${team.teamName}" → "${mappedName}"`);
-                        getMappedTeamName.cache.add(team.teamName);
-                    }
                     return mappedName;
                 }
             }
