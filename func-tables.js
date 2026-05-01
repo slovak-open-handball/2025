@@ -3238,6 +3238,11 @@ function attachClickHandlersForReplacement() {
 // Nahraďte existujúcu funkciu startTeamNameReplacement touto verziou
 
 async function startTeamNameReplacement() {
+    mappingCompleted = false;
+    initialMappingDone = false;
+    window.__mappingNotified = false;
+    hasReplacedAnyTeams = false;
+    
     log('🚀 Spúšťam automatické nahrádzanie identifikátorov tímov...');
     log('📌 Nahrádzajú sa len skupiny, ktoré majú 100% odohraných zápasov a všetky zápasy sú spracované.');
     
