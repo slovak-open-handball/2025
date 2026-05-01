@@ -222,7 +222,6 @@ export function TableSettings({ db, userProfileData, showNotification }) {
             }
             updated[index] = { ...updated[index], [field]: value };
             
-            // 🔥 OPRAVA: Pre headToHead nastavíme predvolený smer 'desc'
             if (field === 'parameter') {
                 if (value === 'headToHead') {
                     updated[index].direction = 'desc';
@@ -582,7 +581,7 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                                 })
                             ),
                             // Select pre smer - zobrazí sa len pre podporované parametre
-                            hasDirectionSupport 
+                            (condition.parameter && supportsDirection(condition.parameter) && condition.parameter !== 'headToHead')
                                 ? React.createElement(
                                     'select',
                                     {
@@ -593,7 +592,14 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                                     React.createElement('option', { value: 'asc', className: 'text-gray-900' }, 'Vzostupne'),
                                     React.createElement('option', { value: 'desc', className: 'text-gray-900' }, 'Zostupne')
                                 )
-                                : React.createElement('div', { className: 'w-32' }),
+                                : (condition.parameter === 'headToHead'
+                                    ? React.createElement(
+                                        'div',
+                                        { className: 'w-32 px-3 py-2 text-sm text-gray-500 italic' },
+                                        'Zostupne'
+                                    )
+                                    : React.createElement('div', { className: 'w-32' })
+                                )
                             // Tlačidlo pre odstránenie
                             React.createElement(
                                 'button',
