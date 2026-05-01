@@ -599,7 +599,7 @@ export function TableSettings({ db, userProfileData, showNotification }) {
                                         'Zostupne'
                                     )
                                     : React.createElement('div', { className: 'w-32' })
-                                )
+                                ),
                             // Tlačidlo pre odstránenie
                             React.createElement(
                                 'button',
