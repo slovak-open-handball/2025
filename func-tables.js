@@ -3689,6 +3689,11 @@ window.__teamNameMapping = window.__teamNameMapping || {};
 function registerTeamNameMapping(originalIdentifier, teamName, category, groupLetter, position) {
     if (!originalIdentifier || !teamName) return;
     
+    // 🔥 KONTROLA - ak už mapovanie existuje, neaktualizujeme
+    if (window.__teamNameMapping[originalIdentifier]) {
+        return;  // Už existuje, preskočíme
+    }
+    
     window.__teamNameMapping[originalIdentifier] = {
         teamName: teamName,
         category: category,
@@ -3696,6 +3701,20 @@ function registerTeamNameMapping(originalIdentifier, teamName, category, groupLe
         position: position,
         timestamp: Date.now()
     };
+    
+    // 🔥 PRIDAJTE AJ DO CACHE
+    const cacheKey = `${category}|${groupLetter.toUpperCase()}|${position}`;
+    if (!replacementCache.has(cacheKey)) {
+        replacementCache.set(cacheKey, {
+            teamName: teamName,
+            displayId: originalIdentifier,
+            category: category,
+            groupLetter: groupLetter.toUpperCase(),
+            position: position,
+            timestamp: Date.now()
+        });
+        saveReplacementCache(replacementCache);
+    }
 }
 
 // ============================================================
@@ -3739,13 +3758,16 @@ window.performPartialReplacement = function(identifiersToReplace) {
         
         if (teamName && teamName !== idInfo.identifier && teamName !== idInfo.originalIdentifier) {
             // REGISTRÁCIA MAPOVANIA - vždy, aj keď nenahradíme text
-            registerTeamNameMapping(
-                idInfo.originalIdentifier, 
-                teamName, 
-                idInfo.category, 
-                idInfo.groupLetter, 
-                idInfo.position
-            );
+            const mappingKey = idInfo.originalIdentifier;
+            if (!window.__teamNameMapping[mappingKey]) {
+                registerTeamNameMapping(
+                    mappingKey, 
+                    teamName, 
+                    idInfo.category, 
+                    idInfo.groupLetter, 
+                    idInfo.position
+                );
+            }
             
             const escapedIdentifier = idInfo.originalIdentifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const regex = new RegExp(escapedIdentifier, 'g');
@@ -3828,7 +3850,7 @@ window.performPartialReplacement = function(identifiersToReplace) {
     }
     
     // VYSIELAME UDALOSŤ S MAPOVANÍM
-    if (Object.keys(window.__teamNameMapping).length > 0) {
+    if (Object.keys(window.__teamNameMapping).length > 0 && !hasReplacedAnyTeams) {
         hasReplacedAnyTeams = true;
         
         const event = new CustomEvent('teamNamesReplaced', {
@@ -3936,7 +3958,7 @@ function notifyMappingReady() {
 }
 
 // TOTO JE DÔLEŽITÉ - po načítaní existujúcich mapovaní
-if (Object.keys(window.__teamNameMapping).length > 0) {
+if (Object.keys(window.__teamNameMapping).length > 0 && !hasReplacedAnyTeams) {
     console.log('✅ Mapovanie už existuje, odosielam udalosť okamžite...');
     notifyMappingReady();
 }
@@ -3986,7 +4008,7 @@ window.startPeriodicReplacement = function(intervalSeconds = 1) {
 // Funkcia na manuálne ohlásenie pripravenosti
 function announceMappingReady() {
     if (mappingCompleted) return;
-    if (Object.keys(window.__teamNameMapping).length > 0) {
+    if (Object.keys(window.__teamNameMapping).length > 0 && !hasReplacedAnyTeams) {
         notifyMappingReady();
     } else {
         setTimeout(announceMappingReady, 500);
@@ -4071,7 +4093,7 @@ if (window.teamNameReplacer) {
 }
 
 // OKAMŽITÁ KONTROLA – ak už náhodou máme mapovanie, pošleme udalosť hneď
-if (Object.keys(window.__teamNameMapping).length > 0) {
+if (Object.keys(window.__teamNameMapping).length > 0 && !hasReplacedAnyTeams) {
     notifyMappingReady();
 }
 
