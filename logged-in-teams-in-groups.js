@@ -2145,27 +2145,56 @@ const AddTeamsGroupApp = (props) => {
                 allGroupsByCategoryId[targetCategoryId]?.some(g => 
                     g.name === team.groupName && g.type === 'nadstavbová skupina'
                 );
-            
+    
             if (!isInSuperstructureGroup) return displayName;
             
             // Kontrola, či je matchTracker dostupný
             if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                 try {
-                    const matchTrackerTeamName = window.matchTracker.getTeamNameByDisplayId(team.teamName);
-                    if (matchTrackerTeamName && matchTrackerTeamName !== team.teamName) {
-                        console.log(`🔄 [Mapovanie] "${team.teamName}" → "${matchTrackerTeamName}" (při změně výběru)`);
-                        return matchTrackerTeamName;
+                    let currentName = team.teamName;
+                    let mappedName = window.matchTracker.getTeamNameByDisplayId(currentName);
+                    
+                    // REKURZÍVNE VOLANIE: Ak sa výsledok líši od vstupu, skúsime znova
+                    let iterationCount = 0;
+                    const maxIterations = 10; // Bezpečnostný limit proti nekonečnej slučke
+                    
+                    while (mappedName && mappedName !== currentName && iterationCount < maxIterations) {
+                        console.log(`🔄 [Mapovanie] Iterácia ${iterationCount + 1}: "${currentName}" → "${mappedName}"`);
+                        currentName = mappedName;
+                        mappedName = window.matchTracker.getTeamNameByDisplayId(currentName);
+                        iterationCount++;
+                    }
+                    
+                    if (iterationCount >= maxIterations) {
+                        console.warn(`⚠️ [Mapovanie] Dosiahnutý maximálny počet iterácií (${maxIterations}) pre tím "${team.teamName}"`);
+                    }
+                    
+                    // Ak sme našli mapovanie, vrátime ho
+                    if (currentName !== team.teamName) {
+                        console.log(`✅ [Mapovanie] Finálny výsledok: "${team.teamName}" → "${currentName}" (po ${iterationCount} iteráciách)`);
+                        return currentName;
                     }
                 } catch (e) {
                     console.warn('[Mapovanie] Chyba pri získavaní mapovaného názvu:', e);
                 }
             }
-    
+        
             // Fallback na globálne mapovanie
-            if (window.__teamNameMapping && window.__teamNameMapping[team.teamName]) {
-                const mappedName = window.__teamNameMapping[team.teamName].teamName;
-                if (mappedName && mappedName !== team.teamName) {
-                    return mappedName;
+            if (window.__teamNameMapping) {
+                let currentName = team.teamName;
+                let mappedName = window.__teamNameMapping[currentName]?.teamName;
+                
+                let iterationCount = 0;
+                const maxIterations = 10;
+        
+                while (mappedName && mappedName !== currentName && iterationCount < maxIterations) {
+                    currentName = mappedName;
+                    mappedName = window.__teamNameMapping[currentName]?.teamName;
+                    iterationCount++;
+                }
+                
+                if (currentName !== team.teamName) {
+                    return currentName;
                 }
             }
             
