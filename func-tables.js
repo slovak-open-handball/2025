@@ -2384,7 +2384,7 @@ function getTeamNameFromDatabase(displayId) {
     // 🔴 KONTROLA PRIPRAVENOSTI - BEZ TOHO NENAČÍTAME Z DB
     const isReady = isGroupReadyForReplacement(category, groupLetter);
     if (!isReady) {
-        log(`⛔ [${category} - ${fullGroupName}] Skupina NIE JE pripravená, nenačítam z DB`);
+//        log(`⛔ [${category} - ${fullGroupName}] Skupina NIE JE pripravená, nenačítam z DB`);
         return null;
     }
     
@@ -2514,7 +2514,7 @@ function getTeamNameByDisplayId(displayId) {
     if (!isReady) {
         if (!checkedGroupsCache.has(`${groupKey}_base_not_ready`)) {
             if (!advancedGroupExists) {
-                log(`⛔ Skupina ${fullGroupName} NIE JE pripravená (nemá 100% odohraných zápasov)`);
+//                log(`⛔ Skupina ${fullGroupName} NIE JE pripravená (nemá 100% odohraných zápasov)`);
             } else {
                 log(`ℹ️ Základná skupina ${fullGroupName} nie je pripravená, ale nadstavbová už bola spracovaná`);
             }
@@ -2856,7 +2856,7 @@ function isGroupReadyForReplacement(category, groupLetter) {
         return true;
     }
     
-    log(`⏳ [${cleanCategory} - ${fullGroupName}] Len ${groupTable.completedCount}/${groupTable.totalMatches} odohraných → NIE JE PRIPRAVENÁ`);
+//    log(`⏳ [${cleanCategory} - ${fullGroupName}] Len ${groupTable.completedCount}/${groupTable.totalMatches} odohraných → NIE JE PRIPRAVENÁ`);
     groupCheckCache.add(`${groupKey}_false`);
     return false;
 }
@@ -3095,7 +3095,7 @@ function replaceAllIdentifiersNow() {
     }
     
     if (notReadyIdentifiers.length > 0) {
-        log(`⏳ ${notReadyIdentifiers.length} identifikátorov nie je pripravených (skupiny nemajú 100%):`);
+//        log(`⏳ ${notReadyIdentifiers.length} identifikátorov nie je pripravených (skupiny nemajú 100%):`);
         notReadyIdentifiers.forEach(id => {
             log(`   - ${id.originalIdentifier} (skupina ${id.groupLetter})`);
         });
