@@ -1527,9 +1527,6 @@ let isTeamNameReplacerInitialized = false;
         
         if (!table) return;
         
-        // Mapovanie názvov tímov v tabuľke
-        const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
-        
         for (const team of table.teams) {
             if (looksLikeIdentifier(team.name)) {
                 const mappedName = getTeamNameByDisplayId(team.name);
