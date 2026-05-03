@@ -2701,7 +2701,7 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
             const teamIndex = order - 1;
             if (teamIndex >= 0 && teamIndex < sortedByOriginalOrder.length) {
                 const team = sortedByOriginalOrder[teamIndex];
-                log(`✅ PREDBEŽNÉ (${groupLetter}${order}) (fallback): → "${team.name}" (zoradené podľa ID)`);
+//                log(`✅ PREDBEŽNÉ (${groupLetter}${order}) (fallback): → "${team.name}" (zoradené podľa ID)`);
                 return team.name;
             }
         }
@@ -2709,11 +2709,11 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
         // 3. Posledná možnosť: Pokúsime sa nájsť tím v používateľských dátach
         const userTeam = findTeamInUsersByGroupAndOrder(category, groupLetter, order);
         if (userTeam && userTeam.teamName) {
-            log(`✅ PREDBEŽNÉ (${groupLetter}${order}) (z userTeams): → "${userTeam.teamName}"`);
+//            log(`✅ PREDBEŽNÉ (${groupLetter}${order}) (z userTeams): → "${userTeam.teamName}"`);
             return userTeam.teamName;
         }
         
-        log(`❌ PREDBEŽNÉ poradie (${groupLetter}${order}) - tím nebol nájdený`);
+//        log(`❌ PREDBEŽNÉ poradie (${groupLetter}${order}) - tím nebol nájdený`);
         return null;
     }
     
