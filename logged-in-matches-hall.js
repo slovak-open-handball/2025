@@ -11342,17 +11342,12 @@ window.forceTeamByGroup = async (categoryName, groupName, order, teamSide = 'hom
     }
 };
 
-/**
- * Registrácia React settera pre users stav.
- */
+
 window.registerUsersSetter = (setterFunction) => {
     window.__reactUsersSetter = setterFunction;
     console.log('✅ React setter pre users bol zaregistrovaný.');
 };
 
-/**
- * Získa všetky tímy v danej kategórii a skupine.
- */
 window.getTeamsByGroup = async (categoryName, groupName) => {
     if (!window.db) return [];
     
@@ -11390,28 +11385,6 @@ window.getTeamsByGroup = async (categoryName, groupName) => {
         return [];
     }
 };
-
-// ============================================================================
-// PRÍKLADY POUŽITIA:
-// ============================================================================
-// 
-// 1. Vloženie tímu podľa skupiny a poradia:
-//    window.forceTeamByGroup("U12 D", "skupina B", 2, "home")
-//
-// 2. Získanie všetkých tímov v skupine:
-//    window.getTeamsByGroup("U12 D", "skupina B")
-//
-// 3. Registrácia React setterov (pridajte do React komponentu):
-//    useEffect(() => {
-//        window.registerMatchSetter(setSelectedMatch);
-//        window.registerUsersSetter(setUsers);
-//        return () => {
-//            window.__reactSelectedMatchSetter = null;
-//            window.__reactUsersSetter = null;
-//        };
-//    }, []);
-//
-// ============================================================================
 
 console.log('✅ Pripravené nové funkcie na vkladanie tímov podľa skupiny:');
 console.log('   • window.forceTeamByGroup("U12 D", "skupina B", 2, "home") - vloženie tímu');
