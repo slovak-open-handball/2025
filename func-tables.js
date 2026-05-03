@@ -2416,7 +2416,7 @@ function getTeamNameFromDatabase(displayId) {
 }
 
 // ============================================================
-// OPRAVENÁ FUNKCIA: getTeamNameByDisplayId - HĽADÁ LEN V 100% PRIPRAVENÝCH SKUPINÁCH
+// OPRAVENÁ FUNKCIA: getTeamNameByDisplayId - HĽADÁ LEN V 100% PRIPRAVENÝCH SKUPINÁCH (BEZ REKURZIE)
 // ============================================================
 
 function getTeamNameByDisplayId(displayId) {
@@ -2487,18 +2487,8 @@ function getTeamNameByDisplayId(displayId) {
         
         const teamIndex = order - 1;
         if (teamIndex >= 0 && teamIndex < advancedGroupTable.teams.length) {
-            let team = advancedGroupTable.teams[teamIndex];
-            let teamName = team.name;
-            
-            // 🔥 Ak je názov ešte identifikátor (napr. "U12 D 1A"), rekurzívne ho namapujeme
-            const looksLikeIdentifier = /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(teamName);
-            if (looksLikeIdentifier && teamName !== displayId) {
-                const mappedName = getTeamNameByDisplayId(teamName);
-                if (mappedName && mappedName !== teamName) {
-                    teamName = mappedName;
-                    log(`🔄 Rekurzívne mapovanie v nadstavbovej: "${team.name}" → "${teamName}"`);
-                }
-            }
+            const team = advancedGroupTable.teams[teamIndex];
+            const teamName = team.name;
             
             // 🔥 REGISTRÁCIA MAPOVANIA DO GLOBÁLNEHO OBJEKTU
             registerTeamNameMapping(displayId, teamName, category, groupLetter, order);
@@ -2545,18 +2535,8 @@ function getTeamNameByDisplayId(displayId) {
     const teamIndex = order - 1;
     
     if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
-        let team = groupTable.teams[teamIndex];
-        let teamName = team.name;
-        
-        // Mapovanie názvu tímu (ak je to identifikátor)
-        const looksLikeIdentifier = /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(teamName);
-        if (looksLikeIdentifier) {
-            const mappedName = getTeamNameByDisplayId(teamName);
-            if (mappedName && mappedName !== teamName) {
-                teamName = mappedName;
-                log(`🔄 Rekurzívne mapovanie v základnej: "${team.name}" → "${teamName}"`);
-            }
-        }
+        const team = groupTable.teams[teamIndex];
+        const teamName = team.name;
         
         // 🔥 REGISTRÁCIA MAPOVANIA DO GLOBÁLNEHO OBJEKTU
         registerTeamNameMapping(displayId, teamName, category, groupLetter, order);
