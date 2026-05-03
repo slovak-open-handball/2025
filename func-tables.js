@@ -2626,107 +2626,49 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
         return null;
     }
     
-    // Extrahujeme číslo a písmeno (bez ohľadu na poradie)
+    // 🔥 ROZLIŠENIE FORMÁTU: "G5" vs "5G"
+    // "G5" = písmeno + číslo → NADSTAVBOVÁ skupina (PO odohratí)
+    // "5G" = číslo + písmeno → ZÁKLADNÁ skupina (PRED odohratím)
+    let isAdvancedFormat = false; // true = "G5" (písmeno+číslo), false = "5G" (číslo+písmeno)
     let order = null;
     let groupLetter = null;
     
-    const numberMatch = lastPart.match(/\d+/);
-    const letterMatch = lastPart.match(/[A-Za-z]+/);
+    // Kontrola, či začína písmenom (formát "G5")
+    const startsWithLetter = /^[A-Za-z]/.test(lastPart);
+    // Kontrola, či začína číslom (formát "5G")
+    const startsWithNumber = /^\d/.test(lastPart);
     
-    if (numberMatch && letterMatch) {
-        order = parseInt(numberMatch[0], 10);
-        groupLetter = letterMatch[0].toUpperCase();
+    if (startsWithLetter) {
+        // Formát "G5" - NADSTAVBOVÁ skupina
+        isAdvancedFormat = true;
+        const letterMatch = lastPart.match(/^([A-Za-z]+)/);
+        const numberMatch = lastPart.match(/\d+$/);
+        if (letterMatch && numberMatch) {
+            groupLetter = letterMatch[0].toUpperCase();
+            order = parseInt(numberMatch[0], 10);
+        }
+    } else if (startsWithNumber) {
+        // Formát "5G" - ZÁKLADNÁ skupina
+        isAdvancedFormat = false;
+        const numberMatch = lastPart.match(/^\d+/);
+        const letterMatch = lastPart.match(/[A-Za-z]+$/);
+        if (numberMatch && letterMatch) {
+            order = parseInt(numberMatch[0], 10);
+            groupLetter = letterMatch[0].toUpperCase();
+        }
     }
     
     if (!order || !groupLetter) {
         return null;
     }
     
-    // Zistíme formát: true = písmeno+číslo (napr. "G5"), false = číslo+písmeno (napr. "5G")
-    const isLetterFirst = /^[A-Za-z]/.test(lastPart);
-    
-    log(`🔍 getTeamNameByDisplayId: "${displayId}" → písmeno: ${groupLetter}, poradie: ${order}, formát: ${isLetterFirst ? 'G5' : '5G'}`);
+    log(`🔍 getTeamNameByDisplayId: "${displayId}" → formát: ${isAdvancedFormat ? 'NADSTAVBA (G5)' : 'ZÁKLADNÁ (5G)'}, skupina: ${groupLetter}, poradie: ${order}`);
     
     // ============================================================
-    // KROK 1: ZISTÍME, ČI SKUPINA EXISTUJE AKO NADSTAVBOVÁ
+    // PRÍPAD 1: Formát "G5" - NADSTAVBOVÁ skupina (PO odohratí)
     // ============================================================
-    const groupsData = window.groupsData || {};
-    const categoryId = window.categoryIdMap?.[category] || null;
-    
-    let hasAdvancedGroup = false;
-    let advancedGroupName = null;
-    
-    if (categoryId && groupsData[categoryId]) {
-        // Hľadáme nadstavbovú skupinu s rovnakým písmenom
-        const advancedGroup = groupsData[categoryId].find(g => 
-            g.type === 'nadstavbová skupina' && 
-            g.name.toLowerCase().includes(groupLetter.toLowerCase())
-        );
-        if (advancedGroup) {
-            hasAdvancedGroup = true;
-            advancedGroupName = advancedGroup.name;
-            log(`📌 Skupina ${groupLetter} existuje ako NADSTAVBOVÁ: "${advancedGroupName}"`);
-        } else {
-            log(`📌 Skupina ${groupLetter} neexistuje ako nadstavbová, použijem ZÁKLADNÚ`);
-        }
-    }
-    
-    // ============================================================
-    // PRÍPAD 1: Formát "G5" (písmeno+číslo) → VŽDY ZÁKLADNÁ skupina
-    // ============================================================
-    if (isLetterFirst) {
-        log(`   🔹 Formát "G5" (písmeno+číslo) → ZÁKLADNÁ skupina (pôvodné umiestnenie)`);
-        
-        const fullGroupName = `skupina ${groupLetter}`;
-        const isReady = isGroupReadyForReplacement(category, groupLetter);
-        
-        if (!isReady) {
-            log(`⏳ Základná skupina ${fullGroupName} nie je pripravená (100%)`);
-            return null;
-        }
-        
-        const groupTable = window.matchTracker?.createGroupTable(category, fullGroupName);
-        
-        if (!groupTable || !groupTable.teams || groupTable.teams.length === 0) {
-            log(`❌ Tabuľka pre skupinu ${fullGroupName} neexistuje`);
-            return null;
-        }
-        
-        const teamIndex = order - 1;
-        
-        if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
-            const team = groupTable.teams[teamIndex];
-            
-            // Uložíme do cache
-            const cacheKey = `${category}|${groupLetter}|${order}_base`;
-            if (!replacementCache.has(cacheKey)) {
-                replacementCache.set(cacheKey, {
-                    teamName: team.name,
-                    displayId: displayId,
-                    category: category,
-                    groupLetter: groupLetter,
-                    position: order,
-                    timestamp: Date.now(),
-                    source: 'base_group'
-                });
-                saveReplacementCache(replacementCache);
-            }
-            
-            log(`✅ ZÁKLADNÁ (${order}${groupLetter}): → "${team.name}"`);
-            return team.name;
-        }
-        
-        return null;
-    }
-    
-    // ============================================================
-    // PRÍPAD 2: Formát "5G" (číslo+písmeno) → PODĽA EXISTENCIE NADSTAVBY
-    // ============================================================
-    // Formát "5G" (číslo+písmeno)
-    
-    if (hasAdvancedGroup && advancedGroupName) {
-        // Skupina existuje ako NADSTAVBOVÁ → použijeme NADSTAVBOVÚ skupinu (vyhodnotenú)
-        log(`   🔹 Formát "5G" (číslo+písmeno) + existuje nadstavba → NADSTAVBOVÁ skupina (vyhodnotené poradie)`);
+    if (isAdvancedFormat) {
+        const advancedGroupName = `nadstavbová skupina ${groupLetter}`;
         
         let advancedGroupTable = null;
         
@@ -2754,7 +2696,7 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
         const advancedGroupExists = advancedGroupTable && advancedGroupTable.teams && advancedGroupTable.teams.length > 0;
         
         if (advancedGroupExists) {
-            // Pre formát "5G" potrebujeme KOMPLETNÚ nadstavbovú skupinu
+            // Pre formát "G5" potrebujeme KOMPLETNÚ nadstavbovú skupinu
             const isComplete = advancedGroupTable.completionPercentage === 100;
             
             if (isComplete) {
@@ -2785,21 +2727,22 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
                         saveReplacementCache(replacementCache);
                     }
                     
-                    log(`✅ NADSTAVBA (${order}${groupLetter}): → "${team.name}"`);
+                    log(`✅ NADSTAVBA (${groupLetter}${order}): → "${team.name}"`);
                     return team.name;
                 }
             } else {
                 log(`⏳ Nadstavbová skupina ${advancedGroupName} nie je kompletná (${advancedGroupTable.completionPercentage}%)`);
-                // Ak nie je kompletná, skúsime základnú ako fallback
             }
         }
+        
+        // Ak nadstavbová skupina neexistuje alebo nie je kompletná, skúsime základnú
+        log(`⚠️ Nadstavbová skupina nie je k dispozícii, skúšam základnú skupinu...`);
     }
     
     // ============================================================
-    // FALLBACK: Ak nemáme nadstavbovú skupinu alebo nie je kompletná, použijeme ZÁKLADNÚ
+    // PRÍPAD 2: Formát "5G" - ZÁKLADNÁ skupina (PRED odohratím)
+    // Alebo fallback, keď nadstavbová nie je kompletná
     // ============================================================
-    log(`   🔹 Fallback → ZÁKLADNÁ skupina (pôvodné umiestnenie)`);
-    
     const fullGroupName = `skupina ${groupLetter}`;
     const isReady = isGroupReadyForReplacement(category, groupLetter);
     
@@ -2821,7 +2764,7 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
         const team = groupTable.teams[teamIndex];
         
         // Uložíme do cache
-        const cacheKey = `${category}|${groupLetter}|${order}_base_fallback`;
+        const cacheKey = `${category}|${groupLetter}|${order}_base`;
         if (!replacementCache.has(cacheKey)) {
             replacementCache.set(cacheKey, {
                 teamName: team.name,
@@ -2830,12 +2773,12 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
                 groupLetter: groupLetter,
                 position: order,
                 timestamp: Date.now(),
-                source: 'base_group_fallback'
+                source: 'base_group'
             });
             saveReplacementCache(replacementCache);
         }
         
-        log(`✅ ZÁKLADNÁ (${order}${groupLetter}) FALLBACK: → "${team.name}"`);
+        log(`✅ ZÁKLADNÁ (${order}${groupLetter}): → "${team.name}"`);
         return team.name;
     }
     
