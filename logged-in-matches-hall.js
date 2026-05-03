@@ -11417,6 +11417,3 @@ console.log('✅ Pripravené nové funkcie na vkladanie tímov podľa skupiny:')
 console.log('   • window.forceTeamByGroup("U12 D", "skupina B", 2, "home") - vloženie tímu');
 console.log('   • window.getTeamsByGroup("U12 D", "skupina B") - zoznam tímov v skupine');
 console.log('   • window.registerUsersSetter(setUsers) - registrácia settera pre users');
-
-
-odtsran prosím z tohto kodu uplne včetko a ponecha iba načitavanie zoznamu zápasov pre halu
