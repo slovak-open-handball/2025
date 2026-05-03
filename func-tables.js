@@ -89,6 +89,11 @@ let isTeamNameReplacerInitialized = false;
     let matchesData = {};
     let eventsData = {};
     let tableSettings = { sortingConditions: [] }; // Uloženie nastavení poradia
+
+    function looksLikeIdentifier(str) {
+        if (!str || typeof str !== 'string') return false;
+        return /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
+    }
     
     // Funkcia na formátovanie času
     function formatMatchTime(seconds) {
@@ -1039,8 +1044,7 @@ let isTeamNameReplacerInitialized = false;
                     let awayTeamName = match.awayTeamName;
                     
                     // Ak sú ešte identifikátory, zmapujeme ich
-                    const looksLikeIdentifier = /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(homeTeamName);
-                    if (looksLikeIdentifier) {
+                    if (looksLikeIdentifier(homeTeamName)) {
                         const mapped = getTeamNameByDisplayId(homeTeamName);
                         if (mapped && mapped !== homeTeamName) {
                             homeTeamName = mapped;
