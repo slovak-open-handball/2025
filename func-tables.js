@@ -42,22 +42,6 @@ function error(...args) {
     if (localError) localError(...args); 
 }
 
-function forceLog(...args) {
-    originalConsoleLog(...args);
-}
-
-function forceInfo(...args) {
-    originalConsoleInfo(...args);
-}
-
-function forceWarn(...args) {
-    originalConsoleWarn(...args);
-}
-
-function forceError(...args) {
-    originalConsoleError(...args);
-}
-
 // ============================================================
 // OD TOHTO MIESTA POKRAČUJE PÔVODNÝ KÓD, ALE VŠETKY log
 // TREBA NAHRADIŤ ZA log(), warn ZA warn(), atď.
@@ -4268,74 +4252,3 @@ if (window.teamNameReplacer) {
 if (Object.keys(window.__teamNameMapping).length > 0 && !hasReplacedAnyTeams) {
     notifyMappingReady();
 }
-
-
-const originalGetTeamNameByDisplayId = getTeamNameByDisplayId;
-window.matchTracker.getTeamNameByDisplayId = function(displayId, forceRefresh = false) {
-    const result = originalGetTeamNameByDisplayId(displayId, forceRefresh);
-    
-    // VŽDY vypíšeme do konzoly (použitím pôvodného console.log)
-    if (result && result !== displayId) {
-        originalConsoleLog(`%c🎯 getTeamNameByDisplayId("${displayId}") → "${result}"`, 'color: #00aaff; font-weight: bold;');
-    } else if (result === displayId) {
-        originalConsoleLog(`%c⚠️ getTeamNameByDisplayId("${displayId}") → (žiadna zmena, názov ostáva rovnaký)`, 'color: #ffaa00;');
-    } else {
-        originalConsoleLog(`%c❌ getTeamNameByDisplayId("${displayId}") → NENAJDENÉ (skupina nie je 100% dokončená)`, 'color: #ff5555;');
-    }
-    
-    return result;
-};
-
-// Prepíšeme printGroupTable tak, aby vždy vypísala tabuľku
-const originalPrintGroupTable = printGroupTable;
-window.matchTracker.printGroupTable = function(categoryName, groupName, baseGroupName = null) {
-    originalConsoleLog(`%c\n📊 VYTVÁRAM TABUĽKU PRE: ${categoryName} - ${groupName}`, 'color: #00ff00; font-weight: bold; font-size: 14px;');
-    originalConsoleLog('%c' + '='.repeat(100), 'color: #888888;');
-    
-    const result = originalPrintGroupTable(categoryName, groupName, baseGroupName);
-    
-    if (!result) {
-        originalConsoleLog(`%c❌ Tabuľka pre ${categoryName} - ${groupName} neexistuje`, 'color: #ff5555;');
-    }
-    
-    return result;
-};
-
-// Prepíšeme printAllGroupTables tak, aby vždy vypísala všetky tabuľky
-const originalPrintAllGroupTables = printAllGroupTables;
-window.matchTracker.printAllGroupTables = function() {
-    originalConsoleLog('%c\n📊 VŠETKY TABUĽKY SKUPÍN', 'color: #00ff00; font-weight: bold; font-size: 16px;');
-    originalConsoleLog('%c' + '='.repeat(100), 'color: #888888;');
-    return originalPrintAllGroupTables();
-};
-
-// Prepíšeme createGroupTable - aby vždy vrátila výsledok (aj keď sa nevypisuje)
-const originalCreateGroupTable = createGroupTable;
-window.matchTracker.createGroupTable = function(categoryName, groupName, forceRefresh = false) {
-    if (!DEBUG_MODE) {
-        // Ticho vytvoríme tabuľku bez logovania
-        const originalLocalLog = localLog;
-        localLog = function() {};  // Dočasne vypneme logovanie
-        
-        const result = originalCreateGroupTable(categoryName, groupName, forceRefresh);
-        
-        localLog = originalLocalLog;  // Obnovíme pôvodné logovanie
-        return result;
-    }
-    return originalCreateGroupTable(categoryName, groupName, forceRefresh);
-};
-
-// Prepíšeme createAdvancedGroupTable
-const originalCreateAdvancedGroupTable = createAdvancedGroupTable;
-window.matchTracker.createAdvancedGroupTable = function(categoryName, groupName, baseGroupName = null, forceRefresh = false) {
-    if (!DEBUG_MODE) {
-        const originalLocalLog = localLog;
-        localLog = function() {};
-        
-        const result = originalCreateAdvancedGroupTable(categoryName, groupName, baseGroupName, forceRefresh);
-        
-        localLog = originalLocalLog;
-        return result;
-    }
-    return originalCreateAdvancedGroupTable(categoryName, groupName, baseGroupName, forceRefresh);
-};
