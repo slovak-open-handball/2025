@@ -2674,53 +2674,53 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
     // VYŽADUJE 100% ODOHRANÝCH ZÁPASOV
     // ============================================================
     if (isFinalFormat) {
-        const groupName = `skupina ${groupLetter}`;
+        const baseGroupName = `skupina ${groupLetter}`;
+        // 🔥 OPRAVA: Skúsime oba možné názvy nadstavbovej skupiny
+        const advancedGroupName1 = `nadstavbová skupina ${groupLetter}`;
+        const advancedGroupName2 = `skupina ${groupLetter}`;  // Niektoré skupiny sa volajú len "skupina G"
         
-        // 🔥 DÔLEŽITÉ: Zistíme, či ide o nadstavbovú skupinu podľa groupsData
-        const groupsData = window.groupsData || {};
-        const categoryId = window.categoryIdMap?.[category] || null;
-        let isAdvancedGroup = false;
+        // 1. SKÚSIME NADSTAVBOVÚ SKUPINU (ak existuje a je 100%)
+        let advancedGroupTable = null;
         
-        if (categoryId && groupsData[categoryId]) {
-            const groupInfo = groupsData[categoryId].find(g => g.name === groupName);
-            if (groupInfo && groupInfo.type === 'nadstavbová skupina') {
-                isAdvancedGroup = true;
+        // Skúsime prvý variant názvu
+        if (forceRefresh) {
+            advancedGroupTable = window.matchTracker?.createAdvancedGroupTable?.(category, advancedGroupName1, null, true);
+        } else {
+            advancedGroupTable = window.matchTracker?.createAdvancedGroupTable?.(category, advancedGroupName1, null);
+        }
+        
+        // Ak prvý variant nefunguje, skúsime druhý
+        if (!advancedGroupTable || advancedGroupTable.teams.length === 0) {
+            if (forceRefresh) {
+                advancedGroupTable = window.matchTracker?.createAdvancedGroupTable?.(category, advancedGroupName2, null, true);
+            } else {
+                advancedGroupTable = window.matchTracker?.createAdvancedGroupTable?.(category, advancedGroupName2, null);
             }
         }
         
-        // 1. AK IDE O NADSTAVBOVÚ SKUPINU - použijeme createAdvancedGroupTable
-        if (isAdvancedGroup) {
-            let advancedGroupTable = null;
-            
-            if (forceRefresh) {
-                advancedGroupTable = window.matchTracker?.createAdvancedGroupTable?.(category, groupName, null, true);
-            } else {
-                advancedGroupTable = window.matchTracker?.createAdvancedGroupTable?.(category, groupName, null);
-            }
-            
-            const isAdvancedComplete = advancedGroupTable ? advancedGroupTable.completionPercentage === 100 : false;
-            
-            if (advancedGroupTable && isAdvancedComplete) {
-                const teamIndex = order - 1;
-                if (teamIndex >= 0 && teamIndex < advancedGroupTable.teams.length) {
-                    let team = advancedGroupTable.teams[teamIndex];
-                    
-                    // Ak je názov stále identifikátor, skúsime ho ešte raz namapovať
-                    if (/[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(team.name)) {
-                        const recursiveResult = getTeamNameByDisplayId(team.name, true);
-                        if (recursiveResult && recursiveResult !== team.name) {
-                            return recursiveResult;
-                        }
+        const advancedExists = advancedGroupTable && advancedGroupTable.teams && advancedGroupTable.teams.length > 0;
+        const isAdvancedComplete = advancedExists ? advancedGroupTable.completionPercentage === 100 : false;
+        
+        if (advancedExists && isAdvancedComplete) {
+            const teamIndex = order - 1;
+            if (teamIndex >= 0 && teamIndex < advancedGroupTable.teams.length) {
+                let team = advancedGroupTable.teams[teamIndex];
+                
+                // Ak je názov stále identifikátor, skúsime ho ešte raz namapovať
+                if (/[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(team.name)) {
+                    const recursiveResult = getTeamNameByDisplayId(team.name, true);
+                    if (recursiveResult && recursiveResult !== team.name) {
+                        return recursiveResult;
                     }
-                    
-                    log(`✅ getTeamNameByDisplayId("${displayId}") → "${team.name}" (z nadstavbovej skupiny ${groupName})`);
-                    return team.name;
                 }
+                
+                log(`✅ getTeamNameByDisplayId("${displayId}") → "${team.name}" (z nadstavbovej skupiny ${advancedGroupTable.group})`);
+                return team.name;
             }
         }
         
         // 2. INÁK SKÚSIME ZÁKLADNÚ SKUPINU (ak je 100%)
-        const baseGroupTable = window.matchTracker?.createGroupTable(category, groupName);
+        const baseGroupTable = window.matchTracker?.createGroupTable(category, baseGroupName);
         const isBaseComplete = baseGroupTable ? baseGroupTable.completionPercentage === 100 : false;
         
         if (isBaseComplete) {
@@ -2736,7 +2736,7 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
                     }
                 }
                 
-                log(`✅ getTeamNameByDisplayId("${displayId}") → "${team.name}" (zo základnej skupiny ${groupName})`);
+                log(`✅ getTeamNameByDisplayId("${displayId}") → "${team.name}" (zo základnej skupiny ${baseGroupName})`);
                 return team.name;
             }
         }
