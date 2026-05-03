@@ -1133,7 +1133,7 @@ let isTeamNameReplacerInitialized = false;
         // ============================================================
         const allMatchesForDisplay = [];
         
-        for (const match of allGroupMatches) {
+        for (const match of advancedMatches) {
             let homeScore = 0;
             let awayScore = 0;
             
