@@ -719,15 +719,6 @@ let isTeamNameReplacerInitialized = false;
         // Mapovanie názvov tímov
         const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
         
-        for (const team of teamsInGroup) {
-            if (looksLikeIdentifier(team.name)) {
-                const mappedName = window.matchTracker?.getTeamNameByDisplayIdSync?.(team.name);
-                if (mappedName && mappedName !== team.name) {
-                    team.name = mappedName;
-                }
-            }
-        }
-        
         const pointsForWin = getPointsForWinSync();
         
         // Spracujeme výsledky LEN z ODOHRANÝCH ZÁPASOV v tejto skupine
