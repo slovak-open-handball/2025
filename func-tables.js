@@ -2779,7 +2779,7 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
         // 3. NIE JE 100% DOKONČENÉ - VRAĆAME NULL
         const basePercent = baseGroupTable?.completionPercentage || 0;
         const advPercent = advancedGroupTable?.completionPercentage || 0;
-        log(`⏳ KONEČNÉ poradie (${order}${groupLetter}) nie je k dispozícii: základná skupina ${basePercent}%, nadstavbová ${advPercent}%`);
+//        log(`⏳ KONEČNÉ poradie (${order}${groupLetter}) nie je k dispozícii: základná skupina ${basePercent}%, nadstavbová ${advPercent}%`);
         return null;
     }
     
