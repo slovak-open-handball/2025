@@ -1017,26 +1017,49 @@ let isTeamNameReplacerInitialized = false;
         const transferredMatches = [];
         const processedPairs = new Set();
         
+        // V createAdvancedGroupTable, v časti pre carryOverEnabled, nahraďte:
+
         if (carryOverEnabled) {
-            log(`   🔄 Zbieram výsledky zo základných skupín...`);
+            log(`   🔄 Zbieram výsledky zo základných skupín (CARRY OVER ZAPNUTÝ)...`);
             
             const baseMatchResults = new Map();
-
+        
             for (const baseGroupName of allBaseGroupsFullyCompleted) {
                 const baseGroupTable = createGroupTable(categoryName, baseGroupName);
                 if (!baseGroupTable) continue;
+                
+                log(`   📋 Spracúvam základnú skupinu: ${baseGroupName}`);
                 
                 // Prejdeme všetky zápasy v základnej skupine
                 for (const match of baseGroupTable.matches) {
                     if (match.status !== 'completed') continue;
                     
-                    // Získame názvy tímov - použijeme UŽ ZMAPOVANÉ názvy z baseGroupTable
-                    const homeTeamName = match.homeTeamName;
-                    const awayTeamName = match.awayTeamName;
+                    // 🔥 DÔLEŽITÉ: Získame ZMAPOVANÉ názvy tímov
+                    let homeTeamName = match.homeTeamName;
+                    let awayTeamName = match.awayTeamName;
+                    
+                    // Ak sú ešte identifikátory, zmapujeme ich
+                    const looksLikeIdentifier = /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(homeTeamName);
+                    if (looksLikeIdentifier) {
+                        const mapped = getTeamNameByDisplayId(homeTeamName);
+                        if (mapped && mapped !== homeTeamName) {
+                            homeTeamName = mapped;
+                            log(`      🔄 Mapovanie domáci: "${match.homeTeamName}" → "${homeTeamName}"`);
+                        }
+                    }
+                    
+                    if (looksLikeIdentifier(awayTeamName)) {
+                        const mapped = getTeamNameByDisplayId(awayTeamName);
+                        if (mapped && mapped !== awayTeamName) {
+                            awayTeamName = mapped;
+                            log(`      🔄 Mapovanie hostia: "${match.awayTeamName}" → "${awayTeamName}"`);
+                        }
+                    }
+                    
                     const homeScore = match.homeScore;
                     const awayScore = match.awayScore;
                     
-                    // Vytvoríme kľúč bez ohľadu na poradie
+                    // Vytvoríme kľúč bez ohľadu na poradie (aby sme nepridali duplicitné výsledky)
                     const key = homeTeamName < awayTeamName ? 
                         `${homeTeamName}|${awayTeamName}` : 
                         `${awayTeamName}|${homeTeamName}`;
@@ -1050,9 +1073,14 @@ let isTeamNameReplacerInitialized = false;
                             awayScore: awayScore,
                             fromGroup: baseGroupName
                         });
+                        log(`      ✅ Prenesený výsledok: ${homeTeamName} ${homeScore}:${awayScore} ${awayTeamName} (z ${baseGroupName})`);
+                    } else {
+                        log(`      ⚠️ Duplicitný výsledok pre pár ${key}, preskakujem`);
                     }
                 }
             }
+            
+            log(`   📊 Celkovo prenesených výsledkov: ${baseMatchResults.size}`);
             
             // Spracujeme dvojice tímov v nadstavbovej skupine
             for (let i = 0; i < teamsInAdvanced.length; i++) {
@@ -1068,6 +1096,8 @@ let isTeamNameReplacerInitialized = false;
                     const baseResult = baseMatchResults.get(searchKey);
                     
                     if (baseResult) {
+                        log(`   🔍 Nájdený prenesený výsledok pre pár: ${teamA.name} vs ${teamB.name}`);
+                        
                         // Správne priradenie skóre k tímom
                         let teamAScore, teamBScore;
                         if (baseResult.homeTeam === teamA.name) {
@@ -1077,23 +1107,19 @@ let isTeamNameReplacerInitialized = false;
                             teamAScore = baseResult.awayScore;
                             teamBScore = baseResult.homeScore;
                         } else {
-                            // Tento pár nemá prenesený výsledok
+                            log(`      ⚠️ Tímy sa nezhodujú: ${baseResult.homeTeam} vs ${baseResult.awayTeam}`);
                             continue;
                         }
                         
-                        // Pridáme do transferredMatches
-                        transferredMatches.push({
-                            homeTeam: teamA.name,
-                            awayTeam: teamB.name,
-                            homeScore: teamAScore,
-                            awayScore: teamBScore,
-                            fromGroup: baseResult.fromGroup,
-                            isTransferred: true
-                        });
+                        // Skontrolujeme, či už tento pár nebol spracovaný
+                        const pairKey = `${teamA.name}|${teamB.name}`;
                         
-                        // Aktualizujeme štatistiky tímov
-                        if (!processedPairs.has(searchKey)) {
-                            processedPairs.add(searchKey);
+                        if (!processedPairs.has(pairKey)) {
+                            processedPairs.add(pairKey);
+                            
+                            log(`      ✅ PRIDÁVAM prenesený výsledok: ${teamA.name} ${teamAScore}:${teamBScore} ${teamB.name}`);
+                            
+                            // Aktualizujeme štatistiky tímov
                             teamA.played++;
                             teamB.played++;
                             teamA.goalsFor += teamAScore;
@@ -1115,7 +1141,21 @@ let isTeamNameReplacerInitialized = false;
                                 teamA.points += 1;
                                 teamB.points += 1;
                             }
+                            
+                            // Pridáme do transferredMatches pre zobrazenie
+                            transferredMatches.push({
+                                homeTeam: teamA.name,
+                                awayTeam: teamB.name,
+                                homeScore: teamAScore,
+                                awayScore: teamBScore,
+                                fromGroup: baseResult.fromGroup,
+                                isTransferred: true
+                            });
+                        } else {
+                            log(`      ⏳ Pár už bol spracovaný, preskakujem`);
                         }
+                    } else {
+                        log(`   ℹ️ Žiadny prenesený výsledok pre pár: ${teamA.name} vs ${teamB.name}`);
                     }
                 }
             }
