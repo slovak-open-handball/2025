@@ -5589,22 +5589,46 @@ const matchesHallApp = ({ userProfileData }) => {
         let resolvedTeamName = null;
         
         if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-            // 🔥 DVOJITÁ KONVERZIA - použijeme synchronné volanie ak je dostupné
-            const getTeamNameSync = (id) => {
-                // Skúsime získať výsledok - ak je Promise, nemôžeme čakať v synchrónnej funkcii
-                let result = window.matchTracker.getTeamNameByDisplayId(id);
-                // Ak je to Promise, vrátime pôvodný identifikátor (bude sa mapovať inde)
+            // Skúsime získať výsledok - použitie async/await nie je možné v synchrónnej funkcii,
+            // takže musíme použiť priamo synchronné volanie ak je dostupné
+            let firstPass = null;
+            try {
+                // Ak je funkcia asynchrónna, môže vrátiť Promise, vtedy použijeme uložené dáta z window.__teamManagerData
+                const result = window.matchTracker.getTeamNameByDisplayId(identifier);
                 if (result && typeof result.then === 'function') {
-                    return null;
+                    // Asynchrónna verzia - pokúsime sa získať z uložených dát
+                    if (window.__teamManagerData?.teamNameMap) {
+                        firstPass = window.__teamManagerData.teamNameMap[identifier];
+                    }
+                    if (!firstPass && window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+                        firstPass = window.teamManager.getTeamNameByDisplayIdSync(identifier);
+                    }
+                } else {
+                    firstPass = result;
                 }
-                return result;
-            };
+            } catch (e) {
+                console.warn('Chyba pri získavaní názvu tímu:', e);
+            }
             
-            // Prvá konverzia
-            let firstPass = getTeamNameSync(identifier);
             if (firstPass && firstPass !== identifier) {
                 // Druhá konverzia
-                let secondPass = getTeamNameSync(firstPass);
+                let secondPass = null;
+                try {
+                    const result2 = window.matchTracker.getTeamNameByDisplayId(firstPass);
+                    if (result2 && typeof result2.then === 'function') {
+                        if (window.__teamManagerData?.teamNameMap) {
+                            secondPass = window.__teamManagerData.teamNameMap[firstPass];
+                        }
+                        if (!secondPass && window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+                            secondPass = window.teamManager.getTeamNameByDisplayIdSync(firstPass);
+                        }
+                    } else {
+                        secondPass = result2;
+                    }
+                } catch (e) {
+                    console.warn('Chyba pri druhej konverzii:', e);
+                }
+                
                 if (secondPass && secondPass !== firstPass) {
                     resolvedTeamName = secondPass;
                 } else {
@@ -5618,17 +5642,7 @@ const matchesHallApp = ({ userProfileData }) => {
             return resolvedTeamName;
         }
         
-        // 2. FALLBACK: Ak je matchTracker asynchrónny, skúsime použiť uložený displayName z selectedMatch
-        if (selectedMatch) {
-            if (selectedMatch.homeTeamIdentifier === identifier && selectedMatch.homeDisplayName) {
-                return selectedMatch.homeDisplayName;
-            }
-            if (selectedMatch.awayTeamIdentifier === identifier && selectedMatch.awayDisplayName) {
-                return selectedMatch.awayDisplayName;
-            }
-        }
-        
-        // 3. PÔVODNÁ LOGIKA - vyhľadávanie v superstructureTeams
+        // 2. PÔVODNÁ LOGIKA - vyhľadávanie v superstructureTeams
         if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
             const parts = identifier.split(' ');
             if (parts.length >= 2) {
@@ -5664,7 +5678,7 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         }
         
-        // 4. Vyhľadávanie v users
+        // 3. Vyhľadávanie v users
         if (users && users.length > 0) {
             const parts = identifier.split(' ');
             if (parts.length >= 2) {
