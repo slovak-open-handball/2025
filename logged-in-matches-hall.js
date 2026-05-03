@@ -5675,54 +5675,43 @@ const matchesHallApp = ({ userProfileData }) => {
         return identifier;
     };   
 
-    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA (vracia zobrazovací názov)
+    // FUNKCIA NA ZÍSKANIE NÁZVU TÍMU PODĽA IDENTIFIKÁTORA (S DVOJITOU KONVERZIOU)
     const getTeamNameByIdentifier = (identifier) => {
         if (!identifier) return 'Neznámy tím';
         
-        // 1. NAJPRV SKÚSIME NÁJSŤ TÍM V POUŽÍVATEĽSKÝCH DÁTACH
-        if (users && users.length > 0) {
-            const parts = identifier.split(' ');
-            if (parts.length >= 2) {
-                const groupAndOrder = parts.pop();
-                const category = parts.join(' ');
+        // 1. NAJPRV SKÚSIME ZÍSKAŤ SPRÁVNY NÁZOV TÍMU CEZ matchTracker
+        let resolvedTeamName = null;
+        let originalIdentifier = identifier;
+        
+        if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+            let firstPass = window.matchTracker.getTeamNameByDisplayId(identifier);
+            
+            // Ak je výsledok asynchrónny (Promise), musíme počkať - ale táto funkcia je synchrónna,
+            // takže predpokladáme, že getTeamNameByDisplayId je synchrónna alebo používa sync verziu
+            const firstPassResult = (firstPass && typeof firstPass.then === 'function') ? null : firstPass;
+            
+            if (firstPassResult && firstPassResult !== identifier) {
+//                console.log(`🔄 Prvá konverzia: "${identifier}" -> "${firstPassResult}"`);
                 
-                let groupLetter = '';
-                let order = '';
-                for (let i = 0; i < groupAndOrder.length; i++) {
-                    const char = groupAndOrder[i];
-                    if (char >= '0' && char <= '9') {
-                        order = groupAndOrder.substring(i);
-                        groupLetter = groupAndOrder.substring(0, i);
-                        break;
-                    }
-                }
+                // 🔥 DVOJITÁ KONVERZIA: Výsledok pošleme ešte raz do rovnakej funkcie
+                const secondPass = window.matchTracker.getTeamNameByDisplayId(firstPassResult);
+                const secondPassResult = (secondPass && typeof secondPass.then === 'function') ? null : secondPass;
                 
-                if (order && groupLetter) {
-                    const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
-                    const orderNum = parseInt(order, 10);
-                    
-                    for (const user of users) {
-                        if (!user.teams) continue;
-                        const userTeams = user.teams[category];
-                        if (!userTeams || !Array.isArray(userTeams)) continue;
-                        
-                        const team = userTeams.find(t => 
-                            t.groupName === fullGroupName && 
-                            t.order === orderNum
-                        );
-                        
-                        if (team && team.teamName) {
-                            // 🔥 Vrátime zobrazovací názov (napr. "U12 D 3A")
-                            // Toto je formát: kategória + poradie + písmeno skupiny
-                            const groupLetterShort = groupLetter.toUpperCase();
-                            return `${category} ${orderNum}${groupLetterShort}`;
-                        }
-                    }
+                if (secondPassResult && secondPassResult !== firstPassResult) {
+//                    console.log(`🔄 Druhá konverzia: "${firstPassResult}" -> "${secondPassResult}"`);
+                    resolvedTeamName = secondPassResult;
+                } else {
+                    resolvedTeamName = firstPassResult;
                 }
             }
         }
         
-        // 2. SKÚSIME SUPERSTRUCTURE TEAMS
+        // Ak sme získali vyriešený názov, použijeme ho
+        if (resolvedTeamName) {
+            return resolvedTeamName;
+        }
+        
+        // 2. PÔVODNÁ LOGIKA - vyhľadávanie v superstructureTeams (pre prípad, že by nefungovala konverzia)
         if (superstructureTeams && Object.keys(superstructureTeams).length > 0) {
             const parts = identifier.split(' ');
             if (parts.length >= 2) {
@@ -5741,7 +5730,7 @@ const matchesHallApp = ({ userProfileData }) => {
                 }
                 
                 if (order) {
-                    const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
+                    const fullGroupName = `skupina ${groupLetter}`;
                     const orderNum = parseInt(order, 10);
                     
                     const categoryTeams = superstructureTeams[category];
@@ -5751,16 +5740,54 @@ const matchesHallApp = ({ userProfileData }) => {
                             t.order === orderNum
                         );
                         if (team && team.teamName) {
-                            // Pokúsime sa vytvoriť zobrazovací názov
-                            const groupLetterShort = groupLetter.toUpperCase();
-                            return `${category} ${orderNum}${groupLetterShort}`;
+                            return team.teamName;
                         }
                     }
                 }
             }
         }
         
-        // 3. Ak nič nenašlo, vrátime pôvodný identifikátor
+        // 3. PÔVODNÁ LOGIKA - vyhľadávanie v používateľoch
+        if (users && users.length > 0) {
+            const parts = identifier.split(' ');
+            if (parts.length >= 2) {
+                const groupAndOrder = parts.pop();
+                const category = parts.join(' ');
+                
+                let groupLetter = '';
+                let order = '';
+                for (let i = 0; i < groupAndOrder.length; i++) {
+                    const char = groupAndOrder[i];
+                    if (char >= '0' && char <= '9') {
+                        order = groupAndOrder.substring(i);
+                        groupLetter = groupAndOrder.substring(0, i);
+                        break;
+                    }
+                }
+                
+                if (order) {
+                    const fullGroupName = `skupina ${groupLetter}`;
+                    const orderNum = parseInt(order, 10);
+                    
+                    for (const user of users) {
+                        if (!user.teams) continue;
+                        const userTeams = user.teams[category];
+                        if (!userTeams || !Array.isArray(userTeams)) continue;
+                        
+                        const team = userTeams.find(t => 
+                            t.groupName === fullGroupName && 
+                            t.order === orderNum
+                        );
+                        
+                        if (team && team.teamName) {
+                            return team.teamName;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 4. Ak nič nenašlo, vrátime pôvodný identifikátor
         return identifier;
     };
 
