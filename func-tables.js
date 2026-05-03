@@ -2196,7 +2196,7 @@ function saveReplacementCache(cacheMap) {
             lastUpdated: Date.now()
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-        log(`💾 Uložená cache do localStorage: ${cacheMap.size} položiek`);
+//        log(`💾 Uložená cache do localStorage: ${cacheMap.size} položiek`);
     } catch (error) {
         error('❌ Chyba pri ukladaní cache:', error);
     }
