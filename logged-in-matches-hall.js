@@ -1660,6 +1660,10 @@ const matchesHallApp = ({ userProfileData }) => {
             }
             
             if (!selectedMatch) return;
+
+            // 🔥 ONESKORENIE 3 sekundy pred načítaním súpisiek
+            console.log('⏳ [SÚPISKY] Čakám 3 sekundy pred načítaním súpisiek...');
+            await new Promise(resolve => setTimeout(resolve, 3000));
             
             console.log('🔄 [SÚPISKY] Začínam načítavať detaily tímov...');
             console.log(`   Domáci ZMAPOVANÝ názov: "${homeTeamResolvedName}"`);
@@ -1780,6 +1784,10 @@ const matchesHallApp = ({ userProfileData }) => {
         
         const mapTeamNames = async () => {
             // Počkáme na matchTracker
+
+            console.log('⏳ [MAPOVANIE] Čakám 5 sekúnd pred začatím mapovania názvov...');
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
             let waitCount = 0;
             while (!window.matchTracker || typeof window.matchTracker.getTeamNameByDisplayId !== 'function') {
                 if (waitCount >= 50) {
