@@ -1650,9 +1650,10 @@ const matchesHallApp = ({ userProfileData }) => {
     // OPRAVENÝ useEffect PRE NAČÍTANIE SÚPISIEK
     useEffect(() => {
         const loadTeamDetails = async () => {
-
+            // Už máme načítané dáta?
             if (homeTeamData && awayTeamData) return;
             
+            // Čakáme na zmapované názvy
             if (!homeTeamResolvedName || !awayTeamResolvedName) {
                 console.log('⏳ [SÚPISKY] Čakám na zmapovanie názvov tímov...');
                 return;
@@ -1660,56 +1661,43 @@ const matchesHallApp = ({ userProfileData }) => {
             
             if (!selectedMatch) return;
             
-            console.log('🔄 [SÚPISKY] Začínam načítavať detaily tímov podľa ZMAPOVANÝCH NÁZOV...');
+            console.log('🔄 [SÚPISKY] Začínam načítavať detaily tímov...');
             console.log(`   Domáci ZMAPOVANÝ názov: "${homeTeamResolvedName}"`);
             console.log(`   Hosťovský ZMAPOVANÝ názov: "${awayTeamResolvedName}"`);
             
             // 🔥 NAČÍTANIE DOMÁCEHO TÍMU
-            let homeDetailsLoaded = null;
             if (homeTeamResolvedName && homeTeamResolvedName !== selectedMatch.homeTeamIdentifier) {
-                homeDetailsLoaded = await getTeamDetailsByDisplayName(homeTeamResolvedName, selectedMatch.categoryName);
+                const homeDetailsLoaded = await getTeamDetailsByDisplayName(homeTeamResolvedName, selectedMatch.categoryName);
                 if (homeDetailsLoaded && homeDetailsLoaded.team) {
                     console.log(`✅ [SÚPISKY] Domáci tím načítaný: ${homeDetailsLoaded.team.teamName}`);
-                    console.log(`   Hráčov: ${homeDetailsLoaded.team.playerDetails?.length || 0}`);
-                    setHomeTeamData(homeDetailsLoaded);  // 🔥 DÔLEŽITÉ: NASTAVTE HOME TEAM DATA
+                    setHomeTeamData(homeDetailsLoaded);
                 } else {
-                    console.log(`⚠️ [SÚPISKY] Domáci tím sa nepodarilo načítať podľa zmapovaného názvu: "${homeTeamResolvedName}"`);
-                    setHomeTeamData(null);  // 🔥 NASTAVTE NA null, ak sa nepodarilo načítať
+                    setHomeTeamData(null);
                 }
             } else {
-                console.log(`⚠️ [SÚPISKY] Domáci zmapovaný názov nie je platný: "${homeTeamResolvedName}"`);
                 setHomeTeamData(null);
             }
             
             // 🔥 NAČÍTANIE HOSŤOVSKÉHO TÍMU
-            let awayDetailsLoaded = null;
             if (awayTeamResolvedName && awayTeamResolvedName !== selectedMatch.awayTeamIdentifier) {
-                awayDetailsLoaded = await getTeamDetailsByDisplayName(awayTeamResolvedName, selectedMatch.categoryName);
+                const awayDetailsLoaded = await getTeamDetailsByDisplayName(awayTeamResolvedName, selectedMatch.categoryName);
                 if (awayDetailsLoaded && awayDetailsLoaded.team) {
                     console.log(`✅ [SÚPISKY] Hosťovský tím načítaný: ${awayDetailsLoaded.team.teamName}`);
-                    console.log(`   Hráčov: ${awayDetailsLoaded.team.playerDetails?.length || 0}`);
-                    setAwayTeamData(awayDetailsLoaded);  // 🔥 DÔLEŽITÉ: NASTAVTE AWAY TEAM DATA
+                    setAwayTeamData(awayDetailsLoaded);
                 } else {
-                    console.log(`⚠️ [SÚPISKY] Hosťovský tím sa nepodarilo načítať podľa zmapovaného názvu: "${awayTeamResolvedName}"`);
-                    setAwayTeamData(null);  // 🔥 NASTAVTE NA null, ak sa nepodarilo načítať
+                    setAwayTeamData(null);
                 }
             } else {
-                console.log(`⚠️ [SÚPISKY] Hosťovský zmapovaný názov nie je platný: "${awayTeamResolvedName}"`);
                 setAwayTeamData(null);
             }
             
-            // Po úspešnom načítaní nastavíme príznaky na true
             setHomeTeamNameReady(true);
             setAwayTeamNameReady(true);
-            
             console.log('✅ [SÚPISKY] Načítavanie detailov tímov dokončené.');
-            setForceUpdate(prev => prev + 1);
         };
         
         loadTeamDetails();
-        
-        return () => {};
-    }, [homeTeamResolvedName, awayTeamResolvedName, selectedMatch?.id, selectedMatch?.categoryName, homeTeamData, awayTeamData]);
+    }, [homeTeamResolvedName, awayTeamResolvedName, selectedMatch?.id, selectedMatch?.categoryName]); // 🔥 Odstránili sme homeTeamData a awayTeamData zo závislostí
 
     
     useEffect(() => {
@@ -1778,143 +1766,74 @@ const matchesHallApp = ({ userProfileData }) => {
         updateTeamNamesInMatches();
     }, [matches.length, teamManagerReady]); // Spustí sa pri zmene dĺžky matches alebo ready stavu
 
-    // UPRAVENÝ useEffect pre mapovanie názvov tímov - s ochranou proti nekonečnej slučke
+    // JEDNODUCHÝ useEffect pre mapovanie názvov tímov - BEZ NEKONEČNEJ SLUČKY
     useEffect(() => {
-        // Ak nie je vybraný žiadny zápas, aktualizujeme názvy v zozname
-        if (!selectedMatch && matches.length > 0 && teamManagerReady) {
-            console.log('🔄 Žiadny vybraný zápas - aktualizujem názvy v zozname...');
-            
-            const updateAllMatchNames = async () => {
-                const updatedMatches = [...matches];
-                let hasChanges = false;
-                
-                for (let i = 0; i < updatedMatches.length; i++) {
-                    const match = updatedMatches[i];
-                    
-                    if (!match.homeTeamIdentifier || !match.awayTeamIdentifier) {
-                        if (!match.homeDisplayName && !match.awayDisplayName) {
-                            updatedMatches[i] = {
-                                ...match,
-                                homeDisplayName: match.homeTeamIdentifier || 'Neznámy tím',
-                                awayDisplayName: match.awayTeamIdentifier || 'Neznámy tím'
-                            };
-                            hasChanges = true;
-                        }
-                        continue;
-                    }
-                    
-                    if (match.homeDisplayName && match.awayDisplayName) continue;
-                    
-                    let homeDisplayName = match.homeTeamIdentifier;
-                    let awayDisplayName = match.awayTeamIdentifier;
-                    
-                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                        try {
-                            const homeResult = window.matchTracker.getTeamNameByDisplayId(match.homeTeamIdentifier);
-                            homeDisplayName = (homeResult && typeof homeResult.then === 'function') ? await homeResult : (homeResult || match.homeTeamIdentifier);
-                        } catch (e) {
-                            console.warn(`Chyba pri mapovaní home: ${match.homeTeamIdentifier}`);
-                        }
-                        
-                        try {
-                            const awayResult = window.matchTracker.getTeamNameByDisplayId(match.awayTeamIdentifier);
-                            awayDisplayName = (awayResult && typeof awayResult.then === 'function') ? await awayResult : (awayResult || match.awayTeamIdentifier);
-                        } catch (e) {
-                            console.warn(`Chyba pri mapovaní away: ${match.awayTeamIdentifier}`);
-                        }
-                    }
-                    
-                    updatedMatches[i] = {
-                        ...match,
-                        homeDisplayName: homeDisplayName || match.homeTeamIdentifier || 'Neznámy tím',
-                        awayDisplayName: awayDisplayName || match.awayTeamIdentifier || 'Neznámy tím'
-                    };
-                    hasChanges = true;
-                }
-                
-                if (hasChanges) {
-                    setMatches(updatedMatches);
-                    console.log('✅ Zoznam zápasov bol aktualizovaný');
-                }
-            };
-            
-            updateAllMatchNames();
-            return;
-        }
-        
-        // Pôvodný kód pre vybraný zápas - 🔥 PRIDANÁ OCHRANA PROTI NEKONEČNEJ SLUČKE
+        // Tento useEffect sa spustí LEN raz pri prvom načítaní selectedMatch
         if (!selectedMatch) return;
         
-        // 🔥 DÔLEŽITÉ: Skontrolujeme, či už máme správne názvy
-        // Ak už homeDisplayName a awayDisplayName nie sú rovnaké ako identifikátory, nemusíme mapovať znova
-        const hasDisplayNames = selectedMatch.homeDisplayName && 
-                                selectedMatch.awayDisplayName && 
-                                selectedMatch.homeDisplayName !== selectedMatch.homeTeamIdentifier &&
-                                selectedMatch.awayDisplayName !== selectedMatch.awayTeamIdentifier;
-        
-        if (hasDisplayNames) {
-            // Už máme správne názvy, nemusíme mapovať znova
+        // Už máme zmapované názvy? Ak áno, končíme
+        if (selectedMatch.homeDisplayName && selectedMatch.awayDisplayName) {
             return;
         }
         
         const mapTeamNames = async () => {
-            // Počkáme na pripravenosť matchTracker (NIE teamManager!)
+            // Počkáme na matchTracker
             let waitCount = 0;
             while (!window.matchTracker || typeof window.matchTracker.getTeamNameByDisplayId !== 'function') {
-                if (waitCount >= 100) {
-                    console.warn('⚠️ Timeout: matchTracker sa nenačítal do 10 sekúnd');
-                    break;
+                if (waitCount >= 50) {
+                    console.warn('⚠️ Timeout: matchTracker sa nenačítal');
+                    // Nastavíme aspoň pôvodné identifikátory
+                    setHomeTeamResolvedName(selectedMatch.homeTeamIdentifier);
+                    setAwayTeamResolvedName(selectedMatch.awayTeamIdentifier);
+                    return;
                 }
                 await new Promise(resolve => setTimeout(resolve, 100));
                 waitCount++;
             }
             
-            // 🔥 POUŽIJEME matchTracker NAMIesto teamManager
             let homeResolvedName = selectedMatch.homeTeamIdentifier;
             let awayResolvedName = selectedMatch.awayTeamIdentifier;
             
-            if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                // Domáci - dvojitá konverzia
-                let firstPass = await window.matchTracker.getTeamNameByDisplayId(selectedMatch.homeTeamIdentifier);
-                if (firstPass && firstPass !== selectedMatch.homeTeamIdentifier) {
-                    let secondPass = await window.matchTracker.getTeamNameByDisplayId(firstPass);
-                    if (secondPass && secondPass !== firstPass) {
-                        homeResolvedName = secondPass;
-                    } else {
-                        homeResolvedName = firstPass;
-                    }
+            try {
+                // Domáci - pokus o konverziu
+                const homeResult = await window.matchTracker.getTeamNameByDisplayId(selectedMatch.homeTeamIdentifier);
+                if (homeResult && homeResult !== selectedMatch.homeTeamIdentifier) {
+                    homeResolvedName = homeResult;
                 }
                 
-                // Hosťovskí - dvojitá konverzia
-                firstPass = await window.matchTracker.getTeamNameByDisplayId(selectedMatch.awayTeamIdentifier);
-                if (firstPass && firstPass !== selectedMatch.awayTeamIdentifier) {
-                    let secondPass = await window.matchTracker.getTeamNameByDisplayId(firstPass);
-                    if (secondPass && secondPass !== firstPass) {
-                        awayResolvedName = secondPass;
-                    } else {
-                        awayResolvedName = firstPass;
-                    }
+                // Hosťovskí - pokus o konverziu
+                const awayResult = await window.matchTracker.getTeamNameByDisplayId(selectedMatch.awayTeamIdentifier);
+                if (awayResult && awayResult !== selectedMatch.awayTeamIdentifier) {
+                    awayResolvedName = awayResult;
                 }
+            } catch (error) {
+                console.warn('Chyba pri mapovaní názvov:', error);
             }
             
             console.log(`🔍 [MAPOVANIE] Domáci: "${selectedMatch.homeTeamIdentifier}" -> "${homeResolvedName}"`);
             console.log(`🔍 [MAPOVANIE] Hosťovskí: "${selectedMatch.awayTeamIdentifier}" -> "${awayResolvedName}"`);
             
-            // 🔥 KRITICKÉ: Aktualizujeme selectedMatch LEN ak sa názvy zmenili
-            if (homeResolvedName !== selectedMatch.homeTeamIdentifier || awayResolvedName !== selectedMatch.awayTeamIdentifier) {
-                setSelectedMatch(prev => ({
+            // Nastavíme resolved names pre načítanie súpisiek
+            setHomeTeamResolvedName(homeResolvedName);
+            setAwayTeamResolvedName(awayResolvedName);
+            
+            // 🔥 DÔLEŽITÉ: Nastavíme displayName v selectedMatch LEN RAZ
+            // Použijeme funkčnú aktualizáciu a skontrolujeme, či už existujú
+            setSelectedMatch(prev => {
+                // Ak už má displayName, nemeniť
+                if (prev.homeDisplayName && prev.awayDisplayName) {
+                    return prev;
+                }
+                return {
                     ...prev,
                     homeDisplayName: homeResolvedName,
                     awayDisplayName: awayResolvedName
-                }));
-            }
-            
-            setHomeTeamResolvedName(homeResolvedName);
-            setAwayTeamResolvedName(awayResolvedName);
+                };
+            });
         };
         
         mapTeamNames();
-    }, [selectedMatch?.homeTeamIdentifier, selectedMatch?.awayTeamIdentifier, selectedMatch?.id, selectedMatch?.homeDisplayName, selectedMatch?.awayDisplayName, matches.length, teamManagerReady]);
+    }, [selectedMatch?.id]); // 🔥 SPUSTÍ SA LEN PRI ZMENE ID ZÁPASU
     
     // ============================================================================
     // NAČÍTANIE SUSPENDOVANÝCH HRÁČOV ZA MODRÚ KARTU PRE DOMÁCICH (OPRAVENÉ S ONESKORENÍM)
