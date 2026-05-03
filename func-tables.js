@@ -2675,14 +2675,27 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
     // ============================================================
     if (isFinalFormat) {
         const baseGroupName = `skupina ${groupLetter}`;
-        const advancedGroupName = `nadstavbová skupina ${groupLetter}`;
+        // 🔥 OPRAVA: Skúsime oba možné názvy nadstavbovej skupiny
+        const advancedGroupName1 = `nadstavbová skupina ${groupLetter}`;
+        const advancedGroupName2 = `skupina ${groupLetter}`;  // Niektoré skupiny sa volajú len "skupina G"
         
         // 1. SKÚSIME NADSTAVBOVÚ SKUPINU (ak existuje a je 100%)
         let advancedGroupTable = null;
+        
+        // Skúsime prvý variant názvu
         if (forceRefresh) {
-            advancedGroupTable = window.matchTracker?.createAdvancedGroupTable?.(category, advancedGroupName, null, true);
+            advancedGroupTable = window.matchTracker?.createAdvancedGroupTable?.(category, advancedGroupName1, null, true);
         } else {
-            advancedGroupTable = window.matchTracker?.createAdvancedGroupTable?.(category, advancedGroupName, null);
+            advancedGroupTable = window.matchTracker?.createAdvancedGroupTable?.(category, advancedGroupName1, null);
+        }
+        
+        // Ak prvý variant nefunguje, skúsime druhý
+        if (!advancedGroupTable || advancedGroupTable.teams.length === 0) {
+            if (forceRefresh) {
+                advancedGroupTable = window.matchTracker?.createAdvancedGroupTable?.(category, advancedGroupName2, null, true);
+            } else {
+                advancedGroupTable = window.matchTracker?.createAdvancedGroupTable?.(category, advancedGroupName2, null);
+            }
         }
         
         const advancedExists = advancedGroupTable && advancedGroupTable.teams && advancedGroupTable.teams.length > 0;
@@ -2701,6 +2714,7 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
                     }
                 }
                 
+                log(`✅ getTeamNameByDisplayId("${displayId}") → "${team.name}" (z nadstavbovej skupiny ${advancedGroupTable.group})`);
                 return team.name;
             }
         }
@@ -2722,6 +2736,7 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
                     }
                 }
                 
+                log(`✅ getTeamNameByDisplayId("${displayId}") → "${team.name}" (zo základnej skupiny ${baseGroupName})`);
                 return team.name;
             }
         }
