@@ -4885,10 +4885,6 @@ const matchesHallApp = ({ userProfileData }) => {
         fetchHallName();
     }, [hallId]);
 
-    // ============================================================================
-    // OPRAVA 2: UPRAVIŤ useEffect PRE NAČÍTANIE UDALOSTÍ ZÁPASU - PODPORA MANUÁLNEHO VÝSLEDKU A KONTUMÁCIE
-    // ============================================================================
-    
     useEffect(() => {
         if (!selectedMatch || !window.db) return;
     
@@ -4903,13 +4899,13 @@ const matchesHallApp = ({ userProfileData }) => {
             return;
         }
         
-        // 🔥 2. MANUÁLNY VÝSLEDOK (finalScore) pre ukončený zápas
+        // 🔥 2. MANUÁLNY VÝSLEDOK (finalScore) pre ukončený zápas - NASTAVÍME SKÓRE A NENAČÍTAME UDALOSTI
         if (selectedMatch.finalScore && selectedMatch.status === 'completed' && !selectedMatch.forfeitResult) {
+            // NASTAVÍME SPRÁVNE SKÓRE Z finalScore
             setMatchScore({ 
                 home: selectedMatch.finalScore.home, 
                 away: selectedMatch.finalScore.away 
             });
-            setLoadingEvents(false);
             
             // Stále načítame udalosti, ak existujú (napr. ak niekto pridal udalosti potom)
             const eventsRef = collection(window.db, 'matchEvents');
@@ -4931,26 +4927,14 @@ const matchesHallApp = ({ userProfileData }) => {
                 });
                 
                 setMatchEvents(loadedEvents);
-                // 🔥 DÔLEŽITÉ: Ak máme udalosti, prepíšeme matchScore z udalostí (správnejšie)
-                if (loadedEvents.length > 0) {
-                    let homeScore = 0;
-                    let awayScore = 0;
-                    const sortedAsc = [...loadedEvents].sort((a, b) => {
-                        if (a.minute !== b.minute) return (a.minute || 0) - (b.minute || 0);
-                        return (a.second || 0) - (b.second || 0);
-                    });
-                    sortedAsc.forEach(event => {
-                        if (event.type === 'goal' || (event.type === 'penalty' && event.subType === 'scored')) {
-                            if (event.team === 'home') homeScore++;
-                            else if (event.team === 'away') awayScore++;
-                        }
-                    });
-                    setMatchScore({ home: homeScore, away: awayScore });
-                }
+                // 🔥 DÔLEŽITÉ: Ak máme udalosti, NEPREPÍŠEME matchScore z udalostí!
+                // Zachováme manuálne zadaný výsledok z finalScore
+                // (tento komentár je dôležitý)
             }, (error) => {
                 console.error("Chyba pri načítaní udalostí zápasu:", error);
             });
             
+            setLoadingEvents(false);
             return () => unsubscribe();
         }
         
@@ -4999,7 +4983,18 @@ const matchesHallApp = ({ userProfileData }) => {
             setMatchEvents(loadedEvents);
             
             // 🔥 DÔLEŽITÉ: PRE UKONČENÝ ZÁPAS S UDALOSŤAMI POUŽIJEME VYPOČÍTANÉ SKÓRE
-            setMatchScore({ home: homeScore, away: awayScore });
+            // (len ak nemá finalScore alebo forfeitResult)
+            if (selectedMatch.status !== 'completed' || (!selectedMatch.finalScore && !selectedMatch.forfeitResult)) {
+                setMatchScore({ home: homeScore, away: awayScore });
+            } else if (selectedMatch.finalScore && !selectedMatch.forfeitResult) {
+                // Ak má finalScore, zachováme ho (toto je už ošetrené v bode 2 vyššie)
+                // Tento fallback je pre prípad, že by sa udalosti načítali skôr ako finalScore
+                setMatchScore({ 
+                    home: selectedMatch.finalScore.home, 
+                    away: selectedMatch.finalScore.away 
+                });
+            }
+            
             setLoadingEvents(false);
         }, (error) => {
             console.error("Chyba pri načítaní udalostí zápasu:", error);
