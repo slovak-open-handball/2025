@@ -867,7 +867,6 @@ let isTeamNameReplacerInitialized = false;
             allBaseGroups = groupsData[categoryId]
                 .filter(g => g.type === 'základná skupina')
                 .map(g => g.name);
-            log(`🎯 Nadstavbová skupina ${groupName} - základné skupiny: ${allBaseGroups.join(', ')}`);
         }
         
         if (allBaseGroups.length === 0 && baseGroupName) {
@@ -875,7 +874,6 @@ let isTeamNameReplacerInitialized = false;
         }
         
         if (allBaseGroups.length === 0) {
-            log(`❌ Žiadne základné skupiny neboli nájdené pre nadstavbovú skupinu ${groupName}`);
             return null;
         }
         
@@ -888,7 +886,6 @@ let isTeamNameReplacerInitialized = false;
             
             if (!baseGroupTable) {
                 missingBaseGroups.push(baseGroup);
-                log(`   ❌ Základná skupina ${baseGroup} neexistuje!`);
                 continue;
             }
             
@@ -896,26 +893,21 @@ let isTeamNameReplacerInitialized = false;
             
             if (isFullyCompleted) {
                 allBaseGroupsFullyCompleted.push(baseGroup);
-                log(`   ✅ Základná skupina ${baseGroup} je 100% dokončená`);
             } else {
                 missingBaseGroups.push(baseGroup);
-                log(`   ⏳ Základná skupina ${baseGroup} NIE JE dokončená`);
             }
         }
         
         if (missingBaseGroups.length > 0) {
-            log(`\n❌ NADSTAVBOVÁ SKUPINA ${groupName} NEMÔŽE BYŤ VYHODNOTENÁ!\n`);
             return null;
         }
         
-        log(`\n✅ VŠETKY základné skupiny sú 100% dokončené, vyhodnocujem...\n`);
         
         const categorySetting = categorySettingsCache[categoryName];
         const carryOverEnabled = categorySetting?.carryOverPoints ?? false;
         
         const advancedMatches = getGroupMatches(categoryName, groupName);
         if (advancedMatches.length === 0) {
-            log(`❌ Žiadne zápasy pre nadstavbovú skupinu ${groupName}`);
             return null;
         }
         
