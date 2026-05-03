@@ -1133,20 +1133,51 @@ let isTeamNameReplacerInitialized = false;
         // ============================================================
         const allMatchesForDisplay = [];
         
-        // 1. Prenesené zápasy
-        for (const transferred of transferredMatches) {
+        for (const match of allGroupMatches) {
+            let homeScore = 0;
+            let awayScore = 0;
+            
+            // Načítame skóre pre dokončené zápasy
+            if (match.status === 'completed') {
+                if (match.finalScore && !match.forfeitResult) {
+                    homeScore = match.finalScore.home || 0;
+                    awayScore = match.finalScore.away || 0;
+                } else if (match.forfeitResult?.isForfeit) {
+                    homeScore = match.forfeitResult.home || 0;
+                    awayScore = match.forfeitResult.away || 0;
+                } else {
+                    const events = eventsData[match.id] || [];
+                    const score = getCurrentScore(events);
+                    homeScore = score.home;
+                    awayScore = score.away;
+                }
+            }
+            
+            // Mapovanie názvov tímov
+            let homeTeamName = match.homeTeamIdentifier;
+            let awayTeamName = match.awayTeamIdentifier;
+            
+            const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
+            if (looksLikeIdentifier(homeTeamName)) {
+                const mapped = getTeamNameByDisplayId(homeTeamName);
+                if (mapped && mapped !== homeTeamName) homeTeamName = mapped;
+            }
+            if (looksLikeIdentifier(awayTeamName)) {
+                const mapped = getTeamNameByDisplayId(awayTeamName);
+                if (mapped && mapped !== awayTeamName) awayTeamName = mapped;
+            }
+            
             allMatchesForDisplay.push({
-                id: `transferred_${Date.now()}_${Math.random()}`,
-                homeTeamIdentifier: transferred.homeTeam,
-                awayTeamIdentifier: transferred.awayTeam,
-                homeTeamName: transferred.homeTeam,  // 🔥 NÁZOV TÍMU
-                awayTeamName: transferred.awayTeam,  // 🔥 NÁZOV TÍMU
-                homeScore: transferred.homeScore,
-                awayScore: transferred.awayScore,
-                status: 'completed',
-                scheduledTime: null,
-                isTransferred: true,
-                fromGroup: transferred.fromGroup
+                id: match.id,
+                homeTeamIdentifier: match.homeTeamIdentifier,
+                awayTeamIdentifier: match.awayTeamIdentifier,
+                homeTeamName: homeTeamName,
+                awayTeamName: awayTeamName,
+                homeScore: homeScore,    // 🔥 DÔLEŽITÉ
+                awayScore: awayScore,    // 🔥 DÔLEŽITÉ
+                status: match.status,
+                scheduledTime: match.scheduledTime,
+                isTransferred: false
             });
         }
         
