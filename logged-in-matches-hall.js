@@ -4300,8 +4300,8 @@ const matchesHallApp = ({ userProfileData }) => {
         
         // Počkáme malé oneskorenie, aby sa načítali všetky dáta (users, categories)
         const timer = setTimeout(async () => {
-            const homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamName);
-            const awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamName);
+            const homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
+            const awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
             
             // Získanie ID tímov z databázy
             let homeTeamDatabaseId = null;
