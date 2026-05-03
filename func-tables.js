@@ -739,9 +739,15 @@ let isTeamNameReplacerInitialized = false;
         });
         
         // ============================================================
-        // 🔥 OPRAVA: Vytvoríme zoznam zápasov so SPRÁVNYM skóre
+        // 🔥 OPRAVA: Vytvoríme zoznam zápasov so SPRÁVNYM skóre A ZMAPOVANÝMI NÁZVA MI
         // ============================================================
         const allMatchesForDisplay = [];
+        
+        // Najprv si vytvoríme mapu pre rýchle vyhľadanie zmapovaných názvov
+        const teamNameMap = new Map();
+        for (const team of sortedTeams) {  // Použijeme sortedTeams, ktoré už majú zmapované názvy
+            teamNameMap.set(team.id, team.name);
+        }
         
         for (const match of allGroupMatches) {
             let homeScore = 0;
@@ -763,16 +769,16 @@ let isTeamNameReplacerInitialized = false;
                 }
             }
             
-            // Mapovanie názvov tímov pre zobrazenie
-            let homeTeamName = match.homeTeamIdentifier;
-            let awayTeamName = match.awayTeamIdentifier;
+            // 🔥 POUŽIJEME ZMAPOVANÉ NÁZVY Z teamNameMap
+            let homeTeamName = teamNameMap.get(match.homeTeamIdentifier) || match.homeTeamIdentifier;
+            let awayTeamName = teamNameMap.get(match.awayTeamIdentifier) || match.awayTeamIdentifier;
             
             allMatchesForDisplay.push({
                 id: match.id,
                 homeTeamIdentifier: match.homeTeamIdentifier,
                 awayTeamIdentifier: match.awayTeamIdentifier,
-                homeTeamName: homeTeamName,
-                awayTeamName: awayTeamName,
+                homeTeamName: homeTeamName,   // ✅ UŽ ZMAPOVANÉ
+                awayTeamName: awayTeamName,   // ✅ UŽ ZMAPOVANÉ
                 homeScore: homeScore,
                 awayScore: awayScore,
                 status: match.status,
