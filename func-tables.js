@@ -2507,17 +2507,17 @@ function getTeamNameByDisplayId(displayId) {
     }
     
     if (!order || !groupLetter) {
-        log(`❌ Neplatný formát: ${lastPart} (neobsahuje číslo a písmeno)`);
+//        log(`❌ Neplatný formát: ${lastPart} (neobsahuje číslo a písmeno)`);
         return null;
     }
     
-    log(`🔍 Hľadám: kategória="${category}", pozícia=${order}, skupina="${groupLetter}"`);
+//    log(`🔍 Hľadám: kategória="${category}", pozícia=${order}, skupina="${groupLetter}"`);
     
     // ============================================================
     // KROK 1: PRIORITNE SKÚSIAME NADSTAVBOVÚ SKUPINU
     // ============================================================
     const advancedGroupName = `nadstavbová skupina ${groupLetter}`;
-    log(`   📌 Skúšam nadstavbovú skupinu: ${advancedGroupName}`);
+//    log(`   📌 Skúšam nadstavbovú skupinu: ${advancedGroupName}`);
     
     const advancedGroupTable = window.matchTracker?.createAdvancedGroupTable?.(category, advancedGroupName, null);
     
@@ -2525,22 +2525,22 @@ function getTeamNameByDisplayId(displayId) {
     const advancedGroupExists = advancedGroupTable && advancedGroupTable.teams && advancedGroupTable.teams.length > 0;
     
     if (advancedGroupExists) {
-        log(`   ✅ Nadstavbová skupina existuje, kontrolujem kompletnosť...`);
+//        log(`   ✅ Nadstavbová skupina existuje, kontrolujem kompletnosť...`);
         
         // 🔥 DÔLEŽITÉ: Nadstavbová skupina musí byť KOMPLETNÁ (100% zápasov odohraných)
         // alebo aspoň musí mať všetky potrebné dáta (prenesené zápasy + odohrané v nadstavbe)
         const isComplete = advancedGroupTable.completionPercentage === 100;
         
         if (!isComplete) {
-            log(`   ⏳ Nadstavbová skupina NIE JE KOMPLETNÁ (${advancedGroupTable.completedCount}/${advancedGroupTable.totalMatches} odohraných)`);
+//            log(`   ⏳ Nadstavbová skupina NIE JE KOMPLETNÁ (${advancedGroupTable.completedCount}/${advancedGroupTable.totalMatches} odohraných)`);
             // Neprerušujeme - skúsime ešte základnú skupinu
         } else {
-            log(`   ✅ Nadstavbová skupina je KOMPLETNÁ (100%)`);
+//            log(`   ✅ Nadstavbová skupina je KOMPLETNÁ (100%)`);
             
             const teamIndex = order - 1;
             if (teamIndex >= 0 && teamIndex < advancedGroupTable.teams.length) {
                 const team = advancedGroupTable.teams[teamIndex];
-                log(`   🎉 NAJDENÝ V NADSTAVBOVEJ: "${team.name}" (pozícia ${order} v skupine ${groupLetter})`);
+//                log(`   🎉 NAJDENÝ V NADSTAVBOVEJ: "${team.name}" (pozícia ${order} v skupine ${groupLetter})`);
                 
                 // Uložíme do cache
                 const cacheKey = `${category}|${groupLetter}|${order}`;
@@ -2559,30 +2559,30 @@ function getTeamNameByDisplayId(displayId) {
                 
                 return team.name;
             } else {
-                log(`   ⚠️ Pozícia ${order} neexistuje v nadstavbovej skupine (max ${advancedGroupTable.teams.length})`);
+//                log(`   ⚠️ Pozícia ${order} neexistuje v nadstavbovej skupine (max ${advancedGroupTable.teams.length})`);
             }
         }
     } else {
-        log(`   ℹ️ Nadstavbová skupina ${advancedGroupName} neexistuje`);
+//        log(`   ℹ️ Nadstavbová skupina ${advancedGroupName} neexistuje`);
     }
     
     // ============================================================
     // KROK 2: AK NADSTAVBOVÁ NEEXISTUJE ALEBO NIE JE KOMPLETNÁ, SKÚSIAME ZÁKLADNÚ SKUPINU
     // ============================================================
     const fullGroupName = `skupina ${groupLetter}`;
-    log(`   📌 Skúšam základnú skupinu: ${fullGroupName}`);
+//    log(`   📌 Skúšam základnú skupinu: ${fullGroupName}`);
     
     const isReady = isGroupReadyForReplacement(category, groupLetter);
     
     if (!isReady) {
-        log(`   ⏳ Základná skupina ${fullGroupName} NIE JE pripravená (nemá 100% odohraných zápasov)`);
+//        log(`   ⏳ Základná skupina ${fullGroupName} NIE JE pripravená (nemá 100% odohraných zápasov)`);
         return null;
     }
     
     const groupTable = window.matchTracker?.createGroupTable(category, fullGroupName);
     
     if (!groupTable || !groupTable.teams || groupTable.teams.length === 0) {
-        log(`   ❌ Tabuľka pre skupinu ${fullGroupName} neexistuje`);
+//        log(`   ❌ Tabuľka pre skupinu ${fullGroupName} neexistuje`);
         return null;
     }
     
@@ -2590,7 +2590,7 @@ function getTeamNameByDisplayId(displayId) {
     
     if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
         const team = groupTable.teams[teamIndex];
-        log(`   🎉 NAJDENÝ V ZÁKLADNEJ: "${team.name}" (pozícia ${order} v skupine ${groupLetter})`);
+//        log(`   🎉 NAJDENÝ V ZÁKLADNEJ: "${team.name}" (pozícia ${order} v skupine ${groupLetter})`);
         
         // Uložíme do cache
         const cacheKey = `${category}|${groupLetter}|${order}`;
@@ -2609,7 +2609,7 @@ function getTeamNameByDisplayId(displayId) {
         
         return team.name;
     } else {
-        log(`   ❌ Pozícia ${order} neexistuje (skupina má ${groupTable.teams.length} tímov)`);
+//        log(`   ❌ Pozícia ${order} neexistuje (skupina má ${groupTable.teams.length} tímov)`);
         return null;
     }
 }
