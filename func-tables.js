@@ -2478,6 +2478,9 @@ function getTeamNameFromDatabase(displayId) {
 // ============================================================
 
 function getTeamNameByDisplayId(displayId, forceRefresh = false) {
+
+    forceRefresh = true;
+    
     if (!displayId) {
         log('❌ Nebol zadaný identifikátor tímu');
         return null;
