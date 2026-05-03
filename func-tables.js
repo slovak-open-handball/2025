@@ -2416,7 +2416,7 @@ function getTeamNameFromDatabase(displayId) {
 }
 
 // ============================================================
-// OPRAVENÁ FUNKCIA: getTeamNameByDisplayId - SPRÁVNE PORADIE VYHĽADÁVANIA
+// OPRAVENÁ FUNKCIA: getTeamNameByDisplayId - HĽADÁ LEN V 100% PRIPRAVENÝCH SKUPINÁCH
 // ============================================================
 
 function getTeamNameByDisplayId(displayId) {
@@ -2464,7 +2464,7 @@ function getTeamNameByDisplayId(displayId) {
     const advancedGroupName = `nadstavbová skupina ${groupLetter}`;
     
     // ============================================================
-    // KROK 1: NAJPRV SKONTROLUJEME, ČI EXISTUJE NADSTAVBOVÁ SKUPINA
+    // KROK 1: SKONTROLUJEME NADSTAVBOVÚ SKUPINU (VYHODNOTENÁ S MAPOVANÝMI NÁZVA MI)
     // ============================================================
     const advancedGroupTable = window.matchTracker?.createAdvancedGroupTable?.(category, advancedGroupName, null);
     const advancedGroupExists = advancedGroupTable && advancedGroupTable.teams && advancedGroupTable.teams.length > 0;
@@ -2476,10 +2476,10 @@ function getTeamNameByDisplayId(displayId) {
             checkedGroupsCache.add(`${groupKey}_advanced_check`);
         }
         
-        // Kontrola, či je nadstavbová skupina kompletne odohraná
+        // 🔥 KRITICKÉ: Kontrola, či je nadstavbová skupina 100% pripravená
         if (advancedGroupTable.completionPercentage !== 100) {
             if (!checkedGroupsCache.has(`${groupKey}_advanced_not_ready`)) {
-                log(`⛔ Nadstavbová skupina ${advancedGroupName} NIE JE KOMPLETNÁ (${advancedGroupTable.completedCount}/${advancedGroupTable.totalMatches})`);
+                log(`⛔ Nadstavbová skupina ${advancedGroupName} NIE JE 100% PRIPRAVENÁ (${advancedGroupTable.completedCount}/${advancedGroupTable.totalMatches})`);
                 checkedGroupsCache.add(`${groupKey}_advanced_not_ready`);
             }
             return null;
@@ -2487,25 +2487,24 @@ function getTeamNameByDisplayId(displayId) {
         
         const teamIndex = order - 1;
         if (teamIndex >= 0 && teamIndex < advancedGroupTable.teams.length) {
-            const team = advancedGroupTable.teams[teamIndex];
-            
-            // Získame názov tímu (už by mal byť zmapovaný z createAdvancedGroupTable)
+            let team = advancedGroupTable.teams[teamIndex];
             let teamName = team.name;
             
-            // 🔥 KONTROLA: Ak je team.name ešte identifikátor, skúsime ho znova namapovať
+            // 🔥 Ak je názov ešte identifikátor (napr. "U12 D 1A"), rekurzívne ho namapujeme
             const looksLikeIdentifier = /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(teamName);
-            
             if (looksLikeIdentifier && teamName !== displayId) {
-                // Rekurzívne volanie na získanie skutočného názvu
                 const mappedName = getTeamNameByDisplayId(teamName);
                 if (mappedName && mappedName !== teamName) {
                     teamName = mappedName;
-                    log(`🔄 Sekundárne mapovanie: "${team.name}" → "${teamName}"`);
+                    log(`🔄 Rekurzívne mapovanie v nadstavbovej: "${team.name}" → "${teamName}"`);
                 }
             }
             
+            // 🔥 REGISTRÁCIA MAPOVANIA DO GLOBÁLNEHO OBJEKTU
+            registerTeamNameMapping(displayId, teamName, category, groupLetter, order);
+            
             if (!checkedGroupsCache.has(`${groupKey}_advanced_found_${order}`)) {
-                log(`✅ NADSTAVBOVÁ: "${teamName}" (pozícia ${order} v skupine ${groupLetter})`);
+                log(`✅ NADSTAVBOVÁ (100%): "${teamName}" (pozícia ${order} v skupine ${groupLetter})`);
                 checkedGroupsCache.add(`${groupKey}_advanced_found_${order}`);
             }
             return teamName;
@@ -2519,15 +2518,15 @@ function getTeamNameByDisplayId(displayId) {
     }
     
     // ============================================================
-    // KROK 2: NADSTAVBOVÁ SKUPINA NEEXISTUJE - POUŽIJEME ZÁKLADNÚ
+    // KROK 2: NADSTAVBOVÁ SKUPINA NEEXISTUJE - POUŽIJEME ZÁKLADNÚ (LEN AK JE 100%)
     // ============================================================
     
-    // Kontrola pripravenosti základnej skupiny
+    // Kontrola pripravenosti základnej skupiny (musí byť 100%)
     const isReady = isGroupReadyForReplacement(category, groupLetter);
     
     if (!isReady) {
         if (!checkedGroupsCache.has(`${groupKey}_base_not_ready`)) {
-            log(`⛔ Skupina ${fullGroupName} NIE JE pripravená (nemá 100% odohraných zápasov)`);
+            log(`⛔ Základná skupina ${fullGroupName} NIE JE 100% PRIPRAVENÁ (nemá všetky zápasy odohrané)`);
             checkedGroupsCache.add(`${groupKey}_base_not_ready`);
         }
         return null;
@@ -2546,21 +2545,24 @@ function getTeamNameByDisplayId(displayId) {
     const teamIndex = order - 1;
     
     if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
-        const team = groupTable.teams[teamIndex];
+        let team = groupTable.teams[teamIndex];
+        let teamName = team.name;
         
         // Mapovanie názvu tímu (ak je to identifikátor)
-        let teamName = team.name;
         const looksLikeIdentifier = /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(teamName);
-        
         if (looksLikeIdentifier) {
             const mappedName = getTeamNameByDisplayId(teamName);
             if (mappedName && mappedName !== teamName) {
                 teamName = mappedName;
+                log(`🔄 Rekurzívne mapovanie v základnej: "${team.name}" → "${teamName}"`);
             }
         }
         
+        // 🔥 REGISTRÁCIA MAPOVANIA DO GLOBÁLNEHO OBJEKTU
+        registerTeamNameMapping(displayId, teamName, category, groupLetter, order);
+        
         if (!checkedGroupsCache.has(`${groupKey}_base_found_${order}`)) {
-            log(`✅ ZÁKLADNÁ: "${teamName}" (pozícia ${order} v skupine ${groupLetter})`);
+            log(`✅ ZÁKLADNÁ (100%): "${teamName}" (pozícia ${order} v skupine ${groupLetter})`);
             checkedGroupsCache.add(`${groupKey}_base_found_${order}`);
         }
         return teamName;
@@ -3572,13 +3574,17 @@ function getReplacedTeams() {
 // Globálny objekt pre mapovanie identifikátorov na názvy tímov
 window.__teamNameMapping = window.__teamNameMapping || {};
 
-// Funkcia na registráciu mapovania
 function registerTeamNameMapping(originalIdentifier, teamName, category, groupLetter, position) {
     if (!originalIdentifier || !teamName) return;
     
-    // 🔥 KONTROLA - ak už mapovanie existuje, neaktualizujeme
+    // 🔥 DÔLEŽITÉ: Ak už mapovanie existuje, NEPREPISUJEME ho (zachovávame pôvodné)
     if (window.__teamNameMapping[originalIdentifier]) {
-        return;  // Už existuje, preskočíme
+        // Kontrola, či sa mapovanie líši (pre debug)
+        const existing = window.__teamNameMapping[originalIdentifier];
+        if (existing.teamName !== teamName) {
+            log(`⚠️ Mapovanie pre "${originalIdentifier}" už existuje: "${existing.teamName}" → ignorujem nové: "${teamName}"`);
+        }
+        return;
     }
     
     window.__teamNameMapping[originalIdentifier] = {
@@ -3589,7 +3595,7 @@ function registerTeamNameMapping(originalIdentifier, teamName, category, groupLe
         timestamp: Date.now()
     };
     
-    // 🔥 PRIDAJTE AJ DO CACHE
+    // Pridáme aj do cache pre rýchle vyhľadávanie
     const cacheKey = `${category}|${groupLetter.toUpperCase()}|${position}`;
     if (!replacementCache.has(cacheKey)) {
         replacementCache.set(cacheKey, {
@@ -3602,6 +3608,8 @@ function registerTeamNameMapping(originalIdentifier, teamName, category, groupLe
         });
         saveReplacementCache(replacementCache);
     }
+    
+    log(`📝 Zaregistrované mapovanie: "${originalIdentifier}" → "${teamName}"`);
 }
 
 // ============================================================
