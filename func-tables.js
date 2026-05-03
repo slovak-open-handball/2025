@@ -2470,26 +2470,33 @@ function getTeamNameByDisplayId(displayId) {
     console.log(`   🔢 Pozícia: ${order}`);
     
     // ============================================================
-    // KROK 1: VŽDY NAJPRV SKONTROLUJEME NADSTAVBOVÚ SKUPINU
+    // KROK 1: NAJPRV SKONTROLUJEME, ČI EXISTUJE NADSTAVBOVÁ SKUPINA
+    // (podľa zápasov, nie podľa tabuľky)
     // ============================================================
     
-    // VYTVORÍME ČERSTVÚ TABUĽKU NADSTAVBOVEJ SKUPINY
-    const advancedGroupTable = window.matchTracker?.createAdvancedGroupTable?.(category, advancedGroupName, null);
-    const advancedGroupExists = advancedGroupTable && advancedGroupTable.teams && advancedGroupTable.teams.length > 0;
+    // Získame všetky zápasy v nadstavbovej skupine priamo z dát
+    const allMatches = window.matchTracker?.getAllMatches?.() || [];
+    const advancedGroupMatches = allMatches.filter(match => 
+        match.categoryName === category && 
+        match.groupName === advancedGroupName &&
+        !match.isPlacementMatch
+    );
+    
+    const advancedGroupExists = advancedGroupMatches.length > 0;
     
     if (advancedGroupExists) {
-        console.log(`   📊 TYP SKUPINY: NADSTAVBOVÁ ${advancedGroupName}`);
+        console.log(`   📊 TYP SKUPINY: NADSTAVBOVÁ ${advancedGroupName} (${advancedGroupMatches.length} zápasov)`);
         
-        if (!checkedGroupsCache.has(`${groupKey}_advanced_check`)) {
-            log(`🔍 Hľadám v NADSTAVBOVEJ skupine: ${advancedGroupName} (pozícia ${order})`);
-            checkedGroupsCache.add(`${groupKey}_advanced_check`);
-        }
+        // Skúsime vytvoriť tabuľku nadstavbovej skupiny (môže vrátiť null ak základné skupiny nie sú hotové)
+        const advancedGroupTable = window.matchTracker?.createAdvancedGroupTable?.(category, advancedGroupName, null);
         
         // 🔥 KRITICKÉ: Nadstavbová skupina musí byť 100% pripravená
-        if (advancedGroupTable.completionPercentage !== 100) {
-            console.log(`   ⛔ NADSTAVBOVÁ skupina NIE JE 100% pripravená (${advancedGroupTable.completedCount}/${advancedGroupTable.totalMatches})`);
+        if (!advancedGroupTable || advancedGroupTable.completionPercentage !== 100) {
+            const completedCount = advancedGroupTable?.completedCount || 0;
+            const totalCount = advancedGroupTable?.totalMatches || advancedGroupMatches.length;
+            console.log(`   ⛔ NADSTAVBOVÁ skupina NIE JE 100% pripravená (${completedCount}/${totalCount} odohraných v nadstavbe)`);
             if (!checkedGroupsCache.has(`${groupKey}_advanced_not_ready`)) {
-                log(`⛔ Nadstavbová skupina ${advancedGroupName} NIE JE 100% PRIPRAVENÁ (${advancedGroupTable.completedCount}/${advancedGroupTable.totalMatches})`);
+                log(`⛔ Nadstavbová skupina ${advancedGroupName} NIE JE 100% PRIPRAVENÁ (základné skupiny nie sú dokončené alebo chýbajú zápasy)`);
                 checkedGroupsCache.add(`${groupKey}_advanced_not_ready`);
             }
             return null;
