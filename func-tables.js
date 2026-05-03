@@ -2663,7 +2663,7 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
         return null;
     }
     
-    log(`🔍 getTeamNameByDisplayId: "${displayId}" → formát: ${isBaseGroupFormat ? 'PREDBEŽNÉ (A1)' : 'KONEČNÉ (1A)'}, skupina: ${groupLetter}, poradie: ${order}`);
+//    log(`🔍 getTeamNameByDisplayId: "${displayId}" → formát: ${isBaseGroupFormat ? 'PREDBEŽNÉ (A1)' : 'KONEČNÉ (1A)'}, skupina: ${groupLetter}, poradie: ${order}`);
     
     // ============================================================
     // PRÍPAD 1: Formát "A1" (písmeno PRED číslom) - PREDBEŽNÉ PORADIE
@@ -2776,7 +2776,7 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
                     saveReplacementCache(replacementCache);
                 }
                 
-                log(`✅ KONEČNÉ (${order}${groupLetter}): → "${team.name}" (z nadstavbovej skupiny, 100%)`);
+//                log(`✅ KONEČNÉ (${order}${groupLetter}): → "${team.name}" (z nadstavbovej skupiny, 100%)`);
                 return team.name;
             }
         } else if (isBaseComplete) {
@@ -2801,7 +2801,7 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
                     saveReplacementCache(replacementCache);
                 }
                 
-                log(`✅ KONEČNÉ (${order}${groupLetter}): → "${team.name}" (zo základnej skupiny, 100%)`);
+//                log(`✅ KONEČNÉ (${order}${groupLetter}): → "${team.name}" (zo základnej skupiny, 100%)`);
                 return team.name;
             }
         }
