@@ -1604,47 +1604,52 @@ const matchesHallApp = ({ userProfileData }) => {
         setAwayTeamNameReady(false);
     }, [selectedMatch?.id]);
 
+    // OPRAVA: Synchronizácia zobrazených názvov tímov v UI s načítanými súpiskami
     useEffect(() => {
         if (!selectedMatch) return;
         
-        const syncTeamNamesWithRoster = async () => {
-            // Počkáme, kým sa načítajú team data
-            if (!homeTeamData && !awayTeamData) return;
+        // Počkáme na načítanie súpisiek
+        if (!homeTeamData || !awayTeamData) return;
+        
+        const syncDisplayNames = () => {
+            let needsUpdate = false;
+            const updates = {};
             
-            // Pre DOMÁCI TÍM
-            if (homeTeamData && homeTeamData.team && homeTeamData.team.teamName) {
-                const rosterTeamName = homeTeamData.team.teamName;
-                const currentDisplayName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
+            // Ak máme načítaný domáci tím a jeho názov je iný ako zobrazený
+            if (homeTeamData?.team?.teamName) {
+                const correctHomeName = homeTeamData.team.teamName;
+                const currentHomeName = selectedMatch.homeDisplayName || getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
                 
-                // Ak sa názvy líšia, aktualizujeme selectedMatch
-                if (currentDisplayName !== rosterTeamName) {
-                    console.log(`🔄 [SYNC] Domáci: "${currentDisplayName}" -> "${rosterTeamName}"`);
-                    
-                    // Aktualizujeme selectedMatch v React stave
-                    setSelectedMatch(prev => ({
-                        ...prev,
-                        homeDisplayName: rosterTeamName
-                    }));
+                if (currentHomeName !== correctHomeName) {
+                    console.log(`🔄 [UI OPRAVA] Domáci: "${currentHomeName}" -> "${correctHomeName}"`);
+                    updates.homeDisplayName = correctHomeName;
+                    needsUpdate = true;
                 }
             }
             
-            // Pre HOSŤOVSKÝ TÍM
-            if (awayTeamData && awayTeamData.team && awayTeamData.team.teamName) {
-                const rosterTeamName = awayTeamData.team.teamName;
-                const currentDisplayName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
+            // Ak máme načítaný hosťovský tím a jeho názov je iný ako zobrazený
+            if (awayTeamData?.team?.teamName) {
+                const correctAwayName = awayTeamData.team.teamName;
+                const currentAwayName = selectedMatch.awayDisplayName || getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
                 
-                if (currentDisplayName !== rosterTeamName) {
-                    console.log(`🔄 [SYNC] Hosťovskí: "${currentDisplayName}" -> "${rosterTeamName}"`);
-                    
-                    setSelectedMatch(prev => ({
-                        ...prev,
-                        awayDisplayName: rosterTeamName
-                    }));
+                if (currentAwayName !== correctAwayName) {
+                    console.log(`🔄 [UI OPRAVA] Hosťovskí: "${currentAwayName}" -> "${correctAwayName}"`);
+                    updates.awayDisplayName = correctAwayName;
+                    needsUpdate = true;
                 }
+            }
+            
+            if (needsUpdate) {
+                setSelectedMatch(prev => ({
+                    ...prev,
+                    ...updates
+                }));
             }
         };
         
-        syncTeamNamesWithRoster();
+        // Malé oneskorenie, aby sa zabezpečilo, že súpisky sú plne načítané
+        const timer = setTimeout(syncDisplayNames, 100);
+        return () => clearTimeout(timer);
     }, [homeTeamData, awayTeamData, selectedMatch?.id]);
 
     // OPRAVENÝ useEffect PRE NAČÍTANIE SÚPISIEK
@@ -6059,12 +6064,24 @@ const matchesHallApp = ({ userProfileData }) => {
         }
     };
 
-    // FUNKCIA PRE VÝBER ZÁPASU
-     const selectMatch = (match) => {
+    const selectMatch = (match) => {
+        // Najprv nastavíme zápas
         setSelectedMatch(match);
         setManualTimeOffset(match.manualTimeOffset || 0);
         updateUrlParameters(match.homeTeamIdentifier, match.awayTeamIdentifier);
         window.currentMatchId = match.id;
+        
+        // OKAMŽITE OPRAVÍME ZOBRAZENÉ NÁZVY podľa identifikátorov
+        setTimeout(async () => {
+            const homeCorrectName = getTeamNameByIdentifier(match.homeTeamIdentifier);
+            const awayCorrectName = getTeamNameByIdentifier(match.awayTeamIdentifier);
+            
+            setSelectedMatch(prev => ({
+                ...prev,
+                homeDisplayName: homeCorrectName,
+                awayDisplayName: awayCorrectName
+            }));
+        }, 100);
     };
 
     // Zoradenie dní podľa dátumu
