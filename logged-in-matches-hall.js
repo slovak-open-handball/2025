@@ -175,7 +175,7 @@ const MatchesHallApp = () => {
 
     return React.createElement(
         'div',
-        { className: 'max-w-6xl mx-auto px-4 py-6' },
+        { className: 'max-w-7xl mx-auto px-4 py-6' },
         
         // Hlavička
         React.createElement(
@@ -216,10 +216,10 @@ const MatchesHallApp = () => {
                         React.createElement('span', { className: 'text-sm text-gray-400 ml-auto' }, `(${dayMatches.length} zápasov)`)
                     ),
                     
-                    // Zápasy pre daný deň
+                    // Zápasy pre daný deň - JEDEN RIADOK
                     React.createElement(
                         'div',
-                        { className: 'space-y-3' },
+                        { className: 'divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden bg-white' },
                         dayMatches.map((match) => {
                             const dateTime = formatMatchDateTime(match.scheduledTime);
                             const isResultAvailable = match.homeScore !== undefined && match.awayScore !== undefined;
@@ -228,90 +228,84 @@ const MatchesHallApp = () => {
                                 'div',
                                 { 
                                     key: match.id,
-                                    className: 'bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow overflow-hidden'
+                                    className: 'hover:bg-gray-50 transition-colors'
                                 },
                                 React.createElement(
                                     'div',
-                                    { className: 'p-4' },
+                                    { className: 'p-3 flex flex-wrap items-center gap-3' },
                                     
-                                    // Horný riadok - čas a typ zápasu
+                                    // Čas
                                     React.createElement(
                                         'div',
-                                        { className: 'flex items-center justify-between mb-3' },
-                                        React.createElement(
-                                            'div',
-                                            { className: 'flex items-center gap-2' },
-                                            React.createElement('i', { className: 'fa-regular fa-clock text-gray-400 text-sm' }),
-                                            React.createElement('span', { className: 'font-mono font-semibold text-gray-700' }, dateTime?.time || '--:--')
-                                        ),
-                                        (match.matchType || match.isPlacementMatch) && React.createElement(
-                                            'span',
-                                            { className: 'text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full' },
-                                            match.isPlacementMatch ? `o ${match.placementRank}. miesto` : match.matchType
+                                        { className: 'min-w-[70px] flex items-center gap-1' },
+                                        React.createElement('i', { className: 'fa-regular fa-clock text-gray-400 text-xs' }),
+                                        React.createElement('span', { className: 'font-mono font-medium text-gray-700 text-sm' }, dateTime?.time || '--:--')
+                                    ),
+                                    
+                                    // Domáci tím
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex-1 text-right min-w-[120px]' },
+                                        React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, 
+                                            match.homeTeamIdentifier || '???'
                                         )
                                     ),
                                     
-                                    // Stredný riadok - tímy
+                                    // VS / výsledok
                                     React.createElement(
                                         'div',
-                                        { className: 'flex items-center justify-between gap-4 mb-3' },
-                                        
-                                        // Domáci tím
-                                        React.createElement(
-                                            'div',
-                                            { className: 'flex-1 text-right' },
-                                            React.createElement('span', { className: 'font-semibold text-gray-800' }, 
-                                                match.homeTeamIdentifier || '???'
-                                            )
-                                        ),
-                                        
-                                        // VS / výsledok
-                                        React.createElement(
-                                            'div',
-                                            { className: 'flex-shrink-0' },
-                                            isResultAvailable ?
-                                                React.createElement(
-                                                    'div',
-                                                    { className: 'flex items-center gap-2' },
-                                                    React.createElement('span', { className: 'font-bold text-lg text-gray-800' }, match.homeScore),
-                                                    React.createElement('span', { className: 'text-gray-400 font-bold' }, ':'),
-                                                    React.createElement('span', { className: 'font-bold text-lg text-gray-800' }, match.awayScore)
-                                                ) :
-                                                React.createElement('span', { className: 'text-gray-400 font-bold' }, 'VS')
-                                        ),
-                                        
-                                        // Hosťovský tím
-                                        React.createElement(
-                                            'div',
-                                            { className: 'flex-1 text-left' },
-                                            React.createElement('span', { className: 'font-semibold text-gray-800' }, 
-                                                match.awayTeamIdentifier || '???'
-                                            )
+                                        { className: 'flex-shrink-0 min-w-[50px] text-center' },
+                                        isResultAvailable ?
+                                            React.createElement(
+                                                'div',
+                                                { className: 'flex items-center justify-center gap-1' },
+                                                React.createElement('span', { className: 'font-bold text-gray-800' }, match.homeScore),
+                                                React.createElement('span', { className: 'text-gray-400' }, ':'),
+                                                React.createElement('span', { className: 'font-bold text-gray-800' }, match.awayScore)
+                                            ) :
+                                            React.createElement('span', { className: 'text-gray-400 font-medium text-sm' }, 'VS')
+                                    ),
+                                    
+                                    // Hosťovský tím
+                                    React.createElement(
+                                        'div',
+                                        { className: 'flex-1 text-left min-w-[120px]' },
+                                        React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, 
+                                            match.awayTeamIdentifier || '???'
                                         )
                                     ),
                                     
-                                    // Spodný riadok - kategória, skupina, detail
+                                    // Skupina (ak existuje)
+                                    match.groupName && React.createElement(
+                                        'span',
+                                        { className: 'text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full whitespace-nowrap' },
+                                        match.groupName
+                                    ),
+                                    
+                                    // Kategória (ak existuje)
+                                    match.categoryName && React.createElement(
+                                        'span',
+                                        { className: 'text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full whitespace-nowrap' },
+                                        match.categoryName
+                                    ),
+                                    
+                                    // Typ zápasu (ak existuje)
+                                    (match.matchType || match.isPlacementMatch) && React.createElement(
+                                        'span',
+                                        { className: `text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${
+                                            match.isPlacementMatch ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                                        }` },
+                                        match.isPlacementMatch ? `o ${match.placementRank}. miesto` : match.matchType
+                                    ),
+                                    
+                                    // Detail tlačidlo
                                     React.createElement(
-                                        'div',
-                                        { className: 'flex items-center gap-2 flex-wrap' },
-                                        match.groupName && React.createElement(
-                                            'span',
-                                            { className: 'text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full' },
-                                            match.groupName
-                                        ),
-                                        match.categoryName && React.createElement(
-                                            'span',
-                                            { className: 'text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full' },
-                                            match.categoryName
-                                        ),
-                                        React.createElement(
-                                            'button',
-                                            {
-                                                className: 'text-xs text-blue-500 hover:text-blue-700 ml-auto',
-                                                onClick: () => console.log('Detail zápasu:', match.id)
-                                            },
-                                            'Detail'
-                                        )
+                                        'button',
+                                        {
+                                            className: 'text-xs text-blue-500 hover:text-blue-700 whitespace-nowrap',
+                                            onClick: () => console.log('Detail zápasu:', match.id)
+                                        },
+                                        'Detail'
                                     )
                                 )
                             );
