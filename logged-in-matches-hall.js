@@ -1778,7 +1778,7 @@ const matchesHallApp = ({ userProfileData }) => {
         updateTeamNamesInMatches();
     }, [matches.length, teamManagerReady]); // Spustí sa pri zmene dĺžky matches alebo ready stavu
 
-    // UPRAVENÝ useEffect pre mapovanie názvov tímov - podpora pre zoznam aj detail
+    // UPRAVENÝ useEffect pre mapovanie názvov tímov
     useEffect(() => {
         // Ak nie je vybraný žiadny zápas, aktualizujeme názvy v zozname
         if (!selectedMatch && matches.length > 0 && teamManagerReady) {
@@ -1791,7 +1791,6 @@ const matchesHallApp = ({ userProfileData }) => {
                 for (let i = 0; i < updatedMatches.length; i++) {
                     const match = updatedMatches[i];
                     
-                    // 🔥 OCHRANA: Ak chýbajú identifikátory, preskočíme
                     if (!match.homeTeamIdentifier || !match.awayTeamIdentifier) {
                         if (!match.homeDisplayName && !match.awayDisplayName) {
                             updatedMatches[i] = {
@@ -1804,7 +1803,6 @@ const matchesHallApp = ({ userProfileData }) => {
                         continue;
                     }
                     
-                    // Ak už máme displayName, neprepisujeme ho (len ak chýba)
                     if (match.homeDisplayName && match.awayDisplayName) continue;
                     
                     let homeDisplayName = match.homeTeamIdentifier;
@@ -1848,26 +1846,26 @@ const matchesHallApp = ({ userProfileData }) => {
         if (!selectedMatch) return;
         
         const mapTeamNames = async () => {
-            // Počkáme na pripravenosť teamManager
+            // Počkáme na pripravenosť matchTracker (NIE teamManager!)
             let waitCount = 0;
-            while (!window.teamManager || !window.teamManager.getTeamNameByDisplayIdSync) {
+            while (!window.matchTracker || typeof window.matchTracker.getTeamNameByDisplayId !== 'function') {
                 if (waitCount >= 100) {
-                    console.warn('⚠️ Timeout: teamManager sa nenačítal do 10 sekúnd');
+                    console.warn('⚠️ Timeout: matchTracker sa nenačítal do 10 sekúnd');
                     break;
                 }
                 await new Promise(resolve => setTimeout(resolve, 100));
                 waitCount++;
             }
             
-            // Získame zmapovaný názov pre domáci tím
+            // 🔥 POUŽIJEME matchTracker NAMIesto teamManager
             let homeResolvedName = selectedMatch.homeTeamIdentifier;
             let awayResolvedName = selectedMatch.awayTeamIdentifier;
             
-            if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+            if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
                 // Domáci - dvojitá konverzia
-                let firstPass = window.teamManager.getTeamNameByDisplayIdSync(selectedMatch.homeTeamIdentifier);
+                let firstPass = await window.matchTracker.getTeamNameByDisplayId(selectedMatch.homeTeamIdentifier);
                 if (firstPass && firstPass !== selectedMatch.homeTeamIdentifier) {
-                    let secondPass = window.teamManager.getTeamNameByDisplayIdSync(firstPass);
+                    let secondPass = await window.matchTracker.getTeamNameByDisplayId(firstPass);
                     if (secondPass && secondPass !== firstPass) {
                         homeResolvedName = secondPass;
                     } else {
@@ -1876,9 +1874,9 @@ const matchesHallApp = ({ userProfileData }) => {
                 }
                 
                 // Hosťovskí - dvojitá konverzia
-                firstPass = window.teamManager.getTeamNameByDisplayIdSync(selectedMatch.awayTeamIdentifier);
+                firstPass = await window.matchTracker.getTeamNameByDisplayId(selectedMatch.awayTeamIdentifier);
                 if (firstPass && firstPass !== selectedMatch.awayTeamIdentifier) {
-                    let secondPass = window.teamManager.getTeamNameByDisplayIdSync(firstPass);
+                    let secondPass = await window.matchTracker.getTeamNameByDisplayId(firstPass);
                     if (secondPass && secondPass !== firstPass) {
                         awayResolvedName = secondPass;
                     } else {
@@ -1886,6 +1884,9 @@ const matchesHallApp = ({ userProfileData }) => {
                     }
                 }
             }
+            
+            console.log(`🔍 [MAPOVANIE] Domáci: "${selectedMatch.homeTeamIdentifier}" -> "${homeResolvedName}"`);
+            console.log(`🔍 [MAPOVANIE] Hosťovskí: "${selectedMatch.awayTeamIdentifier}" -> "${awayResolvedName}"`);
             
             // 🔥 DÔLEŽITÉ: Uložíme názvy do selectedMatch
             setSelectedMatch(prev => ({
