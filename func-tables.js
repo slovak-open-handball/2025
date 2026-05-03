@@ -894,10 +894,7 @@ let isTeamNameReplacerInitialized = false;
             });
         }
 
-        groupTableCache.set(cacheKey, result);
-        lastGroupTableUpdate.set(cacheKey, now);
-        
-        return {
+        const result = {
             category: categoryName,
             group: groupName,
             teams: sortedTeams,
@@ -910,6 +907,11 @@ let isTeamNameReplacerInitialized = false;
             transferredMatches: [],
             pointsForWin: pointsForWin
         };
+        
+        groupTableCache.set(cacheKey, result);
+        lastGroupTableUpdate.set(cacheKey, now);
+
+        return result;
     }
 
     // Pomocná funkcia na získanie názvu tímu pre nadstavbovú skupinu
