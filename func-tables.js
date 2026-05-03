@@ -1454,7 +1454,7 @@ let isTeamNameReplacerInitialized = false;
             
             // 1. Normálne zápasy (v nadstavbovej skupine)
             if (normal.length > 0) {
-                log(`\n🏆 ZÁPASY V NADSTAVBOVEJ SKUPINE (${normal.length}):`);
+                log(`\n🏆 ZÁPASY V SKUPINE (${normal.length}):`);
                 normal.forEach((match, idx) => {
                     // 🔥 DÔLEŽITÉ: Používame homeTeamName a awayTeamName, nie homeTeamIdentifier
                     // Tieto vlastnosti musíme nastaviť už v createAdvancedGroupTable
