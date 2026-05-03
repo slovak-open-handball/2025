@@ -1791,6 +1791,19 @@ const matchesHallApp = ({ userProfileData }) => {
                 for (let i = 0; i < updatedMatches.length; i++) {
                     const match = updatedMatches[i];
                     
+                    // 🔥 OCHRANA: Ak chýbajú identifikátory, preskočíme
+                    if (!match.homeTeamIdentifier || !match.awayTeamIdentifier) {
+                        if (!match.homeDisplayName && !match.awayDisplayName) {
+                            updatedMatches[i] = {
+                                ...match,
+                                homeDisplayName: match.homeTeamIdentifier || 'Neznámy tím',
+                                awayDisplayName: match.awayTeamIdentifier || 'Neznámy tím'
+                            };
+                            hasChanges = true;
+                        }
+                        continue;
+                    }
+                    
                     // Ak už máme displayName, neprepisujeme ho (len ak chýba)
                     if (match.homeDisplayName && match.awayDisplayName) continue;
                     
@@ -1798,17 +1811,25 @@ const matchesHallApp = ({ userProfileData }) => {
                     let awayDisplayName = match.awayTeamIdentifier;
                     
                     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                        const homeResult = window.matchTracker.getTeamNameByDisplayId(match.homeTeamIdentifier);
-                        homeDisplayName = (homeResult && typeof homeResult.then === 'function') ? await homeResult : (homeResult || match.homeTeamIdentifier);
+                        try {
+                            const homeResult = window.matchTracker.getTeamNameByDisplayId(match.homeTeamIdentifier);
+                            homeDisplayName = (homeResult && typeof homeResult.then === 'function') ? await homeResult : (homeResult || match.homeTeamIdentifier);
+                        } catch (e) {
+                            console.warn(`Chyba pri mapovaní home: ${match.homeTeamIdentifier}`);
+                        }
                         
-                        const awayResult = window.matchTracker.getTeamNameByDisplayId(match.awayTeamIdentifier);
-                        awayDisplayName = (awayResult && typeof awayResult.then === 'function') ? await awayResult : (awayResult || match.awayTeamIdentifier);
+                        try {
+                            const awayResult = window.matchTracker.getTeamNameByDisplayId(match.awayTeamIdentifier);
+                            awayDisplayName = (awayResult && typeof awayResult.then === 'function') ? await awayResult : (awayResult || match.awayTeamIdentifier);
+                        } catch (e) {
+                            console.warn(`Chyba pri mapovaní away: ${match.awayTeamIdentifier}`);
+                        }
                     }
                     
                     updatedMatches[i] = {
                         ...match,
-                        homeDisplayName: homeDisplayName,
-                        awayDisplayName: awayDisplayName
+                        homeDisplayName: homeDisplayName || match.homeTeamIdentifier || 'Neznámy tím',
+                        awayDisplayName: awayDisplayName || match.awayTeamIdentifier || 'Neznámy tím'
                     };
                     hasChanges = true;
                 }
@@ -1879,6 +1900,7 @@ const matchesHallApp = ({ userProfileData }) => {
         
         mapTeamNames();
     }, [selectedMatch?.homeTeamIdentifier, selectedMatch?.awayTeamIdentifier, selectedMatch?.id, matches.length, teamManagerReady, selectedMatch]);
+    
     // ============================================================================
     // NAČÍTANIE SUSPENDOVANÝCH HRÁČOV ZA MODRÚ KARTU PRE DOMÁCICH (OPRAVENÉ S ONESKORENÍM)
     // ============================================================================
@@ -2333,35 +2355,69 @@ const matchesHallApp = ({ userProfileData }) => {
                     const homeIdentifier = match.homeTeamIdentifier;
                     const awayIdentifier = match.awayTeamIdentifier;
                     
+                    // 🔥 OCHRANA: Ak je niektorý identifikátor undefined, preskočíme
+                    if (!homeIdentifier || !awayIdentifier) {
+                        console.warn(`⚠️ Zápas ${match.id} má neplatné identifikátory: home=${homeIdentifier}, away=${awayIdentifier}`);
+                        // Nastavíme aspoň fallback hodnoty
+                        if (!match.homeDisplayName) {
+                            updatedMatches[i] = {
+                                ...match,
+                                homeDisplayName: homeIdentifier || 'Neznámy tím',
+                                awayDisplayName: awayIdentifier || 'Neznámy tím'
+                            };
+                            hasChanges = true;
+                        }
+                        continue;
+                    }
+                    
                     let homeDisplayName = homeIdentifier;
                     let awayDisplayName = awayIdentifier;
                     
                     // Použijeme matchTracker na získanie zmapovaných názvov
                     if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-                        const homeResult = window.matchTracker.getTeamNameByDisplayId(homeIdentifier);
-                        homeDisplayName = (homeResult && typeof homeResult.then === 'function') ? await homeResult : (homeResult || homeIdentifier);
+                        try {
+                            const homeResult = window.matchTracker.getTeamNameByDisplayId(homeIdentifier);
+                            homeDisplayName = (homeResult && typeof homeResult.then === 'function') ? await homeResult : (homeResult || homeIdentifier);
+                        } catch (e) {
+                            console.warn(`Chyba pri získavaní názvu pre home: ${homeIdentifier}`, e);
+                            homeDisplayName = homeIdentifier;
+                        }
                         
-                        const awayResult = window.matchTracker.getTeamNameByDisplayId(awayIdentifier);
-                        awayDisplayName = (awayResult && typeof awayResult.then === 'function') ? await awayResult : (awayResult || awayIdentifier);
+                        try {
+                            const awayResult = window.matchTracker.getTeamNameByDisplayId(awayIdentifier);
+                            awayDisplayName = (awayResult && typeof awayResult.then === 'function') ? await awayResult : (awayResult || awayIdentifier);
+                        } catch (e) {
+                            console.warn(`Chyba pri získavaní názvu pre away: ${awayIdentifier}`, e);
+                            awayDisplayName = awayIdentifier;
+                        }
                     } else if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-                        homeDisplayName = window.teamManager.getTeamNameByDisplayIdSync(homeIdentifier) || homeIdentifier;
-                        awayDisplayName = window.teamManager.getTeamNameByDisplayIdSync(awayIdentifier) || awayIdentifier;
+                        try {
+                            homeDisplayName = window.teamManager.getTeamNameByDisplayIdSync(homeIdentifier) || homeIdentifier;
+                            awayDisplayName = window.teamManager.getTeamNameByDisplayIdSync(awayIdentifier) || awayIdentifier;
+                        } catch (e) {
+                            console.warn(`Chyba pri získavaní názvu cez teamManager`, e);
+                        }
                     }
                     
-                    // Skontrolujeme, či sa niečo zmenilo
-                    if (homeDisplayName !== match.homeDisplayName || awayDisplayName !== match.awayDisplayName) {
+                    // Skontrolujeme, či sa niečo zmenilo (s ochranou proti undefined)
+                    const currentHomeDisplay = match.homeDisplayName || match.homeTeamIdentifier || '';
+                    const currentAwayDisplay = match.awayDisplayName || match.awayTeamIdentifier || '';
+                    const newHomeDisplay = homeDisplayName || homeIdentifier || '';
+                    const newAwayDisplay = awayDisplayName || awayIdentifier || '';
+                    
+                    if (currentHomeDisplay !== newHomeDisplay || currentAwayDisplay !== newAwayDisplay) {
                         updatedMatches[i] = {
                             ...match,
-                            homeDisplayName: homeDisplayName,
-                            awayDisplayName: awayDisplayName
+                            homeDisplayName: homeDisplayName || homeIdentifier || 'Neznámy tím',
+                            awayDisplayName: awayDisplayName || awayIdentifier || 'Neznámy tím'
                         };
                         hasChanges = true;
                     } else if (!match.homeDisplayName && !match.awayDisplayName) {
                         // Ak nemáme žiadne displayName, nastavíme aspoň pôvodné
                         updatedMatches[i] = {
                             ...match,
-                            homeDisplayName: homeIdentifier,
-                            awayDisplayName: awayIdentifier
+                            homeDisplayName: homeIdentifier || 'Neznámy tím',
+                            awayDisplayName: awayIdentifier || 'Neznámy tím'
                         };
                         hasChanges = true;
                     }
