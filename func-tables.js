@@ -764,7 +764,7 @@ let isTeamNameReplacerInitialized = false;
         if (!forceRefresh && groupTableCache.has(cacheKey)) {
             const lastUpdate = lastGroupTableUpdate.get(cacheKey) || 0;
             if (now - lastUpdate < 5000) {  // 5 sekúnd cache
-                log(`💿 Používam cached tabuľku pre ${cacheKey}`);
+//                log(`💿 Používam cached tabuľku pre ${cacheKey}`);
                 return groupTableCache.get(cacheKey);
             }
         }
