@@ -707,7 +707,7 @@ let isTeamNameReplacerInitialized = false;
         const allGroupMatches = getGroupMatches(categoryName, groupName);
         
         if (allGroupMatches.length === 0) {
-            log(`Žiadne zápasy pre skupinu ${groupName} v kategórii ${categoryName}`);
+//            log(`Žiadne zápasy pre skupinu ${groupName} v kategórii ${categoryName}`);
             return null;
         }
         
