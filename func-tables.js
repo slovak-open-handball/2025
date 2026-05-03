@@ -2030,6 +2030,8 @@ let isTeamNameReplacerInitialized = false;
                 log(`📋 Ovplyvnené skupiny: ${Array.from(affectedGroups).join(', ')}`);
                 
                 // 1. Najprv prepočítame ovplyvnené ZÁKLADNÉ SKUPINY
+                const groupsToPrint = new Set();  // ✅ NOVÉ: skupiny, ktoré naozaj potrebujeme vytlačiť
+                
                 for (const groupKey of affectedGroups) {
                     const [category, group] = groupKey.split('|');
                     const isAdvancedGroup = group.toLowerCase().includes('nadstavbová');
@@ -2037,6 +2039,7 @@ let isTeamNameReplacerInitialized = false;
                     if (!isAdvancedGroup) {
                         log(`   🔄 Prepočítavam základnú skupinu: ${category} - ${group}`);
                         const groupTable = createGroupTable(category, group);
+                        groupsToPrint.add(groupKey);  // ✅ PRIDÁME túto skupinu na výpis
                         
                         if (groupTable && groupTable.completionPercentage == 100) {
                             log(`   ✅ ${category} - ${group} je teraz KOMPLETNÁ (100%)`);
@@ -2046,6 +2049,7 @@ let isTeamNameReplacerInitialized = false;
                             for (const advGroup of advancedDependentGroups) {
                                 log(`   🔄 Prepočítavam nadstavbovú skupinu (závisí na ${group}): ${category} - ${advGroup}`);
                                 createAdvancedGroupTable(category, advGroup, group);
+                                groupsToPrint.add(`${category}|${advGroup}`);  // ✅ PRIDÁME nadstavbovú skupinu
                             }
                         }
                     }
@@ -2064,19 +2068,27 @@ let isTeamNameReplacerInitialized = false;
                         if (processedGroupsInitial.has(baseGroupKey)) {
                             log(`   🔄 Prepočítavam nadstavbovú skupinu: ${category} - ${group}`);
                             createAdvancedGroupTable(category, group, baseGroupName);
+                            groupsToPrint.add(groupKey);  // ✅ PRIDÁME túto skupinu
                         }
                     }
                 }
                 
-                printAllGroupTables();
+                // ✅ TERAZ VYPRINTUJEME LEN OVPLYVNENÉ SKUPINY, NIE VŠETKY
+                log(`📋 Vypisujem len ovplyvnené skupiny (${groupsToPrint.size}):`);
+                for (const groupKey of groupsToPrint) {
+                    const [category, group] = groupKey.split('|');
+                    printGroupTable(category, group);
+                }
                 
+                // Vyvoláme udalosť pre ostatné časti systému
                 if (window.dispatchEvent) {
                     window.dispatchEvent(new CustomEvent('groupTablesUpdated', {
                         detail: { 
                             reason: 'match_completed', 
                             timestamp: Date.now(),
                             affectedGroups: Array.from(affectedGroups),
-                            affectedCategories: Array.from(affectedCategories)
+                            affectedCategories: Array.from(affectedCategories),
+                            printedGroups: Array.from(groupsToPrint)
                         }
                     }));
                 }
