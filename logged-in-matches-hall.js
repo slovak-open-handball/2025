@@ -6005,8 +6005,8 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         };
     
-        const homeTeamName = getTeamDisplayName('home', selectedMatch.homeTeamIdentifier);
-        const awayTeamName = getTeamDisplayName('away', selectedMatch.awayTeamIdentifier);
+        const homeTeamName = getTeamNameByIdentifier(selectedMatch.homeTeamIdentifier);
+        const awayTeamName = getTeamNameByIdentifier(selectedMatch.awayTeamIdentifier);
         
         const homeTeamDetails = getTeamDetailsFromIdentifier(selectedMatch.homeTeamIdentifier);
         const awayTeamDetails = getTeamDetailsFromIdentifier(selectedMatch.awayTeamIdentifier);
