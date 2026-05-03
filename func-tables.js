@@ -2569,12 +2569,11 @@ function getTeamNameFromDatabase(displayId) {
 }
 
 // ============================================================
-// OPRAVENÁ FUNKCIA: getTeamNameByDisplayId - ZISŤUJE PODĽA EXISTENCIE NADSTAVBOVEJ SKUPINY
+// OPRAVENÁ FUNKCIA: getTeamNameByDisplayId - SPRÁVNE SPRACOVANIE FORMÁTOV
 // ============================================================
 
 function getTeamNameByDisplayId(displayId, forceRefresh = false) {
     if (!displayId) {
-        log('❌ Nebol zadaný identifikátor tímu');
         return null;
     }
     
@@ -2582,7 +2581,6 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
     const parts = displayId.trim().split(' ');
     
     if (parts.length < 2) {
-        log(`❌ Neplatný formát identifikátora: ${displayId}`);
         return null;
     }
     
@@ -2595,11 +2593,11 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
         return null;
     }
     
-    // 🔥 ROZLIŠENIE FORMÁTU:
-    // "A1" = písmeno + číslo → ZÁKLADNÁ skupina (pred vyhodnotením, berie PREDBEŽNÉ/PÔVODNÉ poradie)
-    // "1A" = číslo + písmeno → KONEČNÉ poradie (po vyhodnotení, vyžaduje 100%)
-    let isBaseGroupFormat = false;  // true = "A1" (písmeno+číslo) -> predbežné poradie (ešte pred zápasmi)
-    let isFinalFormat = false;      // true = "1A" (číslo+písmeno) -> konečné poradie (100% odohrané)
+    // Rozlíšenie formátu:
+    // "A1" = písmeno + číslo → PREDBEŽNÉ poradie (berie aktuálne poradie podľa mien, nie podľa výsledkov)
+    // "1A" = číslo + písmeno → KONEČNÉ poradie (vyžaduje 100% odohrané zápasy)
+    let isPreliminaryFormat = false;  // "A1" - písmeno PRED číslom
+    let isFinalFormat = false;        // "1A" - číslo PRED písmenom
     let order = null;
     let groupLetter = null;
     
@@ -2609,8 +2607,8 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
     const startsWithNumber = /^\d/.test(lastPart);
     
     if (startsWithLetter) {
-        // Formát "A1" - ZÁKLADNÁ skupina (písmeno + číslo) - PREDBEŽNÉ PORADIE
-        isBaseGroupFormat = true;
+        // Formát "A1" - PREDBEŽNÉ poradie
+        isPreliminaryFormat = true;
         const letterMatch = lastPart.match(/^([A-Za-z]+)/);
         const numberMatch = lastPart.match(/\d+$/);
         if (letterMatch && numberMatch) {
@@ -2618,7 +2616,7 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
             order = parseInt(numberMatch[0], 10);
         }
     } else if (startsWithNumber) {
-        // Formát "1A" - KONEČNÉ poradie (číslo + písmeno)
+        // Formát "1A" - KONEČNÉ poradie
         isFinalFormat = true;
         const numberMatch = lastPart.match(/^\d+/);
         const letterMatch = lastPart.match(/[A-Za-z]+$/);
@@ -2632,35 +2630,24 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
         return null;
     }
     
-//    log(`🔍 getTeamNameByDisplayId: "${displayId}" → formát: ${isBaseGroupFormat ? 'PREDBEŽNÉ (A1)' : 'KONEČNÉ (1A)'}, skupina: ${groupLetter}, poradie: ${order}`);
-    
     // ============================================================
     // PRÍPAD 1: Formát "A1" (písmeno PRED číslom) - PREDBEŽNÉ PORADIE
-    // Vracia tím podľa PÔVODNÉHO/PODĽA NÁZVOV, NIE PODĽA ODPOHRANÝCH ZÁPASOV
+    // Vracia tím podľa PÔVODNÉHO poradia (podľa názvov, nie podľa výsledkov)
     // ============================================================
-    if (isBaseGroupFormat) {
-        // 🔥 KRITICKÉ: Nepoužívame createGroupTable (ktorá počíta body z odohraných zápasov)
-        // Namiesto toho použijeme pôvodné poradie z administrácie (podľa názvov tímov v skupine)
-        
+    if (isPreliminaryFormat) {
         const fullGroupName = `skupina ${groupLetter}`;
         
-        // 1. Skúsime nájsť pôvodné poradie z userTeams (kde sú tímy uložené v pôvodnom poradí)
-        let preliminaryTeam = getTeamFromPreliminaryOrder(category, groupLetter, order);
-        
+        // Skúsime nájsť tím v pôvodnom poradí z groupsData
+        const preliminaryTeam = getTeamFromPreliminaryOrder(category, groupLetter, order);
         if (preliminaryTeam) {
-//            log(`✅ PREDBEŽNÉ (${groupLetter}${order}): → "${preliminaryTeam}" (z pôvodného poradia, bez ohľadu na odohraté zápasy)`);
             return preliminaryTeam;
         }
         
-        // 2. Fallback: Použijeme createGroupTable, ale len na získanie zoznamu tímov,
-        //    nie na poradie podľa bodov. Zoradíme ich podľa ID alebo pôvodného poradia.
+        // Fallback: použijeme createGroupTable ale zoradíme podľa ID (nie podľa bodov)
         const groupTable = window.matchTracker?.createGroupTable(category, fullGroupName);
-        
-        if (groupTable && groupTable.teams && groupTable.teams.length > 0) {
-            // 🔥 DÔLEŽITÉ: Zoradíme tímy podľa ich ID (alebo iného stabilného kritéria)
-            // Nie podľa bodov! To je kľúčové pre predbežné poradie.
+        if (groupTable && groupTable.teams && groupTable.teams.length >= order) {
+            // Zoradíme tímy podľa pôvodného poradia (extrahované číslo z názvu)
             const sortedByOriginalOrder = [...groupTable.teams].sort((a, b) => {
-                // Pokúsime sa zoradiť podľa extrahovaného čísla z názvu alebo ID
                 const aNum = extractNumberFromTeamName(a.name) || extractNumberFromTeamName(a.id) || 999;
                 const bNum = extractNumberFromTeamName(b.name) || extractNumberFromTeamName(b.id) || 999;
                 if (aNum !== bNum) return aNum - bNum;
@@ -2669,113 +2656,77 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
             
             const teamIndex = order - 1;
             if (teamIndex >= 0 && teamIndex < sortedByOriginalOrder.length) {
-                const team = sortedByOriginalOrder[teamIndex];
-//                log(`✅ PREDBEŽNÉ (${groupLetter}${order}) (fallback): → "${team.name}" (zoradené podľa ID)`);
-                return team.name;
+                return sortedByOriginalOrder[teamIndex].name;
             }
         }
         
-        // 3. Posledná možnosť: Pokúsime sa nájsť tím v používateľských dátach
+        // Posledná možnosť: z userTeams
         const userTeam = findTeamInUsersByGroupAndOrder(category, groupLetter, order);
         if (userTeam && userTeam.teamName) {
-//            log(`✅ PREDBEŽNÉ (${groupLetter}${order}) (z userTeams): → "${userTeam.teamName}"`);
             return userTeam.teamName;
         }
         
-//        log(`❌ PREDBEŽNÉ poradie (${groupLetter}${order}) - tím nebol nájdený`);
         return null;
     }
     
     // ============================================================
     // PRÍPAD 2: Formát "1A" (číslo PRED písmenom) - KONEČNÉ PORADIE
-    // VYŽADUJE 100% ODOHRANÝCH ZÁPASOV (rovnaké ako predtým)
+    // VYŽADUJE 100% ODOHRANÝCH ZÁPASOV
     // ============================================================
     if (isFinalFormat) {
-        const fullGroupName = `skupina ${groupLetter}`;
-        
-        // Najprv skontrolujeme základnú skupinu, či má 100%
-        const baseGroupTable = window.matchTracker?.createGroupTable(category, fullGroupName);
-        const isBaseComplete = baseGroupTable?.completionPercentage === 100;
-        
-        // Skúsime nájsť nadstavbovú skupinu
+        const baseGroupName = `skupina ${groupLetter}`;
         const advancedGroupName = `nadstavbová skupina ${groupLetter}`;
-        let advancedGroupTable = null;
         
+        // 1. SKÚSIME NADSTAVBOVÚ SKUPINU (ak existuje a je 100%)
+        let advancedGroupTable = null;
         if (forceRefresh) {
             advancedGroupTable = window.matchTracker?.createAdvancedGroupTable?.(category, advancedGroupName, null, true);
         } else {
             advancedGroupTable = window.matchTracker?.createAdvancedGroupTable?.(category, advancedGroupName, null);
         }
         
-        const advancedGroupExists = advancedGroupTable && advancedGroupTable.teams && advancedGroupTable.teams.length > 0;
-        const isAdvancedComplete = advancedGroupExists ? advancedGroupTable.completionPercentage === 100 : false;
+        const advancedExists = advancedGroupTable && advancedGroupTable.teams && advancedGroupTable.teams.length > 0;
+        const isAdvancedComplete = advancedExists ? advancedGroupTable.completionPercentage === 100 : false;
         
-        // 🔥 LOGIKA PRE KONEČNÉ PORADIE:
-        // 1. Ak existuje NADSTAVBOVÁ skupina a je kompletná (100%) → použijeme tú
-        // 2. Inak ak je ZÁKLADNÁ skupina kompletná (100%) → použijeme tú
-        // 3. Inak → null (nedostupné, nie je 100%)
-        
-        if (advancedGroupExists && isAdvancedComplete) {
-            // Použijeme nadstavbovú skupinu
+        if (advancedExists && isAdvancedComplete) {
             const teamIndex = order - 1;
             if (teamIndex >= 0 && teamIndex < advancedGroupTable.teams.length) {
                 let team = advancedGroupTable.teams[teamIndex];
                 
-                // Kontrola, či je názov už zmapovaný
-                const looksLikeIdentifier = /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(team.name);
-                
-                if (looksLikeIdentifier) {
-                    log(`⚠️ Tím "${team.name}" je stále identifikátor, skúšam rekurzívne...`);
-                    return getTeamNameByDisplayId(displayId, true);
+                // Ak je názov stále identifikátor, skúsime ho ešte raz namapovať
+                if (/[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(team.name)) {
+                    const recursiveResult = getTeamNameByDisplayId(team.name, true);
+                    if (recursiveResult && recursiveResult !== team.name) {
+                        return recursiveResult;
+                    }
                 }
                 
-                // Uložíme do cache
-                const cacheKey = `${category}|${groupLetter}|${order}_final`;
-                if (!replacementCache.has(cacheKey) || replacementCache.get(cacheKey).teamName !== team.name) {
-                    replacementCache.set(cacheKey, {
-                        teamName: team.name,
-                        displayId: displayId,
-                        category: category,
-                        groupLetter: groupLetter,
-                        position: order,
-                        timestamp: Date.now(),
-                        source: 'advanced_group_final',
-                        isFinal: true
-                    });
-                    saveReplacementCache(replacementCache);
-                }
-                
-//                log(`✅ KONEČNÉ (${order}${groupLetter}): → "${team.name}" (z nadstavbovej skupiny, 100%)`);
-                return team.name;
-            }
-        } else if (isBaseComplete) {
-            // Použijeme základnú skupinu (je kompletne odohraná)
-            const teamIndex = order - 1;
-            if (teamIndex >= 0 && teamIndex < baseGroupTable.teams.length) {
-                const team = baseGroupTable.teams[teamIndex];
-                
-                // Uložíme do cache
-                const cacheKey = `${category}|${groupLetter}|${order}_final_base`;
-                if (!replacementCache.has(cacheKey) || replacementCache.get(cacheKey).teamName !== team.name) {
-                    replacementCache.set(cacheKey, {
-                        teamName: team.name,
-                        displayId: displayId,
-                        category: category,
-                        groupLetter: groupLetter,
-                        position: order,
-                        timestamp: Date.now(),
-                        source: 'base_group_final',
-                        isFinal: true
-                    });
-                    saveReplacementCache(replacementCache);
-                }
-                
-//                log(`✅ KONEČNÉ (${order}${groupLetter}): → "${team.name}" (zo základnej skupiny, 100%)`);
                 return team.name;
             }
         }
         
-        // Nie je 100% dokončené
+        // 2. INÁK SKÚSIME ZÁKLADNÚ SKUPINU (ak je 100%)
+        const baseGroupTable = window.matchTracker?.createGroupTable(category, baseGroupName);
+        const isBaseComplete = baseGroupTable ? baseGroupTable.completionPercentage === 100 : false;
+        
+        if (isBaseComplete) {
+            const teamIndex = order - 1;
+            if (teamIndex >= 0 && teamIndex < baseGroupTable.teams.length) {
+                let team = baseGroupTable.teams[teamIndex];
+                
+                // Ak je názov stále identifikátor, skúsime ho ešte raz namapovať
+                if (/[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(team.name)) {
+                    const recursiveResult = getTeamNameByDisplayId(team.name, true);
+                    if (recursiveResult && recursiveResult !== team.name) {
+                        return recursiveResult;
+                    }
+                }
+                
+                return team.name;
+            }
+        }
+        
+        // 3. NIE JE 100% DOKONČENÉ - VRAĆAME NULL
         const basePercent = baseGroupTable?.completionPercentage || 0;
         const advPercent = advancedGroupTable?.completionPercentage || 0;
         log(`⏳ KONEČNÉ poradie (${order}${groupLetter}) nie je k dispozícii: základná skupina ${basePercent}%, nadstavbová ${advPercent}%`);
@@ -2786,21 +2737,22 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
 }
 
 // ============================================================
-// POMOCNÁ FUNKCIA: Získanie tímu z pôvodného poradia (bez odohraných zápasov)
+// POMOCNÁ FUNKCIA: Získanie tímu z pôvodného poradia (z groupsData)
 // ============================================================
 function getTeamFromPreliminaryOrder(category, groupLetter, order) {
-    // 1. Skúsime nájsť v používateľských dátach (tam je pôvodné poradie)
+    // 1. Skúsime nájsť v používateľských dátach
     const userTeam = findTeamInUsersByGroupAndOrder(category, groupLetter, order);
     if (userTeam && userTeam.teamName) {
         return userTeam.teamName;
     }
     
-    // 2. Skúsime získať z groupsData (ak existuje)
+    // 2. Skúsime získať z groupsData
     const groupsData = window.groupsData || {};
     const categoryId = window.categoryIdMap?.[category] || null;
     
     if (categoryId && groupsData[categoryId]) {
-        const groupInfo = groupsData[categoryId].find(g => g.name === `skupina ${groupLetter}`);
+        const fullGroupName = `skupina ${groupLetter}`;
+        const groupInfo = groupsData[categoryId].find(g => g.name === fullGroupName);
         if (groupInfo && groupInfo.teams && groupInfo.teams[order - 1]) {
             return groupInfo.teams[order - 1].name;
         }
@@ -2810,7 +2762,7 @@ function getTeamFromPreliminaryOrder(category, groupLetter, order) {
 }
 
 // ============================================================
-// POMOCNÁ FUNKCIA: Extrahovanie čísla z názvu tímu pre zoradenie
+// POMOCNÁ FUNKCIA: Extrahovanie čísla z názvu tímu
 // ============================================================
 function extractNumberFromTeamName(teamName) {
     if (!teamName) return null;
