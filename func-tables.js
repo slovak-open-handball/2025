@@ -2427,11 +2427,6 @@ function getTeamNameFromDatabase(displayId) {
     return null;
 }
 
-// Hlavná funkcia - najprv cache, potom databáza
-// ============================================================
-// OPRAVENÁ FUNKCIA: getTeamNameByDisplayId - rozpoznáva dva formáty
-// ============================================================
-
 function getTeamNameByDisplayId(displayId) {
     if (!displayId) {
         log('❌ Nebol zadaný identifikátor tímu');
@@ -2450,119 +2445,135 @@ function getTeamNameByDisplayId(displayId) {
     let category = parts.slice(0, -1).join(' ');
     category = cleanCategoryName(category);
     
-    // 🔥 NOVÁ KONTROLA: Ak posledná časť neobsahuje ŽIADNU ČÍSLICU, nie je to platný identifikátor
+    // Kontrola, či posledná časť obsahuje číslicu
     if (!/\d/.test(lastPart)) {
-        // Ticho preskočíme - nevypisujeme žiadny log
         return null;
     }
     
-    // ============================================================
-    // FORMÁT: PÍSMENO PRED ČÍSLICOU (napr. "A2")
-    // ============================================================
-    const letterFirstMatch = lastPart.match(/^([A-Za-z]+)(\d+)$/);
+    // Extrahujeme pozíciu a písmeno skupiny
+    let position = '';
+    let groupLetter = '';
     
-    if (letterFirstMatch) {
-        const groupLetter = letterFirstMatch[1].toUpperCase();
-        const order = parseInt(letterFirstMatch[2], 10);
-        
-        // 🔥 KONTROLA CACHE - ak sme už túto skupinu kontrolovali, preskočíme logy
-        const groupKey = `${category}|${groupLetter}`;
-        if (!checkedGroupsCache.has(groupKey)) {
-            log(`🔍 Formát "písmeno+číslo" (${lastPart}) → skupina: ${groupLetter}, poradie: ${order}`);
-            log(`   Hľadám tím v používateľských dátach (users)...`);
-            checkedGroupsCache.add(groupKey);
-        }
-        
-        const teamInfo = findTeamInUsersByGroupAndOrder(category, groupLetter, order);
-        
-        if (teamInfo && teamInfo.teamName) {
-            if (!checkedGroupsCache.has(`${groupKey}_found`)) {
-                log(`✅ Nájdený tím v users: "${teamInfo.teamName}"`);
-                checkedGroupsCache.add(`${groupKey}_found`);
-            }
-            return teamInfo.teamName;
-        } else {
-            if (!checkedGroupsCache.has(`${groupKey}_not_found`)) {
-                log(`❌ Tím nebol nájdený v users: ${category} skupina ${groupLetter} poradie ${order}`);
-                checkedGroupsCache.add(`${groupKey}_not_found`);
-            }
-            return null;
+    for (let i = 0; i < lastPart.length; i++) {
+        const char = lastPart[i];
+        if (char >= '0' && char <= '9') {
+            position += char;
+        } else if (/[A-Za-z]/.test(char)) {
+            groupLetter += char;
         }
     }
     
-    // ============================================================
-    // FORMÁT: ČÍSLICA PRED PÍSMENOM (napr. "2A")
-    // ============================================================
-    const numberFirstMatch = lastPart.match(/^(\d+)([A-Za-z]+)$/);
+    if (!position || !groupLetter) {
+        return null;
+    }
     
-    if (numberFirstMatch) {
-        const order = parseInt(numberFirstMatch[1], 10);
-        const groupLetter = numberFirstMatch[2].toUpperCase();
-        
-        // 🔥 KONTROLA CACHE - ak sme už túto skupinu kontrolovali, preskočíme logy
-        const groupKey = `${category}|${groupLetter}`;
-        if (!checkedGroupsCache.has(groupKey)) {
-//            log(`🔍 Formát "číslo+písmeno" (${lastPart}) → poradie: ${order}, skupina: ${groupLetter}`);
-//            log(`   Kontrolujem tabuľku skupiny (vyžaduje 100% odohraných zápasov)...`);
+    const positionNum = parseInt(position, 10);
+    const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
+    
+    log(`🔍 Hľadám tím: ${category} - ${fullGroupName}, pozícia ${positionNum}`);
+    
+    // ============================================================
+    // KROK 1: SKÚSIAME NAJPRV NADSTAVBOVÚ SKUPINU
+    // ============================================================
+    const groupsData = window.groupsData || {};
+    const categoryId = window.categoryIdMap?.[category] || null;
+    
+    let isAdvancedGroup = false;
+    if (categoryId && groupsData[categoryId]) {
+        const groupInfo = groupsData[categoryId].find(g => g.name === fullGroupName);
+        if (groupInfo && groupInfo.type === 'nadstavbová skupina') {
+            isAdvancedGroup = true;
         }
+    }
+    
+    // Ak je to nadstavbová skupina, použijeme createAdvancedGroupTable
+    if (isAdvancedGroup) {
+        log(`   📌 ${fullGroupName} je NADSTAVBOVÁ skupina`);
+        const advancedTable = window.matchTracker.createAdvancedGroupTable(category, fullGroupName);
         
-        const fullGroupName = `skupina ${groupLetter}`;
-        
-        // 🔥 POUŽIJEME CACHE PRE KONTROLU PRIPRAVENOSTI
-        let isReady;
-        if (checkedGroupsCache.has(`${groupKey}_ready`)) {
-            isReady = true;
-        } else if (checkedGroupsCache.has(`${groupKey}_not_ready`)) {
-            isReady = false;
-        } else {
-            isReady = isGroupReadyForReplacement(category, groupLetter);
-            if (isReady) {
-                checkedGroupsCache.add(`${groupKey}_ready`);
+        if (advancedTable && advancedTable.teams && advancedTable.teams.length > 0) {
+            const teamIndex = positionNum - 1;
+            if (teamIndex >= 0 && teamIndex < advancedTable.teams.length) {
+                const team = advancedTable.teams[teamIndex];
+                log(`   ✅ Nájdený v nadstavbovej tabuľke: "${team.name}"`);
+                
+                // Uložíme do cache
+                const cacheKey = `${category}|${groupLetter.toUpperCase()}|${positionNum}`;
+                if (!replacementCache.has(cacheKey)) {
+                    replacementCache.set(cacheKey, {
+                        teamName: team.name,
+                        displayId: displayId,
+                        category: category,
+                        groupLetter: groupLetter.toUpperCase(),
+                        position: positionNum,
+                        timestamp: Date.now(),
+                        groupType: 'advanced'
+                    });
+                    saveReplacementCache(replacementCache);
+                }
+                
+                return team.name;
             } else {
-                checkedGroupsCache.add(`${groupKey}_not_ready`);
+                log(`   ⚠️ Pozícia ${positionNum} neexistuje v nadstavbovej tabuľke (max ${advancedTable.teams.length} tímov)`);
             }
-        }
-        
-        if (!isReady) {
-            if (!checkedGroupsCache.has(`${groupKey}_not_ready_logged`)) {
-                log(`⛔ Skupina ${category} - ${fullGroupName} NIE JE pripravená (nemá 100% odohraných zápasov)`);
-                checkedGroupsCache.add(`${groupKey}_not_ready_logged`);
-            }
-            return null;
-        }
-        
-        // Skupina je pripravená, získame tabuľku
-        const groupTable = window.matchTracker?.createGroupTable(category, fullGroupName);
-        
-        if (!groupTable || !groupTable.teams || groupTable.teams.length === 0) {
-            if (!checkedGroupsCache.has(`${groupKey}_no_table`)) {
-                log(`❌ Tabuľka pre skupinu ${fullGroupName} neexistuje`);
-                checkedGroupsCache.add(`${groupKey}_no_table`);
-            }
-            return null;
-        }
-        
-        const teamIndex = order - 1;
-        
-        if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
-            const team = groupTable.teams[teamIndex];
-            if (!checkedGroupsCache.has(`${groupKey}_team_found_${order}`)) {
-                log(`✅ Nájdený v tabuľke: "${team.name}" (pozícia ${order} v skupine ${groupLetter})`);
-                checkedGroupsCache.add(`${groupKey}_team_found_${order}`);
-            }
-            return team.name;
-        } else {
-            if (!checkedGroupsCache.has(`${groupKey}_invalid_position_${order}`)) {
-                log(`❌ Pozícia ${order} neexistuje (skupina má ${groupTable.teams.length} tímov)`);
-                checkedGroupsCache.add(`${groupKey}_invalid_position_${order}`);
-            }
-            return null;
         }
     }
     
-    // 🔥 AK SME SA DOSTALI SEM, TAK LASTPART NEMA PLATNY FORMÁT
-    // Ticho preskočíme - nevypisujeme žiadny log (už sme skontrolovali, že obsahuje číslicu vyššie)
-    return null;
+    // ============================================================
+    // KROK 2: SKÚSIAME ZÁKLADNÚ SKUPINU (len ak je 100% dokončená)
+    // ============================================================
+    log(`   📌 ${fullGroupName} je ZÁKLADNÁ skupina (alebo sa ju pokúsim nájsť)`);
+    
+    // Kontrola pripravenosti základnej skupiny
+    const isReady = isGroupReadyForReplacement(category, groupLetter);
+    
+    if (!isReady) {
+        log(`   ⏳ Základná skupina nie je pripravená (nemá 100% odohraných zápasov)`);
+        
+        // Skúsime nájsť tím v používateľských dátach (users) - toto funguje aj pre nepripravené skupiny
+        const teamInfo = findTeamInUsersByGroupAndOrder(category, groupLetter, positionNum);
+        if (teamInfo && teamInfo.teamName) {
+            log(`   ✅ Nájdený v users (aj keď skupina nie je 100%): "${teamInfo.teamName}"`);
+            return teamInfo.teamName;
+        }
+        
+        return null;
+    }
+    
+    // Skupina je pripravená, získame tabuľku
+    const groupTable = window.matchTracker.createGroupTable(category, fullGroupName);
+    
+    if (!groupTable || !groupTable.teams || groupTable.teams.length === 0) {
+        log(`   ❌ Tabuľka pre skupinu ${fullGroupName} neexistuje`);
+        return null;
+    }
+    
+    const teamIndex = positionNum - 1;
+    
+    if (teamIndex >= 0 && teamIndex < groupTable.teams.length) {
+        const team = groupTable.teams[teamIndex];
+        log(`   ✅ Nájdený v základnej tabuľke: "${team.name}"`);
+        
+        // Uložíme do cache
+        const cacheKey = `${category}|${groupLetter.toUpperCase()}|${positionNum}`;
+        if (!replacementCache.has(cacheKey)) {
+            replacementCache.set(cacheKey, {
+                teamName: team.name,
+                displayId: displayId,
+                category: category,
+                groupLetter: groupLetter.toUpperCase(),
+                position: positionNum,
+                timestamp: Date.now(),
+                groupType: 'base'
+            });
+            saveReplacementCache(replacementCache);
+        }
+        
+        return team.name;
+    } else {
+        log(`   ❌ Pozícia ${positionNum} neexistuje (skupina má ${groupTable.teams.length} tímov)`);
+        return null;
+    }
 }
 
 function clearCheckedGroupsCache() {
