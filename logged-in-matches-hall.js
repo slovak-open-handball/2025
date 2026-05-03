@@ -5442,7 +5442,7 @@ const matchesHallApp = ({ userProfileData }) => {
     }, [selectedMatch, users, superstructureTeams]);
     
 
-    // Načítanie zápasov pre túto halu - OPRAVENÁ VERZIA (používa useRef pre hallId)
+    // Načítanie zápasov pre túto halu - OPRAVENÁ VERZIA
     const hallIdRef = React.useRef(hallId);
     
     // Aktualizujeme ref vždy keď sa hallId zmení
@@ -5457,22 +5457,14 @@ const matchesHallApp = ({ userProfileData }) => {
             return;
         }
         
-        // 🔥 POUŽIJEME REF HODNOTU NAMIesto priameho hallId
-        // Toto zabráni spusteniu query s undefined hodnotou
+        // 🔥 POUŽIJEME REF HODNOTU namiesto priameho hallId
         const currentHallId = hallIdRef.current;
         
         // 🔥 DÔLEŽITÉ: Skontrolujeme, či je currentHallId platný (nie undefined a nie null)
-        if (!currentHallId) {
-            console.log('⏳ HallId nie je k dispozícii, čakám na jeho načítanie...');
+        if (!currentHallId || typeof currentHallId !== 'string') {
+            console.log('⏳ HallId nie je k dispozícii alebo má nesprávny typ, čakám...');
             setLoading(false);
             // Nezrušíme unsubscribe, len nastavíme loading na false a čakáme
-            return;
-        }
-        
-        // 🔥 DODATOČNÁ OCHRANA: Skontrolujeme typ currentHallId
-        if (typeof currentHallId !== 'string') {
-            console.error('❌ HallId má nesprávny typ:', typeof currentHallId, currentHallId);
-            setLoading(false);
             return;
         }
         
@@ -5543,7 +5535,7 @@ const matchesHallApp = ({ userProfileData }) => {
         });
         
         return () => unsubscribe();
-    }, []); // 🔥 DÔLEŽITÉ: Odstránili sme závislosť na hallId, používame len ref
+    }, []); // 🔥 DÔLEŽITÉ: Prázdne pole závislostí, používame len ref
     
     // SAMOSTATNÝ useEffect PRE VÝPIS DO KONZOLY - závislý na matches AJ categories
     useEffect(() => {
@@ -5941,7 +5933,6 @@ const matchesHallApp = ({ userProfileData }) => {
         return null;
     };
 
-    // Pôvodnú funkciu showAllMatches úplne nahraďte touto verziou
     const showAllMatches = async () => {
         // 🔥 KRITICKÉ: Získame hallId z userProfileData (rovnako ako pri prvotnom načítaní)
         let currentHallId = hallId;
@@ -5957,16 +5948,9 @@ const matchesHallApp = ({ userProfileData }) => {
         }
         
         // 🔥 OCHRANA: Ak nie je hallId, nemôžeme zobraziť zoznam
-        if (!currentHallId) {
+        if (!currentHallId || typeof currentHallId !== 'string') {
             console.warn('⚠️ HallId nie je k dispozícii, nie je možné zobraziť zoznam zápasov');
             window.showGlobalNotification('Nie je možné načítať zoznam zápasov - chýba identifikátor haly', 'error');
-            return;
-        }
-        
-        // 🔥 DODATOČNÁ OCHRANA: Skontrolujeme typ
-        if (typeof currentHallId !== 'string') {
-            console.error('❌ HallId má nesprávny typ:', typeof currentHallId, currentHallId);
-            window.showGlobalNotification('Chyba: Nesprávny formát identifikátora haly', 'error');
             return;
         }
         
@@ -5975,7 +5959,6 @@ const matchesHallApp = ({ userProfileData }) => {
         updateUrlParameters(null, null);
         
         // 🔥 DÔLEŽITÉ: Aktualizujeme matches podľa aktuálneho hallId
-        // Toto zabezpečí, že zoznam zápasov sa obnoví podľa správnej haly
         if (window.db) {
             const matchesRef = collection(window.db, 'matches');
             const q = query(matchesRef, where("hallId", "==", currentHallId));
@@ -6023,36 +6006,6 @@ const matchesHallApp = ({ userProfileData }) => {
             setGroupedMatches(grouped);
             
             console.log(`✅ Zoznam zápasov aktualizovaný pre halu: ${currentHallId}`);
-        }
-        
-        // Vynútime refresh mapovania pri návrate na zoznam
-        if (matches.length > 0 && window.matchTracker) {
-            const updatedMatches = [...matches];
-            let hasChanges = false;
-            
-            for (let i = 0; i < updatedMatches.length; i++) {
-                const match = updatedMatches[i];
-                
-                let homeDisplayName = await window.matchTracker.getTeamNameByDisplayId(match.homeTeamIdentifier);
-                let awayDisplayName = await window.matchTracker.getTeamNameByDisplayId(match.awayTeamIdentifier);
-                
-                if (!homeDisplayName) homeDisplayName = match.homeTeamIdentifier;
-                if (!awayDisplayName) awayDisplayName = match.awayTeamIdentifier;
-                
-                if (homeDisplayName !== match.homeDisplayName || awayDisplayName !== match.awayDisplayName) {
-                    updatedMatches[i] = { 
-                        ...updatedMatches[i], 
-                        homeDisplayName: homeDisplayName,
-                        awayDisplayName: awayDisplayName 
-                    };
-                    hasChanges = true;
-                }
-            }
-            
-            if (hasChanges) {
-                setMatches(updatedMatches);
-                console.log('✅ Zoznam zápasov bol aktualizovaný pri návrate na zoznam');
-            }
         }
     };
 
