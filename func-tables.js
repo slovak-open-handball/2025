@@ -1238,8 +1238,8 @@ let isTeamNameReplacerInitialized = false;
         // KROK 4: PRÍPRAVA ZOZNAMU ZÁPASOV NA ZOBRAZENIE
         // ============================================================
         const allMatchesForDisplay = [];
-        
-        // Prenesené zápasy
+
+        // Prenesené zápasy - tu máme už reálne názvy
         for (const transferred of transferredMatches) {
             allMatchesForDisplay.push({
                 id: `transferred_${Date.now()}_${Math.random()}`,
@@ -1256,7 +1256,7 @@ let isTeamNameReplacerInitialized = false;
             });
         }
         
-        // Zápasy z nadstavbovej skupiny - TERAZ SO SPRÁVNYMI NÁZVVAMI
+        // 🔥 OPRAVA: Zápasy z nadstavbovej skupiny - POUŽIJEME REÁLNE NÁZVY PRE ZOBRAZENIE
         for (const match of advancedMatches) {
             let homeScore = 0, awayScore = 0;
             
@@ -1275,30 +1275,40 @@ let isTeamNameReplacerInitialized = false;
                 }
             }
             
-            // 🔥 Získame reálne názvy tímov pre zobrazenie
+            // 🔥 KRITICKÁ OPRAVA: Získame reálne názvy tímov pre zobrazenie
             let homeDisplayName = match.homeTeamIdentifier;
             let awayDisplayName = match.awayTeamIdentifier;
             
+            // Najprv skúsime cez identifierToRealName (mapovanie z identifikátora na reálny názov)
             if (identifierToRealName.has(match.homeTeamIdentifier)) {
                 homeDisplayName = identifierToRealName.get(match.homeTeamIdentifier);
+                log(`   🏷️ Mapovanie zápasu: ${match.homeTeamIdentifier} → ${homeDisplayName}`);
             } else {
+                // Ak nie je v mape, skúsime nájsť podľa názvu v teamByName
                 const foundHome = teamByName.get(match.homeTeamIdentifier);
-                if (foundHome) homeDisplayName = foundHome.name;
+                if (foundHome) {
+                    homeDisplayName = foundHome.name;
+                    log(`   🏷️ Mapovanie zápasu (fallback): ${match.homeTeamIdentifier} → ${homeDisplayName}`);
+                }
             }
             
             if (identifierToRealName.has(match.awayTeamIdentifier)) {
                 awayDisplayName = identifierToRealName.get(match.awayTeamIdentifier);
+                log(`   🏷️ Mapovanie zápasu: ${match.awayTeamIdentifier} → ${awayDisplayName}`);
             } else {
                 const foundAway = teamByName.get(match.awayTeamIdentifier);
-                if (foundAway) awayDisplayName = foundAway.name;
+                if (foundAway) {
+                    awayDisplayName = foundAway.name;
+                    log(`   🏷️ Mapovanie zápasu (fallback): ${match.awayTeamIdentifier} → ${awayDisplayName}`);
+                }
             }
             
             allMatchesForDisplay.push({
                 id: match.id,
                 homeTeamIdentifier: match.homeTeamIdentifier,
                 awayTeamIdentifier: match.awayTeamIdentifier,
-                homeTeamName: homeDisplayName,
-                awayTeamName: awayDisplayName,
+                homeTeamName: homeDisplayName,    // 🔥 TERAZ POUŽIJEME REÁLNY NÁZOV
+                awayTeamName: awayDisplayName,    // 🔥 TERAZ POUŽIJEME REÁLNY NÁZOV
                 homeScore: homeScore,
                 awayScore: awayScore,
                 status: match.status,
