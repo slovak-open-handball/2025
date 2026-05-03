@@ -767,15 +767,6 @@ let isTeamNameReplacerInitialized = false;
             let homeTeamName = match.homeTeamIdentifier;
             let awayTeamName = match.awayTeamIdentifier;
             
-            if (looksLikeIdentifier(homeTeamName)) {
-                const mapped = getTeamNameByDisplayId(homeTeamName);
-                if (mapped && mapped !== homeTeamName) homeTeamName = mapped;
-            }
-            if (looksLikeIdentifier(awayTeamName)) {
-                const mapped = getTeamNameByDisplayId(awayTeamName);
-                if (mapped && mapped !== awayTeamName) awayTeamName = mapped;
-            }
-            
             allMatchesForDisplay.push({
                 id: match.id,
                 homeTeamIdentifier: match.homeTeamIdentifier,
@@ -1140,16 +1131,6 @@ let isTeamNameReplacerInitialized = false;
             // Mapovanie názvov tímov
             let homeTeamName = match.homeTeamIdentifier;
             let awayTeamName = match.awayTeamIdentifier;
-            
-            const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
-            if (looksLikeIdentifier(homeTeamName)) {
-                const mapped = getTeamNameByDisplayId(homeTeamName);
-                if (mapped && mapped !== homeTeamName) homeTeamName = mapped;
-            }
-            if (looksLikeIdentifier(awayTeamName)) {
-                const mapped = getTeamNameByDisplayId(awayTeamName);
-                if (mapped && mapped !== awayTeamName) awayTeamName = mapped;
-            }
             
             allMatchesForDisplay.push({
                 id: match.id,
