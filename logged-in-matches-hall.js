@@ -5885,26 +5885,89 @@ const matchesHallApp = ({ userProfileData }) => {
         return null;
     };
 
-    // Pôvodná funkcia showAllMatches - UPRAVENÁ
+    // Pôvodnú funkciu showAllMatches úplne nahraďte touto verziou
     const showAllMatches = async () => {
+        // 🔥 KRITICKÉ: Získame hallId z userProfileData (rovnako ako pri prvotnom načítaní)
+        let currentHallId = hallId;
+        
+        // Ak hallId v stave nie je, skúsime získať z userProfileData (priamo z props)
+        if (!currentHallId && userProfileData?.hallId) {
+            currentHallId = userProfileData.hallId;
+        }
+        
+        // Ak stále nemáme, skúsime z globálnej premennej (fallback)
+        if (!currentHallId && window.globalUserProfileData?.hallId) {
+            currentHallId = window.globalUserProfileData.hallId;
+        }
+        
         // 🔥 OCHRANA: Ak nie je hallId, nemôžeme zobraziť zoznam
-        if (!hallId) {
+        if (!currentHallId) {
             console.warn('⚠️ HallId nie je k dispozícii, nie je možné zobraziť zoznam zápasov');
-            // Pokúsime sa znova načítať hallId z userProfileData
-            if (userProfileData?.hallId) {
-                window.location.reload();
-            }
+            window.showGlobalNotification('Nie je možné načítať zoznam zápasov - chýba identifikátor haly', 'error');
             return;
         }
         
         // 🔥 DODATOČNÁ OCHRANA: Skontrolujeme typ
-        if (typeof hallId !== 'string') {
-            console.error('❌ HallId má nesprávny typ:', typeof hallId);
+        if (typeof currentHallId !== 'string') {
+            console.error('❌ HallId má nesprávny typ:', typeof currentHallId, currentHallId);
+            window.showGlobalNotification('Chyba: Nesprávny formát identifikátora haly', 'error');
             return;
         }
         
+        // Vymažeme vybraný zápas
         setSelectedMatch(null);
         updateUrlParameters(null, null);
+        
+        // 🔥 DÔLEŽITÉ: Aktualizujeme matches podľa aktuálneho hallId
+        // Toto zabezpečí, že zoznam zápasov sa obnoví podľa správnej haly
+        if (window.db) {
+            const matchesRef = collection(window.db, 'matches');
+            const q = query(matchesRef, where("hallId", "==", currentHallId));
+            
+            // Načítame čerstvé dáta
+            const snapshot = await getDocs(q);
+            const loadedMatches = [];
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                loadedMatches.push({
+                    id: doc.id,
+                    ...data,
+                    currentPeriod: data.currentPeriod || 1,
+                    manualTimeOffset: data.manualTimeOffset || 0
+                });
+            });
+            
+            // Zoradíme podľa času
+            loadedMatches.sort((a, b) => {
+                if (!a.scheduledTime) return 1;
+                if (!b.scheduledTime) return -1;
+                return a.scheduledTime.toDate() - b.scheduledTime.toDate();
+            });
+            
+            setMatches(loadedMatches);
+            
+            // Zoskupenie podľa dňa
+            const grouped = {};
+            loadedMatches.forEach(match => {
+                if (match.scheduledTime) {
+                    const date = match.scheduledTime.toDate();
+                    const dateStr = getLocalDateStr(date);
+                    
+                    if (!grouped[dateStr]) {
+                        grouped[dateStr] = {
+                            date: date,
+                            dateStr: dateStr,
+                            matches: []
+                        };
+                    }
+                    grouped[dateStr].matches.push(match);
+                }
+            });
+            
+            setGroupedMatches(grouped);
+            
+            console.log(`✅ Zoznam zápasov aktualizovaný pre halu: ${currentHallId}`);
+        }
         
         // Vynútime refresh mapovania pri návrate na zoznam
         if (matches.length > 0 && window.matchTracker) {
