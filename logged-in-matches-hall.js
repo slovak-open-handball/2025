@@ -232,6 +232,65 @@ const updateUrlParameters = (homeIdentifier, awayIdentifier) => {
     window.history.replaceState({}, '', url);
 };
 
+// Synchrónna verzia getTeamNameByDisplayId pre React rendering
+const getTeamNameSync = (identifier) => {
+    if (!identifier) return 'Neznámy tím';
+    
+    // Skúsime získať názov z globálnej cache
+    if (window.matchTracker && window.matchTracker._teamNameCache) {
+        const cachedName = window.matchTracker._teamNameCache[identifier];
+        if (cachedName) return cachedName;
+    }
+    
+    // Skúsime získať z users dát (sú už načítané v stave)
+    if (window.__reactUsersState && window.__reactUsersState.length > 0) {
+        const parts = identifier.split(' ');
+        if (parts.length >= 2) {
+            const groupAndOrder = parts.pop();
+            const category = parts.join(' ');
+            
+            let groupLetter = '';
+            let order = '';
+            for (let i = 0; i < groupAndOrder.length; i++) {
+                const char = groupAndOrder[i];
+                if (char >= '0' && char <= '9') {
+                    order = groupAndOrder.substring(i);
+                    groupLetter = groupAndOrder.substring(0, i);
+                    break;
+                }
+            }
+            
+            if (order) {
+                const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
+                const orderNum = parseInt(order, 10);
+                
+                for (const user of window.__reactUsersState) {
+                    if (!user.teams) continue;
+                    const userTeams = user.teams[category];
+                    if (!userTeams || !Array.isArray(userTeams)) continue;
+                    
+                    const team = userTeams.find(t => 
+                        t.groupName === fullGroupName && 
+                        t.order === orderNum
+                    );
+                    
+                    if (team && team.teamName) {
+                        // Uložíme do cache pre budúce použitie
+                        if (window.matchTracker) {
+                            if (!window.matchTracker._teamNameCache) window.matchTracker._teamNameCache = {};
+                            window.matchTracker._teamNameCache[identifier] = team.teamName;
+                        }
+                        return team.teamName;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Fallback - vrátime identifikátor
+    return identifier;
+};
+
 // ============================================================================
 // POMOCNÉ FUNKCIE PRE KONTROLU MODRÝCH KARIET A VYLÚČENÍ
 // ============================================================================
@@ -1550,6 +1609,30 @@ const matchesHallApp = ({ userProfileData }) => {
     const [awayTeamData, setAwayTeamData] = useState(null);  
 
     const [teamNamesReady, setTeamNamesReady] = useState(false);
+
+    // Aktualizácia zobrazených názvov tímov v detaile zápasu
+    useEffect(() => {
+        if (!selectedMatch) return;
+        
+        const updateDisplayNames = async () => {
+            // Počkáme na users
+            if (users.length === 0) return;
+            
+            const homeName = getTeamNameSync(selectedMatch.homeTeamIdentifier);
+            const awayName = getTeamNameSync(selectedMatch.awayTeamIdentifier);
+            
+            // Aktualizujeme len ak sa názvy zmenili
+            if (selectedMatch.homeDisplayName !== homeName || selectedMatch.awayDisplayName !== awayName) {
+                setSelectedMatch(prev => ({
+                    ...prev,
+                    homeDisplayName: homeName,
+                    awayDisplayName: awayName
+                }));
+            }
+        };
+        
+        updateDisplayNames();
+    }, [selectedMatch?.homeTeamIdentifier, selectedMatch?.awayTeamIdentifier, users]);
 
     useEffect(() => {
         if (!hallId && userProfileData) {
@@ -7261,7 +7344,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     { className: 'flex-1 text-center' },
         //                            React.createElement('div', { className: 'text-sm text-gray-500 mb-2' }, 'DOMÁCI'),
                                     React.createElement('div', { className: 'text-xl font-bold text-gray-800' }, 
-                                      homeTeamName
+                                        selectedMatch.homeDisplayName || homeTeamName
                                     )
                                 ),
                                 
@@ -7278,7 +7361,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                     { className: 'flex-1 text-center' },
         //                            React.createElement('div', { className: 'text-sm text-gray-500 mb-2' }, 'HOSTIA'),
                                     React.createElement('div', { className: 'text-xl font-bold text-gray-800' }, 
-                                      awayTeamName
+                                        selectedMatch.awayDisplayName || awayTeamName
                                     )
                                 )
                             ),
@@ -7642,7 +7725,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                         React.createElement(
                                             'h3',
                                             { className: 'font-bold text-lg text-gray-800 mb-3 text-center border-b border-gray-200 pb-2' },
-                                            homeTeamName
+                                            window.matchTracker.getTeamNameByDisplayId(homeTeamName)
                                         ),
                                         
                                         // Realizačný tím pre domáci tím
@@ -8201,7 +8284,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                         React.createElement(
                                             'h3',
                                             { className: 'font-bold text-lg text-gray-800 mb-3 text-center border-b border-gray-200 pb-2' },
-                                            awayTeamName
+                                            window.matchTracker.getTeamNameByDisplayId(awayTeamName)
                                         ),
                                         
                                         // Realizačný tím pre hosťovský tím
@@ -10376,7 +10459,15 @@ if (window.globalUserProfileData) {
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 // Funkcia na získanie názvu tímu podľa displayId z tabuľky skupiny (LEN PRI 100% ODOHRANÝCH ZÁPASOCH)
+
+const teamNameCache = {};
+
 function getTeamNameByDisplayId(displayId) {
+    // Najprv skontrolujeme cache
+    if (teamNameCache[displayId]) {
+        return teamNameCache[displayId];
+    }
+    
     if (!displayId) {
         console.log('❌ Nebol zadaný identifikátor tímu');
         return null;
@@ -10484,7 +10575,12 @@ function getTeamNameByDisplayId(displayId) {
     }
     
     console.log(`❌ Tím nebol nájdený: ${displayId}`);
-    return null;
+    
+    if (foundTeamName) {
+        teamNameCache[displayId] = foundTeamName;
+    }
+    
+    return foundTeamName;
 }
 
 // Pridáme aj funkciu na vyhľadávanie podľa samostatných parametrov
@@ -11342,12 +11438,17 @@ window.forceTeamByGroup = async (categoryName, groupName, order, teamSide = 'hom
     }
 };
 
-
+/**
+ * Registrácia React settera pre users stav.
+ */
 window.registerUsersSetter = (setterFunction) => {
     window.__reactUsersSetter = setterFunction;
     console.log('✅ React setter pre users bol zaregistrovaný.');
 };
 
+/**
+ * Získa všetky tímy v danej kategórii a skupine.
+ */
 window.getTeamsByGroup = async (categoryName, groupName) => {
     if (!window.db) return [];
     
@@ -11385,6 +11486,28 @@ window.getTeamsByGroup = async (categoryName, groupName) => {
         return [];
     }
 };
+
+// ============================================================================
+// PRÍKLADY POUŽITIA:
+// ============================================================================
+// 
+// 1. Vloženie tímu podľa skupiny a poradia:
+//    window.forceTeamByGroup("U12 D", "skupina B", 2, "home")
+//
+// 2. Získanie všetkých tímov v skupine:
+//    window.getTeamsByGroup("U12 D", "skupina B")
+//
+// 3. Registrácia React setterov (pridajte do React komponentu):
+//    useEffect(() => {
+//        window.registerMatchSetter(setSelectedMatch);
+//        window.registerUsersSetter(setUsers);
+//        return () => {
+//            window.__reactSelectedMatchSetter = null;
+//            window.__reactUsersSetter = null;
+//        };
+//    }, []);
+//
+// ============================================================================
 
 console.log('✅ Pripravené nové funkcie na vkladanie tímov podľa skupiny:');
 console.log('   • window.forceTeamByGroup("U12 D", "skupina B", 2, "home") - vloženie tímu');
