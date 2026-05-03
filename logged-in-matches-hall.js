@@ -5868,63 +5868,63 @@ const matchesHallApp = ({ userProfileData }) => {
     };
 
     const getTeamDetailsFromIdentifier = (identifier) => {
-        if (!identifier) return null;
-        
-        // Rozloženie identifikátora na kategóriu a poradie
-        const parts = identifier.split(' ');
-        if (parts.length < 2) {
-            console.log(`❌ Neplatný formát identifikátora: ${identifier}`);
-            return null;
-        }
-        
-        const groupAndOrder = parts.pop();
-        const categoryName = parts.join(' ');
-        
-        // Získame písmeno skupiny a poradie
-        let groupLetter = '';
-        let order = '';
-        for (let i = 0; i < groupAndOrder.length; i++) {
-            const char = groupAndOrder[i];
-            if (char >= '0' && char <= '9') {
-                order = groupAndOrder.substring(i);
-                groupLetter = groupAndOrder.substring(0, i);
-                break;
-            }
-        }
-        
-        if (!order || !groupLetter) {
-            console.log(`❌ Neplatný formát: ${groupAndOrder}`);
-            return null;
-        }
-        
-        const orderNum = parseInt(order, 10);
-        const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
-        
-        // Vyhľadáme tím v používateľských dátach
-        if (users && users.length > 0) {
-            for (const user of users) {
-                if (!user.teams) continue;
-                
-                const userTeams = user.teams[categoryName];
-                if (!userTeams || !Array.isArray(userTeams)) continue;
-                
-                const team = userTeams.find(t => 
-                    t.groupName === fullGroupName && 
-                    t.order === orderNum
-                );
-                
-                if (team) {
-                    return {
-                        team,
-                        userId: user.id,
-                        userEmail: user.email,
-                        userDisplayName: user.displayName
-                    };
-                }
-            }
-        }
-        
-        return null;
+//        if (!identifier) return null;
+//        
+//        // Rozloženie identifikátora na kategóriu a poradie
+//        const parts = identifier.split(' ');
+//        if (parts.length < 2) {
+//            console.log(`❌ Neplatný formát identifikátora: ${identifier}`);
+//            return null;
+//        }
+//        
+//        const groupAndOrder = parts.pop();
+//        const categoryName = parts.join(' ');
+//        
+//        // Získame písmeno skupiny a poradie
+//        let groupLetter = '';
+//        let order = '';
+//        for (let i = 0; i < groupAndOrder.length; i++) {
+//            const char = groupAndOrder[i];
+//            if (char >= '0' && char <= '9') {
+//                order = groupAndOrder.substring(i);
+//                groupLetter = groupAndOrder.substring(0, i);
+//                break;
+//            }
+//        }
+//        
+//        if (!order || !groupLetter) {
+//            console.log(`❌ Neplatný formát: ${groupAndOrder}`);
+//            return null;
+//        }
+//        
+//        const orderNum = parseInt(order, 10);
+//        const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
+//        
+//        // Vyhľadáme tím v používateľských dátach
+//        if (users && users.length > 0) {
+//            for (const user of users) {
+//                if (!user.teams) continue;
+//                
+//                const userTeams = user.teams[categoryName];
+//                if (!userTeams || !Array.isArray(userTeams)) continue;
+//                
+//                const team = userTeams.find(t => 
+//                    t.groupName === fullGroupName && 
+//                    t.order === orderNum
+//                );
+//                
+//                if (team) {
+//                    return {
+//                        team,
+//                        userId: user.id,
+//                        userEmail: user.email,
+//                        userDisplayName: user.displayName
+//                    };
+//                }
+//            }
+//        }
+//        
+//        return null;
     };
     
     // A UPRAVTE existujúcu getTeamDetails na async verziu (alebo ju nechajte pre kompatibilitu)
