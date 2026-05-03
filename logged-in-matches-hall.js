@@ -1725,6 +1725,12 @@ const matchesHallApp = ({ userProfileData }) => {
         const updateTeamNamesInMatches = async () => {
             console.log('🔄 Aktualizujem mapovanie názvov tímov v zozname zápasov...');
             
+            // Kontrola, či je matchTracker dostupný
+            if (!window.matchTracker || typeof window.matchTracker.getTeamNameByDisplayId !== 'function') {
+                console.warn('⚠️ window.matchTracker.getTeamNameByDisplayId nie je k dispozícii');
+                return;
+            }
+            
             // Vytvoríme kópiu matches
             const updatedMatches = [...matches];
             let hasChanges = false;
@@ -1737,48 +1743,48 @@ const matchesHallApp = ({ userProfileData }) => {
                 const awayIdentifier = match.awayTeamIdentifier;
                 
                 // Ak už máme zmapované názvy uložené v match objekte, nemusíme ich prepočítavať
-                // (môžeme si ich uložiť ako homeDisplayName a awayDisplayName)
                 if (match.homeDisplayName && match.awayDisplayName) {
-                    // Už máme zmapované názvy
                     continue;
                 }
                 
-                // Získame zmapované názvy
+                // Získame zmapované názvy VÝHRADNE cez matchTracker
                 let homeDisplayName = homeIdentifier;
                 let awayDisplayName = awayIdentifier;
                 
-                if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                try {
+                    // Domáci tím
                     const homeResult = window.matchTracker.getTeamNameByDisplayId(homeIdentifier);
                     homeDisplayName = (homeResult && typeof homeResult.then === 'function') ? await homeResult : (homeResult || homeIdentifier);
                     
+                    // Hosťovský tím
                     const awayResult = window.matchTracker.getTeamNameByDisplayId(awayIdentifier);
                     awayDisplayName = (awayResult && typeof awayResult.then === 'function') ? await awayResult : (awayResult || awayIdentifier);
-                } else if (teamManagerReady && window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-                    homeDisplayName = window.teamManager.getTeamNameByDisplayIdSync(homeIdentifier) || homeIdentifier;
-                    awayDisplayName = window.teamManager.getTeamNameByDisplayIdSync(awayIdentifier) || awayIdentifier;
+                } catch (error) {
+                    console.warn(`Chyba pri mapovaní názvov pre zápas ${match.id}:`, error);
+                    // Pokračujeme s pôvodnými identifikátormi
                 }
                 
-                // Ak sa názvy zmenili, uložíme ich do match objektu
+                // Uložíme zmapované názvy do match objektu (aj keď sú rovnaké)
+                updatedMatches[i] = {
+                    ...match,
+                    homeDisplayName: homeDisplayName,
+                    awayDisplayName: awayDisplayName
+                };
+                
+                // Ak sa názvy zmenili oproti pôvodným identifikátorom, zaznačíme zmenu
                 if (homeDisplayName !== homeIdentifier || awayDisplayName !== awayIdentifier) {
-                    updatedMatches[i] = {
-                        ...match,
-                        homeDisplayName: homeDisplayName,
-                        awayDisplayName: awayDisplayName
-                    };
                     hasChanges = true;
-                } else {
-                    // Aj keď sa nezmenili, uložíme pôvodné ako zobrazenie
-                    updatedMatches[i] = {
-                        ...match,
-                        homeDisplayName: homeIdentifier,
-                        awayDisplayName: awayIdentifier
-                    };
                 }
             }
             
             if (hasChanges) {
                 setMatches(updatedMatches);
-                console.log('✅ Zoznam zápasov bol aktualizovaný so zmapovanými názvami tímov');
+                console.log('✅ Zoznam zápasov bol aktualizovaný so zmapovanými názvami tímov (len cez matchTracker)');
+            } else {
+                // Aj keď nedošlo k zmene, môžeme nastaviť matches s homeDisplayName/awayDisplayName
+                // aby sa predišlo opakovnému mapovaniu pri každom re-rendre
+                setMatches(updatedMatches);
+                console.log('📋 Zoznam zápasov aktualizovaný (žiadne zmeny v názvoch)');
             }
         };
         
