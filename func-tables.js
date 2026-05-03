@@ -2292,7 +2292,7 @@ function getTeamNameByDisplayIdFromDB(displayId) {
     const isReady = isGroupReadyForReplacement(category, groupLetter);
     
     if (!isReady) {
-        log(`⛔ [${category} - ${fullGroupName}] Skupina NIE JE pripravená`);
+//        log(`⛔ [${category} - ${fullGroupName}] Skupina NIE JE pripravená`);
         return null;
     }
     
