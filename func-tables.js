@@ -2638,7 +2638,7 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
         let preliminaryTeam = getTeamFromPreliminaryOrder(category, groupLetter, order);
         
         if (preliminaryTeam) {
-            log(`✅ PREDBEŽNÉ (${groupLetter}${order}): → "${preliminaryTeam}" (z pôvodného poradia, bez ohľadu na odohraté zápasy)`);
+//            log(`✅ PREDBEŽNÉ (${groupLetter}${order}): → "${preliminaryTeam}" (z pôvodného poradia, bez ohľadu na odohraté zápasy)`);
             return preliminaryTeam;
         }
         
