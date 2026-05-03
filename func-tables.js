@@ -749,8 +749,26 @@ let isTeamNameReplacerInitialized = false;
         
         return Array.from(teamsMap.values());
     }
+
+    
         
-    function createGroupTable(categoryName, groupName) {
+    let groupTableCache = new Map();  // Cache pre tabuľky skupín
+    let lastGroupTableUpdate = new Map();  // Kedy bola naposledy aktualizovaná
+
+    // A v createGroupTable na začiatok:
+    function createGroupTable(categoryName, groupName, forceRefresh = false) {
+        const cacheKey = `${categoryName}|${groupName}`;
+        const now = Date.now();
+        
+        // Ak nevyžadujeme refresh a cache je menej ako 5 sekúnd stará, vrátime cached
+        if (!forceRefresh && groupTableCache.has(cacheKey)) {
+            const lastUpdate = lastGroupTableUpdate.get(cacheKey) || 0;
+            if (now - lastUpdate < 5000) {  // 5 sekúnd cache
+                log(`💿 Používam cached tabuľku pre ${cacheKey}`);
+                return groupTableCache.get(cacheKey);
+            }
+        }
+        
         // Získame VŠETKY zápasy v skupine (aj neodohrané)
         const allGroupMatches = getGroupMatches(categoryName, groupName);
         
@@ -875,6 +893,9 @@ let isTeamNameReplacerInitialized = false;
                 isTransferred: false
             });
         }
+
+        groupTableCache.set(cacheKey, result);
+        lastGroupTableUpdate.set(cacheKey, now);
         
         return {
             category: categoryName,
