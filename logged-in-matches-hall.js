@@ -5918,16 +5918,22 @@ const matchesHallApp = ({ userProfileData }) => {
         // Získanie názvu tímu - PRIORITA: z načítanej súpisky
         const getTeamDisplayName = (teamSide, identifier) => {
             if (teamSide === 'home') {
+                // 🔥 PRIORITA: Najprv z homeTeamData (súpisky)
                 if (homeTeamData?.team?.teamName) return homeTeamData.team.teamName;
+                // Potom z uloženého displayName v selectedMatch
                 if (selectedMatch.homeDisplayName) return selectedMatch.homeDisplayName;
-                return getTeamNameByIdentifier(identifier);
+                // Nakoniec identifikátor
+                return identifier;
             } else {
+                // 🔥 PRIORITA: Najprv z awayTeamData (súpisky)
                 if (awayTeamData?.team?.teamName) return awayTeamData.team.teamName;
+                // Potom z uloženého displayName v selectedMatch
                 if (selectedMatch.awayDisplayName) return selectedMatch.awayDisplayName;
-                return getTeamNameByIdentifier(identifier);
+                // Nakoniec identifikátor
+                return identifier;
             }
         };
-    
+
         const homeTeamName = getTeamDisplayName('home', selectedMatch.homeTeamIdentifier);
         const awayTeamName = getTeamDisplayName('away', selectedMatch.awayTeamIdentifier);
         
