@@ -881,7 +881,7 @@ let isTeamNameReplacerInitialized = false;
         if (forceRefresh) {
             const cacheKey = `${categoryName}|${groupName}`;
             processedCarryOverGroups.delete(cacheKey);
-            log(`🔄 Force refresh pre skupinu ${cacheKey}`);
+//            log(`🔄 Force refresh pre skupinu ${cacheKey}`);
         }
         
         const groupsData = window.groupsData || {};
@@ -2530,7 +2530,7 @@ function getTeamNameByDisplayId(displayId, forceRefresh = false) {
     
     if (forceRefresh) {
         // Vynútime vytvorenie FRESH tabuľky priamo (nie z cache)
-        log(`🔄 Vynucujem FRESH prepočet nadstavbovej skupiny: ${advancedGroupName}`);
+//        log(`🔄 Vynucujem FRESH prepočet nadstavbovej skupiny: ${advancedGroupName}`);
         advancedGroupTable = window.matchTracker?.createAdvancedGroupTable?.(category, advancedGroupName, null, true); // true = force refresh
     } else {
         // Normálne získanie (môže byť z cache)
