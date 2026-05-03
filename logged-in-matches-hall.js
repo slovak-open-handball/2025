@@ -9439,7 +9439,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                             !teamNamesReady ? 
                                                 React.createElement('span', { className: 'text-gray-400 italic' }, 'Načítavam...') :
                                                 React.createElement('span', { className: 'font-medium text-gray-800 text-right flex-1' }, 
-                                                    match.homeDisplayName || getTeamNameByIdentifier(match.homeTeamIdentifier)
+                                                    window.matchTracker.getTeamNameByDisplayId(match.homeTeamIdentifier)
                                                 ),
                                             
                                             // Zobrazenie stavu zápasu
@@ -9503,7 +9503,7 @@ const matchesHallApp = ({ userProfileData }) => {
                                         !teamNamesReady ? 
                                             React.createElement('span', { className: 'text-gray-400 italic' }, 'Načítavam...') :
                                             React.createElement('span', { className: 'font-medium text-gray-800 flex-1' }, 
-                                                match.awayDisplayName || getTeamNameByIdentifier(match.awayTeamIdentifier)
+                                                window.matchTracker.getTeamNameByDisplayId(match.awayTeamIdentifier)
                                             )
                                         ),
                                         
