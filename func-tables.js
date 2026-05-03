@@ -446,9 +446,7 @@ let isTeamNameReplacerInitialized = false;
         
         // 🔥 KROK 1: Najprv zmapujeme vstupné názvy na reálne názvy tímov
         let mappedTeamA = teamAName;
-        let mappedTeamB = teamBName;
-        
-        const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
+        let mappedTeamB = teamBName;        
         
         if (looksLikeIdentifier(teamAName)) {
             const mapped = getTeamNameByDisplayId(teamAName);
