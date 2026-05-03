@@ -11509,6 +11509,121 @@ window.getTeamsByGroup = async (categoryName, groupName) => {
 //
 // ============================================================================
 
+window.getTeamNameSync = (identifier) => {
+    if (!identifier) return 'Neznámy tím';
+    
+    // 1. Skúsime získať názov z globalUserProfileData (ak existuje)
+    if (window.globalUserProfileData?.teamNameCache?.[identifier]) {
+        return window.globalUserProfileData.teamNameCache[identifier];
+    }
+    
+    // 2. Skúsime získať z window.__teamManagerData (najspoľahlivejšie)
+    if (window.__teamManagerData?.teamNameMap?.[identifier]) {
+        return window.__teamManagerData.teamNameMap[identifier];
+    }
+    
+    // 3. Skúsime získať z používateľských dát (window.__reactUsersState)
+    if (window.__reactUsersState && window.__reactUsersState.length > 0) {
+        const parts = identifier.split(' ');
+        if (parts.length >= 2) {
+            const groupAndOrder = parts.pop();
+            const category = parts.join(' ');
+            
+            let groupLetter = '';
+            let order = '';
+            for (let i = 0; i < groupAndOrder.length; i++) {
+                const char = groupAndOrder[i];
+                if (char >= '0' && char <= '9') {
+                    order = groupAndOrder.substring(i);
+                    groupLetter = groupAndOrder.substring(0, i);
+                    break;
+                }
+            }
+            
+            if (order) {
+                const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
+                const orderNum = parseInt(order, 10);
+                
+                for (const user of window.__reactUsersState) {
+                    if (!user.teams) continue;
+                    const userTeams = user.teams[category];
+                    if (!userTeams || !Array.isArray(userTeams)) continue;
+                    
+                    const team = userTeams.find(t => 
+                        t.groupName === fullGroupName && 
+                        t.order === orderNum
+                    );
+                    
+                    if (team && team.teamName) {
+                        // Uložíme do cache pre budúce použitie
+                        if (!window.globalUserProfileData) window.globalUserProfileData = {};
+                        if (!window.globalUserProfileData.teamNameCache) window.globalUserProfileData.teamNameCache = {};
+                        window.globalUserProfileData.teamNameCache[identifier] = team.teamName;
+                        return team.teamName;
+                    }
+                }
+            }
+        }
+    }
+    
+    // 4. Skúsime superstructureTeams (len ak sú dáta pripravené)
+    if (window.superstructureTeams && Object.keys(window.superstructureTeams).length > 0) {
+        const parts = identifier.split(' ');
+        if (parts.length >= 2) {
+            const groupAndOrder = parts.pop();
+            const category = parts.join(' ');
+            
+            let groupLetter = '';
+            let order = '';
+            for (let i = 0; i < groupAndOrder.length; i++) {
+                const char = groupAndOrder[i];
+                if (char >= '0' && char <= '9') {
+                    order = groupAndOrder.substring(i);
+                    groupLetter = groupAndOrder.substring(0, i);
+                    break;
+                }
+            }
+            
+            if (order) {
+                const fullGroupName = `skupina ${groupLetter.toUpperCase()}`;
+                const orderNum = parseInt(order, 10);
+                
+                const categoryTeams = window.superstructureTeams[category];
+                if (categoryTeams && Array.isArray(categoryTeams)) {
+                    const team = categoryTeams.find(t => 
+                        t.groupName === fullGroupName && 
+                        t.order === orderNum
+                    );
+                    if (team && team.teamName) {
+                        return team.teamName;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Fallback - vrátime pôvodný identifikátor
+    return identifier;
+};
+
+/**
+ * Prepíšeme pôvodnú getTeamNameByDisplayId na synchrónnu verziu pre zoznam.
+ * Pôvodnú asynchrónnu funkciu si uložíme pre prípady, keď je potrebná.
+ */
+const originalGetTeamNameByDisplayId = window.matchTracker?.getTeamNameByDisplayId || window.getTeamNameByDisplayId;
+
+// Nastavíme novú synchrónnu funkciu
+window.getTeamNameByDisplayIdSync = window.getTeamNameSync;
+
+// Prepíšeme getTeamNameByDisplayId na synchrónnu verziu pre zoznam
+if (window.matchTracker) {
+    window.matchTracker.getTeamNameByDisplayId = window.getTeamNameSync;
+} else {
+    window.getTeamNameByDisplayId = window.getTeamNameSync;
+}
+
+console.log('✅ Opravené: Funkcia getTeamNameByDisplayId je teraz synchrónna pre zoznam zápasov');
+
 console.log('✅ Pripravené nové funkcie na vkladanie tímov podľa skupiny:');
 console.log('   • window.forceTeamByGroup("U12 D", "skupina B", 2, "home") - vloženie tímu');
 console.log('   • window.getTeamsByGroup("U12 D", "skupina B") - zoznam tímov v skupine');
