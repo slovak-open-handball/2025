@@ -757,6 +757,8 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         isRunningRef.current ? stopTimerAndSave() : startTimer();
     };
 
+    // V MatchTimer komponente, nájdite funkciu resetTime a nahraďte ju touto verziou:
+
     const resetTime = async () => {
         if (!canReset()) return;
     
@@ -767,25 +769,57 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             isRunningRef.current = false;
         }
     
-        // Resetneme čas na 0
+        // Resetneme čas na 0 a vymažeme všetky výsledky
         setDisplaySeconds(0);
         
-        // Aktualizujeme v databáze
+        // Aktualizujeme v databáze - vymažeme všetky výsledky a kontumácie
         if (window.db && matchId) {
             try {
                 lastServerUpdateRef.current = Date.now();
                 const matchRef = doc(window.db, 'matches', matchId);
-                await updateDoc(matchRef, {
+                
+                // Získame aktuálne dáta zápasu, aby sme zachovali dôležité informácie
+                const matchSnap = await getDoc(matchRef);
+                const currentMatchData = matchSnap.exists() ? matchSnap.data() : {};
+                
+                // Pripravíme update objekt - vymažeme výsledkové polia
+                const updateData = {
                     manualTimeOffset: 0,
                     currentPeriod: 1,
                     status: 'scheduled',
                     startedAt: null,
                     pausedAt: null,
-                    updatedAt: Timestamp.now()
+                    updatedAt: Timestamp.now(),
+                    // VYMAŽEME VÝSLEDKY
+                    homeScore: null,
+                    awayScore: null,
+                    isForfeit: null,
+                    forfeitTeam: null,
+                    forfeitAt: null,
+                    forfeitResult: null
+                };
+                
+                // Zachováme dôležité polia, ktoré nechceme vymazať
+                // (napr. hallId, categoryId, groupName, homeTeamIdentifier, awayTeamIdentifier, atď.)
+                const fieldsToPreserve = [
+                    'hallId', 'categoryId', 'categoryName', 'groupName', 
+                    'homeTeamIdentifier', 'awayTeamIdentifier', 'matchType',
+                    'isPlacementMatch', 'placementRank', 'scheduledTime'
+                ];
+                
+                fieldsToPreserve.forEach(field => {
+                    if (currentMatchData[field] !== undefined) {
+                        updateData[field] = currentMatchData[field];
+                    }
                 });
+                
+                await updateDoc(matchRef, updateData);
+                
                 setPeriod(1);
                 if (onTimeUpdate) onTimeUpdate({ seconds: 0, period: 1, isRunning: false });
                 setTimeout(() => { lastServerUpdateRef.current = 0; }, 300);
+                
+                console.log(`✅ Zápas ${matchId} bol resetovaný - výsledok vymazaný, stav nastavený na 'scheduled'`);
             } catch (err) {
                 console.error('Chyba pri resetovaní časovača:', err);
             }
