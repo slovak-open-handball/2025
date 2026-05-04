@@ -738,9 +738,9 @@ const MatchesHallApp = () => {
     
     // Funkcia na vytvorenie hash pre zápas
     const createMatchHash = (homeTeamId, awayTeamId) => {
-        // Kódovanie identifikátorov pre URL
-        const encodedHome = encodeURIComponent(homeTeamId);
-        const encodedAway = encodeURIComponent(awayTeamId);
+        // Nahradíme medzery za pomlčky a potom zakódujeme
+        const encodedHome = encodeURIComponent(homeTeamId.replace(/ /g, '-'));
+        const encodedAway = encodeURIComponent(awayTeamId.replace(/ /g, '-'));
         return `#match/${encodedHome}/${encodedAway}`;
     };
     
@@ -750,9 +750,12 @@ const MatchesHallApp = () => {
         const matchPattern = /^#match\/([^/]+)\/([^/]+)$/;
         const match = hash.match(matchPattern);
         if (match) {
+            // Dekódujeme a nahradíme pomlčky späť na medzery
+            const homeTeamIdentifier = decodeURIComponent(match[1]).replace(/-/g, ' ');
+            const awayTeamIdentifier = decodeURIComponent(match[2]).replace(/-/g, ' ');
             return {
-                homeTeamIdentifier: decodeURIComponent(match[1]),
-                awayTeamIdentifier: decodeURIComponent(match[2])
+                homeTeamIdentifier: homeTeamIdentifier,
+                awayTeamIdentifier: awayTeamIdentifier
             };
         }
         return null;
