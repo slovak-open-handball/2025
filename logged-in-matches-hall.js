@@ -466,11 +466,13 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const periodDurationRef = useRef(periodDuration);
     const periodRef = useRef(period);
     const lastServerUpdateRef = useRef(0);
-    const lastServerOffsetRef = useRef(0);
+    const displaySecondsRef = useRef(0); // ref pre aktuálny čas
 
+    // synchronizácia refov
     useEffect(() => { isRunningRef.current = isRunning; }, [isRunning]);
     useEffect(() => { periodDurationRef.current = periodDuration; }, [periodDuration]);
     useEffect(() => { periodRef.current = period; }, [period]);
+    useEffect(() => { displaySecondsRef.current = displaySeconds; }, [displaySeconds]);
 
     const formatTime = (totalSeconds) => {
         const mins = Math.floor(Math.max(0, totalSeconds) / 60);
@@ -534,7 +536,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         const currentSeconds = displaySeconds;
         const maxSec = periodDuration * 60;
         if (currentSeconds >= maxSec) return;
-        // lokálne spustenie
         startLocalInterval(currentSeconds);
         setIsRunning(true);
         isRunningRef.current = true;
@@ -567,7 +568,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         if (newSeconds > maxSec) newSeconds = maxSec;
         setDisplaySeconds(newSeconds);
         if (isRunningRef.current) {
-            // reset lokálneho odpočtu
             startTimeRef.current = Date.now();
             localStartOffsetRef.current = newSeconds;
         }
@@ -587,13 +587,14 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         }
     };
 
+    // Synchronizácia z DB (pre iné zariadenia) - OPRAVA: používame ref pre period aj displaySeconds
     useEffect(() => {
         if (!window.db || !matchId) return;
         const matchRef = doc(window.db, 'matches', matchId);
         const unsubscribe = onSnapshot(matchRef, (docSnap) => {
             if (!docSnap.exists()) return;
             const now = Date.now();
-            // Ignorujeme vlastné zmeny (do 300 ms)
+            // Ignorujeme vlastné aktualizácie
             if (lastServerUpdateRef.current && (now - lastServerUpdateRef.current) < 300) return;
             const data = docSnap.data();
             const serverStatus = data.status;
@@ -604,14 +605,17 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 const maxSec = periodDurationRef.current * 60;
                 serverSeconds = Math.min(serverSeconds + elapsed, maxSec);
             }
-            // Aktualizácia periódy
-            if (serverPeriod !== period) {
+            
+            // ----- AKTUALIZÁCIA PERIÓDY (používame ref, aby sme predišli stale closure) -----
+            if (serverPeriod !== periodRef.current) {
                 setPeriod(serverPeriod);
                 periodRef.current = serverPeriod;
             }
-            // Aktualizácia času na UI
+            
+            // ----- AKTUALIZÁCIA ČASU -----
             setDisplaySeconds(serverSeconds);
-            // Spracovanie stavu behu a synchronizácia času počas behu
+            
+            // ----- SPRACOVANIE STAVU A SYNCHRONIZÁCIA -----
             if (serverStatus === 'in-progress') {
                 if (!isRunningRef.current) {
                     // Iné zariadenie spustilo časovač
@@ -620,10 +624,9 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     isRunningRef.current = true;
                     if (onTimeUpdate) onTimeUpdate({ seconds: serverSeconds, period: serverPeriod, isRunning: true });
                 } else {
-                    // Už beží – skontrolujeme, či sa čas výrazne líši (manuálna zmena na inom PC)
-                    const diff = Math.abs(serverSeconds - displaySeconds);
+                    // Už beží – kontrola odchýlky (manuálna zmena na inom PC)
+                    const diff = Math.abs(serverSeconds - displaySecondsRef.current);
                     if (diff > 0.5) {
-                        // Pretaktovanie lokálneho intervalu na novú hodnotu
                         startLocalInterval(serverSeconds);
                         if (onTimeUpdate) onTimeUpdate({ seconds: serverSeconds, period: serverPeriod, isRunning: true });
                     }
@@ -637,9 +640,9 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             }
         });
         return () => unsubscribe();
-    }, [matchId]);
+    }, [matchId]); // závislosť len na matchId – používame refy, takže je to bezpečné
 
-    // Inicializácia z props
+    // Inicializácia z props (bez zmeny)
     useEffect(() => {
         if (!match) return;
         if (categorySettings) {
@@ -668,7 +671,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         return () => stopLocalInterval();
     }, [match?.id]);
 
-    // Pomocné funkcie pre tlačidlá
+    // Pomocné funkcie pre tlačidlá (bez zmeny)
     const canSubtractMinute = () => displaySeconds >= 60;
     const canAddMinute = () => displaySeconds + 60 <= periodDuration * 60;
     const canSubtractSecond = () => displaySeconds >= 1;
@@ -720,7 +723,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         setTimeout(() => { lastServerUpdateRef.current = 0; }, 300);
     };
 
-    // Render (rovnaký)
+    // Render (rovnaký, bez zmeny)
     return React.createElement('div', { className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
         React.createElement('div', { className: 'bg-gray-50 px-6 py-3 border-b border-gray-200' },
             React.createElement('h3', { className: 'font-semibold text-gray-800' }, 'Športový časovač'),
