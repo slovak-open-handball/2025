@@ -927,17 +927,38 @@ let isTeamNameReplacerInitialized = false;
         // ============================================================
         for (const team of teamsInAdvanced) {
             // Skúsime namapovať identifikátor na skutočný názov
-            // POUŽIJEME team.name NAMIESTO team.id
             const mappedName = getTeamNameByDisplayId(team.name);
             if (mappedName && mappedName !== team.name) {
                 log(`   🔄 Mapovanie tímu: "${team.name}" → "${mappedName}"`);
-                team.originalId = team.id;  // Pôvodné ID si odložíme
-                team.id = mappedName;       // ID prepíšeme na mapovaný názov
-                team.name = mappedName;     // Aj name nastavíme na mapovaný názov
+                team.originalId = team.id;
+                team.id = mappedName;
+                team.name = mappedName;
             } else if (mappedName && mappedName === team.name) {
                 log(`   ℹ️ Tím "${team.name}" už má správny názov`);
             } else {
-                log(`   ⚠️ Tím "${team.name}" nebolo možné namapovať, používam pôvodný názov`);
+                // 🔥 AK SA NEPODARILO ZMAPOVAŤ, SKÚSIME INÝ SPÔSOB
+                // Možno je to už správny názov, alebo ho treba nájsť v základných skupinách
+                
+                // Skúsime nájsť podľa písmena a pozície
+                const parts = team.name.trim().split(' ');
+                if (parts.length >= 2) {
+                    const lastPart = parts[parts.length - 1];
+                    const letterMatch = lastPart.match(/^([A-Za-z]+)(\d+)$/);
+                    if (letterMatch) {
+                        const groupLetter = letterMatch[1].toUpperCase();
+                        const position = parseInt(letterMatch[2], 10);
+                
+                        // Vytvoríme správny identifikátor a skúsime znova
+                        const displayId = `${cleanCategoryName(categoryName)} ${position}${groupLetter}`;
+                        const retryMapped = getTeamNameByDisplayId(displayId);
+                        if (retryMapped && retryMapped !== team.name) {
+                            log(`   🔄 Mapovanie (fallback): "${team.name}" → "${retryMapped}"`);
+                            team.originalId = team.id;
+                            team.id = retryMapped;
+                            team.name = retryMapped;
+                        }
+                    }
+                }
             }
         }
         
