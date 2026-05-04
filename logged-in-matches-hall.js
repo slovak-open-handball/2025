@@ -224,15 +224,37 @@ const loadTeamMembers = async (teamName, categoryName, onUpdate) => {
         return () => {};
     }
     
+    // 🔥 PRVÝ KROK: Prevedieme teamName cez matchTracker na správny názov
+    let actualTeamName = teamName;
+    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+        try {
+            console.log(`🔄 Prevod názvu tímu: "${teamName}" → cez matchTracker`);
+            const convertedName = await window.matchTracker.getTeamNameByDisplayId(teamName);
+            if (convertedName && convertedName !== teamName) {
+                actualTeamName = convertedName;
+                console.log(`✅ Prevedený názov: "${teamName}" → "${actualTeamName}"`);
+            } else {
+                console.log(`ℹ️ Názov tímu sa nezmenil: "${teamName}"`);
+            }
+        } catch (err) {
+            console.error(`Chyba pri prevode názvu tímu "${teamName}":`, err);
+            // Pokračujeme s pôvodným názvom
+        }
+    } else {
+        console.log(`⚠️ window.matchTracker.getTeamNameByDisplayId nie je dostupný, používam pôvodný názov: "${teamName}"`);
+    }
+    
     console.log(`=== VYHĽADÁVANIE ČLENOV TÍMU (real-time) ===`);
-    console.log(`Hľadám tím: "${teamName}" v kategórii (NÁZOV): "${categoryName}"`);
+    console.log(`Pôvodný názov: "${teamName}"`);
+    console.log(`Skutočný názov na vyhľadávanie: "${actualTeamName}"`);
+    console.log(`Kategória: "${categoryName}"`);
     
     // Prehľadávame všetkých používateľov (kluby)
     const usersRef = collection(window.db, 'users');
     
     // Vytvoríme unsubscribe funkciu pre real-time počúvanie
     const unsubscribe = onSnapshot(usersRef, (usersSnapshot) => {
-        console.log(`Real-time aktualizácia: Načítavam členov pre tím ${teamName}`);
+        console.log(`Real-time aktualizácia: Načítavam členov pre tím ${actualTeamName}`);
         
         for (const userDoc of usersSnapshot.docs) {
             const userId = userDoc.id;
@@ -243,11 +265,11 @@ const loadTeamMembers = async (teamName, categoryName, onUpdate) => {
             for (const [categoryKey, teamsArray] of Object.entries(teams)) {
                 if (categoryKey !== categoryName) continue;
                 
-                // Hľadáme tím s daným názvom
-                const foundTeam = (teamsArray || []).find(t => t.teamName === teamName);
+                // Hľadáme tím s daným názvom - používame actualTeamName
+                const foundTeam = (teamsArray || []).find(t => t.teamName === actualTeamName);
                 
                 if (foundTeam) {
-                    console.log(`✅ Našiel som tím: "${teamName}" v kategórii ${categoryKey} (real-time)`);
+                    console.log(`✅ Našiel som tím: "${actualTeamName}" v kategórii ${categoryKey} (real-time)`);
                     
                     // Získame všetkých členov tímu
                     const members = [];
@@ -324,7 +346,7 @@ const loadTeamMembers = async (teamName, categoryName, onUpdate) => {
             }
         }
         
-        console.log(`❌ Nenašiel som tím: "${teamName}" v kategórii: "${categoryName}"`);
+        console.log(`❌ Nenašiel som tím: "${actualTeamName}" v kategórii: "${categoryName}"`);
         if (onUpdate) onUpdate([]);
     }, (error) => {
         console.error('Chyba pri real-time načítaní členov tímu:', error);
