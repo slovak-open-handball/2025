@@ -1004,7 +1004,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                             period <= 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
                         }`
                     },
-                    React.createElement('i', { className: 'fa-solid fa-chevron-left' })
+                    React.createElement('i', { className: 'fa-solid fa-minus' })
                 ),
                 
                 React.createElement(
@@ -1022,7 +1022,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                             period >= totalPeriods ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
                         }`
                     },
-                    React.createElement('i', { className: 'fa-solid fa-chevron-right' })
+                    React.createElement('i', { className: 'fa-solid fa-plus' })
                 ),
                 
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
