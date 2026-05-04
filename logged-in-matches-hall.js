@@ -587,13 +587,13 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         }
     };
 
-    // Synchronizácia z DB (pre iné zariadenia)
     useEffect(() => {
         if (!window.db || !matchId) return;
         const matchRef = doc(window.db, 'matches', matchId);
         const unsubscribe = onSnapshot(matchRef, (docSnap) => {
             if (!docSnap.exists()) return;
             const now = Date.now();
+            // Ignorujeme vlastné zmeny (do 300 ms)
             if (lastServerUpdateRef.current && (now - lastServerUpdateRef.current) < 300) return;
             const data = docSnap.data();
             const serverStatus = data.status;
@@ -604,19 +604,30 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 const maxSec = periodDurationRef.current * 60;
                 serverSeconds = Math.min(serverSeconds + elapsed, maxSec);
             }
-            // aktualizácia periódy
+            // Aktualizácia periódy
             if (serverPeriod !== period) {
                 setPeriod(serverPeriod);
                 periodRef.current = serverPeriod;
             }
-            // aktualizácia času a stavu
+            // Aktualizácia času na UI
             setDisplaySeconds(serverSeconds);
-            if (serverStatus === 'in-progress' && !isRunningRef.current) {
-                // Iné zariadenie spustilo časovač
-                startLocalInterval(serverSeconds);
-                setIsRunning(true);
-                isRunningRef.current = true;
-                if (onTimeUpdate) onTimeUpdate({ seconds: serverSeconds, period: serverPeriod, isRunning: true });
+            // Spracovanie stavu behu a synchronizácia času počas behu
+            if (serverStatus === 'in-progress') {
+                if (!isRunningRef.current) {
+                    // Iné zariadenie spustilo časovač
+                    startLocalInterval(serverSeconds);
+                    setIsRunning(true);
+                    isRunningRef.current = true;
+                    if (onTimeUpdate) onTimeUpdate({ seconds: serverSeconds, period: serverPeriod, isRunning: true });
+                } else {
+                    // Už beží – skontrolujeme, či sa čas výrazne líši (manuálna zmena na inom PC)
+                    const diff = Math.abs(serverSeconds - displaySeconds);
+                    if (diff > 0.5) {
+                        // Pretaktovanie lokálneho intervalu na novú hodnotu
+                        startLocalInterval(serverSeconds);
+                        if (onTimeUpdate) onTimeUpdate({ seconds: serverSeconds, period: serverPeriod, isRunning: true });
+                    }
+                }
             } else if (serverStatus === 'paused' && isRunningRef.current) {
                 // Iné zariadenie zastavilo
                 stopLocalInterval();
