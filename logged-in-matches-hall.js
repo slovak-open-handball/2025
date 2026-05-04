@@ -317,7 +317,7 @@ const MatchesHallApp = () => {
                                     React.createElement('th', { className: 'px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Domáci'),
                                     React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, 'VS'),
                                     React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Hostia'),
-                                    React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Info')
+                                    React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Info') // Zúžený stĺpec na 1/4 (w-48 namiesto pôvodnej šírky)
                                 )
                             ),
                             
@@ -410,13 +410,13 @@ const MatchesHallApp = () => {
                                             React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, awayTeamDisplay)
                                         ),
                                         
-                                        // Info tagy
+                                        // Info tagy - zúžený stĺpec
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3' },
                                             React.createElement(
                                                 'div',
-                                                { className: 'flex flex-wrap gap-1' },
+                                                { className: 'flex flex-col gap-1' }, // Zmena na stĺpec namiesto riadku pre lepšie využitie úzkeho priestoru
                                                 infoTags
                                             )
                                         )
