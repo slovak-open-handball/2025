@@ -2272,26 +2272,85 @@ const MatchesHallApp = () => {
         }
     };
 
-    // Spracovanie názvov tímov pre všetky zápasy
-    const processTeamNames = (matches) => {
+    // Spracovanie názvov tímov pre všetky zápasy - ASYNCHRÓNNA VERZIA S MAPOVANÍM
+    const processTeamNames = async (matches) => {
         const names = { ...teamNames };
+        let needsUpdate = false;
         
-        matches.forEach(match => {
+        for (const match of matches) {
+            // Získanie názvu kategórie pre tento zápas
+            let categoryName = match.categoryName;
+            if (!categoryName && match.categoryId && window.categoriesData && window.categoriesData[match.categoryId]) {
+                categoryName = window.categoriesData[match.categoryId];
+            }
+            
+            if (!categoryName) {
+                console.log(`⚠️ Zápas ${match.id} nemá názov kategórie, preskakujem mapovanie`);
+                continue;
+            }
+            
+            // Spracovanie domáceho tímu
             if (match.homeTeamIdentifier) {
-                const homeKey = match.homeTeamIdentifier;
-                if (!names[homeKey]) {
-                    names[homeKey] = getDisplayTeamName(homeKey);
+                const currentDisplayName = names[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
+                
+                // 🔥 KONTROLA: Mapujeme LEN ak názov tímu obsahuje názov kategórie
+                if (currentDisplayName && currentDisplayName.includes(categoryName)) {
+                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                        try {
+                            console.log(`🔄 [PROCESS] Domáci tím "${currentDisplayName}" obsahuje kategóriu "${categoryName}" → volám getTeamNameByDisplayId`);
+                            const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                            if (newName && newName !== currentDisplayName && newName !== names[match.homeTeamIdentifier]) {
+                                names[match.homeTeamIdentifier] = newName;
+                                needsUpdate = true;
+                                console.log(`✅ [PROCESS] Domáci tím "${currentDisplayName}" → "${newName}"`);
+                            }
+                        } catch (err) {
+                            console.error(`Chyba pri mapovaní domáceho tímu ${currentDisplayName}:`, err);
+                        }
+                    } else {
+                        console.log(`⚠️ [PROCESS] window.matchTracker.getTeamNameByDisplayId nie je dostupný pre domáci tím`);
+                    }
+                } else if (!names[match.homeTeamIdentifier]) {
+                    // Ak nemáme žiadny názov, použijeme základný
+                    names[match.homeTeamIdentifier] = currentDisplayName;
                 }
             }
+            
+            // Spracovanie hosťujúceho tímu
             if (match.awayTeamIdentifier) {
-                const awayKey = match.awayTeamIdentifier;
-                if (!names[awayKey]) {
-                    names[awayKey] = getDisplayTeamName(awayKey);
+                const currentDisplayName = names[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
+                
+                // 🔥 KONTROLA: Mapujeme LEN ak názov tímu obsahuje názov kategórie
+                if (currentDisplayName && currentDisplayName.includes(categoryName)) {
+                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                        try {
+                            console.log(`🔄 [PROCESS] Hosťujúci tím "${currentDisplayName}" obsahuje kategóriu "${categoryName}" → volám getTeamNameByDisplayId`);
+                            const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                            if (newName && newName !== currentDisplayName && newName !== names[match.awayTeamIdentifier]) {
+                                names[match.awayTeamIdentifier] = newName;
+                                needsUpdate = true;
+                                console.log(`✅ [PROCESS] Hosťujúci tím "${currentDisplayName}" → "${newName}"`);
+                            }
+                        } catch (err) {
+                            console.error(`Chyba pri mapovaní hosťujúceho tímu ${currentDisplayName}:`, err);
+                        }
+                    } else {
+                        console.log(`⚠️ [PROCESS] window.matchTracker.getTeamNameByDisplayId nie je dostupný pre hosťujúci tím`);
+                    }
+                } else if (!names[match.awayTeamIdentifier]) {
+                    // Ak nemáme žiadny názov, použijeme základný
+                    names[match.awayTeamIdentifier] = currentDisplayName;
                 }
             }
-        });
+        }
         
-        setTeamNames(names);
+        if (needsUpdate) {
+            setTeamNames(prev => ({ ...prev, ...names }));
+            console.log('✅ [PROCESS] Aktualizované názvy tímov pri načítaní:', names);
+        } else {
+            setTeamNames(names);
+            console.log('ℹ️ [PROCESS] Žiadne zmeny v názvoch tímov pri načítaní');
+        }
     };
 
     const loadMatches = async (hallId) => {
@@ -2341,7 +2400,9 @@ const MatchesHallApp = () => {
             
             setMatches(hallMatches);
             setAllMatchesList(hallMatches);
-            processTeamNames(hallMatches);
+            
+            // 🔥 POČKÁME NA DOKONČENIE PROCESS TEAM NAMES
+            await processTeamNames(hallMatches);
             
             // Nastavíme počiatočné statusy
             const initialStatuses = {};
