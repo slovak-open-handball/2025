@@ -461,6 +461,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const [showEndMatchModal, setShowEndMatchModal] = useState(false);
     const [showForfeitModal, setShowForfeitModal] = useState(false);
     const [forfeitTeam, setForfeitTeam] = useState(null); // 'home' alebo 'away'
+    const [selectedForfeitTeam, setSelectedForfeitTeam] = useState(null);
     
     const intervalRef = useRef(null);
     const isRunningRef = useRef(false);
@@ -478,8 +479,8 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
 
     // V MatchTimer komponente, nájdite funkciu handleForfeit a nahraďte ju touto verziou:
 
-    const handleForfeit = async (team) => {
-        if (!window.db || !matchId) return;
+    const handleForfeit = async () => {
+        if (!window.db || !matchId || !selectedForfeitTeam) return;
         
         try {
             // Zastavíme časovač ak beží
@@ -493,34 +494,28 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             let homeScore = 0;
             let awayScore = 0;
             
-            if (team === 'home') {
+            if (selectedForfeitTeam === 'home') {
                 homeScore = 10;
                 awayScore = 0;
-            } else if (team === 'away') {
+            } else if (selectedForfeitTeam === 'away') {
                 homeScore = 0;
                 awayScore = 10;
             }
             
             const matchRef = doc(window.db, 'matches', matchId);
             
-            // 🔥 DÔLEŽITÉ: Ukladáme v štruktúre, ktorú očakáva match-tracker
-            // match-tracker v prvom kóde používa:
-            // - match.forfeitResult.isForfeit
-            // - match.forfeitResult.home
-            // - match.forfeitResult.away
             await updateDoc(matchRef, {
                 homeScore: homeScore,
                 awayScore: awayScore,
                 status: 'completed',
                 isForfeit: true,
-                forfeitTeam: team,
+                forfeitTeam: selectedForfeitTeam,
                 forfeitAt: Timestamp.now(),
-                // 🔥 PRIDANÉ: Štruktúra pre match-tracker
                 forfeitResult: {
                     isForfeit: true,
                     home: homeScore,
                     away: awayScore,
-                    team: team,
+                    team: selectedForfeitTeam,
                     timestamp: Timestamp.now()
                 },
                 manualTimeOffset: 0,
@@ -529,9 +524,9 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 updatedAt: Timestamp.now()
             });
             
-            console.log(`Zápas ${matchId} bol kontumovaný v prospech ${team === 'home' ? 'domácich' : 'hostí'} s výsledkom ${homeScore}:${awayScore}`);
+            console.log(`Zápas ${matchId} bol kontumovaný v prospech ${selectedForfeitTeam === 'home' ? 'domácich' : 'hostí'} s výsledkom ${homeScore}:${awayScore}`);
             setShowForfeitModal(false);
-            setForfeitTeam(null);
+            setSelectedForfeitTeam(null);
             
             if (onTimeUpdate) onTimeUpdate({ seconds: 0, period, isRunning: false });
         } catch (err) {
@@ -920,7 +915,10 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             'div',
             { 
                 className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50',
-                onClick: () => setShowForfeitModal(false)
+                onClick: () => {
+                    setShowForfeitModal(false);
+                    setSelectedForfeitTeam(null);
+                }
             },
             React.createElement(
                 'div',
@@ -936,38 +934,72 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 React.createElement(
                     'p',
                     { className: 'text-gray-600 mb-2 text-center' },
-                    'Kontumačný výsledok bude 10:0 v prospech vybraného tímu.'
+                    'Vyberte tím, v prospech ktorého sa zápas kontumuje (10:0)'
                 ),
-                // Dve tlačidlá vedľa seba
+                React.createElement(
+                    'p',
+                    { className: 'text-sm text-red-600 mb-6 text-center' },
+                    'Táto akcia je nevratná!'
+                ),
+                // Dve tlačidlá pre výber tímu vedľa seba
                 React.createElement(
                     'div',
                     { className: 'flex gap-3 mb-6' },
                     React.createElement(
                         'button',
                         {
-                            onClick: () => handleForfeit('home'),
-                            className: 'flex-1 py-3 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-semibold transition-colors cursor-pointer text-center'
+                            onClick: () => setSelectedForfeitTeam('home'),
+                            className: `flex-1 py-3 rounded-lg font-semibold transition-colors cursor-pointer text-center ${
+                                selectedForfeitTeam === 'home' 
+                                    ? 'bg-yellow-400 text-yellow-900 border-2 border-yellow-600' 
+                                    : 'bg-gray-600 hover:bg-gray-700 text-white'
+                            }`
                         },
-                        React.createElement('span', { className: 'block text-sm' }, 'Kontumovať'),
-                        React.createElement('span', { className: 'block text-xs opacity-90 mt-1' }, homeTeamName)
+                            React.createElement('span', { className: 'block text-sm' }, 'Domáci'),
+                            React.createElement('span', { className: 'block text-xs opacity-90 mt-1' }, homeTeamName)
                     ),
                     React.createElement(
                         'button',
                         {
-                            onClick: () => handleForfeit('away'),
-                            className: 'flex-1 py-3 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-semibold transition-colors cursor-pointer text-center'
+                            onClick: () => setSelectedForfeitTeam('away'),
+                            className: `flex-1 py-3 rounded-lg font-semibold transition-colors cursor-pointer text-center ${
+                                selectedForfeitTeam === 'away' 
+                                    ? 'bg-yellow-400 text-yellow-900 border-2 border-yellow-600' 
+                                    : 'bg-gray-600 hover:bg-gray-700 text-white'
+                            }`
                         },
-                        React.createElement('span', { className: 'block text-sm' }, 'Kontumovať'),
-                        React.createElement('span', { className: 'block text-xs opacity-90 mt-1' }, awayTeamName)
+                            React.createElement('span', { className: 'block text-sm' }, 'Hostia'),
+                            React.createElement('span', { className: 'block text-xs opacity-90 mt-1' }, awayTeamName)
                     )
                 ),
+                // Dve tlačidlá: Zrušiť a Potvrdiť
                 React.createElement(
-                    'button',
-                    {
-                        onClick: () => setShowForfeitModal(false),
-                        className: 'w-full py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors cursor-pointer text-center'
-                    },
-                    'Zrušiť'
+                    'div',
+                    { className: 'flex gap-3' },
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => {
+                                setShowForfeitModal(false);
+                                setSelectedForfeitTeam(null);
+                            },
+                            className: 'flex-1 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors cursor-pointer text-center'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => handleForfeit(),
+                            disabled: !selectedForfeitTeam,
+                            className: `flex-1 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-center ${
+                                selectedForfeitTeam 
+                                    ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            }`
+                        },
+                        'Potvrdiť'
+                    )
                 )
             )
         );
