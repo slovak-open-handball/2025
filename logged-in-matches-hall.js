@@ -2124,30 +2124,51 @@ const MatchesHallApp = () => {
         
         const matchesRef = collection(window.db, 'matches');
         
-        // Vytvoríme dotaz na zápasy v danej hale
+        // LOKÁLNA CACHE PRE STATUSY (mimo React state)
+        let localMatchStatuses = {};
+        
+        // Inicializácia lokálnej cache z aktuálneho React state
+        setMatchStatuses(prev => {
+            localMatchStatuses = { ...prev };
+            return prev;
+        });
+        
         const unsubscribe = onSnapshot(matchesRef, (snapshot) => {
             const updatedStatuses = {};
             const updatedMatches = [];
             let hasMatchCompletedAnywhere = false;
+            let completedMatchesList = []; // Zoznam zápasov, ktoré boli dokončené
             
-            snapshot.forEach((doc) => {
+            snapshot.docChanges().forEach(change => {
                 const match = {
-                    id: doc.id,
-                    ...doc.data()
+                    id: change.doc.id,
+                    ...change.doc.data()
                 };
                 
-                // Kontrola či došlo k zmene statusu na 'completed' PRE AKÝKOĽVEK ZÁPAS V CELEJ DATABÁZE
-                const oldStatus = matchStatuses[match.id];
+                const oldStatus = localMatchStatuses[match.id];
                 const newStatus = match.status || 'scheduled';
                 
-                if (oldStatus && oldStatus !== 'completed' && newStatus === 'completed') {
+                // 🔥 DETEGUJEME ZMENU NA completed (len pri zmene, nie pri prvom načítaní)
+                if (change.type === 'modified' && oldStatus && oldStatus !== 'completed' && newStatus === 'completed') {
                     hasMatchCompletedAnywhere = true;
-                    console.log(`🏆 Zápas ${match.id} (hala: ${match.hallId}) bol práve ukončený - spustím globálnu aktualizáciu názvov tímov`);
+                    completedMatchesList.push({
+                        id: match.id,
+                        hallId: match.hallId,
+                        category: match.categoryName,
+                        group: match.groupName,
+                        oldStatus: oldStatus,
+                        newStatus: newStatus
+                    });
+                    console.log(`🏆 Zápas ${match.id} (hala: ${match.hallId || 'neznáma'}) bol práve ukončený!`);
+                    console.log(`   Starý status: ${oldStatus} → Nový status: ${newStatus}`);
                 }
                 
-                // Aktualizujeme statusy len pre zápasy v našej hale
+                // Aktualizujeme lokálnu cache
+                localMatchStatuses[match.id] = newStatus;
+                updatedStatuses[match.id] = newStatus;
+                
+                // Aktualizujeme matches pre našu halu
                 if (match.hallId === hallId) {
-                    updatedStatuses[match.id] = newStatus;
                     updatedMatches.push(match);
                     
                     // Aktualizujeme matches (hlavný zoznam)
@@ -2173,31 +2194,27 @@ const MatchesHallApp = () => {
                             return [...prevList, match];
                         }
                     });
-                } else {
-                    // Pre zápasy v iných halách si tiež pamätáme statusy pre kontrolu dokončenia
-                    // Ale neaktualizujeme ich v zoznamoch pre túto halu
-                    if (oldStatus !== newStatus) {
-                        console.log(`📝 Zápas ${match.id} v inej hale zmenil status z "${oldStatus}" na "${newStatus}"`);
-                    }
                 }
             });
             
-            // Aktualizujeme matchStatuses pre všetky zápasy (aj z iných hál)
-            setMatchStatuses(prev => {
-                const newStatuses = { ...prev };
-                snapshot.forEach((doc) => {
-                    const match = doc.data();
-                    newStatuses[doc.id] = match.status || 'scheduled';
-                });
-                return newStatuses;
-            });
+            // Aktualizujeme React state matchStatuses (pre zobrazenie)
+            if (Object.keys(updatedStatuses).length > 0) {
+                setMatchStatuses(prev => ({ ...prev, ...updatedStatuses }));
+            }
             
             // 🔥 AK BOL AKÝKOĽVEK ZÁPAS V CELEJ DATABÁZE DOKONČENÝ, SPUSTÍME AKTUALIZÁCIU NÁZVOV TÍMOV
             if (hasMatchCompletedAnywhere) {
-                console.log(`🏁 Zistené dokončenie zápasu v databáze - spúšťam globálnu aktualizáciu názvov tímov pre všetky zápasy`);
+                console.log(`🏁 Zistené dokončenie ${completedMatchesList.length} zápasov v databáze!`);
+                completedMatchesList.forEach(m => {
+                    console.log(`   ✅ ${m.id} (hala: ${m.hallId}) - ${m.category} - ${m.group}`);
+                });
+                console.log(`🌐 Spúšťam globálnu aktualizáciu názvov tímov pre všetky zápasy...`);
+                
                 setTimeout(() => {
                     if (window.updateTeamNamesGlobally && typeof window.updateTeamNamesGlobally === 'function') {
                         window.updateTeamNamesGlobally();
+                    } else {
+                        console.error('❌ window.updateTeamNamesGlobally nie je dostupný!');
                     }
                 }, 100);
             }
