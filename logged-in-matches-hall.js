@@ -460,6 +460,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const [displaySeconds, setDisplaySeconds] = useState(0);
     
     const intervalRef = useRef(null);
+    const saveIntervalRef = useRef(null); // Nový interval pre pravidelné ukladanie
     const isRunningRef = useRef(false);
     const startTimeRef = useRef(null);
     const localStartOffsetRef = useRef(0);
@@ -467,6 +468,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const periodRef = useRef(period);
     const isLocalControlRef = useRef(false);
     const lastServerUpdateRef = useRef(0);
+    const lastSavedSecondsRef = useRef(0); // Naposledy uložená hodnota
 
     // Synchronizácia refov so state
     useEffect(() => {
@@ -511,11 +513,38 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         return displaySeconds > 0;
     };
 
+    // Funkcia na uloženie aktuálneho času do DB (počas behu)
+    const saveCurrentTimeToDB = async () => {
+        if (!window.db || !matchId) return;
+        if (!isRunningRef.current) return;
+        
+        const currentSeconds = displaySeconds;
+        
+        // Ukladáme len ak sa hodnota zmenila o viac ako 1 sekundu (aby sme nezahlcovali DB)
+        if (Math.abs(currentSeconds - lastSavedSecondsRef.current) < 1) return;
+        
+        lastSavedSecondsRef.current = currentSeconds;
+        
+        try {
+            const matchRef = doc(window.db, 'matches', matchId);
+            await updateDoc(matchRef, {
+                manualTimeOffset: currentSeconds,
+                updatedAt: Timestamp.now()
+            });
+        } catch (error) {
+            console.error('Chyba pri ukladaní času počas behu:', error);
+        }
+    };
+
     // Zastavenie časovača a uloženie (bez ukladania do DB - len lokálne zastavenie)
     const stopTimerLocally = () => {
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
+        }
+        if (saveIntervalRef.current) {
+            clearInterval(saveIntervalRef.current);
+            saveIntervalRef.current = null;
         }
         isRunningRef.current = false;
         setIsRunning(false);
@@ -528,10 +557,14 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         // Ak je poskytnutá finálna hodnota, použijeme ju, inak aktuálny displaySeconds
         const finalSeconds = finalSecondsOverride !== null ? finalSecondsOverride : displaySeconds;
     
-        // Zastavíme interval
+        // Zastavíme intervaly
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
+        }
+        if (saveIntervalRef.current) {
+            clearInterval(saveIntervalRef.current);
+            saveIntervalRef.current = null;
         }
     
         // Aktualizujeme lokálny stav na finálnu hodnotu
@@ -582,23 +615,26 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         
         // Automatické zastavenie na konci periódy
         if (clampedSeconds >= maxSeconds && totalSeconds >= maxSeconds) {
-            // Zastavíme časovač a uložíme konečnú hodnotu
-            // Použijeme clampedSeconds ako finálnu hodnotu
             stopTimerAndSave(clampedSeconds);
         }
     };
 
     // Spustenie časovača (lokálne)
     const startTimerLocal = async (startSeconds, startPeriod, serverStartedAt = null) => {
-        // Zastavíme existujúci interval
+        // Zastavíme existujúce intervaly
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
+        }
+        if (saveIntervalRef.current) {
+            clearInterval(saveIntervalRef.current);
+            saveIntervalRef.current = null;
         }
         
         // Nastavíme referenčné časy
         startTimeRef.current = Date.now();
         localStartOffsetRef.current = startSeconds;
+        lastSavedSecondsRef.current = startSeconds;
         
         // Nastavíme stav
         isRunningRef.current = true;
@@ -613,23 +649,31 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         // Nastavíme zobrazenie
         setDisplaySeconds(startSeconds);
         
-        // Spustíme interval
+        // Spustíme interval pre aktualizáciu zobrazenia (každých 100ms)
         intervalRef.current = setInterval(() => {
             updateDisplay();
         }, 100);
+        
+        // Spustíme interval pre pravidelné ukladanie do DB (každú 1 sekundu)
+        saveIntervalRef.current = setInterval(() => {
+            saveCurrentTimeToDB();
+        }, 1000);
     };
 
     // Spustenie časovača z DB (žiadne ukladanie do DB)
     const startTimerFromServer = (startSeconds, startPeriod, serverStartedAt) => {
-        // Zastavíme existujúci interval
+        // Zastavíme existujúce intervaly
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
         }
+        if (saveIntervalRef.current) {
+            clearInterval(saveIntervalRef.current);
+            saveIntervalRef.current = null;
+        }
         
         // Nastavíme referenčné časy - použijeme serverový startedAt
         if (serverStartedAt) {
-            // Serverový startedAt je timestamp, vypočítame koľko sekúnd už ubehlo
             const now = Date.now();
             const serverStartTime = serverStartedAt.toDate ? serverStartedAt.toDate().getTime() : serverStartedAt;
             const elapsedFromServer = Math.floor((now - serverStartTime) / 1000);
@@ -640,10 +684,12 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             startTimeRef.current = serverStartTime;
             localStartOffsetRef.current = startSeconds;
             setDisplaySeconds(finalSeconds);
+            lastSavedSecondsRef.current = finalSeconds;
         } else {
             startTimeRef.current = Date.now();
             localStartOffsetRef.current = startSeconds;
             setDisplaySeconds(startSeconds);
+            lastSavedSecondsRef.current = startSeconds;
         }
         
         // Nastavíme stav
@@ -656,10 +702,12 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             setPeriod(startPeriod);
         }
         
-        // Spustíme interval
+        // Spustíme interval pre aktualizáciu zobrazenia
         intervalRef.current = setInterval(() => {
             updateDisplay();
         }, 100);
+        
+        // Nespúšťame saveInterval pre serverový časovač - iba lokálny ukladá
     };
 
     // Synchronizácia s databázou (onSnapshot)
@@ -690,7 +738,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             }
             
             // SPRACOVANIE ČASU - aktualizujeme len ak nie sme v lokálnom behu
-            if (serverOffset !== displaySeconds && !isRunningRef.current) {
+            if (!isRunningRef.current && serverOffset !== displaySeconds) {
                 setDisplaySeconds(serverOffset);
             }
             
@@ -704,10 +752,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 if (isRunningRef.current && !isLocalControlRef.current) {
                     console.log('Zastavujem časovač podľa servera');
                     stopTimerLocally();
-                    // Aktualizujeme aj zobrazenie na serverovú hodnotu
-                    setDisplaySeconds(serverOffset);
-                } else if (!isRunningRef.current && serverOffset !== displaySeconds) {
-                    // Ak nie je spustený a serverová hodnota je iná, aktualizujeme
                     setDisplaySeconds(serverOffset);
                 }
             }
@@ -728,23 +772,33 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             return;
         }
         
-        // Zastavíme existujúci interval
+        // Zastavíme existujúce intervaly
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
+        }
+        if (saveIntervalRef.current) {
+            clearInterval(saveIntervalRef.current);
+            saveIntervalRef.current = null;
         }
         
         // Nastavíme lokálne spustenie
         startTimeRef.current = Date.now();
         localStartOffsetRef.current = currentSeconds;
+        lastSavedSecondsRef.current = currentSeconds;
         isRunningRef.current = true;
         setIsRunning(true);
         isLocalControlRef.current = true;
         
-        // Spustíme interval
+        // Spustíme interval pre aktualizáciu zobrazenia
         intervalRef.current = setInterval(() => {
             updateDisplay();
         }, 100);
+        
+        // Spustíme interval pre pravidelné ukladanie do DB
+        saveIntervalRef.current = setInterval(() => {
+            saveCurrentTimeToDB();
+        }, 1000);
         
         // Uložíme do databázy
         try {
@@ -786,7 +840,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         }
     };
 
-    // Manuálna zmena času - vylepšená verzia s kontrolami
+    // Manuálna zmena času
     const addTime = (deltaSeconds) => {
         let newSeconds = displaySeconds + deltaSeconds;
         const maxSeconds = periodDuration * 60;
@@ -799,6 +853,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         if (isRunningRef.current) {
             startTimeRef.current = Date.now();
             localStartOffsetRef.current = newSeconds;
+            lastSavedSecondsRef.current = newSeconds;
         }
         
         if (window.db && matchId) {
@@ -812,10 +867,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             
             if (!isRunningRef.current) {
                 updateData.pausedAt = Timestamp.now();
-            }
-            
-            if (isRunningRef.current && match?.startedAt) {
-                updateData.startedAt = match.startedAt;
             }
             
             updateDoc(doc(window.db, 'matches', matchId), updateData)
@@ -865,6 +916,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             setPeriod(newPeriod);
             setDisplaySeconds(0);
             isLocalControlRef.current = false;
+            lastSavedSecondsRef.current = 0;
             
             if (window.db && matchId) {
                 try {
@@ -896,6 +948,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             setPeriod(newPeriod);
             setDisplaySeconds(0);
             isLocalControlRef.current = false;
+            lastSavedSecondsRef.current = 0;
             
             if (window.db && matchId) {
                 try {
@@ -933,6 +986,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         const maxSeconds = (categorySettings?.periodDuration || 20) * 60;
         const clampedTime = Math.min(initialTime, maxSeconds);
         setDisplaySeconds(clampedTime);
+        lastSavedSecondsRef.current = clampedTime;
         
         const shouldBeRunning = match.status === 'in-progress';
         
@@ -947,6 +1001,10 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 clearInterval(intervalRef.current);
                 intervalRef.current = null;
             }
+            if (saveIntervalRef.current) {
+                clearInterval(saveIntervalRef.current);
+                saveIntervalRef.current = null;
+            }
             startTimeRef.current = null;
         }
         
@@ -954,6 +1012,10 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             if (intervalRef.current) {
                 clearInterval(intervalRef.current);
                 intervalRef.current = null;
+            }
+            if (saveIntervalRef.current) {
+                clearInterval(saveIntervalRef.current);
+                saveIntervalRef.current = null;
             }
         };
     }, [match?.id]);
