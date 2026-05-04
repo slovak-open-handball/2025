@@ -2133,6 +2133,9 @@ const MatchesHallApp = () => {
             return prev;
         });
         
+        // Premenná pre timeout, aby sme nehromadili viacero volaní
+        let pendingUpdateTimeout = null;
+        
         const unsubscribe = onSnapshot(matchesRef, (snapshot) => {
             const updatedStatuses = {};
             const updatedMatches = [];
@@ -2202,21 +2205,30 @@ const MatchesHallApp = () => {
                 setMatchStatuses(prev => ({ ...prev, ...updatedStatuses }));
             }
             
-            // 🔥 AK BOL AKÝKOĽVEK ZÁPAS V CELEJ DATABÁZE DOKONČENÝ, SPUSTÍME AKTUALIZÁCIU NÁZVOV TÍMOV
+            // 🔥 AK BOL AKÝKOĽVEK ZÁPAS V CELEJ DATABÁZE DOKONČENÝ, SPUSTÍME AKTUALIZÁCIU NÁZVOV TÍMOV S ONSKORENÍM 5 SEKÚND
             if (hasMatchCompletedAnywhere) {
                 console.log(`🏁 Zistené dokončenie ${completedMatchesList.length} zápasov v databáze!`);
                 completedMatchesList.forEach(m => {
                     console.log(`   ✅ ${m.id} (hala: ${m.hallId}) - ${m.category} - ${m.group}`);
                 });
-                console.log(`🌐 Spúšťam globálnu aktualizáciu názvov tímov pre všetky zápasy...`);
                 
-                setTimeout(() => {
+                // Zrušíme predchádzajúci pending timeout, ak existuje
+                if (pendingUpdateTimeout) {
+                    clearTimeout(pendingUpdateTimeout);
+                    console.log(`⏹️ Zrušený predchádzajúci pending timeout pre aktualizáciu`);
+                }
+                
+                // 🔥 PRIDANÉ 5-SEKUNDOVÉ ONSKORENIE
+                console.log(`⏰ Spúšťam aktualizáciu názvov tímov o 5 sekúnd...`);
+                pendingUpdateTimeout = setTimeout(() => {
+                    console.log(`🌐 Spúšťam globálnu aktualizáciu názvov tímov pre všetky zápasy (po 5s oneskorení)...`);
                     if (window.updateTeamNamesGlobally && typeof window.updateTeamNamesGlobally === 'function') {
                         window.updateTeamNamesGlobally();
                     } else {
                         console.error('❌ window.updateTeamNamesGlobally nie je dostupný!');
                     }
-                }, 100);
+                    pendingUpdateTimeout = null;
+                }, 5000); // 5000 milisekúnd = 5 sekúnd
             }
             
             // Zoradíme matches podľa času (len pre našu halu)
@@ -2252,7 +2264,19 @@ const MatchesHallApp = () => {
             console.error('Chyba pri real-time načítaní zápasov:', error);
         });
         
-        return unsubscribe;
+        // Cleanup funkcia pre timeout pri odpojení listenera
+        const cleanup = () => {
+            if (pendingUpdateTimeout) {
+                clearTimeout(pendingUpdateTimeout);
+                pendingUpdateTimeout = null;
+            }
+        };
+        
+        // Vrátime unsubscribe funkciu, ktorá zároveň vyčistí timeout
+        return () => {
+            cleanup();
+            unsubscribe();
+        };
     };
 
     // Načítanie farieb kategórií a názvov z databázy
