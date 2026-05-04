@@ -586,7 +586,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                                 type: 'number',
                                 value: manualHomeScore,
                                 onChange: (e) => setManualHomeScore(e.target.value),
-                                placeholder: '0',
                                 className: 'w-full px-4 py-3 text-center text-2xl font-bold border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none',
                                 min: '0',
                                 step: '1'
@@ -612,7 +611,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                                 type: 'number',
                                 value: manualAwayScore,
                                 onChange: (e) => setManualAwayScore(e.target.value),
-                                placeholder: '0',
                                 className: 'w-full px-4 py-3 text-center text-2xl font-bold border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none',
                                 min: '0',
                                 step: '1'
