@@ -452,8 +452,8 @@ const TeamMembersList = ({ teamName, categoryName }) => {
     );
 };
 
-// Komponent pre detail zápasu (upravený s dvoma boxmi vedľa seba)
-const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColors, groupsData }) => {
+// Komponent pre detail zápasu (s navigáciou medzi zápasmi)
+const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColors, groupsData, allMatches, currentMatchIndex, onNavigate }) => {
     const dateTime = formatMatchDateTime(match.scheduledTime);
     const isResultAvailable = match.homeScore !== undefined && match.awayScore !== undefined;
     const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
@@ -482,14 +482,18 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     // Formátovanie dátumu pre detail
     const formattedDate = dateTime?.dateObj ? formatDateHeader(dateTime.dateObj) : 'Dátum neznámy';
     
+    // Či existuje predchádzajúci a nasledujúci zápas
+    const hasPrevious = currentMatchIndex > 0;
+    const hasNext = currentMatchIndex < allMatches.length - 1;
+    
     return React.createElement(
         'div',
         { className: 'max-w-6xl mx-auto px-4 py-6' },
         
-        // Hlavička s tlačidlom späť
+        // Hlavička s tlačidlami navigácie
         React.createElement(
             'div',
-            { className: 'mb-6' },
+            { className: 'mb-6 flex flex-wrap items-center justify-between gap-3' },
             React.createElement(
                 'button',
                 {
@@ -498,10 +502,42 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 },
                 React.createElement('i', { className: 'fa-solid fa-arrow-left' }),
                 React.createElement('span', {}, 'Späť na zoznam zápasov')
+            ),
+            React.createElement(
+                'div',
+                { className: 'flex gap-3' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => hasPrevious && onNavigate('prev'),
+                        disabled: !hasPrevious,
+                        className: `flex items-center gap-2 px-4 py-2 rounded-lg transition-colors cursor-pointer ${
+                            hasPrevious 
+                                ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-chevron-left' }),
+                    React.createElement('span', {}, 'Predchádzajúci')
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => hasNext && onNavigate('next'),
+                        disabled: !hasNext,
+                        className: `flex items-center gap-2 px-4 py-2 rounded-lg transition-colors cursor-pointer ${
+                            hasNext 
+                                ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`
+                    },
+                    React.createElement('span', {}, 'Nasledujúci'),
+                    React.createElement('i', { className: 'fa-solid fa-chevron-right' })
+                )
             )
         ),
         
-        // Nadpis s názvom haly
+        // Nadpis s názvom haly a poradím zápasu
         React.createElement(
             'div',
             { className: 'text-center mb-6' },
@@ -511,10 +547,15 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 { className: 'flex items-center justify-center gap-2 mt-1' },
                 React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-500 text-sm' }),
                 React.createElement('span', { className: 'text-gray-600' }, hallInfo?.name || 'Športová hala')
+            ),
+            React.createElement(
+                'p',
+                { className: 'text-xs text-gray-400 mt-1' },
+                `Zápas ${currentMatchIndex + 1} z ${allMatches.length}`
             )
         ),
         
-        // Karta s detailom zápasu
+        // Karta s detailom zápasu (rovnaký ako predtým)
         React.createElement(
             'div',
             { className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden mb-6' },
@@ -604,14 +645,12 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 React.createElement(
                     'div',
                     { className: 'grid grid-cols-3 gap-4 items-center' },
-                    // Domáci tím
                     React.createElement(
                         'div',
                         { className: 'text-center' },
                         React.createElement('div', { className: 'text-xs text-gray-500 mb-1' }, 'DOMÁCI'),
                         React.createElement('div', { className: 'text-lg font-bold text-gray-800' }, homeTeamDisplay)
                     ),
-                    // Skóre
                     React.createElement(
                         'div',
                         { className: 'text-center' },
@@ -630,7 +669,6 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                 React.createElement('div', { className: 'text-xs text-gray-400 mt-1' }, 'Zápas ešte nebol odohraný')
                             )
                     ),
-                    // Hosťujúci tím
                     React.createElement(
                         'div',
                         { className: 'text-center' },
@@ -667,12 +705,10 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         React.createElement(
             'div',
             { className: 'grid grid-cols-1 md:grid-cols-2 gap-6' },
-            // Domáci tím - box
             React.createElement(TeamMembersList, {
                 teamName: homeTeamDisplay,
                 categoryName: categoryDisplayName
             }),
-            // Hosťujúci tím - box
             React.createElement(TeamMembersList, {
                 teamName: awayTeamDisplay,
                 categoryName: categoryDisplayName
@@ -697,6 +733,10 @@ const MatchesHallApp = () => {
     // Nové stavy pre detail zápasu
     const [selectedMatch, setSelectedMatch] = useState(null);
     const [showingDetail, setShowingDetail] = useState(false);
+
+    // Pridajte tieto stavy k existujúcim
+    const [allMatchesList, setAllMatchesList] = useState([]); // Zoznam všetkých zápasov pre danú halu
+    const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
 
     // Načítanie farieb kategórií a názvov z databázy
     const loadCategoryColors = async () => {
@@ -789,23 +829,22 @@ const MatchesHallApp = () => {
         setTeamNames(names);
     };
 
-    // Načítanie zápasov
     const loadMatches = async (hallId) => {
         if (!window.db) {
             setError('Databáza nie je inicializovaná');
             setLoading(false);
             return;
         }
-
+    
         if (!hallId) {
             setError('Používateľ nemá priradenú žiadnu halu');
             setLoading(false);
             return;
         }
-
+    
         setLoading(true);
         setError(null);
-
+    
         try {
             const matchesRef = collection(window.db, 'matches');
             const querySnapshot = await getDocs(matchesRef);
@@ -836,6 +875,7 @@ const MatchesHallApp = () => {
             });
             
             setMatches(hallMatches);
+            setAllMatchesList(hallMatches); // Uložíme zoznam všetkých zápasov
             processTeamNames(hallMatches);
             
         } catch (err) {
@@ -847,10 +887,27 @@ const MatchesHallApp = () => {
     };
 
     // Handler pre kliknutie na Detail
-    const handleDetailClick = (match) => {
+    const handleDetailClick = (match, index) => {
         setSelectedMatch(match);
+        setCurrentMatchIndex(index);
         setShowingDetail(true);
         window.scrollTo(0, 0);
+    };
+
+    // Pridajte funkciu pre navigáciu medzi zápasmi
+    const handleNavigateMatch = (direction) => {
+        let newIndex;
+        if (direction === 'prev') {
+            newIndex = currentMatchIndex - 1;
+        } else {
+            newIndex = currentMatchIndex + 1;
+        }
+        
+        if (newIndex >= 0 && newIndex < allMatchesList.length) {
+            setSelectedMatch(allMatchesList[newIndex]);
+            setCurrentMatchIndex(newIndex);
+            window.scrollTo(0, 0);
+        }
     };
 
     // Handler pre návrat z detailu
@@ -916,7 +973,10 @@ const MatchesHallApp = () => {
             onBack: handleBackToList,
             hallInfo: hallInfo,
             categoryDrawColors: categoryDrawColors,
-            groupsData: groupsData
+            groupsData: groupsData,
+            allMatches: allMatchesList,
+            currentMatchIndex: currentMatchIndex,
+            onNavigate: handleNavigateMatch
         });
     }
 
@@ -1160,7 +1220,15 @@ const MatchesHallApp = () => {
                                             React.createElement(
                                                 'button',
                                                 {
-                                                    onClick: () => handleDetailClick(match),
+                                                    onClick: () => {
+                                                        // Vypočítame globálny index zápasu
+                                                        let globalIndex = 0;
+                                                        for (let i = 0; i < dayIndex; i++) {
+                                                            globalIndex += matchesByDay[i].matches.length;
+                                                        }
+                                                        globalIndex += matchIndex;
+                                                        handleDetailClick(match, globalIndex);
+                                                    },
                                                     className: 'bg-gray-200 hover:bg-gray-300 text-gray-900 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer',
                                                     style: {
                                                         fontWeight: '500'
