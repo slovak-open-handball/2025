@@ -927,38 +927,17 @@ let isTeamNameReplacerInitialized = false;
         // ============================================================
         for (const team of teamsInAdvanced) {
             // Skúsime namapovať identifikátor na skutočný názov
+            // POUŽIJEME team.name NAMIESTO team.id
             const mappedName = getTeamNameByDisplayId(team.name);
             if (mappedName && mappedName !== team.name) {
                 log(`   🔄 Mapovanie tímu: "${team.name}" → "${mappedName}"`);
-                team.originalId = team.id;
-                team.id = mappedName;
-                team.name = mappedName;
+                team.originalId = team.id;  // Pôvodné ID si odložíme
+                team.id = mappedName;       // ID prepíšeme na mapovaný názov
+                team.name = mappedName;     // Aj name nastavíme na mapovaný názov
             } else if (mappedName && mappedName === team.name) {
                 log(`   ℹ️ Tím "${team.name}" už má správny názov`);
             } else {
-                // 🔥 AK SA NEPODARILO ZMAPOVAŤ, SKÚSIME INÝ SPÔSOB
-                // Možno je to už správny názov, alebo ho treba nájsť v základných skupinách
-                
-                // Skúsime nájsť podľa písmena a pozície
-                const parts = team.name.trim().split(' ');
-                if (parts.length >= 2) {
-                    const lastPart = parts[parts.length - 1];
-                    const letterMatch = lastPart.match(/^([A-Za-z]+)(\d+)$/);
-                    if (letterMatch) {
-                        const groupLetter = letterMatch[1].toUpperCase();
-                        const position = parseInt(letterMatch[2], 10);
-                
-                        // Vytvoríme správny identifikátor a skúsime znova
-                        const displayId = `${cleanCategoryName(categoryName)} ${position}${groupLetter}`;
-                        const retryMapped = getTeamNameByDisplayId(displayId);
-                        if (retryMapped && retryMapped !== team.name) {
-                            log(`   🔄 Mapovanie (fallback): "${team.name}" → "${retryMapped}"`);
-                            team.originalId = team.id;
-                            team.id = retryMapped;
-                            team.name = retryMapped;
-                        }
-                    }
-                }
+                log(`   ⚠️ Tím "${team.name}" nebolo možné namapovať, používam pôvodný názov`);
             }
         }
         
@@ -1168,8 +1147,8 @@ let isTeamNameReplacerInitialized = false;
                 id: `transferred_${Date.now()}_${Math.random()}`,
                 homeTeamIdentifier: transferred.homeTeam,
                 awayTeamIdentifier: transferred.awayTeam,
-                homeTeamName: transferred.homeTeam,
-                awayTeamName: transferred.awayTeam,
+                homeTeamName: transferred.homeTeam,  // 🔥 NÁZOV TÍMU
+                awayTeamName: transferred.awayTeam,  // 🔥 NÁZOV TÍMU
                 homeScore: transferred.homeScore,
                 awayScore: transferred.awayScore,
                 status: 'completed',
@@ -1179,22 +1158,22 @@ let isTeamNameReplacerInitialized = false;
             });
         }
         
-        // 2. Zápasy z nadstavbovej skupiny - POUŽIJEME ZMAPOVANÉ NÁZVY Z teamsInAdvanced
+        // 2. Zápasy z nadstavbovej skupiny - S MAPOVANÝMI NÁZVAMI
         for (const match of advancedMatches) {
-            // 🔥 KĽÚČOVÉ: Hľadáme tímy v už zmapovanom zozname teamsInAdvanced
+            // 🔥 KĽÚČOVÉ: MAPUJEME NÁZVY TÍMOV CEZ UŽ ZMAPOVANÉ TÍMY V teamsInAdvanced
             let homeTeamName = match.homeTeamIdentifier;
             let awayTeamName = match.awayTeamIdentifier;
             
-            // Najprv skúsime nájsť v zmapovaných tímoch (cez originalId alebo id)
+            // Najprv skúsime nájsť v už zmapovaných tímoch (cez originalId)
             const homeTeamMapped = teamsInAdvanced.find(t => 
-                t.originalId === match.homeTeamIdentifier || t.id === match.homeTeamIdentifier || t.name === match.homeTeamIdentifier
+                t.originalId === match.homeTeamIdentifier || t.id === match.homeTeamIdentifier
             );
             const awayTeamMapped = teamsInAdvanced.find(t => 
-                t.originalId === match.awayTeamIdentifier || t.id === match.awayTeamIdentifier || t.name === match.awayTeamIdentifier
+                t.originalId === match.awayTeamIdentifier || t.id === match.awayTeamIdentifier
             );
             
             if (homeTeamMapped) {
-                homeTeamName = homeTeamMapped.name;  // ✅ POUŽIJEME ZMAPOVANÝ NÁZOV
+                homeTeamName = homeTeamMapped.name;
             } else {
                 // Ak nie je v zmapovaných, skúsime getTeamNameByDisplayId
                 const mapped = getTeamNameByDisplayId(match.homeTeamIdentifier);
@@ -1204,7 +1183,7 @@ let isTeamNameReplacerInitialized = false;
             }
             
             if (awayTeamMapped) {
-                awayTeamName = awayTeamMapped.name;  // ✅ POUŽIJEME ZMAPOVANÝ NÁZOV
+                awayTeamName = awayTeamMapped.name;
             } else {
                 const mapped = getTeamNameByDisplayId(match.awayTeamIdentifier);
                 if (mapped && mapped !== match.awayTeamIdentifier) {
@@ -1212,7 +1191,6 @@ let isTeamNameReplacerInitialized = false;
                 }
             }
             
-            // Získanie skóre (rovnaké ako predtým)
             let homeScore = 0, awayScore = 0;
             if (match.status === 'completed') {
                 if (match.finalScore && !match.forfeitResult) {
@@ -1233,8 +1211,8 @@ let isTeamNameReplacerInitialized = false;
                 id: match.id,
                 homeTeamIdentifier: match.homeTeamIdentifier,
                 awayTeamIdentifier: match.awayTeamIdentifier,
-                homeTeamName: homeTeamName,      // 🔥 TERAZ UŽ SPRÁVNY NÁZOV
-                awayTeamName: awayTeamName,      // 🔥 TERAZ UŽ SPRÁVNY NÁZOV
+                homeTeamName: homeTeamName,  // 🔥 UŽ ZMAPOVANÝ NÁZOV TÍMU
+                awayTeamName: awayTeamName,  // 🔥 UŽ ZMAPOVANÝ NÁZOV TÍMU
                 homeScore: homeScore,
                 awayScore: awayScore,
                 status: match.status,
