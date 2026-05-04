@@ -476,6 +476,8 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     useEffect(() => { periodRef.current = period; }, [period]);
     useEffect(() => { displaySecondsRef.current = displaySeconds; }, [displaySeconds]);
 
+    // V MatchTimer komponente, nájdite funkciu handleForfeit a nahraďte ju touto verziou:
+
     const handleForfeit = async (team) => {
         if (!window.db || !matchId) return;
         
@@ -500,6 +502,12 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             }
             
             const matchRef = doc(window.db, 'matches', matchId);
+            
+            // 🔥 DÔLEŽITÉ: Ukladáme v štruktúre, ktorú očakáva match-tracker
+            // match-tracker v prvom kóde používa:
+            // - match.forfeitResult.isForfeit
+            // - match.forfeitResult.home
+            // - match.forfeitResult.away
             await updateDoc(matchRef, {
                 homeScore: homeScore,
                 awayScore: awayScore,
@@ -507,6 +515,14 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 isForfeit: true,
                 forfeitTeam: team,
                 forfeitAt: Timestamp.now(),
+                // 🔥 PRIDANÉ: Štruktúra pre match-tracker
+                forfeitResult: {
+                    isForfeit: true,
+                    home: homeScore,
+                    away: awayScore,
+                    team: team,
+                    timestamp: Timestamp.now()
+                },
                 manualTimeOffset: 0,
                 startedAt: null,
                 pausedAt: null,
