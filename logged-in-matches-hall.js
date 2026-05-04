@@ -1126,7 +1126,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     );
 };
 
-// Hlavný komponent MatchesHallApp - upravený s podporou URL parametrov
+// Hlavný komponent MatchesHallApp - upravený s podporou URL parametrov a real-time aktualizáciou farieb tlačidiel
 const MatchesHallApp = () => {
     const [matches, setMatches] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -1144,6 +1144,9 @@ const MatchesHallApp = () => {
     const [showingDetail, setShowingDetail] = useState(false);
     const [allMatchesList, setAllMatchesList] = useState([]);
     const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+    
+    // Stav pre real-time aktualizáciu statusov zápasov
+    const [matchStatuses, setMatchStatuses] = useState({});
     
     // Funkcia na vytvorenie hash pre zápas
     const createMatchHash = (homeTeamId, awayTeamId) => {
@@ -1209,6 +1212,43 @@ const MatchesHallApp = () => {
         setShowingDetail(false);
         setSelectedMatch(null);
         return false;
+    };
+    
+    // Funkcia na nastavenie real-time listenera pre zmeny statusov zápasov
+    const setupMatchesRealTimeListener = (hallId) => {
+        if (!window.db || !hallId) return;
+        
+        const matchesRef = collection(window.db, 'matches');
+        
+        // Vytvoríme dotaz na zápasy v danej hale
+        const unsubscribe = onSnapshot(matchesRef, (snapshot) => {
+            const updatedStatuses = {};
+            
+            snapshot.forEach((doc) => {
+                const match = {
+                    id: doc.id,
+                    ...doc.data()
+                };
+                
+                if (match.hallId === hallId) {
+                    updatedStatuses[match.id] = match.status || 'scheduled';
+                    
+                    // Aktualizujeme aj matches a allMatchesList
+                    setMatches(prevMatches => 
+                        prevMatches.map(m => m.id === match.id ? { ...m, status: match.status } : m)
+                    );
+                    setAllMatchesList(prevList => 
+                        prevList.map(m => m.id === match.id ? { ...m, status: match.status } : m)
+                    );
+                }
+            });
+            
+            setMatchStatuses(updatedStatuses);
+        }, (error) => {
+            console.error('Chyba pri real-time načítaní statusov zápasov:', error);
+        });
+        
+        return unsubscribe;
     };
 
     // Načítanie farieb kategórií a názvov z databázy
@@ -1351,12 +1391,25 @@ const MatchesHallApp = () => {
             setAllMatchesList(hallMatches);
             processTeamNames(hallMatches);
             
+            // Nastavíme počiatočné statusy
+            const initialStatuses = {};
+            hallMatches.forEach(match => {
+                initialStatuses[match.id] = match.status || 'scheduled';
+            });
+            setMatchStatuses(initialStatuses);
+            
             // Po načítaní zápasov skúsime zobraziť detail podľa URL
             const matchShown = showMatchFromUrl(hallMatches);
             if (!matchShown) {
                 // Ak sa nezobrazil detail, ukončíme loading
                 setLoading(false);
             }
+            
+            // Spustíme real-time listener pre aktualizáciu statusov
+            const unsubscribe = setupMatchesRealTimeListener(hallId);
+            
+            // Uložíme unsubscribe funkciu pre cleanup
+            window.__matchesRealTimeUnsubscribe = unsubscribe;
             
         } catch (err) {
             console.error('Chyba pri načítaní zápasov:', err);
@@ -1448,6 +1501,15 @@ const MatchesHallApp = () => {
         window.addEventListener('hashchange', handleHashChange);
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, [allMatchesList, showingDetail, selectedMatch]);
+    
+    // Cleanup real-time listenera pri odmontovaní komponentu
+    useEffect(() => {
+        return () => {
+            if (window.__matchesRealTimeUnsubscribe && typeof window.__matchesRealTimeUnsubscribe === 'function') {
+                window.__matchesRealTimeUnsubscribe();
+            }
+        };
+    }, []);
 
     // Inicializácia
     useEffect(() => {
@@ -1474,6 +1536,34 @@ const MatchesHallApp = () => {
             return () => window.removeEventListener('globalDataUpdated', init);
         }
     }, []);
+
+    // Zobrazenie tlačidla Detail s dynamickou farbou
+    const renderDetailButton = (match, dayIndex, matchIndex) => {
+        const matchStatus = matchStatuses[match.id] || match.status || 'scheduled';
+        const isInProgress = matchStatus === 'in-progress';
+        
+        const buttonClass = isInProgress 
+            ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer'
+            : 'bg-gray-200 hover:bg-gray-300 text-gray-900 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer';
+        
+        return React.createElement(
+            'button',
+            {
+                onClick: () => {
+                    // Výpočet globálneho indexu zápasu
+                    let globalIndex = 0;
+                    for (let i = 0; i < dayIndex; i++) {
+                        globalIndex += matchesByDay[i].matches.length;
+                    }
+                    globalIndex += matchIndex;
+                    handleDetailClick(match, globalIndex);
+                },
+                className: buttonClass,
+                style: { fontWeight: '500' }
+            },
+            'Detail'
+        );
+    };
 
     // Zoskupenie zápasov podľa dní
     const getMatchesByDay = () => {
@@ -1751,25 +1841,7 @@ const MatchesHallApp = () => {
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3 whitespace-nowrap text-center' },
-                                            React.createElement(
-                                                'button',
-                                                {
-                                                    onClick: () => {
-                                                        // Výpočet globálneho indexu zápasu
-                                                        let globalIndex = 0;
-                                                        for (let i = 0; i < dayIndex; i++) {
-                                                            globalIndex += matchesByDay[i].matches.length;
-                                                        }
-                                                        globalIndex += matchIndex;
-                                                        handleDetailClick(match, globalIndex);
-                                                    },
-                                                    className: match.status === 'in-progress' 
-                                                        ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer'
-                                                        : 'bg-gray-200 hover:bg-gray-300 text-gray-900 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer',
-                                                    style: { fontWeight: '500' }
-                                                },
-                                                'Detail'
-                                            )
+                                            renderDetailButton(match, dayIndex, matchIndex)
                                         )
                                     )
                                 );
