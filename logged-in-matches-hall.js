@@ -25,6 +25,12 @@ const formatDateHeader = (date) => {
     return `${dayName} ${day}. ${month}. ${year}`;
 };
 
+// Konštanty pre fialové farby (jednotné pre všetky play-off a placement zápasy)
+const ELIMINATION_COLORS = {
+    backgroundColor: '#F3E8FF', // bledofialová
+    textColor: '#6B21A5'        // tmavofialová
+};
+
 // Funkcia na získanie farby kategórie z databázy
 const getCategoryDrawColor = (categoryId) => {
     if (!window.categoryDrawColors || !categoryId) return '#3B82F6';
@@ -81,24 +87,26 @@ const getGroupTypeColors = (groupName, categoryId, groupsData) => {
     return result;
 };
 
-// Funkcia na získanie farieb pre zápas (podľa typu zápasu a skupiny)
-const getMatchColors = (match, groupsData) => {
-    // Zápas o umiestnenie (placement match)
-    if (match.isPlacementMatch) {
-        return {
-            backgroundColor: '#F3E8FF',
-            textColor: '#6B21A5'
-        };
-    }
+// Funkcia na kontrolu, či ide o eliminačný zápas (play-off alebo o umiestnenie)
+const isEliminationMatch = (match) => {
+    // Zápas o umiestnenie
+    if (match.isPlacementMatch) return true;
     
     // Zápas z pavúka (playoff / elimination)
     if (match.matchType === 'Playoff' || match.matchType === 'Semifinále' || 
         match.matchType === 'Finále' || match.matchType === 'Štvrťfinále' ||
         match.matchType === 'Osemfinále' || (match.matchType && match.matchType.includes('finále'))) {
-        return {
-            backgroundColor: '#F3E8FF',
-            textColor: '#6B21A5'
-        };
+        return true;
+    }
+    
+    return false;
+};
+
+// Funkcia na získanie farieb pre zápas
+const getMatchColors = (match, groupsData) => {
+    // Eliminačné zápasy (play-off aj o umiestnenie) - jednotná fialová farba
+    if (isEliminationMatch(match)) {
+        return ELIMINATION_COLORS;
     }
     
     // Podľa skupiny z databázy
@@ -134,7 +142,7 @@ const MatchesHallApp = () => {
     const [userProfile, setUserProfile] = useState(null);
     const [teamNames, setTeamNames] = useState({});
     const [categoryDrawColors, setCategoryDrawColors] = useState({});
-    const [groupsData, setGroupsData] = useState({}); // Dáta o skupinách z databázy
+    const [groupsData, setGroupsData] = useState({});
 
     // Načítanie farieb kategórií z databázy
     const loadCategoryColors = async () => {
@@ -173,7 +181,7 @@ const MatchesHallApp = () => {
             if (groupsSnap.exists()) {
                 const data = groupsSnap.data();
                 setGroupsData(data);
-                window.groupsData = data; // Uloženie do globálneho priestoru
+                window.groupsData = data;
                 console.log("[Groups Data] Načítané skupiny:", data);
             }
         } catch (err) {
@@ -284,7 +292,7 @@ const MatchesHallApp = () => {
                 const hallId = window.globalUserProfileData.hallId;
                 if (hallId) {
                     await loadCategoryColors();
-                    await loadGroupsData(); // Načítanie skupín
+                    await loadGroupsData();
                     await loadHallInfo(hallId);
                     await loadMatches(hallId);
                 } else {
@@ -426,12 +434,12 @@ const MatchesHallApp = () => {
                                 const categoryColor = getCategoryDrawColor(match.categoryId);
                                 const lighterCategoryColor = getLighterColor(categoryColor);
                                 
-                                // Získanie farieb pre daný zápas (podľa typu skupiny z databázy)
+                                // Získanie farieb pre daný zápas
                                 const matchColors = getMatchColors(match, groupsData);
                                 
                                 const infoTags = [];
                                 
-                                // Tag pre typ zápasu (matchType)
+                                // Tag pre typ zápasu (matchType) - eliminačné zápasy majú fialovú farbu
                                 if (match.matchType && !match.isPlacementMatch) {
                                     infoTags.push(
                                         React.createElement('span', { 
@@ -447,15 +455,15 @@ const MatchesHallApp = () => {
                                     ));
                                 }
                                 
-                                // Tag pre zápas o umiestnenie
+                                // Tag pre zápas o umiestnenie - používa rovnakú fialovú farbu
                                 if (match.isPlacementMatch) {
                                     infoTags.push(
                                         React.createElement('span', { 
                                             key: 'placement',
                                             className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
                                             style: {
-                                                backgroundColor: '#F3E8FF',
-                                                color: '#6B21A5',
+                                                backgroundColor: ELIMINATION_COLORS.backgroundColor,
+                                                color: ELIMINATION_COLORS.textColor,
                                                 fontWeight: '500'
                                             }
                                         },
@@ -463,9 +471,15 @@ const MatchesHallApp = () => {
                                     ));
                                 }
                                 
-                                // Tag pre skupinu - s farbou podľa typu z databázy
+                                // Tag pre skupinu
                                 if (match.groupName) {
-                                    const groupColors = getGroupTypeColors(match.groupName, match.categoryId, groupsData);
+                                    // Pre eliminačné zápasy používame fialovú farbu aj pre skupinu
+                                    let groupColors;
+                                    if (isEliminationMatch(match)) {
+                                        groupColors = ELIMINATION_COLORS;
+                                    } else {
+                                        groupColors = getGroupTypeColors(match.groupName, match.categoryId, groupsData);
+                                    }
                                     
                                     infoTags.push(
                                         React.createElement('span', { 
