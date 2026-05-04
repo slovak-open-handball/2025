@@ -282,12 +282,43 @@ const TeamMembersList = ({ teamName, categoryName, teamSide }) => {
             const result = await loadTeamMembers(teamName, categoryName);
             // Filtrujeme iba hráčov a členov RT (bez šoférov)
             const filteredMembers = result.filter(m => m.type === 'Hráč' || m.type === 'Člen RT (muž)' || m.type === 'Člen RT (žena)');
-            setMembers(filteredMembers);
+            
+            // Usporiadame: najprv členovia RT, potom hráči
+            const rtMembers = filteredMembers.filter(m => m.type !== 'Hráč');
+            const players = filteredMembers.filter(m => m.type === 'Hráč');
+            const sortedMembers = [...rtMembers, ...players];
+            
+            setMembers(sortedMembers);
             setLoading(false);
         };
         
         fetchMembers();
     }, [teamName, categoryName]);
+    
+    // Funkcia pre kliknutie na člena
+    const handleMemberClick = (member, index, arrayName) => {
+        console.log(`=== KLIKNUTÉ NA ČLENA ===`);
+        console.log(`Meno: ${member.firstName} ${member.lastName}`);
+        console.log(`Typ: ${member.type}`);
+        console.log(`Poradie v poli: ${index + 1}.`);
+        console.log(`Názov poľa: ${arrayName}`);
+        console.log(`Celkový počet v tomto poli: ${members.length}`);
+        console.log(`Tím: ${teamName}`);
+        console.log(`Kategória: ${categoryName}`);
+        console.log(`========================`);
+    };
+    
+    // Získanie ikonky podľa typu člena
+    const getMemberIcon = (memberType) => {
+        if (memberType === 'Hráč') {
+            return React.createElement('i', { className: 'fa-solid fa-user text-gray-500 mr-2', style: { width: '16px' } });
+        } else if (memberType === 'Člen RT (muž)') {
+            return React.createElement('i', { className: 'fa-solid fa-user-tie text-blue-500 mr-2', style: { width: '16px' } });
+        } else if (memberType === 'Člen RT (žena)') {
+            return React.createElement('i', { className: 'fa-solid fa-user-tie text-red-500 mr-2', style: { width: '16px' } });
+        }
+        return React.createElement('i', { className: 'fa-solid fa-user text-gray-500 mr-2', style: { width: '16px' } });
+    };
     
     if (loading) {
         return React.createElement(
@@ -314,10 +345,9 @@ const TeamMembersList = ({ teamName, categoryName, teamSide }) => {
         );
     }
     
-    // Zoskupenie členov podľa typu
+    // Rozdelenie členov pre zobrazenie v skupinách
+    const rtMembers = members.filter(m => m.type !== 'Hráč');
     const players = members.filter(m => m.type === 'Hráč');
-    const staffMen = members.filter(m => m.type === 'Člen RT (muž)');
-    const staffWomen = members.filter(m => m.type === 'Člen RT (žena)');
     
     return React.createElement(
         'div',
@@ -339,9 +369,40 @@ const TeamMembersList = ({ teamName, categoryName, teamSide }) => {
         React.createElement(
             'div',
             { className: 'p-3' },
-            players.length > 0 && React.createElement(
+            // Členovia RT (spoločne)
+            rtMembers.length > 0 && React.createElement(
                 'div',
                 { className: 'mb-3' },
+                React.createElement(
+                    'div',
+                    { className: 'text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1' },
+                    'Realizačný tím (' + rtMembers.length + ')'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'space-y-1' },
+                    rtMembers.map((member, idx) => {
+                        const fullName = (member.firstName + ' ' + member.lastName).trim() || 'Neznámy';
+                        // Zistenie názvu poľa pre konzolu
+                        const arrayName = member.type === 'Člen RT (muž)' ? 'menTeamMemberDetails' : 'womenTeamMemberDetails';
+                        
+                        return React.createElement(
+                            'div',
+                            { 
+                                key: 'rt-' + idx, 
+                                className: 'text-sm text-gray-700 cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors',
+                                onClick: () => handleMemberClick(member, idx, arrayName)
+                            },
+                            getMemberIcon(member.type),
+                            fullName
+                        );
+                    })
+                )
+            ),
+            // Hráči
+            players.length > 0 && React.createElement(
+                'div',
+                { className: 'mb-2' },
                 React.createElement(
                     'div',
                     { className: 'text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1' },
@@ -352,57 +413,18 @@ const TeamMembersList = ({ teamName, categoryName, teamSide }) => {
                     { className: 'space-y-1' },
                     players.map((member, idx) => {
                         const fullName = (member.firstName + ' ' + member.lastName).trim() || 'Neznámy';
-                        // Číslo dresu PRED menom
-                        const jerseyDisplay = member.jerseyNumber ? '#' + member.jerseyNumber + ' ' : '';
+                        // Číslo dresu PRED menom (bez znaku #)
+                        const jerseyDisplay = member.jerseyNumber ? member.jerseyNumber + ' ' : '';
                         
                         return React.createElement(
                             'div',
-                            { key: 'player-' + idx, className: 'text-sm text-gray-700' },
+                            { 
+                                key: 'player-' + idx, 
+                                className: 'text-sm text-gray-700 cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors',
+                                onClick: () => handleMemberClick(member, idx, 'playerDetails')
+                            },
+                            getMemberIcon(member.type),
                             jerseyDisplay + fullName
-                        );
-                    })
-                )
-            ),
-            staffMen.length > 0 && React.createElement(
-                'div',
-                { className: 'mb-3' },
-                React.createElement(
-                    'div',
-                    { className: 'text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1' },
-                    'Realizačný tím - muži (' + staffMen.length + ')'
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'space-y-1' },
-                    staffMen.map((member, idx) => {
-                        const fullName = (member.firstName + ' ' + member.lastName).trim() || 'Neznámy';
-                        
-                        return React.createElement(
-                            'div',
-                            { key: 'staff-m-' + idx, className: 'text-sm text-gray-700' },
-                            fullName
-                        );
-                    })
-                )
-            ),
-            staffWomen.length > 0 && React.createElement(
-                'div',
-                { className: 'mb-2' },
-                React.createElement(
-                    'div',
-                    { className: 'text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1' },
-                    'Realizačný tím - ženy (' + staffWomen.length + ')'
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'space-y-1' },
-                    staffWomen.map((member, idx) => {
-                        const fullName = (member.firstName + ' ' + member.lastName).trim() || 'Neznámy';
-                        
-                        return React.createElement(
-                            'div',
-                            { key: 'staff-w-' + idx, className: 'text-sm text-gray-700' },
-                            fullName
                         );
                     })
                 )
