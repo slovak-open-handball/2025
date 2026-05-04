@@ -1038,10 +1038,7 @@ let isTeamNameReplacerInitialized = false;
     // ============================================================
     function createAdvancedGroupTable(categoryName, groupName, baseGroupName, forceRefresh = false) {
 
-        // ============================================================
-        const categorySetting = categorySettingsCache[categoryName];
-        const carryOverEnabled = categorySetting?.carryOverPoints ?? false;
-    
+        // ============================================================    
         log(`\n🔧 KONTROLA NASTAVENÍ PRE KATEGÓRIU: "${categoryName}"`);
         log(`   categorySetting:`, categorySetting);
         log(`   carryOverEnabled: ${carryOverEnabled} (${carryOverEnabled ? 'ZAPNUTÉ ✅' : 'VYPNUTÉ ❌'})`);
