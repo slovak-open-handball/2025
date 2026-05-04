@@ -974,6 +974,17 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     React.createElement(
                         'button',
                         {
+                            onClick: () => {
+                                setShowForfeitModal(false);
+                                setSelectedForfeitTeam(null);
+                            },
+                            className: 'flex-1 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors cursor-pointer text-center'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
                             onClick: () => handleForfeit(),
                             disabled: !selectedForfeitTeam,
                             className: `flex-1 py-2 rounded-lg font-semibold transition-colors text-center ${
@@ -983,17 +994,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                             }`
                         },
                         'Potvrdiť'
-                    ),
-                    React.createElement(
-                        'button',
-                        {
-                            onClick: () => {
-                                setShowForfeitModal(false);
-                                setSelectedForfeitTeam(null);
-                            },
-                            className: 'flex-1 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors cursor-pointer text-center'
-                        },
-                        'Zrušiť'
                     )
                 )
             )
