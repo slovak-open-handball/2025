@@ -135,6 +135,8 @@ const updateTeamNamesInMatches = async (matchesList, setTeamNames, currentTeamNa
     const updatedNames = {};
     let needsUpdate = false;
     
+    console.log(`🔄 Spúšťam aktualizáciu názvov tímov pre ${matchesList.length} zápasov...`);
+    
     for (const match of matchesList) {
         // Získanie názvu kategórie pre tento zápas
         let categoryName = match.categoryName;
@@ -2433,6 +2435,7 @@ const MatchesHallApp = () => {
 
     const globalUpdateTeamNames = async () => {
         if (allMatchesList.length > 0) {
+            console.log('🌐 Spúšťam globálnu aktualizáciu názvov tímov pre všetky zápasy...');
             await updateTeamNamesInMatches(allMatchesList, setTeamNames, teamNames);
         }
     };
@@ -2472,15 +2475,20 @@ const MatchesHallApp = () => {
         }
     };
 
+    // Upravená funkcia refreshMatchInList v hlavnom komponente MatchesHallApp
     const refreshMatchInList = (matchId, updates) => {
-        // Ak je zápas ukončený, aktualizujeme názvy tímov
-        if (updates.status === 'completed') {
-            console.log(`🏁 Zápas ${matchId} bol ukončený - spúšťam aktualizáciu názvov tímov`);
+        // 🔥 Ak je zápas ukončený (COMPLETED), aktualizujeme názvy tímov
+        const isNowCompleted = updates.status === 'completed';
+        const wasCompleted = matches.find(m => m.id === matchId)?.status === 'completed';
+        
+        if (isNowCompleted && !wasCompleted) {
+            console.log(`🏁 Zápas ${matchId} bol práve ukončený - spúšťam aktualizáciu názvov tímov`);
+            // Spustíme aktualizáciu názvov tímov okamžite
             setTimeout(() => {
                 if (window.updateTeamNamesGlobally && typeof window.updateTeamNamesGlobally === 'function') {
                     window.updateTeamNamesGlobally();
                 }
-            }, 500);
+            }, 100);
         }
         
         // 🔥 SPRACOVANIE AKTUALIZÁCIE NÁZVOV TÍMOV Z DETAILU
