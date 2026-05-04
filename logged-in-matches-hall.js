@@ -452,7 +452,7 @@ const TeamMembersList = ({ teamName, categoryName }) => {
     );
 };
 
-// Komponent pre športový časovač
+// Komponent pre športový časovač (OPRAVENÝ)
 const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const [isRunning, setIsRunning] = useState(false);
     const [time, setTime] = useState({ minutes: 0, seconds: 0 });
@@ -460,44 +460,54 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const [totalPeriods, setTotalPeriods] = useState(1);
     const [periodDuration, setPeriodDuration] = useState(20);
     const intervalRef = useRef(null);
-    const startTimeRef = useRef(null); // Čas spustenia časovača (timestamp)
-    const accumulatedTimeRef = useRef(0); // Nazbieraný čas v sekundách pred posledným spustením
+    const startTimeRef = useRef(null);
+    const accumulatedTimeRef = useRef(0);
     const isUpdatingFromServerRef = useRef(false);
     const lastServerStateRef = useRef({ isRunning: false, accumulatedSeconds: 0, period: 1 });
-    
-    // Pomocná funkcia na prevod MM:SS na sekundy
+
     const timeToSeconds = (minutes, seconds) => minutes * 60 + seconds;
-    
-    // Pomocná funkcia na prevod sekúnd na MM:SS
     const secondsToTime = (totalSeconds) => {
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = totalSeconds % 60;
         return { minutes, seconds };
     };
-    
-    // Výpočet aktuálneho času z diferenčných hodnôt
-    const calculateCurrentTime = () => {
+
+    // Aktualizácia lokálneho času z diferenčných hodnôt
+    const updateLocalTime = () => {
+        let totalSeconds;
         if (isRunning && startTimeRef.current !== null) {
             const now = Date.now();
             const elapsedSeconds = Math.floor((now - startTimeRef.current) / 1000);
-            const totalSeconds = accumulatedTimeRef.current + elapsedSeconds;
-            return secondsToTime(totalSeconds);
+            totalSeconds = accumulatedTimeRef.current + elapsedSeconds;
         } else {
-            return secondsToTime(accumulatedTimeRef.current);
+            totalSeconds = accumulatedTimeRef.current;
+        }
+        setTime(secondsToTime(totalSeconds));
+    };
+
+    // Zastavenie intervalu
+    const stopInterval = () => {
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
         }
     };
-    
-    // Aktualizácia lokálneho času z diferenčných hodnôt
-    const updateLocalTime = () => {
-        const newTime = calculateCurrentTime();
-        setTime(newTime);
+
+    // Spustenie intervalu
+    const startInterval = () => {
+        if (intervalRef.current) stopInterval();
+        intervalRef.current = setInterval(() => {
+            if (!isUpdatingFromServerRef.current) {
+                updateLocalTime();
+            }
+        }, 100);
     };
-    
-    // Uloženie stavu časovača do Firestore (iba start/stop a accumulatedSeconds)
+
+    // Uloženie stavu časovača do Firestore
     const saveTimerStateToFirestore = async (newIsRunning, newAccumulatedSeconds, newPeriod) => {
         if (!window.db || !matchId) return;
         if (isUpdatingFromServerRef.current) return;
-        
+
         try {
             const matchRef = doc(window.db, 'matches', matchId);
             await updateDoc(matchRef, {
@@ -506,13 +516,13 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 currentPeriod: newPeriod,
                 lastTimerUpdate: new Date()
             });
-            
+
             lastServerStateRef.current = {
                 isRunning: newIsRunning,
                 accumulatedSeconds: newAccumulatedSeconds,
                 period: newPeriod
             };
-            
+
             if (onTimeUpdate) {
                 const currentTime = secondsToTime(newAccumulatedSeconds);
                 onTimeUpdate({ ...currentTime, period: newPeriod, isRunning: newIsRunning });
@@ -521,8 +531,158 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             console.error('Chyba pri ukladaní stavu časovača:', error);
         }
     };
-    
-    // Real-time počúvanie zmien časovača z databázy
+
+    // Univerzálna funkcia na zmenu času
+    const updateAccumulatedTime = (newAccumulatedSeconds) => {
+        if (isUpdatingFromServerRef.current) return;
+        
+        // Zastavíme interval ak beží
+        const wasRunning = isRunning;
+        if (wasRunning) {
+            stopInterval();
+        }
+        
+        // Uložíme nový čas
+        accumulatedTimeRef.current = Math.max(0, newAccumulatedSeconds);
+        
+        // Aktualizujeme zobrazenie
+        setTime(secondsToTime(accumulatedTimeRef.current));
+        
+        // Uložíme do databázy
+        saveTimerStateToFirestore(false, accumulatedTimeRef.current, period);
+        
+        // Ak bol časovač spustený, znova ho spustíme s novou referenciou
+        if (wasRunning) {
+            startTimeRef.current = Date.now();
+            setIsRunning(true);
+            startInterval();
+            // Po spustení uložíme stav do databázy
+            setTimeout(() => {
+                if (!isUpdatingFromServerRef.current) {
+                    saveTimerStateToFirestore(true, accumulatedTimeRef.current, period);
+                }
+            }, 50);
+        }
+    };
+
+    // Handler pre manuálne zmeny času
+    const addMinute = () => {
+        const currentSeconds = accumulatedTimeRef.current;
+        updateAccumulatedTime(currentSeconds + 60);
+    };
+
+    const subtractMinute = () => {
+        const currentSeconds = accumulatedTimeRef.current;
+        updateAccumulatedTime(currentSeconds - 60);
+    };
+
+    const addSecond = () => {
+        const currentSeconds = accumulatedTimeRef.current;
+        updateAccumulatedTime(currentSeconds + 1);
+    };
+
+    const subtractSecond = () => {
+        const currentSeconds = accumulatedTimeRef.current;
+        updateAccumulatedTime(currentSeconds - 1);
+    };
+
+    const resetTime = () => {
+        updateAccumulatedTime(0);
+    };
+
+    // Spustenie časovača
+    const startTimer = () => {
+        if (isRunning) return;
+        
+        startTimeRef.current = Date.now();
+        setIsRunning(true);
+        startInterval();
+        saveTimerStateToFirestore(true, accumulatedTimeRef.current, period);
+    };
+
+    // Zastavenie časovača
+    const stopTimer = () => {
+        if (!isRunning) return;
+        
+        stopInterval();
+        
+        // Aktualizujeme accumulatedTime na aktuálnu hodnotu
+        const finalSeconds = accumulatedTimeRef.current;
+        accumulatedTimeRef.current = finalSeconds;
+        
+        setIsRunning(false);
+        startTimeRef.current = null;
+        setTime(secondsToTime(finalSeconds));
+        
+        saveTimerStateToFirestore(false, finalSeconds, period);
+    };
+
+    const handleStartStop = () => {
+        if (isRunning) {
+            stopTimer();
+        } else {
+            startTimer();
+        }
+    };
+
+    // Periódy
+    const nextPeriod = () => {
+        if (isUpdatingFromServerRef.current) return;
+        
+        if (period < totalPeriods) {
+            const newPeriod = period + 1;
+            setPeriod(newPeriod);
+            
+            // Reset času na 0
+            if (isRunning) {
+                stopInterval();
+                setIsRunning(false);
+                startTimeRef.current = null;
+            }
+            
+            accumulatedTimeRef.current = 0;
+            setTime({ minutes: 0, seconds: 0 });
+            saveTimerStateToFirestore(false, 0, newPeriod);
+        }
+    };
+
+    const prevPeriod = () => {
+        if (isUpdatingFromServerRef.current) return;
+        
+        if (period > 1) {
+            const newPeriod = period - 1;
+            setPeriod(newPeriod);
+            
+            if (isRunning) {
+                stopInterval();
+                setIsRunning(false);
+                startTimeRef.current = null;
+            }
+            
+            accumulatedTimeRef.current = 0;
+            setTime({ minutes: 0, seconds: 0 });
+            saveTimerStateToFirestore(false, 0, newPeriod);
+        }
+    };
+
+    // Kontrola konca periódy
+    useEffect(() => {
+        if (isRunning && !isUpdatingFromServerRef.current) {
+            const currentTotalSeconds = time.minutes * 60 + time.seconds;
+            const periodTotalSeconds = periodDuration * 60;
+            
+            if (currentTotalSeconds >= periodTotalSeconds) {
+                stopTimer();
+                const finalTime = secondsToTime(periodTotalSeconds);
+                setTime(finalTime);
+                accumulatedTimeRef.current = periodTotalSeconds;
+                saveTimerStateToFirestore(false, periodTotalSeconds, period);
+                console.log(`Perióda ${period} skončila! Čas: ${formatTime()}`);
+            }
+        }
+    }, [time, isRunning, periodDuration, period]);
+
+    // Real-time počúvanie z databázy
     useEffect(() => {
         if (!window.db || !matchId) return;
         
@@ -531,8 +691,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         const unsubscribe = onSnapshot(matchRef, (docSnapshot) => {
             if (docSnapshot.exists()) {
                 const matchData = docSnapshot.data();
-                
-                // Označíme, že aktualizácia prichádza zo servera
                 isUpdatingFromServerRef.current = true;
                 
                 // Synchronizácia periódy
@@ -541,22 +699,17 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     lastServerStateRef.current.period = matchData.currentPeriod;
                 }
                 
-                // Synchronizácia stavu časovača z databázy
                 const serverIsRunning = matchData.timerIsRunning || false;
                 const serverAccumulatedSeconds = matchData.timerAccumulatedSeconds || 0;
                 const serverPeriod = matchData.currentPeriod || 1;
                 
-                // Kontrola či sa stav zmenil oproti lokálnemu
                 const stateChanged = serverIsRunning !== lastServerStateRef.current.isRunning ||
                                     serverAccumulatedSeconds !== lastServerStateRef.current.accumulatedSeconds ||
                                     serverPeriod !== lastServerStateRef.current.period;
                 
                 if (stateChanged) {
-                    // Zastavíme lokálny interval ak beží
-                    if (intervalRef.current) {
-                        clearInterval(intervalRef.current);
-                        intervalRef.current = null;
-                    }
+                    // Zastavíme lokálny interval
+                    stopInterval();
                     
                     // Nastavíme nový stav
                     setIsRunning(serverIsRunning);
@@ -564,19 +717,11 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     setPeriod(serverPeriod);
                     
                     if (serverIsRunning) {
-                        // Ak má bežať, nastavíme startTime na aktuálny čas
                         startTimeRef.current = Date.now();
-                        // Spustíme interval
-                        intervalRef.current = setInterval(() => {
-                            if (!isUpdatingFromServerRef.current) {
-                                updateLocalTime();
-                            }
-                        }, 100);
+                        startInterval();
                     } else {
                         startTimeRef.current = null;
-                        // Aktualizujeme čas
-                        const currentTime = secondsToTime(serverAccumulatedSeconds);
-                        setTime(currentTime);
+                        setTime(secondsToTime(serverAccumulatedSeconds));
                     }
                     
                     lastServerStateRef.current = {
@@ -586,7 +731,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     };
                 }
                 
-                // Reset flagu po dokončení aktualizácie
                 setTimeout(() => {
                     isUpdatingFromServerRef.current = false;
                 }, 100);
@@ -597,22 +741,17 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         
         return () => unsubscribe();
     }, [matchId]);
-    
-    // Načítanie počiatočných nastavení z matcha
+
+    // Načítanie počiatočných nastavení
     useEffect(() => {
         if (match) {
             if (categorySettings) {
-                if (categorySettings.periods !== undefined) {
-                    setTotalPeriods(categorySettings.periods);
-                }
-                if (categorySettings.periodDuration !== undefined) {
-                    setPeriodDuration(categorySettings.periodDuration);
-                }
+                if (categorySettings.periods !== undefined) setTotalPeriods(categorySettings.periods);
+                if (categorySettings.periodDuration !== undefined) setPeriodDuration(categorySettings.periodDuration);
             } else if (match.totalPeriods) {
                 setTotalPeriods(match.totalPeriods);
             }
             
-            // Načítanie stavu z matcha (diferenčné hodnoty)
             const initialIsRunning = match.timerIsRunning || false;
             const initialAccumulatedSeconds = match.timerAccumulatedSeconds || 0;
             const initialPeriod = match.currentPeriod || 1;
@@ -620,20 +759,12 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             setPeriod(initialPeriod);
             accumulatedTimeRef.current = initialAccumulatedSeconds;
             
-            if (initialIsRunning) {
+            if (initialIsRunning && !isRunning) {
                 setIsRunning(true);
                 startTimeRef.current = Date.now();
-                // Spustíme interval pre aktualizáciu času
-                intervalRef.current = setInterval(() => {
-                    if (!isUpdatingFromServerRef.current) {
-                        updateLocalTime();
-                    }
-                }, 100);
-            } else {
-                setIsRunning(false);
-                startTimeRef.current = null;
-                const initialTime = secondsToTime(initialAccumulatedSeconds);
-                setTime(initialTime);
+                startInterval();
+            } else if (!initialIsRunning) {
+                setTime(secondsToTime(initialAccumulatedSeconds));
             }
             
             lastServerStateRef.current = {
@@ -643,285 +774,35 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             };
         }
     }, [match, categorySettings]);
-    
-    // Kontrola či čas dosiahol dĺžku periódy (automatické zastavenie)
-    useEffect(() => {
-        if (isRunning && !isUpdatingFromServerRef.current) {
-            const currentTotalSeconds = time.minutes * 60 + time.seconds;
-            const periodTotalSeconds = periodDuration * 60;
-            
-            if (currentTotalSeconds >= periodTotalSeconds) {
-                // Zastavíme časovač
-                if (intervalRef.current) {
-                    clearInterval(intervalRef.current);
-                    intervalRef.current = null;
-                }
-                
-                const finalTime = secondsToTime(periodTotalSeconds);
-                setTime(finalTime);
-                setIsRunning(false);
-                startTimeRef.current = null;
-                accumulatedTimeRef.current = periodTotalSeconds;
-                
-                // Uložíme zastavený stav do databázy
-                saveTimerStateToFirestore(false, periodTotalSeconds, period);
-                console.log(`Perióda ${period} skončila! Čas: ${formatTime()}`);
-            }
-        }
-    }, [time, isRunning, periodDuration, period]);
-    
-    // Čistenie intervalu
+
+    // Čistenie
     useEffect(() => {
         return () => {
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-            }
+            stopInterval();
         };
     }, []);
-    
-    // Spustenie časovača
-    const startTimer = () => {
-        if (isRunning) return;
-        
-        // Zaznamenáme čas spustenia
-        startTimeRef.current = Date.now();
-        setIsRunning(true);
-        
-        // Spustíme interval pre aktualizáciu času
-        intervalRef.current = setInterval(() => {
-            if (!isUpdatingFromServerRef.current) {
-                updateLocalTime();
-            }
-        }, 100);
-        
-        // Uložíme stav do databázy (spustený + aktuálny accumulatedSeconds)
-        saveTimerStateToFirestore(true, accumulatedTimeRef.current, period);
-    };
-    
-    // Zastavenie časovača
-    const stopTimer = () => {
-        if (!isRunning) return;
-        
-        // Zastavíme interval
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
-        }
-        
-        // Vypočítame finálny čas
-        const finalTime = calculateCurrentTime();
-        const finalSeconds = timeToSeconds(finalTime.minutes, finalTime.seconds);
-        
-        setTime(finalTime);
-        setIsRunning(false);
-        accumulatedTimeRef.current = finalSeconds;
-        startTimeRef.current = null;
-        
-        // Uložíme zastavený stav do databázy
-        saveTimerStateToFirestore(false, finalSeconds, period);
-    };
-    
-    const handleStartStop = () => {
-        if (isRunning) {
-            stopTimer();
-        } else {
-            startTimer();
-        }
-    };
-    
-    // Manuálna úprava času
-    const addMinute = () => {
-        if (isUpdatingFromServerRef.current) return;
-        
-        const currentSeconds = accumulatedTimeRef.current + (isRunning ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0);
-        const newSeconds = currentSeconds + 60;
-        
-        accumulatedTimeRef.current = newSeconds;
-        if (!isRunning) {
-            setTime(secondsToTime(newSeconds));
-            saveTimerStateToFirestore(false, newSeconds, period);
-        }
-        updateLocalTime();
-    };
-    
-    const subtractMinute = () => {
-        if (isUpdatingFromServerRef.current) return;
-        
-        const currentSeconds = accumulatedTimeRef.current + (isRunning ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0);
-        const newSeconds = Math.max(0, currentSeconds - 60);
-        
-        accumulatedTimeRef.current = newSeconds;
-        if (!isRunning) {
-            setTime(secondsToTime(newSeconds));
-            saveTimerStateToFirestore(false, newSeconds, period);
-        }
-        updateLocalTime();
-    };
-    
-    const addSecond = () => {
-        if (isUpdatingFromServerRef.current) return;
-        
-        const currentSeconds = accumulatedTimeRef.current + (isRunning ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0);
-        const newSeconds = currentSeconds + 1;
-        
-        accumulatedTimeRef.current = newSeconds;
-        if (!isRunning) {
-            setTime(secondsToTime(newSeconds));
-            saveTimerStateToFirestore(false, newSeconds, period);
-        }
-        updateLocalTime();
-    };
-    
-    const subtractSecond = () => {
-        if (isUpdatingFromServerRef.current) return;
-        
-        const currentSeconds = accumulatedTimeRef.current + (isRunning ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0);
-        const newSeconds = Math.max(0, currentSeconds - 1);
-        
-        accumulatedTimeRef.current = newSeconds;
-        if (!isRunning) {
-            setTime(secondsToTime(newSeconds));
-            saveTimerStateToFirestore(false, newSeconds, period);
-        }
-        updateLocalTime();
-    };
-    
-    const resetTime = () => {
-        if (isUpdatingFromServerRef.current) return;
-        
-        if (isRunning) {
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-                intervalRef.current = null;
-            }
-            setIsRunning(false);
-            startTimeRef.current = null;
-        }
-        
-        accumulatedTimeRef.current = 0;
-        setTime({ minutes: 0, seconds: 0 });
-        saveTimerStateToFirestore(false, 0, period);
-    };
-    
-    const nextPeriod = () => {
-        if (isUpdatingFromServerRef.current) return;
-        
-        if (period < totalPeriods) {
-            const newPeriod = period + 1;
-            setPeriod(newPeriod);
-            
-            // Reset času na 0
-            if (isRunning) {
-                if (intervalRef.current) {
-                    clearInterval(intervalRef.current);
-                    intervalRef.current = null;
-                }
-                setIsRunning(false);
-                startTimeRef.current = null;
-            }
-            
-            accumulatedTimeRef.current = 0;
-            setTime({ minutes: 0, seconds: 0 });
-            saveTimerStateToFirestore(false, 0, newPeriod);
-        }
-    };
-    
-    const prevPeriod = () => {
-        if (isUpdatingFromServerRef.current) return;
-        
-        if (period > 1) {
-            const newPeriod = period - 1;
-            setPeriod(newPeriod);
-            
-            if (isRunning) {
-                if (intervalRef.current) {
-                    clearInterval(intervalRef.current);
-                    intervalRef.current = null;
-                }
-                setIsRunning(false);
-                startTimeRef.current = null;
-            }
-            
-            accumulatedTimeRef.current = 0;
-            setTime({ minutes: 0, seconds: 0 });
-            saveTimerStateToFirestore(false, 0, newPeriod);
-        }
-    };
-    
-    // Handler pre tlačidlá zápasu
-    const handleEndMatch = () => {
-        console.log('Ukončiť zápas');
-    };
-    
-    const handleManualResult = () => {
-        console.log('Zadať výsledok manuálne');
-    };
-    
-    const handleForfeit = () => {
-        console.log('Kontumácia');
-    };
-    
-    const handleGoal = () => {
-        console.log('Gól');
-    };
-    
-    const handleSevenMeters = () => {
-        console.log('7m');
-    };
-    
-    const handleYellowCard = () => {
-        console.log('ŽK');
-    };
-    
-    const handleRedCard = () => {
-        console.log('ČK');
-    };
-    
-    const handleBlueCard = () => {
-        console.log('MK');
-    };
-    
-    const handleExclusion = () => {
-        console.log('Vylúčenie');
-    };
-    
+
     const formatTime = () => {
         return `${time.minutes.toString().padStart(2, '0')}:${time.seconds.toString().padStart(2, '0')}`;
     };
-    
+
     return React.createElement(
         'div',
         { className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
-        
         React.createElement(
             'div',
             { className: 'bg-gray-50 px-6 py-3 border-b border-gray-200' },
-            React.createElement(
-                'h3',
-                { className: 'font-semibold text-gray-800' },
-                'Športový časovač'
-            ),
-            React.createElement(
-                'p',
-                { className: 'text-xs text-gray-500 mt-0.5' },
-                `Trvanie periódy: ${periodDuration} min | Počet periód: ${totalPeriods}`
-            )
+            React.createElement('h3', { className: 'font-semibold text-gray-800' }, 'Športový časovač'),
+            React.createElement('p', { className: 'text-xs text-gray-500 mt-0.5' }, `Trvanie periódy: ${periodDuration} min | Počet periód: ${totalPeriods}`)
         ),
-        
         React.createElement(
             'div',
             { className: 'p-6' },
-            
             React.createElement(
                 'div',
                 { className: 'text-center mb-6' },
-                React.createElement(
-                    'div',
-                    { className: 'text-6xl font-mono font-bold text-gray-800' },
-                    formatTime()
-                )
+                React.createElement('div', { className: 'text-6xl font-mono font-bold text-gray-800' }, formatTime())
             ),
-            
             React.createElement(
                 'div',
                 { className: 'flex flex-wrap items-center justify-center gap-2 mb-6' },
@@ -936,65 +817,31 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     React.createElement('i', { className: isRunning ? 'fa-solid fa-stop mr-1' : 'fa-solid fa-play mr-1' }),
                     isRunning ? 'Stop' : 'Štart'
                 ),
-                
                 React.createElement(
                     'button',
-                    {
-                        onClick: subtractMinute,
-                        className: 'bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
-                    },
+                    { onClick: subtractMinute, className: 'bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
                     React.createElement('i', { className: 'fa-solid fa-minus' })
                 ),
-                
-                React.createElement(
-                    'span',
-                    { className: 'text-sm text-gray-600 px-1 font-medium' },
-                    'Min'
-                ),
-                
+                React.createElement('span', { className: 'text-sm text-gray-600 px-1 font-medium' }, 'Min'),
                 React.createElement(
                     'button',
-                    {
-                        onClick: addMinute,
-                        className: 'bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
-                    },
+                    { onClick: addMinute, className: 'bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
                     React.createElement('i', { className: 'fa-solid fa-plus' })
                 ),
-                
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
-                
                 React.createElement(
                     'button',
-                    {
-                        onClick: subtractSecond,
-                        className: 'bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
-                    },
+                    { onClick: subtractSecond, className: 'bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
                     React.createElement('i', { className: 'fa-solid fa-minus' })
                 ),
-                
-                React.createElement(
-                    'span',
-                    { className: 'text-sm text-gray-600 px-1 font-medium' },
-                    'Sec'
-                ),
-                
+                React.createElement('span', { className: 'text-sm text-gray-600 px-1 font-medium' }, 'Sec'),
                 React.createElement(
                     'button',
-                    {
-                        onClick: addSecond,
-                        className: 'bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
-                    },
+                    { onClick: addSecond, className: 'bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
                     React.createElement('i', { className: 'fa-solid fa-plus' })
                 ),
-                
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
-                
-                React.createElement(
-                    'span',
-                    { className: 'text-sm text-gray-600 font-medium' },
-                    'Perióda'
-                ),
-                
+                React.createElement('span', { className: 'text-sm text-gray-600 font-medium' }, 'Perióda'),
                 React.createElement(
                     'button',
                     {
@@ -1006,13 +853,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     },
                     React.createElement('i', { className: 'fa-solid fa-minus' })
                 ),
-                
-                React.createElement(
-                    'span',
-                    { className: 'text-sm text-gray-800 font-semibold px-1' },
-                    `${period}/${totalPeriods}`
-                ),
-                
+                React.createElement('span', { className: 'text-sm text-gray-800 font-semibold px-1' }, `${period}/${totalPeriods}`),
                 React.createElement(
                     'button',
                     {
@@ -1024,9 +865,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     },
                     React.createElement('i', { className: 'fa-solid fa-plus' })
                 ),
-                
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
-                
                 React.createElement(
                     'button',
                     {
@@ -1037,85 +876,56 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     'Reset'
                 )
             ),
-            
             React.createElement(
                 'div',
                 { className: 'flex flex-wrap items-center justify-center gap-2 mb-6 pt-2 border-t border-gray-100' },
                 React.createElement(
                     'button',
-                    {
-                        onClick: handleEndMatch,
-                        className: 'bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
-                    },
+                    { onClick: () => console.log('Ukončiť zápas'), className: 'bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
                     'Ukončiť zápas'
                 ),
                 React.createElement(
                     'button',
-                    {
-                        onClick: handleManualResult,
-                        className: 'bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
-                    },
+                    { onClick: () => console.log('Zadať výsledok manuálne'), className: 'bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
                     'Zadať výsledok manuálne'
                 ),
                 React.createElement(
                     'button',
-                    {
-                        onClick: handleForfeit,
-                        className: 'bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
-                    },
+                    { onClick: () => console.log('Kontumácia'), className: 'bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
                     'Kontumácia'
                 )
             ),
-            
             React.createElement(
                 'div',
                 { className: 'flex flex-wrap items-center justify-center gap-2 pt-2 border-t border-gray-100' },
                 React.createElement(
                     'button',
-                    {
-                        onClick: handleGoal,
-                        className: 'bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
-                    },
+                    { onClick: () => console.log('Gól'), className: 'bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
                     'Gól'
                 ),
                 React.createElement(
                     'button',
-                    {
-                        onClick: handleSevenMeters,
-                        className: 'bg-teal-500 hover:bg-teal-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
-                    },
+                    { onClick: () => console.log('7m'), className: 'bg-teal-500 hover:bg-teal-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
                     '7m'
                 ),
                 React.createElement(
                     'button',
-                    {
-                        onClick: handleYellowCard,
-                        className: 'bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
-                    },
+                    { onClick: () => console.log('ŽK'), className: 'bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
                     'ŽK'
                 ),
                 React.createElement(
                     'button',
-                    {
-                        onClick: handleRedCard,
-                        className: 'bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
-                    },
+                    { onClick: () => console.log('ČK'), className: 'bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
                     'ČK'
                 ),
                 React.createElement(
                     'button',
-                    {
-                        onClick: handleBlueCard,
-                        className: 'bg-blue-400 hover:bg-blue-500 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
-                    },
+                    { onClick: () => console.log('MK'), className: 'bg-blue-400 hover:bg-blue-500 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
                     'MK'
                 ),
                 React.createElement(
                     'button',
-                    {
-                        onClick: handleExclusion,
-                        className: 'bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
-                    },
+                    { onClick: () => console.log('Vylúčenie'), className: 'bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
                     'Vylúčenie'
                 )
             )
