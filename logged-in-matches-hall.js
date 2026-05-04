@@ -717,7 +717,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     );
 };
 
-// Hlavný komponent
+// Hlavný komponent MatchesHallApp - upravený s podporou URL parametrov
 const MatchesHallApp = () => {
     const [matches, setMatches] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -733,10 +733,66 @@ const MatchesHallApp = () => {
     // Nové stavy pre detail zápasu
     const [selectedMatch, setSelectedMatch] = useState(null);
     const [showingDetail, setShowingDetail] = useState(false);
-
-    // Pridajte tieto stavy k existujúcim
-    const [allMatchesList, setAllMatchesList] = useState([]); // Zoznam všetkých zápasov pre danú halu
+    const [allMatchesList, setAllMatchesList] = useState([]);
     const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+    
+    // Funkcia na vytvorenie hash pre zápas
+    const createMatchHash = (homeTeamId, awayTeamId) => {
+        // Kódovanie identifikátorov pre URL
+        const encodedHome = encodeURIComponent(homeTeamId);
+        const encodedAway = encodeURIComponent(awayTeamId);
+        return `#match/${encodedHome}/${encodedAway}`;
+    };
+    
+    // Funkcia na parsovanie hash z URL
+    const parseMatchHash = () => {
+        const hash = window.location.hash;
+        const matchPattern = /^#match\/([^/]+)\/([^/]+)$/;
+        const match = hash.match(matchPattern);
+        if (match) {
+            return {
+                homeTeamIdentifier: decodeURIComponent(match[1]),
+                awayTeamIdentifier: decodeURIComponent(match[2])
+            };
+        }
+        return null;
+    };
+    
+    // Funkcia na vyhľadanie zápasu podľa identifikátorov
+    const findMatchByIdentifiers = (homeTeamIdentifier, awayTeamIdentifier, matchesList) => {
+        return matchesList.findIndex(match => 
+            match.homeTeamIdentifier === homeTeamIdentifier && 
+            match.awayTeamIdentifier === awayTeamIdentifier
+        );
+    };
+    
+    // Funkcia na aktualizáciu URL pri zmene zápasu
+    const updateUrlForMatch = (match) => {
+        if (match && match.homeTeamIdentifier && match.awayTeamIdentifier) {
+            const newHash = createMatchHash(match.homeTeamIdentifier, match.awayTeamIdentifier);
+            // Použijeme replaceState aby sme neukladali každý krok do histórie zbytočne
+            window.history.replaceState(null, '', newHash);
+        }
+    };
+    
+    // Funkcia na zobrazenie detailu zápasu podľa URL
+    const showMatchFromUrl = (matchesList) => {
+        const urlMatch = parseMatchHash();
+        if (urlMatch && matchesList.length > 0) {
+            const matchIndex = findMatchByIdentifiers(
+                urlMatch.homeTeamIdentifier, 
+                urlMatch.awayTeamIdentifier, 
+                matchesList
+            );
+            if (matchIndex !== -1) {
+                setSelectedMatch(matchesList[matchIndex]);
+                setCurrentMatchIndex(matchIndex);
+                setShowingDetail(true);
+                return true;
+            }
+        }
+        return false;
+    };
 
     // Načítanie farieb kategórií a názvov z databázy
     const loadCategoryColors = async () => {
@@ -875,13 +931,18 @@ const MatchesHallApp = () => {
             });
             
             setMatches(hallMatches);
-            setAllMatchesList(hallMatches); // Uložíme zoznam všetkých zápasov
+            setAllMatchesList(hallMatches);
             processTeamNames(hallMatches);
+            
+            // Po načítaní zápasov skúsime zobraziť detail podľa URL
+            const matchShown = showMatchFromUrl(hallMatches);
+            if (!matchShown) {
+                setLoading(false);
+            }
             
         } catch (err) {
             console.error('Chyba pri načítaní zápasov:', err);
             setError('Nepodarilo sa načítať zápasy: ' + err.message);
-        } finally {
             setLoading(false);
         }
     };
@@ -891,10 +952,11 @@ const MatchesHallApp = () => {
         setSelectedMatch(match);
         setCurrentMatchIndex(index);
         setShowingDetail(true);
+        updateUrlForMatch(match);
         window.scrollTo(0, 0);
     };
 
-    // Pridajte funkciu pre navigáciu medzi zápasmi
+    // Funkcia pre navigáciu medzi zápasmi
     const handleNavigateMatch = (direction) => {
         let newIndex;
         if (direction === 'prev') {
@@ -904,8 +966,10 @@ const MatchesHallApp = () => {
         }
         
         if (newIndex >= 0 && newIndex < allMatchesList.length) {
-            setSelectedMatch(allMatchesList[newIndex]);
+            const newMatch = allMatchesList[newIndex];
+            setSelectedMatch(newMatch);
             setCurrentMatchIndex(newIndex);
+            updateUrlForMatch(newMatch);
             window.scrollTo(0, 0);
         }
     };
@@ -914,7 +978,39 @@ const MatchesHallApp = () => {
     const handleBackToList = () => {
         setSelectedMatch(null);
         setShowingDetail(false);
+        // Odstránime hash z URL, ale necháme # pre zachovanie pozície
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
     };
+
+    // Počúvanie na zmeny hash v URL
+    useEffect(() => {
+        const handleHashChange = () => {
+            // Ak sme v detaile, skúsime nájsť zápas podľa URL
+            if (allMatchesList.length > 0) {
+                const urlMatch = parseMatchHash();
+                if (urlMatch) {
+                    const matchIndex = findMatchByIdentifiers(
+                        urlMatch.homeTeamIdentifier,
+                        urlMatch.awayTeamIdentifier,
+                        allMatchesList
+                    );
+                    if (matchIndex !== -1 && (!showingDetail || selectedMatch?.homeTeamIdentifier !== urlMatch.homeTeamIdentifier)) {
+                        setSelectedMatch(allMatchesList[matchIndex]);
+                        setCurrentMatchIndex(matchIndex);
+                        setShowingDetail(true);
+                        window.scrollTo(0, 0);
+                    }
+                } else if (showingDetail) {
+                    // Ak hash neexistuje a sme v detaile, vrátime sa na zoznam
+                    setSelectedMatch(null);
+                    setShowingDetail(false);
+                }
+            }
+        };
+        
+        window.addEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, [allMatchesList, showingDetail, selectedMatch]);
 
     // Inicializácia
     useEffect(() => {
