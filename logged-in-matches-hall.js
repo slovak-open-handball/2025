@@ -290,6 +290,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                 'div',
                                 { className: 'text-center' },
                                 React.createElement('span', { className: 'text-xl text-gray-400 font-medium' }, 'VS'),
+                                React.createElement('div', { className: 'text-xs text-gray-400 mt-1' }, 'Zápas ešte nebol odohraný')
                             )
                     ),
                     // Hosťujúci tím
