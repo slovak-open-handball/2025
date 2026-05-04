@@ -723,11 +723,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     'div',
                     { className: 'text-6xl font-mono font-bold text-gray-800' },
                     formatTime()
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'text-sm text-gray-500 mt-1' },
-                    `Perióda ${period} / ${totalPeriods}`
                 )
             ),
             
@@ -808,6 +803,13 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 // Oddeľovač
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
                 
+                // Text Perióda (pridaný text)
+                React.createElement(
+                    'span',
+                    { className: 'text-sm text-gray-600 font-medium' },
+                    'Perióda'
+                ),
+                
                 // Minus perióda
                 React.createElement(
                     'button',
@@ -821,15 +823,11 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     React.createElement('i', { className: 'fa-solid fa-chevron-left' })
                 ),
                 
-                // Reset času
+                // Zobrazenie aktuálnej periódy
                 React.createElement(
-                    'button',
-                    {
-                        onClick: resetTime,
-                        className: 'bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm flex items-center gap-1'
-                    },
-                    React.createElement('i', { className: 'fa-solid fa-arrow-rotate-left' }),
-                    'Reset'
+                    'span',
+                    { className: 'text-sm text-gray-800 font-semibold px-1' },
+                    `${period}/${totalPeriods}`
                 ),
                 
                 // Plus perióda
@@ -843,6 +841,17 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                         }`
                     },
                     React.createElement('i', { className: 'fa-solid fa-chevron-right' })
+                ),
+                
+                // Reset času (presunutý za šípku doprava)
+                React.createElement(
+                    'button',
+                    {
+                        onClick: resetTime,
+                        className: 'bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm flex items-center gap-1'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-arrow-rotate-left' }),
+                    'Reset'
                 )
             )
         )
