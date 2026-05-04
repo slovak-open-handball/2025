@@ -95,7 +95,8 @@ const isEliminationMatch = (match) => {
     // Zápas z pavúka (playoff / elimination)
     if (match.matchType === 'Playoff' || match.matchType === 'Semifinále' || 
         match.matchType === 'Finále' || match.matchType === 'Štvrťfinále' ||
-        match.matchType === 'Osemfinále' || (match.matchType && match.matchType.includes('finále'))) {
+        match.matchType === 'Osemfinále' || (match.matchType && match.matchType.includes('finále')) ||
+        (match.matchType && match.matchType.includes('miesto'))) {
         return true;
     }
     
@@ -434,12 +435,12 @@ const MatchesHallApp = () => {
                                 const categoryColor = getCategoryDrawColor(match.categoryId);
                                 const lighterCategoryColor = getLighterColor(categoryColor);
                                 
-                                // Získanie farieb pre daný zápas
+                                // Získanie farieb pre daný zápas - pre eliminačné zápasy fialová
                                 const matchColors = getMatchColors(match, groupsData);
                                 
                                 const infoTags = [];
                                 
-                                // Tag pre typ zápasu (matchType) - eliminačné zápasy majú fialovú farbu
+                                // Tag pre typ zápasu (matchType) - pre eliminačné zápasy (okrem placement) - fialová
                                 if (match.matchType && !match.isPlacementMatch) {
                                     infoTags.push(
                                         React.createElement('span', { 
@@ -455,7 +456,7 @@ const MatchesHallApp = () => {
                                     ));
                                 }
                                 
-                                // Tag pre zápas o umiestnenie - používa rovnakú fialovú farbu
+                                // Tag pre zápas o umiestnenie - fialová farba
                                 if (match.isPlacementMatch) {
                                     infoTags.push(
                                         React.createElement('span', { 
