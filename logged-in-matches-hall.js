@@ -847,10 +847,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     };
 
     const isMatchCompleted = match?.status === 'completed';
-
-    // V MatchTimer komponente, nahraďte pôvodný render blok týmto:
-
-    const isMatchCompleted = match?.status === 'completed';
     
     // Render
     return React.createElement('div', { className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
