@@ -275,6 +275,15 @@ const MatchesHallApp = () => {
                                         )
                                     ),
                                     
+                                    // Typ zápasu (ak existuje) - TERAZ PRVÝ
+                                    (match.matchType || match.isPlacementMatch) && React.createElement(
+                                        'span',
+                                        { className: `text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${
+                                            match.isPlacementMatch ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                                        }` },
+                                        match.isPlacementMatch ? `o ${match.placementRank}. miesto` : match.matchType
+                                    ),
+                                    
                                     // Skupina (ak existuje)
                                     match.groupName && React.createElement(
                                         'span',
@@ -287,15 +296,6 @@ const MatchesHallApp = () => {
                                         'span',
                                         { className: 'text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full whitespace-nowrap' },
                                         match.categoryName
-                                    ),
-                                    
-                                    // Typ zápasu (ak existuje)
-                                    (match.matchType || match.isPlacementMatch) && React.createElement(
-                                        'span',
-                                        { className: `text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${
-                                            match.isPlacementMatch ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
-                                        }` },
-                                        match.isPlacementMatch ? `o ${match.placementRank}. miesto` : match.matchType
                                     ),
                                     
                                     // Detail tlačidlo
