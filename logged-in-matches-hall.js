@@ -1755,7 +1755,7 @@ const MatchesHallApp = () => {
                                                 'button',
                                                 {
                                                     onClick: () => {
-                                                        // Vypočítame globálny index zápasu
+                                                        // Výpočet globálneho indexu zápasu
                                                         let globalIndex = 0;
                                                         for (let i = 0; i < dayIndex; i++) {
                                                             globalIndex += matchesByDay[i].matches.length;
@@ -1765,10 +1765,8 @@ const MatchesHallApp = () => {
                                                     },
                                                     className: match.status === 'in-progress' 
                                                         ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer'
-                                                        : 'bg-gray-200 hover:bg-gray-300 text-gray-900 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer'
-                                                    style: {
-                                                        fontWeight: '500'
-                                                    }
+                                                        : 'bg-gray-200 hover:bg-gray-300 text-gray-900 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer',
+                                                    style: { fontWeight: '500' }
                                                 },
                                                 'Detail'
                                             )
