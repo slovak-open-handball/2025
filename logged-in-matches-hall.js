@@ -788,9 +788,14 @@ const MatchesHallApp = () => {
                 setSelectedMatch(matchesList[matchIndex]);
                 setCurrentMatchIndex(matchIndex);
                 setShowingDetail(true);
+                // Nezabudneme nastaviť loading na false, ak už bol true
+                setLoading(false);
                 return true;
             }
         }
+        // Ak sme nenašli zápas podľa URL, uistíme sa, že nie sme v detaile
+        setShowingDetail(false);
+        setSelectedMatch(null);
         return false;
     };
 
@@ -937,6 +942,7 @@ const MatchesHallApp = () => {
             // Po načítaní zápasov skúsime zobraziť detail podľa URL
             const matchShown = showMatchFromUrl(hallMatches);
             if (!matchShown) {
+                // Ak sa nezobrazil detail, ukončíme loading
                 setLoading(false);
             }
             
@@ -978,7 +984,8 @@ const MatchesHallApp = () => {
     const handleBackToList = () => {
         setSelectedMatch(null);
         setShowingDetail(false);
-        // Odstránime hash z URL, ale necháme # pre zachovanie pozície
+        setCurrentMatchIndex(0); // Reset indexu
+        // Odstránime hash z URL
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
     };
 
