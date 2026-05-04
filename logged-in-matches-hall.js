@@ -471,9 +471,9 @@ const MatchesHallApp = () => {
                                     ));
                                 }
                                 
-                                // Tag pre skupinu
-                                if (match.groupName) {
-                                    // Pre eliminačné zápasy používame fialovú farbu aj pre skupinu
+                                // Tag pre skupinu - NIE pre zápasy o umiestnenie
+                                if (match.groupName && !match.isPlacementMatch) {
+                                    // Pre eliminačné zápasy (play-off) používame fialovú farbu aj pre skupinu
                                     let groupColors;
                                     if (isEliminationMatch(match)) {
                                         groupColors = ELIMINATION_COLORS;
