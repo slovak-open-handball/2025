@@ -1005,7 +1005,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 return 'Ukončený';
             case 'scheduled':
             default:
-                return 'Zápas ešte nebol odohraný';
+                return 'Naplánovaný';
         }
     };
     
