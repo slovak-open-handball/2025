@@ -459,6 +459,8 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const [periodDuration, setPeriodDuration] = useState(20);
     const [displaySeconds, setDisplaySeconds] = useState(0);
     const [showEndMatchModal, setShowEndMatchModal] = useState(false);
+    const [showForfeitModal, setShowForfeitModal] = useState(false);
+    const [forfeitTeam, setForfeitTeam] = useState(null); // 'home' alebo 'away'
     
     const intervalRef = useRef(null);
     const isRunningRef = useRef(false);
@@ -473,6 +475,53 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     useEffect(() => { periodDurationRef.current = periodDuration; }, [periodDuration]);
     useEffect(() => { periodRef.current = period; }, [period]);
     useEffect(() => { displaySecondsRef.current = displaySeconds; }, [displaySeconds]);
+
+    const handleForfeit = async (team) => {
+        if (!window.db || !matchId) return;
+        
+        try {
+            // Zastavíme časovač ak beží
+            if (isRunningRef.current) {
+                stopLocalInterval();
+                setIsRunning(false);
+                isRunningRef.current = false;
+            }
+            
+            // Nastavíme kontumačný výsledok 10:0
+            let homeScore = 0;
+            let awayScore = 0;
+            
+            if (team === 'home') {
+                homeScore = 10;
+                awayScore = 0;
+            } else if (team === 'away') {
+                homeScore = 0;
+                awayScore = 10;
+            }
+            
+            const matchRef = doc(window.db, 'matches', matchId);
+            await updateDoc(matchRef, {
+                homeScore: homeScore,
+                awayScore: awayScore,
+                status: 'completed',
+                isForfeit: true,
+                forfeitTeam: team,
+                forfeitAt: Timestamp.now(),
+                manualTimeOffset: 0,
+                startedAt: null,
+                pausedAt: null,
+                updatedAt: Timestamp.now()
+            });
+            
+            console.log(`Zápas ${matchId} bol kontumovaný v prospech ${team === 'home' ? 'domácich' : 'hostí'} s výsledkom ${homeScore}:${awayScore}`);
+            setShowForfeitModal(false);
+            setForfeitTeam(null);
+            
+            if (onTimeUpdate) onTimeUpdate({ seconds: 0, period, isRunning: false });
+        } catch (err) {
+            console.error('Chyba pri kontumácii zápasu:', err);
+        }
+    };
 
     const formatTime = (totalSeconds) => {
         const mins = Math.floor(Math.max(0, totalSeconds) / 60);
@@ -796,6 +845,68 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         }
     };
 
+    const renderForfeitModal = () => {
+        if (!showForfeitModal) return null;
+        
+        return React.createElement(
+            'div',
+            { 
+                className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50',
+                onClick: () => setShowForfeitModal(false)
+            },
+            React.createElement(
+                'div',
+                { 
+                    className: 'bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
+                React.createElement(
+                    'h3',
+                    { className: 'text-xl font-bold text-gray-800 mb-4' },
+                    'Kontumácia zápasu'
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-600 mb-2' },
+                    'Kontumačný výsledok bude 10:0 v prospech vybraného tímu.'
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-sm text-red-600 mb-6' },
+                    'Táto akcia je nevratná!'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex flex-col gap-3 mb-6' },
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => handleForfeit('home'),
+                            className: 'w-full py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors cursor-pointer'
+                        },
+                        'Kontumovať v prospech DOMÁCICH (10:0)'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => handleForfeit('away'),
+                            className: 'w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors cursor-pointer'
+                        },
+                        'Kontumovať v prospech HOSTÍ (10:0)'
+                    )
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: () => setShowForfeitModal(false),
+                        className: 'w-full py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors cursor-pointer'
+                    },
+                    'Zrušiť'
+                )
+            )
+        );
+    };
+
     // Render modálneho okna
     const renderEndMatchModal = () => {
         if (!showEndMatchModal) return null;
@@ -928,7 +1039,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     React.createElement('i', { className: 'fa-solid fa-pen-to-square mr-1' }), 'Zadať výsledok manuálne'
                 ),
                 React.createElement('button', { 
-                    onClick: () => console.log('Kontumácia - zatiaľ len výpis do konzoly'), 
+                    onClick: () => setShowForfeitModal(true), 
                     className: 'px-4 py-2 rounded-lg font-semibold transition-colors text-sm bg-purple-600 hover:bg-purple-700 text-white cursor-pointer'
                 },
                     React.createElement('i', { className: 'fa-solid fa-gavel mr-1' }), 'Kontumácia'
@@ -962,7 +1073,8 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 }, 'Vylúčenie')
             )
         ),
-        renderEndMatchModal()
+        renderEndMatchModal(),
+        renderForfeitModal()
     );
 };
 
