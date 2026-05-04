@@ -936,11 +936,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     { className: 'text-gray-600 mb-2 text-center' },
                     'Vyberte tím, v prospech ktorého sa zápas kontumuje (10:0)'
                 ),
-                React.createElement(
-                    'p',
-                    { className: 'text-sm text-red-600 mb-6 text-center' },
-                    'Táto akcia je nevratná!'
-                ),
                 // Dve tlačidlá pre výber tímu vedľa seba - bledosivé
                 React.createElement(
                     'div',
@@ -979,17 +974,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     React.createElement(
                         'button',
                         {
-                            onClick: () => {
-                                setShowForfeitModal(false);
-                                setSelectedForfeitTeam(null);
-                            },
-                            className: 'flex-1 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors cursor-pointer text-center'
-                        },
-                        'Zrušiť'
-                    ),
-                    React.createElement(
-                        'button',
-                        {
                             onClick: () => handleForfeit(),
                             disabled: !selectedForfeitTeam,
                             className: `flex-1 py-2 rounded-lg font-semibold transition-colors text-center ${
@@ -999,6 +983,17 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                             }`
                         },
                         'Potvrdiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => {
+                                setShowForfeitModal(false);
+                                setSelectedForfeitTeam(null);
+                            },
+                            className: 'flex-1 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors cursor-pointer text-center'
+                        },
+                        'Zrušiť'
                     )
                 )
             )
