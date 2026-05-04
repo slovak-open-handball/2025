@@ -1247,6 +1247,9 @@ let isTeamNameReplacerInitialized = false;
         const teamStatsMap = new Map();      // reálny názov klubu → objekt štatistík
         const identifierToRealName = new Map(); // identifikátor (napr. "U12 D F3") → reálny názov klubu
         const advancedNameToRealName = new Map(); // názov v nadstavbe (napr. "U12 D 1A") → reálny názov klubu
+
+        console.log('🔍 DEBUG teamStatsMap keys:', Array.from(teamStatsMap.keys()));
+        console.log('🔍 DEBUG allBaseGroupsFullyCompleted:', allBaseGroupsFullyCompleted);
         
         for (const [advancedTeamName, teamObject] of teamByAdvancedName.entries()) {
             // Zistíme, ktorý reálny klub patrí k tomuto názvu v nadstavbe
@@ -1330,6 +1333,10 @@ let isTeamNameReplacerInitialized = false;
                     const awayClubName = match.awayTeamName;
                     const homeInAdvanced = teamStatsMap.has(homeClubName);
                     const awayInAdvanced = teamStatsMap.has(awayClubName);
+
+                    console.log(`🔍 Hľadám v skupine ${baseGroupName}:`);
+                    console.log(`   homeClubName: ${homeClubName}, awayClubName: ${awayClubName}`);
+                    console.log(`   homeInAdvanced: ${homeInAdvanced}, awayInAdvanced: ${awayInAdvanced}`);
                     
                     if (homeInAdvanced && awayInAdvanced) {
                         const key = homeClubName < awayClubName ? 
