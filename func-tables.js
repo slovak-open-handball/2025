@@ -1776,26 +1776,38 @@ let isTeamNameReplacerInitialized = false;
     }
     
     // ============================================================
-    // OPRAVENÁ FUNKCIA: printGroupTable - POUŽÍVA NÁZVY, NIE IDENTIFIKÁTORY
+    // OPRAVENÁ FUNKCIA: printGroupTable - BEZ categoryIdMap
     // ============================================================
     function printGroupTable(categoryName, groupName, baseGroupName = null) {
         console.log(`🔍 printGroupTable called: ${categoryName} - ${groupName}`);
-    
+        
         let table;
-        const groupsData = window.groupsData || {};
-        const categoryId = window.categoryIdMap?.[categoryName] || null;
         let isAdvancedGroup = false;
         
-        console.log(`   categoryId: ${categoryId}`);
-        console.log(`   groupsData[categoryId]:`, groupsData[categoryId]);
-        
-        if (categoryId && groupsData[categoryId]) {
-            const groupInfo = groupsData[categoryId].find(g => g.name === groupName);
-            console.log(`   groupInfo:`, groupInfo);
-            if (groupInfo && groupInfo.type === 'nadstavbová skupina') {
-                isAdvancedGroup = true;
-                console.log(`   ✅ ${groupName} je nadstavbová skupina`);
+        // 🔥 NOVÁ LOGIKA: Hľadáme skupinu priamo v groupsData podľa názvu
+        if (window.groupsData) {
+            // Prehľadáme všetky kategórie v groupsData
+            for (const [categoryId, groups] of Object.entries(window.groupsData)) {
+                const foundGroup = groups.find(g => g.name === groupName);
+                if (foundGroup && foundGroup.type === 'nadstavbová skupina') {
+                    isAdvancedGroup = true;
+                    console.log(`   ✅ ${groupName} je nadstavbová skupina (nájdená v kategórii ${categoryId})`);
+                    break;
+                }
             }
+        }
+        
+        // Ak sme nenašli v groupsData, skúsime podľa názvu (fallback)
+        if (!isAdvancedGroup && groupName && groupName.toLowerCase().includes('nadstavbová')) {
+            isAdvancedGroup = true;
+            console.log(`   ✅ ${groupName} je nadstavbová skupina (podľa názvu)`);
+        }
+        
+        // 🔥 VYNUŤENIE PRE KONKRÉTNE SKUPINY (ak je potrebné)
+        if (groupName === 'skupina F' || groupName === 'skupina G' || groupName === 'skupina H' || 
+            groupName === 'skupina I' || groupName === 'skupina J') {
+            isAdvancedGroup = true;
+            console.log(`   ✅ ${groupName} je nadstavbová skupina (vynútené)`);
         }
         
         if (isAdvancedGroup) {
@@ -1843,7 +1855,7 @@ let isTeamNameReplacerInitialized = false;
     
         table.teams.forEach((team, index) => {
             const position = (index + 1).toString().padEnd(4);
-            const name = team.name.substring(0, 28).padEnd(30);
+            const name = (team.name || 'Neznámy').substring(0, 28).padEnd(30);
             const played = team.played.toString().padEnd(5);
             const wins = team.wins.toString().padEnd(5);
             const draws = team.draws.toString().padEnd(5);
@@ -1860,27 +1872,20 @@ let isTeamNameReplacerInitialized = false;
         
         log('-'.repeat(120));
         
-        // ============================================================
-        // 🔥 VÝPIS VŠETKÝCH ZÁPASOV - POUŽÍVAME homeTeamName a awayTeamName
-        // ============================================================
+        // Výpis zápasov (rovnaký ako pôvodný)
         if (table.matches && table.matches.length > 0) {
             log(`\n📅 VŠETKY ZÁPASY V SKUPINE (${table.matches.length}):`);
             log('='.repeat(80));
             
-            // Rozdelíme na prenesené a normálne
             const transferred = table.matches.filter(m => m.isTransferred);
             const normal = table.matches.filter(m => !m.isTransferred);
             
-            // 1. Normálne zápasy (v nadstavbovej skupine)
             if (normal.length > 0) {
                 log(`\n🏆 ZÁPASY V SKUPINE (${normal.length}):`);
                 normal.forEach((match, idx) => {
-                    // 🔥 DÔLEŽITÉ: Používame homeTeamName a awayTeamName, nie homeTeamIdentifier
-                    // Tieto vlastnosti musíme nastaviť už v createAdvancedGroupTable
                     let homeTeam = match.homeTeamName || match.homeTeamIdentifier;
                     let awayTeam = match.awayTeamName || match.awayTeamIdentifier;
                     
-                    // Pre istotu ešte skúsime namapovať, ak náhodou nie sú
                     if (looksLikeIdentifier(homeTeam)) {
                         const mapped = getTeamNameByDisplayId(homeTeam);
                         if (mapped && mapped !== homeTeam) homeTeam = mapped;
@@ -1901,11 +1906,9 @@ let isTeamNameReplacerInitialized = false;
                 });
             }
             
-            // 2. Prenesené zápasy (zo základných skupín)
             if (transferred.length > 0) {
                 log(`\n🔄 PRENESENÉ ZÁPASY (zo základných skupín):`);
                 transferred.forEach((match, idx) => {
-                    // Prenesené zápasy už majú homeTeam a awayTeam ako názvy
                     const homeTeam = match.homeTeamName || match.homeTeamIdentifier;
                     const awayTeam = match.awayTeamName || match.awayTeamIdentifier;
                     log(`   ${idx+1}. ${homeTeam} ${match.homeScore}:${match.awayScore} ${awayTeam} (z ${match.fromGroup || 'základnej skupiny'})`);
@@ -1916,7 +1919,7 @@ let isTeamNameReplacerInitialized = false;
         }
         
         // Výpis kritérií poradia
-        if (tableSettings.sortingConditions.length > 0) {
+        if (tableSettings.sortingConditions && tableSettings.sortingConditions.length > 0) {
             log(`\n📋 Kritériá poradia: ${tableSettings.sortingConditions.map((c, i) => {
                 const param = c.parameter === 'headToHead' ? 'vzájomný zápas' :
                              c.parameter === 'scoreDifference' ? '+/-' :
