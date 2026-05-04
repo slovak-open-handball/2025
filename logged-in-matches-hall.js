@@ -941,7 +941,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     { className: 'text-sm text-red-600 mb-6 text-center' },
                     'Táto akcia je nevratná!'
                 ),
-                // Dve tlačidlá pre výber tímu vedľa seba
+                // Dve tlačidlá pre výber tímu vedľa seba - bledosivé
                 React.createElement(
                     'div',
                     { className: 'flex gap-3 mb-6' },
@@ -952,7 +952,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                             className: `flex-1 py-3 rounded-lg font-semibold transition-colors cursor-pointer text-center ${
                                 selectedForfeitTeam === 'home' 
                                     ? 'bg-yellow-400 text-yellow-900 border-2 border-yellow-600' 
-                                    : 'bg-gray-600 hover:bg-gray-700 text-white'
+                                    : 'bg-gray-300 hover:bg-gray-400 text-gray-700'
                             }`
                         },
                             React.createElement('span', { className: 'block text-sm' }, 'Domáci'),
@@ -965,7 +965,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                             className: `flex-1 py-3 rounded-lg font-semibold transition-colors cursor-pointer text-center ${
                                 selectedForfeitTeam === 'away' 
                                     ? 'bg-yellow-400 text-yellow-900 border-2 border-yellow-600' 
-                                    : 'bg-gray-600 hover:bg-gray-700 text-white'
+                                    : 'bg-gray-300 hover:bg-gray-400 text-gray-700'
                             }`
                         },
                             React.createElement('span', { className: 'block text-sm' }, 'Hostia'),
@@ -992,10 +992,10 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                         {
                             onClick: () => handleForfeit(),
                             disabled: !selectedForfeitTeam,
-                            className: `flex-1 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-center ${
+                            className: `flex-1 py-2 rounded-lg font-semibold transition-colors text-center ${
                                 selectedForfeitTeam 
-                                    ? 'bg-green-600 hover:bg-green-700 text-white' 
-                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    ? 'bg-green-600 hover:bg-green-700 text-white cursor-pointer' 
+                                    : 'bg-gray-300 text-gray-500 border-2 border-green-600 cursor-none hover:bg-gray-300'
                             }`
                         },
                         'Potvrdiť'
