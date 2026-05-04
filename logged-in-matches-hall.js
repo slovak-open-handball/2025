@@ -561,7 +561,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             React.createElement(
                 'div',
                 { 
-                    className: 'bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6',
+                    className: 'bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 p-6',  // Zmena: max-w-md → max-w-2xl (širšie)
                     onClick: (e) => e.stopPropagation()
                 },
                 React.createElement(
@@ -571,20 +571,20 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 ),
                 React.createElement(
                     'p',
-                    { className: 'text-gray-600 mb-4 text-center text-sm' },
+                    { className: 'text-gray-600 mb-6 text-center text-sm' },  // Zmena: mb-4 → mb-6
                     'Zadajte konečný výsledok zápasu'
                 ),
                 
-                // Dva inputy pre výsledky vedľa seba
+                // Dva inputy pre výsledky vedľa seba - širšie
                 React.createElement(
                     'div',
-                    { className: 'flex gap-4 mb-6' },
+                    { className: 'flex gap-6 mb-8' },  // Zmena: gap-4 → gap-6, mb-6 → mb-8
                     React.createElement(
                         'div',
                         { className: 'flex-1 text-center' },
                         React.createElement(
                             'label',
-                            { className: 'block text-sm font-medium text-gray-700 mb-2' },
+                            { className: 'block text-base font-medium text-gray-700 mb-3' },  // Zmena: text-sm → text-base, mb-2 → mb-3
                             homeTeamName
                         ),
                         React.createElement(
@@ -593,7 +593,8 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                                 type: 'number',
                                 value: manualHomeScore,
                                 onChange: (e) => setManualHomeScore(e.target.value),
-                                className: 'w-full px-4 py-3 text-center text-2xl font-bold border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none',
+                                placeholder: '0',
+                                className: 'w-full px-6 py-4 text-center text-3xl font-bold border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none',  // Zmena: väčšie padding a text
                                 min: '0',
                                 step: '1'
                             }
@@ -601,7 +602,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     ),
                     React.createElement(
                         'div',
-                        { className: 'flex items-center justify-center text-2xl font-bold text-gray-400' },
+                        { className: 'flex items-center justify-center text-3xl font-bold text-gray-400 px-2' },  // Zmena: text-2xl → text-3xl
                         ':'
                     ),
                     React.createElement(
@@ -609,7 +610,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                         { className: 'flex-1 text-center' },
                         React.createElement(
                             'label',
-                            { className: 'block text-sm font-medium text-gray-700 mb-2' },
+                            { className: 'block text-base font-medium text-gray-700 mb-3' },  // Zmena: text-sm → text-base, mb-2 → mb-3
                             awayTeamName
                         ),
                         React.createElement(
@@ -618,7 +619,8 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                                 type: 'number',
                                 value: manualAwayScore,
                                 onChange: (e) => setManualAwayScore(e.target.value),
-                                className: 'w-full px-4 py-3 text-center text-2xl font-bold border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none',
+                                placeholder: '0',
+                                className: 'w-full px-6 py-4 text-center text-3xl font-bold border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none',  // Zmena: väčšie padding a text
                                 min: '0',
                                 step: '1'
                             }
@@ -629,7 +631,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 // Dve tlačidlá: Zrušiť a Potvrdiť
                 React.createElement(
                     'div',
-                    { className: 'flex gap-3' },
+                    { className: 'flex gap-4' },  // Zmena: gap-3 → gap-4
                     React.createElement(
                         'button',
                         {
@@ -638,7 +640,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                                 setManualHomeScore('');
                                 setManualAwayScore('');
                             },
-                            className: 'flex-1 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors cursor-pointer text-center'
+                            className: 'flex-1 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium transition-colors cursor-pointer text-center'  // Zmena: py-2 → py-3, rounded-lg → rounded-xl
                         },
                         'Zrušiť'
                     ),
@@ -647,11 +649,11 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                         {
                             onClick: handleManualResultSubmit,
                             disabled: manualHomeScore === '' || manualAwayScore === '',
-                            className: `flex-1 py-2 rounded-lg font-semibold transition-colors text-center ${
+                            className: `flex-1 py-3 rounded-xl font-semibold transition-colors text-center ${
                                 manualHomeScore !== '' && manualAwayScore !== ''
                                     ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
                                     : 'bg-white text-blue-600 border-2 border-blue-600 cursor-not-allowed'
-                            }`
+                            }`  // Zmena: py-2 → py-3, rounded-lg → rounded-xl
                         },
                         'Potvrdiť'
                     )
