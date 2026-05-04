@@ -1948,6 +1948,23 @@ const MatchesHallApp = () => {
             window.scrollTo(0, 0);
         }
     };
+
+    const refreshMatchInList = (matchId, updates) => {
+        // Aktualizujeme v matches
+        setMatches(prevMatches => 
+            prevMatches.map(m => m.id === matchId ? { ...m, ...updates } : m)
+        );
+    
+        // Aktualizujeme v allMatchesList
+        setAllMatchesList(prevList => 
+            prevList.map(m => m.id === matchId ? { ...m, ...updates } : m)
+        );
+    
+        // Aktualizujeme v selectedMatch ak je zobrazený
+        if (selectedMatch && selectedMatch.id === matchId) {
+            setSelectedMatch(prev => ({ ...prev, ...updates }));
+        }
+    };
     
     const handleMatchUpdate = (matchId, updates) => {
         // Ak update obsahuje resetComplete, znamená to že výsledok bol vymazaný
@@ -1970,23 +1987,6 @@ const MatchesHallApp = () => {
         setCurrentMatchIndex(0); // Reset indexu
         // Odstránime hash z URL
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
-    };
-
-    const refreshMatchInList = (matchId, updates) => {
-        // Aktualizujeme v matches
-        setMatches(prevMatches => 
-            prevMatches.map(m => m.id === matchId ? { ...m, ...updates } : m)
-        );
-    
-        // Aktualizujeme v allMatchesList
-        setAllMatchesList(prevList => 
-            prevList.map(m => m.id === matchId ? { ...m, ...updates } : m)
-        );
-    
-        // Aktualizujeme v selectedMatch ak je zobrazený
-        if (selectedMatch && selectedMatch.id === matchId) {
-            setSelectedMatch(prev => ({ ...prev, ...updates }));
-        }
     };
 
     // Počúvanie na zmeny hash v URL
