@@ -1106,54 +1106,54 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             React.createElement(
                 'div',
                 { 
-                    className: 'bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 p-6',  // Zmena: max-w-md → max-w-2xl (rovnaké ako manuálny výsledok)
+                    className: 'bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 p-6',
                     onClick: (e) => e.stopPropagation()
                 },
                 React.createElement(
                     'h3',
-                    { className: 'text-xl font-bold text-gray-800 mb-4 text-center' },
+                    { className: 'text-2xl font-bold text-gray-800 mb-4 text-center' },  // Zväčšené: text-xl → text-2xl
                     'Kontumácia zápasu'
                 ),
                 React.createElement(
                     'p',
-                    { className: 'text-gray-600 mb-6 text-center text-sm' },  // Zmena: mb-2 → mb-6, pridaný text-sm
+                    { className: 'text-gray-600 mb-6 text-center text-base' },  // Zväčšené: text-sm → text-base
                     'Vyberte tím, v prospech ktorého sa zápas kontumuje (10:0)'
                 ),
-                // Dve tlačidlá pre výber tímu vedľa seba - väčšie
+                // Dve tlačidlá pre výber tímu vedľa seba
                 React.createElement(
                     'div',
-                    { className: 'flex gap-6 mb-8' },  // Zmena: gap-3 → gap-6, mb-6 → mb-8
+                    { className: 'flex gap-6 mb-8' },
                     React.createElement(
                         'button',
                         {
                             onClick: () => setSelectedForfeitTeam('home'),
-                            className: `flex-1 py-4 rounded-xl font-semibold transition-colors cursor-pointer text-center ${
+                            className: `flex-1 py-4 rounded-xl font-bold transition-colors cursor-pointer text-center ${
                                 selectedForfeitTeam === 'home' 
                                     ? 'bg-yellow-400 text-yellow-900 border-2 border-yellow-600' 
                                     : 'bg-gray-300 hover:bg-gray-400 text-gray-700'
-                            }`  // Zmena: py-3 → py-4, rounded-lg → rounded-xl
+                            }`
                         },
-                            React.createElement('span', { className: 'block text-base' }, 'Domáci'),  // Zmena: text-sm → text-base
-                            React.createElement('span', { className: 'block text-xs opacity-90 mt-1' }, homeTeamName)
+                            React.createElement('span', { className: 'block text-lg font-bold' }, 'Domáci'),  // Zväčšené: text-base → text-lg, pridaný font-bold
+                            React.createElement('span', { className: 'block text-sm opacity-90 mt-1' }, homeTeamName)  // Zväčšené: text-xs → text-sm
                     ),
                     React.createElement(
                         'button',
                         {
                             onClick: () => setSelectedForfeitTeam('away'),
-                            className: `flex-1 py-4 rounded-xl font-semibold transition-colors cursor-pointer text-center ${
+                            className: `flex-1 py-4 rounded-xl font-bold transition-colors cursor-pointer text-center ${
                                 selectedForfeitTeam === 'away' 
                                     ? 'bg-yellow-400 text-yellow-900 border-2 border-yellow-600' 
                                     : 'bg-gray-300 hover:bg-gray-400 text-gray-700'
-                            }`  // Zmena: py-3 → py-4, rounded-lg → rounded-xl
+                            }`
                         },
-                            React.createElement('span', { className: 'block text-base' }, 'Hostia'),  // Zmena: text-sm → text-base
-                            React.createElement('span', { className: 'block text-xs opacity-90 mt-1' }, awayTeamName)
+                            React.createElement('span', { className: 'block text-lg font-bold' }, 'Hostia'),  // Zväčšené: text-base → text-lg, pridaný font-bold
+                            React.createElement('span', { className: 'block text-sm opacity-90 mt-1' }, awayTeamName)  // Zväčšené: text-xs → text-sm
                     )
                 ),
-                // Dve tlačidlá: Zrušiť a Potvrdiť - väčšie
+                // Dve tlačidlá: Zrušiť a Potvrdiť
                 React.createElement(
                     'div',
-                    { className: 'flex gap-4' },  // Zmena: gap-3 → gap-4
+                    { className: 'flex gap-4' },
                     React.createElement(
                         'button',
                         {
@@ -1161,7 +1161,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                                 setShowForfeitModal(false);
                                 setSelectedForfeitTeam(null);
                             },
-                            className: 'flex-1 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium transition-colors cursor-pointer text-center'  // Zmena: py-2 → py-3, rounded-lg → rounded-xl
+                            className: 'flex-1 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold transition-colors cursor-pointer text-center'  // pridaný font-semibold
                         },
                         'Zrušiť'
                     ),
@@ -1170,11 +1170,11 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                         {
                             onClick: () => handleForfeit(),
                             disabled: !selectedForfeitTeam,
-                            className: `flex-1 py-3 rounded-xl font-semibold transition-colors text-center ${
+                            className: `flex-1 py-3 rounded-xl font-bold transition-colors text-center ${  // font-semibold → font-bold
                                 selectedForfeitTeam 
                                     ? 'bg-green-600 hover:bg-green-700 text-white cursor-pointer' 
                                     : 'bg-white text-green-600 border-2 border-green-600 cursor-not-allowed'
-                            }`,  // Zmena: py-2 → py-3, rounded-lg → rounded-xl
+                            }`,
                             style: !selectedForfeitTeam ? { cursor: 'not-allowed' } : {}
                         },
                         'Potvrdiť'
