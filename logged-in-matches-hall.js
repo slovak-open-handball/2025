@@ -5885,26 +5885,90 @@ const matchesHallApp = ({ userProfileData }) => {
         return null;
     };
 
-    // Pôvodná funkcia showAllMatches - UPRAVENÁ
+    // Pôvodná funkcia showAllMatches - OPRAVENÁ VERZIA
     const showAllMatches = async () => {
-        // 🔥 OCHRANA: Ak nie je hallId, nemôžeme zobraziť zoznam
-        if (!hallId) {
+        // 🔥 KRITICKÉ: Použijeme ref hodnotu namiesto priameho hallId
+        const currentHallId = hallIdRef.current;
+        
+        // 🔥 OCHRANA: Ak nemáme hallId, skúsime ho získať z userProfileData
+        let finalHallId = currentHallId;
+        
+        if (!finalHallId && userProfileData?.hallId) {
+            finalHallId = userProfileData.hallId;
+            console.log('🔄 HallId získaný z userProfileData:', finalHallId);
+        }
+        
+        if (!finalHallId) {
             console.warn('⚠️ HallId nie je k dispozícii, nie je možné zobraziť zoznam zápasov');
-            // Pokúsime sa znova načítať hallId z userProfileData
-            if (userProfileData?.hallId) {
-                window.location.reload();
-            }
+            window.showGlobalNotification('Nie je možné načítať zoznam zápasov - chýba identifikátor haly', 'error');
             return;
         }
         
         // 🔥 DODATOČNÁ OCHRANA: Skontrolujeme typ
-        if (typeof hallId !== 'string') {
-            console.error('❌ HallId má nesprávny typ:', typeof hallId);
+        if (typeof finalHallId !== 'string') {
+            console.error('❌ HallId má nesprávny typ:', typeof finalHallId, finalHallId);
+            window.showGlobalNotification('Chyba: Neplatný identifikátor haly', 'error');
             return;
         }
         
+        console.log('📋 showAllMatches volaná s hallId:', finalHallId);
+        
         setSelectedMatch(null);
         updateUrlParameters(null, null);
+        
+        // Manuálne spustenie načítania zápasov
+        if (window.db) {
+            try {
+                const matchesRef = collection(window.db, 'matches');
+                const q = query(matchesRef, where("hallId", "==", finalHallId));
+                const querySnapshot = await getDocs(q);
+                
+                const loadedMatches = [];
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    loadedMatches.push({
+                        id: doc.id,
+                        ...data,
+                        currentPeriod: data.currentPeriod || 1,
+                        manualTimeOffset: data.manualTimeOffset || 0
+                    });
+                });
+                
+                // Zoradíme podľa času
+                loadedMatches.sort((a, b) => {
+                    if (!a.scheduledTime) return 1;
+                    if (!b.scheduledTime) return -1;
+                    return a.scheduledTime.toDate() - b.scheduledTime.toDate();
+                });
+                
+                setMatches(loadedMatches);
+                
+                // Zoskupenie podľa dňa
+                const grouped = {};
+                loadedMatches.forEach(match => {
+                    if (match.scheduledTime) {
+                        const date = match.scheduledTime.toDate();
+                        const dateStr = getLocalDateStr(date);
+                        
+                        if (!grouped[dateStr]) {
+                            grouped[dateStr] = {
+                                date: date,
+                                dateStr: dateStr,
+                                matches: []
+                            };
+                        }
+                        grouped[dateStr].matches.push(match);
+                    }
+                });
+                
+                setGroupedMatches(grouped);
+                console.log('✅ Zoznam zápasov bol manuálne aktualizovaný');
+                
+            } catch (error) {
+                console.error('Chyba pri manuálnom načítaní zápasov:', error);
+                window.showGlobalNotification('Chyba pri načítaní zápasov', 'error');
+            }
+        }
         
         // Vynútime refresh mapovania pri návrate na zoznam
         if (matches.length > 0 && window.matchTracker) {
