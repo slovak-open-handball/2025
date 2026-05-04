@@ -869,7 +869,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                         disabled: period <= 1,
                         className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${period <= 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`
                     },
-                    React.createElement('i', { className: 'fa-solid fa-chevron-left' })
+                    React.createElement('i', { className: 'fa-solid fa-minus' })
                 ),
                 React.createElement('span', { className: 'text-sm text-gray-800 font-semibold px-1' }, 'Perióda'),
                 React.createElement(
@@ -879,7 +879,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                         disabled: period >= totalPeriods,
                         className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${period >= totalPeriods ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`
                     },
-                    React.createElement('i', { className: 'fa-solid fa-chevron-right' })
+                    React.createElement('i', { className: 'fa-solid fa-plus' })
                 ),
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
                 React.createElement(
