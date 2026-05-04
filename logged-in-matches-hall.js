@@ -593,7 +593,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                                 type: 'number',
                                 value: manualHomeScore,
                                 onChange: (e) => setManualHomeScore(e.target.value),
-                                placeholder: '0',
                                 className: 'w-full px-6 py-4 text-center text-3xl font-bold border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none',  // Zmena: väčšie padding a text
                                 min: '0',
                                 step: '1'
@@ -619,7 +618,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                                 type: 'number',
                                 value: manualAwayScore,
                                 onChange: (e) => setManualAwayScore(e.target.value),
-                                placeholder: '0',
                                 className: 'w-full px-6 py-4 text-center text-3xl font-bold border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none',  // Zmena: väčšie padding a text
                                 min: '0',
                                 step: '1'
