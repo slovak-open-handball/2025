@@ -177,14 +177,14 @@ const MatchesHallApp = () => {
         'div',
         { className: 'max-w-7xl mx-auto px-4 py-6' },
         
-        // Hlavička
+        // Hlavička - teraz vycentrovaná
         React.createElement(
             'div',
-            { className: 'mb-6' },
+            { className: 'mb-8 text-center' },
             React.createElement('h1', { className: 'text-2xl font-bold text-gray-800' }, 'Zápasy'),
             React.createElement(
                 'div',
-                { className: 'flex items-center gap-2 mt-1' },
+                { className: 'flex items-center justify-center gap-2 mt-1' },
                 React.createElement('i', { className: 'fa-solid fa-location-dot text-blue-500 text-sm' }),
                 React.createElement('span', { className: 'text-gray-600' }, hallInfo?.name || 'Športová hala'),
                 React.createElement('span', { className: 'text-gray-400 text-sm ml-2' }, `(${totalMatches} zápasov)`)
@@ -296,16 +296,6 @@ const MatchesHallApp = () => {
                                         'span',
                                         { className: 'text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full whitespace-nowrap' },
                                         match.categoryName
-                                    ),
-                                    
-                                    // Detail tlačidlo
-                                    React.createElement(
-                                        'button',
-                                        {
-                                            className: 'text-xs text-blue-500 hover:text-blue-700 whitespace-nowrap',
-                                            onClick: () => console.log('Detail zápasu:', match.id)
-                                        },
-                                        'Detail'
                                     )
                                 )
                             );
