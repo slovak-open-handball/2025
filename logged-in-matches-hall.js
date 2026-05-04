@@ -865,16 +865,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 React.createElement(
                     'button',
                     {
-                        onClick: resetTime,
-                        className: 'bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
-                    },
-                    React.createElement('i', { className: 'fa-solid fa-arrow-rotate-left mr-1' }),
-                    'Reset'
-                ),
-                React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
-                React.createElement(
-                    'button',
-                    {
                         onClick: prevPeriod,
                         disabled: period <= 1,
                         className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${period <= 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`
@@ -890,6 +880,16 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                         className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${period >= totalPeriods ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`
                     },
                     React.createElement('i', { className: 'fa-solid fa-chevron-right' })
+                ),
+                React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: resetTime,
+                        className: 'bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-arrow-rotate-left mr-1' }),
+                    'Reset'
                 )
             ),
             React.createElement(
