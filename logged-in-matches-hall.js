@@ -25,7 +25,7 @@ const formatDateHeader = (date) => {
     return `${dayName} ${day}. ${month}. ${year}`;
 };
 
-// Funkcia na získanie zobrazeného názvu tímu
+// Funkcia na získanie zobrazeného názvu tímu - IBA cez teamManager
 const getDisplayTeamName = (teamIdentifier) => {
     if (!teamIdentifier) return '???';
     
@@ -39,19 +39,14 @@ const getDisplayTeamName = (teamIdentifier) => {
         const number = spaceMatch[3];
         const displayId = `${category} ${number} ${letter}`;
         
-        // Skúsiť najprv teamManager
+        // Použiť LEN teamManager
         if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
             const teamName = window.teamManager.getTeamNameByDisplayIdSync(displayId);
-            if (teamName) return teamName;
+            if (teamName && teamName !== displayId) return teamName;
         }
         
-        // Ak teamManager nemá výsledok, skúsiť matchTracker
-        if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-            const teamName = window.matchTracker.getTeamNameByDisplayId(displayId);
-            if (teamName) return teamName;
-        }
-        
-        return teamIdentifier;
+        // Ak teamManager vráti rovnakú hodnotu alebo neexistuje, vrátiť pôvodný identifikátor v upravenom formáte
+        return `${category} ${number} ${letter}`;
     }
     
     // Kontrola formátu: "kategoria cislo pismeno" (s medzerou)
@@ -64,19 +59,20 @@ const getDisplayTeamName = (teamIdentifier) => {
         const letter = numberLetterMatch[3];
         const displayId = `${category} ${number} ${letter}`;
         
-        // Skúsiť najprv teamManager
+        // Použiť LEN teamManager
         if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
             const teamName = window.teamManager.getTeamNameByDisplayIdSync(displayId);
-            if (teamName) return teamName;
+            if (teamName && teamName !== displayId) return teamName;
         }
         
-        // Ak teamManager nemá výsledok, skúsiť matchTracker
-        if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
-            const teamName = window.matchTracker.getTeamNameByDisplayId(displayId);
-            if (teamName) return teamName;
-        }
-        
+        // Ak teamManager vráti rovnakú hodnotu alebo neexistuje, vrátiť pôvodný identifikátor
         return teamIdentifier;
+    }
+    
+    // Ak formát nesedí, skúsiť poslať priamo do teamManager
+    if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+        const teamName = window.teamManager.getTeamNameByDisplayIdSync(teamIdentifier);
+        if (teamName && teamName !== teamIdentifier) return teamName;
     }
     
     // Ak formát nesedí, vrátiť pôvodný identifikátor
@@ -317,7 +313,7 @@ const MatchesHallApp = () => {
                                     React.createElement('th', { className: 'px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Domáci'),
                                     React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, 'VS'),
                                     React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Hostia'),
-                                    React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Info') // Zúžený stĺpec na 1/4 (w-48 namiesto pôvodnej šírky)
+                                    React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Info')
                                 )
                             ),
                             
@@ -329,7 +325,7 @@ const MatchesHallApp = () => {
                                     const dateTime = formatMatchDateTime(match.scheduledTime);
                                     const isResultAvailable = match.homeScore !== undefined && match.awayScore !== undefined;
                                     
-                                    // Získanie zobrazených názvov tímov
+                                    // Získanie zobrazených názvov tímov - vždy cez teamManager
                                     const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
                                     const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
                                     
@@ -410,13 +406,13 @@ const MatchesHallApp = () => {
                                             React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, awayTeamDisplay)
                                         ),
                                         
-                                        // Info tagy - zúžený stĺpec
+                                        // Info tagy
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3' },
                                             React.createElement(
                                                 'div',
-                                                { className: 'flex flex-col gap-1' }, // Zmena na stĺpec namiesto riadku pre lepšie využitie úzkeho priestoru
+                                                { className: 'flex flex-col gap-1' },
                                                 infoTags
                                             )
                                         )
