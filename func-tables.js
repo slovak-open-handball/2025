@@ -644,15 +644,59 @@ let isTeamNameReplacerInitialized = false;
             teamPairsPlayed: teamPairsPlayed
         };
     }
+
+    function getTeamsBaseOrder(categoryName, groupName) {
+        // Získame tímy z globálneho stavu (z druhého kódu)
+        const allTeams = window.__allTeamsState || [];
+    
+        // Vyfiltrujeme tímy v danej kategórii a skupine
+        const teamsInGroup = allTeams.filter(team => 
+            team.category === categoryName && 
+            team.groupName === groupName &&
+            typeof team.order === 'number' && team.order > 0
+        );
+    
+        // Zoradíme podľa order
+        const sortedTeams = [...teamsInGroup].sort((a, b) => a.order - b.order);
+        
+        // Transformujeme do formátu, ktorý používa tabuľka
+        return sortedTeams.map(team => ({
+            id: team.id,
+            name: team.teamName,
+            played: 0,
+            wins: 0,
+            draws: 0,
+            losses: 0,
+            goalsFor: 0,
+            goalsAgainst: 0,
+            points: 0,
+            goalDifference: 0,
+            // Uložíme pôvodné poradie pre prípad potreby
+            baseOrder: team.order
+        }));
+    }
     
     // Funkcia na získanie všetkých tímov v skupine (na základe všetkých zápasov, okrem zápasov o umiestnenie)
-    function getTeamsInGroupFromAllMatches(groupMatches) {
+    function getTeamsInGroupFromAllMatches(groupMatches, categoryName, groupName, useBaseOrderIfNoMatches = true) {
         const teamsMap = new Map();
+    
+        // Zistíme, či sú v skupine nejaké DOKONČENÉ zápasy
+        const hasAnyCompletedMatches = groupMatches.some(match => match.status === 'completed');
         
+        // Ak nie sú žiadne dokončené zápasy a chceme použiť base order
+        if (!hasAnyCompletedMatches && useBaseOrderIfNoMatches) {
+            const baseOrderTeams = getTeamsBaseOrder(categoryName, groupName);
+            if (baseOrderTeams.length > 0) {
+                log(`📋 [${categoryName} - ${groupName}] Žiadne dokončené zápasy, používam preddefinované poradie (${baseOrderTeams.length} tímov)`);
+                return baseOrderTeams;
+            }
+        }
+    
+        // Inak pôvodná logika
         groupMatches.forEach(match => {
             // PRESKOČÍME ZÁPASY O UMIESTNENIE
             if (match.isPlacementMatch) return;
-            
+        
             const homeTeamId = match.homeTeamIdentifier;
             const awayTeamId = match.awayTeamIdentifier;
             
@@ -666,10 +710,11 @@ let isTeamNameReplacerInitialized = false;
                     losses: 0,
                     goalsFor: 0,
                     goalsAgainst: 0,
-                    points: 0
+                    points: 0,
+                    baseOrder: null
                 });
             }
-            
+        
             if (!teamsMap.has(awayTeamId)) {
                 teamsMap.set(awayTeamId, {
                     id: awayTeamId,
@@ -680,12 +725,28 @@ let isTeamNameReplacerInitialized = false;
                     losses: 0,
                     goalsFor: 0,
                     goalsAgainst: 0,
-                    points: 0
+                    points: 0,
+                    baseOrder: null
                 });
             }
         });
+    
+        let teamsArray = Array.from(teamsMap.values());
+    
+        // Pokúsime sa doplniť baseOrder z globálneho stavu
+        const allTeamsGlobal = window.__allTeamsState || [];
+        for (const team of teamsArray) {
+            const globalTeam = allTeamsGlobal.find(t => 
+                t.category === categoryName && 
+                t.groupName === groupName &&
+                (t.teamName === team.name || t.id === team.id)
+            );
+            if (globalTeam && typeof globalTeam.order === 'number') {
+                team.baseOrder = globalTeam.order;
+            }
+        }
         
-        return Array.from(teamsMap.values());
+        return teamsArray;
     }
     
     // Funkcia na získanie všetkých zápasov v skupine (vrátane neodohraných) - VYNEChÁ ZÁPASY O UMIESTNENIE
@@ -755,7 +816,6 @@ let isTeamNameReplacerInitialized = false;
     let groupTableCache = new Map();  // Cache pre tabuľky skupín
     let lastGroupTableUpdate = new Map();  // Kedy bola naposledy aktualizovaná
 
-    // A v createGroupTable na začiatok:
     function createGroupTable(categoryName, groupName, forceRefresh = false) {
         const cacheKey = `${categoryName}|${groupName}`;
         const now = Date.now();
@@ -763,8 +823,7 @@ let isTeamNameReplacerInitialized = false;
         // Ak nevyžadujeme refresh a cache je menej ako 5 sekúnd stará, vrátime cached
         if (!forceRefresh && groupTableCache.has(cacheKey)) {
             const lastUpdate = lastGroupTableUpdate.get(cacheKey) || 0;
-            if (now - lastUpdate < 5000) {  // 5 sekúnd cache
-//                log(`💿 Používam cached tabuľku pre ${cacheKey}`);
+            if (now - lastUpdate < 5000) {
                 return groupTableCache.get(cacheKey);
             }
         }
@@ -779,8 +838,25 @@ let isTeamNameReplacerInitialized = false;
         // Získame len ODOHRANÉ zápasy pre výpočet štatistík
         const completedGroupMatches = allGroupMatches.filter(match => match.status === 'completed');
         
-        // Získame všetky tímy v skupine
-        const teamsInGroup = getTeamsInGroupFromAllMatches(allGroupMatches);
+        // Zistíme, či máme nejaké dokončené zápasy
+        const hasAnyCompletedMatches = completedGroupMatches.length > 0;
+        
+        // Získame všetky tímy v skupine (s podporou base order ak nie sú dokončené zápasy)
+        let teamsInGroup;
+        if (!hasAnyCompletedMatches) {
+            // Použijeme preddefinované poradie z globálneho stavu
+            teamsInGroup = getTeamsBaseOrder(categoryName, groupName);
+            if (teamsInGroup.length === 0) {
+                // Fallback na pôvodnú metódu
+                teamsInGroup = getTeamsInGroupFromAllMatches(allGroupMatches, categoryName, groupName, false);
+            }
+        } else {
+            teamsInGroup = getTeamsInGroupFromAllMatches(allGroupMatches, categoryName, groupName, false);
+        }
+        
+        if (teamsInGroup.length === 0) {
+            return null;
+        }
         
         // Získame aktuálny počet bodov za výhru z cache
         const pointsForWin = getPointsForWinSync();
@@ -846,13 +922,24 @@ let isTeamNameReplacerInitialized = false;
             team.goalDifference = team.goalsFor - team.goalsAgainst;
         });
         
-        // Zoradenie tímov
-        const sortedTeams = [...teamsInGroup].sort((a, b) => {
-            return compareTeams(a, b, allGroupMatches, tableSettings.sortingConditions);
-        });
+        // ============================================================
+        // 🔥 ZORADENIE TÍMOV
+        // ============================================================
+        let sortedTeams;
+        
+        if (!hasAnyCompletedMatches && teamsInGroup.length > 0 && teamsInGroup[0].baseOrder) {
+            // Ak nie sú žiadne dokončené zápasy a máme baseOrder, zoradíme podľa baseOrder
+            sortedTeams = [...teamsInGroup].sort((a, b) => (a.baseOrder || 999) - (b.baseOrder || 999));
+            log(`📋 [${categoryName} - ${groupName}] Zoradené podľa preddefinovaného poradia (baseOrder)`);
+        } else {
+            // Inak použijeme štandardné porovnávanie
+            sortedTeams = [...teamsInGroup].sort((a, b) => {
+                return compareTeams(a, b, allGroupMatches, tableSettings.sortingConditions);
+            });
+        }
         
         // ============================================================
-        // Vytvoríme zoznam zápasov so SPRÁVNYM skóre A ZMAPOVANÝMI NÁZVA MI
+        // Vytvoríme zoznam zápasov so SPRÁVNYM skóre A ZMAPOVANÝMI NÁZVAMI
         // ============================================================
         const allMatchesForDisplay = [];
         
@@ -893,7 +980,7 @@ let isTeamNameReplacerInitialized = false;
                 isTransferred: false
             });
         }
-
+    
         const result = {
             category: categoryName,
             group: groupName,
@@ -905,12 +992,14 @@ let isTeamNameReplacerInitialized = false;
             remainingCount: totalMatches - completedMatches,
             completionPercentage: completionPercentage,
             transferredMatches: [],
-            pointsForWin: pointsForWin
+            pointsForWin: pointsForWin,
+            // Pridáme informáciu, či bolo použité preddefinované poradie
+            usedBaseOrder: !hasAnyCompletedMatches && teamsInGroup.some(t => t.baseOrder)
         };
         
         groupTableCache.set(cacheKey, result);
         lastGroupTableUpdate.set(cacheKey, now);
-
+    
         return result;
     }
 
