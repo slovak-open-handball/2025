@@ -460,7 +460,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const [totalPeriods, setTotalPeriods] = useState(1);
     const [periodDuration, setPeriodDuration] = useState(20);
     const intervalRef = useRef(null);
-    const lastSyncTimeRef = useRef(null);
+    const isUpdatingFromServerRef = useRef(false);
     const lastServerTimeRef = useRef({ minutes: 0, seconds: 0 });
     
     // Real-time počúvanie zmien časovača z databázy
@@ -473,15 +473,8 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             if (docSnapshot.exists()) {
                 const matchData = docSnapshot.data();
                 
-                // Načítanie nastavení z kategórie (ak nie sú)
-                if (categorySettings) {
-                    if (categorySettings.periods !== undefined && !matchData.totalPeriods) {
-                        setTotalPeriods(categorySettings.periods);
-                    }
-                    if (categorySettings.periodDuration !== undefined && !matchData.periodDuration) {
-                        setPeriodDuration(categorySettings.periodDuration);
-                    }
-                }
+                // Označíme, že aktualizácia prichádza zo servera
+                isUpdatingFromServerRef.current = true;
                 
                 // Synchronizácia periódy
                 if (matchData.currentPeriod !== undefined && matchData.currentPeriod !== period) {
@@ -495,21 +488,13 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                         seconds: matchData.timerSeconds
                     };
                     
-                    // Uložíme posledný známy server čas
-                    lastServerTimeRef.current = serverTime;
+                    // Kontrola či sa čas zmenil
+                    const lastTime = lastServerTimeRef.current;
+                    const timeChanged = lastTime.minutes !== serverTime.minutes || lastTime.seconds !== serverTime.seconds;
                     
-                    // Aktualizujeme lokálny čas (len ak nie je spustený lokálny časovač)
-                    if (!isRunning) {
+                    if (timeChanged) {
+                        lastServerTimeRef.current = serverTime;
                         setTime(serverTime);
-                    } else {
-                        // Ak beží časovač, porovnáme čas a prípadne upravíme
-                        const localTimeSeconds = time.minutes * 60 + time.seconds;
-                        const serverTimeSeconds = serverTime.minutes * 60 + serverTime.seconds;
-                        
-                        // Ak je rozdiel väčší ako 2 sekundy, preberieme server čas
-                        if (Math.abs(localTimeSeconds - serverTimeSeconds) > 2) {
-                            setTime(serverTime);
-                        }
                     }
                 }
                 
@@ -519,7 +504,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     if (matchData.timerRunning) {
                         // Ak je na serveri spustený a lokálne nie, spustíme ho
                         if (!isRunning && intervalRef.current === null) {
-                            startTimer();
+                            startTimerFromServer();
                         }
                     } else {
                         // Ak je na serveri zastavený a lokálne beží, zastavíme ho
@@ -531,13 +516,18 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                         }
                     }
                 }
+                
+                // Reset flagu po dokončení aktualizácie
+                setTimeout(() => {
+                    isUpdatingFromServerRef.current = false;
+                }, 100);
             }
         }, (error) => {
             console.error('Chyba pri real-time počúvaní časovača:', error);
         });
         
         return () => unsubscribe();
-    }, [matchId, categorySettings]);
+    }, [matchId]);
     
     // Načítanie počiatočných nastavení z matcha
     useEffect(() => {
@@ -565,7 +555,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             if (match.timerRunning !== undefined) {
                 setIsRunning(match.timerRunning);
                 if (match.timerRunning) {
-                    startTimer();
+                    startTimerFromServer();
                 }
             }
         }
@@ -573,7 +563,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     
     // Kontrola či čas dosiahol dĺžku periódy (automatické zastavenie)
     useEffect(() => {
-        if (isRunning) {
+        if (isRunning && !isUpdatingFromServerRef.current) {
             const currentTotalSeconds = time.minutes * 60 + time.seconds;
             const periodTotalSeconds = periodDuration * 60;
             
@@ -592,6 +582,9 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     // Uloženie časovača do Firestore s kontrolou zmeny
     const saveTimerToFirestore = async (newTime, newPeriod, newIsRunning) => {
         if (!window.db || !matchId) return;
+        
+        // Ak aktualizácia prichádza zo servera, neukladáme
+        if (isUpdatingFromServerRef.current) return;
         
         // Kontrola či sa čas naozaj zmenil
         const lastTime = lastServerTimeRef.current;
@@ -626,10 +619,33 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const startTimer = () => {
         if (intervalRef.current) clearInterval(intervalRef.current);
         
-        // Zaznamenáme čas začiatku pre prípadnú synchronizáciu
-        lastSyncTimeRef.current = Date.now();
+        intervalRef.current = setInterval(() => {
+            // Ak práve prebieha aktualizácia zo servera, preskočíme
+            if (isUpdatingFromServerRef.current) return;
+            
+            setTime(prevTime => {
+                let newMinutes = prevTime.minutes;
+                let newSeconds = prevTime.seconds + 1;
+                
+                if (newSeconds >= 60) {
+                    newMinutes += 1;
+                    newSeconds = 0;
+                }
+                
+                const newTimeState = { minutes: newMinutes, seconds: newSeconds };
+                saveTimerToFirestore(newTimeState, period, true);
+                return newTimeState;
+            });
+        }, 1000);
+    };
+    
+    const startTimerFromServer = () => {
+        // Tento štart je vyvolaný zo servera - nespúšťame interval znovu
+        if (intervalRef.current) return;
         
         intervalRef.current = setInterval(() => {
+            if (isUpdatingFromServerRef.current) return;
+            
             setTime(prevTime => {
                 let newMinutes = prevTime.minutes;
                 let newSeconds = prevTime.seconds + 1;
@@ -660,33 +676,31 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         } else {
             startTimer();
         }
-        setIsRunning(!isRunning);
+        // Nevoláme setIsRunning tu - nastaví sa cez onSnapshot
     };
     
     // Manuálna úprava času (so synchronizáciou)
     const addMinute = () => {
+        if (isUpdatingFromServerRef.current) return;
+        
         const newTime = { ...time, minutes: time.minutes + 1 };
         setTime(newTime);
-        if (!isRunning) {
-            saveTimerToFirestore(newTime, period, false);
-        } else {
-            saveTimerToFirestore(newTime, period, true);
-        }
+        saveTimerToFirestore(newTime, period, isRunning);
     };
     
     const subtractMinute = () => {
+        if (isUpdatingFromServerRef.current) return;
+        
         if (time.minutes > 0) {
             const newTime = { ...time, minutes: time.minutes - 1 };
             setTime(newTime);
-            if (!isRunning) {
-                saveTimerToFirestore(newTime, period, false);
-            } else {
-                saveTimerToFirestore(newTime, period, true);
-            }
+            saveTimerToFirestore(newTime, period, isRunning);
         }
     };
     
     const addSecond = () => {
+        if (isUpdatingFromServerRef.current) return;
+        
         let newSeconds = time.seconds + 1;
         let newMinutes = time.minutes;
         if (newSeconds >= 60) {
@@ -695,14 +709,12 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         }
         const newTime = { minutes: newMinutes, seconds: newSeconds };
         setTime(newTime);
-        if (!isRunning) {
-            saveTimerToFirestore(newTime, period, false);
-        } else {
-            saveTimerToFirestore(newTime, period, true);
-        }
+        saveTimerToFirestore(newTime, period, isRunning);
     };
     
     const subtractSecond = () => {
+        if (isUpdatingFromServerRef.current) return;
+        
         let newSeconds = time.seconds - 1;
         let newMinutes = time.minutes;
         if (newSeconds < 0) {
@@ -715,20 +727,17 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         }
         const newTime = { minutes: newMinutes, seconds: newSeconds };
         setTime(newTime);
-        if (!isRunning) {
-            saveTimerToFirestore(newTime, period, false);
-        } else {
-            saveTimerToFirestore(newTime, period, true);
-        }
+        saveTimerToFirestore(newTime, period, isRunning);
     };
     
     const resetTime = () => {
+        if (isUpdatingFromServerRef.current) return;
+        
         if (isRunning) {
             if (intervalRef.current) {
                 clearInterval(intervalRef.current);
                 intervalRef.current = null;
             }
-            setIsRunning(false);
         }
         
         const newTime = { minutes: 0, seconds: 0 };
@@ -737,17 +746,18 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     };
     
     const nextPeriod = () => {
+        if (isUpdatingFromServerRef.current) return;
+        
         if (period < totalPeriods) {
             const newPeriod = period + 1;
-            setPeriod(newPeriod);
             const newTime = { minutes: 0, seconds: 0 };
             setTime(newTime);
+            setPeriod(newPeriod);
             if (isRunning) {
                 if (intervalRef.current) {
                     clearInterval(intervalRef.current);
                     intervalRef.current = null;
                 }
-                setIsRunning(false);
                 saveTimerToFirestore(newTime, newPeriod, false);
             } else {
                 saveTimerToFirestore(newTime, newPeriod, false);
@@ -756,17 +766,18 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     };
     
     const prevPeriod = () => {
+        if (isUpdatingFromServerRef.current) return;
+        
         if (period > 1) {
             const newPeriod = period - 1;
-            setPeriod(newPeriod);
             const newTime = { minutes: 0, seconds: 0 };
             setTime(newTime);
+            setPeriod(newPeriod);
             if (isRunning) {
                 if (intervalRef.current) {
                     clearInterval(intervalRef.current);
                     intervalRef.current = null;
                 }
-                setIsRunning(false);
                 saveTimerToFirestore(newTime, newPeriod, false);
             } else {
                 saveTimerToFirestore(newTime, newPeriod, false);
