@@ -458,6 +458,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const [totalPeriods, setTotalPeriods] = useState(1);
     const [periodDuration, setPeriodDuration] = useState(20);
     const [displaySeconds, setDisplaySeconds] = useState(0);
+    const [showEndMatchModal, setShowEndMatchModal] = useState(false);
     
     const intervalRef = useRef(null);
     const isRunningRef = useRef(false);
@@ -756,6 +757,81 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         setTimeout(() => { lastServerUpdateRef.current = 0; }, 300);
     };
 
+    // Funkcia pre ukončenie zápasu
+    const endMatch = async () => {
+        if (window.db && matchId) {
+            try {
+                // Zastavíme časovač ak beží
+                if (isRunningRef.current) {
+                    stopLocalInterval();
+                    setIsRunning(false);
+                    isRunningRef.current = false;
+                }
+                
+                const matchRef = doc(window.db, 'matches', matchId);
+                await updateDoc(matchRef, {
+                    status: 'completed',
+                    updatedAt: Timestamp.now()
+                });
+                console.log(`Zápas ${matchId} bol ukončený`);
+                setShowEndMatchModal(false);
+                if (onTimeUpdate) onTimeUpdate({ seconds: displaySeconds, period, isRunning: false });
+            } catch (err) {
+                console.error('Chyba pri ukončovaní zápasu:', err);
+            }
+        }
+    };
+
+    // Render modálneho okna
+    const renderEndMatchModal = () => {
+        if (!showEndMatchModal) return null;
+        
+        return React.createElement(
+            'div',
+            { 
+                className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50',
+                onClick: () => setShowEndMatchModal(false)
+            },
+            React.createElement(
+                'div',
+                { 
+                    className: 'bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
+                React.createElement(
+                    'h3',
+                    { className: 'text-xl font-bold text-gray-800 mb-4' },
+                    'Ukončiť zápas'
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-600 mb-6' },
+                    'Naozaj chcete ukončiť tento zápas? Po ukončení už nebude možné meniť čas ani výsledok.'
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex gap-3 justify-end' },
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => setShowEndMatchModal(false),
+                            className: 'px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors cursor-pointer'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: endMatch,
+                            className: 'px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors cursor-pointer'
+                        },
+                        'Ukončiť zápas'
+                    )
+                )
+            )
+        );
+    };
+
     // Render (rovnaký)
     return React.createElement('div', { className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
         React.createElement('div', { className: 'bg-gray-50 px-6 py-3 border-b border-gray-200' },
@@ -786,6 +862,28 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
                 React.createElement('button', { onClick: resetTime, disabled: !canReset(), className: `px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${canReset() ? 'bg-yellow-500 hover:bg-yellow-600 text-white' : 'bg-gray-300 text-gray-400 cursor-not-allowed'}` }, React.createElement('i', { className: 'fa-solid fa-arrow-rotate-left mr-1' }), 'Reset')
             ),
+            // NOVÝ RIADOK S TLAČIDLAMI PRE UKONČENIE ZÁPASU
+            React.createElement('div', { className: 'flex flex-wrap items-center justify-center gap-2 mb-6 pt-2 border-t border-gray-100' },
+                React.createElement('button', { 
+                    onClick: () => setShowEndMatchModal(true), 
+                    className: 'bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' 
+                },
+                    React.createElement('i', { className: 'fa-solid fa-flag-checkered mr-1' }), 'Ukončiť zápas'
+                ),
+                React.createElement('button', { 
+                    onClick: () => console.log('Zadať výsledok manuálne - zatiaľ len výpis do konzoly'), 
+                    className: 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' 
+                },
+                    React.createElement('i', { className: 'fa-solid fa-pen-to-square mr-1' }), 'Zadať výsledok manuálne'
+                ),
+                React.createElement('button', { 
+                    onClick: () => console.log('Kontumácia - zatiaľ len výpis do konzoly'), 
+                    className: 'bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' 
+                },
+                    React.createElement('i', { className: 'fa-solid fa-gavel mr-1' }), 'Kontumácia'
+                )
+            ),
+            // Pôvodné tlačidlá pre gól, 7m, ŽK, ČK, MK, Vylúčenie
             React.createElement('div', { className: 'flex flex-wrap items-center justify-center gap-2 pt-2 border-t border-gray-100' },
                 React.createElement('button', { onClick: () => console.log('Gól'), className: 'bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' }, 'Gól'),
                 React.createElement('button', { onClick: () => console.log('7m'), className: 'bg-teal-500 hover:bg-teal-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' }, '7m'),
@@ -794,7 +892,8 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 React.createElement('button', { onClick: () => console.log('MK'), className: 'bg-blue-400 hover:bg-blue-500 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' }, 'MK'),
                 React.createElement('button', { onClick: () => console.log('Vylúčenie'), className: 'bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' }, 'Vylúčenie')
             )
-        )
+        ),
+        renderEndMatchModal()
     );
 };
 
