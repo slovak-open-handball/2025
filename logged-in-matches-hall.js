@@ -229,7 +229,7 @@ const MatchesHallApp = () => {
             )
         ),
         
-        // Zoznam dní
+        // Tabuľka zápasov - jedna tabuľka pre všetky dni
         matchesByDay.length === 0 ? 
             React.createElement(
                 'div',
@@ -237,93 +237,106 @@ const MatchesHallApp = () => {
                 React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-5xl mb-3 opacity-50' }),
                 React.createElement('p', { className: 'text-lg' }, 'Žiadne zápasy pre túto halu')
             ) :
-            matchesByDay.map((dayGroup, dayIndex) => {
-                const dayMatches = dayGroup.matches;
-                const dayDate = dayGroup.date;
-                
-                return React.createElement(
-                    'div',
-                    { key: dayIndex, className: 'mb-8' },
+            React.createElement(
+                'div',
+                { className: 'overflow-x-auto border border-gray-200 rounded-lg bg-white' },
+                React.createElement(
+                    'table',
+                    { className: 'min-w-full divide-y divide-gray-200' },
                     
-                    // Hlavička dňa
+                    // Hlavička tabuľky
                     React.createElement(
-                        'div',
-                        { className: 'flex items-center gap-2 mb-4 pb-2 border-b border-gray-200' },
-                        React.createElement('i', { className: 'fa-regular fa-calendar text-blue-500' }),
-                        React.createElement('h2', { className: 'text-lg font-semibold text-gray-700' }, formatDateHeader(dayDate)),
-                        React.createElement('span', { className: 'text-sm text-gray-400 ml-auto' }, `(${dayMatches.length} zápasov)`)
+                        'thead',
+                        { className: 'bg-gray-50' },
+                        React.createElement(
+                            'tr',
+                            null,
+                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, 'Čas'),
+                            React.createElement('th', { className: 'px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Domáci'),
+                            React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, 'VS'),
+                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Hostia'),
+                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Info')
+                        )
                     ),
                     
-                    // Tabuľka zápasov
+                    // Telo tabuľky
                     React.createElement(
-                        'div',
-                        { className: 'overflow-x-auto border border-gray-200 rounded-lg bg-white' },
-                        React.createElement(
-                            'table',
-                            { className: 'min-w-full divide-y divide-gray-200' },
+                        'tbody',
+                        { className: 'divide-y divide-gray-100' },
+                        matchesByDay.map((dayGroup, dayIndex) => {
+                            const dayMatches = dayGroup.matches;
+                            const dayDate = dayGroup.date;
                             
-                            // Hlavička tabuľky
-                            React.createElement(
-                                'thead',
-                                { className: 'bg-gray-50' },
+                            // Vytvorenie poľa riadkov pre každý deň
+                            const dayRows = [];
+                            
+                            // Pridať riadok s dátumom (zlúčený cez všetky stĺpce)
+                            dayRows.push(
                                 React.createElement(
                                     'tr',
-                                    null,
-                                    React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24' }, 'Čas'),
-                                    React.createElement('th', { className: 'px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Domáci'),
-                                    React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, 'VS'),
-                                    React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Hostia'),
-                                    React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Info')
+                                    { key: `day-${dayIndex}`, className: 'bg-blue-50' },
+                                    React.createElement(
+                                        'td',
+                                        { 
+                                            colSpan: 5,
+                                            className: 'px-4 py-4 text-left'
+                                        },
+                                        React.createElement(
+                                            'div',
+                                            { className: 'flex items-center gap-2' },
+                                            React.createElement('i', { className: 'fa-regular fa-calendar text-blue-500 text-lg' }),
+                                            React.createElement('span', { className: 'font-semibold text-gray-800 text-base' }, formatDateHeader(dayDate)),
+                                            React.createElement('span', { className: 'text-sm text-gray-500 ml-2' }, `(${dayMatches.length} zápasov)`)
+                                        )
+                                    )
                                 )
-                            ),
+                            );
                             
-                            // Telo tabuľky
-                            React.createElement(
-                                'tbody',
-                                { className: 'divide-y divide-gray-100' },
-                                dayMatches.map((match) => {
-                                    const dateTime = formatMatchDateTime(match.scheduledTime);
-                                    const isResultAvailable = match.homeScore !== undefined && match.awayScore !== undefined;
-                                    
-                                    // Získanie zobrazených názvov tímov - priamo cez teamManager
-                                    const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
-                                    const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
-                                    
-                                    // Získanie info tagov
-                                    const infoTags = [];
-                                    if (match.matchType || match.isPlacementMatch) {
-                                        infoTags.push(
-                                            React.createElement('span', { 
-                                                key: 'type',
-                                                className: `inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${
-                                                    match.isPlacementMatch ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
-                                                }` 
-                                            },
-                                            match.isPlacementMatch ? `o ${match.placementRank}. miesto` : match.matchType
-                                        ));
-                                    }
-                                    if (match.groupName) {
-                                        infoTags.push(
-                                            React.createElement('span', { 
-                                                key: 'group',
-                                                className: 'inline-block text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full whitespace-nowrap' 
-                                            },
-                                            match.groupName
-                                        ));
-                                    }
-                                    if (match.categoryName) {
-                                        infoTags.push(
-                                            React.createElement('span', { 
-                                                key: 'category',
-                                                className: 'inline-block text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full whitespace-nowrap' 
-                                            },
-                                            match.categoryName
-                                        ));
-                                    }
-                                    
-                                    return React.createElement(
+                            // Pridať všetky zápasy pre tento deň
+                            dayMatches.forEach((match, matchIndex) => {
+                                const dateTime = formatMatchDateTime(match.scheduledTime);
+                                const isResultAvailable = match.homeScore !== undefined && match.awayScore !== undefined;
+                                
+                                // Získanie zobrazených názvov tímov - priamo cez teamManager
+                                const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
+                                const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
+                                
+                                // Získanie info tagov
+                                const infoTags = [];
+                                if (match.matchType || match.isPlacementMatch) {
+                                    infoTags.push(
+                                        React.createElement('span', { 
+                                            key: 'type',
+                                            className: `inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${
+                                                match.isPlacementMatch ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                                            }` 
+                                        },
+                                        match.isPlacementMatch ? `o ${match.placementRank}. miesto` : match.matchType
+                                    ));
+                                }
+                                if (match.groupName) {
+                                    infoTags.push(
+                                        React.createElement('span', { 
+                                            key: 'group',
+                                            className: 'inline-block text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full whitespace-nowrap' 
+                                        },
+                                        match.groupName
+                                    ));
+                                }
+                                if (match.categoryName) {
+                                    infoTags.push(
+                                        React.createElement('span', { 
+                                            key: 'category',
+                                            className: 'inline-block text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full whitespace-nowrap' 
+                                        },
+                                        match.categoryName
+                                    ));
+                                }
+                                
+                                dayRows.push(
+                                    React.createElement(
                                         'tr',
-                                        { key: match.id, className: 'hover:bg-gray-50 transition-colors' },
+                                        { key: `match-${dayIndex}-${matchIndex}`, className: 'hover:bg-gray-50 transition-colors' },
                                         
                                         // Čas
                                         React.createElement(
@@ -376,13 +389,15 @@ const MatchesHallApp = () => {
                                                 infoTags
                                             )
                                         )
-                                    );
-                                })
-                            )
-                        )
+                                    )
+                                );
+                            });
+                            
+                            return dayRows;
+                        }).flat() // flatten the array of rows
                     )
-                );
-            })
+                )
+            )
     );
 };
 
