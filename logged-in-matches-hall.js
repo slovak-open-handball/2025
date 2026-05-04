@@ -812,6 +812,9 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const [categorySettings, setCategorySettings] = React.useState(null);
     const [loadingSettings, setLoadingSettings] = React.useState(true);
     
+    // STATE pre aktuálny status zápasu (pre prípad, že by sa zmenil)
+    const [currentMatchStatus, setCurrentMatchStatus] = React.useState(match.status || 'scheduled');
+    
     // Získanie názvu kategórie z ID (pre vyhľadávanie členov tímu)
     const getCategoryDisplayName = () => {
         if (match.categoryName) return match.categoryName;
@@ -822,6 +825,57 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     };
     
     const categoryDisplayName = getCategoryDisplayName();
+    
+    // Funkcia na získanie textu stavu zápasu
+    const getMatchStatusText = () => {
+        switch (currentMatchStatus) {
+            case 'in-progress':
+                return 'Práve prebieha';
+            case 'paused':
+                return 'Pozastavený';
+            case 'completed':
+                return 'Ukončený';
+            case 'scheduled':
+            default:
+                return 'Zápas ešte nebol odohraný';
+        }
+    };
+    
+    // Funkcia na získanie farby stavu zápasu
+    const getMatchStatusColor = () => {
+        switch (currentMatchStatus) {
+            case 'in-progress':
+                return 'text-green-600 bg-green-50';
+            case 'paused':
+                return 'text-yellow-600 bg-yellow-50';
+            case 'completed':
+                return 'text-blue-600 bg-blue-50';
+            case 'scheduled':
+            default:
+                return 'text-gray-500 bg-gray-50';
+        }
+    };
+    
+    // Real-time počúvanie zmien statusu zápasu
+    React.useEffect(() => {
+        if (!window.db || !match.id) return;
+        
+        const matchRef = doc(window.db, 'matches', match.id);
+        const unsubscribe = onSnapshot(matchRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const updatedMatch = docSnap.data();
+                if (updatedMatch.status !== currentMatchStatus) {
+                    setCurrentMatchStatus(updatedMatch.status || 'scheduled');
+                    // Aktualizujeme aj stav v hornom komponente
+                    if (onMatchUpdate) {
+                        onMatchUpdate(match.id, { status: updatedMatch.status });
+                    }
+                }
+            }
+        });
+        
+        return () => unsubscribe();
+    }, [match.id]);
     
     // Načítanie nastavení kategórie z databázy
     React.useEffect(() => {
@@ -1014,6 +1068,18 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                             { className: 'flex items-center gap-2' },
                             React.createElement('i', { className: 'fa-regular fa-clock text-gray-400' }),
                             React.createElement('span', { className: 'font-mono text-gray-700 text-sm' }, dateTime?.time || '--:--')
+                        ),
+                        // Zobrazenie stavu zápasu
+                        React.createElement(
+                            'div',
+                            { className: `inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getMatchStatusColor()}` },
+                            React.createElement('i', { 
+                                className: currentMatchStatus === 'in-progress' ? 'fa-solid fa-play' :
+                                          currentMatchStatus === 'paused' ? 'fa-solid fa-pause' :
+                                          currentMatchStatus === 'completed' ? 'fa-solid fa-check' :
+                                          'fa-regular fa-clock'
+                            }),
+                            React.createElement('span', {}, getMatchStatusText())
                         )
                     ),
                     React.createElement(
@@ -1099,7 +1165,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                 'div',
                                 { className: 'text-center' },
                                 React.createElement('span', { className: 'text-lg text-gray-400 font-medium' }, 'VS'),
-                                React.createElement('div', { className: 'text-xs text-gray-400 mt-1' }, 'Zápas ešte nebol odohraný')
+                                React.createElement('div', { className: 'text-xs text-gray-400 mt-1' }, getMatchStatusText())
                             )
                     ),
                     React.createElement(
