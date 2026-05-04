@@ -25,6 +25,33 @@ const formatDateHeader = (date) => {
     return `${dayName} ${day}. ${month}. ${year}`;
 };
 
+// Funkcia na získanie farby kategórie z databázy
+const getCategoryDrawColor = (categoryId) => {
+    if (!window.categoryDrawColors || !categoryId) return '#3B82F6'; // predvolená modrá
+    
+    const color = window.categoryDrawColors[categoryId];
+    if (color && color !== '#3B82F6') return color;
+    
+    return '#3B82F6';
+};
+
+// Funkcia na vytvorenie svetlejšej verzie farby (80% bledšia)
+const getLighterColor = (color) => {
+    // Konverzia hex na RGB
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    
+    // Zosvetlenie o 80% (posun smerom k bielej)
+    const lighterR = Math.min(255, Math.floor(r + (255 - r) * 0.8));
+    const lighterG = Math.min(255, Math.floor(g + (255 - g) * 0.8));
+    const lighterB = Math.min(255, Math.floor(b + (255 - b) * 0.8));
+    
+    // Konverzia späť na hex
+    return `#${lighterR.toString(16).padStart(2, '0')}${lighterG.toString(16).padStart(2, '0')}${lighterB.toString(16).padStart(2, '0')}`;
+};
+
 // Funkcia na získanie zobrazeného názvu tímu - priamo cez teamManager BEZ prestavby
 const getDisplayTeamName = (teamIdentifier) => {
     if (!teamIdentifier) return '???';
@@ -47,6 +74,34 @@ const MatchesHallApp = () => {
     const [hallInfo, setHallInfo] = useState(null);
     const [userProfile, setUserProfile] = useState(null);
     const [teamNames, setTeamNames] = useState({}); // Cache pre názvy tímov
+    const [categoryDrawColors, setCategoryDrawColors] = useState({}); // Cache pre farby kategórií
+
+    // Načítanie farieb kategórií z databázy
+    const loadCategoryColors = async () => {
+        if (!window.db) return;
+        
+        try {
+            const settingsRef = doc(window.db, 'settings', 'categories');
+            const settingsSnap = await getDoc(settingsRef);
+            
+            if (settingsSnap.exists()) {
+                const data = settingsSnap.data();
+                const colors = {};
+                
+                Object.entries(data).forEach(([catId, catData]) => {
+                    if (catData.drawColor) {
+                        colors[catId] = catData.drawColor;
+                    }
+                });
+                
+                setCategoryDrawColors(colors);
+                window.categoryDrawColors = colors; // Uloženie do globálneho priestoru pre ostatné funkcie
+                console.log("[Category Colors] Načítané farby kategórií:", colors);
+            }
+        } catch (err) {
+            console.error('Chyba pri načítaní farieb kategórií:', err);
+        }
+    };
 
     // Načítanie informácií o hale
     const loadHallInfo = async (hallId) => {
@@ -150,6 +205,7 @@ const MatchesHallApp = () => {
                 setUserProfile(window.globalUserProfileData);
                 const hallId = window.globalUserProfileData.hallId;
                 if (hallId) {
+                    loadCategoryColors(); // Načítanie farieb kategórií
                     loadHallInfo(hallId);
                     loadMatches(hallId);
                 } else {
@@ -301,7 +357,11 @@ const MatchesHallApp = () => {
                                 const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
                                 const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
                                 
-                                // Získanie info tagov
+                                // Získanie farby pre kategóriu
+                                const categoryColor = getCategoryDrawColor(match.categoryId);
+                                const lighterCategoryColor = getLighterColor(categoryColor);
+                                
+                                // Získanie info tagov s použitím farby pre kategóriu
                                 const infoTags = [];
                                 if (match.matchType || match.isPlacementMatch) {
                                     infoTags.push(
@@ -327,7 +387,12 @@ const MatchesHallApp = () => {
                                     infoTags.push(
                                         React.createElement('span', { 
                                             key: 'category',
-                                            className: 'inline-block text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full whitespace-nowrap' 
+                                            className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
+                                            style: {
+                                                backgroundColor: lighterCategoryColor,
+                                                color: categoryColor,
+                                                fontWeight: '500'
+                                            }
                                         },
                                         match.categoryName
                                     ));
