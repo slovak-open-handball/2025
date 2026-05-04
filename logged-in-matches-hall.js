@@ -566,7 +566,7 @@ const MatchesHallApp = () => {
                                                 'button',
                                                 {
                                                     onClick: () => handleDetailClick(match),
-                                                    className: 'bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-1 rounded-full transition-colors cursor-pointer',
+                                                    className: 'bg-gray-200 hover:bg-gray-300 text-gray-900 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer',
                                                     style: {
                                                         fontWeight: '500'
                                                     }
