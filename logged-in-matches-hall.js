@@ -334,6 +334,13 @@ const MatchesHallApp = () => {
         return Object.values(groups).sort((a, b) => a.date - b.date);
     };
 
+    // Handler pre kliknutie na Detail
+    const handleDetailClick = (match) => {
+        console.log("Detail zápasu:", match);
+        // Tu môžeš pridať ďalšiu logiku, napr. otvorenie modálneho okna s detailami
+        // window.showGlobalNotification(`Detail zápasu: ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`, 'info');
+    };
+
     if (loading) {
         return React.createElement(
             'div',
@@ -395,7 +402,7 @@ const MatchesHallApp = () => {
                             React.createElement('th', { className: 'px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Domáci'),
                             React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, 'VS'),
                             React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Hostia'),
-                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Info')
+                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-56' }, 'Info')
                         )
                     ),
                     
@@ -511,6 +518,22 @@ const MatchesHallApp = () => {
                                         match.categoryName
                                     ));
                                 }
+                                
+                                // Tag pre Detail - na koniec
+                                infoTags.push(
+                                    React.createElement(
+                                        'button',
+                                        {
+                                            key: 'detail',
+                                            onClick: () => handleDetailClick(match),
+                                            className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors cursor-pointer',
+                                            style: {
+                                                fontWeight: '500'
+                                            }
+                                        },
+                                        'Detail'
+                                    )
+                                );
                                 
                                 dayRows.push(
                                     React.createElement(
