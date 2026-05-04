@@ -860,22 +860,34 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     React.useEffect(() => {
         if (!window.db || !match.id) return;
         
+        console.log(`[MatchDetailView] Nastavujem real-time listener pre zápas ${match.id}`);
+        
         const matchRef = doc(window.db, 'matches', match.id);
         const unsubscribe = onSnapshot(matchRef, (docSnap) => {
             if (docSnap.exists()) {
                 const updatedMatch = docSnap.data();
-                if (updatedMatch.status !== currentMatchStatus) {
-                    setCurrentMatchStatus(updatedMatch.status || 'scheduled');
-                    // Aktualizujeme aj stav v hornom komponente
-                    if (onMatchUpdate) {
-                        onMatchUpdate(match.id, { status: updatedMatch.status });
-                    }
+                const newStatus = updatedMatch.status || 'scheduled';
+                const oldStatus = currentMatchStatus;
+                
+                console.log(`[MatchDetailView] Zmena statusu: ${oldStatus} -> ${newStatus}`);
+                
+                // VŽDY aktualizujeme status, nie len pri zmene
+                setCurrentMatchStatus(newStatus);
+                
+                // Aktualizujeme aj stav v hornom komponente
+                if (onMatchUpdate) {
+                    onMatchUpdate(match.id, { status: newStatus });
                 }
             }
+        }, (error) => {
+            console.error(`[MatchDetailView] Chyba pri počúvaní zápasu ${match.id}:`, error);
         });
         
-        return () => unsubscribe();
-    }, [match.id]);
+        return () => {
+            console.log(`[MatchDetailView] Ruším real-time listener pre zápas ${match.id}`);
+            unsubscribe();
+        };
+    }, [match.id]); // Odstránili sme currentMatchStatus z dependecií, aby sme neustále neprepájali listener
     
     // Načítanie nastavení kategórie z databázy
     React.useEffect(() => {
@@ -947,6 +959,14 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         
         loadCategorySettings();
     }, [match.categoryId]);
+    
+    // Sledujeme zmeny match.status z props (napr. pri navigácii medzi zápasmi)
+    React.useEffect(() => {
+        if (match.status && match.status !== currentMatchStatus) {
+            console.log(`[MatchDetailView] Aktualizujem status z props: ${match.status}`);
+            setCurrentMatchStatus(match.status);
+        }
+    }, [match.status]);
     
     // Získanie informácií o skupine
     let groupInfo = null;
@@ -1202,7 +1222,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         
         // Časovač zápasu - TERAZ S PREDANÝM categorySettings
         !loadingSettings && React.createElement(MatchTimer, {
-            match: match,
+            match: { ...match, status: currentMatchStatus }, // Passujeme aktuálny status do časovača
             matchId: match.id,
             onTimeUpdate: handleTimeUpdate,
             categorySettings: categorySettings
