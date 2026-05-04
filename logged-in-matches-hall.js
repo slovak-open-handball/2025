@@ -938,11 +938,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     { className: 'text-gray-600 mb-2 text-center' },
                     'Kontumačný výsledok bude 10:0 v prospech vybraného tímu.'
                 ),
-                React.createElement(
-                    'p',
-                    { className: 'text-sm text-red-600 mb-6 text-center' },
-                    'Táto akcia je nevratná!'
-                ),
                 // Dve tlačidlá vedľa seba
                 React.createElement(
                     'div',
@@ -951,7 +946,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                         'button',
                         {
                             onClick: () => handleForfeit('home'),
-                            className: 'flex-1 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors cursor-pointer text-center'
+                            className: 'flex-1 py-3 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-semibold transition-colors cursor-pointer text-center'
                         },
                         React.createElement('span', { className: 'block text-sm' }, 'Kontumovať'),
                         React.createElement('span', { className: 'block text-xs opacity-90 mt-1' }, homeTeamName)
@@ -960,7 +955,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                         'button',
                         {
                             onClick: () => handleForfeit('away'),
-                            className: 'flex-1 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors cursor-pointer text-center'
+                            className: 'flex-1 py-3 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-semibold transition-colors cursor-pointer text-center'
                         },
                         React.createElement('span', { className: 'block text-sm' }, 'Kontumovať'),
                         React.createElement('span', { className: 'block text-xs opacity-90 mt-1' }, awayTeamName)
