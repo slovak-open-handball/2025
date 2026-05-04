@@ -225,10 +225,11 @@ const getCategoryNameById = (categoryId) => {
 };
 
 // Funkcia na načítanie členov tímu z databázy podľa názvu tímu a NÁZVU kategórie (s real-time aktualizáciou)
-const loadTeamMembers = async (teamName, categoryName, onUpdate) => {
+const loadTeamMembers = async (teamName, categoryName, onUpdate, onMappedName) => {
     if (!window.db || !teamName || !categoryName) {
         console.log("Chýba db, teamName alebo categoryName");
         if (onUpdate) onUpdate([]);
+        if (onMappedName) onMappedName(teamName);
         return () => {};
     }
     
@@ -241,15 +242,27 @@ const loadTeamMembers = async (teamName, categoryName, onUpdate) => {
             if (convertedName && convertedName !== teamName) {
                 actualTeamName = convertedName;
                 console.log(`✅ Prevedený názov: "${teamName}" → "${actualTeamName}"`);
+                // 🔥 ODOŠLEME ZMAPOVANÝ NÁZOV HORE
+                if (onMappedName) {
+                    onMappedName(actualTeamName);
+                }
             } else {
                 console.log(`ℹ️ Názov tímu sa nezmenil: "${teamName}"`);
+                if (onMappedName) {
+                    onMappedName(teamName);
+                }
             }
         } catch (err) {
             console.error(`Chyba pri prevode názvu tímu "${teamName}":`, err);
-            // Pokračujeme s pôvodným názvom
+            if (onMappedName) {
+                onMappedName(teamName);
+            }
         }
     } else {
         console.log(`⚠️ window.matchTracker.getTeamNameByDisplayId nie je dostupný, používam pôvodný názov: "${teamName}"`);
+        if (onMappedName) {
+            onMappedName(teamName);
+        }
     }
     
     console.log(`=== VYHĽADÁVANIE ČLENOV TÍMU (real-time) ===`);
@@ -365,11 +378,12 @@ const loadTeamMembers = async (teamName, categoryName, onUpdate) => {
     return unsubscribe;
 };
 
-// Komponent pre zoznam členov tímu (s real-time aktualizáciou)
-const TeamMembersList = ({ teamName, categoryName }) => {
+// UPRAVENÝ TeamMembersList KOMPONENT - PRIDANÝ CALLBACK PRE ZMAPOVANÝ NÁZOV
+const TeamMembersList = ({ teamName, categoryName, onMappedNameUpdate }) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [mappedName, setMappedName] = useState(teamName);
     
     useEffect(() => {
         setLoading(true);
@@ -394,8 +408,20 @@ const TeamMembersList = ({ teamName, categoryName }) => {
             setLoading(false);
         };
         
+        // 🔥 CALLBACK PRE ZMAPOVANÝ NÁZOV
+        const handleMappedName = (newMappedName) => {
+            if (newMappedName !== mappedName) {
+                console.log(`📝 Zmapovaný názov tímu: "${teamName}" → "${newMappedName}"`);
+                setMappedName(newMappedName);
+                // Odoslanie zmapovaného názvu rodičovi
+                if (onMappedNameUpdate && typeof onMappedNameUpdate === 'function') {
+                    onMappedNameUpdate(newMappedName);
+                }
+            }
+        };
+        
         // Spustíme real-time počúvanie
-        const unsubscribe = loadTeamMembers(teamName, categoryName, handleMembersUpdate);
+        const unsubscribe = loadTeamMembers(teamName, categoryName, handleMembersUpdate, handleMappedName);
         
         // Časový limit pre prípad, že by sa nič nenačítalo
         const timeoutId = setTimeout(() => {
@@ -419,7 +445,8 @@ const TeamMembersList = ({ teamName, categoryName }) => {
         console.log(`Poradie v poli: ${index + 1}.`);
         console.log(`Názov poľa: ${arrayName}`);
         console.log(`Celkový počet v tomto poli: ${members.length}`);
-        console.log(`Tím: ${teamName}`);
+        console.log(`Tím (pôvodný): ${teamName}`);
+        console.log(`Tím (zmapovaný): ${mappedName}`);
         console.log(`Kategória: ${categoryName}`);
         console.log(`========================`);
     };
@@ -465,6 +492,9 @@ const TeamMembersList = ({ teamName, categoryName }) => {
     const rtMembers = members.filter(m => m.type !== 'Hráč');
     const players = members.filter(m => m.type === 'Hráč');
     
+    // Zobrazený názov tímu - použijeme zmapovaný názov ak existuje, inak pôvodný
+    const displayTeamName = mappedName !== teamName ? mappedName : teamName;
+    
     return React.createElement(
         'div',
         { className: 'bg-white rounded-lg border border-gray-200 overflow-hidden h-full' },
@@ -474,7 +504,7 @@ const TeamMembersList = ({ teamName, categoryName }) => {
             React.createElement(
                 'h3',
                 { className: 'font-semibold text-gray-800' },
-                teamName
+                displayTeamName
             ),
             React.createElement(
                 'p',
@@ -1489,6 +1519,9 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     
     // STATE pre aktuálny status zápasu (pre prípad, že by sa zmenil)
     const [currentMatchStatus, setCurrentMatchStatus] = React.useState(match.status || 'scheduled');
+
+    const [homeTeamMappedName, setHomeTeamMappedName] = React.useState(homeTeamDisplay);
+    const [awayTeamMappedName, setAwayTeamMappedName] = React.useState(awayTeamDisplay);
     
     // Získanie názvu kategórie z ID (pre vyhľadávanie členov tímu)
     const getCategoryDisplayName = () => {
@@ -1530,6 +1563,40 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 return 'text-gray-500 bg-gray-50';
         }
     };
+
+    React.useEffect(() => {
+        // Ak sa zmapovaný názov domáceho tímu líši od pôvodného, aktualizujeme ho
+        if (homeTeamMappedName !== homeTeamDisplay && match.homeTeamIdentifier) {
+            console.log(`🔄 Aktualizujem názov domáceho tímu v zozname: "${homeTeamDisplay}" → "${homeTeamMappedName}"`);
+            if (onMatchUpdate) {
+                onMatchUpdate(match.id, { 
+                    updatedHomeTeamName: homeTeamMappedName,
+                    homeTeamIdentifier: match.homeTeamIdentifier
+                });
+            }
+            // Aktualizujeme aj v globálnom zozname
+            if (window.updateTeamNamesGlobally && typeof window.updateTeamNamesGlobally === 'function') {
+                window.updateTeamNamesGlobally();
+            }
+        }
+    }, [homeTeamMappedName]);
+    
+    React.useEffect(() => {
+        // Ak sa zmapovaný názov hosťujúceho tímu líši od pôvodného, aktualizujeme ho
+        if (awayTeamMappedName !== awayTeamDisplay && match.awayTeamIdentifier) {
+            console.log(`🔄 Aktualizujem názov hosťujúceho tímu v zozname: "${awayTeamDisplay}" → "${awayTeamMappedName}"`);
+            if (onMatchUpdate) {
+                onMatchUpdate(match.id, { 
+                    updatedAwayTeamName: awayTeamMappedName,
+                    awayTeamIdentifier: match.awayTeamIdentifier
+                });
+            }
+            // Aktualizujeme aj v globálnom zozname
+            if (window.updateTeamNamesGlobally && typeof window.updateTeamNamesGlobally === 'function') {
+                window.updateTeamNamesGlobally();
+            }
+        }
+    }, [awayTeamMappedName]);
 
     React.useEffect(() => {
         if (!window.db || !match.id) return;
@@ -1949,11 +2016,13 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             { className: 'grid grid-cols-1 md:grid-cols-2 gap-6 mt-6' },
             React.createElement(TeamMembersList, {
                 teamName: homeTeamDisplay,
-                categoryName: categoryDisplayName
+                categoryName: categoryDisplayName,
+                onMappedNameUpdate: setHomeTeamMappedName
             }),
             React.createElement(TeamMembersList, {
                 teamName: awayTeamDisplay,
-                categoryName: categoryDisplayName
+                categoryName: categoryDisplayName,
+                onMappedNameUpdate: setAwayTeamMappedName
             })
         )
     );
@@ -2345,7 +2414,6 @@ const MatchesHallApp = () => {
     const refreshMatchInList = (matchId, updates) => {
         // Ak je zápas ukončený, aktualizujeme názvy tímov
         if (updates.status === 'completed') {
-            // Spustíme aktualizáciu názvov tímov
             console.log(`🏁 Zápas ${matchId} bol ukončený - spúšťam aktualizáciu názvov tímov`);
             setTimeout(() => {
                 if (window.updateTeamNamesGlobally && typeof window.updateTeamNamesGlobally === 'function') {
@@ -2353,17 +2421,33 @@ const MatchesHallApp = () => {
                 }
             }, 500);
         }
-
+        
+        // 🔥 SPRACOVANIE AKTUALIZÁCIE NÁZVOV TÍMOV Z DETAILU
+        let teamNamesUpdates = {};
+        if (updates.updatedHomeTeamName && updates.homeTeamIdentifier) {
+            teamNamesUpdates[updates.homeTeamIdentifier] = updates.updatedHomeTeamName;
+            console.log(`📝 Aktualizujem názov domáceho tímu v zozname: ${updates.homeTeamIdentifier} → ${updates.updatedHomeTeamName}`);
+        }
+        if (updates.updatedAwayTeamName && updates.awayTeamIdentifier) {
+            teamNamesUpdates[updates.awayTeamIdentifier] = updates.updatedAwayTeamName;
+            console.log(`📝 Aktualizujem názov hosťujúceho tímu v zozname: ${updates.awayTeamIdentifier} → ${updates.updatedAwayTeamName}`);
+        }
+        
+        // Ak máme aktualizácie názvov tímov, vykonáme ich
+        if (Object.keys(teamNamesUpdates).length > 0) {
+            setTeamNames(prev => ({ ...prev, ...teamNamesUpdates }));
+        }
+    
         // Aktualizujeme v matches
         setMatches(prevMatches => 
             prevMatches.map(m => m.id === matchId ? { ...m, ...updates } : m)
         );
-
+    
         // Aktualizujeme v allMatchesList
         setAllMatchesList(prevList => 
             prevList.map(m => m.id === matchId ? { ...m, ...updates } : m)
         );
-
+    
         // Aktualizujeme v selectedMatch ak je zobrazený
         if (selectedMatch && selectedMatch.id === matchId) {
             setSelectedMatch(prev => ({ ...prev, ...updates }));
