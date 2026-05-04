@@ -848,17 +848,32 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
 
     const isMatchCompleted = match?.status === 'completed';
 
-    // Render (rovnaký)
+    // V MatchTimer komponente, nahraďte pôvodný render blok týmto:
+
+    const isMatchCompleted = match?.status === 'completed';
+    
+    // Render
     return React.createElement('div', { className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
         React.createElement('div', { className: 'bg-gray-50 px-6 py-3 border-b border-gray-200' },
             React.createElement('h3', { className: 'font-semibold text-gray-800' }, 'Športový časovač'),
             React.createElement('p', { className: 'text-xs text-gray-500 mt-0.5' }, `Trvanie periódy: ${periodDuration} min | Počet periód: ${totalPeriods}`)
         ),
         React.createElement('div', { className: 'p-6' },
-            React.createElement('div', { className: 'text-center mb-6' },
+            // Časovač - zobrazíme LEN ak zápas NIE JE ukončený
+            !isMatchCompleted && React.createElement('div', { className: 'text-center mb-6' },
                 React.createElement('div', { className: 'text-6xl font-mono font-bold text-gray-800' }, formatTime(displaySeconds)),
                 React.createElement('div', { className: 'mt-2 text-sm text-gray-500' }, `Perióda ${period} / ${totalPeriods}`)
             ),
+            
+            // Ak je zápas ukončený, zobrazíme správu namiesto časovača
+            isMatchCompleted && React.createElement('div', { className: 'text-center mb-6 py-4' },
+                React.createElement('div', { className: 'inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-50 text-green-700' },
+                    React.createElement('i', { className: 'fa-solid fa-flag-checkered' }),
+                    React.createElement('span', { className: 'font-medium' }, 'Zápas bol ukončený')
+                )
+            ),
+            
+            // Ovládacie tlačidlá - zobrazujeme VŽDY (aj pri ukončenom zápase, ale disabled)
             React.createElement('div', { className: 'flex flex-wrap items-center justify-center gap-2 mb-6' },
                 React.createElement('button', { 
                     onClick: toggleTimer, 
@@ -885,7 +900,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
                 React.createElement('button', { onClick: resetTime, disabled: !canReset(), className: `px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${canReset() ? 'bg-yellow-500 hover:bg-yellow-600 text-white' : 'bg-gray-300 text-gray-400 cursor-not-allowed'}` }, React.createElement('i', { className: 'fa-solid fa-arrow-rotate-left mr-1' }), 'Reset')
             ),
-            // NOVÝ RIADOK S TLAČIDLAMI PRE UKONČENIE ZÁPASU
+            // Ďalšie tlačidlá (Ukončiť zápas, Zadať výsledok, Kontumácia) - zostávajú viditeľné
             React.createElement('div', { className: 'flex flex-wrap items-center justify-center gap-2 mb-6 pt-2 border-t border-gray-100' },
                 React.createElement('button', { 
                     onClick: () => setShowEndMatchModal(true), 
@@ -915,7 +930,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     React.createElement('i', { className: 'fa-solid fa-gavel mr-1' }), 'Kontumácia'
                 )
             ),
-            // Pôvodné tlačidlá pre gól, 7m, ŽK, ČK, MK, Vylúčenie
+            // Tlačidlá pre gól, 7m, ŽK, ČK, MK, Vylúčenie - zostávajú viditeľné
             React.createElement('div', { className: 'flex flex-wrap items-center justify-center gap-2 pt-2 border-t border-gray-100' },
                 React.createElement('button', { 
                     onClick: () => console.log('Gól'), 
