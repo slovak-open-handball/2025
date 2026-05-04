@@ -460,7 +460,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const [displaySeconds, setDisplaySeconds] = useState(0);
     
     const intervalRef = useRef(null);
-    const saveIntervalRef = useRef(null); // Nový interval pre pravidelné ukladanie
+    const saveIntervalRef = useRef(null);
     const isRunningRef = useRef(false);
     const startTimeRef = useRef(null);
     const localStartOffsetRef = useRef(0);
@@ -468,7 +468,8 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const periodRef = useRef(period);
     const isLocalControlRef = useRef(false);
     const lastServerUpdateRef = useRef(0);
-    const lastSavedSecondsRef = useRef(0); // Naposledy uložená hodnota
+    const lastSavedSecondsRef = useRef(0);
+    const lastServerOffsetRef = useRef(0); // Sledovanie serverového offsetu
 
     // Synchronizácia refov so state
     useEffect(() => {
@@ -491,27 +492,11 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     };
 
     // Pomocné funkcie pre kontrolu tlačidiel
-    const canSubtractMinute = () => {
-        return displaySeconds >= 60;
-    };
-
-    const canAddMinute = () => {
-        const maxSeconds = periodDuration * 60;
-        return displaySeconds + 60 <= maxSeconds;
-    };
-
-    const canSubtractSecond = () => {
-        return displaySeconds >= 1;
-    };
-
-    const canAddSecond = () => {
-        const maxSeconds = periodDuration * 60;
-        return displaySeconds + 1 <= maxSeconds;
-    };
-
-    const canReset = () => {
-        return displaySeconds > 0;
-    };
+    const canSubtractMinute = () => displaySeconds >= 60;
+    const canAddMinute = () => displaySeconds + 60 <= periodDuration * 60;
+    const canSubtractSecond = () => displaySeconds >= 1;
+    const canAddSecond = () => displaySeconds + 1 <= periodDuration * 60;
+    const canReset = () => displaySeconds > 0;
 
     // Funkcia na uloženie aktuálneho času do DB (počas behu)
     const saveCurrentTimeToDB = async () => {
@@ -520,7 +505,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         
         const currentSeconds = displaySeconds;
         
-        // Ukladáme len ak sa hodnota zmenila o viac ako 1 sekundu (aby sme nezahlcovali DB)
         if (Math.abs(currentSeconds - lastSavedSecondsRef.current) < 1) return;
         
         lastSavedSecondsRef.current = currentSeconds;
@@ -536,7 +520,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         }
     };
 
-    // Zastavenie časovača a uloženie (bez ukladania do DB - len lokálne zastavenie)
+    // Zastavenie časovača
     const stopTimerLocally = () => {
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
@@ -554,10 +538,8 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const stopTimerAndSave = async (finalSecondsOverride = null) => {
         if (!isRunningRef.current) return;
     
-        // Ak je poskytnutá finálna hodnota, použijeme ju, inak aktuálny displaySeconds
         const finalSeconds = finalSecondsOverride !== null ? finalSecondsOverride : displaySeconds;
     
-        // Zastavíme intervaly
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
@@ -567,7 +549,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             saveIntervalRef.current = null;
         }
     
-        // Aktualizujeme lokálny stav na finálnu hodnotu
         setDisplaySeconds(finalSeconds);
     
         isRunningRef.current = false;
@@ -575,7 +556,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         startTimeRef.current = null;
         isLocalControlRef.current = false;
         
-        // Uložíme do databázy
         if (window.db && matchId) {
             try {
                 lastServerUpdateRef.current = Date.now();
@@ -610,18 +590,15 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         const maxSeconds = periodDurationRef.current * 60;
         const clampedSeconds = Math.min(totalSeconds, maxSeconds);
     
-        // Vždy aktualizujeme zobrazenie
         setDisplaySeconds(clampedSeconds);
         
-        // Automatické zastavenie na konci periódy
         if (clampedSeconds >= maxSeconds && totalSeconds >= maxSeconds) {
             stopTimerAndSave(clampedSeconds);
         }
     };
 
     // Spustenie časovača (lokálne)
-    const startTimerLocal = async (startSeconds, startPeriod, serverStartedAt = null) => {
-        // Zastavíme existujúce intervaly
+    const startTimerLocal = async (startSeconds, startPeriod) => {
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
@@ -631,30 +608,24 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             saveIntervalRef.current = null;
         }
         
-        // Nastavíme referenčné časy
         startTimeRef.current = Date.now();
         localStartOffsetRef.current = startSeconds;
         lastSavedSecondsRef.current = startSeconds;
         
-        // Nastavíme stav
         isRunningRef.current = true;
         setIsRunning(true);
         isLocalControlRef.current = true;
         
-        // Nastavíme periódu ak je poskytnutá
         if (startPeriod !== undefined && startPeriod !== period) {
             setPeriod(startPeriod);
         }
         
-        // Nastavíme zobrazenie
         setDisplaySeconds(startSeconds);
         
-        // Spustíme interval pre aktualizáciu zobrazenia (každých 100ms)
         intervalRef.current = setInterval(() => {
             updateDisplay();
         }, 100);
         
-        // Spustíme interval pre pravidelné ukladanie do DB (každú 1 sekundu)
         saveIntervalRef.current = setInterval(() => {
             saveCurrentTimeToDB();
         }, 1000);
@@ -662,7 +633,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
 
     // Spustenie časovača z DB (žiadne ukladanie do DB)
     const startTimerFromServer = (startSeconds, startPeriod, serverStartedAt) => {
-        // Zastavíme existujúce intervaly
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
@@ -672,7 +642,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             saveIntervalRef.current = null;
         }
         
-        // Nastavíme referenčné časy - použijeme serverový startedAt
         if (serverStartedAt) {
             const now = Date.now();
             const serverStartTime = serverStartedAt.toDate ? serverStartedAt.toDate().getTime() : serverStartedAt;
@@ -684,33 +653,26 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             startTimeRef.current = serverStartTime;
             localStartOffsetRef.current = startSeconds;
             setDisplaySeconds(finalSeconds);
-            lastSavedSecondsRef.current = finalSeconds;
         } else {
             startTimeRef.current = Date.now();
             localStartOffsetRef.current = startSeconds;
             setDisplaySeconds(startSeconds);
-            lastSavedSecondsRef.current = startSeconds;
         }
         
-        // Nastavíme stav
         isRunningRef.current = true;
         setIsRunning(true);
         isLocalControlRef.current = false;
         
-        // Nastavíme periódu
         if (startPeriod !== undefined && startPeriod !== period) {
             setPeriod(startPeriod);
         }
         
-        // Spustíme interval pre aktualizáciu zobrazenia
         intervalRef.current = setInterval(() => {
             updateDisplay();
         }, 100);
-        
-        // Nespúšťame saveInterval pre serverový časovač - iba lokálny ukladá
     };
 
-    // Synchronizácia s databázou (onSnapshot)
+    // Synchronizácia s databázou - HLAVNÁ ZMENA
     useEffect(() => {
         if (!window.db || !matchId) return;
         
@@ -725,8 +687,9 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             const serverPeriod = data.currentPeriod || 1;
             const serverStartedAt = data.startedAt;
             
-            // Kontrola, či ide o aktualizáciu z lokálneho zdroja
             const now = Date.now();
+            
+            // Ignorujeme vlastné aktualizácie (do 500ms)
             if (lastServerUpdateRef.current && (now - lastServerUpdateRef.current) < 500) {
                 return;
             }
@@ -737,9 +700,35 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 periodRef.current = serverPeriod;
             }
             
-            // SPRACOVANIE ČASU - aktualizujeme len ak nie sme v lokálnom behu
-            if (!isRunningRef.current && serverOffset !== displaySeconds) {
-                setDisplaySeconds(serverOffset);
+            // SPRACOVANIE ČASU - AJ POČAS BEHU!
+            // Ak sa serverový offset zmenil a nie je to naša vlastná aktualizácia
+            if (serverOffset !== lastServerOffsetRef.current) {
+                lastServerOffsetRef.current = serverOffset;
+                
+                // AK BEŽÍ ČASOVAČ
+                if (isRunningRef.current) {
+                    // Kontrola či je rozdiel väčší ako 1 sekunda (aby sme neaktualizovali pri každej zmene)
+                    if (Math.abs(serverOffset - displaySeconds) > 1) {
+                        console.log(`Synchronizácia času počas behu: server=${serverOffset}, local=${displaySeconds}`);
+                        
+                        // Aktualizujeme lokálny čas podľa servera
+                        if (serverStartedAt) {
+                            const serverStartTime = serverStartedAt.toDate ? serverStartedAt.toDate().getTime() : serverStartedAt;
+                            startTimeRef.current = serverStartTime;
+                            localStartOffsetRef.current = serverOffset;
+                            setDisplaySeconds(serverOffset);
+                            lastSavedSecondsRef.current = serverOffset;
+                        } else {
+                            startTimeRef.current = Date.now();
+                            localStartOffsetRef.current = serverOffset;
+                            setDisplaySeconds(serverOffset);
+                            lastSavedSecondsRef.current = serverOffset;
+                        }
+                    }
+                } else {
+                    // Časovač nebeží - jednoducho aktualizujeme zobrazenie
+                    setDisplaySeconds(serverOffset);
+                }
             }
             
             // SPRACOVANIE STAVU BEHU
@@ -772,7 +761,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             return;
         }
         
-        // Zastavíme existujúce intervaly
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
@@ -782,7 +770,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             saveIntervalRef.current = null;
         }
         
-        // Nastavíme lokálne spustenie
         startTimeRef.current = Date.now();
         localStartOffsetRef.current = currentSeconds;
         lastSavedSecondsRef.current = currentSeconds;
@@ -790,17 +777,14 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         setIsRunning(true);
         isLocalControlRef.current = true;
         
-        // Spustíme interval pre aktualizáciu zobrazenia
         intervalRef.current = setInterval(() => {
             updateDisplay();
         }, 100);
         
-        // Spustíme interval pre pravidelné ukladanie do DB
         saveIntervalRef.current = setInterval(() => {
             saveCurrentTimeToDB();
         }, 1000);
         
-        // Uložíme do databázy
         try {
             lastServerUpdateRef.current = Date.now();
             const matchRef = doc(window.db, 'matches', matchId);
@@ -849,6 +833,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         if (newSeconds > maxSeconds) newSeconds = maxSeconds;
         
         setDisplaySeconds(newSeconds);
+        lastServerOffsetRef.current = newSeconds;
         
         if (isRunningRef.current) {
             startTimeRef.current = Date.now();
@@ -874,35 +859,11 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         }
     };
 
-    const addMinute = () => {
-        if (canAddMinute()) {
-            addTime(60);
-        }
-    };
-    
-    const subtractMinute = () => {
-        if (canSubtractMinute()) {
-            addTime(-60);
-        }
-    };
-    
-    const addSecond = () => {
-        if (canAddSecond()) {
-            addTime(1);
-        }
-    };
-    
-    const subtractSecond = () => {
-        if (canSubtractSecond()) {
-            addTime(-1);
-        }
-    };
-    
-    const resetTime = () => {
-        if (canReset()) {
-            addTime(-displaySeconds);
-        }
-    };
+    const addMinute = () => canAddMinute() && addTime(60);
+    const subtractMinute = () => canSubtractMinute() && addTime(-60);
+    const addSecond = () => canAddSecond() && addTime(1);
+    const subtractSecond = () => canSubtractSecond() && addTime(-1);
+    const resetTime = () => canReset() && addTime(-displaySeconds);
 
     // Zmena periódy
     const nextPeriod = async () => {
@@ -917,6 +878,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             setDisplaySeconds(0);
             isLocalControlRef.current = false;
             lastSavedSecondsRef.current = 0;
+            lastServerOffsetRef.current = 0;
             
             if (window.db && matchId) {
                 try {
@@ -949,6 +911,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             setDisplaySeconds(0);
             isLocalControlRef.current = false;
             lastSavedSecondsRef.current = 0;
+            lastServerOffsetRef.current = 0;
             
             if (window.db && matchId) {
                 try {
@@ -987,6 +950,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         const clampedTime = Math.min(initialTime, maxSeconds);
         setDisplaySeconds(clampedTime);
         lastSavedSecondsRef.current = clampedTime;
+        lastServerOffsetRef.current = clampedTime;
         
         const shouldBeRunning = match.status === 'in-progress';
         
@@ -1020,6 +984,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         };
     }, [match?.id]);
 
+    // Render (bez zmeny)
     return React.createElement(
         'div',
         { className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
@@ -1035,16 +1000,8 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             React.createElement(
                 'div',
                 { className: 'text-center mb-6' },
-                React.createElement(
-                    'div', 
-                    { className: 'text-6xl font-mono font-bold text-gray-800' },
-                    formatTime(displaySeconds)
-                ),
-                React.createElement(
-                    'div',
-                    { className: 'mt-2 text-sm text-gray-500' },
-                    `Perióda ${period} / ${totalPeriods}`
-                )
+                React.createElement('div', { className: 'text-6xl font-mono font-bold text-gray-800' }, formatTime(displaySeconds)),
+                React.createElement('div', { className: 'mt-2 text-sm text-gray-500' }, `Perióda ${period} / ${totalPeriods}`)
             ),
             React.createElement(
                 'div',
@@ -1053,138 +1010,35 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     'button',
                     {
                         onClick: toggleTimer,
-                        className: `px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${
-                            isRunning ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'
-                        }`
+                        className: `px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${isRunning ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`
                     },
                     React.createElement('i', { className: isRunning ? 'fa-solid fa-stop mr-1' : 'fa-solid fa-play mr-1' }),
                     isRunning ? 'Stop' : 'Štart'
                 ),
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
-                React.createElement(
-                    'button',
-                    { 
-                        onClick: subtractMinute, 
-                        disabled: !canSubtractMinute(),
-                        className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${
-                            canSubtractMinute() 
-                                ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' 
-                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        }`
-                    },
-                    React.createElement('i', { className: 'fa-solid fa-minus' })
-                ),
+                React.createElement('button', { onClick: subtractMinute, disabled: !canSubtractMinute(), className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${canSubtractMinute() ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}` }, React.createElement('i', { className: 'fa-solid fa-minus' })),
                 React.createElement('span', { className: 'text-sm text-gray-600 px-1 font-medium' }, 'Min'),
-                React.createElement(
-                    'button',
-                    { 
-                        onClick: addMinute, 
-                        disabled: !canAddMinute(),
-                        className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${
-                            canAddMinute() 
-                                ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' 
-                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        }`
-                    },
-                    React.createElement('i', { className: 'fa-solid fa-plus' })
-                ),
+                React.createElement('button', { onClick: addMinute, disabled: !canAddMinute(), className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${canAddMinute() ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}` }, React.createElement('i', { className: 'fa-solid fa-plus' })),
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
-                React.createElement(
-                    'button',
-                    { 
-                        onClick: subtractSecond, 
-                        disabled: !canSubtractSecond(),
-                        className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${
-                            canSubtractSecond() 
-                                ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' 
-                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        }`
-                    },
-                    React.createElement('i', { className: 'fa-solid fa-minus' })
-                ),
+                React.createElement('button', { onClick: subtractSecond, disabled: !canSubtractSecond(), className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${canSubtractSecond() ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}` }, React.createElement('i', { className: 'fa-solid fa-minus' })),
                 React.createElement('span', { className: 'text-sm text-gray-600 px-1 font-medium' }, 'Sec'),
-                React.createElement(
-                    'button',
-                    { 
-                        onClick: addSecond, 
-                        disabled: !canAddSecond(),
-                        className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${
-                            canAddSecond() 
-                                ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' 
-                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        }`
-                    },
-                    React.createElement('i', { className: 'fa-solid fa-plus' })
-                ),
+                React.createElement('button', { onClick: addSecond, disabled: !canAddSecond(), className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${canAddSecond() ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}` }, React.createElement('i', { className: 'fa-solid fa-plus' })),
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
-                React.createElement(
-                    'button',
-                    {
-                        onClick: prevPeriod,
-                        disabled: period <= 1,
-                        className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${period <= 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`
-                    },
-                    React.createElement('i', { className: 'fa-solid fa-minus' })
-                ),
+                React.createElement('button', { onClick: prevPeriod, disabled: period <= 1, className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${period <= 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}` }, React.createElement('i', { className: 'fa-solid fa-minus' })),
                 React.createElement('span', { className: 'text-sm text-gray-800 font-semibold px-1' }, 'Perióda'),
-                React.createElement(
-                    'button',
-                    {
-                        onClick: nextPeriod,
-                        disabled: period >= totalPeriods,
-                        className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${period >= totalPeriods ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`
-                    },
-                    React.createElement('i', { className: 'fa-solid fa-plus' })
-                ),
+                React.createElement('button', { onClick: nextPeriod, disabled: period >= totalPeriods, className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${period >= totalPeriods ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}` }, React.createElement('i', { className: 'fa-solid fa-plus' })),
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
-                React.createElement(
-                    'button',
-                    {
-                        onClick: resetTime,
-                        disabled: !canReset(),
-                        className: `px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${
-                            canReset() 
-                                ? 'bg-yellow-500 hover:bg-yellow-600 text-white' 
-                                : 'bg-gray-300 text-gray-400 cursor-not-allowed'
-                        }`
-                    },
-                    React.createElement('i', { className: 'fa-solid fa-arrow-rotate-left mr-1' }),
-                    'Reset'
-                )
+                React.createElement('button', { onClick: resetTime, disabled: !canReset(), className: `px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${canReset() ? 'bg-yellow-500 hover:bg-yellow-600 text-white' : 'bg-gray-300 text-gray-400 cursor-not-allowed'}` }, React.createElement('i', { className: 'fa-solid fa-arrow-rotate-left mr-1' }), 'Reset')
             ),
             React.createElement(
                 'div',
                 { className: 'flex flex-wrap items-center justify-center gap-2 pt-2 border-t border-gray-100' },
-                React.createElement(
-                    'button',
-                    { onClick: () => console.log('Gól'), className: 'bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
-                    'Gól'
-                ),
-                React.createElement(
-                    'button',
-                    { onClick: () => console.log('7m'), className: 'bg-teal-500 hover:bg-teal-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
-                    '7m'
-                ),
-                React.createElement(
-                    'button',
-                    { onClick: () => console.log('ŽK'), className: 'bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
-                    'ŽK'
-                ),
-                React.createElement(
-                    'button',
-                    { onClick: () => console.log('ČK'), className: 'bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
-                    'ČK'
-                ),
-                React.createElement(
-                    'button',
-                    { onClick: () => console.log('MK'), className: 'bg-blue-400 hover:bg-blue-500 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
-                    'MK'
-                ),
-                React.createElement(
-                    'button',
-                    { onClick: () => console.log('Vylúčenie'), className: 'bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
-                    'Vylúčenie'
-                )
+                React.createElement('button', { onClick: () => console.log('Gól'), className: 'bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' }, 'Gól'),
+                React.createElement('button', { onClick: () => console.log('7m'), className: 'bg-teal-500 hover:bg-teal-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' }, '7m'),
+                React.createElement('button', { onClick: () => console.log('ŽK'), className: 'bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' }, 'ŽK'),
+                React.createElement('button', { onClick: () => console.log('ČK'), className: 'bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' }, 'ČK'),
+                React.createElement('button', { onClick: () => console.log('MK'), className: 'bg-blue-400 hover:bg-blue-500 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' }, 'MK'),
+                React.createElement('button', { onClick: () => console.log('Vylúčenie'), className: 'bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' }, 'Vylúčenie')
             )
         )
     );
