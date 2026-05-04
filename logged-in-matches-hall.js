@@ -25,6 +25,64 @@ const formatDateHeader = (date) => {
     return `${dayName} ${day}. ${month}. ${year}`;
 };
 
+// Funkcia na získanie zobrazeného názvu tímu
+const getDisplayTeamName = (teamIdentifier) => {
+    if (!teamIdentifier) return '???';
+    
+    // Kontrola formátu: "kategoria pismeno cislo" (s medzerou)
+    const spacePattern = /^(\w+)\s+([A-Za-z])\s+(\d+)$/;
+    const spaceMatch = teamIdentifier.match(spacePattern);
+    
+    if (spaceMatch) {
+        const category = spaceMatch[1];
+        const letter = spaceMatch[2];
+        const number = spaceMatch[3];
+        const displayId = `${category} ${number} ${letter}`;
+        
+        // Skúsiť najprv teamManager
+        if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+            const teamName = window.teamManager.getTeamNameByDisplayIdSync(displayId);
+            if (teamName) return teamName;
+        }
+        
+        // Ak teamManager nemá výsledok, skúsiť matchTracker
+        if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+            const teamName = window.matchTracker.getTeamNameByDisplayId(displayId);
+            if (teamName) return teamName;
+        }
+        
+        return teamIdentifier;
+    }
+    
+    // Kontrola formátu: "kategoria cislo pismeno" (s medzerou)
+    const numberLetterPattern = /^(\w+)\s+(\d+)\s+([A-Za-z])$/;
+    const numberLetterMatch = teamIdentifier.match(numberLetterPattern);
+    
+    if (numberLetterMatch) {
+        const category = numberLetterMatch[1];
+        const number = numberLetterMatch[2];
+        const letter = numberLetterMatch[3];
+        const displayId = `${category} ${number} ${letter}`;
+        
+        // Skúsiť najprv teamManager
+        if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
+            const teamName = window.teamManager.getTeamNameByDisplayIdSync(displayId);
+            if (teamName) return teamName;
+        }
+        
+        // Ak teamManager nemá výsledok, skúsiť matchTracker
+        if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+            const teamName = window.matchTracker.getTeamNameByDisplayId(displayId);
+            if (teamName) return teamName;
+        }
+        
+        return teamIdentifier;
+    }
+    
+    // Ak formát nesedí, vrátiť pôvodný identifikátor
+    return teamIdentifier;
+};
+
 // Hlavný komponent
 const MatchesHallApp = () => {
     const [matches, setMatches] = useState([]);
@@ -32,6 +90,7 @@ const MatchesHallApp = () => {
     const [error, setError] = useState(null);
     const [hallInfo, setHallInfo] = useState(null);
     const [userProfile, setUserProfile] = useState(null);
+    const [teamNames, setTeamNames] = useState({}); // Cache pre názvy tímov
 
     // Načítanie informácií o hale
     const loadHallInfo = async (hallId) => {
@@ -46,6 +105,28 @@ const MatchesHallApp = () => {
         } catch (err) {
             console.error('Chyba pri načítaní haly:', err);
         }
+    };
+
+    // Spracovanie názvov tímov pre všetky zápasy
+    const processTeamNames = (matches) => {
+        const names = { ...teamNames };
+        
+        matches.forEach(match => {
+            if (match.homeTeamIdentifier) {
+                const homeKey = match.homeTeamIdentifier;
+                if (!names[homeKey]) {
+                    names[homeKey] = getDisplayTeamName(homeKey);
+                }
+            }
+            if (match.awayTeamIdentifier) {
+                const awayKey = match.awayTeamIdentifier;
+                if (!names[awayKey]) {
+                    names[awayKey] = getDisplayTeamName(awayKey);
+                }
+            }
+        });
+        
+        setTeamNames(names);
     };
 
     // Načítanie zápasov
@@ -96,6 +177,7 @@ const MatchesHallApp = () => {
             });
             
             setMatches(hallMatches);
+            processTeamNames(hallMatches);
             
         } catch (err) {
             console.error('Chyba pri načítaní zápasov:', err);
@@ -224,6 +306,10 @@ const MatchesHallApp = () => {
                             const dateTime = formatMatchDateTime(match.scheduledTime);
                             const isResultAvailable = match.homeScore !== undefined && match.awayScore !== undefined;
                             
+                            // Získanie zobrazených názvov tímov
+                            const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
+                            const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
+                            
                             return React.createElement(
                                 'div',
                                 { 
@@ -246,9 +332,7 @@ const MatchesHallApp = () => {
                                     React.createElement(
                                         'div',
                                         { className: 'flex-1 text-right min-w-[120px]' },
-                                        React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, 
-                                            match.homeTeamIdentifier || '???'
-                                        )
+                                        React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, homeTeamDisplay)
                                     ),
                                     
                                     // VS / výsledok
@@ -270,9 +354,7 @@ const MatchesHallApp = () => {
                                     React.createElement(
                                         'div',
                                         { className: 'flex-1 text-left min-w-[120px]' },
-                                        React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, 
-                                            match.awayTeamIdentifier || '???'
-                                        )
+                                        React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, awayTeamDisplay)
                                     ),
                                     
                                     // Typ zápasu (ak existuje) - TERAZ PRVÝ
