@@ -990,7 +990,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                             className: `flex-1 py-2 rounded-lg font-semibold transition-colors text-center ${
                                 selectedForfeitTeam 
                                     ? 'bg-green-600 hover:bg-green-700 text-white cursor-pointer' 
-                                    : 'bg-white text-green-600 border-2 border-green-600 hover:bg-gray-100'
+                                    : 'bg-white text-green-600 border-2 border-green-600'
                             }`,
                             style: !selectedForfeitTeam ? { cursor: 'not-allowed' } : {}
                         },
