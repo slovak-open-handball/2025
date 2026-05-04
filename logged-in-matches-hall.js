@@ -457,15 +457,16 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const [period, setPeriod] = useState(1);
     const [totalPeriods, setTotalPeriods] = useState(1);
     const [periodDuration, setPeriodDuration] = useState(20);
-    const [manualTimeOffset, setManualTimeOffset] = useState(0);
     const [displaySeconds, setDisplaySeconds] = useState(0);
     
     const intervalRef = useRef(null);
-    const isRunningRef = useRef(false); // REF pre sledovanie stavu behu
+    const isRunningRef = useRef(false);
     const startTimeRef = useRef(null);
     const localStartOffsetRef = useRef(0);
     const periodDurationRef = useRef(periodDuration);
     const periodRef = useRef(period);
+    const isLocalControlRef = useRef(false); // Označuje, či je časovač ovládaný lokálne
+    const lastServerUpdateRef = useRef(0); // Prevencia proti nekonečným cyklom
 
     // Synchronizácia refov so state
     useEffect(() => {
@@ -487,69 +488,18 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
-    // Výpočet aktuálneho času (v sekundách)
-    const calculateCurrentTime = () => {
-        if (!match) return 0;
-        
-        // Ak je zápas v stave 'in-progress' a má startedAt
-        if (match.status === 'in-progress' && match.startedAt) {
-            const now = Timestamp.now();
-            const startedAt = match.startedAt;
-            const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
-            return baseSeconds + (match.manualTimeOffset || 0);
+    // Zastavenie časovača a uloženie (bez ukladania do DB - len lokálne zastavenie)
+    const stopTimerLocally = () => {
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
         }
-        // Ak je zápas pozastavený
-        else if (match.status === 'paused' && match.startedAt && match.pausedAt) {
-            const pausedAt = match.pausedAt;
-            const startedAt = match.startedAt;
-            const baseSeconds = Math.floor((pausedAt.seconds - startedAt.seconds));
-            return baseSeconds + (match.manualTimeOffset || 0);
-        }
-        
-        // Inak vrátime uložený offset alebo 0
-        return match.manualTimeOffset || 0;
+        isRunningRef.current = false;
+        setIsRunning(false);
+        startTimeRef.current = null;
     };
 
-    // Aktualizácia zobrazenia (volané z intervalu) - POUŽÍVA REFy
-    const updateDisplay = () => {
-        // Použijeme ref namiesto state
-        if (!isRunningRef.current) return;
-        
-        // Vypočítame aktuálny čas od začiatku merania
-        const now = Date.now();
-        const elapsedSeconds = Math.floor((now - startTimeRef.current) / 1000);
-        const totalSeconds = localStartOffsetRef.current + elapsedSeconds;
-        
-        const maxSeconds = periodDurationRef.current * 60;
-        const clampedSeconds = Math.min(totalSeconds, maxSeconds);
-        
-        // Priamo nastavíme displaySeconds
-        setDisplaySeconds(clampedSeconds);
-        
-        // Automatické zastavenie na konci periódy
-        if (clampedSeconds >= maxSeconds && totalSeconds >= maxSeconds) {
-            // Zastavíme bez čakania na re-render
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-                intervalRef.current = null;
-            }
-            isRunningRef.current = false;
-            setIsRunning(false);
-            
-            // Uložíme do databázy
-            if (window.db && matchId) {
-                const matchRef = doc(window.db, 'matches', matchId);
-                updateDoc(matchRef, {
-                    manualTimeOffset: maxSeconds,
-                    status: 'paused',
-                    pausedAt: Timestamp.now(),
-                    updatedAt: Timestamp.now()
-                }).catch(err => console.error('Chyba pri ukladaní časovača:', err));
-            }
-        }
-    };
-
-    // Zastavenie časovača a uloženie
+    // Zastavenie časovača s uložením do DB
     const stopTimerAndSave = async () => {
         if (!isRunningRef.current) return;
         
@@ -564,7 +514,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         isRunningRef.current = false;
         setIsRunning(false);
         startTimeRef.current = null;
-        setManualTimeOffset(finalSeconds);
+        isLocalControlRef.current = false;
         
         // Uložíme do databázy
         if (window.db && matchId) {
@@ -590,11 +540,167 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         }
     };
 
-    // Spustenie časovača
+    // Aktualizácia zobrazenia (volané z intervalu)
+    const updateDisplay = () => {
+        if (!isRunningRef.current) return;
+        
+        const now = Date.now();
+        const elapsedSeconds = Math.floor((now - startTimeRef.current) / 1000);
+        const totalSeconds = localStartOffsetRef.current + elapsedSeconds;
+        
+        const maxSeconds = periodDurationRef.current * 60;
+        const clampedSeconds = Math.min(totalSeconds, maxSeconds);
+        
+        setDisplaySeconds(clampedSeconds);
+        
+        // Automatické zastavenie na konci periódy
+        if (clampedSeconds >= maxSeconds && totalSeconds >= maxSeconds) {
+            stopTimerAndSave();
+        }
+    };
+
+    // Spustenie časovača (lokálne)
+    const startTimerLocal = async (startSeconds, startPeriod, serverStartedAt = null) => {
+        // Zastavíme existujúci interval
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }
+        
+        // Nastavíme referenčné časy
+        startTimeRef.current = Date.now();
+        localStartOffsetRef.current = startSeconds;
+        
+        // Nastavíme stav
+        isRunningRef.current = true;
+        setIsRunning(true);
+        isLocalControlRef.current = true;
+        
+        // Nastavíme periódu ak je poskytnutá
+        if (startPeriod !== undefined && startPeriod !== period) {
+            setPeriod(startPeriod);
+        }
+        
+        // Nastavíme zobrazenie
+        setDisplaySeconds(startSeconds);
+        
+        // Spustíme interval
+        intervalRef.current = setInterval(() => {
+            updateDisplay();
+        }, 100);
+    };
+
+    // Spustenie časovača z DB (žiadne ukladanie do DB)
+    const startTimerFromServer = (startSeconds, startPeriod, serverStartedAt) => {
+        // Zastavíme existujúci interval
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }
+        
+        // Nastavíme referenčné časy - použijeme serverový startedAt
+        if (serverStartedAt) {
+            // Serverový startedAt je timestamp, vypočítame koľko sekúnd už ubehlo
+            const now = Date.now();
+            const serverStartTime = serverStartedAt.toDate ? serverStartedAt.toDate().getTime() : serverStartedAt;
+            const elapsedFromServer = Math.floor((now - serverStartTime) / 1000);
+            const adjustedSeconds = startSeconds + elapsedFromServer;
+            const maxSeconds = periodDuration * 60;
+            const finalSeconds = Math.min(adjustedSeconds, maxSeconds);
+            
+            startTimeRef.current = serverStartTime;
+            localStartOffsetRef.current = startSeconds;
+            setDisplaySeconds(finalSeconds);
+        } else {
+            startTimeRef.current = Date.now();
+            localStartOffsetRef.current = startSeconds;
+            setDisplaySeconds(startSeconds);
+        }
+        
+        // Nastavíme stav
+        isRunningRef.current = true;
+        setIsRunning(true);
+        isLocalControlRef.current = false; // Toto je zo servera, nie lokálne
+        
+        // Nastavíme periódu
+        if (startPeriod !== undefined && startPeriod !== period) {
+            setPeriod(startPeriod);
+        }
+        
+        // Spustíme interval
+        intervalRef.current = setInterval(() => {
+            updateDisplay();
+        }, 100);
+    };
+
+    // Synchronizácia s databázou (onSnapshot) - HLAVNÁ ZMENA
+    useEffect(() => {
+        if (!window.db || !matchId) return;
+        
+        const matchRef = doc(window.db, 'matches', matchId);
+        
+        const unsubscribe = onSnapshot(matchRef, (docSnapshot) => {
+            if (!docSnapshot.exists()) return;
+            
+            const data = docSnapshot.data();
+            const serverStatus = data.status;
+            const serverOffset = data.manualTimeOffset || 0;
+            const serverPeriod = data.currentPeriod || 1;
+            const serverStartedAt = data.startedAt;
+            
+            // Kontrola, či ide o aktualizáciu z lokálneho zdroja (aby sme neprepisovali sami seba)
+            const now = Date.now();
+            if (lastServerUpdateRef.current && (now - lastServerUpdateRef.current) < 500) {
+                // Toto je pravdepodobne naša vlastná aktualizácia
+                return;
+            }
+            
+            // AKTUALIZÁCIA PERIÓDY - vždy aktualizujeme (ak nie je lokálna zmena periódy)
+            if (serverPeriod !== period) {
+                setPeriod(serverPeriod);
+                periodRef.current = serverPeriod;
+            }
+            
+            // AKTUALIZÁCIA ČASU - ak nie je lokálne spustený časovač
+            if (!isRunningRef.current) {
+                // Časovač nie je lokálne spustený, aktualizujeme čas
+                if (serverOffset !== displaySeconds) {
+                    setDisplaySeconds(serverOffset);
+                }
+            }
+            
+            // SPRACOVANIE STAVU BEHU
+            if (serverStatus === 'in-progress') {
+                // Server hovorí, že časovač má bežať
+                if (!isRunningRef.current) {
+                    // Lokálne nebeží - musíme spustiť podľa servera
+                    console.log('Spúšťam časovač podľa servera (iné zariadenie)');
+                    startTimerFromServer(serverOffset, serverPeriod, serverStartedAt);
+                }
+                // Ak už beží, nerobíme nič (lokálne ovládanie má prednosť)
+            } else if (serverStatus === 'paused') {
+                // Server hovorí, že časovač je pozastavený
+                if (isRunningRef.current && !isLocalControlRef.current) {
+                    // Beží lokálne ale nebol spustený lokálne (spustený zo servera) - zastavíme
+                    console.log('Zastavujem časovač podľa servera (iné zariadenie)');
+                    stopTimerLocally();
+                } else if (isRunningRef.current && isLocalControlRef.current) {
+                    // Beží a bol spustený lokálne - ignorujeme, lokálne má prednosť
+                    console.log('Ignorujem pause z servera, lokálne beží');
+                } else if (!isRunningRef.current) {
+                    // Nie je spustený, aktualizujeme čas (už je hore)
+                }
+            }
+        });
+        
+        return () => unsubscribe();
+    }, [matchId]);
+
+    // Spustenie časovača (hlavná funkcia - ukladá do DB)
     const startTimer = async () => {
         if (!matchId || !window.db) return;
         
-        const currentSeconds = manualTimeOffset;
+        const currentSeconds = displaySeconds;
         const maxSeconds = periodDuration * 60;
         
         if (currentSeconds >= maxSeconds) {
@@ -608,24 +714,21 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             intervalRef.current = null;
         }
         
-        // Nastavíme referenčné časy
+        // Nastavíme lokálne spustenie
         startTimeRef.current = Date.now();
         localStartOffsetRef.current = currentSeconds;
-        
-        // Nastavíme stav
         isRunningRef.current = true;
         setIsRunning(true);
+        isLocalControlRef.current = true;
         
-        // Okamžite aktualizujeme zobrazenie
-        setDisplaySeconds(currentSeconds);
-        
-        // Spustíme interval - použijeme anonymnú funkciu ktorá volá updateDisplay
+        // Spustíme interval
         intervalRef.current = setInterval(() => {
             updateDisplay();
         }, 100);
         
         // Uložíme do databázy
         try {
+            lastServerUpdateRef.current = Date.now();
             const matchRef = doc(window.db, 'matches', matchId);
             const updateData = {
                 manualTimeOffset: currentSeconds,
@@ -651,13 +754,8 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             }
         } catch (error) {
             console.error('Chyba pri spúšťaní časovača:', error);
-            // V prípade chyby vrátime stav
-            isRunningRef.current = false;
-            setIsRunning(false);
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-                intervalRef.current = null;
-            }
+            // Vrátime stav
+            stopTimerLocally();
         }
     };
 
@@ -678,19 +776,17 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         if (newSeconds < 0) newSeconds = 0;
         if (newSeconds > maxSeconds) newSeconds = maxSeconds;
         
-        // Aktualizujeme lokálny stav
-        setManualTimeOffset(newSeconds);
         setDisplaySeconds(newSeconds);
         
         // Ak časovač beží, musíme aktualizovať aj referenciu
         if (isRunningRef.current) {
-            // Resetneme startTime s novým offsetom
             startTimeRef.current = Date.now();
             localStartOffsetRef.current = newSeconds;
         }
         
         // Uložíme do databázy
         if (window.db && matchId) {
+            lastServerUpdateRef.current = Date.now();
             const status = isRunningRef.current ? 'in-progress' : 'paused';
             const updateData = {
                 manualTimeOffset: newSeconds,
@@ -722,22 +818,17 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             
             // Zastavíme časovač ak beží
             if (isRunningRef.current) {
-                if (intervalRef.current) {
-                    clearInterval(intervalRef.current);
-                    intervalRef.current = null;
-                }
-                isRunningRef.current = false;
-                setIsRunning(false);
-                startTimeRef.current = null;
+                stopTimerLocally();
             }
             
             setPeriod(newPeriod);
-            setManualTimeOffset(0);
             setDisplaySeconds(0);
+            isLocalControlRef.current = false;
             
             // Uložíme do databázy
             if (window.db && matchId) {
                 try {
+                    lastServerUpdateRef.current = Date.now();
                     const matchRef = doc(window.db, 'matches', matchId);
                     await updateDoc(matchRef, {
                         manualTimeOffset: 0,
@@ -759,21 +850,16 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             const newPeriod = period - 1;
             
             if (isRunningRef.current) {
-                if (intervalRef.current) {
-                    clearInterval(intervalRef.current);
-                    intervalRef.current = null;
-                }
-                isRunningRef.current = false;
-                setIsRunning(false);
-                startTimeRef.current = null;
+                stopTimerLocally();
             }
             
             setPeriod(newPeriod);
-            setManualTimeOffset(0);
             setDisplaySeconds(0);
+            isLocalControlRef.current = false;
             
             if (window.db && matchId) {
                 try {
+                    lastServerUpdateRef.current = Date.now();
                     const matchRef = doc(window.db, 'matches', matchId);
                     await updateDoc(matchRef, {
                         manualTimeOffset: 0,
@@ -790,37 +876,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         }
     };
 
-    // Synchronizácia s databázou (onSnapshot)
-    useEffect(() => {
-        if (!window.db || !matchId) return;
-        
-        const matchRef = doc(window.db, 'matches', matchId);
-        
-        const unsubscribe = onSnapshot(matchRef, (docSnapshot) => {
-            if (docSnapshot.exists()) {
-                const data = docSnapshot.data();
-                
-                // NEPREPÍNAME lokálny stav ak časovač beží lokálne
-                if (isRunningRef.current) return;
-                
-                // Aktualizácia periódy
-                const serverPeriod = data.currentPeriod || 1;
-                if (serverPeriod !== period) {
-                    setPeriod(serverPeriod);
-                }
-                
-                // Aktualizácia offsetu
-                const serverOffset = data.manualTimeOffset || 0;
-                if (serverOffset !== manualTimeOffset) {
-                    setManualTimeOffset(serverOffset);
-                    setDisplaySeconds(serverOffset);
-                }
-            }
-        });
-        
-        return () => unsubscribe();
-    }, [matchId]);
-
     // Inicializácia z match objektu
     useEffect(() => {
         if (!match) return;
@@ -834,25 +889,34 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         // Perióda
         const initialPeriod = match.currentPeriod || 1;
         setPeriod(initialPeriod);
+        periodRef.current = initialPeriod;
         
-        // Čas
-        const initialTime = calculateCurrentTime();
+        // Čas - použijeme priamo z matcha
+        const initialTime = match.manualTimeOffset || 0;
         const maxSeconds = (categorySettings?.periodDuration || 20) * 60;
         const clampedTime = Math.min(initialTime, maxSeconds);
-        
-        setManualTimeOffset(clampedTime);
         setDisplaySeconds(clampedTime);
         
-        // Stav behu - NIKDY nepreberáme stav behu zo servera pri inicializácii
-        isRunningRef.current = false;
-        setIsRunning(false);
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
-        }
-        startTimeRef.current = null;
+        // Stav behu - kontrolujeme podľa match.status
+        const shouldBeRunning = match.status === 'in-progress';
         
-        // Cleanup pri odmontovaní
+        if (shouldBeRunning) {
+            // Časovač by mal bežať podľa databázy
+            console.log('Inicializácia: časovač má bežať podľa match.status');
+            startTimerFromServer(clampedTime, initialPeriod, match.startedAt);
+        } else {
+            // Časovač je zastavený
+            isRunningRef.current = false;
+            setIsRunning(false);
+            isLocalControlRef.current = false;
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+            }
+            startTimeRef.current = null;
+        }
+        
+        // Cleanup
         return () => {
             if (intervalRef.current) {
                 clearInterval(intervalRef.current);
