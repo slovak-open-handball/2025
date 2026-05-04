@@ -1,7 +1,7 @@
 // logged-in-matches-hall.js
-import { collection, getDocs, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, getDocs, doc, getDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 // Funkcia na formátovanie dátumu a času
 const formatMatchDateTime = (timestamp) => {
@@ -452,8 +452,321 @@ const TeamMembersList = ({ teamName, categoryName }) => {
     );
 };
 
-// Komponent pre detail zápasu (s navigáciou medzi zápasmi)
-const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColors, groupsData, allMatches, currentMatchIndex, onNavigate }) => {
+// Komponent pre športový časovač
+const MatchTimer = ({ match, matchId, onTimeUpdate }) => {
+    const [isRunning, setIsRunning] = useState(false);
+    const [time, setTime] = useState({ minutes: 0, seconds: 0 });
+    const [period, setPeriod] = useState(1);
+    const [totalPeriods, setTotalPeriods] = useState(1);
+    const intervalRef = useRef(null);
+    
+    // Načítanie nastavení časovača z matcha pri prvom renderi
+    useEffect(() => {
+        if (match) {
+            // Načítanie periód
+            if (match.totalPeriods) {
+                setTotalPeriods(match.totalPeriods);
+            }
+            if (match.currentPeriod) {
+                setPeriod(match.currentPeriod);
+            }
+            // Načítanie času
+            if (match.timerMinutes !== undefined && match.timerSeconds !== undefined) {
+                setTime({ minutes: match.timerMinutes, seconds: match.timerSeconds });
+            }
+            // Načítanie stavu časovača
+            if (match.timerRunning !== undefined) {
+                setIsRunning(match.timerRunning);
+                if (match.timerRunning) {
+                    // Ak bol časovač spustený, reštartujeme interval
+                    startTimer();
+                }
+            }
+        }
+    }, [match]);
+    
+    // Uloženie časovača do Firestore
+    const saveTimerToFirestore = async (newTime, newPeriod, newIsRunning) => {
+        if (!window.db || !matchId) return;
+        
+        try {
+            const matchRef = doc(window.db, 'matches', matchId);
+            await updateDoc(matchRef, {
+                timerMinutes: newTime.minutes,
+                timerSeconds: newTime.seconds,
+                currentPeriod: newPeriod,
+                timerRunning: newIsRunning,
+                lastTimerUpdate: new Date()
+            });
+            if (onTimeUpdate) {
+                onTimeUpdate({ ...newTime, period: newPeriod, isRunning: newIsRunning });
+            }
+        } catch (error) {
+            console.error('Chyba pri ukladaní časovača:', error);
+        }
+    };
+    
+    const startTimer = () => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        
+        intervalRef.current = setInterval(() => {
+            setTime(prevTime => {
+                let newMinutes = prevTime.minutes;
+                let newSeconds = prevTime.seconds + 1;
+                
+                if (newSeconds >= 60) {
+                    newMinutes += 1;
+                    newSeconds = 0;
+                }
+                
+                const newTimeState = { minutes: newMinutes, seconds: newSeconds };
+                saveTimerToFirestore(newTimeState, period, true);
+                return newTimeState;
+            });
+        }, 1000);
+    };
+    
+    const stopTimer = () => {
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }
+        saveTimerToFirestore(time, period, false);
+    };
+    
+    const handleStartStop = () => {
+        if (isRunning) {
+            stopTimer();
+        } else {
+            startTimer();
+        }
+        setIsRunning(!isRunning);
+    };
+    
+    const addMinute = () => {
+        const newTime = { ...time, minutes: time.minutes + 1 };
+        setTime(newTime);
+        if (!isRunning) {
+            saveTimerToFirestore(newTime, period, false);
+        } else {
+            saveTimerToFirestore(newTime, period, true);
+        }
+    };
+    
+    const subtractMinute = () => {
+        if (time.minutes > 0) {
+            const newTime = { ...time, minutes: time.minutes - 1 };
+            setTime(newTime);
+            if (!isRunning) {
+                saveTimerToFirestore(newTime, period, false);
+            } else {
+                saveTimerToFirestore(newTime, period, true);
+            }
+        }
+    };
+    
+    const addSecond = () => {
+        let newSeconds = time.seconds + 1;
+        let newMinutes = time.minutes;
+        if (newSeconds >= 60) {
+            newMinutes += 1;
+            newSeconds = 0;
+        }
+        const newTime = { minutes: newMinutes, seconds: newSeconds };
+        setTime(newTime);
+        if (!isRunning) {
+            saveTimerToFirestore(newTime, period, false);
+        } else {
+            saveTimerToFirestore(newTime, period, true);
+        }
+    };
+    
+    const subtractSecond = () => {
+        let newSeconds = time.seconds - 1;
+        let newMinutes = time.minutes;
+        if (newSeconds < 0) {
+            if (newMinutes > 0) {
+                newMinutes -= 1;
+                newSeconds = 59;
+            } else {
+                newSeconds = 0;
+            }
+        }
+        const newTime = { minutes: newMinutes, seconds: newSeconds };
+        setTime(newTime);
+        if (!isRunning) {
+            saveTimerToFirestore(newTime, period, false);
+        } else {
+            saveTimerToFirestore(newTime, period, true);
+        }
+    };
+    
+    const nextPeriod = () => {
+        if (period < totalPeriods) {
+            const newPeriod = period + 1;
+            setPeriod(newPeriod);
+            // Pri zmene periódy resetujeme čas na 0
+            const newTime = { minutes: 0, seconds: 0 };
+            setTime(newTime);
+            if (isRunning) {
+                // Ak bol časovač spustený, najprv ho zastavíme
+                if (intervalRef.current) {
+                    clearInterval(intervalRef.current);
+                    intervalRef.current = null;
+                }
+                setIsRunning(false);
+                saveTimerToFirestore(newTime, newPeriod, false);
+            } else {
+                saveTimerToFirestore(newTime, newPeriod, false);
+            }
+        }
+    };
+    
+    const prevPeriod = () => {
+        if (period > 1) {
+            const newPeriod = period - 1;
+            setPeriod(newPeriod);
+            const newTime = { minutes: 0, seconds: 0 };
+            setTime(newTime);
+            if (isRunning) {
+                if (intervalRef.current) {
+                    clearInterval(intervalRef.current);
+                    intervalRef.current = null;
+                }
+                setIsRunning(false);
+                saveTimerToFirestore(newTime, newPeriod, false);
+            } else {
+                saveTimerToFirestore(newTime, newPeriod, false);
+            }
+        }
+    };
+    
+    // Cleanup intervalu pri odmontovaní komponentu
+    useEffect(() => {
+        return () => {
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+            }
+        };
+    }, []);
+    
+    // Formátovanie času
+    const formatTime = () => {
+        return `${time.minutes.toString().padStart(2, '0')}:${time.seconds.toString().padStart(2, '0')}`;
+    };
+    
+    return React.createElement(
+        'div',
+        { className: 'bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-6 text-white shadow-xl' },
+        React.createElement(
+            'div',
+            { className: 'text-center mb-6' },
+            React.createElement(
+                'div',
+                { className: 'flex items-center justify-center gap-4 mb-2' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: prevPeriod,
+                        disabled: period <= 1,
+                        className: `w-10 h-10 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                            period <= 1 ? 'bg-gray-600 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+                        }`
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-chevron-left' })
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'text-center' },
+                    React.createElement('div', { className: 'text-sm text-gray-400 uppercase tracking-wider' }, 'Perióda'),
+                    React.createElement('div', { className: 'text-3xl font-bold' }, `${period} / ${totalPeriods}`)
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: nextPeriod,
+                        disabled: period >= totalPeriods,
+                        className: `w-10 h-10 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                            period >= totalPeriods ? 'bg-gray-600 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+                        }`
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-chevron-right' })
+                )
+            ),
+            React.createElement(
+                'div',
+                { className: 'text-6xl font-mono font-bold tracking-wider' },
+                formatTime()
+            )
+        ),
+        
+        React.createElement(
+            'div',
+            { className: 'grid grid-cols-5 gap-2 mb-4' },
+            React.createElement(
+                'button',
+                {
+                    onClick: handleStartStop,
+                    className: `col-span-2 py-3 rounded-lg font-semibold transition-colors cursor-pointer flex items-center justify-center gap-2 ${
+                        isRunning ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
+                    }`
+                },
+                React.createElement('i', { className: isRunning ? 'fa-solid fa-stop' : 'fa-solid fa-play' }),
+                React.createElement('span', {}, isRunning ? 'Stop' : 'Štart')
+            ),
+            React.createElement(
+                'button',
+                {
+                    onClick: subtractMinute,
+                    className: 'bg-gray-700 hover:bg-gray-600 py-3 rounded-lg font-semibold transition-colors cursor-pointer flex items-center justify-center'
+                },
+                React.createElement('i', { className: 'fa-solid fa-minus' }),
+                React.createElement('span', { className: 'ml-1' }, 'Min')
+            ),
+            React.createElement(
+                'button',
+                {
+                    onClick: addMinute,
+                    className: 'bg-gray-700 hover:bg-gray-600 py-3 rounded-lg font-semibold transition-colors cursor-pointer flex items-center justify-center'
+                },
+                React.createElement('i', { className: 'fa-solid fa-plus' }),
+                React.createElement('span', { className: 'ml-1' }, 'Min')
+            ),
+            React.createElement(
+                'div',
+                { className: 'flex gap-2 col-span-2' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: subtractSecond,
+                        className: 'flex-1 bg-gray-700 hover:bg-gray-600 py-3 rounded-lg font-semibold transition-colors cursor-pointer flex items-center justify-center'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-minus' }),
+                    React.createElement('span', { className: 'ml-1' }, 'Sec')
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: addSecond,
+                        className: 'flex-1 bg-gray-700 hover:bg-gray-600 py-3 rounded-lg font-semibold transition-colors cursor-pointer flex items-center justify-center'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-plus' }),
+                    React.createElement('span', { className: 'ml-1' }, 'Sec')
+                )
+            )
+        ),
+        
+        React.createElement(
+            'div',
+            { className: 'text-center text-xs text-gray-400 mt-2' },
+            React.createElement('i', { className: 'fa-regular fa-clock mr-1' }),
+            'Časovač sa automaticky ukladá do databázy'
+        )
+    );
+};
+
+// Komponent pre detail zápasu (s navigáciou medzi zápasmi a časovačom)
+const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColors, groupsData, allMatches, currentMatchIndex, onNavigate, onMatchUpdate }) => {
     const dateTime = formatMatchDateTime(match.scheduledTime);
     const isResultAvailable = match.homeScore !== undefined && match.awayScore !== undefined;
     const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
@@ -485,6 +798,18 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     // Či existuje predchádzajúci a nasledujúci zápas
     const hasPrevious = currentMatchIndex > 0;
     const hasNext = currentMatchIndex < allMatches.length - 1;
+    
+    // Handler pre aktualizáciu časovača
+    const handleTimeUpdate = (timeData) => {
+        if (onMatchUpdate) {
+            onMatchUpdate(match.id, {
+                timerMinutes: timeData.minutes,
+                timerSeconds: timeData.seconds,
+                currentPeriod: timeData.period,
+                timerRunning: timeData.isRunning
+            });
+        }
+    };
     
     return React.createElement(
         'div',
@@ -555,7 +880,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             )
         ),
         
-        // Karta s detailom zápasu (rovnaký ako predtým)
+        // Karta s detailom zápasu
         React.createElement(
             'div',
             { className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden mb-6' },
@@ -701,10 +1026,17 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             )
         ),
         
-        // Dva boxy s členmi tímov vedľa seba
+        // Časovač zápasu
+        React.createElement(MatchTimer, {
+            match: match,
+            matchId: match.id,
+            onTimeUpdate: handleTimeUpdate
+        }),
+        
+        // Dva boxy s členmi tímov vedľa seba (po časovači)
         React.createElement(
             'div',
-            { className: 'grid grid-cols-1 md:grid-cols-2 gap-6' },
+            { className: 'grid grid-cols-1 md:grid-cols-2 gap-6 mt-6' },
             React.createElement(TeamMembersList, {
                 teamName: homeTeamDisplay,
                 categoryName: categoryDisplayName
@@ -982,6 +1314,24 @@ const MatchesHallApp = () => {
             window.scrollTo(0, 0);
         }
     };
+    
+    // Handler pre aktualizáciu zápasu (napr. po zmene časovača)
+    const handleMatchUpdate = (matchId, updates) => {
+        setSelectedMatch(prev => {
+            if (prev && prev.id === matchId) {
+                return { ...prev, ...updates };
+            }
+            return prev;
+        });
+        
+        setAllMatchesList(prev => 
+            prev.map(m => m.id === matchId ? { ...m, ...updates } : m)
+        );
+        
+        setMatches(prev => 
+            prev.map(m => m.id === matchId ? { ...m, ...updates } : m)
+        );
+    };
 
     // Handler pre návrat z detailu
     const handleBackToList = () => {
@@ -1082,7 +1432,8 @@ const MatchesHallApp = () => {
             groupsData: groupsData,
             allMatches: allMatchesList,
             currentMatchIndex: currentMatchIndex,
-            onNavigate: handleNavigateMatch
+            onNavigate: handleNavigateMatch,
+            onMatchUpdate: handleMatchUpdate
         });
     }
 
