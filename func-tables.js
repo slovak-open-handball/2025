@@ -586,9 +586,16 @@ let isTeamNameReplacerInitialized = false;
         return null;
     }
 
-    // Pomocná funkcia na vyhľadanie zápasu medzi dvoma klubmi naprieč všetkými skupinami
     function findCrossGroupMatch(teamAName, teamBName, categoryName) {
-        const allMatches = window.matchTracker.getAllMatches?.() || [];
+        // 🔥 POUŽIJEME LOKÁLNU getAllMatches() NIE window.matchTracker.getAllMatches()
+        const allMatches = getAllMatches();  // ← TOTO JE SPRÁVNE
+        
+        if (!allMatches || allMatches.length === 0) {
+            log(`   ⚠️ [findCrossGroupMatch] Žiadne zápasy v databáze`);
+            return null;
+        }
+        
+        log(`   🔍 [findCrossGroupMatch] Hľadám zápas medzi: "${teamAName}" a "${teamBName}" v kategórii ${categoryName}`);
         
         for (const match of allMatches) {
             // Preskočíme zápasy o umiestnenie
@@ -601,13 +608,14 @@ let isTeamNameReplacerInitialized = false;
             let homeName = match.homeTeamIdentifier;
             let awayName = match.awayTeamIdentifier;
             
-            if (window.matchTracker.getTeamNameByDisplayId) {
-                const mappedHome = window.matchTracker.getTeamNameByDisplayId(match.homeTeamIdentifier);
+            // 🔥 POUŽIJEME getTeamNameByDisplayId (dostupná cez closure)
+            if (typeof getTeamNameByDisplayId === 'function') {
+                const mappedHome = getTeamNameByDisplayId(match.homeTeamIdentifier);
                 if (mappedHome && mappedHome !== match.homeTeamIdentifier) {
                     homeName = mappedHome;
                 }
                 
-                const mappedAway = window.matchTracker.getTeamNameByDisplayId(match.awayTeamIdentifier);
+                const mappedAway = getTeamNameByDisplayId(match.awayTeamIdentifier);
                 if (mappedAway && mappedAway !== match.awayTeamIdentifier) {
                     awayName = mappedAway;
                 }
@@ -617,37 +625,46 @@ let isTeamNameReplacerInitialized = false;
             const hasTeamA = (homeName === teamAName || awayName === teamAName);
             const hasTeamB = (homeName === teamBName || awayName === teamBName);
             
-            if (hasTeamA && hasTeamB && match.status === 'completed') {
-                // Získame skóre
-                let homeScore = 0, awayScore = 0;
+            if (hasTeamA && hasTeamB) {
+                log(`   ✅ [findCrossGroupMatch] Nájdený zápas: ${homeName} vs ${awayName} (skupina: ${match.groupName}, stav: ${match.status})`);
                 
-                if (match.finalScore && !match.forfeitResult) {
-                    homeScore = match.finalScore.home || 0;
-                    awayScore = match.finalScore.away || 0;
-                } else if (match.forfeitResult?.isForfeit) {
-                    homeScore = match.forfeitResult.home || 0;
-                    awayScore = match.forfeitResult.away || 0;
+                if (match.status === 'completed') {
+                    let homeScore = 0, awayScore = 0;
+                    
+                    if (match.finalScore && !match.forfeitResult) {
+                        homeScore = match.finalScore.home || 0;
+                        awayScore = match.finalScore.away || 0;
+                    } else if (match.forfeitResult?.isForfeit) {
+                        homeScore = match.forfeitResult.home || 0;
+                        awayScore = match.forfeitResult.away || 0;
+                    } else {
+                        // 🔥 POUŽIJEME LOKÁLNE eventsData
+                        const events = eventsData[match.id] || [];
+                        const score = getCurrentScore(events);
+                        homeScore = score.home;
+                        awayScore = score.away;
+                    }
+                    
+                    const isTeamADomaci = (homeName === teamAName);
+                    
+                    log(`   ✅ [findCrossGroupMatch] Výsledok: ${isTeamADomaci ? homeScore : awayScore}:${isTeamADomaci ? awayScore : homeScore}`);
+                    
+                    return {
+                        groupName: match.groupName,
+                        status: match.status,
+                        homeTeamName: homeName,
+                        awayTeamName: awayName,
+                        homeScore: isTeamADomaci ? homeScore : awayScore,
+                        awayScore: isTeamADomaci ? awayScore : homeScore
+                    };
                 } else {
-                    const events = window.matchTracker.getEvents?.(match.id) || [];
-                    const score = getCurrentScore(events);
-                    homeScore = score.home;
-                    awayScore = score.away;
+                    log(`   ⏳ [findCrossGroupMatch] Zápas nie je dokončený (stav: ${match.status})`);
+                    return null;
                 }
-                
-                // Zistíme, ktorý klub je domáci
-                const isTeamADomaci = (homeName === teamAName);
-                
-                return {
-                    groupName: match.groupName,
-                    status: match.status,
-                    homeTeamName: homeName,
-                    awayTeamName: awayName,
-                    homeScore: isTeamADomaci ? homeScore : awayScore,
-                    awayScore: isTeamADomaci ? awayScore : homeScore
-                };
             }
         }
         
+        log(`   ❌ [findCrossGroupMatch] Žiadny dokončený zápas medzi "${teamAName}" a "${teamBName}" nebol nájdený.`);
         return null;
     }
 
