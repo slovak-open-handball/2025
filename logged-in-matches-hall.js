@@ -27,7 +27,7 @@ const formatDateHeader = (date) => {
 
 // Funkcia na získanie farby kategórie z databázy
 const getCategoryDrawColor = (categoryId) => {
-    if (!window.categoryDrawColors || !categoryId) return '#3B82F6'; // predvolená modrá
+    if (!window.categoryDrawColors || !categoryId) return '#3B82F6';
     
     const color = window.categoryDrawColors[categoryId];
     if (color && color !== '#3B82F6') return color;
@@ -37,28 +37,57 @@ const getCategoryDrawColor = (categoryId) => {
 
 // Funkcia na vytvorenie svetlejšej verzie farby (80% bledšia)
 const getLighterColor = (color) => {
-    // Konverzia hex na RGB
     const hex = color.replace('#', '');
     const r = parseInt(hex.substring(0, 2), 16);
     const g = parseInt(hex.substring(2, 4), 16);
     const b = parseInt(hex.substring(4, 6), 16);
     
-    // Zosvetlenie o 80% (posun smerom k bielej)
     const lighterR = Math.min(255, Math.floor(r + (255 - r) * 0.8));
     const lighterG = Math.min(255, Math.floor(g + (255 - g) * 0.8));
     const lighterB = Math.min(255, Math.floor(b + (255 - b) * 0.8));
     
-    // Konverzia späť na hex
     return `#${lighterR.toString(16).padStart(2, '0')}${lighterG.toString(16).padStart(2, '0')}${lighterB.toString(16).padStart(2, '0')}`;
 };
 
-// Funkcia na získanie farieb podľa typu zápasu
-const getMatchTypeColors = (match) => {
+// Funkcia na získanie farieb podľa typu skupiny z databázy
+const getGroupTypeColors = (groupName, categoryId, groupsData) => {
+    // Predvolené farby pre základnú skupinu
+    let result = {
+        backgroundColor: '#DCFCE7',
+        textColor: '#166534'
+    };
+    
+    // Ak nemáme dáta o skupinách, vrátime predvolené
+    if (!groupsData || !categoryId) return result;
+    
+    // Nájdenie skupiny podľa názvu v danej kategórii
+    const categoryGroups = groupsData[categoryId] || [];
+    const foundGroup = categoryGroups.find(g => g.name === groupName);
+    
+    if (foundGroup) {
+        if (foundGroup.type === 'nadstavbová skupina') {
+            result = {
+                backgroundColor: '#DBEAFE',
+                textColor: '#1E40AF'
+            };
+        } else if (foundGroup.type === 'základná skupina') {
+            result = {
+                backgroundColor: '#DCFCE7',
+                textColor: '#166534'
+            };
+        }
+    }
+    
+    return result;
+};
+
+// Funkcia na získanie farieb pre zápas (podľa typu zápasu a skupiny)
+const getMatchColors = (match, groupsData) => {
     // Zápas o umiestnenie (placement match)
     if (match.isPlacementMatch) {
         return {
-            backgroundColor: '#F3E8FF', // bledofialová
-            textColor: '#6B21A5'        // tmavofialová
+            backgroundColor: '#F3E8FF',
+            textColor: '#6B21A5'
         };
     }
     
@@ -67,37 +96,32 @@ const getMatchTypeColors = (match) => {
         match.matchType === 'Finále' || match.matchType === 'Štvrťfinále' ||
         match.matchType === 'Osemfinále' || (match.matchType && match.matchType.includes('finále'))) {
         return {
-            backgroundColor: '#F3E8FF', // bledofialová
-            textColor: '#6B21A5'        // tmavofialová
+            backgroundColor: '#F3E8FF',
+            textColor: '#6B21A5'
         };
     }
     
-    // Nadstavbová skupina
-    if (match.groupType === 'advancement' || (match.groupName && match.groupName.includes('nadstavbová'))) {
-        return {
-            backgroundColor: '#DBEAFE', // bledomodrá
-            textColor: '#1E40AF'        // tmavomodrá
-        };
+    // Podľa skupiny z databázy
+    if (match.groupName && match.categoryId) {
+        return getGroupTypeColors(match.groupName, match.categoryId, groupsData);
     }
     
-    // Základná skupina (predvolené)
+    // Predvolené - základná skupina
     return {
-        backgroundColor: '#DCFCE7', // bledozelená
-        textColor: '#166534'        // tmavozelená
+        backgroundColor: '#DCFCE7',
+        textColor: '#166534'
     };
 };
 
-// Funkcia na získanie zobrazeného názvu tímu - priamo cez teamManager BEZ prestavby
+// Funkcia na získanie zobrazeného názvu tímu
 const getDisplayTeamName = (teamIdentifier) => {
     if (!teamIdentifier) return '???';
     
-    // Priamo poslať do teamManager bez akejkoľvek prestavby formátu
     if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
         const teamName = window.teamManager.getTeamNameByDisplayIdSync(teamIdentifier);
         if (teamName && teamName !== teamIdentifier) return teamName;
     }
     
-    // Ak teamManager neexistuje alebo vráti rovnakú hodnotu, vrátiť pôvodný identifikátor
     return teamIdentifier;
 };
 
@@ -108,8 +132,9 @@ const MatchesHallApp = () => {
     const [error, setError] = useState(null);
     const [hallInfo, setHallInfo] = useState(null);
     const [userProfile, setUserProfile] = useState(null);
-    const [teamNames, setTeamNames] = useState({}); // Cache pre názvy tímov
-    const [categoryDrawColors, setCategoryDrawColors] = useState({}); // Cache pre farby kategórií
+    const [teamNames, setTeamNames] = useState({});
+    const [categoryDrawColors, setCategoryDrawColors] = useState({});
+    const [groupsData, setGroupsData] = useState({}); // Dáta o skupinách z databázy
 
     // Načítanie farieb kategórií z databázy
     const loadCategoryColors = async () => {
@@ -130,11 +155,29 @@ const MatchesHallApp = () => {
                 });
                 
                 setCategoryDrawColors(colors);
-                window.categoryDrawColors = colors; // Uloženie do globálneho priestoru pre ostatné funkcie
-                console.log("[Category Colors] Načítané farby kategórií:", colors);
+                window.categoryDrawColors = colors;
             }
         } catch (err) {
             console.error('Chyba pri načítaní farieb kategórií:', err);
+        }
+    };
+
+    // Načítanie skupín z databázy
+    const loadGroupsData = async () => {
+        if (!window.db) return;
+        
+        try {
+            const groupsRef = doc(window.db, 'settings', 'groups');
+            const groupsSnap = await getDoc(groupsRef);
+            
+            if (groupsSnap.exists()) {
+                const data = groupsSnap.data();
+                setGroupsData(data);
+                window.groupsData = data; // Uloženie do globálneho priestoru
+                console.log("[Groups Data] Načítané skupiny:", data);
+            }
+        } catch (err) {
+            console.error('Chyba pri načítaní skupín:', err);
         }
     };
 
@@ -235,14 +278,15 @@ const MatchesHallApp = () => {
 
     // Inicializácia
     useEffect(() => {
-        const init = () => {
+        const init = async () => {
             if (window.globalUserProfileData) {
                 setUserProfile(window.globalUserProfileData);
                 const hallId = window.globalUserProfileData.hallId;
                 if (hallId) {
-                    loadCategoryColors(); // Načítanie farieb kategórií
-                    loadHallInfo(hallId);
-                    loadMatches(hallId);
+                    await loadCategoryColors();
+                    await loadGroupsData(); // Načítanie skupín
+                    await loadHallInfo(hallId);
+                    await loadMatches(hallId);
                 } else {
                     setError('Používateľ nemá priradenú žiadnu halu');
                     setLoading(false);
@@ -278,7 +322,6 @@ const MatchesHallApp = () => {
             }
         });
         
-        // Zoradenie dní
         return Object.values(groups).sort((a, b) => a.date - b.date);
     };
 
@@ -306,7 +349,6 @@ const MatchesHallApp = () => {
         'div',
         { className: 'max-w-7xl mx-auto px-4 py-6' },
         
-        // Hlavička
         React.createElement(
             'div',
             { className: 'mb-8 text-center' },
@@ -320,7 +362,6 @@ const MatchesHallApp = () => {
             )
         ),
         
-        // Tabuľka zápasov - jedna tabuľka pre všetky dni
         matchesByDay.length === 0 ? 
             React.createElement(
                 'div',
@@ -335,7 +376,6 @@ const MatchesHallApp = () => {
                     'table',
                     { className: 'min-w-full divide-y divide-gray-200' },
                     
-                    // Hlavička tabuľky
                     React.createElement(
                         'thead',
                         { className: 'bg-gray-50' },
@@ -350,28 +390,21 @@ const MatchesHallApp = () => {
                         )
                     ),
                     
-                    // Telo tabuľky
                     React.createElement(
                         'tbody',
                         { className: 'divide-y divide-gray-100' },
                         matchesByDay.map((dayGroup, dayIndex) => {
                             const dayMatches = dayGroup.matches;
                             const dayDate = dayGroup.date;
-                            
-                            // Vytvorenie poľa riadkov pre každý deň
                             const dayRows = [];
                             
-                            // Pridať riadok s dátumom (zlúčený cez všetky stĺpce)
                             dayRows.push(
                                 React.createElement(
                                     'tr',
                                     { key: `day-${dayIndex}`, className: 'bg-blue-50' },
                                     React.createElement(
                                         'td',
-                                        { 
-                                            colSpan: 5,
-                                            className: 'px-4 py-4 text-left'
-                                        },
+                                        { colSpan: 5, className: 'px-4 py-4 text-left' },
                                         React.createElement(
                                             'div',
                                             { className: 'flex items-center gap-2' },
@@ -383,23 +416,19 @@ const MatchesHallApp = () => {
                                 )
                             );
                             
-                            // Pridať všetky zápasy pre tento deň
                             dayMatches.forEach((match, matchIndex) => {
                                 const dateTime = formatMatchDateTime(match.scheduledTime);
                                 const isResultAvailable = match.homeScore !== undefined && match.awayScore !== undefined;
                                 
-                                // Získanie zobrazených názvov tímov - priamo cez teamManager
                                 const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
                                 const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
                                 
-                                // Získanie farby pre kategóriu
                                 const categoryColor = getCategoryDrawColor(match.categoryId);
                                 const lighterCategoryColor = getLighterColor(categoryColor);
                                 
-                                // Získanie farieb pre typ zápasu
-                                const matchTypeColors = getMatchTypeColors(match);
+                                // Získanie farieb pre daný zápas (podľa typu skupiny z databázy)
+                                const matchColors = getMatchColors(match, groupsData);
                                 
-                                // Získanie info tagov s použitím farby pre kategóriu a typ zápasu
                                 const infoTags = [];
                                 
                                 // Tag pre typ zápasu (matchType)
@@ -409,8 +438,8 @@ const MatchesHallApp = () => {
                                             key: 'type',
                                             className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
                                             style: {
-                                                backgroundColor: matchTypeColors.backgroundColor,
-                                                color: matchTypeColors.textColor,
+                                                backgroundColor: matchColors.backgroundColor,
+                                                color: matchColors.textColor,
                                                 fontWeight: '500'
                                             }
                                         },
@@ -434,27 +463,17 @@ const MatchesHallApp = () => {
                                     ));
                                 }
                                 
-                                // Tag pre skupinu
+                                // Tag pre skupinu - s farbou podľa typu z databázy
                                 if (match.groupName) {
-                                    // Rozlíšenie farby pre skupinu podľa typu
-                                    let groupBgColor = '#DCFCE7'; // bledozelená pre základnú
-                                    let groupTextColor = '#166534'; // tmavozelená pre základnú
-                                    
-                                    if (match.groupType === 'advancement' || match.groupName.includes('nadstavbová')) {
-                                        groupBgColor = '#DBEAFE'; // bledomodrá
-                                        groupTextColor = '#1E40AF'; // tmavomodrá
-                                    } else if (match.isPlacementMatch || match.matchType === 'Playoff') {
-                                        groupBgColor = '#F3E8FF'; // bledofialová
-                                        groupTextColor = '#6B21A5'; // tmavofialová
-                                    }
+                                    const groupColors = getGroupTypeColors(match.groupName, match.categoryId, groupsData);
                                     
                                     infoTags.push(
                                         React.createElement('span', { 
                                             key: 'group',
                                             className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap',
                                             style: {
-                                                backgroundColor: groupBgColor,
-                                                color: groupTextColor,
+                                                backgroundColor: groupColors.backgroundColor,
+                                                color: groupColors.textColor,
                                                 fontWeight: '500'
                                             }
                                         },
@@ -483,7 +502,6 @@ const MatchesHallApp = () => {
                                         'tr',
                                         { key: `match-${dayIndex}-${matchIndex}`, className: 'hover:bg-gray-50 transition-colors' },
                                         
-                                        // Čas
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3 whitespace-nowrap' },
@@ -495,14 +513,12 @@ const MatchesHallApp = () => {
                                             )
                                         ),
                                         
-                                        // Domáci tím
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3 whitespace-nowrap text-right' },
                                             React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, homeTeamDisplay)
                                         ),
                                         
-                                        // VS / výsledok
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3 whitespace-nowrap text-center' },
@@ -517,14 +533,12 @@ const MatchesHallApp = () => {
                                                 React.createElement('span', { className: 'text-gray-400 font-medium text-sm' }, 'VS')
                                         ),
                                         
-                                        // Hosťovský tím
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3 whitespace-nowrap text-left' },
                                             React.createElement('span', { className: 'font-medium text-gray-800 text-sm' }, awayTeamDisplay)
                                         ),
                                         
-                                        // Info tagy
                                         React.createElement(
                                             'td',
                                             { className: 'px-4 py-3' },
@@ -539,7 +553,7 @@ const MatchesHallApp = () => {
                             });
                             
                             return dayRows;
-                        }).flat() // flatten the array of rows
+                        }).flat()
                     )
                 )
             )
