@@ -460,8 +460,86 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const [totalPeriods, setTotalPeriods] = useState(1);
     const [periodDuration, setPeriodDuration] = useState(20);
     const intervalRef = useRef(null);
+    const lastSyncTimeRef = useRef(null);
+    const lastServerTimeRef = useRef({ minutes: 0, seconds: 0 });
     
-    // Načítanie nastavení časovača z matcha a z kategórie
+    // Real-time počúvanie zmien časovača z databázy
+    useEffect(() => {
+        if (!window.db || !matchId) return;
+        
+        const matchRef = doc(window.db, 'matches', matchId);
+        
+        const unsubscribe = onSnapshot(matchRef, (docSnapshot) => {
+            if (docSnapshot.exists()) {
+                const matchData = docSnapshot.data();
+                
+                // Načítanie nastavení z kategórie (ak nie sú)
+                if (categorySettings) {
+                    if (categorySettings.periods !== undefined && !matchData.totalPeriods) {
+                        setTotalPeriods(categorySettings.periods);
+                    }
+                    if (categorySettings.periodDuration !== undefined && !matchData.periodDuration) {
+                        setPeriodDuration(categorySettings.periodDuration);
+                    }
+                }
+                
+                // Synchronizácia periódy
+                if (matchData.currentPeriod !== undefined && matchData.currentPeriod !== period) {
+                    setPeriod(matchData.currentPeriod);
+                }
+                
+                // Synchronizácia času z databázy
+                if (matchData.timerMinutes !== undefined && matchData.timerSeconds !== undefined) {
+                    const serverTime = {
+                        minutes: matchData.timerMinutes,
+                        seconds: matchData.timerSeconds
+                    };
+                    
+                    // Uložíme posledný známy server čas
+                    lastServerTimeRef.current = serverTime;
+                    
+                    // Aktualizujeme lokálny čas (len ak nie je spustený lokálny časovač)
+                    if (!isRunning) {
+                        setTime(serverTime);
+                    } else {
+                        // Ak beží časovač, porovnáme čas a prípadne upravíme
+                        const localTimeSeconds = time.minutes * 60 + time.seconds;
+                        const serverTimeSeconds = serverTime.minutes * 60 + serverTime.seconds;
+                        
+                        // Ak je rozdiel väčší ako 2 sekundy, preberieme server čas
+                        if (Math.abs(localTimeSeconds - serverTimeSeconds) > 2) {
+                            setTime(serverTime);
+                        }
+                    }
+                }
+                
+                // Synchronizácia stavu časovača
+                if (matchData.timerRunning !== undefined && matchData.timerRunning !== isRunning) {
+                    setIsRunning(matchData.timerRunning);
+                    if (matchData.timerRunning) {
+                        // Ak je na serveri spustený a lokálne nie, spustíme ho
+                        if (!isRunning && intervalRef.current === null) {
+                            startTimer();
+                        }
+                    } else {
+                        // Ak je na serveri zastavený a lokálne beží, zastavíme ho
+                        if (isRunning && intervalRef.current !== null) {
+                            if (intervalRef.current) {
+                                clearInterval(intervalRef.current);
+                                intervalRef.current = null;
+                            }
+                        }
+                    }
+                }
+            }
+        }, (error) => {
+            console.error('Chyba pri real-time počúvaní časovača:', error);
+        });
+        
+        return () => unsubscribe();
+    }, [matchId, categorySettings]);
+    
+    // Načítanie počiatočných nastavení z matcha
     useEffect(() => {
         if (match) {
             if (categorySettings) {
@@ -481,6 +559,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             
             if (match.timerMinutes !== undefined && match.timerSeconds !== undefined) {
                 setTime({ minutes: match.timerMinutes, seconds: match.timerSeconds });
+                lastServerTimeRef.current = { minutes: match.timerMinutes, seconds: match.timerSeconds };
             }
             
             if (match.timerRunning !== undefined) {
@@ -510,9 +589,18 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         }
     }, [time, isRunning, periodDuration, period]);
     
-    // Uloženie časovača do Firestore
+    // Uloženie časovača do Firestore s kontrolou zmeny
     const saveTimerToFirestore = async (newTime, newPeriod, newIsRunning) => {
         if (!window.db || !matchId) return;
+        
+        // Kontrola či sa čas naozaj zmenil
+        const lastTime = lastServerTimeRef.current;
+        const timeChanged = lastTime.minutes !== newTime.minutes || lastTime.seconds !== newTime.seconds;
+        const periodChanged = period !== newPeriod;
+        
+        if (!timeChanged && !periodChanged && isRunning === newIsRunning) {
+            return; // Žiadna zmena, neukladáme
+        }
         
         try {
             const matchRef = doc(window.db, 'matches', matchId);
@@ -523,6 +611,10 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 timerRunning: newIsRunning,
                 lastTimerUpdate: new Date()
             });
+            
+            // Aktualizujeme posledný známy server čas
+            lastServerTimeRef.current = { ...newTime };
+            
             if (onTimeUpdate) {
                 onTimeUpdate({ ...newTime, period: newPeriod, isRunning: newIsRunning });
             }
@@ -533,6 +625,9 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     
     const startTimer = () => {
         if (intervalRef.current) clearInterval(intervalRef.current);
+        
+        // Zaznamenáme čas začiatku pre prípadnú synchronizáciu
+        lastSyncTimeRef.current = Date.now();
         
         intervalRef.current = setInterval(() => {
             setTime(prevTime => {
@@ -568,6 +663,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         setIsRunning(!isRunning);
     };
     
+    // Manuálna úprava času (so synchronizáciou)
     const addMinute = () => {
         const newTime = { ...time, minutes: time.minutes + 1 };
         setTime(newTime);
@@ -681,47 +777,38 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     // Handler pre tlačidlá zápasu
     const handleEndMatch = () => {
         console.log('Ukončiť zápas');
-        // Tu bude logika pre ukončenie zápasu
     };
     
     const handleManualResult = () => {
         console.log('Zadať výsledok manuálne');
-        // Tu bude logika pre manuálne zadanie výsledku
     };
     
     const handleForfeit = () => {
         console.log('Kontumácia');
-        // Tu bude logika pre kontumáciu
     };
     
     const handleGoal = () => {
         console.log('Gól');
-        // Tu bude logika pre gól
     };
     
     const handleSevenMeters = () => {
         console.log('7m');
-        // Tu bude logika pre 7 metrov
     };
     
     const handleYellowCard = () => {
         console.log('ŽK');
-        // Tu bude logika pre žltú kartu
     };
     
     const handleRedCard = () => {
         console.log('ČK');
-        // Tu bude logika pre červenú kartu
     };
     
     const handleBlueCard = () => {
         console.log('MK');
-        // Tu bude logika pre modrú kartu
     };
     
     const handleExclusion = () => {
         console.log('Vylúčenie');
-        // Tu bude logika pre vylúčenie
     };
     
     useEffect(() => {
@@ -904,7 +991,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 )
             ),
             
-            // DRUHÝ RIADOK - tlačidlá pre správu zápasu (UPRAVENÉ FARBY)
+            // DRUHÝ RIADOK - tlačidlá pre správu zápasu
             React.createElement(
                 'div',
                 { className: 'flex flex-wrap items-center justify-center gap-2 mb-6 pt-2 border-t border-gray-100' },
