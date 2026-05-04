@@ -676,16 +676,91 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         }
     };
 
+    // UPRAVENÁ FUNKCIA renderManualResultModal v MatchTimer komponente
     const renderManualResultModal = () => {
         if (!showManualResultModal) return null;
         
-        // Získame zmapované názvy tímov
-        const homeTeamName = match.homeTeamIdentifier 
-            ? (window.teamManager?.getTeamNameByDisplayIdSync?.(match.homeTeamIdentifier) || match.homeTeamIdentifier)
-            : 'Domáci';
-        const awayTeamName = match.awayTeamIdentifier 
-            ? (window.teamManager?.getTeamNameByDisplayIdSync?.(match.awayTeamIdentifier) || match.awayTeamIdentifier)
-            : 'Hostia';
+        // State pre zmapované názvy tímov
+        const [mappedHomeTeamName, setMappedHomeTeamName] = useState(match.homeTeamIdentifier || 'Domáci');
+        const [mappedAwayTeamName, setMappedAwayTeamName] = useState(match.awayTeamIdentifier || 'Hostia');
+        const [loadingMapping, setLoadingMapping] = useState(true);
+        
+        // Získanie názvu kategórie pre tento zápas
+        let categoryName = match.categoryName;
+        if (!categoryName && match.categoryId && window.categoriesData && window.categoriesData[match.categoryId]) {
+            categoryName = window.categoriesData[match.categoryId];
+        }
+        
+        // Načítanie zmapovaných názvov tímov pri otvorení modálu
+        useEffect(() => {
+            const loadMappedNames = async () => {
+                setLoadingMapping(true);
+                
+                let homeName = match.homeTeamIdentifier || 'Domáci';
+                let awayName = match.awayTeamIdentifier || 'Hostia';
+                
+                // Mapovanie domáceho tímu
+                if (match.homeTeamIdentifier && categoryName && homeName.includes(categoryName)) {
+                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                        try {
+                            console.log(`🔄 [MODAL] Mapovanie domáceho tímu: "${homeName}" (obsahuje kategóriu: ${categoryName})`);
+                            const mappedHome = await window.matchTracker.getTeamNameByDisplayId(homeName);
+                            if (mappedHome && mappedHome !== homeName) {
+                                homeName = mappedHome;
+                                console.log(`✅ [MODAL] Zmapovaný domáci tím: "${match.homeTeamIdentifier}" → "${homeName}"`);
+                            }
+                        } catch (err) {
+                            console.error(`Chyba pri mapovaní domáceho tímu:`, err);
+                        }
+                    }
+                }
+                
+                // Mapovanie hosťujúceho tímu
+                if (match.awayTeamIdentifier && categoryName && awayName.includes(categoryName)) {
+                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                        try {
+                            console.log(`🔄 [MODAL] Mapovanie hosťujúceho tímu: "${awayName}" (obsahuje kategóriu: ${categoryName})`);
+                            const mappedAway = await window.matchTracker.getTeamNameByDisplayId(awayName);
+                            if (mappedAway && mappedAway !== awayName) {
+                                awayName = mappedAway;
+                                console.log(`✅ [MODAL] Zmapovaný hosťujúci tím: "${match.awayTeamIdentifier}" → "${awayName}"`);
+                            }
+                        } catch (err) {
+                            console.error(`Chyba pri mapovaní hosťujúceho tímu:`, err);
+                        }
+                    }
+                }
+                
+                setMappedHomeTeamName(homeName);
+                setMappedAwayTeamName(awayName);
+                setLoadingMapping(false);
+            };
+            
+            loadMappedNames();
+        }, [showManualResultModal]);
+        
+        if (loadingMapping) {
+            return React.createElement(
+                'div',
+                { 
+                    className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50',
+                    onClick: () => {
+                        setShowManualResultModal(false);
+                        setManualHomeScore('');
+                        setManualAwayScore('');
+                    }
+                },
+                React.createElement(
+                    'div',
+                    { 
+                        className: 'bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 p-6 text-center',
+                        onClick: (e) => e.stopPropagation()
+                    },
+                    React.createElement('div', { className: 'animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4' }),
+                    React.createElement('p', { className: 'text-gray-600' }, 'Načítavam názvy tímov...')
+                )
+            );
+        }
         
         return React.createElement(
             'div',
@@ -700,7 +775,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             React.createElement(
                 'div',
                 { 
-                    className: 'bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 p-6',  // Zmena: max-w-md → max-w-2xl (širšie)
+                    className: 'bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 p-6',
                     onClick: (e) => e.stopPropagation()
                 },
                 React.createElement(
@@ -710,21 +785,21 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 ),
                 React.createElement(
                     'p',
-                    { className: 'text-gray-600 mb-6 text-center text-sm' },  // Zmena: mb-4 → mb-6
+                    { className: 'text-gray-600 mb-6 text-center text-sm' },
                     'Zadajte konečný výsledok zápasu'
                 ),
                 
                 // Dva inputy pre výsledky vedľa seba - širšie
                 React.createElement(
                     'div',
-                    { className: 'flex gap-6 mb-8' },  // Zmena: gap-4 → gap-6, mb-6 → mb-8
+                    { className: 'flex gap-6 mb-8' },
                     React.createElement(
                         'div',
                         { className: 'flex-1 text-center' },
                         React.createElement(
                             'label',
-                            { className: 'block text-base font-medium text-gray-700 mb-3' },  // Zmena: text-sm → text-base, mb-2 → mb-3
-                            homeTeamName
+                            { className: 'block text-base font-medium text-gray-700 mb-3' },
+                            mappedHomeTeamName
                         ),
                         React.createElement(
                             'input',
@@ -732,7 +807,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                                 type: 'number',
                                 value: manualHomeScore,
                                 onChange: (e) => setManualHomeScore(e.target.value),
-                                className: 'w-full px-6 py-4 text-center text-3xl font-bold border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none',  // Zmena: väčšie padding a text
+                                className: 'w-full px-6 py-4 text-center text-3xl font-bold border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none',
                                 min: '0',
                                 step: '1'
                             }
@@ -740,7 +815,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     ),
                     React.createElement(
                         'div',
-                        { className: 'flex items-center justify-center text-3xl font-bold text-gray-400 px-2' },  // Zmena: text-2xl → text-3xl
+                        { className: 'flex items-center justify-center text-3xl font-bold text-gray-400 px-2' },
                         ':'
                     ),
                     React.createElement(
@@ -748,8 +823,8 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                         { className: 'flex-1 text-center' },
                         React.createElement(
                             'label',
-                            { className: 'block text-base font-medium text-gray-700 mb-3' },  // Zmena: text-sm → text-base, mb-2 → mb-3
-                            awayTeamName
+                            { className: 'block text-base font-medium text-gray-700 mb-3' },
+                            mappedAwayTeamName
                         ),
                         React.createElement(
                             'input',
@@ -757,7 +832,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                                 type: 'number',
                                 value: manualAwayScore,
                                 onChange: (e) => setManualAwayScore(e.target.value),
-                                className: 'w-full px-6 py-4 text-center text-3xl font-bold border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none',  // Zmena: väčšie padding a text
+                                className: 'w-full px-6 py-4 text-center text-3xl font-bold border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none',
                                 min: '0',
                                 step: '1'
                             }
@@ -768,7 +843,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 // Dve tlačidlá: Zrušiť a Potvrdiť
                 React.createElement(
                     'div',
-                    { className: 'flex gap-4' },  // Zmena: gap-3 → gap-4
+                    { className: 'flex gap-4' },
                     React.createElement(
                         'button',
                         {
@@ -777,7 +852,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                                 setManualHomeScore('');
                                 setManualAwayScore('');
                             },
-                            className: 'flex-1 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium transition-colors cursor-pointer text-center'  // Zmena: py-2 → py-3, rounded-lg → rounded-xl
+                            className: 'flex-1 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium transition-colors cursor-pointer text-center'
                         },
                         'Zrušiť'
                     ),
@@ -790,7 +865,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                                 manualHomeScore !== '' && manualAwayScore !== ''
                                     ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
                                     : 'bg-white text-blue-600 border-2 border-blue-600 cursor-not-allowed'
-                            }`  // Zmena: py-2 → py-3, rounded-lg → rounded-xl
+                            }`
                         },
                         'Potvrdiť'
                     )
@@ -1228,18 +1303,90 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         }
     };
 
-    // V MatchTimer komponente, nájdite funkciu renderForfeitModal a nahraďte ju touto verziou:
-
+    // UPRAVENÁ FUNKCIA renderForfeitModal v MatchTimer komponente
     const renderForfeitModal = () => {
         if (!showForfeitModal) return null;
         
-        // Získame zmapované názvy tímov
-        const homeTeamName = match.homeTeamIdentifier 
-            ? (window.teamManager?.getTeamNameByDisplayIdSync?.(match.homeTeamIdentifier) || match.homeTeamIdentifier)
-            : 'Domáci';
-        const awayTeamName = match.awayTeamIdentifier 
-            ? (window.teamManager?.getTeamNameByDisplayIdSync?.(match.awayTeamIdentifier) || match.awayTeamIdentifier)
-            : 'Hostia';
+        // State pre zmapované názvy tímov
+        const [mappedHomeTeamName, setMappedHomeTeamName] = useState(match.homeTeamIdentifier || 'Domáci');
+        const [mappedAwayTeamName, setMappedAwayTeamName] = useState(match.awayTeamIdentifier || 'Hostia');
+        const [loadingMapping, setLoadingMapping] = useState(true);
+        
+        // Získanie názvu kategórie pre tento zápas
+        let categoryName = match.categoryName;
+        if (!categoryName && match.categoryId && window.categoriesData && window.categoriesData[match.categoryId]) {
+            categoryName = window.categoriesData[match.categoryId];
+        }
+        
+        // Načítanie zmapovaných názvov tímov pri otvorení modálu
+        useEffect(() => {
+            const loadMappedNames = async () => {
+                setLoadingMapping(true);
+                
+                let homeName = match.homeTeamIdentifier || 'Domáci';
+                let awayName = match.awayTeamIdentifier || 'Hostia';
+                
+                // Mapovanie domáceho tímu
+                if (match.homeTeamIdentifier && categoryName && homeName.includes(categoryName)) {
+                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                        try {
+                            console.log(`🔄 [FORFEIT] Mapovanie domáceho tímu: "${homeName}" (obsahuje kategóriu: ${categoryName})`);
+                            const mappedHome = await window.matchTracker.getTeamNameByDisplayId(homeName);
+                            if (mappedHome && mappedHome !== homeName) {
+                                homeName = mappedHome;
+                                console.log(`✅ [FORFEIT] Zmapovaný domáci tím: "${match.homeTeamIdentifier}" → "${homeName}"`);
+                            }
+                        } catch (err) {
+                            console.error(`Chyba pri mapovaní domáceho tímu:`, err);
+                        }
+                    }
+                }
+                
+                // Mapovanie hosťujúceho tímu
+                if (match.awayTeamIdentifier && categoryName && awayName.includes(categoryName)) {
+                    if (window.matchTracker && typeof window.matchTracker.getTeamNameByDisplayId === 'function') {
+                        try {
+                            console.log(`🔄 [FORFEIT] Mapovanie hosťujúceho tímu: "${awayName}" (obsahuje kategóriu: ${categoryName})`);
+                            const mappedAway = await window.matchTracker.getTeamNameByDisplayId(awayName);
+                            if (mappedAway && mappedAway !== awayName) {
+                                awayName = mappedAway;
+                                console.log(`✅ [FORFEIT] Zmapovaný hosťujúci tím: "${match.awayTeamIdentifier}" → "${awayName}"`);
+                            }
+                        } catch (err) {
+                            console.error(`Chyba pri mapovaní hosťujúceho tímu:`, err);
+                        }
+                    }
+                }
+                
+                setMappedHomeTeamName(homeName);
+                setMappedAwayTeamName(awayName);
+                setLoadingMapping(false);
+            };
+            
+            loadMappedNames();
+        }, [showForfeitModal]);
+        
+        if (loadingMapping) {
+            return React.createElement(
+                'div',
+                { 
+                    className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50',
+                    onClick: () => {
+                        setShowForfeitModal(false);
+                        setSelectedForfeitTeam(null);
+                    }
+                },
+                React.createElement(
+                    'div',
+                    { 
+                        className: 'bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 p-6 text-center',
+                        onClick: (e) => e.stopPropagation()
+                    },
+                    React.createElement('div', { className: 'animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4' }),
+                    React.createElement('p', { className: 'text-gray-600' }, 'Načítavam názvy tímov...')
+                )
+            );
+        }
         
         return React.createElement(
             'div',
@@ -1258,12 +1405,12 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 },
                 React.createElement(
                     'h3',
-                    { className: 'text-2xl font-bold text-gray-800 mb-4 text-center' },  // Zväčšené: text-xl → text-2xl
+                    { className: 'text-2xl font-bold text-gray-800 mb-4 text-center' },
                     'Kontumácia zápasu'
                 ),
                 React.createElement(
                     'p',
-                    { className: 'text-gray-600 mb-6 text-center text-base' },  // Zväčšené: text-sm → text-base
+                    { className: 'text-gray-600 mb-6 text-center text-base' },
                     'Vyberte tím, v prospech ktorého sa zápas kontumuje (10:0)'
                 ),
                 // Dve tlačidlá pre výber tímu vedľa seba
@@ -1280,8 +1427,8 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                                     : 'bg-gray-300 hover:bg-gray-400 text-gray-700'
                             }`
                         },
-                            React.createElement('span', { className: 'block text-lg font-bold' }, 'Domáci'),  // Zväčšené: text-base → text-lg, pridaný font-bold
-                            React.createElement('span', { className: 'block text-sm opacity-90 mt-1' }, homeTeamName)  // Zväčšené: text-xs → text-sm
+                            React.createElement('span', { className: 'block text-lg font-bold' }, 'Domáci'),
+                            React.createElement('span', { className: 'block text-sm opacity-90 mt-1' }, mappedHomeTeamName)
                     ),
                     React.createElement(
                         'button',
@@ -1293,8 +1440,8 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                                     : 'bg-gray-300 hover:bg-gray-400 text-gray-700'
                             }`
                         },
-                            React.createElement('span', { className: 'block text-lg font-bold' }, 'Hostia'),  // Zväčšené: text-base → text-lg, pridaný font-bold
-                            React.createElement('span', { className: 'block text-sm opacity-90 mt-1' }, awayTeamName)  // Zväčšené: text-xs → text-sm
+                            React.createElement('span', { className: 'block text-lg font-bold' }, 'Hostia'),
+                            React.createElement('span', { className: 'block text-sm opacity-90 mt-1' }, mappedAwayTeamName)
                     )
                 ),
                 // Dve tlačidlá: Zrušiť a Potvrdiť
@@ -1308,7 +1455,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                                 setShowForfeitModal(false);
                                 setSelectedForfeitTeam(null);
                             },
-                            className: 'flex-1 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold transition-colors cursor-pointer text-center'  // pridaný font-semibold
+                            className: 'flex-1 py-3 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold transition-colors cursor-pointer text-center'
                         },
                         'Zrušiť'
                     ),
@@ -1317,7 +1464,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                         {
                             onClick: () => handleForfeit(),
                             disabled: !selectedForfeitTeam,
-                            className: `flex-1 py-3 rounded-xl font-bold transition-colors text-center ${  // font-semibold → font-bold
+                            className: `flex-1 py-3 rounded-xl font-bold transition-colors text-center ${
                                 selectedForfeitTeam 
                                     ? 'bg-green-600 hover:bg-green-700 text-white cursor-pointer' 
                                     : 'bg-white text-green-600 border-2 border-green-600 cursor-not-allowed'
