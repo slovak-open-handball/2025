@@ -1803,13 +1803,6 @@ let isTeamNameReplacerInitialized = false;
             console.log(`   ✅ ${groupName} je nadstavbová skupina (podľa názvu)`);
         }
         
-        // 🔥 VYNUŤENIE PRE KONKRÉTNE SKUPINY (ak je potrebné)
-        if (groupName === 'skupina F' || groupName === 'skupina G' || groupName === 'skupina H' || 
-            groupName === 'skupina I' || groupName === 'skupina J') {
-            isAdvancedGroup = true;
-            console.log(`   ✅ ${groupName} je nadstavbová skupina (vynútené)`);
-        }
-        
         if (isAdvancedGroup) {
             console.log(`   🔧 Volám createAdvancedGroupTable pre ${groupName}`);
             table = createAdvancedGroupTable(categoryName, groupName, null);
