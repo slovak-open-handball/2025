@@ -532,6 +532,8 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     };
 
     const startTimer = async () => {
+        // Ak je zápas ukončený, nespúšťame časovač
+        if (match?.status === 'completed') return;
         if (isRunningRef.current) return;
         const currentSeconds = displaySeconds;
         const maxSec = periodDuration * 60;
@@ -562,6 +564,8 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     };
 
     const addTime = (deltaSeconds) => {
+        // Ak je zápas ukončený, neupravujeme čas
+        if (match?.status === 'completed') return;
         let newSeconds = displaySeconds + deltaSeconds;
         const maxSec = periodDuration * 60;
         if (newSeconds < 0) newSeconds = 0;
@@ -656,7 +660,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     
         setDisplaySeconds(initialSeconds);
         
-        // Spustíme časovač len ak je status in-progress
+        // Spustíme časovač len ak je status in-progress a nie je completed
         if (match.status === 'in-progress') {
             startLocalInterval(initialSeconds);
             setIsRunning(true);
@@ -671,17 +675,22 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     }, [match?.id]);
 
     // Pomocné funkcie pre tlačidlá
-    const canSubtractMinute = () => displaySeconds >= 60;
-    const canAddMinute = () => displaySeconds + 60 <= periodDuration * 60;
-    const canSubtractSecond = () => displaySeconds >= 1;
-    const canAddSecond = () => displaySeconds + 1 <= periodDuration * 60;
-    const canReset = () => displaySeconds > 0 || period > 1 || match?.status === 'in-progress' || match?.status === 'paused';
+    const canSubtractMinute = () => displaySeconds >= 60 && match?.status !== 'completed';
+    const canAddMinute = () => displaySeconds + 60 <= periodDuration * 60 && match?.status !== 'completed';
+    const canSubtractSecond = () => displaySeconds >= 1 && match?.status !== 'completed';
+    const canAddSecond = () => displaySeconds + 1 <= periodDuration * 60 && match?.status !== 'completed';
+    // Reset je povolený vždy (aj pre ukončený zápas)
+    const canReset = () => (displaySeconds > 0 || period > 1 || match?.status === 'in-progress' || match?.status === 'paused' || match?.status === 'completed');
 
     const addMinute = () => canAddMinute() && addTime(60);
     const subtractMinute = () => canSubtractMinute() && addTime(-60);
     const addSecond = () => canAddSecond() && addTime(1);
     const subtractSecond = () => canSubtractSecond() && addTime(-1);
-    const toggleTimer = () => isRunningRef.current ? stopTimerAndSave() : startTimer();
+    const toggleTimer = () => {
+        // Ak je zápas ukončený, nespúšťame/nezastavujeme časovač
+        if (match?.status === 'completed') return;
+        isRunningRef.current ? stopTimerAndSave() : startTimer();
+    };
 
     const resetTime = async () => {
         if (!canReset()) return;
@@ -719,6 +728,8 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     };
 
     const nextPeriod = async () => {
+        // Ak je zápas ukončený, neprepíname periódu
+        if (match?.status === 'completed') return;
         if (period >= totalPeriods) return;
         if (isRunningRef.current) await stopTimerAndSave();
         const newPeriod = period + 1;
@@ -737,7 +748,10 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         if (onTimeUpdate) onTimeUpdate({ seconds: 0, period: newPeriod, isRunning: false });
         setTimeout(() => { lastServerUpdateRef.current = 0; }, 300);
     };
+    
     const prevPeriod = async () => {
+        // Ak je zápas ukončený, neprepíname periódu
+        if (match?.status === 'completed') return;
         if (period <= 1) return;
         if (isRunningRef.current) await stopTimerAndSave();
         const newPeriod = period - 1;
@@ -832,6 +846,8 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         );
     };
 
+    const isMatchCompleted = match?.status === 'completed';
+
     // Render (rovnaký)
     return React.createElement('div', { className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
         React.createElement('div', { className: 'bg-gray-50 px-6 py-3 border-b border-gray-200' },
@@ -844,21 +860,28 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 React.createElement('div', { className: 'mt-2 text-sm text-gray-500' }, `Perióda ${period} / ${totalPeriods}`)
             ),
             React.createElement('div', { className: 'flex flex-wrap items-center justify-center gap-2 mb-6' },
-                React.createElement('button', { onClick: toggleTimer, className: `px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${isRunning ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}` },
+                React.createElement('button', { 
+                    onClick: toggleTimer, 
+                    disabled: isMatchCompleted,
+                    className: `px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${
+                        isMatchCompleted ? 'bg-gray-300 text-gray-500 cursor-not-allowed' :
+                        isRunning ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'
+                    }` 
+                },
                     React.createElement('i', { className: isRunning ? 'fa-solid fa-stop mr-1' : 'fa-solid fa-play mr-1' }), isRunning ? 'Stop' : 'Štart'
                 ),
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
-                React.createElement('button', { onClick: subtractMinute, disabled: !canSubtractMinute(), className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${canSubtractMinute() ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}` }, React.createElement('i', { className: 'fa-solid fa-minus' })),
+                React.createElement('button', { onClick: subtractMinute, disabled: !canSubtractMinute() || isMatchCompleted, className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${(!canSubtractMinute() || isMatchCompleted) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}` }, React.createElement('i', { className: 'fa-solid fa-minus' })),
                 React.createElement('span', { className: 'text-sm text-gray-600 px-1 font-medium' }, 'Min'),
-                React.createElement('button', { onClick: addMinute, disabled: !canAddMinute(), className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${canAddMinute() ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}` }, React.createElement('i', { className: 'fa-solid fa-plus' })),
+                React.createElement('button', { onClick: addMinute, disabled: !canAddMinute() || isMatchCompleted, className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${(!canAddMinute() || isMatchCompleted) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}` }, React.createElement('i', { className: 'fa-solid fa-plus' })),
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
-                React.createElement('button', { onClick: subtractSecond, disabled: !canSubtractSecond(), className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${canSubtractSecond() ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}` }, React.createElement('i', { className: 'fa-solid fa-minus' })),
+                React.createElement('button', { onClick: subtractSecond, disabled: !canSubtractSecond() || isMatchCompleted, className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${(!canSubtractSecond() || isMatchCompleted) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}` }, React.createElement('i', { className: 'fa-solid fa-minus' })),
                 React.createElement('span', { className: 'text-sm text-gray-600 px-1 font-medium' }, 'Sec'),
-                React.createElement('button', { onClick: addSecond, disabled: !canAddSecond(), className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${canAddSecond() ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}` }, React.createElement('i', { className: 'fa-solid fa-plus' })),
+                React.createElement('button', { onClick: addSecond, disabled: !canAddSecond() || isMatchCompleted, className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${(!canAddSecond() || isMatchCompleted) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}` }, React.createElement('i', { className: 'fa-solid fa-plus' })),
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
-                React.createElement('button', { onClick: prevPeriod, disabled: period <= 1, className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${period <= 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}` }, React.createElement('i', { className: 'fa-solid fa-minus' })),
+                React.createElement('button', { onClick: prevPeriod, disabled: period <= 1 || isMatchCompleted, className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${(period <= 1 || isMatchCompleted) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}` }, React.createElement('i', { className: 'fa-solid fa-minus' })),
                 React.createElement('span', { className: 'text-sm text-gray-800 font-semibold px-1' }, 'Perióda'),
-                React.createElement('button', { onClick: nextPeriod, disabled: period >= totalPeriods, className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${period >= totalPeriods ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}` }, React.createElement('i', { className: 'fa-solid fa-plus' })),
+                React.createElement('button', { onClick: nextPeriod, disabled: period >= totalPeriods || isMatchCompleted, className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${(period >= totalPeriods || isMatchCompleted) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}` }, React.createElement('i', { className: 'fa-solid fa-plus' })),
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
                 React.createElement('button', { onClick: resetTime, disabled: !canReset(), className: `px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${canReset() ? 'bg-yellow-500 hover:bg-yellow-600 text-white' : 'bg-gray-300 text-gray-400 cursor-not-allowed'}` }, React.createElement('i', { className: 'fa-solid fa-arrow-rotate-left mr-1' }), 'Reset')
             ),
@@ -866,31 +889,64 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             React.createElement('div', { className: 'flex flex-wrap items-center justify-center gap-2 mb-6 pt-2 border-t border-gray-100' },
                 React.createElement('button', { 
                     onClick: () => setShowEndMatchModal(true), 
-                    className: 'bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' 
+                    disabled: isMatchCompleted,
+                    className: `px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${
+                        isMatchCompleted ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700 text-white'
+                    }` 
                 },
                     React.createElement('i', { className: 'fa-solid fa-flag-checkered mr-1' }), 'Ukončiť zápas'
                 ),
                 React.createElement('button', { 
                     onClick: () => console.log('Zadať výsledok manuálne - zatiaľ len výpis do konzoly'), 
-                    className: 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' 
+                    disabled: isMatchCompleted,
+                    className: `px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${
+                        isMatchCompleted ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    }` 
                 },
                     React.createElement('i', { className: 'fa-solid fa-pen-to-square mr-1' }), 'Zadať výsledok manuálne'
                 ),
                 React.createElement('button', { 
                     onClick: () => console.log('Kontumácia - zatiaľ len výpis do konzoly'), 
-                    className: 'bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' 
+                    disabled: isMatchCompleted,
+                    className: `px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${
+                        isMatchCompleted ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700 text-white'
+                    }` 
                 },
                     React.createElement('i', { className: 'fa-solid fa-gavel mr-1' }), 'Kontumácia'
                 )
             ),
             // Pôvodné tlačidlá pre gól, 7m, ŽK, ČK, MK, Vylúčenie
             React.createElement('div', { className: 'flex flex-wrap items-center justify-center gap-2 pt-2 border-t border-gray-100' },
-                React.createElement('button', { onClick: () => console.log('Gól'), className: 'bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' }, 'Gól'),
-                React.createElement('button', { onClick: () => console.log('7m'), className: 'bg-teal-500 hover:bg-teal-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' }, '7m'),
-                React.createElement('button', { onClick: () => console.log('ŽK'), className: 'bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' }, 'ŽK'),
-                React.createElement('button', { onClick: () => console.log('ČK'), className: 'bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' }, 'ČK'),
-                React.createElement('button', { onClick: () => console.log('MK'), className: 'bg-blue-400 hover:bg-blue-500 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' }, 'MK'),
-                React.createElement('button', { onClick: () => console.log('Vylúčenie'), className: 'bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' }, 'Vylúčenie')
+                React.createElement('button', { 
+                    onClick: () => console.log('Gól'), 
+                    disabled: isMatchCompleted,
+                    className: `px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${isMatchCompleted ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600 text-white'}` 
+                }, 'Gól'),
+                React.createElement('button', { 
+                    onClick: () => console.log('7m'), 
+                    disabled: isMatchCompleted,
+                    className: `px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${isMatchCompleted ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-teal-500 hover:bg-teal-600 text-white'}` 
+                }, '7m'),
+                React.createElement('button', { 
+                    onClick: () => console.log('ŽK'), 
+                    disabled: isMatchCompleted,
+                    className: `px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${isMatchCompleted ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-yellow-500 hover:bg-yellow-600 text-white'}` 
+                }, 'ŽK'),
+                React.createElement('button', { 
+                    onClick: () => console.log('ČK'), 
+                    disabled: isMatchCompleted,
+                    className: `px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${isMatchCompleted ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700 text-white'}` 
+                }, 'ČK'),
+                React.createElement('button', { 
+                    onClick: () => console.log('MK'), 
+                    disabled: isMatchCompleted,
+                    className: `px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${isMatchCompleted ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-400 hover:bg-blue-500 text-white'}` 
+                }, 'MK'),
+                React.createElement('button', { 
+                    onClick: () => console.log('Vylúčenie'), 
+                    disabled: isMatchCompleted,
+                    className: `px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${isMatchCompleted ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-orange-500 hover:bg-orange-600 text-white'}` 
+                }, 'Vylúčenie')
             )
         ),
         renderEndMatchModal()
