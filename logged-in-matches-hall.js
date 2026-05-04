@@ -462,6 +462,9 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const [showForfeitModal, setShowForfeitModal] = useState(false);
     const [forfeitTeam, setForfeitTeam] = useState(null); // 'home' alebo 'away'
     const [selectedForfeitTeam, setSelectedForfeitTeam] = useState(null);
+    const [showManualResultModal, setShowManualResultModal] = useState(false);
+    const [manualHomeScore, setManualHomeScore] = useState('');
+    const [manualAwayScore, setManualAwayScore] = useState('');
     
     const intervalRef = useRef(null);
     const isRunningRef = useRef(false);
@@ -477,7 +480,180 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     useEffect(() => { periodRef.current = period; }, [period]);
     useEffect(() => { displaySecondsRef.current = displaySeconds; }, [displaySeconds]);
 
-    // V MatchTimer komponente, nájdite funkciu handleForfeit a nahraďte ju touto verziou:
+    const handleManualResultSubmit = async () => {
+        const homeScoreInt = parseInt(manualHomeScore);
+        const awayScoreInt = parseInt(manualAwayScore);
+        
+        // Validácia
+        if (isNaN(homeScoreInt) || isNaN(awayScoreInt)) {
+            alert('Prosím zadajte platné čísla pre oba výsledky');
+            return;
+        }
+        
+        if (homeScoreInt < 0 || awayScoreInt < 0) {
+            alert('Výsledky nemôžu byť záporné');
+            return;
+        }
+        
+        if (window.db && matchId) {
+            try {
+                // Zastavíme časovač ak beží
+                if (isRunningRef.current) {
+                    stopLocalInterval();
+                    setIsRunning(false);
+                    isRunningRef.current = false;
+                }
+                
+                const matchRef = doc(window.db, 'matches', matchId);
+                await updateDoc(matchRef, {
+                    homeScore: homeScoreInt,
+                    awayScore: awayScoreInt,
+                    status: 'completed',
+                    manualResultEntered: true,
+                    manualResultEnteredAt: Timestamp.now(),
+                    manualTimeOffset: displaySeconds,
+                    startedAt: null,
+                    pausedAt: null,
+                    updatedAt: Timestamp.now()
+                });
+                
+                console.log(`Zápas ${matchId} bol ukončený s manuálnym výsledkom ${homeScoreInt}:${awayScoreInt}`);
+                setShowManualResultModal(false);
+                setManualHomeScore('');
+                setManualAwayScore('');
+                
+                if (onTimeUpdate) onTimeUpdate({ seconds: displaySeconds, period, isRunning: false });
+            } catch (err) {
+                console.error('Chyba pri ukladaní manuálneho výsledku:', err);
+                alert('Nepodarilo sa uložiť výsledok');
+            }
+        }
+    };
+
+    const renderManualResultModal = () => {
+        if (!showManualResultModal) return null;
+        
+        // Získame zmapované názvy tímov
+        const homeTeamName = match.homeTeamIdentifier 
+            ? (window.teamManager?.getTeamNameByDisplayIdSync?.(match.homeTeamIdentifier) || match.homeTeamIdentifier)
+            : 'Domáci';
+        const awayTeamName = match.awayTeamIdentifier 
+            ? (window.teamManager?.getTeamNameByDisplayIdSync?.(match.awayTeamIdentifier) || match.awayTeamIdentifier)
+            : 'Hostia';
+        
+        return React.createElement(
+            'div',
+            { 
+                className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50',
+                onClick: () => {
+                    setShowManualResultModal(false);
+                    setManualHomeScore('');
+                    setManualAwayScore('');
+                }
+            },
+            React.createElement(
+                'div',
+                { 
+                    className: 'bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6',
+                    onClick: (e) => e.stopPropagation()
+                },
+                React.createElement(
+                    'h3',
+                    { className: 'text-xl font-bold text-gray-800 mb-4 text-center' },
+                    'Zadať výsledok manuálne'
+                ),
+                React.createElement(
+                    'p',
+                    { className: 'text-gray-600 mb-4 text-center text-sm' },
+                    'Zadajte konečný výsledok zápasu'
+                ),
+                
+                // Dva inputy pre výsledky vedľa seba
+                React.createElement(
+                    'div',
+                    { className: 'flex gap-4 mb-6' },
+                    React.createElement(
+                        'div',
+                        { className: 'flex-1 text-center' },
+                        React.createElement(
+                            'label',
+                            { className: 'block text-sm font-medium text-gray-700 mb-2' },
+                            homeTeamName
+                        ),
+                        React.createElement(
+                            'input',
+                            {
+                                type: 'number',
+                                value: manualHomeScore,
+                                onChange: (e) => setManualHomeScore(e.target.value),
+                                placeholder: '0',
+                                className: 'w-full px-4 py-3 text-center text-2xl font-bold border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none',
+                                min: '0',
+                                step: '1'
+                            }
+                        )
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'flex items-center justify-center text-2xl font-bold text-gray-400' },
+                        ':'
+                    ),
+                    React.createElement(
+                        'div',
+                        { className: 'flex-1 text-center' },
+                        React.createElement(
+                            'label',
+                            { className: 'block text-sm font-medium text-gray-700 mb-2' },
+                            awayTeamName
+                        ),
+                        React.createElement(
+                            'input',
+                            {
+                                type: 'number',
+                                value: manualAwayScore,
+                                onChange: (e) => setManualAwayScore(e.target.value),
+                                placeholder: '0',
+                                className: 'w-full px-4 py-3 text-center text-2xl font-bold border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none',
+                                min: '0',
+                                step: '1'
+                            }
+                        )
+                    )
+                ),
+                
+                // Dve tlačidlá: Zrušiť a Potvrdiť
+                React.createElement(
+                    'div',
+                    { className: 'flex gap-3' },
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: () => {
+                                setShowManualResultModal(false);
+                                setManualHomeScore('');
+                                setManualAwayScore('');
+                            },
+                            className: 'flex-1 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors cursor-pointer text-center'
+                        },
+                        'Zrušiť'
+                    ),
+                    React.createElement(
+                        'button',
+                        {
+                            onClick: handleManualResultSubmit,
+                            disabled: manualHomeScore === '' || manualAwayScore === '',
+                            className: `flex-1 py-2 rounded-lg font-semibold transition-colors text-center ${
+                                manualHomeScore !== '' && manualAwayScore !== ''
+                                    ? 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            }`
+                        },
+                        'Potvrdiť'
+                    )
+                )
+            )
+        );
+    };
 
     const handleForfeit = async () => {
         if (!window.db || !matchId || !selectedForfeitTeam) return;
@@ -1127,7 +1303,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     React.createElement('i', { className: 'fa-solid fa-flag-checkered mr-1' }), 'Ukončiť zápas'
                 ),
                 React.createElement('button', { 
-                    onClick: () => console.log('Zadať výsledok manuálne - zatiaľ len výpis do konzoly'), 
+                    onClick: () => setShowManualResultModal(true), 
                     className: 'px-4 py-2 rounded-lg font-semibold transition-colors text-sm bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
                 },
                     React.createElement('i', { className: 'fa-solid fa-pen-to-square mr-1' }), 'Zadať výsledok manuálne'
@@ -1168,7 +1344,8 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             )
         ),
         renderEndMatchModal(),
-        renderForfeitModal()
+        renderForfeitModal(),
+        renderManualResultModal()
     );
 };
 
