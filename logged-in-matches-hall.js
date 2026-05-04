@@ -904,7 +904,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 )
             ),
             
-            // DRUHÝ RIADOK - tlačidlá pre správu zápasu
+            // DRUHÝ RIADOK - tlačidlá pre správu zápasu (UPRAVENÉ FARBY)
             React.createElement(
                 'div',
                 { className: 'flex flex-wrap items-center justify-center gap-2 mb-6 pt-2 border-t border-gray-100' },
@@ -920,7 +920,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     'button',
                     {
                         onClick: handleManualResult,
-                        className: 'bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
+                        className: 'bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
                     },
                     'Zadať výsledok manuálne'
                 ),
@@ -928,7 +928,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     'button',
                     {
                         onClick: handleForfeit,
-                        className: 'bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
+                        className: 'bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
                     },
                     'Kontumácia'
                 )
