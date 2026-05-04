@@ -800,7 +800,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 };
                 
                 // Zachováme dôležité polia, ktoré nechceme vymazať
-                // (napr. hallId, categoryId, groupName, homeTeamIdentifier, awayTeamIdentifier, atď.)
                 const fieldsToPreserve = [
                     'hallId', 'categoryId', 'categoryName', 'groupName', 
                     'homeTeamIdentifier', 'awayTeamIdentifier', 'matchType',
@@ -816,7 +815,16 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 await updateDoc(matchRef, updateData);
                 
                 setPeriod(1);
-                if (onTimeUpdate) onTimeUpdate({ seconds: 0, period: 1, isRunning: false });
+                
+                // 🔥 DÔLEŽITÉ: Po resetovaní zavoláme onTimeUpdate s tým, že už nie je výsledok
+                if (onTimeUpdate) onTimeUpdate({ 
+                    seconds: 0, 
+                    period: 1, 
+                    isRunning: false,
+                    // Explicitne označíme, že výsledok bol vymazaný
+                    resetComplete: true
+                });
+                
                 setTimeout(() => { lastServerUpdateRef.current = 0; }, 300);
                 
                 console.log(`✅ Zápas ${matchId} bol resetovaný - výsledok vymazaný, stav nastavený na 'scheduled'`);
@@ -1198,6 +1206,31 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 return 'text-gray-500 bg-gray-50';
         }
     };
+
+    React.useEffect(() => {
+        if (!window.db || !match.id) return;
+    
+        const matchRef = doc(window.db, 'matches', match.id);
+        const unsubscribe = onSnapshot(matchRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const updatedMatch = docSnap.data();
+                const newHomeScore = updatedMatch.homeScore;
+                const newAwayScore = updatedMatch.awayScore;
+                const newStatus = updatedMatch.status || 'scheduled';
+            
+                // Aktualizujeme stav v nadradenom komponente
+                if (onMatchUpdate) {
+                    onMatchUpdate(match.id, { 
+                        homeScore: newHomeScore, 
+                        awayScore: newAwayScore,
+                        status: newStatus
+                    });
+                }
+            }
+        });
+    
+        return () => unsubscribe();
+    }, [match.id]);
     
     // Real-time počúvanie zmien statusu zápasu
     React.useEffect(() => {
@@ -1916,22 +1949,18 @@ const MatchesHallApp = () => {
         }
     };
     
-    // Handler pre aktualizáciu zápasu (napr. po zmene časovača)
     const handleMatchUpdate = (matchId, updates) => {
-        setSelectedMatch(prev => {
-            if (prev && prev.id === matchId) {
-                return { ...prev, ...updates };
-            }
-            return prev;
-        });
-        
-        setAllMatchesList(prev => 
-            prev.map(m => m.id === matchId ? { ...m, ...updates } : m)
-        );
-        
-        setMatches(prev => 
-            prev.map(m => m.id === matchId ? { ...m, ...updates } : m)
-        );
+        // Ak update obsahuje resetComplete, znamená to že výsledok bol vymazaný
+        if (updates.resetComplete) {
+            // Špeciálne spracovanie pre reset - vymažeme výsledky
+            refreshMatchInList(matchId, {
+                homeScore: undefined,
+                awayScore: undefined,
+                status: 'scheduled'
+            });
+        } else {
+            refreshMatchInList(matchId, updates);
+        }
     };
 
     // Handler pre návrat z detailu
@@ -1941,6 +1970,23 @@ const MatchesHallApp = () => {
         setCurrentMatchIndex(0); // Reset indexu
         // Odstránime hash z URL
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    };
+
+    const refreshMatchInList = (matchId, updates) => {
+        // Aktualizujeme v matches
+        setMatches(prevMatches => 
+            prevMatches.map(m => m.id === matchId ? { ...m, ...updates } : m)
+        );
+    
+        // Aktualizujeme v allMatchesList
+        setAllMatchesList(prevList => 
+            prevList.map(m => m.id === matchId ? { ...m, ...updates } : m)
+        );
+    
+        // Aktualizujeme v selectedMatch ak je zobrazený
+        if (selectedMatch && selectedMatch.id === matchId) {
+            setSelectedMatch(prev => ({ ...prev, ...updates }));
+        }
     };
 
     // Počúvanie na zmeny hash v URL
@@ -2169,7 +2215,7 @@ const MatchesHallApp = () => {
                             
                             dayMatches.forEach((match, matchIndex) => {
                                 const dateTime = formatMatchDateTime(match.scheduledTime);
-                                const isResultAvailable = match.homeScore !== undefined && match.awayScore !== undefined;
+                                const isResultAvailable = match.homeScore !== undefined && match.homeScore !== null && match.awayScore !== undefined && match.awayScore !== null;
                                 
                                 const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
                                 const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
