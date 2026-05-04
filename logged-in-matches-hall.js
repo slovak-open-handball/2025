@@ -453,27 +453,42 @@ const TeamMembersList = ({ teamName, categoryName }) => {
 };
 
 // Komponent pre športový časovač
-const MatchTimer = ({ match, matchId, onTimeUpdate }) => {
+const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const [isRunning, setIsRunning] = useState(false);
     const [time, setTime] = useState({ minutes: 0, seconds: 0 });
     const [period, setPeriod] = useState(1);
     const [totalPeriods, setTotalPeriods] = useState(1);
+    const [periodDuration, setPeriodDuration] = useState(20); // Trvanie periódy v minútach
     const intervalRef = useRef(null);
     
-    // Načítanie nastavení časovača z matcha pri prvom renderi
+    // Načítanie nastavení časovača z matcha a z kategórie
     useEffect(() => {
         if (match) {
-            // Načítanie periód
-            if (match.totalPeriods) {
+            // Načítanie periód z kategórie (ak existuje)
+            if (categorySettings) {
+                // Počet periód z nastavení kategórie
+                if (categorySettings.periods !== undefined) {
+                    setTotalPeriods(categorySettings.periods);
+                }
+                // Trvanie periódy z nastavení kategórie
+                if (categorySettings.periodDuration !== undefined) {
+                    setPeriodDuration(categorySettings.periodDuration);
+                }
+            } else if (match.totalPeriods) {
+                // Fallback na údaje z matcha
                 setTotalPeriods(match.totalPeriods);
             }
+            
+            // Načítanie aktuálnej periódy z matcha
             if (match.currentPeriod) {
                 setPeriod(match.currentPeriod);
             }
+            
             // Načítanie času
             if (match.timerMinutes !== undefined && match.timerSeconds !== undefined) {
                 setTime({ minutes: match.timerMinutes, seconds: match.timerSeconds });
             }
+            
             // Načítanie stavu časovača
             if (match.timerRunning !== undefined) {
                 setIsRunning(match.timerRunning);
@@ -483,7 +498,28 @@ const MatchTimer = ({ match, matchId, onTimeUpdate }) => {
                 }
             }
         }
-    }, [match]);
+    }, [match, categorySettings]);
+    
+    // Kontrola či čas dosiahol dĺžku periódy (automatické zastavenie)
+    useEffect(() => {
+        if (isRunning) {
+            const currentTotalSeconds = time.minutes * 60 + time.seconds;
+            const periodTotalSeconds = periodDuration * 60;
+            
+            if (currentTotalSeconds >= periodTotalSeconds) {
+                // Čas dosiahol koniec periódy - automaticky zastavíme
+                if (intervalRef.current) {
+                    clearInterval(intervalRef.current);
+                    intervalRef.current = null;
+                }
+                setIsRunning(false);
+                saveTimerToFirestore(time, period, false);
+                
+                // Notifikácia pre používateľa (voliteľné)
+                console.log(`Perióda ${period} skončila! Čas: ${formatTime()}`);
+            }
+        }
+    }, [time, isRunning, periodDuration, period]);
     
     // Uloženie časovača do Firestore
     const saveTimerToFirestore = async (newTime, newPeriod, newIsRunning) => {
@@ -601,7 +637,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate }) => {
         }
     };
     
-    // NOVÁ FUNKCIA: Reset času na 00:00
+    // Reset času na 00:00
     const resetTime = () => {
         // Zastavíme časovač ak beží
         if (isRunning) {
@@ -674,6 +710,15 @@ const MatchTimer = ({ match, matchId, onTimeUpdate }) => {
         return `${time.minutes.toString().padStart(2, '0')}:${time.seconds.toString().padStart(2, '0')}`;
     };
     
+    // Výpočet percentuálneho pokroku pre progress bar
+    const getProgressPercentage = () => {
+        const currentTotalSeconds = time.minutes * 60 + time.seconds;
+        const periodTotalSeconds = periodDuration * 60;
+        if (periodTotalSeconds === 0) return 0;
+        const percentage = (currentTotalSeconds / periodTotalSeconds) * 100;
+        return Math.min(percentage, 100);
+    };
+    
     return React.createElement(
         'div',
         { className: 'bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-6 text-white shadow-xl' },
@@ -716,6 +761,25 @@ const MatchTimer = ({ match, matchId, onTimeUpdate }) => {
                 'div',
                 { className: 'text-6xl font-mono font-bold tracking-wider' },
                 formatTime()
+            ),
+            // Progress bar zobrazujúci čas v rámci periódy
+            React.createElement(
+                'div',
+                { className: 'mt-3' },
+                React.createElement(
+                    'div',
+                    { className: 'w-full bg-gray-700 rounded-full h-2' },
+                    React.createElement('div', {
+                        className: 'bg-green-500 h-2 rounded-full transition-all duration-300',
+                        style: { width: `${getProgressPercentage()}%` }
+                    })
+                ),
+                React.createElement(
+                    'div',
+                    { className: 'flex justify-between text-xs text-gray-400 mt-1' },
+                    React.createElement('span', {}, '00:00'),
+                    React.createElement('span', {}, `${Math.floor(periodDuration / 60)}:${(periodDuration % 60).toString().padStart(2, '0')}`)
+                )
             )
         ),
         
@@ -775,7 +839,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate }) => {
             )
         ),
         
-        // NOVÝ ROW S RESET TLACIDLOM
+        // RESET tlačidlo
         React.createElement(
             'div',
             { className: 'grid grid-cols-1 gap-2 mt-2' },
@@ -794,7 +858,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate }) => {
             'div',
             { className: 'text-center text-xs text-gray-400 mt-2' },
             React.createElement('i', { className: 'fa-regular fa-clock mr-1' }),
-            'Časovač sa automaticky ukladá do databázy'
+            `Trvanie periódy: ${periodDuration} min | Časovač sa automaticky ukladá do databázy`
         )
     );
 };
@@ -809,6 +873,9 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const lighterCategoryColor = getLighterColor(categoryColor);
     const matchColors = getMatchColors(match, groupsData);
     
+    // NOVÝ STATE pre nastavenia kategórie
+    const [categorySettings, setCategorySettings] = React.useState(null);
+    
     // Získanie názvu kategórie z ID (pre vyhľadávanie členov tímu)
     const getCategoryDisplayName = () => {
         if (match.categoryName) return match.categoryName;
@@ -819,6 +886,35 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     };
     
     const categoryDisplayName = getCategoryDisplayName();
+    
+    // NOVÝ EFFECT: Načítanie nastavení kategórie z databázy
+    React.useEffect(() => {
+        const loadCategorySettings = async () => {
+            if (!window.db || !match.categoryId) return;
+            
+            try {
+                const settingsRef = doc(window.db, 'settings', 'categories');
+                const settingsSnap = await getDoc(settingsRef);
+                
+                if (settingsSnap.exists()) {
+                    const data = settingsSnap.data();
+                    const categoryData = data[match.categoryId];
+                    if (categoryData) {
+                        setCategorySettings({
+                            periods: categoryData.periods ?? 2,
+                            periodDuration: categoryData.periodDuration ?? 20,
+                            breakDuration: categoryData.breakDuration ?? 2,
+                            matchBreak: categoryData.matchBreak ?? 5
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error('Chyba pri načítaní nastavení kategórie:', err);
+            }
+        };
+        
+        loadCategorySettings();
+    }, [match.categoryId]);
     
     // Získanie informácií o skupine
     let groupInfo = null;
