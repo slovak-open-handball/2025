@@ -874,8 +874,9 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const lighterCategoryColor = getLighterColor(categoryColor);
     const matchColors = getMatchColors(match, groupsData);
     
-    // NOVÝ STATE pre nastavenia kategórie
+    // STATE pre nastavenia kategórie
     const [categorySettings, setCategorySettings] = React.useState(null);
+    const [loadingSettings, setLoadingSettings] = React.useState(true);
     
     // Získanie názvu kategórie z ID (pre vyhľadávanie členov tímu)
     const getCategoryDisplayName = () => {
@@ -888,10 +889,13 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     
     const categoryDisplayName = getCategoryDisplayName();
     
-    // NOVÝ EFFECT: Načítanie nastavení kategórie z databázy
+    // Načítanie nastavení kategórie z databázy
     React.useEffect(() => {
         const loadCategorySettings = async () => {
-            if (!window.db || !match.categoryId) return;
+            if (!window.db || !match.categoryId) {
+                setLoadingSettings(false);
+                return;
+            }
             
             try {
                 const settingsRef = doc(window.db, 'settings', 'categories');
@@ -905,12 +909,51 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                             periods: categoryData.periods ?? 2,
                             periodDuration: categoryData.periodDuration ?? 20,
                             breakDuration: categoryData.breakDuration ?? 2,
-                            matchBreak: categoryData.matchBreak ?? 5
+                            matchBreak: categoryData.matchBreak ?? 5,
+                            timeoutCount: categoryData.timeoutCount ?? 2,
+                            timeoutDuration: categoryData.timeoutDuration ?? 1,
+                            exclusionTime: categoryData.exclusionTime ?? 2
+                        });
+                        console.log(`[MatchDetailView] Načítané nastavenia pre kategóriu ${match.categoryId}:`, {
+                            periods: categoryData.periods ?? 2,
+                            periodDuration: categoryData.periodDuration ?? 20
+                        });
+                    } else {
+                        console.log(`[MatchDetailView] Kategória ${match.categoryId} nemá vlastné nastavenia, používam default`);
+                        setCategorySettings({
+                            periods: 2,
+                            periodDuration: 20,
+                            breakDuration: 2,
+                            matchBreak: 5,
+                            timeoutCount: 2,
+                            timeoutDuration: 1,
+                            exclusionTime: 2
                         });
                     }
+                } else {
+                    setCategorySettings({
+                        periods: 2,
+                        periodDuration: 20,
+                        breakDuration: 2,
+                        matchBreak: 5,
+                        timeoutCount: 2,
+                        timeoutDuration: 1,
+                        exclusionTime: 2
+                    });
                 }
             } catch (err) {
                 console.error('Chyba pri načítaní nastavení kategórie:', err);
+                setCategorySettings({
+                    periods: 2,
+                    periodDuration: 20,
+                    breakDuration: 2,
+                    matchBreak: 5,
+                    timeoutCount: 2,
+                    timeoutDuration: 1,
+                    exclusionTime: 2
+                });
+            } finally {
+                setLoadingSettings(false);
             }
         };
         
@@ -1157,12 +1200,21 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             )
         ),
         
-        // Časovač zápasu
-        React.createElement(MatchTimer, {
+        // Časovač zápasu - TERAZ S PREDANÝM categorySettings
+        !loadingSettings && React.createElement(MatchTimer, {
             match: match,
             matchId: match.id,
-            onTimeUpdate: handleTimeUpdate
+            onTimeUpdate: handleTimeUpdate,
+            categorySettings: categorySettings
         }),
+        
+        // Ak sa ešte načítavajú nastavenia, zobrazíme spinner
+        loadingSettings && React.createElement(
+            'div',
+            { className: 'bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-4 text-white shadow-xl text-center' },
+            React.createElement('div', { className: 'animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto' }),
+            React.createElement('p', { className: 'text-sm mt-2' }, 'Načítavam nastavenia časovača...')
+        ),
         
         // Dva boxy s členmi tímov vedľa seba (po časovači)
         React.createElement(
