@@ -1227,6 +1227,40 @@ const matchesHallApp = ({ userProfileData }) => {
     const [homeTeamData, setHomeTeamData] = useState(null);
     const [awayTeamData, setAwayTeamData] = useState(null);  
 
+    const [mappedHomeTeamName, setMappedHomeTeamName] = useState('');
+    const [mappedAwayTeamName, setMappedAwayTeamName] = useState('');
+    const [isMappingTeamNames, setIsMappingTeamNames] = useState(true);
+
+    useEffect(() => {
+        if (!selectedMatch) {
+            setMappedHomeTeamName('');
+            setMappedAwayTeamName('');
+            setIsMappingTeamNames(false);
+            return;
+        }
+    
+        setIsMappingTeamNames(true);
+        
+        const mapTeamNames = async () => {
+            try {
+                const [homeName, awayName] = await Promise.all([
+                    getTeamNameFromTracker(selectedMatch.homeTeamIdentifier),
+                    getTeamNameFromTracker(selectedMatch.awayTeamIdentifier)
+                ]);
+                setMappedHomeTeamName(homeName);
+                setMappedAwayTeamName(awayName);
+            } catch (error) {
+                console.error('Chyba pri mapovaní názvov tímov:', error);
+                setMappedHomeTeamName(selectedMatch.homeTeamIdentifier);
+                setMappedAwayTeamName(selectedMatch.awayTeamIdentifier);
+            } finally {
+                setIsMappingTeamNames(false);
+            }
+        };
+        
+        mapTeamNames();
+    }, [selectedMatch?.homeTeamIdentifier, selectedMatch?.awayTeamIdentifier, selectedMatch?.id]);
+
     useEffect(() => {
         if (!hallId && userProfileData) {
             console.warn('⚠️ userProfileData existuje, ale hallId je undefined:', userProfileData);
@@ -5591,8 +5625,8 @@ const matchesHallApp = ({ userProfileData }) => {
             }
         };
     
-        const homeTeamName = getTeamDisplayName('home', selectedMatch.homeTeamIdentifier);
-        const awayTeamName = getTeamDisplayName('away', selectedMatch.awayTeamIdentifier);
+        const homeTeamName = mappedHomeTeamName || selectedMatch.homeTeamIdentifier;
+        const awayTeamName = mappedAwayTeamName || selectedMatch.awayTeamIdentifier;
         
         const homeTeamDetails = getTeamDetailsFromIdentifier(selectedMatch.homeTeamIdentifier);
         const awayTeamDetails = getTeamDetailsFromIdentifier(selectedMatch.awayTeamIdentifier);
@@ -8738,8 +8772,8 @@ const matchesHallApp = ({ userProfileData }) => {
                             { className: 'divide-y divide-gray-100' },
                             dayGroup.matches.map((match) => {
                                 // Použijeme funkciu getTeamNameFromTracker na získanie názvov tímov
-                                const homeTeamName = match.homeDisplayName;
-                                const awayTeamName = match.awayDisplayName;
+                                const homeTeamName = match.homeDisplayName || match.homeTeamIdentifier;
+                                const awayTeamName = match.awayDisplayName || match.awayTeamIdentifier;
                                 const category = categories.find(c => c.name === match.categoryName);
                                 
                                 // Zistenie, či má zápas typ (finále, semifinále, o umiestnenie)
