@@ -1183,7 +1183,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             )
         );
     };
-    };
 
     // Render modálneho okna
     const renderEndMatchModal = () => {
