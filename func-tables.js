@@ -1779,22 +1779,30 @@ let isTeamNameReplacerInitialized = false;
     // OPRAVENÁ FUNKCIA: printGroupTable - POUŽÍVA NÁZVY, NIE IDENTIFIKÁTORY
     // ============================================================
     function printGroupTable(categoryName, groupName, baseGroupName = null) {
-        let table;
+        console.log(`🔍 printGroupTable called: ${categoryName} - ${groupName}`);
     
+        let table;
         const groupsData = window.groupsData || {};
         const categoryId = window.categoryIdMap?.[categoryName] || null;
         let isAdvancedGroup = false;
         
+        console.log(`   categoryId: ${categoryId}`);
+        console.log(`   groupsData[categoryId]:`, groupsData[categoryId]);
+        
         if (categoryId && groupsData[categoryId]) {
             const groupInfo = groupsData[categoryId].find(g => g.name === groupName);
+            console.log(`   groupInfo:`, groupInfo);
             if (groupInfo && groupInfo.type === 'nadstavbová skupina') {
                 isAdvancedGroup = true;
+                console.log(`   ✅ ${groupName} je nadstavbová skupina`);
             }
         }
         
         if (isAdvancedGroup) {
+            console.log(`   🔧 Volám createAdvancedGroupTable pre ${groupName}`);
             table = createAdvancedGroupTable(categoryName, groupName, null);
         } else {
+            console.log(`   📋 Volám createGroupTable pre ${groupName}`);
             table = createGroupTable(categoryName, groupName);
         }
         
