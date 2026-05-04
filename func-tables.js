@@ -1037,21 +1037,6 @@ let isTeamNameReplacerInitialized = false;
     // OPRAVENÁ FUNKCIA: createAdvancedGroupTable - POUŽÍVA PÔVODNÉ NÁZVY TÍMOV Z team.name
     // ============================================================
     function createAdvancedGroupTable(categoryName, groupName, baseGroupName, forceRefresh = false) {
-
-        // ============================================================
-        const categorySetting = categorySettingsCache[categoryName];
-        const carryOverEnabled = categorySetting?.carryOverPoints ?? false;
-    
-        log(`\n🔧 KONTROLA NASTAVENÍ PRE KATEGÓRIU: "${categoryName}"`);
-        log(`   categorySetting:`, categorySetting);
-        log(`   carryOverEnabled: ${carryOverEnabled} (${carryOverEnabled ? 'ZAPNUTÉ ✅' : 'VYPNUTÉ ❌'})`);
-    
-        if (!carryOverEnabled) {
-            log(`   ⚠️ PRENÁŠANIE VÝSLEDKOV JE VYPNUTÉ! Zápasy zo základných skupín sa NEBUDÚ prenášať.`);
-            log(`   Ak chceš prenášať výsledky, nastav v databáze settings/categories pre "${categoryName}" carryOverPoints = true`);
-        }
-        // ============================================================
-        
         if (forceRefresh) {
             const cacheKey = `${categoryName}|${groupName}`;
             processedCarryOverGroups.delete(cacheKey);
