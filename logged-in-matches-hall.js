@@ -27,8 +27,8 @@ const formatDateHeader = (date) => {
 
 // Konštanty pre fialové farby (jednotné pre všetky play-off a placement zápasy)
 const ELIMINATION_COLORS = {
-    backgroundColor: '#F3E8FF', // bledofialová
-    textColor: '#6B21A5'        // tmavofialová
+    backgroundColor: '#F3E8FF',
+    textColor: '#6B21A5'
 };
 
 // Funkcia na získanie farby kategórie z databázy
@@ -57,16 +57,13 @@ const getLighterColor = (color) => {
 
 // Funkcia na získanie farieb podľa typu skupiny z databázy
 const getGroupTypeColors = (groupName, categoryId, groupsData) => {
-    // Predvolené farby pre základnú skupinu
     let result = {
         backgroundColor: '#DCFCE7',
         textColor: '#166534'
     };
     
-    // Ak nemáme dáta o skupinách, vrátime predvolené
     if (!groupsData || !categoryId) return result;
     
-    // Nájdenie skupiny podľa názvu v danej kategórii
     const categoryGroups = groupsData[categoryId] || [];
     const foundGroup = categoryGroups.find(g => g.name === groupName);
     
@@ -87,12 +84,10 @@ const getGroupTypeColors = (groupName, categoryId, groupsData) => {
     return result;
 };
 
-// Funkcia na kontrolu, či ide o eliminačný zápas (play-off alebo o umiestnenie)
+// Funkcia na kontrolu, či ide o eliminačný zápas
 const isEliminationMatch = (match) => {
-    // Zápas o umiestnenie
     if (match.isPlacementMatch) return true;
     
-    // Zápas z pavúka (playoff / elimination)
     if (match.matchType === 'Playoff' || match.matchType === 'Semifinále' || 
         match.matchType === 'Finále' || match.matchType === 'Štvrťfinále' ||
         match.matchType === 'Osemfinále' || (match.matchType && match.matchType.includes('finále')) ||
@@ -105,17 +100,14 @@ const isEliminationMatch = (match) => {
 
 // Funkcia na získanie farieb pre zápas
 const getMatchColors = (match, groupsData) => {
-    // Eliminačné zápasy (play-off aj o umiestnenie) - jednotná fialová farba
     if (isEliminationMatch(match)) {
         return ELIMINATION_COLORS;
     }
     
-    // Podľa skupiny z databázy
     if (match.groupName && match.categoryId) {
         return getGroupTypeColors(match.groupName, match.categoryId, groupsData);
     }
     
-    // Predvolené - základná skupina
     return {
         backgroundColor: '#DCFCE7',
         textColor: '#166534'
@@ -183,7 +175,6 @@ const MatchesHallApp = () => {
                 const data = groupsSnap.data();
                 setGroupsData(data);
                 window.groupsData = data;
-                console.log("[Groups Data] Načítané skupiny:", data);
             }
         } catch (err) {
             console.error('Chyba pri načítaní skupín:', err);
@@ -261,7 +252,6 @@ const MatchesHallApp = () => {
                 }
             });
             
-            // Zoradenie podľa dátumu a času
             hallMatches.sort((a, b) => {
                 if (!a.scheduledTime) return 1;
                 if (!b.scheduledTime) return -1;
@@ -337,8 +327,6 @@ const MatchesHallApp = () => {
     // Handler pre kliknutie na Detail
     const handleDetailClick = (match) => {
         console.log("Detail zápasu:", match);
-        // Tu môžeš pridať ďalšiu logiku, napr. otvorenie modálneho okna s detailami
-        // window.showGlobalNotification(`Detail zápasu: ${match.homeTeamIdentifier} vs ${match.awayTeamIdentifier}`, 'info');
     };
 
     if (loading) {
@@ -402,7 +390,8 @@ const MatchesHallApp = () => {
                             React.createElement('th', { className: 'px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Domáci'),
                             React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, 'VS'),
                             React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider' }, 'Hostia'),
-                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-56' }, 'Info')
+                            React.createElement('th', { className: 'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48' }, 'Info'),
+                            React.createElement('th', { className: 'px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20' }, 'Akcia')
                         )
                     ),
                     
@@ -420,7 +409,7 @@ const MatchesHallApp = () => {
                                     { key: `day-${dayIndex}`, className: 'bg-blue-50' },
                                     React.createElement(
                                         'td',
-                                        { colSpan: 5, className: 'px-4 py-4 text-left' },
+                                        { colSpan: 6, className: 'px-4 py-4 text-left' },
                                         React.createElement(
                                             'div',
                                             { className: 'flex items-center gap-2' },
@@ -442,12 +431,11 @@ const MatchesHallApp = () => {
                                 const categoryColor = getCategoryDrawColor(match.categoryId);
                                 const lighterCategoryColor = getLighterColor(categoryColor);
                                 
-                                // Získanie farieb pre daný zápas - pre eliminačné zápasy fialová
                                 const matchColors = getMatchColors(match, groupsData);
                                 
                                 const infoTags = [];
                                 
-                                // Tag pre typ zápasu (matchType) - pre eliminačné zápasy (okrem placement) - fialová
+                                // Tag pre typ zápasu
                                 if (match.matchType && !match.isPlacementMatch) {
                                     infoTags.push(
                                         React.createElement('span', { 
@@ -463,7 +451,7 @@ const MatchesHallApp = () => {
                                     ));
                                 }
                                 
-                                // Tag pre zápas o umiestnenie - fialová farba
+                                // Tag pre zápas o umiestnenie
                                 if (match.isPlacementMatch) {
                                     infoTags.push(
                                         React.createElement('span', { 
@@ -479,9 +467,8 @@ const MatchesHallApp = () => {
                                     ));
                                 }
                                 
-                                // Tag pre skupinu - NIE pre zápasy o umiestnenie
+                                // Tag pre skupinu
                                 if (match.groupName && !match.isPlacementMatch) {
-                                    // Pre eliminačné zápasy (play-off) používame fialovú farbu aj pre skupinu
                                     let groupColors;
                                     if (isEliminationMatch(match)) {
                                         groupColors = ELIMINATION_COLORS;
@@ -518,22 +505,6 @@ const MatchesHallApp = () => {
                                         match.categoryName
                                     ));
                                 }
-                                
-                                // Tag pre Detail - na koniec
-                                infoTags.push(
-                                    React.createElement(
-                                        'button',
-                                        {
-                                            key: 'detail',
-                                            onClick: () => handleDetailClick(match),
-                                            className: 'inline-block text-xs px-2 py-0.5 rounded-full whitespace-nowrap bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors cursor-pointer',
-                                            style: {
-                                                fontWeight: '500'
-                                            }
-                                        },
-                                        'Detail'
-                                    )
-                                );
                                 
                                 dayRows.push(
                                     React.createElement(
@@ -584,6 +555,23 @@ const MatchesHallApp = () => {
                                                 'div',
                                                 { className: 'flex flex-col gap-1' },
                                                 infoTags
+                                            )
+                                        ),
+                                        
+                                        // Nový stĺpec pre Detail tlačidlo
+                                        React.createElement(
+                                            'td',
+                                            { className: 'px-4 py-3 whitespace-nowrap text-center' },
+                                            React.createElement(
+                                                'button',
+                                                {
+                                                    onClick: () => handleDetailClick(match),
+                                                    className: 'bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-1 rounded-full transition-colors cursor-pointer',
+                                                    style: {
+                                                        fontWeight: '500'
+                                                    }
+                                                },
+                                                'Detail'
                                             )
                                         )
                                     )
