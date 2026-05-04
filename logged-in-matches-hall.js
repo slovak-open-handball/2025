@@ -1,5 +1,5 @@
 // logged-in-matches-hall.js
-import { collection, getDocs, doc, getDoc, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { useState, useEffect } = React;
 
@@ -126,15 +126,33 @@ const getDisplayTeamName = (teamIdentifier) => {
     return teamIdentifier;
 };
 
-// Funkcia na načítanie členov tímu z databázy podľa názvu tímu a kategórie
-const loadTeamMembers = async (teamName, categoryIdOrName) => {
-    if (!window.db || !teamName || !categoryIdOrName) {
-        console.log("Chýba db, teamName alebo categoryIdOrName");
+// Funkcia na získanie názvu kategórie podľa ID
+const getCategoryNameById = (categoryId) => {
+    if (!categoryId) return null;
+    
+    // Najprv skúsime z window.categoriesData (ID -> názov)
+    if (window.categoriesData && window.categoriesData[categoryId]) {
+        return window.categoriesData[categoryId];
+    }
+    
+    // Ak máme window.categoriesList (pole objektov s id a name)
+    if (window.categoriesList) {
+        const found = window.categoriesList.find(cat => cat.id === categoryId);
+        if (found) return found.name;
+    }
+    
+    return null;
+};
+
+// Funkcia na načítanie členov tímu z databázy podľa názvu tímu a názvu kategórie
+const loadTeamMembers = async (teamName, categoryName) => {
+    if (!window.db || !teamName || !categoryName) {
+        console.log("Chýba db, teamName alebo categoryName");
         return [];
     }
     
     try {
-        console.log(`Hľadám tím: ${teamName} v kategórii: ${categoryIdOrName}`);
+        console.log(`Hľadám tím: ${teamName} v kategórii (názov): ${categoryName}`);
         
         // Prehľadávame všetkých používateľov (kluby)
         const usersRef = collection(window.db, 'users');
@@ -145,38 +163,29 @@ const loadTeamMembers = async (teamName, categoryIdOrName) => {
             const teams = userData.teams || {};
             
             // Prehľadávame všetky kategórie tohto používateľa
-            for (const [category, teamsArray] of Object.entries(teams)) {
-                // Porovnanie kategórie - podľa ID alebo názvu
-                let categoryMatches = false;
+            for (const [categoryKey, teamsArray] of Object.entries(teams)) {
+                // Porovnávame názov kategórie (nie ID)
+                // categoryKey je ID kategórie, potrebujeme získať jej názov
+                let categoryDisplayName = null;
                 
-                // Ak categoryIdOrName je číselný string alebo ID, porovnávame s kľúčom kategórie
-                if (category === categoryIdOrName) {
-                    categoryMatches = true;
-                }
-                // Inak skúsime porovnať s názvom kategórie (ak máme kategóriu načítanú)
-                else if (window.categoriesData && window.categoriesData[categoryIdOrName]) {
-                    // categoryIdOrName je ID, porovnávame s kľúčom
-                    if (category === categoryIdOrName) {
-                        categoryMatches = true;
-                    }
-                }
-                // Ak je categoryIdOrName názov kategórie, hľadáme podľa názvu v settings/categories
-                else if (window.categoriesData) {
-                    for (const [catId, catData] of Object.entries(window.categoriesData)) {
-                        if (catData.name === categoryIdOrName && category === catId) {
-                            categoryMatches = true;
-                            break;
-                        }
-                    }
+                // Skúsime získať názov kategórie z window.categoriesData
+                if (window.categoriesData && window.categoriesData[categoryKey]) {
+                    categoryDisplayName = window.categoriesData[categoryKey];
                 }
                 
-                if (!categoryMatches) continue;
+                // Ak nemáme názov, pokračujeme
+                if (!categoryDisplayName) continue;
+                
+                // Porovnáme názvy
+                if (categoryDisplayName !== categoryName) continue;
+                
+                console.log(`Našiel som kategóriu: ${categoryDisplayName} (ID: ${categoryKey})`);
                 
                 // Hľadáme tím s daným názvom
                 const foundTeam = (teamsArray || []).find(t => t.teamName === teamName);
                 
                 if (foundTeam) {
-                    console.log(`Našiel som tím: ${teamName} v kategórii ${category}`);
+                    console.log(`Našiel som tím: ${teamName} v kategórii ${categoryDisplayName}`);
                     
                     // Získame všetkých členov tímu
                     const members = [];
@@ -251,7 +260,7 @@ const loadTeamMembers = async (teamName, categoryIdOrName) => {
             }
         }
         
-        console.log(`Nenašiel som tím: ${teamName} v kategórii: ${categoryIdOrName}`);
+        console.log(`Nenašiel som tím: ${teamName} v kategórii: ${categoryName}`);
         return [];
         
     } catch (err) {
@@ -265,27 +274,65 @@ const TeamMembersList = ({ teamName, categoryId, categoryName }) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [resolvedCategoryName, setResolvedCategoryName] = useState(null);
+    
+    // Najprv vyriešime názov kategórie z ID (ak máme ID a nie názov)
+    useEffect(() => {
+        const resolveCategoryName = async () => {
+            // Ak už máme categoryName, použijeme ho
+            if (categoryName) {
+                setResolvedCategoryName(categoryName);
+                return;
+            }
+            
+            // Ak máme categoryId, skúsime získať názov
+            if (categoryId) {
+                // Najprv skúsime z window.categoriesData
+                if (window.categoriesData && window.categoriesData[categoryId]) {
+                    setResolvedCategoryName(window.categoriesData[categoryId]);
+                    return;
+                }
+                
+                // Ak nemáme, načítame z databázy
+                try {
+                    const settingsRef = doc(window.db, 'settings', 'categories');
+                    const settingsSnap = await getDoc(settingsRef);
+                    
+                    if (settingsSnap.exists()) {
+                        const data = settingsSnap.data();
+                        if (data[categoryId] && data[categoryId].name) {
+                            setResolvedCategoryName(data[categoryId].name);
+                            return;
+                        }
+                    }
+                } catch (err) {
+                    console.error('Chyba pri načítaní názvu kategórie:', err);
+                }
+            }
+            
+            setResolvedCategoryName(null);
+        };
+        
+        resolveCategoryName();
+    }, [categoryId, categoryName]);
     
     useEffect(() => {
         const fetchMembers = async () => {
             setLoading(true);
             setError(null);
             
-            // Použijeme categoryId ak existuje, inak categoryName
-            const categoryIdentifier = categoryId || categoryName;
-            
-            if (!teamName || !categoryIdentifier) {
+            if (!teamName || !resolvedCategoryName) {
                 setLoading(false);
                 return;
             }
             
-            const result = await loadTeamMembers(teamName, categoryIdentifier);
+            const result = await loadTeamMembers(teamName, resolvedCategoryName);
             setMembers(result);
             setLoading(false);
         };
         
         fetchMembers();
-    }, [teamName, categoryId, categoryName]);
+    }, [teamName, resolvedCategoryName]);
     
     if (loading) {
         return React.createElement(
@@ -346,6 +393,17 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
     const categoryColor = getCategoryDrawColor(match.categoryId);
     const lighterCategoryColor = getLighterColor(categoryColor);
     const matchColors = getMatchColors(match, groupsData);
+    
+    // Získanie názvu kategórie z ID (pre vyhľadávanie členov tímu)
+    const getCategoryDisplayName = () => {
+        if (match.categoryName) return match.categoryName;
+        if (match.categoryId && window.categoriesData && window.categoriesData[match.categoryId]) {
+            return window.categoriesData[match.categoryId];
+        }
+        return null;
+    };
+    
+    const categoryDisplayName = getCategoryDisplayName();
     
     // Získanie informácií o skupine
     let groupInfo = null;
@@ -455,7 +513,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                             },
                             match.groupName
                         ),
-                        match.categoryName && React.createElement(
+                        (match.categoryName || categoryDisplayName) && React.createElement(
                             'span',
                             {
                                 className: 'inline-block text-xs px-3 py-1 rounded-full',
@@ -465,7 +523,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                     fontWeight: '500'
                                 }
                             },
-                            match.categoryName
+                            match.categoryName || categoryDisplayName
                         )
                     )
                 )
@@ -563,7 +621,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                     React.createElement(TeamMembersList, {
                                         teamName: homeTeamDisplay,
                                         categoryId: match.categoryId,
-                                        categoryName: match.categoryName
+                                        categoryName: categoryDisplayName
                                     })
                                 )
                             )
@@ -595,7 +653,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                     React.createElement(TeamMembersList, {
                                         teamName: awayTeamDisplay,
                                         categoryId: match.categoryId,
-                                        categoryName: match.categoryName
+                                        categoryName: categoryDisplayName
                                     })
                                 )
                             )
@@ -618,12 +676,13 @@ const MatchesHallApp = () => {
     const [categoryDrawColors, setCategoryDrawColors] = useState({});
     const [groupsData, setGroupsData] = useState({});
     const [categoriesData, setCategoriesData] = useState({});
+    const [categoriesList, setCategoriesList] = useState([]);
     
     // Nové stavy pre detail zápasu
     const [selectedMatch, setSelectedMatch] = useState(null);
     const [showingDetail, setShowingDetail] = useState(false);
 
-    // Načítanie farieb kategórií z databázy
+    // Načítanie farieb kategórií a názvov z databázy
     const loadCategoryColors = async () => {
         if (!window.db) return;
         
@@ -635,6 +694,7 @@ const MatchesHallApp = () => {
                 const data = settingsSnap.data();
                 const colors = {};
                 const categories = {};
+                const list = [];
                 
                 Object.entries(data).forEach(([catId, catData]) => {
                     if (catData.drawColor) {
@@ -642,13 +702,16 @@ const MatchesHallApp = () => {
                     }
                     if (catData.name) {
                         categories[catId] = catData.name;
+                        list.push({ id: catId, name: catData.name });
                     }
                 });
                 
                 setCategoryDrawColors(colors);
                 setCategoriesData(categories);
+                setCategoriesList(list);
                 window.categoryDrawColors = colors;
                 window.categoriesData = categories;
+                window.categoriesList = list;
             }
         } catch (err) {
             console.error('Chyba pri načítaní farieb kategórií:', err);
@@ -1002,8 +1065,13 @@ const MatchesHallApp = () => {
                                     ));
                                 }
                                 
-                                // Tag pre kategóriu
-                                if (match.categoryName) {
+                                // Tag pre kategóriu - použitie názvu z ID ak treba
+                                let categoryDisplayTag = match.categoryName;
+                                if (!categoryDisplayTag && match.categoryId && categoriesData[match.categoryId]) {
+                                    categoryDisplayTag = categoriesData[match.categoryId];
+                                }
+                                
+                                if (categoryDisplayTag) {
                                     infoTags.push(
                                         React.createElement('span', { 
                                             key: 'category',
@@ -1014,7 +1082,7 @@ const MatchesHallApp = () => {
                                                 fontWeight: '500'
                                             }
                                         },
-                                        match.categoryName
+                                        categoryDisplayTag
                                     ));
                                 }
                                 
