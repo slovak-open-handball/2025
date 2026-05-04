@@ -601,6 +601,25 @@ const MatchTimer = ({ match, matchId, onTimeUpdate }) => {
         }
     };
     
+    // NOVÁ FUNKCIA: Reset času na 00:00
+    const resetTime = () => {
+        // Zastavíme časovač ak beží
+        if (isRunning) {
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+            }
+            setIsRunning(false);
+        }
+        
+        // Resetujeme čas na 0
+        const newTime = { minutes: 0, seconds: 0 };
+        setTime(newTime);
+        
+        // Uložíme do databázy
+        saveTimerToFirestore(newTime, period, false);
+    };
+    
     const nextPeriod = () => {
         if (period < totalPeriods) {
             const newPeriod = period + 1;
@@ -753,6 +772,21 @@ const MatchTimer = ({ match, matchId, onTimeUpdate }) => {
                     React.createElement('i', { className: 'fa-solid fa-plus' }),
                     React.createElement('span', { className: 'ml-1' }, 'Sec')
                 )
+            )
+        ),
+        
+        // NOVÝ ROW S RESET TLACIDLOM
+        React.createElement(
+            'div',
+            { className: 'grid grid-cols-1 gap-2 mt-2' },
+            React.createElement(
+                'button',
+                {
+                    onClick: resetTime,
+                    className: 'bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded-lg font-semibold transition-colors cursor-pointer flex items-center justify-center gap-2'
+                },
+                React.createElement('i', { className: 'fa-solid fa-arrow-rotate-left' }),
+                React.createElement('span', {}, 'Reset času na 00:00')
             )
         ),
         
