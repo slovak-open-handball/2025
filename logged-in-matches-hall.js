@@ -144,15 +144,15 @@ const getCategoryNameById = (categoryId) => {
     return null;
 };
 
-// Funkcia na načítanie členov tímu z databázy podľa názvu tímu a názvu kategórie
-const loadTeamMembers = async (teamName, categoryName) => {
-    if (!window.db || !teamName || !categoryName) {
-        console.log("Chýba db, teamName alebo categoryName");
+// Funkcia na načítanie členov tímu z databázy podľa názvu tímu a ID kategórie
+const loadTeamMembers = async (teamName, categoryId) => {
+    if (!window.db || !teamName || !categoryId) {
+        console.log("Chýba db, teamName alebo categoryId");
         return [];
     }
     
     try {
-        console.log(`Hľadám tím: ${teamName} v kategórii (názov): ${categoryName}`);
+        console.log(`Hľadám tím: ${teamName} v kategórii (ID): ${categoryId}`);
         
         // Prehľadávame všetkých používateľov (kluby)
         const usersRef = collection(window.db, 'users');
@@ -164,28 +164,16 @@ const loadTeamMembers = async (teamName, categoryName) => {
             
             // Prehľadávame všetky kategórie tohto používateľa
             for (const [categoryKey, teamsArray] of Object.entries(teams)) {
-                // Porovnávame názov kategórie (nie ID)
-                // categoryKey je ID kategórie, potrebujeme získať jej názov
-                let categoryDisplayName = null;
+                // Porovnávame priamo ID kategórie (categoryKey) s hľadaným ID
+                if (categoryKey !== categoryId) continue;
                 
-                // Skúsime získať názov kategórie z window.categoriesData
-                if (window.categoriesData && window.categoriesData[categoryKey]) {
-                    categoryDisplayName = window.categoriesData[categoryKey];
-                }
-                
-                // Ak nemáme názov, pokračujeme
-                if (!categoryDisplayName) continue;
-                
-                // Porovnáme názvy
-                if (categoryDisplayName !== categoryName) continue;
-                
-                console.log(`Našiel som kategóriu: ${categoryDisplayName} (ID: ${categoryKey})`);
+                console.log(`Našiel som kategóriu s ID: ${categoryKey}`);
                 
                 // Hľadáme tím s daným názvom
                 const foundTeam = (teamsArray || []).find(t => t.teamName === teamName);
                 
                 if (foundTeam) {
-                    console.log(`Našiel som tím: ${teamName} v kategórii ${categoryDisplayName}`);
+                    console.log(`Našiel som tím: ${teamName} v kategórii ${categoryKey}`);
                     
                     // Získame všetkých členov tímu
                     const members = [];
@@ -260,7 +248,7 @@ const loadTeamMembers = async (teamName, categoryName) => {
             }
         }
         
-        console.log(`Nenašiel som tím: ${teamName} v kategórii: ${categoryName}`);
+        console.log(`Nenašiel som tím: ${teamName} v kategórii ID: ${categoryId}`);
         return [];
         
     } catch (err) {
@@ -270,69 +258,28 @@ const loadTeamMembers = async (teamName, categoryName) => {
 };
 
 // Komponent pre zoznam členov tímu
-const TeamMembersList = ({ teamName, categoryId, categoryName }) => {
+const TeamMembersList = ({ teamName, categoryId }) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [resolvedCategoryName, setResolvedCategoryName] = useState(null);
-    
-    // Najprv vyriešime názov kategórie z ID (ak máme ID a nie názov)
-    useEffect(() => {
-        const resolveCategoryName = async () => {
-            // Ak už máme categoryName, použijeme ho
-            if (categoryName) {
-                setResolvedCategoryName(categoryName);
-                return;
-            }
-            
-            // Ak máme categoryId, skúsime získať názov
-            if (categoryId) {
-                // Najprv skúsime z window.categoriesData
-                if (window.categoriesData && window.categoriesData[categoryId]) {
-                    setResolvedCategoryName(window.categoriesData[categoryId]);
-                    return;
-                }
-                
-                // Ak nemáme, načítame z databázy
-                try {
-                    const settingsRef = doc(window.db, 'settings', 'categories');
-                    const settingsSnap = await getDoc(settingsRef);
-                    
-                    if (settingsSnap.exists()) {
-                        const data = settingsSnap.data();
-                        if (data[categoryId] && data[categoryId].name) {
-                            setResolvedCategoryName(data[categoryId].name);
-                            return;
-                        }
-                    }
-                } catch (err) {
-                    console.error('Chyba pri načítaní názvu kategórie:', err);
-                }
-            }
-            
-            setResolvedCategoryName(null);
-        };
-        
-        resolveCategoryName();
-    }, [categoryId, categoryName]);
     
     useEffect(() => {
         const fetchMembers = async () => {
             setLoading(true);
             setError(null);
             
-            if (!teamName || !resolvedCategoryName) {
+            if (!teamName || !categoryId) {
                 setLoading(false);
                 return;
             }
             
-            const result = await loadTeamMembers(teamName, resolvedCategoryName);
+            const result = await loadTeamMembers(teamName, categoryId);
             setMembers(result);
             setLoading(false);
         };
         
         fetchMembers();
-    }, [teamName, resolvedCategoryName]);
+    }, [teamName, categoryId]);
     
     if (loading) {
         return React.createElement(
@@ -620,8 +567,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                     { className: 'mt-2 pl-2 border-l-2 border-blue-200' },
                                     React.createElement(TeamMembersList, {
                                         teamName: homeTeamDisplay,
-                                        categoryId: match.categoryId,
-                                        categoryName: categoryDisplayName
+                                        categoryId: match.categoryId  // ← priamo ID kategórie
                                     })
                                 )
                             )
@@ -652,8 +598,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                     { className: 'mt-2 pl-2 border-l-2 border-blue-200' },
                                     React.createElement(TeamMembersList, {
                                         teamName: awayTeamDisplay,
-                                        categoryId: match.categoryId,
-                                        categoryName: categoryDisplayName
+                                        categoryId: match.categoryId  // ← priamo ID kategórie
                                     })
                                 )
                             )
