@@ -1,5 +1,5 @@
 // logged-in-matches-hall.js
-import { collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, getDocs, doc, getDoc, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const { useState, useEffect } = React;
 
@@ -126,7 +126,218 @@ const getDisplayTeamName = (teamIdentifier) => {
     return teamIdentifier;
 };
 
-// Komponent pre detail zápasu (odstránené nežiaduce riadky)
+// Funkcia na načítanie členov tímu z databázy podľa názvu tímu a kategórie
+const loadTeamMembers = async (teamName, categoryIdOrName) => {
+    if (!window.db || !teamName || !categoryIdOrName) {
+        console.log("Chýba db, teamName alebo categoryIdOrName");
+        return [];
+    }
+    
+    try {
+        console.log(`Hľadám tím: ${teamName} v kategórii: ${categoryIdOrName}`);
+        
+        // Prehľadávame všetkých používateľov (kluby)
+        const usersRef = collection(window.db, 'users');
+        const usersSnapshot = await getDocs(usersRef);
+        
+        for (const userDoc of usersSnapshot.docs) {
+            const userData = userDoc.data();
+            const teams = userData.teams || {};
+            
+            // Prehľadávame všetky kategórie tohto používateľa
+            for (const [category, teamsArray] of Object.entries(teams)) {
+                // Porovnanie kategórie - podľa ID alebo názvu
+                let categoryMatches = false;
+                
+                // Ak categoryIdOrName je číselný string alebo ID, porovnávame s kľúčom kategórie
+                if (category === categoryIdOrName) {
+                    categoryMatches = true;
+                }
+                // Inak skúsime porovnať s názvom kategórie (ak máme kategóriu načítanú)
+                else if (window.categoriesData && window.categoriesData[categoryIdOrName]) {
+                    // categoryIdOrName je ID, porovnávame s kľúčom
+                    if (category === categoryIdOrName) {
+                        categoryMatches = true;
+                    }
+                }
+                // Ak je categoryIdOrName názov kategórie, hľadáme podľa názvu v settings/categories
+                else if (window.categoriesData) {
+                    for (const [catId, catData] of Object.entries(window.categoriesData)) {
+                        if (catData.name === categoryIdOrName && category === catId) {
+                            categoryMatches = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (!categoryMatches) continue;
+                
+                // Hľadáme tím s daným názvom
+                const foundTeam = (teamsArray || []).find(t => t.teamName === teamName);
+                
+                if (foundTeam) {
+                    console.log(`Našiel som tím: ${teamName} v kategórii ${category}`);
+                    
+                    // Získame všetkých členov tímu
+                    const members = [];
+                    
+                    // Hráči
+                    if (foundTeam.playerDetails && Array.isArray(foundTeam.playerDetails)) {
+                        foundTeam.playerDetails.forEach(player => {
+                            members.push({
+                                type: 'Hráč',
+                                firstName: player.firstName || '',
+                                lastName: player.lastName || '',
+                                jerseyNumber: player.jerseyNumber || '',
+                                registrationNumber: player.registrationNumber || ''
+                            });
+                        });
+                    }
+                    
+                    // Členovia realizačného tímu (muži)
+                    if (foundTeam.menTeamMemberDetails && Array.isArray(foundTeam.menTeamMemberDetails)) {
+                        foundTeam.menTeamMemberDetails.forEach(member => {
+                            members.push({
+                                type: 'Člen RT (muž)',
+                                firstName: member.firstName || '',
+                                lastName: member.lastName || '',
+                                jerseyNumber: '',
+                                registrationNumber: member.registrationNumber || ''
+                            });
+                        });
+                    }
+                    
+                    // Členovia realizačného tímu (ženy)
+                    if (foundTeam.womenTeamMemberDetails && Array.isArray(foundTeam.womenTeamMemberDetails)) {
+                        foundTeam.womenTeamMemberDetails.forEach(member => {
+                            members.push({
+                                type: 'Člen RT (žena)',
+                                firstName: member.firstName || '',
+                                lastName: member.lastName || '',
+                                jerseyNumber: '',
+                                registrationNumber: member.registrationNumber || ''
+                            });
+                        });
+                    }
+                    
+                    // Šoféri (muži)
+                    if (foundTeam.driverDetailsMale && Array.isArray(foundTeam.driverDetailsMale)) {
+                        foundTeam.driverDetailsMale.forEach(driver => {
+                            members.push({
+                                type: 'Šofér (muž)',
+                                firstName: driver.firstName || '',
+                                lastName: driver.lastName || '',
+                                jerseyNumber: '',
+                                registrationNumber: driver.registrationNumber || ''
+                            });
+                        });
+                    }
+                    
+                    // Šoféri (ženy)
+                    if (foundTeam.driverDetailsFemale && Array.isArray(foundTeam.driverDetailsFemale)) {
+                        foundTeam.driverDetailsFemale.forEach(driver => {
+                            members.push({
+                                type: 'Šofér (žena)',
+                                firstName: driver.firstName || '',
+                                lastName: driver.lastName || '',
+                                jerseyNumber: '',
+                                registrationNumber: driver.registrationNumber || ''
+                            });
+                        });
+                    }
+                    
+                    return members;
+                }
+            }
+        }
+        
+        console.log(`Nenašiel som tím: ${teamName} v kategórii: ${categoryIdOrName}`);
+        return [];
+        
+    } catch (err) {
+        console.error('Chyba pri načítaní členov tímu:', err);
+        return [];
+    }
+};
+
+// Komponent pre zoznam členov tímu
+const TeamMembersList = ({ teamName, categoryId, categoryName }) => {
+    const [members, setMembers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    
+    useEffect(() => {
+        const fetchMembers = async () => {
+            setLoading(true);
+            setError(null);
+            
+            // Použijeme categoryId ak existuje, inak categoryName
+            const categoryIdentifier = categoryId || categoryName;
+            
+            if (!teamName || !categoryIdentifier) {
+                setLoading(false);
+                return;
+            }
+            
+            const result = await loadTeamMembers(teamName, categoryIdentifier);
+            setMembers(result);
+            setLoading(false);
+        };
+        
+        fetchMembers();
+    }, [teamName, categoryId, categoryName]);
+    
+    if (loading) {
+        return React.createElement(
+            'div',
+            { className: 'text-center py-4' },
+            React.createElement('div', { className: 'animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400 mx-auto' }),
+            React.createElement('p', { className: 'text-xs text-gray-400 mt-2' }, 'Načítavam členov...')
+        );
+    }
+    
+    if (error) {
+        return React.createElement(
+            'div',
+            { className: 'text-center py-4 text-red-500 text-sm' },
+            'Nepodarilo sa načítať členov tímu'
+        );
+    }
+    
+    if (members.length === 0) {
+        return React.createElement(
+            'div',
+            { className: 'text-center py-4 text-gray-400 text-sm' },
+            'Žiadni členovia tímu'
+        );
+    }
+    
+    return React.createElement(
+        'div',
+        { className: 'mt-2' },
+        React.createElement(
+            'div',
+            { className: 'space-y-1 max-h-64 overflow-y-auto' },
+            members.map((member, idx) => {
+                const fullName = `${member.firstName} ${member.lastName}`.trim() || 'Neznámy';
+                const jerseyDisplay = member.jerseyNumber ? ` (#${member.jerseyNumber})` : '';
+                const regDisplay = member.registrationNumber ? ` (reg: ${member.registrationNumber})` : '';
+                
+                return React.createElement(
+                    'div',
+                    { key: idx, className: 'text-sm text-gray-600 py-1 border-b border-gray-100 last:border-0' },
+                    React.createElement('span', { className: 'font-medium' }, member.type),
+                    ': ',
+                    React.createElement('span', null, fullName),
+                    jerseyDisplay,
+                    regDisplay
+                );
+            })
+        )
+    );
+};
+
+// Komponent pre detail zápasu
 const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColors, groupsData }) => {
     const dateTime = formatMatchDateTime(match.scheduledTime);
     const isResultAvailable = match.homeScore !== undefined && match.awayScore !== undefined;
@@ -303,7 +514,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 )
             ),
             
-            // Detailné informácie - PONEchaný len typ zápasu a umiestnenie
+            // Detailné informácie s členmi tímov
             React.createElement(
                 'div',
                 { className: 'border-t border-gray-200' },
@@ -311,7 +522,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     'div',
                     { className: 'divide-y divide-gray-100' },
                     
-                    // Riadok - Typ zápasu (PONEchaný)
+                    // Riadok - Typ zápasu
                     match.matchType && React.createElement(
                         'div',
                         { className: 'flex py-4 px-6' },
@@ -319,12 +530,76 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                         React.createElement('div', { className: 'flex-1 text-sm text-gray-800' }, match.matchType)
                     ),
                     
-                    // Riadok - Umiestnenie pre placement match (PONEchaný)
+                    // Riadok - Umiestnenie pre placement match
                     match.isPlacementMatch && match.placementRank && React.createElement(
                         'div',
                         { className: 'flex py-4 px-6' },
                         React.createElement('div', { className: 'w-32 text-sm text-gray-500' }, 'O umiestnenie'),
                         React.createElement('div', { className: 'flex-1 text-sm text-gray-800' }, `${match.placementRank}. miesto`)
+                    ),
+                    
+                    // Riadok - Zoznam členov domáceho tímu
+                    React.createElement(
+                        'div',
+                        { className: 'flex py-4 px-6' },
+                        React.createElement('div', { className: 'w-32 text-sm text-gray-500' }, 'Domáci tím'),
+                        React.createElement(
+                            'div',
+                            { className: 'flex-1' },
+                            React.createElement(
+                                'details',
+                                { className: 'group' },
+                                React.createElement(
+                                    'summary',
+                                    { className: 'text-sm text-blue-600 cursor-pointer hover:text-blue-800' },
+                                    React.createElement('span', { className: 'font-medium' }, homeTeamDisplay),
+                                    ' (',
+                                    React.createElement('span', { className: 'text-gray-500' }, 'klikni pre zobrazenie členov'),
+                                    ')'
+                                ),
+                                React.createElement(
+                                    'div',
+                                    { className: 'mt-2 pl-2 border-l-2 border-blue-200' },
+                                    React.createElement(TeamMembersList, {
+                                        teamName: homeTeamDisplay,
+                                        categoryId: match.categoryId,
+                                        categoryName: match.categoryName
+                                    })
+                                )
+                            )
+                        )
+                    ),
+                    
+                    // Riadok - Zoznam členov hosťujúceho tímu
+                    React.createElement(
+                        'div',
+                        { className: 'flex py-4 px-6' },
+                        React.createElement('div', { className: 'w-32 text-sm text-gray-500' }, 'Hosťujúci tím'),
+                        React.createElement(
+                            'div',
+                            { className: 'flex-1' },
+                            React.createElement(
+                                'details',
+                                { className: 'group' },
+                                React.createElement(
+                                    'summary',
+                                    { className: 'text-sm text-blue-600 cursor-pointer hover:text-blue-800' },
+                                    React.createElement('span', { className: 'font-medium' }, awayTeamDisplay),
+                                    ' (',
+                                    React.createElement('span', { className: 'text-gray-500' }, 'klikni pre zobrazenie členov'),
+                                    ')'
+                                ),
+                                React.createElement(
+                                    'div',
+                                    { className: 'mt-2 pl-2 border-l-2 border-blue-200' },
+                                    React.createElement(TeamMembersList, {
+                                        teamName: awayTeamDisplay,
+                                        categoryId: match.categoryId,
+                                        categoryName: match.categoryName
+                                    })
+                                )
+                            )
+                        )
                     )
                 )
             )
@@ -342,6 +617,7 @@ const MatchesHallApp = () => {
     const [teamNames, setTeamNames] = useState({});
     const [categoryDrawColors, setCategoryDrawColors] = useState({});
     const [groupsData, setGroupsData] = useState({});
+    const [categoriesData, setCategoriesData] = useState({});
     
     // Nové stavy pre detail zápasu
     const [selectedMatch, setSelectedMatch] = useState(null);
@@ -358,15 +634,21 @@ const MatchesHallApp = () => {
             if (settingsSnap.exists()) {
                 const data = settingsSnap.data();
                 const colors = {};
+                const categories = {};
                 
                 Object.entries(data).forEach(([catId, catData]) => {
                     if (catData.drawColor) {
                         colors[catId] = catData.drawColor;
                     }
+                    if (catData.name) {
+                        categories[catId] = catData.name;
+                    }
                 });
                 
                 setCategoryDrawColors(colors);
+                setCategoriesData(categories);
                 window.categoryDrawColors = colors;
+                window.categoriesData = categories;
             }
         } catch (err) {
             console.error('Chyba pri načítaní farieb kategórií:', err);
