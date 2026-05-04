@@ -2128,7 +2128,7 @@ const MatchesHallApp = () => {
         const unsubscribe = onSnapshot(matchesRef, (snapshot) => {
             const updatedStatuses = {};
             const updatedMatches = [];
-            let hasStatusChange = false;
+            let hasMatchCompletedAnywhere = false;
             
             snapshot.forEach((doc) => {
                 const match = {
@@ -2136,16 +2136,17 @@ const MatchesHallApp = () => {
                     ...doc.data()
                 };
                 
+                // Kontrola či došlo k zmene statusu na 'completed' PRE AKÝKOĽVEK ZÁPAS V CELEJ DATABÁZE
+                const oldStatus = matchStatuses[match.id];
+                const newStatus = match.status || 'scheduled';
+                
+                if (oldStatus && oldStatus !== 'completed' && newStatus === 'completed') {
+                    hasMatchCompletedAnywhere = true;
+                    console.log(`🏆 Zápas ${match.id} (hala: ${match.hallId}) bol práve ukončený - spustím globálnu aktualizáciu názvov tímov`);
+                }
+                
+                // Aktualizujeme statusy len pre zápasy v našej hale
                 if (match.hallId === hallId) {
-                    // Kontrola či došlo k zmene statusu
-                    const oldStatus = matchStatuses[match.id];
-                    const newStatus = match.status || 'scheduled';
-                    
-                    if (oldStatus && oldStatus !== newStatus) {
-                        hasStatusChange = true;
-                        console.log(`🔄 Zápas ${match.id} zmenil status z "${oldStatus}" na "${newStatus}" - spustím aktualizáciu názvov tímov`);
-                    }
-                    
                     updatedStatuses[match.id] = newStatus;
                     updatedMatches.push(match);
                     
@@ -2172,14 +2173,28 @@ const MatchesHallApp = () => {
                             return [...prevList, match];
                         }
                     });
+                } else {
+                    // Pre zápasy v iných halách si tiež pamätáme statusy pre kontrolu dokončenia
+                    // Ale neaktualizujeme ich v zoznamoch pre túto halu
+                    if (oldStatus !== newStatus) {
+                        console.log(`📝 Zápas ${match.id} v inej hale zmenil status z "${oldStatus}" na "${newStatus}"`);
+                    }
                 }
             });
             
-            setMatchStatuses(updatedStatuses);
+            // Aktualizujeme matchStatuses pre všetky zápasy (aj z iných hál)
+            setMatchStatuses(prev => {
+                const newStatuses = { ...prev };
+                snapshot.forEach((doc) => {
+                    const match = doc.data();
+                    newStatuses[doc.id] = match.status || 'scheduled';
+                });
+                return newStatuses;
+            });
             
-            // 🔥 AK DOŠLO K ZMENE STATUSU AKÉHOKOĽVEK ZÁPASU, SPUSTÍME AKTUALIZÁCIU NÁZVOV TÍMOV
-            if (hasStatusChange && updatedMatches.length > 0) {
-                console.log(`🏁 Zistená zmena statusu zápasu - spúšťam aktualizáciu názvov tímov`);
+            // 🔥 AK BOL AKÝKOĽVEK ZÁPAS V CELEJ DATABÁZE DOKONČENÝ, SPUSTÍME AKTUALIZÁCIU NÁZVOV TÍMOV
+            if (hasMatchCompletedAnywhere) {
+                console.log(`🏁 Zistené dokončenie zápasu v databáze - spúšťam globálnu aktualizáciu názvov tímov pre všetky zápasy`);
                 setTimeout(() => {
                     if (window.updateTeamNamesGlobally && typeof window.updateTeamNamesGlobally === 'function') {
                         window.updateTeamNamesGlobally();
@@ -2187,7 +2202,7 @@ const MatchesHallApp = () => {
                 }, 100);
             }
             
-            // Zoradíme matches podľa času
+            // Zoradíme matches podľa času (len pre našu halu)
             setMatches(prevMatches => {
                 return [...prevMatches].sort((a, b) => {
                     if (!a.scheduledTime) return 1;
@@ -2394,12 +2409,16 @@ const MatchesHallApp = () => {
             const querySnapshot = await getDocs(matchesRef);
             
             const hallMatches = [];
+            const allStatuses = {};
             
             querySnapshot.forEach((doc) => {
                 const match = {
                     id: doc.id,
                     ...doc.data()
                 };
+                
+                // Uložíme status pre KAŽDÝ zápas v databáze (aj z iných hál)
+                allStatuses[doc.id] = match.status || 'scheduled';
                 
                 if (match.hallId === hallId) {
                     hallMatches.push(match);
@@ -2421,15 +2440,11 @@ const MatchesHallApp = () => {
             setMatches(hallMatches);
             setAllMatchesList(hallMatches);
             
+            // Nastavíme počiatočné statusy pre VŠETKY zápasy
+            setMatchStatuses(allStatuses);
+            
             // 🔥 POČKÁME NA DOKONČENIE PROCESS TEAM NAMES
             await processTeamNames(hallMatches);
-            
-            // Nastavíme počiatočné statusy
-            const initialStatuses = {};
-            hallMatches.forEach(match => {
-                initialStatuses[match.id] = match.status || 'scheduled';
-            });
-            setMatchStatuses(initialStatuses);
             
             // Po načítaní zápasov skúsime zobraziť detail podľa URL
             const matchShown = showMatchFromUrl(hallMatches);
