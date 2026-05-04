@@ -861,8 +861,18 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         }
     };
 
+    // V MatchTimer komponente, nájdite funkciu renderForfeitModal a nahraďte ju touto verziou:
+
     const renderForfeitModal = () => {
         if (!showForfeitModal) return null;
+        
+        // Získame zmapované názvy tímov
+        const homeTeamName = match.homeTeamIdentifier 
+            ? (window.teamManager?.getTeamNameByDisplayIdSync?.(match.homeTeamIdentifier) || match.homeTeamIdentifier)
+            : 'Domáci';
+        const awayTeamName = match.awayTeamIdentifier 
+            ? (window.teamManager?.getTeamNameByDisplayIdSync?.(match.awayTeamIdentifier) || match.awayTeamIdentifier)
+            : 'Hostia';
         
         return React.createElement(
             'div',
@@ -878,44 +888,47 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 },
                 React.createElement(
                     'h3',
-                    { className: 'text-xl font-bold text-gray-800 mb-4' },
+                    { className: 'text-xl font-bold text-gray-800 mb-4 text-center' },
                     'Kontumácia zápasu'
                 ),
                 React.createElement(
                     'p',
-                    { className: 'text-gray-600 mb-2' },
+                    { className: 'text-gray-600 mb-2 text-center' },
                     'Kontumačný výsledok bude 10:0 v prospech vybraného tímu.'
                 ),
                 React.createElement(
                     'p',
-                    { className: 'text-sm text-red-600 mb-6' },
+                    { className: 'text-sm text-red-600 mb-6 text-center' },
                     'Táto akcia je nevratná!'
                 ),
+                // Dve tlačidlá vedľa seba
                 React.createElement(
                     'div',
-                    { className: 'flex flex-col gap-3 mb-6' },
+                    { className: 'flex gap-3 mb-6' },
                     React.createElement(
                         'button',
                         {
                             onClick: () => handleForfeit('home'),
-                            className: 'w-full py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors cursor-pointer'
+                            className: 'flex-1 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors cursor-pointer text-center'
                         },
-                        'Kontumovať v prospech DOMÁCICH (10:0)'
+                        React.createElement('span', { className: 'block text-sm' }, 'Kontumovať'),
+                        React.createElement('span', { className: 'block text-xs opacity-90 mt-1' }, homeTeamName)
                     ),
                     React.createElement(
                         'button',
                         {
                             onClick: () => handleForfeit('away'),
-                            className: 'w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors cursor-pointer'
+                            className: 'flex-1 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors cursor-pointer text-center'
                         },
-                        'Kontumovať v prospech HOSTÍ (10:0)'
+                        React.createElement('span', { className: 'block text-sm' }, 'Kontumovať'),
+                        React.createElement('span', { className: 'block text-xs opacity-90 mt-1' }, awayTeamName)
                     )
                 ),
                 React.createElement(
                     'button',
                     {
                         onClick: () => setShowForfeitModal(false),
-                        className: 'w-full py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors cursor-pointer'
+                        className: 'w-full py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors cursor-pointer text-center'
                     },
                     'Zrušiť'
                 )
