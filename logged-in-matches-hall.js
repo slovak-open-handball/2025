@@ -1537,15 +1537,15 @@ const MatchesHallApp = () => {
         }
     }, []);
 
-    // Zobrazenie tlačidla Detail s dynamickou farbou
     const renderDetailButton = (match, dayIndex, matchIndex) => {
         const matchStatus = matchStatuses[match.id] || match.status || 'scheduled';
-        const isInProgress = matchStatus === 'in-progress';
-        
-        const buttonClass = isInProgress 
+        // Tlačidlo bude žlté pre zápasy s statusom 'in-progress' ALEBO 'paused'
+        const isActive = matchStatus === 'in-progress' || matchStatus === 'paused';
+    
+        const buttonClass = isActive 
             ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer'
             : 'bg-gray-200 hover:bg-gray-300 text-gray-900 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer';
-        
+    
         return React.createElement(
             'button',
             {
