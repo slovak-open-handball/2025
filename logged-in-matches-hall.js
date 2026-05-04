@@ -452,72 +452,49 @@ const TeamMembersList = ({ teamName, categoryName }) => {
     );
 };
 
-// Komponent pre športový časovač (KOMPATIBILNÝ S PÔVODNOU ŠTRUKTÚROU)
 const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const [isRunning, setIsRunning] = useState(false);
-    const [displayTime, setDisplayTime] = useState({ minutes: 0, seconds: 0 });
     const [period, setPeriod] = useState(1);
     const [totalPeriods, setTotalPeriods] = useState(1);
     const [periodDuration, setPeriodDuration] = useState(20);
     const [manualTimeOffset, setManualTimeOffset] = useState(0);
+    const [displaySeconds, setDisplaySeconds] = useState(0);
     
     const intervalRef = useRef(null);
     const isUpdatingFromServerRef = useRef(false);
+    const startTimeRef = useRef(null);
 
-    // Pomocné funkcie
-    const secondsToTime = (totalSeconds) => {
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        return { minutes, seconds };
+    // Formátovanie času MM:SS
+    const formatTime = (totalSeconds) => {
+        const mins = Math.floor(Math.max(0, totalSeconds) / 60);
+        const secs = Math.max(0, totalSeconds) % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
-    const timeToSeconds = (minutes, seconds) => {
-        return minutes * 60 + seconds;
-    };
-
-    // Výpočet aktuálneho času podľa pôvodnej logiky
+    // Výpočet aktuálneho času (v sekundách)
     const calculateCurrentTime = () => {
         if (!match) return 0;
         
+        // Ak je zápas v stave 'in-progress' a má startedAt
         if (match.status === 'in-progress' && match.startedAt) {
             const now = Timestamp.now();
             const startedAt = match.startedAt;
             const baseSeconds = Math.floor((now.seconds - startedAt.seconds));
             return baseSeconds + (match.manualTimeOffset || 0);
-        } else if (match.status === 'paused' && match.startedAt && match.pausedAt) {
+        }
+        // Ak je zápas pozastavený
+        else if (match.status === 'paused' && match.startedAt && match.pausedAt) {
             const pausedAt = match.pausedAt;
             const startedAt = match.startedAt;
             const baseSeconds = Math.floor((pausedAt.seconds - startedAt.seconds));
             return baseSeconds + (match.manualTimeOffset || 0);
         }
         
-        return match.timerAccumulatedSeconds || 0;
+        // Inak vrátime uložený offset alebo 0
+        return match.manualTimeOffset || 0;
     };
 
-    // Formátovanie času pre zobrazenie
-    const formatTimeDisplay = () => {
-        let totalSeconds;
-        
-        if (isRunning && match?.status === 'in-progress' && match?.startedAt) {
-            const now = Date.now();
-            const startTimeMs = match.startedAt.toDate ? match.startedAt.toDate().getTime() : match.startedAt;
-            const elapsed = Math.floor((now - startTimeMs) / 1000);
-            totalSeconds = manualTimeOffset + elapsed;
-        } else {
-            totalSeconds = manualTimeOffset;
-        }
-        
-        // Kontrola konca periódy
-        const maxSeconds = periodDuration * 60;
-        if (totalSeconds > maxSeconds) totalSeconds = maxSeconds;
-        if (totalSeconds < 0) totalSeconds = 0;
-        
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    };
-
-    // Uloženie stavu do Firestore (podľa pôvodnej štruktúry)
+    // Uloženie stavu do Firestore
     const saveToFirestore = async (newIsRunning, newManualOffset, newPeriod) => {
         if (!window.db || !matchId) return;
         if (isUpdatingFromServerRef.current) return;
@@ -544,181 +521,165 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             await updateDoc(matchRef, updateData);
             
             if (onTimeUpdate) {
-                const totalSeconds = newManualOffset;
                 onTimeUpdate({ 
-                    minutes: Math.floor(totalSeconds / 60),
-                    seconds: totalSeconds % 60,
+                    seconds: newManualOffset,
                     period: newPeriod,
-                    isRunning: newIsRunning,
-                    totalSeconds: totalSeconds
+                    isRunning: newIsRunning
                 });
             }
         } catch (error) {
-            console.error('Chyba pri ukladaní:', error);
+            console.error('Chyba pri ukladaní časovača:', error);
         }
     };
 
-    // JEDNOTLIVÉ TLAČIDLO PRE ŠTART/STOP
+    // Aktualizácia zobrazenia
+    const updateDisplay = () => {
+        let totalSeconds = manualTimeOffset;
+        
+        if (isRunning && match?.status === 'in-progress' && match?.startedAt && startTimeRef.current) {
+            const now = Date.now();
+            const elapsed = Math.floor((now - startTimeRef.current) / 1000);
+            totalSeconds = manualTimeOffset + elapsed;
+        }
+        
+        const maxSeconds = periodDuration * 60;
+        if (totalSeconds > maxSeconds) totalSeconds = maxSeconds;
+        if (totalSeconds < 0) totalSeconds = 0;
+        
+        setDisplaySeconds(totalSeconds);
+    };
+
+    // Spustenie intervalu
+    const startInterval = () => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        
+        intervalRef.current = setInterval(() => {
+            if (!isUpdatingFromServerRef.current) {
+                updateDisplay();
+            }
+        }, 100);
+    };
+
+    // Zastavenie intervalu
+    const stopInterval = () => {
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }
+    };
+
+    // Prepínanie Štart/Stop
     const toggleTimer = async () => {
         if (!matchId || !window.db) return;
         
-        const matchRef = doc(window.db, 'matches', matchId);
-        
         if (isRunning) {
-            // ZASTAVENIE - uložíme aktuálny čas do manualTimeOffset
-            const currentSeconds = manualTimeOffset;
+            // ZASTAVENIE
+            const finalSeconds = displaySeconds;
             
-            await updateDoc(matchRef, {
-                status: 'paused',
-                pausedAt: Timestamp.now(),
-                manualTimeOffset: currentSeconds,
-                updatedAt: Timestamp.now()
-            });
-            
+            setManualTimeOffset(finalSeconds);
             setIsRunning(false);
-            if (onTimeUpdate) {
-                onTimeUpdate({ 
-                    minutes: Math.floor(currentSeconds / 60),
-                    seconds: currentSeconds % 60,
-                    period: period,
-                    isRunning: false,
-                    totalSeconds: currentSeconds
-                });
-            }
+            stopInterval();
+            startTimeRef.current = null;
+            
+            await saveToFirestore(false, finalSeconds, period);
         } else {
-            // ŠTART - nastavíme startedAt ak neexistuje
+            // ŠTART
             const currentSeconds = manualTimeOffset;
-            const updateData = {
-                status: 'in-progress',
-                manualTimeOffset: currentSeconds,
-                updatedAt: Timestamp.now()
-            };
+            const maxSeconds = periodDuration * 60;
             
-            if (!match?.startedAt) {
-                updateData.startedAt = Timestamp.now();
-            } else {
-                updateData.pausedAt = null;
+            if (currentSeconds >= maxSeconds) {
+                console.log('Perióda je už ukončená, nie je možné spustiť časovač');
+                return;
             }
             
-            await updateDoc(matchRef, updateData);
+            startTimeRef.current = Date.now();
             setIsRunning(true);
+            startInterval();
             
-            if (onTimeUpdate) {
-                onTimeUpdate({ 
-                    minutes: Math.floor(currentSeconds / 60),
-                    seconds: currentSeconds % 60,
-                    period: period,
-                    isRunning: true,
-                    totalSeconds: currentSeconds
-                });
-            }
+            await saveToFirestore(true, currentSeconds, period);
         }
     };
 
     // Manuálna zmena času
-    const setNewTime = (deltaSeconds) => {
+    const addTime = (deltaSeconds) => {
         if (isUpdatingFromServerRef.current) return;
         
-        let newSeconds = manualTimeOffset + deltaSeconds;
+        let newSeconds = displaySeconds + deltaSeconds;
         const maxSeconds = periodDuration * 60;
         
-        // Obmedzenie na 0 - maxSeconds
         if (newSeconds < 0) newSeconds = 0;
         if (newSeconds > maxSeconds) newSeconds = maxSeconds;
         
         setManualTimeOffset(newSeconds);
-        setDisplayTime(secondsToTime(newSeconds));
+        setDisplaySeconds(newSeconds);
         
-        // Uložíme do databázy
-        saveToFirestore(isRunning, newSeconds, period);
+        // Ak časovač nebeží, uložíme priamo
+        if (!isRunning) {
+            saveToFirestore(false, newSeconds, period);
+        } else {
+            // Ak beží, musíme aktualizovať startedAt
+            saveToFirestore(true, newSeconds, period);
+        }
     };
 
-    const addMinute = () => setNewTime(60);
-    const subtractMinute = () => setNewTime(-60);
-    const addSecond = () => setNewTime(1);
-    const subtractSecond = () => setNewTime(-1);
-    const resetTime = () => setNewTime(-manualTimeOffset);
+    const addMinute = () => addTime(60);
+    const subtractMinute = () => addTime(-60);
+    const addSecond = () => addTime(1);
+    const subtractSecond = () => addTime(-1);
+    const resetTime = () => addTime(-displaySeconds);
 
     // Zmena periódy
-    const nextPeriod = () => {
+    const nextPeriod = async () => {
         if (period < totalPeriods) {
             const newPeriod = period + 1;
+            
+            // Zastavíme časovač
+            if (isRunning) {
+                stopInterval();
+                setIsRunning(false);
+                startTimeRef.current = null;
+            }
+            
             setPeriod(newPeriod);
             setManualTimeOffset(0);
-            setDisplayTime({ minutes: 0, seconds: 0 });
+            setDisplaySeconds(0);
             
-            if (isRunning) {
-                setIsRunning(false);
-                saveToFirestore(false, 0, newPeriod);
-            } else {
-                saveToFirestore(false, 0, newPeriod);
-            }
+            await saveToFirestore(false, 0, newPeriod);
         }
     };
 
-    const prevPeriod = () => {
+    const prevPeriod = async () => {
         if (period > 1) {
             const newPeriod = period - 1;
-            setPeriod(newPeriod);
-            setManualTimeOffset(0);
-            setDisplayTime({ minutes: 0, seconds: 0 });
             
             if (isRunning) {
+                stopInterval();
                 setIsRunning(false);
-                saveToFirestore(false, 0, newPeriod);
-            } else {
-                saveToFirestore(false, 0, newPeriod);
+                startTimeRef.current = null;
             }
+            
+            setPeriod(newPeriod);
+            setManualTimeOffset(0);
+            setDisplaySeconds(0);
+            
+            await saveToFirestore(false, 0, newPeriod);
         }
     };
 
-    // Spustenie intervalu pre aktualizáciu zobrazenia
+    // Kontrola konca periódy
     useEffect(() => {
-        if (!isRunning) {
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-                intervalRef.current = null;
-            }
-            return;
+        const maxSeconds = periodDuration * 60;
+        if (displaySeconds >= maxSeconds && isRunning) {
+            // Automatické zastavenie na konci periódy
+            stopInterval();
+            setIsRunning(false);
+            startTimeRef.current = null;
+            setManualTimeOffset(maxSeconds);
+            saveToFirestore(false, maxSeconds, period);
         }
-        
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        
-        intervalRef.current = setInterval(() => {
-            if (!isUpdatingFromServerRef.current && isRunning && match?.startedAt) {
-                const now = Date.now();
-                const startTimeMs = match.startedAt.toDate ? match.startedAt.toDate().getTime() : match.startedAt;
-                const elapsed = Math.floor((now - startTimeMs) / 1000);
-                const totalSeconds = manualTimeOffset + elapsed;
-                const maxSeconds = periodDuration * 60;
-                
-                let displaySeconds = totalSeconds;
-                if (displaySeconds > maxSeconds) displaySeconds = maxSeconds;
-                if (displaySeconds < 0) displaySeconds = 0;
-                
-                setDisplayTime(secondsToTime(displaySeconds));
-                
-                // Automatické zastavenie na konci periódy
-                if (totalSeconds >= maxSeconds && maxSeconds > 0) {
-                    clearInterval(intervalRef.current);
-                    intervalRef.current = null;
-                    setIsRunning(false);
-                    setManualTimeOffset(maxSeconds);
-                    setDisplayTime(secondsToTime(maxSeconds));
-                    saveToFirestore(false, maxSeconds, period);
-                }
-            }
-        }, 100);
-        
-        return () => {
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-                intervalRef.current = null;
-            }
-        };
-    }, [isRunning, manualTimeOffset, match?.startedAt, periodDuration, period]);
+    }, [displaySeconds, isRunning, periodDuration, period]);
 
-    // Real-time synchronizácia z databázy (onSnapshot)
+    // Synchronizácia s databázou (onSnapshot)
     useEffect(() => {
         if (!window.db || !matchId) return;
         
@@ -735,17 +696,27 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     setPeriod(serverPeriod);
                 }
                 
-                // Aktualizácia manuálneho offsetu
+                // Aktualizácia offsetu
                 const serverOffset = data.manualTimeOffset || 0;
                 if (serverOffset !== manualTimeOffset) {
                     setManualTimeOffset(serverOffset);
-                    setDisplayTime(secondsToTime(serverOffset));
+                    setDisplaySeconds(serverOffset);
                 }
                 
                 // Aktualizácia stavu behu
                 const serverIsRunning = data.status === 'in-progress';
                 if (serverIsRunning !== isRunning) {
-                    setIsRunning(serverIsRunning);
+                    if (serverIsRunning && !isRunning) {
+                        // Treba spustiť
+                        startTimeRef.current = Date.now();
+                        setIsRunning(true);
+                        startInterval();
+                    } else if (!serverIsRunning && isRunning) {
+                        // Treba zastaviť
+                        stopInterval();
+                        setIsRunning(false);
+                        startTimeRef.current = null;
+                    }
                 }
                 
                 setTimeout(() => {
@@ -757,45 +728,41 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         return () => unsubscribe();
     }, [matchId]);
 
-    // Načítanie počiatočných hodnôt z match objektu
+    // Inicializácia z match objektu
     useEffect(() => {
         if (!match) return;
         
-        // Nastavenia kategórie
+        // Nastavenia z kategórie
         if (categorySettings) {
             if (categorySettings.periods !== undefined) setTotalPeriods(categorySettings.periods);
             if (categorySettings.periodDuration !== undefined) setPeriodDuration(categorySettings.periodDuration);
         }
         
-        // Počiatočná perióda
+        // Perióda
         const initialPeriod = match.currentPeriod || 1;
         setPeriod(initialPeriod);
         
-        // Počiatočný čas
+        // Čas
         const initialTime = calculateCurrentTime();
         const maxSeconds = (categorySettings?.periodDuration || 20) * 60;
         const clampedTime = Math.min(initialTime, maxSeconds);
         
         setManualTimeOffset(clampedTime);
-        setDisplayTime(secondsToTime(clampedTime));
+        setDisplaySeconds(clampedTime);
         
-        // Počiatočný stav behu
+        // Stav behu
         const initialIsRunning = match.status === 'in-progress';
         setIsRunning(initialIsRunning);
         
-    }, [match, categorySettings]);
-
-    // Vynútenie prekreslenia pre aktuálny čas
-    const [forceUpdate, setForceUpdate] = useState(0);
-    useEffect(() => {
-        if (!isRunning) return;
+        if (initialIsRunning) {
+            startTimeRef.current = Date.now();
+            startInterval();
+        }
         
-        const interval = setInterval(() => {
-            setForceUpdate(prev => prev + 1);
-        }, 100);
-        
-        return () => clearInterval(interval);
-    }, [isRunning]);
+        return () => {
+            stopInterval();
+        };
+    }, [match?.id]); // len pri zmene ID zápasu
 
     return React.createElement(
         'div',
