@@ -505,9 +505,16 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 }
                 
                 const matchRef = doc(window.db, 'matches', matchId);
+                
+                // 🔥 DÔLEŽITÉ: Uložíme výsledok do finalScore (pre matchTracker)
+                // a tiež do homeScore/awayScore pre zobrazenie
                 await updateDoc(matchRef, {
                     homeScore: homeScoreInt,
                     awayScore: awayScoreInt,
+                    finalScore: {
+                        home: homeScoreInt,
+                        away: awayScoreInt
+                    },
                     status: 'completed',
                     manualResultEntered: true,
                     manualResultEnteredAt: Timestamp.now(),
