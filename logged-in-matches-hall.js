@@ -126,8 +126,9 @@ const getDisplayTeamName = (teamIdentifier) => {
     return teamIdentifier;
 };
 
-const updateTeamNamesInMatches = async (matchesList, setTeamNames) => {
+const updateTeamNamesInMatches = async (matchesList, setTeamNames, currentTeamNames) => {
     if (!window.matchTracker || typeof window.matchTracker.getTeamNameByDisplayId !== 'function') {
+        console.log('⚠️ matchTracker.getTeamNameByDisplayId nie je dostupný');
         return;
     }
     
@@ -135,35 +136,56 @@ const updateTeamNamesInMatches = async (matchesList, setTeamNames) => {
     let needsUpdate = false;
     
     for (const match of matchesList) {
+        // Získanie názvu kategórie pre tento zápas
+        let categoryName = match.categoryName;
+        if (!categoryName && match.categoryId && window.categoriesData && window.categoriesData[match.categoryId]) {
+            categoryName = window.categoriesData[match.categoryId];
+        }
+        
+        if (!categoryName) {
+            console.log(`⚠️ Zápas ${match.id} nemá názov kategórie, preskakujem`);
+            continue;
+        }
+        
         // Spracovanie domáceho tímu
         if (match.homeTeamIdentifier) {
-            try {
-                const newName = await window.matchTracker.getTeamNameByDisplayId(match.homeTeamIdentifier);
-                if (newName && newName !== match.homeTeamIdentifier && newName !== updatedNames[match.homeTeamIdentifier]) {
-                    updatedNames[match.homeTeamIdentifier] = newName;
-                    needsUpdate = true;
-                } else if (!updatedNames[match.homeTeamIdentifier] && newName !== match.homeTeamIdentifier) {
-                    updatedNames[match.homeTeamIdentifier] = newName;
-                    needsUpdate = true;
+            // Získame aktuálny zobrazený názov tímu
+            const currentDisplayName = currentTeamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
+            
+            // Kontrola, či názov tímu obsahuje názov kategórie
+            if (currentDisplayName && currentDisplayName.includes(categoryName)) {
+                try {
+                    // Voláme s jedným parametrom - aktuálny názov tímu
+                    const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                    if (newName && newName !== currentDisplayName && newName !== updatedNames[match.homeTeamIdentifier]) {
+                        updatedNames[match.homeTeamIdentifier] = newName;
+                        needsUpdate = true;
+                        console.log(`✅ Domáci tím "${currentDisplayName}" → "${newName}" (obsahoval kategóriu: ${categoryName})`);
+                    }
+                } catch (err) {
+                    console.error(`Chyba pri získavaní názvu pre domáci tím ${currentDisplayName}:`, err);
                 }
-            } catch (err) {
-                console.error(`Chyba pri získavaní názvu pre tím ${match.homeTeamIdentifier}:`, err);
             }
         }
         
         // Spracovanie hosťujúceho tímu
         if (match.awayTeamIdentifier) {
-            try {
-                const newName = await window.matchTracker.getTeamNameByDisplayId(match.awayTeamIdentifier);
-                if (newName && newName !== match.awayTeamIdentifier && newName !== updatedNames[match.awayTeamIdentifier]) {
-                    updatedNames[match.awayTeamIdentifier] = newName;
-                    needsUpdate = true;
-                } else if (!updatedNames[match.awayTeamIdentifier] && newName !== match.awayTeamIdentifier) {
-                    updatedNames[match.awayTeamIdentifier] = newName;
-                    needsUpdate = true;
+            // Získame aktuálny zobrazený názov tímu
+            const currentDisplayName = currentTeamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
+            
+            // Kontrola, či názov tímu obsahuje názov kategórie
+            if (currentDisplayName && currentDisplayName.includes(categoryName)) {
+                try {
+                    // Voláme s jedným parametrom - aktuálny názov tímu
+                    const newName = await window.matchTracker.getTeamNameByDisplayId(currentDisplayName);
+                    if (newName && newName !== currentDisplayName && newName !== updatedNames[match.awayTeamIdentifier]) {
+                        updatedNames[match.awayTeamIdentifier] = newName;
+                        needsUpdate = true;
+                        console.log(`✅ Hosťujúci tím "${currentDisplayName}" → "${newName}" (obsahoval kategóriu: ${categoryName})`);
+                    }
+                } catch (err) {
+                    console.error(`Chyba pri získavaní názvu pre hosťujúci tím ${currentDisplayName}:`, err);
                 }
-            } catch (err) {
-                console.error(`Chyba pri získavaní názvu pre tím ${match.awayTeamIdentifier}:`, err);
             }
         }
     }
@@ -171,6 +193,8 @@ const updateTeamNamesInMatches = async (matchesList, setTeamNames) => {
     if (needsUpdate) {
         setTeamNames(prev => ({ ...prev, ...updatedNames }));
         console.log('✅ Aktualizované názvy tímov:', updatedNames);
+    } else {
+        console.log('ℹ️ Žiadne zmeny v názvoch tímov');
     }
 };
 
@@ -2249,7 +2273,7 @@ const MatchesHallApp = () => {
 
     const globalUpdateTeamNames = async () => {
         if (allMatchesList.length > 0) {
-            await updateTeamNamesInMatches(allMatchesList, setTeamNames);
+            await updateTeamNamesInMatches(allMatchesList, setTeamNames, teamNames);
         }
     };
 
@@ -2259,7 +2283,7 @@ const MatchesHallApp = () => {
         return () => {
             delete window.updateTeamNamesGlobally;
         };
-    }, [allMatchesList]);
+    }, [allMatchesList, teamNames]);
 
     // Handler pre kliknutie na Detail
     const handleDetailClick = (match, index) => {
