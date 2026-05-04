@@ -144,22 +144,23 @@ const getCategoryNameById = (categoryId) => {
     return null;
 };
 
-// Funkcia na načítanie členov tímu z databázy podľa názvu tímu a NÁZVU kategórie
-const loadTeamMembers = async (teamName, categoryName) => {
+// Funkcia na načítanie členov tímu z databázy podľa názvu tímu a NÁZVU kategórie (s real-time aktualizáciou)
+const loadTeamMembers = async (teamName, categoryName, onUpdate) => {
     if (!window.db || !teamName || !categoryName) {
         console.log("Chýba db, teamName alebo categoryName");
-        return [];
+        if (onUpdate) onUpdate([]);
+        return () => {};
     }
     
-    try {
-        console.log(`=== VYHĽADÁVANIE ČLENOV TÍMU ===`);
-        console.log(`Hľadám tím: "${teamName}" v kategórii (NÁZOV): "${categoryName}"`);
-        
-        // Prehľadávame všetkých používateľov (kluby)
-        const usersRef = collection(window.db, 'users');
-        const usersSnapshot = await getDocs(usersRef);
-        
-        console.log(`Celkový počet user dokumentov: ${usersSnapshot.docs.length}`);
+    console.log(`=== VYHĽADÁVANIE ČLENOV TÍMU (real-time) ===`);
+    console.log(`Hľadám tím: "${teamName}" v kategórii (NÁZOV): "${categoryName}"`);
+    
+    // Prehľadávame všetkých používateľov (kluby)
+    const usersRef = collection(window.db, 'users');
+    
+    // Vytvoríme unsubscribe funkciu pre real-time počúvanie
+    const unsubscribe = onSnapshot(usersRef, (usersSnapshot) => {
+        console.log(`Real-time aktualizácia: Načítavam členov pre tím ${teamName}`);
         
         for (const userDoc of usersSnapshot.docs) {
             const userId = userDoc.id;
@@ -168,17 +169,13 @@ const loadTeamMembers = async (teamName, categoryName) => {
             
             // Prehľadávame všetky kategórie tohto používateľa
             for (const [categoryKey, teamsArray] of Object.entries(teams)) {
-                // Porovnávame NÁZOV kategórie (categoryKey) s hľadaným názvom
-                // categoryKey je priamo názov (napr. "U12 CH", nie ID)
                 if (categoryKey !== categoryName) continue;
-                
-                console.log(`✅ Našiel som kategóriu: "${categoryKey}" u používateľa ${userId}`);
                 
                 // Hľadáme tím s daným názvom
                 const foundTeam = (teamsArray || []).find(t => t.teamName === teamName);
                 
                 if (foundTeam) {
-                    console.log(`✅✅✅ NAŠIEL SOM TÍM: "${teamName}" v kategórii ${categoryKey} ✅✅✅`);
+                    console.log(`✅ Našiel som tím: "${teamName}" v kategórii ${categoryKey} (real-time)`);
                     
                     // Získame všetkých členov tímu
                     const members = [];
@@ -248,40 +245,43 @@ const loadTeamMembers = async (teamName, categoryName) => {
                         });
                     }
                     
-                    console.log(`Celkový počet členov tímu: ${members.length}`);
-                    return members;
+                    console.log(`Celkový počet členov tímu (real-time): ${members.length}`);
+                    if (onUpdate) onUpdate(members);
+                    return;
                 }
             }
         }
         
         console.log(`❌ Nenašiel som tím: "${teamName}" v kategórii: "${categoryName}"`);
-        return [];
-        
-    } catch (err) {
-        console.error('Chyba pri načítaní členov tímu:', err);
-        return [];
-    }
+        if (onUpdate) onUpdate([]);
+    }, (error) => {
+        console.error('Chyba pri real-time načítaní členov tímu:', error);
+        if (onUpdate) onUpdate([]);
+    });
+    
+    // Vrátime unsubscribe funkciu pre zrušenie odberu
+    return unsubscribe;
 };
 
-// Komponent pre zoznam členov tímu (sivý box, bez registračných čísel a šoférov)
-const TeamMembersList = ({ teamName, categoryName, teamSide }) => {
+// Komponent pre zoznam členov tímu (s real-time aktualizáciou)
+const TeamMembersList = ({ teamName, categoryName }) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     
     useEffect(() => {
-        const fetchMembers = async () => {
-            setLoading(true);
-            setError(null);
-            
-            if (!teamName || !categoryName) {
-                setLoading(false);
-                return;
-            }
-            
-            const result = await loadTeamMembers(teamName, categoryName);
+        setLoading(true);
+        setError(null);
+        
+        if (!teamName || !categoryName) {
+            setLoading(false);
+            return;
+        }
+        
+        // Callback pre aktualizáciu členov
+        const handleMembersUpdate = (updatedMembers) => {
             // Filtrujeme iba hráčov a členov RT (bez šoférov)
-            const filteredMembers = result.filter(m => m.type === 'Hráč' || m.type === 'Člen RT (muž)' || m.type === 'Člen RT (žena)');
+            const filteredMembers = updatedMembers.filter(m => m.type === 'Hráč' || m.type === 'Člen RT (muž)' || m.type === 'Člen RT (žena)');
             
             // Usporiadame: najprv členovia RT, potom hráči
             const rtMembers = filteredMembers.filter(m => m.type !== 'Hráč');
@@ -292,7 +292,21 @@ const TeamMembersList = ({ teamName, categoryName, teamSide }) => {
             setLoading(false);
         };
         
-        fetchMembers();
+        // Spustíme real-time počúvanie
+        const unsubscribe = loadTeamMembers(teamName, categoryName, handleMembersUpdate);
+        
+        // Časový limit pre prípad, že by sa nič nenačítalo
+        const timeoutId = setTimeout(() => {
+            setLoading(false);
+        }, 5000);
+        
+        // Cleanup funkcia
+        return () => {
+            clearTimeout(timeoutId);
+            if (unsubscribe && typeof unsubscribe === 'function') {
+                unsubscribe();
+            }
+        };
     }, [teamName, categoryName]);
     
     // Funkcia pre kliknutie na člena
