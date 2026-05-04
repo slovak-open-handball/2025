@@ -1234,6 +1234,33 @@ const matchesHallApp = ({ userProfileData }) => {
     const currentSelectedMatchIdRef = React.useRef(null);
     const isMappingInProgressRef = React.useRef(false);
 
+    // Resetovanie všetkých stavov pri zmene vybraného zápasu
+    useEffect(() => {
+        // Resetovanie stavov pre súpisky
+        setHomeTeamData(null);
+        setAwayTeamData(null);
+        setHomeTeamNameReady(false);
+        setAwayTeamNameReady(false);
+        setHomeTeamResolvedName(null);
+        setAwayTeamResolvedName(null);
+    
+        // Resetovanie suspendovaných hráčov
+        setSuspendedPlayersHome({});
+        setSuspendedPlayersAway({});
+        setIsLoadingSuspensionsHome(true);
+        setIsLoadingSuspensionsAway(true);
+    
+        // Resetovanie mapovaných názvov
+        setMappedHomeTeamName('');
+        setMappedAwayTeamName('');
+        setIsMappingTeamNames(true);
+        
+        // Resetovanie refov
+        currentSelectedMatchIdRef.current = null;
+        isMappingInProgressRef.current = false;
+        
+    }, [selectedMatch?.id]);
+
     useEffect(() => {
         // Ak nie je vybraný zápas, resetujeme stavy
         if (!selectedMatch) {
@@ -1400,68 +1427,65 @@ const matchesHallApp = ({ userProfileData }) => {
         syncTeamNamesWithRoster();
     }, [homeTeamData, awayTeamData, selectedMatch?.id]);
 
-    // OPRAVENÝ useEffect PRE NAČÍTANIE SÚPISIEK
+    // OPRAVENÝ useEffect PRE NAČÍTANIE SÚPISIEK - BEZ NEKONEČNÉHO CYKLU
     useEffect(() => {
+        let isMounted = true;
+        
         const loadTeamDetails = async () => {
-            if (homeTeamData && awayTeamData) return;
+            // Ak už máme načítané oba tímy, preskočíme
+            if ((homeTeamData && awayTeamData) || !selectedMatch) {
+                return;
+            }
             
+            // Čakáme na zmapované názvy
             if (!homeTeamResolvedName || !awayTeamResolvedName) {
                 console.log('⏳ [SÚPISKY] Čakám na zmapovanie názvov tímov...');
                 return;
             }
             
-            if (!selectedMatch) return;
-            
             console.log('🔄 [SÚPISKY] Začínam načítavať detaily tímov podľa ZMAPOVANÝCH NÁZOV...');
             console.log(`   Domáci ZMAPOVANÝ názov: "${homeTeamResolvedName}"`);
             console.log(`   Hosťovský ZMAPOVANÝ názov: "${awayTeamResolvedName}"`);
             
-            // 🔥 NAČÍTANIE DOMÁCEHO TÍMU
-            let homeDetailsLoaded = null;
-            if (homeTeamResolvedName && homeTeamResolvedName !== selectedMatch.homeTeamIdentifier) {
-                homeDetailsLoaded = await getTeamDetailsByDisplayName(homeTeamResolvedName, selectedMatch.categoryName);
-                if (homeDetailsLoaded && homeDetailsLoaded.team) {
+            // NAČÍTANIE DOMÁCEHO TÍMU (len ak ešte nie je načítaný)
+            if (!homeTeamData && homeTeamResolvedName && homeTeamResolvedName !== selectedMatch.homeTeamIdentifier) {
+                const homeDetailsLoaded = await getTeamDetailsByDisplayName(homeTeamResolvedName, selectedMatch.categoryName);
+                if (isMounted && homeDetailsLoaded && homeDetailsLoaded.team) {
                     console.log(`✅ [SÚPISKY] Domáci tím načítaný: ${homeDetailsLoaded.team.teamName}`);
                     console.log(`   Hráčov: ${homeDetailsLoaded.team.playerDetails?.length || 0}`);
                     setHomeTeamData(homeDetailsLoaded);
-                } else {
-                    console.log(`⚠️ [SÚPISKY] Domáci tím sa nepodarilo načítať podľa zmapovaného názvu: "${homeTeamResolvedName}"`);
+                } else if (isMounted) {
+                    console.log(`⚠️ [SÚPISKY] Domáci tím sa nepodarilo načítať: "${homeTeamResolvedName}"`);
                     setHomeTeamData(null);
                 }
-            } else {
-                console.log(`⚠️ [SÚPISKY] Domáci zmapovaný názov nie je platný: "${homeTeamResolvedName}"`);
-                setHomeTeamData(null);
             }
             
-            // 🔥 NAČÍTANIE HOSŤOVSKÉHO TÍMU
-            let awayDetailsLoaded = null;
-            if (awayTeamResolvedName && awayTeamResolvedName !== selectedMatch.awayTeamIdentifier) {
-                awayDetailsLoaded = await getTeamDetailsByDisplayName(awayTeamResolvedName, selectedMatch.categoryName);
-                if (awayDetailsLoaded && awayDetailsLoaded.team) {
+            // NAČÍTANIE HOSŤOVSKÉHO TÍMU (len ak ešte nie je načítaný)
+            if (!awayTeamData && awayTeamResolvedName && awayTeamResolvedName !== selectedMatch.awayTeamIdentifier) {
+                const awayDetailsLoaded = await getTeamDetailsByDisplayName(awayTeamResolvedName, selectedMatch.categoryName);
+                if (isMounted && awayDetailsLoaded && awayDetailsLoaded.team) {
                     console.log(`✅ [SÚPISKY] Hosťovský tím načítaný: ${awayDetailsLoaded.team.teamName}`);
                     console.log(`   Hráčov: ${awayDetailsLoaded.team.playerDetails?.length || 0}`);
                     setAwayTeamData(awayDetailsLoaded);
-                } else {
-                    console.log(`⚠️ [SÚPISKY] Hosťovský tím sa nepodarilo načítať podľa zmapovaného názvu: "${awayTeamResolvedName}"`);
+                } else if (isMounted) {
+                    console.log(`⚠️ [SÚPISKY] Hosťovský tím sa nepodarilo načítať: "${awayTeamResolvedName}"`);
                     setAwayTeamData(null);
                 }
-            } else {
-                console.log(`⚠️ [SÚPISKY] Hosťovský zmapovaný názov nie je platný: "${awayTeamResolvedName}"`);
-                setAwayTeamData(null);
             }
             
             // Po úspešnom načítaní nastavíme príznaky na true
-            setHomeTeamNameReady(true);
-            setAwayTeamNameReady(true);
-            
-            console.log('✅ [SÚPISKY] Načítavanie detailov tímov dokončené.');
-            setForceUpdate(prev => prev + 1);
+            if (isMounted) {
+                setHomeTeamNameReady(true);
+                setAwayTeamNameReady(true);
+            }
         };
         
         loadTeamDetails();
         
-        return () => {};
-    }, [homeTeamResolvedName, awayTeamResolvedName, selectedMatch?.id, selectedMatch?.categoryName, homeTeamData, awayTeamData]);
+        return () => {
+            isMounted = false;
+        };
+    }, [homeTeamResolvedName, awayTeamResolvedName, selectedMatch?.id, selectedMatch?.categoryName]); // Odstránené homeTeamData a awayTeamData zo závislostí
 
     
     useEffect(() => {
