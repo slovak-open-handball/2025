@@ -126,7 +126,7 @@ const getDisplayTeamName = (teamIdentifier) => {
     return teamIdentifier;
 };
 
-// Komponent pre detail zápasu
+// Komponent pre detail zápasu (odstránené nežiaduce riadky)
 const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColors, groupsData }) => {
     const dateTime = formatMatchDateTime(match.scheduledTime);
     const isResultAvailable = match.homeScore !== undefined && match.awayScore !== undefined;
@@ -290,6 +290,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                 'div',
                                 { className: 'text-center' },
                                 React.createElement('span', { className: 'text-xl text-gray-400 font-medium' }, 'VS'),
+                                React.createElement('div', { className: 'text-xs text-gray-400 mt-1' }, 'Zápas ešte nebol odohraný')
                             )
                     ),
                     // Hosťujúci tím
@@ -302,7 +303,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 )
             ),
             
-            // Detailné informácie
+            // Detailné informácie - PONEchaný len typ zápasu a umiestnenie
             React.createElement(
                 'div',
                 { className: 'border-t border-gray-200' },
@@ -310,51 +311,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                     'div',
                     { className: 'divide-y divide-gray-100' },
                     
-                    // Riadok - Stav zápasu
-                    React.createElement(
-                        'div',
-                        { className: 'flex py-4 px-6' },
-                        React.createElement('div', { className: 'w-32 text-sm text-gray-500' }, 'Stav zápasu'),
-                        React.createElement(
-                            'div',
-                            { className: 'flex-1 text-sm text-gray-800' },
-                            isResultAvailable ? 'Odohraný' : (match.scheduledTime ? 'Naplánovaný' : 'Čaká na zaradenie')
-                        )
-                    ),
-                    
-                    // Riadok - ID zápasu
-                    React.createElement(
-                        'div',
-                        { className: 'flex py-4 px-6' },
-                        React.createElement('div', { className: 'w-32 text-sm text-gray-500' }, 'ID zápasu'),
-                        React.createElement('div', { className: 'flex-1 text-sm font-mono text-gray-600' }, match.id)
-                    ),
-                    
-                    // Riadok - Hala (ak je dostupná)
-                    hallInfo && React.createElement(
-                        'div',
-                        { className: 'flex py-4 px-6' },
-                        React.createElement('div', { className: 'w-32 text-sm text-gray-500' }, 'Miesto konania'),
-                        React.createElement('div', { className: 'flex-1 text-sm text-gray-800' }, hallInfo.name)
-                    ),
-                    
-                    // Riadok - Kategória
-                    match.categoryName && React.createElement(
-                        'div',
-                        { className: 'flex py-4 px-6' },
-                        React.createElement('div', { className: 'w-32 text-sm text-gray-500' }, 'Kategória'),
-                        React.createElement('div', { className: 'flex-1 text-sm text-gray-800' }, match.categoryName)
-                    ),
-                    
-                    // Riadok - Skupina (ak nie je play-off)
-                    match.groupName && !match.isPlacementMatch && !isEliminationMatch(match) && React.createElement(
-                        'div',
-                        { className: 'flex py-4 px-6' },
-                        React.createElement('div', { className: 'w-32 text-sm text-gray-500' }, 'Skupina'),
-                        React.createElement('div', { className: 'flex-1 text-sm text-gray-800' }, match.groupName)
-                    ),
-                    
-                    // Riadok - Typ zápasu
+                    // Riadok - Typ zápasu (PONEchaný)
                     match.matchType && React.createElement(
                         'div',
                         { className: 'flex py-4 px-6' },
@@ -362,7 +319,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                         React.createElement('div', { className: 'flex-1 text-sm text-gray-800' }, match.matchType)
                     ),
                     
-                    // Riadok - Umiestnenie (pre placement match)
+                    // Riadok - Umiestnenie pre placement match (PONEchaný)
                     match.isPlacementMatch && match.placementRank && React.createElement(
                         'div',
                         { className: 'flex py-4 px-6' },
