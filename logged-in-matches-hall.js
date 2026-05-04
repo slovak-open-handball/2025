@@ -522,18 +522,21 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         startTimeRef.current = null;
     };
 
-    // Zastavenie časovača s uložením do DB
-    const stopTimerAndSave = async () => {
+    const stopTimerAndSave = async (finalSecondsOverride = null) => {
         if (!isRunningRef.current) return;
-        
-        const finalSeconds = displaySeconds;
-        
+    
+        // Ak je poskytnutá finálna hodnota, použijeme ju, inak aktuálny displaySeconds
+        const finalSeconds = finalSecondsOverride !== null ? finalSecondsOverride : displaySeconds;
+    
         // Zastavíme interval
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
         }
-        
+    
+        // Aktualizujeme lokálny stav na finálnu hodnotu
+        setDisplaySeconds(finalSeconds);
+    
         isRunningRef.current = false;
         setIsRunning(false);
         startTimeRef.current = null;
@@ -542,6 +545,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         // Uložíme do databázy
         if (window.db && matchId) {
             try {
+                lastServerUpdateRef.current = Date.now();
                 const matchRef = doc(window.db, 'matches', matchId);
                 await updateDoc(matchRef, {
                     manualTimeOffset: finalSeconds,
@@ -563,22 +567,24 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         }
     };
 
-    // Aktualizácia zobrazenia (volané z intervalu)
     const updateDisplay = () => {
         if (!isRunningRef.current) return;
-        
+    
         const now = Date.now();
         const elapsedSeconds = Math.floor((now - startTimeRef.current) / 1000);
         const totalSeconds = localStartOffsetRef.current + elapsedSeconds;
-        
+    
         const maxSeconds = periodDurationRef.current * 60;
         const clampedSeconds = Math.min(totalSeconds, maxSeconds);
-        
+    
+        // Vždy aktualizujeme zobrazenie
         setDisplaySeconds(clampedSeconds);
         
         // Automatické zastavenie na konci periódy
         if (clampedSeconds >= maxSeconds && totalSeconds >= maxSeconds) {
-            stopTimerAndSave();
+            // Zastavíme časovač a uložíme konečnú hodnotu
+            // Použijeme clampedSeconds ako finálnu hodnotu
+            stopTimerAndSave(clampedSeconds);
         }
     };
 
@@ -683,16 +689,9 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 periodRef.current = serverPeriod;
             }
             
-            // SPRACOVANIE ČASU - dôležité pre manuálne zmeny
-            if (serverOffset !== displaySeconds) {
-                if (!isLocalControlRef.current || Math.abs(now - lastServerUpdateRef.current) > 500) {
-                    setDisplaySeconds(serverOffset);
-                    
-                    if (isRunningRef.current) {
-                        startTimeRef.current = Date.now();
-                        localStartOffsetRef.current = serverOffset;
-                    }
-                }
+            // SPRACOVANIE ČASU - aktualizujeme len ak nie sme v lokálnom behu
+            if (serverOffset !== displaySeconds && !isRunningRef.current) {
+                setDisplaySeconds(serverOffset);
             }
             
             // SPRACOVANIE STAVU BEHU
@@ -700,17 +699,16 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 if (!isRunningRef.current) {
                     console.log('Spúšťam časovač podľa servera (iné zariadenie)');
                     startTimerFromServer(serverOffset, serverPeriod, serverStartedAt);
-                } else if (isRunningRef.current && !isLocalControlRef.current) {
-                    if (serverOffset !== localStartOffsetRef.current) {
-                        console.log('Aktualizujem offset z DB počas behu');
-                        startTimeRef.current = Date.now();
-                        localStartOffsetRef.current = serverOffset;
-                    }
                 }
             } else if (serverStatus === 'paused') {
                 if (isRunningRef.current && !isLocalControlRef.current) {
                     console.log('Zastavujem časovač podľa servera');
                     stopTimerLocally();
+                    // Aktualizujeme aj zobrazenie na serverovú hodnotu
+                    setDisplaySeconds(serverOffset);
+                } else if (!isRunningRef.current && serverOffset !== displaySeconds) {
+                    // Ak nie je spustený a serverová hodnota je iná, aktualizujeme
+                    setDisplaySeconds(serverOffset);
                 }
             }
         });
