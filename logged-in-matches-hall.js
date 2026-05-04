@@ -645,12 +645,17 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         setPeriod(initialPeriod);
         periodRef.current = initialPeriod;
         let initialSeconds = match.manualTimeOffset || 0;
+    
+        // Len pre in-progress počítame elapsed čas
         if (match.status === 'in-progress' && match.startedAt) {
             const elapsed = Math.floor((Date.now() - match.startedAt.toDate().getTime()) / 1000);
             const maxSec = (categorySettings?.periodDuration || 20) * 60;
             initialSeconds = Math.min(initialSeconds + elapsed, maxSec);
         }
+    
         setDisplaySeconds(initialSeconds);
+        
+        // Spustíme časovač len ak je status in-progress
         if (match.status === 'in-progress') {
             startLocalInterval(initialSeconds);
             setIsRunning(true);
@@ -660,6 +665,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             setIsRunning(false);
             isRunningRef.current = false;
         }
+    
         return () => stopLocalInterval();
     }, [match?.id]);
 
@@ -668,14 +674,48 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const canAddMinute = () => displaySeconds + 60 <= periodDuration * 60;
     const canSubtractSecond = () => displaySeconds >= 1;
     const canAddSecond = () => displaySeconds + 1 <= periodDuration * 60;
-    const canReset = () => displaySeconds > 0 && !isRunning;  // <-- ZMENA: Reset blokovaný počas behu
+    const canReset = () => displaySeconds > 0 || period > 1 || match?.status === 'in-progress' || match?.status === 'paused';
 
     const addMinute = () => canAddMinute() && addTime(60);
     const subtractMinute = () => canSubtractMinute() && addTime(-60);
     const addSecond = () => canAddSecond() && addTime(1);
     const subtractSecond = () => canSubtractSecond() && addTime(-1);
-    const resetTime = () => canReset() && addTime(-displaySeconds);
     const toggleTimer = () => isRunningRef.current ? stopTimerAndSave() : startTimer();
+
+    const resetTime = async () => {
+        if (!canReset()) return;
+    
+        // Zastavíme časovač ak beží
+        if (isRunningRef.current) {
+            stopLocalInterval();
+            setIsRunning(false);
+            isRunningRef.current = false;
+        }
+    
+        // Resetneme čas na 0
+        setDisplaySeconds(0);
+        
+        // Aktualizujeme v databáze
+        if (window.db && matchId) {
+            try {
+                lastServerUpdateRef.current = Date.now();
+                const matchRef = doc(window.db, 'matches', matchId);
+                await updateDoc(matchRef, {
+                    manualTimeOffset: 0,
+                    currentPeriod: 1,
+                    status: 'scheduled',
+                    startedAt: null,
+                    pausedAt: null,
+                    updatedAt: Timestamp.now()
+                });
+                setPeriod(1);
+                if (onTimeUpdate) onTimeUpdate({ seconds: 0, period: 1, isRunning: false });
+                setTimeout(() => { lastServerUpdateRef.current = 0; }, 300);
+            } catch (err) {
+                console.error('Chyba pri resetovaní časovača:', err);
+            }
+        }
+    };
 
     const nextPeriod = async () => {
         if (period >= totalPeriods) return;
@@ -1541,11 +1581,11 @@ const MatchesHallApp = () => {
         const matchStatus = matchStatuses[match.id] || match.status || 'scheduled';
         // Tlačidlo bude žlté pre zápasy s statusom 'in-progress' ALEBO 'paused'
         const isActive = matchStatus === 'in-progress' || matchStatus === 'paused';
-    
+
         const buttonClass = isActive 
             ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer'
             : 'bg-gray-200 hover:bg-gray-300 text-gray-900 text-xs px-3 py-1 rounded-full transition-colors cursor-pointer';
-    
+
         return React.createElement(
             'button',
             {
