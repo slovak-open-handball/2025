@@ -452,7 +452,7 @@ const TeamMembersList = ({ teamName, categoryName }) => {
     );
 };
 
-// Komponent pre športový časovač (JEDNODUCHŠIA A FUNKČNÁ VERZIA)
+// Komponent pre športový časovač (JEDNOTLIVÉ TLAČIDLO ŠTART/STOP)
 const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const [isRunning, setIsRunning] = useState(false);
     const [displayTime, setDisplayTime] = useState({ minutes: 0, seconds: 0 });
@@ -472,9 +472,17 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         return { minutes, seconds };
     };
 
-    const formatTimeDisplay = (seconds) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
+    const formatTimeDisplay = () => {
+        let totalSeconds;
+        if (isRunning && startTimeRef.current) {
+            const now = Date.now();
+            const elapsed = Math.floor((now - startTimeRef.current) / 1000);
+            totalSeconds = accumulatedSecondsRef.current + elapsed;
+        } else {
+            totalSeconds = accumulatedSecondsRef.current;
+        }
+        const mins = Math.floor(totalSeconds / 60);
+        const secs = totalSeconds % 60;
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
@@ -566,32 +574,34 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         }
     };
 
-    // Handlery pre tlačidlá
-    const startTimer = () => {
-        if (isRunning) return;
-        
-        startTimeRef.current = Date.now();
-        setIsRunning(true);
-        startTimerInterval();
-        saveToFirestore(true, accumulatedSecondsRef.current, period);
-    };
-
-    const stopTimer = () => {
-        if (!isRunning) return;
-        
-        // Získame aktuálny čas
-        const now = Date.now();
-        const elapsed = Math.floor((now - startTimeRef.current) / 1000);
-        const finalSeconds = accumulatedSecondsRef.current + elapsed;
-        
-        stopTimerInterval();
-        
-        accumulatedSecondsRef.current = finalSeconds;
-        updateDisplayFromAccumulated();
-        setIsRunning(false);
-        startTimeRef.current = null;
-        
-        saveToFirestore(false, finalSeconds, period);
+    // JEDNOTLIVÉ TLAČIDLO PRE ŠTART/STOP
+    const toggleTimer = () => {
+        if (isRunning) {
+            // Zastavenie časovača
+            if (!isRunning) return;
+            
+            // Získame aktuálny čas
+            const now = Date.now();
+            const elapsed = Math.floor((now - startTimeRef.current) / 1000);
+            const finalSeconds = accumulatedSecondsRef.current + elapsed;
+            
+            stopTimerInterval();
+            
+            accumulatedSecondsRef.current = finalSeconds;
+            updateDisplayFromAccumulated();
+            setIsRunning(false);
+            startTimeRef.current = null;
+            
+            saveToFirestore(false, finalSeconds, period);
+        } else {
+            // Spustenie časovača
+            if (isRunning) return;
+            
+            startTimeRef.current = Date.now();
+            setIsRunning(true);
+            startTimerInterval();
+            saveToFirestore(true, accumulatedSecondsRef.current, period);
+        }
     };
 
     const addMinute = () => setNewTime(accumulatedSecondsRef.current + 60);
@@ -736,6 +746,18 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         };
     }, [match, categorySettings]);
 
+    // Funkcia na vynútenie prekreslenia zobrazenia (pre aktuálny čas)
+    const [forceUpdate, setForceUpdate] = useState(0);
+    useEffect(() => {
+        if (!isRunning) return;
+        
+        const interval = setInterval(() => {
+            setForceUpdate(prev => prev + 1);
+        }, 100);
+        
+        return () => clearInterval(interval);
+    }, [isRunning]);
+
     return React.createElement(
         'div',
         { className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
@@ -754,7 +776,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 React.createElement(
                     'div', 
                     { className: 'text-6xl font-mono font-bold text-gray-800' },
-                    formatTimeDisplay(accumulatedSecondsRef.current + (isRunning && startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0))
+                    formatTimeDisplay()
                 )
             ),
             React.createElement(
@@ -763,22 +785,13 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 React.createElement(
                     'button',
                     {
-                        onClick: startTimer,
-                        disabled: isRunning,
-                        className: `px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${isRunning ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white'}`
+                        onClick: toggleTimer,
+                        className: `px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${
+                            isRunning ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'
+                        }`
                     },
-                    React.createElement('i', { className: 'fa-solid fa-play mr-1' }),
-                    'Štart'
-                ),
-                React.createElement(
-                    'button',
-                    {
-                        onClick: stopTimer,
-                        disabled: !isRunning,
-                        className: `px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${!isRunning ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700 text-white'}`
-                    },
-                    React.createElement('i', { className: 'fa-solid fa-stop mr-1' }),
-                    'Stop'
+                    React.createElement('i', { className: isRunning ? 'fa-solid fa-stop mr-1' : 'fa-solid fa-play mr-1' }),
+                    isRunning ? 'Stop' : 'Štart'
                 ),
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
                 React.createElement(
