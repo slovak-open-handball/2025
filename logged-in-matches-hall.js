@@ -660,7 +660,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         }, 100);
     };
 
-    // Synchronizácia s databázou - HLAVNÁ ZMENA
+    // Synchronizácia s databázou - OPRAVENÁ pre manuálne zmeny
     useEffect(() => {
         if (!window.db || !matchId) return;
         
@@ -676,8 +676,9 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             
             const now = Date.now();
             
-            // Ignorujeme vlastné aktualizácie (do 500ms)
-            if (lastServerUpdateRef.current && (now - lastServerUpdateRef.current) < 500) {
+            // ZMENA: Ignorujeme vlastné aktualizácie, ale s kratším oneskorením (200ms)
+            // a len ak pochádzajú z tohto zariadenia
+            if (lastServerUpdateRef.current && (now - lastServerUpdateRef.current) < 200) {
                 return;
             }
             
@@ -687,26 +688,23 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 periodRef.current = serverPeriod;
             }
             
-            // SPRACOVANIE ČASU
-            // Ak sa serverový offset zmenil a nie je to naša vlastná aktualizácia
+            // SPRACOVANIE ČASU - DÔLEŽITÉ PRE MANUÁLNE ZMENY
             if (serverOffset !== lastServerOffsetRef.current) {
+                console.log(`Server offset zmenený: ${lastServerOffsetRef.current} -> ${serverOffset}`);
                 lastServerOffsetRef.current = serverOffset;
                 
-                // AK BEŽÍ ČASOVAČ
+                // VŽDY aktualizujeme zobrazenie, či už beží alebo nie
                 if (isRunningRef.current) {
-                    // Kontrola či je rozdiel väčší ako 0.5 sekundy
-                    if (Math.abs(serverOffset - displaySeconds) > 0.5) {
-                        console.log(`Synchronizácia času počas behu: server=${serverOffset}, local=${displaySeconds}`);
-                        
-                        // Aktualizujeme lokálny čas podľa servera
-                        startTimeRef.current = Date.now();
-                        localStartOffsetRef.current = serverOffset;
-                        setDisplaySeconds(serverOffset);
-                        lastSavedSecondsRef.current = serverOffset;
-                    }
+                    // Ak časovač beží, aktualizujeme jeho základ
+                    startTimeRef.current = Date.now();
+                    localStartOffsetRef.current = serverOffset;
+                    setDisplaySeconds(serverOffset);
+                    lastSavedSecondsRef.current = serverOffset;
+                    console.log(`Synchronizácia času počas behu na: ${serverOffset}`);
                 } else {
                     // Časovač nebeží - jednoducho aktualizujeme zobrazenie
                     setDisplaySeconds(serverOffset);
+                    console.log(`Aktualizácia času v stave pause na: ${serverOffset}`);
                 }
             }
             
@@ -803,7 +801,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         }
     };
 
-    // Manuálna zmena času
+    // Manuálna zmena času - KOMPLETNÁ OPRAVA
     const addTime = (deltaSeconds) => {
         let newSeconds = displaySeconds + deltaSeconds;
         const maxSeconds = periodDuration * 60;
@@ -812,16 +810,22 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         if (newSeconds > maxSeconds) newSeconds = maxSeconds;
         
         setDisplaySeconds(newSeconds);
-        lastServerOffsetRef.current = newSeconds;
+        lastServerOffsetRef.current = newSeconds; // DÔLEŽITÉ: Aktualizujeme ref
         
         if (isRunningRef.current) {
+            // Ak časovač beží, resetujeme startTime
             startTimeRef.current = Date.now();
             localStartOffsetRef.current = newSeconds;
             lastSavedSecondsRef.current = newSeconds;
         }
         
+        // Uloženie do databázy
         if (window.db && matchId) {
+            // NASTAVÍME lastServerUpdateRef ALE S KRÁTKYM ONESKORENÍM
+            // Aby sme neignorovali vlastnú zmenu na tomto PC, ale iné PC ju zachytia
             lastServerUpdateRef.current = Date.now();
+            
+            const matchRef = doc(window.db, 'matches', matchId);
             const status = isRunningRef.current ? 'in-progress' : 'paused';
             const updateData = {
                 manualTimeOffset: newSeconds,
@@ -833,7 +837,13 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 updateData.pausedAt = Timestamp.now();
             }
             
-            updateDoc(doc(window.db, 'matches', matchId), updateData)
+            updateDoc(matchRef, updateData)
+                .then(() => {
+                    // Po úspešnom uložení krátko počkáme a potom resetujeme flag
+                    setTimeout(() => {
+                        lastServerUpdateRef.current = 0;
+                    }, 300);
+                })
                 .catch(err => console.error('Chyba pri ukladaní času:', err));
         }
     };
