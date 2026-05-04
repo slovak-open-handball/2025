@@ -1152,7 +1152,9 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
 // Komponent pre detail zápasu (s navigáciou medzi zápasmi a časovačom)
 const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColors, groupsData, allMatches, currentMatchIndex, onNavigate, onMatchUpdate }) => {
     const dateTime = formatMatchDateTime(match.scheduledTime);
-    const isResultAvailable = match.homeScore !== undefined && match.awayScore !== undefined;
+    const [currentHomeScore, setCurrentHomeScore] = React.useState(match.homeScore);
+    const [currentAwayScore, setCurrentAwayScore] = React.useState(match.awayScore);
+    const isResultAvailable = currentHomeScore !== undefined && currentHomeScore !== null && currentAwayScore !== undefined && currentAwayScore !== null;
     const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
     const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
     const categoryColor = getCategoryDrawColor(match.categoryId);
@@ -1209,7 +1211,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
 
     React.useEffect(() => {
         if (!window.db || !match.id) return;
-    
+
         const matchRef = doc(window.db, 'matches', match.id);
         const unsubscribe = onSnapshot(matchRef, (docSnap) => {
             if (docSnap.exists()) {
@@ -1217,6 +1219,11 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                 const newHomeScore = updatedMatch.homeScore;
                 const newAwayScore = updatedMatch.awayScore;
                 const newStatus = updatedMatch.status || 'scheduled';
+            
+                // Aktualizujeme lokálne stavy
+                setCurrentHomeScore(newHomeScore);
+                setCurrentAwayScore(newAwayScore);
+                setCurrentMatchStatus(newStatus);
             
                 // Aktualizujeme stav v nadradenom komponente
                 if (onMatchUpdate) {
@@ -1555,9 +1562,9 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                             React.createElement(
                                 'div',
                                 { className: 'flex items-center justify-center gap-3' },
-                                React.createElement('span', { className: 'text-3xl font-bold text-gray-800' }, match.homeScore),
+                                React.createElement('span', { className: 'text-3xl font-bold text-gray-800' }, currentHomeScore),
                                 React.createElement('span', { className: 'text-xl text-gray-400' }, ':'),
-                                React.createElement('span', { className: 'text-3xl font-bold text-gray-800' }, match.awayScore)
+                                React.createElement('span', { className: 'text-3xl font-bold text-gray-800' }, currentAwayScore)
                             ) :
                             React.createElement(
                                 'div',
@@ -1600,7 +1607,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
         
         // Časovač zápasu - TERAZ S PREDANÝM categorySettings
         !loadingSettings && React.createElement(MatchTimer, {
-            match: { ...match, status: currentMatchStatus }, // Passujeme aktuálny status do časovača
+            match: { ...match, status: currentMatchStatus, homeScore: currentHomeScore, awayScore: currentAwayScore },
             matchId: match.id,
             onTimeUpdate: handleTimeUpdate,
             categorySettings: categorySettings
