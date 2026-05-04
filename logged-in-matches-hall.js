@@ -5524,6 +5524,12 @@ const matchesHallApp = ({ userProfileData }) => {
 
     // Pôvodná funkcia showAllMatches - OPRAVENÁ VERZIA
     const showAllMatches = async () => {
+        setMappedHomeTeamName('');
+        setMappedAwayTeamName('');
+        setIsMappingTeamNames(false);
+        currentSelectedMatchIdRef.current = null;
+        isMappingInProgressRef.current = false;
+        
         // 🔥 KRITICKÉ: Použijeme ref hodnotu namiesto priameho hallId
         const currentHallId = hallIdRef.current;
         
