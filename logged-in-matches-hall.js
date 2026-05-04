@@ -452,7 +452,7 @@ const TeamMembersList = ({ teamName, categoryName }) => {
     );
 };
 
-// Komponent pre športový časovač (JEDNOTLIVÉ TLAČIDLO ŠTART/STOP)
+// Komponent pre športový časovač (JEDNODUCHŠIA A FUNKČNÁ VERZIA - Z PRVÉHO KÓDU)
 const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const [isRunning, setIsRunning] = useState(false);
     const [displayTime, setDisplayTime] = useState({ minutes: 0, seconds: 0 });
@@ -847,40 +847,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                         className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${period >= totalPeriods ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`
                     },
                     React.createElement('i', { className: 'fa-solid fa-plus' })
-                )
-            ),
-            React.createElement(
-                'div',
-                { className: 'flex flex-wrap items-center justify-center gap-2 pt-2 border-t border-gray-100' },
-                React.createElement(
-                    'button',
-                    { onClick: () => console.log('Gól'), className: 'bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
-                    'Gól'
-                ),
-                React.createElement(
-                    'button',
-                    { onClick: () => console.log('7m'), className: 'bg-teal-500 hover:bg-teal-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
-                    '7m'
-                ),
-                React.createElement(
-                    'button',
-                    { onClick: () => console.log('ŽK'), className: 'bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
-                    'ŽK'
-                ),
-                React.createElement(
-                    'button',
-                    { onClick: () => console.log('ČK'), className: 'bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
-                    'ČK'
-                ),
-                React.createElement(
-                    'button',
-                    { onClick: () => console.log('MK'), className: 'bg-blue-400 hover:bg-blue-500 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
-                    'MK'
-                ),
-                React.createElement(
-                    'button',
-                    { onClick: () => console.log('Vylúčenie'), className: 'bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
-                    'Vylúčenie'
                 )
             )
         )
