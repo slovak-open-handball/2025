@@ -678,6 +678,52 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         }
     };
     
+    // Handler pre tlačidlá zápasu
+    const handleEndMatch = () => {
+        console.log('Ukončiť zápas');
+        // Tu bude logika pre ukončenie zápasu
+    };
+    
+    const handleManualResult = () => {
+        console.log('Zadať výsledok manuálne');
+        // Tu bude logika pre manuálne zadanie výsledku
+    };
+    
+    const handleForfeit = () => {
+        console.log('Kontumácia');
+        // Tu bude logika pre kontumáciu
+    };
+    
+    const handleGoal = () => {
+        console.log('Gól');
+        // Tu bude logika pre gól
+    };
+    
+    const handleSevenMeters = () => {
+        console.log('7m');
+        // Tu bude logika pre 7 metrov
+    };
+    
+    const handleYellowCard = () => {
+        console.log('ŽK');
+        // Tu bude logika pre žltú kartu
+    };
+    
+    const handleRedCard = () => {
+        console.log('ČK');
+        // Tu bude logika pre červenú kartu
+    };
+    
+    const handleBlueCard = () => {
+        console.log('MK');
+        // Tu bude logika pre modrú kartu
+    };
+    
+    const handleExclusion = () => {
+        console.log('Vylúčenie');
+        // Tu bude logika pre vylúčenie
+    };
+    
     useEffect(() => {
         return () => {
             if (intervalRef.current) {
@@ -694,7 +740,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         'div',
         { className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
         
-        // Hlavička s názvom - PRIDANÝ POČET PERIÓD
+        // Hlavička s názvom
         React.createElement(
             'div',
             { className: 'bg-gray-50 px-6 py-3 border-b border-gray-200' },
@@ -726,10 +772,10 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 )
             ),
             
-            // Všetky tlačidlá v jednom riadku
+            // PRVÝ RIADOK - ovládanie časovača
             React.createElement(
                 'div',
-                { className: 'flex flex-wrap items-center justify-center gap-2' },
+                { className: 'flex flex-wrap items-center justify-center gap-2 mb-6' },
                 // Štart/Stop
                 React.createElement(
                     'button',
@@ -855,6 +901,90 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     },
                     React.createElement('i', { className: 'fa-solid fa-arrow-rotate-left' }),
                     'Reset'
+                )
+            ),
+            
+            // DRUHÝ RIADOK - tlačidlá pre správu zápasu
+            React.createElement(
+                'div',
+                { className: 'flex flex-wrap items-center justify-center gap-2 mb-6 pt-2 border-t border-gray-100' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: handleEndMatch,
+                        className: 'bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
+                    },
+                    'Ukončiť zápas'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: handleManualResult,
+                        className: 'bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
+                    },
+                    'Zadať výsledok manuálne'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: handleForfeit,
+                        className: 'bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
+                    },
+                    'Kontumácia'
+                )
+            ),
+            
+            // TRETÍ RIADOK - tlačidlá pre udalosti v zápase
+            React.createElement(
+                'div',
+                { className: 'flex flex-wrap items-center justify-center gap-2 pt-2 border-t border-gray-100' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: handleGoal,
+                        className: 'bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
+                    },
+                    'Gól'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: handleSevenMeters,
+                        className: 'bg-teal-500 hover:bg-teal-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
+                    },
+                    '7m'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: handleYellowCard,
+                        className: 'bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
+                    },
+                    'ŽK'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: handleRedCard,
+                        className: 'bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
+                    },
+                    'ČK'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: handleBlueCard,
+                        className: 'bg-blue-400 hover:bg-blue-500 text-white px-5 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
+                    },
+                    'MK'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: handleExclusion,
+                        className: 'bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
+                    },
+                    'Vylúčenie'
                 )
             )
         )
