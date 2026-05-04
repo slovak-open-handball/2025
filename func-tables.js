@@ -1288,9 +1288,55 @@ let isTeamNameReplacerInitialized = false;
                 }
             }
             
+            // ✅ NOVÁ ČASŤ: AK NENAŠLI SME ŽIADNY PRENESENÝ ZÁPAS, SKÚSIME VYHĽADAŤ VZÁJOMNÝ ZÁPAS V ZÁKLADNEJ SKUPINE
+            if (baseMatchResults.size === 0) {
+                log(`   ⚠️ Nenašli sa žiadne priame zápasy medzi klubmi z nadstavby v základných skupinách.`);
+                log(`   🔍 Skúšam vyhľadať vzájomné zápasy v základných skupinách (pomocou findMatchBetweenTeamsInOtherGroup)...`);
+                
+                // Získame všetky dvojice klubov v nadstavbe
+                const clubsList = Array.from(teamStatsMap.keys());
+                
+                for (let i = 0; i < clubsList.length; i++) {
+                    for (let j = i + 1; j < clubsList.length; j++) {
+                        const clubA = clubsList[i];
+                        const clubB = clubsList[j];
+                        const pairKey = clubA < clubB ? `${clubA}|${clubB}` : `${clubB}|${clubA}`;
+                        
+                        if (baseMatchResults.has(pairKey)) continue; // Už máme výsledok
+                        
+                        log(`      🔎 Hľadám zápas medzi: "${clubA}" a "${clubB}" v základných skupinách...`);
+                        
+                        // Použijeme existujúcu funkciu na vyhľadanie zápasu medzi tímami
+                        const foundMatch = findMatchBetweenTeamsInOtherGroup(
+                            clubA, 
+                            clubB, 
+                            categoryName, 
+                            groupName,  // currentGroupName - nadstavbová skupina
+                            null        // excludeGroupName - nevynechávame žiadnu skupinu
+                        );
+                        
+                        if (foundMatch && foundMatch.isTransferred) {
+                            log(`         ✅ Nájdený prenesený zápas: ${foundMatch.homeTeam} ${foundMatch.homeScore}:${foundMatch.awayScore} ${foundMatch.awayTeam} (z ${foundMatch.fromGroup})`);
+                            
+                            baseMatchResults.set(pairKey, {
+                                homeTeam: foundMatch.homeTeam,
+                                awayTeam: foundMatch.awayTeam,
+                                homeScore: foundMatch.homeScore,
+                                awayScore: foundMatch.awayScore,
+                                fromGroup: foundMatch.fromGroup
+                            });
+                        } else if (foundMatch && !foundMatch.isTransferred) {
+                            log(`         ⏳ Zápas nájdený, ale nie je dokončený (stav: ${foundMatch.status || 'neznámy'})`);
+                        } else {
+                            log(`         ❌ Žiadny dokončený zápas medzi "${clubA}" a "${clubB}" nebol nájdený.`);
+                        }
+                    }
+                }
+            }
+            
             log(`   📊 Celkovo unikátnych prenesených výsledkov: ${baseMatchResults.size}`);
             
-            // Spracovanie prenesených výsledkov do štatistík
+            // Spracovanie prenesených výsledkov do štatistík (rovnaké ako pôvodne)
             for (const [key, baseResult] of baseMatchResults.entries()) {
                 const { homeTeam: homeClubName, awayTeam: awayClubName, homeScore, awayScore, fromGroup } = baseResult;
                 
