@@ -690,176 +690,161 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         return `${time.minutes.toString().padStart(2, '0')}:${time.seconds.toString().padStart(2, '0')}`;
     };
     
-    const getProgressPercentage = () => {
-        const currentTotalSeconds = time.minutes * 60 + time.seconds;
-        const periodTotalSeconds = periodDuration * 60;
-        if (periodTotalSeconds === 0) return 0;
-        const percentage = (currentTotalSeconds / periodTotalSeconds) * 100;
-        return Math.min(percentage, 100);
-    };
-    
     return React.createElement(
         'div',
-        { className: 'bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-4 text-white shadow-xl' },
-        // Zobrazenie času a progress baru
+        { className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
+        
+        // Hlavička s názvom
         React.createElement(
             'div',
-            { className: 'text-center mb-3' },
+            { className: 'bg-gray-50 px-6 py-3 border-b border-gray-200' },
             React.createElement(
-                'div',
-                { className: 'text-5xl font-mono font-bold tracking-wider' },
-                formatTime()
+                'h3',
+                { className: 'font-semibold text-gray-800' },
+                'Športový časovač'
             ),
             React.createElement(
+                'p',
+                { className: 'text-xs text-gray-500 mt-0.5' },
+                `Trvanie periódy: ${periodDuration} min`
+            )
+        ),
+        
+        // Telo s časom a ovládaním
+        React.createElement(
+            'div',
+            { className: 'p-6' },
+            
+            // Zobrazenie času
+            React.createElement(
                 'div',
-                { className: 'mt-2' },
+                { className: 'text-center mb-6' },
                 React.createElement(
                     'div',
-                    { className: 'w-full bg-gray-700 rounded-full h-1.5' },
-                    React.createElement('div', {
-                        className: 'bg-green-500 h-1.5 rounded-full transition-all duration-300',
-                        style: { width: `${getProgressPercentage()}%` }
-                    })
+                    { className: 'text-6xl font-mono font-bold text-gray-800' },
+                    formatTime()
                 ),
                 React.createElement(
                     'div',
-                    { className: 'flex justify-between text-xs text-gray-400 mt-0.5' },
-                    React.createElement('span', {}, '00:00'),
-                    React.createElement('span', {}, `${Math.floor(periodDuration / 60)}:${(periodDuration % 60).toString().padStart(2, '0')}`)
+                    { className: 'text-sm text-gray-500 mt-1' },
+                    `Perióda ${period} / ${totalPeriods}`
+                )
+            ),
+            
+            // Všetky tlačidlá v jednom riadku
+            React.createElement(
+                'div',
+                { className: 'flex flex-wrap items-center justify-center gap-2' },
+                // Štart/Stop
+                React.createElement(
+                    'button',
+                    {
+                        onClick: handleStartStop,
+                        className: `px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${
+                            isRunning ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'
+                        }`
+                    },
+                    React.createElement('i', { className: isRunning ? 'fa-solid fa-stop mr-1' : 'fa-solid fa-play mr-1' }),
+                    isRunning ? 'Stop' : 'Štart'
+                ),
+                
+                // Minus minúta
+                React.createElement(
+                    'button',
+                    {
+                        onClick: subtractMinute,
+                        className: 'bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-minus' })
+                ),
+                
+                // Text minúta
+                React.createElement(
+                    'span',
+                    { className: 'text-sm text-gray-600 px-1 font-medium' },
+                    'Min'
+                ),
+                
+                // Plus minúta
+                React.createElement(
+                    'button',
+                    {
+                        onClick: addMinute,
+                        className: 'bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-plus' })
+                ),
+                
+                // Oddeľovač
+                React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
+                
+                // Minus sekunda
+                React.createElement(
+                    'button',
+                    {
+                        onClick: subtractSecond,
+                        className: 'bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-minus' })
+                ),
+                
+                // Text sekunda
+                React.createElement(
+                    'span',
+                    { className: 'text-sm text-gray-600 px-1 font-medium' },
+                    'Sec'
+                ),
+                
+                // Plus sekunda
+                React.createElement(
+                    'button',
+                    {
+                        onClick: addSecond,
+                        className: 'bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-plus' })
+                ),
+                
+                // Oddeľovač
+                React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
+                
+                // Minus perióda
+                React.createElement(
+                    'button',
+                    {
+                        onClick: prevPeriod,
+                        disabled: period <= 1,
+                        className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${
+                            period <= 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                        }`
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-chevron-left' })
+                ),
+                
+                // Reset času
+                React.createElement(
+                    'button',
+                    {
+                        onClick: resetTime,
+                        className: 'bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm flex items-center gap-1'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-arrow-rotate-left' }),
+                    'Reset'
+                ),
+                
+                // Plus perióda
+                React.createElement(
+                    'button',
+                    {
+                        onClick: nextPeriod,
+                        disabled: period >= totalPeriods,
+                        className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${
+                            period >= totalPeriods ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                        }`
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-chevron-right' })
                 )
             )
-        ),
-        
-        // Všetky tlačidlá v jednom riadku - použité flex-wrap pre responzivitu
-        React.createElement(
-            'div',
-            { className: 'flex flex-wrap items-center justify-center gap-1 mb-2' },
-            // Štart/Stop
-            React.createElement(
-                'button',
-                {
-                    onClick: handleStartStop,
-                    className: `px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${
-                        isRunning ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
-                    }`
-                },
-                React.createElement('i', { className: isRunning ? 'fa-solid fa-stop' : 'fa-solid fa-play' })
-            ),
-            
-            // Minus minúta
-            React.createElement(
-                'button',
-                {
-                    onClick: subtractMinute,
-                    className: 'bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
-                },
-                React.createElement('i', { className: 'fa-solid fa-minus' })
-            ),
-            
-            // Text minúta
-            React.createElement(
-                'span',
-                { className: 'text-xs text-gray-300 px-1' },
-                'Min'
-            ),
-            
-            // Plus minúta
-            React.createElement(
-                'button',
-                {
-                    onClick: addMinute,
-                    className: 'bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
-                },
-                React.createElement('i', { className: 'fa-solid fa-plus' })
-            ),
-            
-            // Oddelovač
-            React.createElement('span', { className: 'text-gray-600 mx-0.5' }),
-            
-            // Minus sekunda
-            React.createElement(
-                'button',
-                {
-                    onClick: subtractSecond,
-                    className: 'bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
-                },
-                React.createElement('i', { className: 'fa-solid fa-minus' })
-            ),
-            
-            // Text sekunda
-            React.createElement(
-                'span',
-                { className: 'text-xs text-gray-300 px-1' },
-                'Sec'
-            ),
-            
-            // Plus sekunda
-            React.createElement(
-                'button',
-                {
-                    onClick: addSecond,
-                    className: 'bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
-                },
-                React.createElement('i', { className: 'fa-solid fa-plus' })
-            ),
-            
-            // Oddelovač
-            React.createElement('span', { className: 'text-gray-600 mx-0.5' }),
-            
-            // Minus perióda
-            React.createElement(
-                'button',
-                {
-                    onClick: prevPeriod,
-                    disabled: period <= 1,
-                    className: `px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${
-                        period <= 1 ? 'bg-gray-600 cursor-not-allowed' : 'bg-gray-700 hover:bg-gray-600'
-                    }`
-                },
-                React.createElement('i', { className: 'fa-solid fa-chevron-left' })
-            ),
-            
-            // Text perióda
-            React.createElement(
-                'span',
-                { className: 'text-xs text-gray-300 px-1' },
-                `${period}/${totalPeriods}`
-            ),
-            
-            // Plus perióda
-            React.createElement(
-                'button',
-                {
-                    onClick: nextPeriod,
-                    disabled: period >= totalPeriods,
-                    className: `px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${
-                        period >= totalPeriods ? 'bg-gray-600 cursor-not-allowed' : 'bg-gray-700 hover:bg-gray-600'
-                    }`
-                },
-                React.createElement('i', { className: 'fa-solid fa-chevron-right' })
-            ),
-            
-            // Oddelovač
-            React.createElement('span', { className: 'text-gray-600 mx-0.5' }),
-            
-            // Reset času
-            React.createElement(
-                'button',
-                {
-                    onClick: resetTime,
-                    className: 'bg-yellow-500 hover:bg-yellow-600 px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer text-sm flex items-center gap-1'
-                },
-                React.createElement('i', { className: 'fa-solid fa-arrow-rotate-left' }),
-                React.createElement('span', { className: 'hidden sm:inline' }, 'Reset')
-            )
-        ),
-        
-        // Informácia o trvaní periódy
-        React.createElement(
-            'div',
-            { className: 'text-center text-xs text-gray-400 mt-1' },
-            React.createElement('i', { className: 'fa-regular fa-clock mr-1' }),
-            `Trvanie periódy: ${periodDuration} min`
         )
     );
 };
