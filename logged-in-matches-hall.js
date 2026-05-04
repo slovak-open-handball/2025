@@ -25,57 +25,17 @@ const formatDateHeader = (date) => {
     return `${dayName} ${day}. ${month}. ${year}`;
 };
 
-// Funkcia na získanie zobrazeného názvu tímu - IBA cez teamManager
+// Funkcia na získanie zobrazeného názvu tímu - priamo cez teamManager BEZ prestavby
 const getDisplayTeamName = (teamIdentifier) => {
     if (!teamIdentifier) return '???';
     
-    // Kontrola formátu: "kategoria pismeno cislo" (s medzerou)
-    const spacePattern = /^(\w+)\s+([A-Za-z])\s+(\d+)$/;
-    const spaceMatch = teamIdentifier.match(spacePattern);
-    
-    if (spaceMatch) {
-        const category = spaceMatch[1];
-        const letter = spaceMatch[2];
-        const number = spaceMatch[3];
-        const displayId = `${category} ${number} ${letter}`;
-        
-        // Použiť LEN teamManager
-        if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-            const teamName = window.teamManager.getTeamNameByDisplayIdSync(displayId);
-            if (teamName && teamName !== displayId) return teamName;
-        }
-        
-        // Ak teamManager vráti rovnakú hodnotu alebo neexistuje, vrátiť pôvodný identifikátor v upravenom formáte
-        return `${category} ${number} ${letter}`;
-    }
-    
-    // Kontrola formátu: "kategoria cislo pismeno" (s medzerou)
-    const numberLetterPattern = /^(\w+)\s+(\d+)\s+([A-Za-z])$/;
-    const numberLetterMatch = teamIdentifier.match(numberLetterPattern);
-    
-    if (numberLetterMatch) {
-        const category = numberLetterMatch[1];
-        const number = numberLetterMatch[2];
-        const letter = numberLetterMatch[3];
-        const displayId = `${category} ${number} ${letter}`;
-        
-        // Použiť LEN teamManager
-        if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
-            const teamName = window.teamManager.getTeamNameByDisplayIdSync(displayId);
-            if (teamName && teamName !== displayId) return teamName;
-        }
-        
-        // Ak teamManager vráti rovnakú hodnotu alebo neexistuje, vrátiť pôvodný identifikátor
-        return teamIdentifier;
-    }
-    
-    // Ak formát nesedí, skúsiť poslať priamo do teamManager
+    // Priamo poslať do teamManager bez akejkoľvek prestavby formátu
     if (window.teamManager && typeof window.teamManager.getTeamNameByDisplayIdSync === 'function') {
         const teamName = window.teamManager.getTeamNameByDisplayIdSync(teamIdentifier);
         if (teamName && teamName !== teamIdentifier) return teamName;
     }
     
-    // Ak formát nesedí, vrátiť pôvodný identifikátor
+    // Ak teamManager neexistuje alebo vráti rovnakú hodnotu, vrátiť pôvodný identifikátor
     return teamIdentifier;
 };
 
@@ -325,7 +285,7 @@ const MatchesHallApp = () => {
                                     const dateTime = formatMatchDateTime(match.scheduledTime);
                                     const isResultAvailable = match.homeScore !== undefined && match.awayScore !== undefined;
                                     
-                                    // Získanie zobrazených názvov tímov - vždy cez teamManager
+                                    // Získanie zobrazených názvov tímov - priamo cez teamManager
                                     const homeTeamDisplay = teamNames[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
                                     const awayTeamDisplay = teamNames[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
                                     
