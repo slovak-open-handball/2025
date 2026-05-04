@@ -657,7 +657,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         return () => stopLocalInterval();
     }, [match?.id]);
 
-    // Pomocné funkcie pre tlačidlá (can*, addMinute, atď.)
+    // Pomocné funkcie pre tlačidlá
     const canSubtractMinute = () => displaySeconds >= 60;
     const canAddMinute = () => displaySeconds + 60 <= periodDuration * 60;
     const canSubtractSecond = () => displaySeconds >= 1;
