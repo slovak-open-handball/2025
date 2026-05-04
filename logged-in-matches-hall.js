@@ -465,8 +465,8 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const localStartOffsetRef = useRef(0);
     const periodDurationRef = useRef(periodDuration);
     const periodRef = useRef(period);
-    const isLocalControlRef = useRef(false); // Označuje, či je časovač ovládaný lokálne
-    const lastServerUpdateRef = useRef(0); // Prevencia proti nekonečným cyklom
+    const isLocalControlRef = useRef(false);
+    const lastServerUpdateRef = useRef(0);
 
     // Synchronizácia refov so state
     useEffect(() => {
@@ -486,6 +486,29 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         const mins = Math.floor(Math.max(0, totalSeconds) / 60);
         const secs = Math.max(0, totalSeconds) % 60;
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    // Pomocné funkcie pre kontrolu tlačidiel
+    const canSubtractMinute = () => {
+        return displaySeconds >= 60;
+    };
+
+    const canAddMinute = () => {
+        const maxSeconds = periodDuration * 60;
+        return displaySeconds + 60 <= maxSeconds;
+    };
+
+    const canSubtractSecond = () => {
+        return displaySeconds >= 1;
+    };
+
+    const canAddSecond = () => {
+        const maxSeconds = periodDuration * 60;
+        return displaySeconds + 1 <= maxSeconds;
+    };
+
+    const canReset = () => {
+        return displaySeconds > 0;
     };
 
     // Zastavenie časovača a uloženie (bez ukladania do DB - len lokálne zastavenie)
@@ -620,7 +643,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         // Nastavíme stav
         isRunningRef.current = true;
         setIsRunning(true);
-        isLocalControlRef.current = false; // Toto je zo servera, nie lokálne
+        isLocalControlRef.current = false;
         
         // Nastavíme periódu
         if (startPeriod !== undefined && startPeriod !== period) {
@@ -633,7 +656,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         }, 100);
     };
 
-    // Synchronizácia s databázou (onSnapshot) - UPRAVENÁ VERZIA
+    // Synchronizácia s databázou (onSnapshot)
     useEffect(() => {
         if (!window.db || !matchId) return;
         
@@ -661,13 +684,10 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             }
             
             // SPRACOVANIE ČASU - dôležité pre manuálne zmeny
-            // Vždy aktualizujeme čas, ak sa zmenil v DB a nie sme v lokálnej zmene
             if (serverOffset !== displaySeconds) {
-                // Kontrola, či nie sme uprostred lokálnej zmeny
                 if (!isLocalControlRef.current || Math.abs(now - lastServerUpdateRef.current) > 500) {
                     setDisplaySeconds(serverOffset);
                     
-                    // Ak časovač beží, aktualizujeme aj referencie
                     if (isRunningRef.current) {
                         startTimeRef.current = Date.now();
                         localStartOffsetRef.current = serverOffset;
@@ -678,12 +698,9 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             // SPRACOVANIE STAVU BEHU
             if (serverStatus === 'in-progress') {
                 if (!isRunningRef.current) {
-                    // Lokálne nebeží - spustíme podľa servera
                     console.log('Spúšťam časovač podľa servera (iné zariadenie)');
                     startTimerFromServer(serverOffset, serverPeriod, serverStartedAt);
                 } else if (isRunningRef.current && !isLocalControlRef.current) {
-                    // Beží podľa servera, ale môže potrebovať aktualizáciu offsetu
-                    // Toto je prípad, keď iné zariadenie manuálne zmenilo čas
                     if (serverOffset !== localStartOffsetRef.current) {
                         console.log('Aktualizujem offset z DB počas behu');
                         startTimeRef.current = Date.now();
@@ -743,7 +760,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 updatedAt: Timestamp.now()
             };
             
-            // Ak nemá startedAt, nastavíme ho
             if (!match?.startedAt) {
                 updateData.startedAt = Timestamp.now();
             }
@@ -759,7 +775,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             }
         } catch (error) {
             console.error('Chyba pri spúšťaní časovača:', error);
-            // Vrátime stav
             stopTimerLocally();
         }
     };
@@ -773,7 +788,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         }
     };
 
-    // Manuálna zmena času - vylepšená verzia
+    // Manuálna zmena času - vylepšená verzia s kontrolami
     const addTime = (deltaSeconds) => {
         let newSeconds = displaySeconds + deltaSeconds;
         const maxSeconds = periodDuration * 60;
@@ -783,14 +798,11 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         
         setDisplaySeconds(newSeconds);
         
-        // Ak časovač beží, musíme aktualizovať aj referenciu
         if (isRunningRef.current) {
-            // Resetneme startTime s novým offsetom
             startTimeRef.current = Date.now();
             localStartOffsetRef.current = newSeconds;
         }
         
-        // Uložíme do databázy - vždy, bez ohľadu na stav
         if (window.db && matchId) {
             lastServerUpdateRef.current = Date.now();
             const status = isRunningRef.current ? 'in-progress' : 'paused';
@@ -804,7 +816,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 updateData.pausedAt = Timestamp.now();
             }
             
-            // Ak časovač beží, musíme zachovať startedAt
             if (isRunningRef.current && match?.startedAt) {
                 updateData.startedAt = match.startedAt;
             }
@@ -814,12 +825,34 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         }
     };
 
-    const addMinute = () => addTime(60);
-    const subtractMinute = () => addTime(-60);
-    const addSecond = () => addTime(1);
-    const subtractSecond = () => addTime(-1);
+    const addMinute = () => {
+        if (canAddMinute()) {
+            addTime(60);
+        }
+    };
+    
+    const subtractMinute = () => {
+        if (canSubtractMinute()) {
+            addTime(-60);
+        }
+    };
+    
+    const addSecond = () => {
+        if (canAddSecond()) {
+            addTime(1);
+        }
+    };
+    
+    const subtractSecond = () => {
+        if (canSubtractSecond()) {
+            addTime(-1);
+        }
+    };
+    
     const resetTime = () => {
-        addTime(-displaySeconds);
+        if (canReset()) {
+            addTime(-displaySeconds);
+        }
     };
 
     // Zmena periódy
@@ -827,7 +860,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         if (period < totalPeriods) {
             const newPeriod = period + 1;
             
-            // Zastavíme časovač ak beží
             if (isRunningRef.current) {
                 stopTimerLocally();
             }
@@ -836,7 +868,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             setDisplaySeconds(0);
             isLocalControlRef.current = false;
             
-            // Uložíme do databázy
             if (window.db && matchId) {
                 try {
                     lastServerUpdateRef.current = Date.now();
@@ -891,32 +922,26 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     useEffect(() => {
         if (!match) return;
         
-        // Nastavenia z kategórie
         if (categorySettings) {
             if (categorySettings.periods !== undefined) setTotalPeriods(categorySettings.periods);
             if (categorySettings.periodDuration !== undefined) setPeriodDuration(categorySettings.periodDuration);
         }
         
-        // Perióda
         const initialPeriod = match.currentPeriod || 1;
         setPeriod(initialPeriod);
         periodRef.current = initialPeriod;
         
-        // Čas - použijeme priamo z matcha
         const initialTime = match.manualTimeOffset || 0;
         const maxSeconds = (categorySettings?.periodDuration || 20) * 60;
         const clampedTime = Math.min(initialTime, maxSeconds);
         setDisplaySeconds(clampedTime);
         
-        // Stav behu - kontrolujeme podľa match.status
         const shouldBeRunning = match.status === 'in-progress';
         
         if (shouldBeRunning) {
-            // Časovač by mal bežať podľa databázy
             console.log('Inicializácia: časovač má bežať podľa match.status');
             startTimerFromServer(clampedTime, initialPeriod, match.startedAt);
         } else {
-            // Časovač je zastavený
             isRunningRef.current = false;
             setIsRunning(false);
             isLocalControlRef.current = false;
@@ -927,7 +952,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
             startTimeRef.current = null;
         }
         
-        // Cleanup
         return () => {
             if (intervalRef.current) {
                 clearInterval(intervalRef.current);
@@ -979,25 +1003,57 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
                 React.createElement(
                     'button',
-                    { onClick: subtractMinute, className: 'bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
+                    { 
+                        onClick: subtractMinute, 
+                        disabled: !canSubtractMinute(),
+                        className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${
+                            canSubtractMinute() 
+                                ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' 
+                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        }`
+                    },
                     React.createElement('i', { className: 'fa-solid fa-minus' })
                 ),
                 React.createElement('span', { className: 'text-sm text-gray-600 px-1 font-medium' }, 'Min'),
                 React.createElement(
                     'button',
-                    { onClick: addMinute, className: 'bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
+                    { 
+                        onClick: addMinute, 
+                        disabled: !canAddMinute(),
+                        className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${
+                            canAddMinute() 
+                                ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' 
+                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        }`
+                    },
                     React.createElement('i', { className: 'fa-solid fa-plus' })
                 ),
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
                 React.createElement(
                     'button',
-                    { onClick: subtractSecond, className: 'bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
+                    { 
+                        onClick: subtractSecond, 
+                        disabled: !canSubtractSecond(),
+                        className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${
+                            canSubtractSecond() 
+                                ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' 
+                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        }`
+                    },
                     React.createElement('i', { className: 'fa-solid fa-minus' })
                 ),
                 React.createElement('span', { className: 'text-sm text-gray-600 px-1 font-medium' }, 'Sec'),
                 React.createElement(
                     'button',
-                    { onClick: addSecond, className: 'bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm' },
+                    { 
+                        onClick: addSecond, 
+                        disabled: !canAddSecond(),
+                        className: `px-3 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${
+                            canAddSecond() 
+                                ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' 
+                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        }`
+                    },
                     React.createElement('i', { className: 'fa-solid fa-plus' })
                 ),
                 React.createElement('span', { className: 'text-gray-300 mx-1' }, '|'),
@@ -1025,7 +1081,12 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                     'button',
                     {
                         onClick: resetTime,
-                        className: 'bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm'
+                        disabled: !canReset(),
+                        className: `px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer text-sm ${
+                            canReset() 
+                                ? 'bg-yellow-500 hover:bg-yellow-600 text-white' 
+                                : 'bg-gray-300 text-gray-400 cursor-not-allowed'
+                        }`
                     },
                     React.createElement('i', { className: 'fa-solid fa-arrow-rotate-left mr-1' }),
                     'Reset'
