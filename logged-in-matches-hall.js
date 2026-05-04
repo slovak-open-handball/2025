@@ -694,22 +694,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
         'div',
         { className: 'bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden' },
         
-        // Hlavička s názvom
-        React.createElement(
-            'div',
-            { className: 'bg-gray-50 px-6 py-3 border-b border-gray-200' },
-            React.createElement(
-                'h3',
-                { className: 'font-semibold text-gray-800' },
-                'Športový časovač'
-            ),
-            React.createElement(
-                'p',
-                { className: 'text-xs text-gray-500 mt-0.5' },
-                `Trvanie periódy: ${periodDuration} min`
-            )
-        ),
-        
         // Telo s časom a ovládaním
         React.createElement(
             'div',
