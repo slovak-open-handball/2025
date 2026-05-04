@@ -782,7 +782,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                 React.createElement(
                     'div', 
                     { className: 'text-6xl font-mono font-bold text-gray-800' },
-                    formatTimeDisplay()
+                    formatTime(displaySeconds)
                 ),
                 React.createElement(
                     'div',
