@@ -295,7 +295,7 @@ const TeamMembersList = ({ teamName, categoryName, teamSide }) => {
     if (loading) {
         return React.createElement(
             'div',
-            { className: `${boxColors.bg} rounded-lg border ${boxColors.border} p-4 h-full` },
+            { className: boxColors.bg + ' rounded-lg border ' + boxColors.border + ' p-4 h-full' },
             React.createElement(
                 'div',
                 { className: 'text-center py-4' },
@@ -308,7 +308,7 @@ const TeamMembersList = ({ teamName, categoryName, teamSide }) => {
     if (error) {
         return React.createElement(
             'div',
-            { className: `${boxColors.bg} rounded-lg border ${boxColors.border} p-4 h-full` },
+            { className: boxColors.bg + ' rounded-lg border ' + boxColors.border + ' p-4 h-full' },
             React.createElement(
                 'div',
                 { className: 'text-center py-4 text-red-500 text-sm' },
@@ -326,19 +326,19 @@ const TeamMembersList = ({ teamName, categoryName, teamSide }) => {
     
     return React.createElement(
         'div',
-        { className={`${boxColors.bg} rounded-lg border ${boxColors.border} overflow-hidden h-full`},
+        { className: boxColors.bg + ' rounded-lg border ' + boxColors.border + ' overflow-hidden h-full' },
         React.createElement(
             'div',
-            { className={`${boxColors.headerBg} px-4 py-2 border-b ${boxColors.border}`},
+            { className: boxColors.headerBg + ' px-4 py-2 border-b ' + boxColors.border },
             React.createElement(
                 'h3',
-                { className: `font-semibold ${boxColors.headerText}` },
+                { className: 'font-semibold ' + boxColors.headerText },
                 teamName
             ),
             React.createElement(
                 'p',
                 { className: 'text-xs text-gray-500 mt-0.5' },
-                `Spolu: ${members.length} členov`
+                'Spolu: ' + members.length + ' členov'
             )
         ),
         React.createElement(
@@ -350,20 +350,20 @@ const TeamMembersList = ({ teamName, categoryName, teamSide }) => {
                 React.createElement(
                     'div',
                     { className: 'text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1' },
-                    `Hráči (${players.length})`
+                    'Hráči (' + players.length + ')'
                 ),
                 React.createElement(
                     'div',
                     { className: 'space-y-1' },
                     players.map((member, idx) => {
-                        const fullName = `${member.firstName} ${member.lastName}`.trim() || 'Neznámy';
-                        const jerseyDisplay = member.jerseyNumber ? ` (#${member.jerseyNumber})` : '';
-                        const regDisplay = member.registrationNumber ? ` (reg: ${member.registrationNumber})` : '';
+                        const fullName = (member.firstName + ' ' + member.lastName).trim() || 'Neznámy';
+                        const jerseyDisplay = member.jerseyNumber ? ' (#' + member.jerseyNumber + ')' : '';
+                        const regDisplay = member.registrationNumber ? ' (reg: ' + member.registrationNumber + ')' : '';
                         
                         return React.createElement(
                             'div',
-                            { key: `player-${idx}`, className: 'text-sm text-gray-700' },
-                            `${fullName}${jerseyDisplay}${regDisplay}`
+                            { key: 'player-' + idx, className: 'text-sm text-gray-700' },
+                            fullName + jerseyDisplay + regDisplay
                         );
                     })
                 )
@@ -374,19 +374,19 @@ const TeamMembersList = ({ teamName, categoryName, teamSide }) => {
                 React.createElement(
                     'div',
                     { className: 'text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1' },
-                    `Realizačný tím - muži (${staffMen.length})`
+                    'Realizačný tím - muži (' + staffMen.length + ')'
                 ),
                 React.createElement(
                     'div',
                     { className: 'space-y-1' },
                     staffMen.map((member, idx) => {
-                        const fullName = `${member.firstName} ${member.lastName}`.trim() || 'Neznámy';
-                        const regDisplay = member.registrationNumber ? ` (reg: ${member.registrationNumber})` : '';
+                        const fullName = (member.firstName + ' ' + member.lastName).trim() || 'Neznámy';
+                        const regDisplay = member.registrationNumber ? ' (reg: ' + member.registrationNumber + ')' : '';
                         
                         return React.createElement(
                             'div',
-                            { key: `staff-m-${idx}`, className: 'text-sm text-gray-700' },
-                            `${fullName}${regDisplay}`
+                            { key: 'staff-m-' + idx, className: 'text-sm text-gray-700' },
+                            fullName + regDisplay
                         );
                     })
                 )
@@ -397,19 +397,19 @@ const TeamMembersList = ({ teamName, categoryName, teamSide }) => {
                 React.createElement(
                     'div',
                     { className: 'text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1' },
-                    `Realizačný tím - ženy (${staffWomen.length})`
+                    'Realizačný tím - ženy (' + staffWomen.length + ')'
                 ),
                 React.createElement(
                     'div',
                     { className: 'space-y-1' },
                     staffWomen.map((member, idx) => {
-                        const fullName = `${member.firstName} ${member.lastName}`.trim() || 'Neznámy';
-                        const regDisplay = member.registrationNumber ? ` (reg: ${member.registrationNumber})` : '';
+                        const fullName = (member.firstName + ' ' + member.lastName).trim() || 'Neznámy';
+                        const regDisplay = member.registrationNumber ? ' (reg: ' + member.registrationNumber + ')' : '';
                         
                         return React.createElement(
                             'div',
-                            { key: `staff-w-${idx}`, className: 'text-sm text-gray-700' },
-                            `${fullName}${regDisplay}`
+                            { key: 'staff-w-' + idx, className: 'text-sm text-gray-700' },
+                            fullName + regDisplay
                         );
                     })
                 )
@@ -420,19 +420,19 @@ const TeamMembersList = ({ teamName, categoryName, teamSide }) => {
                 React.createElement(
                     'div',
                     { className: 'text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1' },
-                    `Šoféri - muži (${driversMale.length})`
+                    'Šoféri - muži (' + driversMale.length + ')'
                 ),
                 React.createElement(
                     'div',
                     { className: 'space-y-1' },
                     driversMale.map((driver, idx) => {
-                        const fullName = `${driver.firstName} ${driver.lastName}`.trim() || 'Neznámy';
-                        const regDisplay = driver.registrationNumber ? ` (reg: ${driver.registrationNumber})` : '';
+                        const fullName = (driver.firstName + ' ' + driver.lastName).trim() || 'Neznámy';
+                        const regDisplay = driver.registrationNumber ? ' (reg: ' + driver.registrationNumber + ')' : '';
                         
                         return React.createElement(
                             'div',
-                            { key: `driver-m-${idx}`, className: 'text-sm text-gray-700' },
-                            `${fullName}${regDisplay}`
+                            { key: 'driver-m-' + idx, className: 'text-sm text-gray-700' },
+                            fullName + regDisplay
                         );
                     })
                 )
@@ -443,19 +443,19 @@ const TeamMembersList = ({ teamName, categoryName, teamSide }) => {
                 React.createElement(
                     'div',
                     { className: 'text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1' },
-                    `Šoféri - ženy (${driversFemale.length})`
+                    'Šoféri - ženy (' + driversFemale.length + ')'
                 ),
                 React.createElement(
                     'div',
                     { className: 'space-y-1' },
                     driversFemale.map((driver, idx) => {
-                        const fullName = `${driver.firstName} ${driver.lastName}`.trim() || 'Neznámy';
-                        const regDisplay = driver.registrationNumber ? ` (reg: ${driver.registrationNumber})` : '';
+                        const fullName = (driver.firstName + ' ' + driver.lastName).trim() || 'Neznámy';
+                        const regDisplay = driver.registrationNumber ? ' (reg: ' + driver.registrationNumber + ')' : '';
                         
                         return React.createElement(
                             'div',
-                            { key: `driver-f-${idx}`, className: 'text-sm text-gray-700' },
-                            `${fullName}${regDisplay}`
+                            { key: 'driver-f-' + idx, className: 'text-sm text-gray-700' },
+                            fullName + regDisplay
                         );
                     })
                 )
@@ -584,7 +584,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                     fontWeight: '500'
                                 }
                             },
-                            `o ${match.placementRank}. miesto`
+                            'o ' + match.placementRank + '. miesto'
                         ),
                         match.groupName && !match.isPlacementMatch && React.createElement(
                             'span',
@@ -674,7 +674,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                         'div',
                         null,
                         React.createElement('span', { className: 'text-gray-500' }, 'O umiestnenie: '),
-                        React.createElement('span', { className: 'text-gray-800' }, `${match.placementRank}. miesto`)
+                        React.createElement('span', { className: 'text-gray-800' }, match.placementRank + '. miesto')
                     )
                 )
             )
