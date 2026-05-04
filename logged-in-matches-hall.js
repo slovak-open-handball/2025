@@ -1231,35 +1231,76 @@ const matchesHallApp = ({ userProfileData }) => {
     const [mappedAwayTeamName, setMappedAwayTeamName] = useState('');
     const [isMappingTeamNames, setIsMappingTeamNames] = useState(true);
 
+    const currentSelectedMatchIdRef = React.useRef(null);
+    const isMappingInProgressRef = React.useRef(false);
+
     useEffect(() => {
+        // Ak nie je vybraný zápas, resetujeme stavy
         if (!selectedMatch) {
             setMappedHomeTeamName('');
             setMappedAwayTeamName('');
             setIsMappingTeamNames(false);
+            currentSelectedMatchIdRef.current = null;
+            isMappingInProgressRef.current = false;
             return;
         }
-    
+        
+        // Ak už mapujeme rovnaký zápas, preskočíme
+        if (currentSelectedMatchIdRef.current === selectedMatch.id && !isMappingInProgressRef.current) {
+            // Už máme zmapované názvy pre tento zápas
+            return;
+        }
+        
+        // Ak už prebieha mapovanie pre iný zápas, zrušíme ho (nastavíme flag)
+        if (isMappingInProgressRef.current) {
+            console.log('⏳ Mapovanie už prebieha, preskakujem...');
+            return;
+        }
+        
+        // Označíme, že začíname mapovať
+        isMappingInProgressRef.current = true;
+        currentSelectedMatchIdRef.current = selectedMatch.id;
         setIsMappingTeamNames(true);
+        
+        let isCancelled = false;
         
         const mapTeamNames = async () => {
             try {
+                console.log(`🔄 Mapujem názvy tímov pre zápas: ${selectedMatch.id}`);
+                
                 const [homeName, awayName] = await Promise.all([
                     getTeamNameFromTracker(selectedMatch.homeTeamIdentifier),
                     getTeamNameFromTracker(selectedMatch.awayTeamIdentifier)
                 ]);
-                setMappedHomeTeamName(homeName);
-                setMappedAwayTeamName(awayName);
+                
+                // Ak bola operácia zrušená (klikli sme na iný zápas), neaktualizujeme stav
+                if (!isCancelled && currentSelectedMatchIdRef.current === selectedMatch.id) {
+                    setMappedHomeTeamName(homeName);
+                    setMappedAwayTeamName(awayName);
+                    console.log(`✅ Mapovanie dokončené: ${homeName} vs ${awayName}`);
+                }
             } catch (error) {
                 console.error('Chyba pri mapovaní názvov tímov:', error);
-                setMappedHomeTeamName(selectedMatch.homeTeamIdentifier);
-                setMappedAwayTeamName(selectedMatch.awayTeamIdentifier);
+                if (!isCancelled && currentSelectedMatchIdRef.current === selectedMatch.id) {
+                    setMappedHomeTeamName(selectedMatch.homeTeamIdentifier);
+                    setMappedAwayTeamName(selectedMatch.awayTeamIdentifier);
+                }
             } finally {
-                setIsMappingTeamNames(false);
+                if (!isCancelled && currentSelectedMatchIdRef.current === selectedMatch.id) {
+                    setIsMappingTeamNames(false);
+                }
+                isMappingInProgressRef.current = false;
             }
         };
         
         mapTeamNames();
-    }, [selectedMatch?.homeTeamIdentifier, selectedMatch?.awayTeamIdentifier, selectedMatch?.id]);
+        
+        // Cleanup funkcia - označí, že operácia bola zrušená
+        return () => {
+            isCancelled = true;
+            // Neresetujeme isMappingInProgressRef hneď, lebo iný zápas môže čakať
+        };
+    }, [selectedMatch?.id]);
 
     useEffect(() => {
         if (!hallId && userProfileData) {
@@ -5599,6 +5640,11 @@ const matchesHallApp = ({ userProfileData }) => {
 
     // FUNKCIA PRE VÝBER ZÁPASU
     const selectMatch = (match) => {
+        // Resetujeme mapované názvy pred výberom nového zápasu
+        setMappedHomeTeamName('');
+        setMappedAwayTeamName('');
+        setIsMappingTeamNames(true);
+        
         setSelectedMatch(match);
         setManualTimeOffset(match.manualTimeOffset || 0);
         updateUrlParameters(match.homeTeamIdentifier, match.awayTeamIdentifier);
