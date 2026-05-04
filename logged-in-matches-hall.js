@@ -990,8 +990,9 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                             className: `flex-1 py-2 rounded-lg font-semibold transition-colors text-center ${
                                 selectedForfeitTeam 
                                     ? 'bg-green-600 hover:bg-green-700 text-white cursor-pointer' 
-                                    : 'bg-gray-300 text-gray-500 border-2 border-green-600 cursor-none hover:bg-gray-300'
-                            }`
+                                    : 'bg-gray-300 text-gray-500 border-2 border-green-600 hover:bg-gray-300'
+                            }`,
+                            style: !selectedForfeitTeam ? { cursor: 'not-allowed' } : {}
                         },
                         'Potvrdiť'
                     )
