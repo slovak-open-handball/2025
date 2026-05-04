@@ -144,16 +144,16 @@ const getCategoryNameById = (categoryId) => {
     return null;
 };
 
-// Funkcia na načítanie členov tímu z databázy podľa názvu tímu a ID kategórie
-const loadTeamMembers = async (teamName, categoryId) => {
-    if (!window.db || !teamName || !categoryId) {
-        console.log("Chýba db, teamName alebo categoryId");
+// Funkcia na načítanie členov tímu z databázy podľa názvu tímu a NÁZVU kategórie
+const loadTeamMembers = async (teamName, categoryName) => {
+    if (!window.db || !teamName || !categoryName) {
+        console.log("Chýba db, teamName alebo categoryName");
         return [];
     }
     
     try {
         console.log(`=== VYHĽADÁVANIE ČLENOV TÍMU ===`);
-        console.log(`Hľadám tím: "${teamName}" v kategórii (ID): "${categoryId}"`);
+        console.log(`Hľadám tím: "${teamName}" v kategórii (NÁZOV): "${categoryName}"`);
         
         // Prehľadávame všetkých používateľov (kluby)
         const usersRef = collection(window.db, 'users');
@@ -161,64 +161,31 @@ const loadTeamMembers = async (teamName, categoryId) => {
         
         console.log(`Celkový počet user dokumentov: ${usersSnapshot.docs.length}`);
         
-        let foundAnyTeam = false;
-        
         for (const userDoc of usersSnapshot.docs) {
             const userId = userDoc.id;
             const userData = userDoc.data();
             const teams = userData.teams || {};
             
-            console.log(`\n--- Spracovávam užívateľa: ${userId} ---`);
-            console.log(`  Meno: ${userData.firstName} ${userData.lastName}`);
-            console.log(`  Email: ${userData.email}`);
-            console.log(`  Počet kategórií v teams: ${Object.keys(teams).length}`);
-            console.log(`  Kategórie (ID): ${Object.keys(teams).join(', ')}`);
-            
             // Prehľadávame všetky kategórie tohto používateľa
             for (const [categoryKey, teamsArray] of Object.entries(teams)) {
-                console.log(`\n    Kategória ID: "${categoryKey}"`);
-                console.log(`    Porovnanie s hľadaným ID "${categoryId}": ${categoryKey === categoryId ? 'ZHODA' : 'NIE'}`);
+                // Porovnávame NÁZOV kategórie (categoryKey) s hľadaným názvom
+                // categoryKey je priamo názov (napr. "U12 CH", nie ID)
+                if (categoryKey !== categoryName) continue;
                 
-                // Porovnávame priamo ID kategórie (categoryKey) s hľadaným ID
-                if (categoryKey !== categoryId) continue;
-                
-                console.log(`    ✅ Našiel som ZODPOVEDAJÚCU kategóriu s ID: ${categoryKey}`);
-                console.log(`    Počet tímov v tejto kategórii: ${(teamsArray || []).length}`);
-                
-                // Vypíšeme všetky tímy v tejto kategórii
-                if (teamsArray && teamsArray.length > 0) {
-                    console.log(`    Zoznam tímov v kategórii:`);
-                    teamsArray.forEach((team, idx) => {
-                        console.log(`      ${idx + 1}. Názov tímu: "${team.teamName || 'BEZ NÁZVA'}"`);
-                        console.log(`         Hráči: ${team.playerDetails?.length || 0}`);
-                        console.log(`         RT muži: ${team.menTeamMemberDetails?.length || 0}`);
-                        console.log(`         RT ženy: ${team.womenTeamMemberDetails?.length || 0}`);
-                        console.log(`         Šoféri muži: ${team.driverDetailsMale?.length || 0}`);
-                        console.log(`         Šoféri ženy: ${team.driverDetailsFemale?.length || 0}`);
-                    });
-                }
+                console.log(`✅ Našiel som kategóriu: "${categoryKey}" u používateľa ${userId}`);
                 
                 // Hľadáme tím s daným názvom
                 const foundTeam = (teamsArray || []).find(t => t.teamName === teamName);
                 
                 if (foundTeam) {
-                    foundAnyTeam = true;
-                    console.log(`\n    ✅✅✅ NAŠIEL SOM TÍM: "${teamName}" v kategórii ${categoryKey} ✅✅✅`);
-                    console.log(`    Detaily nájdeného tímu:`);
-                    console.log(`      - Hráči: ${foundTeam.playerDetails?.length || 0}`);
-                    console.log(`      - RT muži: ${foundTeam.menTeamMemberDetails?.length || 0}`);
-                    console.log(`      - RT ženy: ${foundTeam.womenTeamMemberDetails?.length || 0}`);
-                    console.log(`      - Šoféri muži: ${foundTeam.driverDetailsMale?.length || 0}`);
-                    console.log(`      - Šoféri ženy: ${foundTeam.driverDetailsFemale?.length || 0}`);
+                    console.log(`✅✅✅ NAŠIEL SOM TÍM: "${teamName}" v kategórii ${categoryKey} ✅✅✅`);
                     
                     // Získame všetkých členov tímu
                     const members = [];
                     
                     // Hráči
                     if (foundTeam.playerDetails && Array.isArray(foundTeam.playerDetails)) {
-                        console.log(`      Zoznam hráčov:`);
-                        foundTeam.playerDetails.forEach((player, idx) => {
-                            console.log(`        ${idx + 1}. ${player.firstName || ''} ${player.lastName || ''} (č.dresu: ${player.jerseyNumber || '-'}, reg.č: ${player.registrationNumber || '-'})`);
+                        foundTeam.playerDetails.forEach(player => {
                             members.push({
                                 type: 'Hráč',
                                 firstName: player.firstName || '',
@@ -231,9 +198,7 @@ const loadTeamMembers = async (teamName, categoryId) => {
                     
                     // Členovia realizačného tímu (muži)
                     if (foundTeam.menTeamMemberDetails && Array.isArray(foundTeam.menTeamMemberDetails)) {
-                        console.log(`      Zoznam RT (muži):`);
-                        foundTeam.menTeamMemberDetails.forEach((member, idx) => {
-                            console.log(`        ${idx + 1}. ${member.firstName || ''} ${member.lastName || ''} (reg.č: ${member.registrationNumber || '-'})`);
+                        foundTeam.menTeamMemberDetails.forEach(member => {
                             members.push({
                                 type: 'Člen RT (muž)',
                                 firstName: member.firstName || '',
@@ -246,9 +211,7 @@ const loadTeamMembers = async (teamName, categoryId) => {
                     
                     // Členovia realizačného tímu (ženy)
                     if (foundTeam.womenTeamMemberDetails && Array.isArray(foundTeam.womenTeamMemberDetails)) {
-                        console.log(`      Zoznam RT (ženy):`);
-                        foundTeam.womenTeamMemberDetails.forEach((member, idx) => {
-                            console.log(`        ${idx + 1}. ${member.firstName || ''} ${member.lastName || ''} (reg.č: ${member.registrationNumber || '-'})`);
+                        foundTeam.womenTeamMemberDetails.forEach(member => {
                             members.push({
                                 type: 'Člen RT (žena)',
                                 firstName: member.firstName || '',
@@ -261,9 +224,7 @@ const loadTeamMembers = async (teamName, categoryId) => {
                     
                     // Šoféri (muži)
                     if (foundTeam.driverDetailsMale && Array.isArray(foundTeam.driverDetailsMale)) {
-                        console.log(`      Zoznam šoférov (muži):`);
-                        foundTeam.driverDetailsMale.forEach((driver, idx) => {
-                            console.log(`        ${idx + 1}. ${driver.firstName || ''} ${driver.lastName || ''} (reg.č: ${driver.registrationNumber || '-'})`);
+                        foundTeam.driverDetailsMale.forEach(driver => {
                             members.push({
                                 type: 'Šofér (muž)',
                                 firstName: driver.firstName || '',
@@ -276,9 +237,7 @@ const loadTeamMembers = async (teamName, categoryId) => {
                     
                     // Šoféri (ženy)
                     if (foundTeam.driverDetailsFemale && Array.isArray(foundTeam.driverDetailsFemale)) {
-                        console.log(`      Zoznam šoférov (ženy):`);
-                        foundTeam.driverDetailsFemale.forEach((driver, idx) => {
-                            console.log(`        ${idx + 1}. ${driver.firstName || ''} ${driver.lastName || ''} (reg.č: ${driver.registrationNumber || '-'})`);
+                        foundTeam.driverDetailsFemale.forEach(driver => {
                             members.push({
                                 type: 'Šofér (žena)',
                                 firstName: driver.firstName || '',
@@ -289,21 +248,13 @@ const loadTeamMembers = async (teamName, categoryId) => {
                         });
                     }
                     
-                    console.log(`\n    Celkový počet členov tímu: ${members.length}`);
-                    console.log(`=== KONIEC VYHĽADÁVANIA - TÍM BOL NÁJDENÝ ===\n`);
+                    console.log(`Celkový počet členov tímu: ${members.length}`);
                     return members;
-                } else {
-                    console.log(`    ❌ Tím s názvom "${teamName}" nebol nájdený v tejto kategórii`);
                 }
             }
         }
         
-        if (!foundAnyTeam) {
-            console.log(`\n=== VÝSLEDOK VYHĽADÁVANIA ===`);
-            console.log(`❌ Nenašiel som žiadny tím s názvom "${teamName}" v kategórii ID: ${categoryId}`);
-            console.log(`=============================\n`);
-        }
-        
+        console.log(`❌ Nenašiel som tím: "${teamName}" v kategórii: "${categoryName}"`);
         return [];
         
     } catch (err) {
@@ -313,94 +264,28 @@ const loadTeamMembers = async (teamName, categoryId) => {
 };
 
 // Komponent pre zoznam členov tímu
-const TeamMembersList = ({ teamName, categoryId }) => {
+const TeamMembersList = ({ teamName, categoryName }) => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-
-    // DEBUG: Výpis všetkých user dokumentov --------------------------------------------------------------------------------- tento useeffect len vypisuje
-    useEffect(() => {
-        const debugUsers = async () => {
-            if (!window.db) return;
-            
-            try {
-                console.log('\n=== DEBUG: VÝPIS VŠETKÝCH USER DOKUMENTOV ===');
-                const usersRef = collection(window.db, 'users');
-                const usersSnapshot = await getDocs(usersRef);
-                
-                console.log(`Celkový počet user dokumentov: ${usersSnapshot.docs.length}\n`);
-                
-                for (const userDoc of usersSnapshot.docs) {
-                    const userId = userDoc.id;
-                    const userData = userDoc.data();
-                    const teams = userData.teams || {};
-                    
-                    console.log(`📄 User ID: ${userId}`);
-                    console.log(`   Meno: ${userData.firstName} ${userData.lastName}`);
-                    console.log(`   Email: ${userData.email}`);
-                    console.log(`   Rola: ${userData.role}`);
-                    console.log(`   Počet kategórií: ${Object.keys(teams).length}`);
-                    
-                    if (Object.keys(teams).length > 0) {
-                        console.log(`   Kategórie a tímy:`);
-                        for (const [categoryId, teamsArray] of Object.entries(teams)) {
-                            console.log(`     📁 Kategória ID: "${categoryId}"`);
-                            if (teamsArray && teamsArray.length > 0) {
-                                teamsArray.forEach((team, idx) => {
-                                    console.log(`        ${idx + 1}. Tím: "${team.teamName || 'BEZ NÁZVA'}"`);
-                                    console.log(`           - Hráči: ${team.playerDetails?.length || 0}`);
-                                    console.log(`           - RT muži: ${team.menTeamMemberDetails?.length || 0}`);
-                                    console.log(`           - RT ženy: ${team.womenTeamMemberDetails?.length || 0}`);
-                                    console.log(`           - Šoféri muži: ${team.driverDetailsMale?.length || 0}`);
-                                    console.log(`           - Šoféri ženy: ${team.driverDetailsFemale?.length || 0}`);
-                                    
-                                    // Výpis prvých pár hráčov
-                                    if (team.playerDetails && team.playerDetails.length > 0) {
-                                        console.log(`           Prví hráči:`);
-                                        team.playerDetails.slice(0, 3).forEach(player => {
-                                            console.log(`             - ${player.firstName || ''} ${player.lastName || ''} (č.${player.jerseyNumber || '-'})`);
-                                        });
-                                        if (team.playerDetails.length > 3) {
-                                            console.log(`             ... a ďalších ${team.playerDetails.length - 3} hráčov`);
-                                        }
-                                    }
-                                });
-                            } else {
-                                console.log(`        (žiadne tímy)`);
-                            }
-                        }
-                    }
-                    console.log(''); // prázdny riadok medzi userami
-                }
-                console.log('=== KONIEC VÝPISU USER DOKUMENTOV ===\n');
-            } catch (err) {
-                console.error('Chyba pri debug výpise user dokumentov:', err);
-            }
-        };
-        
-        // Spustíme debug výpis po načítaní databázy
-        if (window.db) {
-            debugUsers();
-        }
-    }, [window.db]);    
     
     useEffect(() => {
         const fetchMembers = async () => {
             setLoading(true);
             setError(null);
             
-            if (!teamName || !categoryId) {
+            if (!teamName || !categoryName) {
                 setLoading(false);
                 return;
             }
             
-            const result = await loadTeamMembers(teamName, categoryId);
+            const result = await loadTeamMembers(teamName, categoryName);
             setMembers(result);
             setLoading(false);
         };
         
         fetchMembers();
-    }, [teamName, categoryId]);
+    }, [teamName, categoryName]);
     
     if (loading) {
         return React.createElement(
@@ -688,7 +573,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                     { className: 'mt-2 pl-2 border-l-2 border-blue-200' },
                                     React.createElement(TeamMembersList, {
                                         teamName: homeTeamDisplay,
-                                        categoryId: match.categoryId  // ← priamo ID kategórie
+                                        categoryName: categoryDisplayName  // ← používame NÁZOV kategórie
                                     })
                                 )
                             )
@@ -719,7 +604,7 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
                                     { className: 'mt-2 pl-2 border-l-2 border-blue-200' },
                                     React.createElement(TeamMembersList, {
                                         teamName: awayTeamDisplay,
-                                        categoryId: match.categoryId  // ← priamo ID kategórie
+                                        categoryName: categoryDisplayName  // ← používame NÁZOV kategórie
                                     })
                                 )
                             )
