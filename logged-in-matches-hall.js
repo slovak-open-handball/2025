@@ -1925,7 +1925,7 @@ const MatchesHallApp = () => {
         return false;
     };
     
-    // Funkcia na nastavenie real-time listenera pre zmeny statusov zápasov
+    // Funkcia na nastavenie real-time listenera pre zmeny statusov a výsledkov zápasov
     const setupMatchesRealTimeListener = (hallId) => {
         if (!window.db || !hallId) return;
         
@@ -1934,6 +1934,7 @@ const MatchesHallApp = () => {
         // Vytvoríme dotaz na zápasy v danej hale
         const unsubscribe = onSnapshot(matchesRef, (snapshot) => {
             const updatedStatuses = {};
+            const updatedMatches = [];
             
             snapshot.forEach((doc) => {
                 const match = {
@@ -1943,20 +1944,69 @@ const MatchesHallApp = () => {
                 
                 if (match.hallId === hallId) {
                     updatedStatuses[match.id] = match.status || 'scheduled';
+                    updatedMatches.push(match);
                     
-                    // Aktualizujeme aj matches a allMatchesList
-                    setMatches(prevMatches => 
-                        prevMatches.map(m => m.id === match.id ? { ...m, status: match.status } : m)
-                    );
-                    setAllMatchesList(prevList => 
-                        prevList.map(m => m.id === match.id ? { ...m, status: match.status } : m)
-                    );
+                    // Aktualizujeme matches (hlavný zoznam)
+                    setMatches(prevMatches => {
+                        const existingIndex = prevMatches.findIndex(m => m.id === match.id);
+                        if (existingIndex !== -1) {
+                            // Aktualizujeme existujúci zápas so všetkými zmenami (vrátane výsledkov)
+                            const updatedPrevMatches = [...prevMatches];
+                            updatedPrevMatches[existingIndex] = { ...updatedPrevMatches[existingIndex], ...match };
+                            return updatedPrevMatches;
+                        } else {
+                            // Pridáme nový zápas
+                            return [...prevMatches, match];
+                        }
+                    });
+                    
+                    // Aktualizujeme allMatchesList (zoznam pre detail)
+                    setAllMatchesList(prevList => {
+                        const existingIndex = prevList.findIndex(m => m.id === match.id);
+                        if (existingIndex !== -1) {
+                            const updatedList = [...prevList];
+                            updatedList[existingIndex] = { ...updatedList[existingIndex], ...match };
+                            return updatedList;
+                        } else {
+                            return [...prevList, match];
+                        }
+                    });
                 }
             });
             
             setMatchStatuses(updatedStatuses);
+            
+            // Zoradíme matches podľa času
+            setMatches(prevMatches => {
+                return [...prevMatches].sort((a, b) => {
+                    if (!a.scheduledTime) return 1;
+                    if (!b.scheduledTime) return -1;
+                    try {
+                        const timeA = a.scheduledTime.toDate().getTime();
+                        const timeB = b.scheduledTime.toDate().getTime();
+                        return timeA - timeB;
+                    } catch (e) {
+                        return 0;
+                    }
+                });
+            });
+            
+            setAllMatchesList(prevList => {
+                return [...prevList].sort((a, b) => {
+                    if (!a.scheduledTime) return 1;
+                    if (!b.scheduledTime) return -1;
+                    try {
+                        const timeA = a.scheduledTime.toDate().getTime();
+                        const timeB = b.scheduledTime.toDate().getTime();
+                        return timeA - timeB;
+                    } catch (e) {
+                        return 0;
+                    }
+                });
+            });
+            
         }, (error) => {
-            console.error('Chyba pri real-time načítaní statusov zápasov:', error);
+            console.error('Chyba pri real-time načítaní zápasov:', error);
         });
         
         return unsubscribe;
