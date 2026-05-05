@@ -79,57 +79,6 @@ let groupCompletionSnapshot = new Map();
 let isMappingNotificationSent = false;
 let isTeamNameReplacerInitialized = false;
 
-async function loadGroupsDataToWindow() {
-    if (!window.db) {
-        log('⏳ Čakám na Firebase pre načítanie groupsData...');
-        return;
-    }
-    
-    try {
-        const { collection, getDocs } = window.firebaseModules || await importFirebaseModules();
-        if (!collection) return;
-        
-        const categoriesRef = collection(window.db, 'categories');
-        const categoriesSnapshot = await getDocs(categoriesRef);
-        
-        window.groupsData = {};
-        window.categoryIdMap = {};
-        
-        for (const categoryDoc of categoriesSnapshot.docs) {
-            const categoryData = categoryDoc.data();
-            const categoryName = categoryData.name;
-            const categoryId = categoryDoc.id;
-            
-            window.categoryIdMap[categoryName] = categoryId;
-            
-            if (categoryData.groups && Array.isArray(categoryData.groups)) {
-                window.groupsData[categoryId] = categoryData.groups.map(group => ({
-                    name: group.name,
-                    type: group.type || 'základná skupina'
-                }));
-                log(`📋 Načítané skupiny pre kategóriu ${categoryName}: ${window.groupsData[categoryId].map(g => `${g.name}(${g.type})`).join(', ')}`);
-            }
-        }
-        
-        log('✅ groupsData bolo načítané do window.groupsData');
-    } catch (error) {
-        error('❌ Chyba pri načítaní groupsData:', error);
-    }
-}
-
-// Spustíme načítanie groupsData
-if (window.db) {
-    loadGroupsDataToWindow();
-} else {
-    // Počkáme na Firebase
-    const checkDbInterval = setInterval(() => {
-        if (window.db) {
-            clearInterval(checkDbInterval);
-            loadGroupsDataToWindow();
-        }
-    }, 500);
-}
-
 (function() {
     'use strict';
     
