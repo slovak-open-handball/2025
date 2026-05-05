@@ -1523,6 +1523,9 @@ let isTeamNameReplacerInitialized = false;
                         const mapped = getTeamNameByDisplayId(awayTeam);
                         if (mapped && mapped !== awayTeam) awayTeam = mapped;
                     }
+
+                    homeTeam = teamManager.getTeamNameByDisplayIdSync(homeTeam)
+                    awayTeam = teamManager.getTeamNameByDisplayIdSync(awayTeam)
                     
                     const matchDate = match.scheduledTime ? match.scheduledTime.toDate() : null;
                     const dateStr = matchDate ? matchDate.toLocaleDateString('sk-SK') : 'neurčený';
