@@ -1512,7 +1512,24 @@ let isTeamNameReplacerInitialized = false;
                     // 🔥 DÔLEŽITÉ: Používame homeTeamName a awayTeamName, nie homeTeamIdentifier
                     // Tieto vlastnosti musíme nastaviť už v createAdvancedGroupTable
                     let homeTeam = teamManager.getTeamNameByDisplayIdSync(match.homeTeamIdentifier);
-                    let awayTeam = teamManager.getTeamNameByDisplayIdSync(match.awayTeamIdentifier);                    
+                    let awayTeam = teamManager.getTeamNameByDisplayIdSync(match.awayTeamIdentifier);
+
+                    if (homeTeam.includes(match.categoryName)) {
+                        const mappedHome = window.matchTracker.getTeamNameByDisplayId(homeTeam);
+                        if (mappedHome && mappedHome !== homeTeam) {
+                            homeTeam = mappedHome;
+                            log(`   🔄 Mapovanie domácich: "${match.homeTeamIdentifier}" → "${homeTeam}"`);
+                        }
+                    }
+        
+                    // 🔥 KONTROLA: Či awayTeam OBSAHUJE názov kategórie
+                    if (awayTeam.includes(match.categoryName)) {
+                        const mappedAway = window.matchTracker.getTeamNameByDisplayId(awayTeam);
+                        if (mappedAway && mappedAway !== awayTeam) {
+                            awayTeam = mappedAway;
+                            log(`   🔄 Mapovanie hostí: "${match.awayTeamIdentifier}" → "${awayTeam}"`);
+                        }
+                    }
                     
                     const matchDate = match.scheduledTime ? match.scheduledTime.toDate() : null;
                     const dateStr = matchDate ? matchDate.toLocaleDateString('sk-SK') : 'neurčený';
