@@ -1514,16 +1514,6 @@ let isTeamNameReplacerInitialized = false;
                     let homeTeam = match.homeTeamName || match.homeTeamIdentifier;
                     let awayTeam = match.awayTeamName || match.awayTeamIdentifier;
                     
-                    // Pre istotu ešte skúsime namapovať, ak náhodou nie sú
-                    if (looksLikeIdentifier(homeTeam)) {
-                        const mapped = getTeamNameByDisplayId(homeTeam);
-                        if (mapped && mapped !== homeTeam) homeTeam = mapped;
-                    }
-                    if (looksLikeIdentifier(awayTeam)) {
-                        const mapped = getTeamNameByDisplayId(awayTeam);
-                        if (mapped && mapped !== awayTeam) awayTeam = mapped;
-                    }
-                    
                     const matchDate = match.scheduledTime ? match.scheduledTime.toDate() : null;
                     const dateStr = matchDate ? matchDate.toLocaleDateString('sk-SK') : 'neurčený';
                     
