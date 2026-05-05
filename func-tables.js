@@ -1507,14 +1507,24 @@ let isTeamNameReplacerInitialized = false;
             
             // 1. Normálne zápasy (v nadstavbovej skupine)
             if (normal.length > 0) {
-                log(`\n🏆 ZÁPASY V NADSTAVBOVEJ SKUPINE (${normal.length}):`);
+                log(`\n🏆 ZÁPASY V SKUPINE (${normal.length}):`);
                 normal.forEach((match, idx) => {
                     // 🔥 DÔLEŽITÉ: Používame homeTeamName a awayTeamName, nie homeTeamIdentifier
                     // Tieto vlastnosti musíme nastaviť už v createAdvancedGroupTable
-                    let homeTeam = match.homeTeamName || match.homeTeamIdentifier;
-                    let awayTeam = match.awayTeamName || match.awayTeamIdentifier;
+                    let homeTeam = teamManager.getTeamNameByDisplayIdSync(homeTeam)
+                    let awayTeam = teamManager.getTeamNameByDisplayIdSync(awayTeam)
+        
+                    // 🔥 NOVÁ LOGIKA: Ak text obsahuje názov kategórie, použijeme window.matchTracker.getTeamNameByDisplayId()
+                    if (homeTeam && looksLikeIdentifier(homeTeam)) {
+                        const mapped = window.matchTracker.getTeamNameByDisplayId(homeTeam);
+                        if (mapped && mapped !== homeTeam) homeTeam = mapped;
+                    }
+                    if (awayTeam && looksLikeIdentifier(awayTeam)) {
+                        const mapped = window.matchTracker.getTeamNameByDisplayId(awayTeam);
+                        if (mapped && mapped !== awayTeam) awayTeam = mapped;
+                    }
                     
-                    // Pre istotu ešte skúsime namapovať, ak náhodou nie sú
+                    // Pre istotu ešte skúsime namapovať pôvodnou funkciou, ak náhodou nie sú
                     if (looksLikeIdentifier(homeTeam)) {
                         const mapped = getTeamNameByDisplayId(homeTeam);
                         if (mapped && mapped !== homeTeam) homeTeam = mapped;
@@ -1523,9 +1533,6 @@ let isTeamNameReplacerInitialized = false;
                         const mapped = getTeamNameByDisplayId(awayTeam);
                         if (mapped && mapped !== awayTeam) awayTeam = mapped;
                     }
-
-                    homeTeam = teamManager.getTeamNameByDisplayIdSync(homeTeam)
-                    awayTeam = teamManager.getTeamNameByDisplayIdSync(awayTeam)
                     
                     const matchDate = match.scheduledTime ? match.scheduledTime.toDate() : null;
                     const dateStr = matchDate ? matchDate.toLocaleDateString('sk-SK') : 'neurčený';
