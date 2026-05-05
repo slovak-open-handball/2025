@@ -854,47 +854,11 @@ let isTeamNameReplacerInitialized = false;
     // ============================================================
     // OPRAVENÁ FUNKCIA: findMatchBetweenNamedTeams
     // Vyhľadá zápas medzi dvoma tímami podľa ich KONEČNÝCH NÁZVOV
-    // POUŽÍVA PÔVODNÉ IDENTIFIKÁTORY NA POROVNANIE
     // ============================================================
     function findMatchBetweenNamedTeams(teamAName, teamBName, categoryName, excludeGroupName = null) {
         log(`   🔍 Hľadám zápas medzi: "${teamAName}" vs "${teamBName}" v kategórii ${categoryName}`);
         
-        // Najprv musíme zistiť, aké pôvodné identifikátory majú tieto tímy
-        // Prejdeme všetky základné skupiny a nájdeme tímy s týmito názvami
-        let teamAOriginalId = null;
-        let teamBOriginalId = null;
-        
-        // Získame všetky skupiny v tejto kategórii
-        const allGroups = new Set();
-        for (const match of Object.values(matchesData)) {
-            if (match.categoryName === categoryName && match.groupName && !match.isPlacementMatch) {
-                allGroups.add(match.groupName);
-            }
-        }
-        
-        // Pre každú skupinu skúsime nájsť tím s daným názvom a získať jeho pôvodný identifikátor
-        for (const groupName of allGroups) {
-            const groupTable = createGroupTable(categoryName, groupName);
-            if (groupTable && groupTable.teams) {
-                for (const team of groupTable.teams) {
-                    if (team.name === teamAName && !teamAOriginalId) {
-                        teamAOriginalId = team.id;
-                        log(`      📍 Tím A "${teamAName}" má pôvodný identifikátor: "${teamAOriginalId}"`);
-                    }
-                    if (team.name === teamBName && !teamBOriginalId) {
-                        teamBOriginalId = team.id;
-                        log(`      📍 Tím B "${teamBName}" má pôvodný identifikátor: "${teamBOriginalId}"`);
-                    }
-                }
-            }
-        }
-        
-        if (!teamAOriginalId || !teamBOriginalId) {
-            log(`      ❌ Nepodarilo sa nájsť pôvodné identifikátory pre tímy`);
-            return null;
-        }
-        
-        // Teraz hľadáme zápas medzi týmito pôvodnými identifikátormi
+        // Získame všetky zápasy v kategórii
         const allMatches = Object.values(matchesData);
         
         for (const match of allMatches) {
@@ -907,17 +871,33 @@ let isTeamNameReplacerInitialized = false;
             // Kontrola kategórie
             if (match.categoryName !== categoryName) continue;
             
-            // Porovnanie podľa pôvodných identifikátorov
-            const homeId = match.homeTeamIdentifier;
-            const awayId = match.awayTeamIdentifier;
+            // Získame názvy tímov pre tento zápas (pomocou mapovania na KONEČNÉ NÁZVY)
+            let homeTeamName = match.homeTeamIdentifier;
+            let awayTeamName = match.awayTeamIdentifier;
             
-            const hasTeamA = (homeId === teamAOriginalId || awayId === teamAOriginalId);
-            const hasTeamB = (homeId === teamBOriginalId || awayId === teamBOriginalId);
+            // Mapujeme na konečné názvy, ak je to identifikátor
+            if (/[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(homeTeamName)) {
+                const mapped = getTeamNameByDisplayId(homeTeamName);
+                if (mapped && mapped !== homeTeamName) {
+                    homeTeamName = mapped;
+                }
+            }
+            
+            if (/[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(awayTeamName)) {
+                const mapped = getTeamNameByDisplayId(awayTeamName);
+                if (mapped && mapped !== awayTeamName) {
+                    awayTeamName = mapped;
+                }
+            }
+            
+            // 🔥 POROVNÁVAME KONEČNÉ NÁZVY
+            const hasTeamA = (homeTeamName === teamAName || awayTeamName === teamAName);
+            const hasTeamB = (homeTeamName === teamBName || awayTeamName === teamBName);
             
             if (hasTeamA && hasTeamB) {
                 log(`      ✅ Nájdený zápas v skupine: ${match.groupName} (stav: ${match.status})`);
-                log(`         Domáci ID: ${homeId}`);
-                log(`         Hostia ID: ${awayId}`);
+                log(`         Domáci (konečný názov): ${homeTeamName}`);
+                log(`         Hostia (konečný názov): ${awayTeamName}`);
                 
                 if (match.status === 'completed') {
                     // Získame skóre
@@ -937,7 +917,7 @@ let isTeamNameReplacerInitialized = false;
                     }
                     
                     let teamAScore, teamBScore;
-                    if (homeId === teamAOriginalId) {
+                    if (homeTeamName === teamAName) {
                         teamAScore = homeScore;
                         teamBScore = awayScore;
                     } else {
