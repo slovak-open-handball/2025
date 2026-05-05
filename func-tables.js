@@ -49,6 +49,36 @@ function error(...args) {
 
 // Teraz v celom kóde používame tieto funkcie namiesto priamo log ---------------- všetko pred týmto riadkom vymaž
 
+// Premenné pre nahrádzanie
+let hasReplacedAnyTeams = false;
+let mappingCompleted = false;
+let initialMappingDone = false;
+const replacementCallbacks = [];
+
+// Cache pre skupiny
+let groupCheckCache = new Set();
+let processedCarryOverGroups = new Set();
+let isInitialDataLoaded = false;
+let processedGroupsInitial = new Set();
+
+// Premenné pre periodické úlohy
+let periodicReplaceInterval = null;
+let periodicReplaceActive = true;
+let groupMonitorInterval = null;
+let isReplacingInProgress = false;
+
+// Cache pre mapovanie
+let processedGroups = new Map();
+let pendingReplaceTimeout = null;
+let replacedIdentifiers = new Set();
+let checkedGroupsCache = new Set();
+
+// Snapshot pre sledovanie
+let groupCompletionSnapshot = new Map();
+
+let isMappingNotificationSent = false;
+let isTeamNameReplacerInitialized = false;
+
 async function loadGroupsDataToWindow() {
     if (!window.db) {
         log('⏳ Čakám na Firebase pre načítanie groupsData...');
@@ -99,36 +129,6 @@ if (window.db) {
         }
     }, 500);
 }
-
-// Premenné pre nahrádzanie
-let hasReplacedAnyTeams = false;
-let mappingCompleted = false;
-let initialMappingDone = false;
-const replacementCallbacks = [];
-
-// Cache pre skupiny
-let groupCheckCache = new Set();
-let processedCarryOverGroups = new Set();
-let isInitialDataLoaded = false;
-let processedGroupsInitial = new Set();
-
-// Premenné pre periodické úlohy
-let periodicReplaceInterval = null;
-let periodicReplaceActive = true;
-let groupMonitorInterval = null;
-let isReplacingInProgress = false;
-
-// Cache pre mapovanie
-let processedGroups = new Map();
-let pendingReplaceTimeout = null;
-let replacedIdentifiers = new Set();
-let checkedGroupsCache = new Set();
-
-// Snapshot pre sledovanie
-let groupCompletionSnapshot = new Map();
-
-let isMappingNotificationSent = false;
-let isTeamNameReplacerInitialized = false;
 
 (function() {
     'use strict';
