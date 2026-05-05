@@ -586,7 +586,7 @@ const TeamMembersList = ({ teamName, categoryName, onMappedNameUpdate }) => {
     );
 };
 
-const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
+const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings, teamNames }) => {
     const [isRunning, setIsRunning] = useState(false);
     const [period, setPeriod] = useState(1);
     const [totalPeriods, setTotalPeriods] = useState(1);
