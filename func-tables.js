@@ -969,22 +969,26 @@ let isTeamNameReplacerInitialized = false;
 
     // ============================================================
     // SPRÁVNA FUNKCIA: createAdvancedGroupTable
-    // Používa výhradne KONEČNÉ NÁZVY tímov
+    // Prehľadáva VŠETKY základné skupiny, nielen priradené
     // ============================================================
     function createAdvancedGroupTable(categoryName, groupName, baseGroupName) {
         const groupsData = window.groupsData || {};
         const categoryId = window.categoryIdMap?.[categoryName] || null;
         
+        // ============================================================
+        // 🔥 KROK 0: Získame VŠETKY základné skupiny v tejto kategórii
+        // ============================================================
         let allBaseGroups = [];
         
         if (baseGroupName) {
             allBaseGroups = [baseGroupName];
         } 
         else if (categoryId && groupsData[categoryId]) {
+            // Získame VŠETKY základné skupiny (bez ohľadu na názov)
             allBaseGroups = groupsData[categoryId]
                 .filter(g => g.type === 'základná skupina')
                 .map(g => g.name);
-            log(`🎯 Nadstavbová skupina ${groupName} - základné skupiny: ${allBaseGroups.join(', ')}`);
+            log(`🎯 Nadstavbová skupina ${groupName} - VŠETKY základné skupiny v kategórii: ${allBaseGroups.join(', ')}`);
         }
         
         if (allBaseGroups.length === 0 && baseGroupName) {
@@ -996,7 +1000,7 @@ let isTeamNameReplacerInitialized = false;
             return null;
         }
         
-        // Kontrola dokončenosti základných skupín
+        // Kontrola dokončenosti základných skupín (všetky musia byť 100% pre nadstavbovú tabuľku)
         const allBaseGroupsFullyCompleted = [];
         const missingBaseGroups = [];
         
@@ -1016,12 +1020,14 @@ let isTeamNameReplacerInitialized = false;
                 log(`   ✅ Základná skupina ${baseGroup} je 100% dokončená`);
             } else {
                 missingBaseGroups.push(baseGroup);
-                log(`   ⏳ Základná skupina ${baseGroup} NIE JE dokončená`);
+                log(`   ⏳ Základná skupina ${baseGroup} NIE JE dokončená (${baseGroupTable.completionPercentage}%)`);
             }
         }
         
+        // 🔥 DÔLEŽITÉ: Pre nadstavbovú tabuľku potrebujeme, aby boli VŠETKY základné skupiny 100%
+        // Ale pre vyhľadávanie prenesených zápasov môžeme použiť aj tie, ktoré sú dokončené
         if (missingBaseGroups.length > 0) {
-            log(`\n❌ NADSTAVBOVÁ SKUPINA ${groupName} NEMÔŽE BYŤ VYHODNOTENÁ!\n`);
+            log(`\n❌ NADSTAVBOVÁ SKUPINA ${groupName} NEMÔŽE BYŤ VYHODNOTENÁ, pretože nie všetky základné skupiny sú 100% dokončené!\n`);
             return null;
         }
         
@@ -1043,7 +1049,6 @@ let isTeamNameReplacerInitialized = false;
         
         // Mapujeme tímy na KONEČNÉ NÁZVY pomocou základných skupín
         for (const team of teamsInAdvanced) {
-            // Nájdeme konečný názov tohto tímu
             let finalName = null;
             for (const baseGroup of allBaseGroupsFullyCompleted) {
                 const baseTable = createGroupTable(categoryName, baseGroup);
@@ -1073,9 +1078,11 @@ let isTeamNameReplacerInitialized = false;
         const processedPairs = new Set();
         
         if (carryOverEnabled) {
-            log(`   🔄 Zbieram výsledky zo základných skupín (podľa KONEČNÝCH NÁZVOV)...`);
+            log(`   🔄 Zbieram výsledky zo VŠETKÝCH základných skupín (podľa KONEČNÝCH NÁZVOV)...`);
             
-            // Pre každú základnú skupinu
+            // ============================================================
+            // 🔥 KROK 2: Prehľadáme VŠETKY dokončené základné skupiny
+            // ============================================================
             for (const baseGroup of allBaseGroupsFullyCompleted) {
                 const baseTable = createGroupTable(categoryName, baseGroup);
                 if (!baseTable || !baseTable.matches) continue;
@@ -1083,7 +1090,6 @@ let isTeamNameReplacerInitialized = false;
                 const completedBaseMatches = baseTable.matches.filter(m => m.status === 'completed');
                 log(`\n   📋 Spracúvam základnú skupinu ${baseGroup} (${completedBaseMatches.length} dokončených zápasov)...`);
                 
-                // Pre každý zápas v základnej skupine
                 for (const match of completedBaseMatches) {
                     // Získame KONEČNÉ NÁZVY tímov z tabuľky základnej skupiny
                     let homeFinalName = null;
@@ -1159,7 +1165,7 @@ let isTeamNameReplacerInitialized = false;
             }
             
             // ============================================================
-            // 🔥 KROK 2: Aplikujeme prenesené výsledky do štatistík
+            // 🔥 KROK 3: Aplikujeme prenesené výsledky do štatistík
             // ============================================================
             log(`\n   📊 Aplikujem ${transferredMatches.length} prenesených zápasov...`);
             
