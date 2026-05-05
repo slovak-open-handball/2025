@@ -1511,8 +1511,8 @@ let isTeamNameReplacerInitialized = false;
                 normal.forEach((match, idx) => {
                     // 🔥 DÔLEŽITÉ: Používame homeTeamName a awayTeamName, nie homeTeamIdentifier
                     // Tieto vlastnosti musíme nastaviť už v createAdvancedGroupTable
-                    let homeTeam = match.homeTeamIdentifier;
-                    let awayTeam = match.awayTeamIdentifier;
+                    let homeTeam = teamManager.getTeamNameByDisplayIdSync(match.homeTeamIdentifier);
+                    let awayTeam = teamManager.getTeamNameByDisplayIdSync(match.awayTeamIdentifier);
                     
                     const matchDate = match.scheduledTime ? match.scheduledTime.toDate() : null;
                     const dateStr = matchDate ? matchDate.toLocaleDateString('sk-SK') : 'neurčený';
