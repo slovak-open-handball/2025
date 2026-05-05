@@ -1518,7 +1518,7 @@ let isTeamNameReplacerInitialized = false;
                         const mappedHome = window.matchTracker.getTeamNameByDisplayId(homeTeam);
                         if (mappedHome && mappedHome !== homeTeam) {
                             homeTeam = mappedHome;
-                            log(`   🔄 Mapovanie domácich: "${match.homeTeamIdentifier}" → "${homeTeam}"`);
+//                            log(`   🔄 Mapovanie domácich: "${match.homeTeamIdentifier}" → "${homeTeam}"`);
                         }
                     }
         
@@ -1527,7 +1527,7 @@ let isTeamNameReplacerInitialized = false;
                         const mappedAway = window.matchTracker.getTeamNameByDisplayId(awayTeam);
                         if (mappedAway && mappedAway !== awayTeam) {
                             awayTeam = mappedAway;
-                            log(`   🔄 Mapovanie hostí: "${match.awayTeamIdentifier}" → "${awayTeam}"`);
+//                            log(`   🔄 Mapovanie hostí: "${match.awayTeamIdentifier}" → "${awayTeam}"`);
                         }
                     }
                     
