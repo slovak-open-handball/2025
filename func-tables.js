@@ -1078,6 +1078,9 @@ let isTeamNameReplacerInitialized = false;
         const processedPairs = new Set();
         
         if (carryOverEnabled) {
+            log(`   🔄 CARRYOVER JE ZAPNUTÝ (${carryOverEnabled})`);
+            log(`   📋 allBaseGroupsFullyCompleted: ${JSON.stringify(allBaseGroupsFullyCompleted)}`);
+            log(`   📋 teamsInAdvanced (pôvodné ID): ${teamsInAdvanced.map(t => t.id).join(', ')}`);
             log(`   🔄 Zbieram výsledky zo základných skupín...`);
             log(`   📋 Tímy v nadstavbovej skupine: ${Array.from(finalNameToOriginalId.keys()).join(', ')}`);
             
