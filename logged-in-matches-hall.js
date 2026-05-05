@@ -599,8 +599,6 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const [showManualResultModal, setShowManualResultModal] = useState(false);
     const [manualHomeScore, setManualHomeScore] = useState('');
     const [manualAwayScore, setManualAwayScore] = useState('');
-    const [modalMappedHomeTeamName, setModalMappedHomeTeamName] = useState(match.homeTeamIdentifier || 'Domáci');
-    const [modalMappedAwayTeamName, setModalMappedAwayTeamName] = useState(match.awayTeamIdentifier || 'Hostia');
     const [modalLoadingMapping, setModalLoadingMapping] = useState(false);
     
     const intervalRef = useRef(null);
@@ -683,6 +681,10 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const renderManualResultModal = () => {
         if (!showManualResultModal) return null;
         
+        // Získame správne názvy tímov (rovnako ako v detaile)
+        const homeTeamDisplayName = teamNames?.[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
+        const awayTeamDisplayName = teamNames?.[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
+        
         if (modalLoadingMapping) {
             return React.createElement(
                 'div',
@@ -741,7 +743,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                         React.createElement(
                             'label',
                             { className: 'block text-base font-medium text-gray-700 mb-3' },
-                            modalMappedHomeTeamName
+                            homeTeamDisplayName
                         ),
                         React.createElement(
                             'input',
@@ -766,7 +768,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                         React.createElement(
                             'label',
                             { className: 'block text-base font-medium text-gray-700 mb-3' },
-                            modalMappedAwayTeamName
+                            awayTeamDisplayName
                         ),
                         React.createElement(
                             'input',
@@ -1247,6 +1249,10 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
     const renderForfeitModal = () => {
         if (!showForfeitModal) return null;
         
+        // Získame správne názvy tímov (rovnako ako v detaile)
+        const homeTeamDisplayName = teamNames?.[match.homeTeamIdentifier] || getDisplayTeamName(match.homeTeamIdentifier);
+        const awayTeamDisplayName = teamNames?.[match.awayTeamIdentifier] || getDisplayTeamName(match.awayTeamIdentifier);
+        
         if (modalLoadingMapping) {
             return React.createElement(
                 'div',
@@ -1308,7 +1314,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                             }`
                         },
                             React.createElement('span', { className: 'block text-lg font-bold' }, 'Domáci'),
-                            React.createElement('span', { className: 'block text-sm opacity-90 mt-1' }, modalMappedHomeTeamName)
+                            React.createElement('span', { className: 'block text-sm opacity-90 mt-1' }, homeTeamDisplayName)
                     ),
                     React.createElement(
                         'button',
@@ -1321,7 +1327,7 @@ const MatchTimer = ({ match, matchId, onTimeUpdate, categorySettings }) => {
                             }`
                         },
                             React.createElement('span', { className: 'block text-lg font-bold' }, 'Hostia'),
-                            React.createElement('span', { className: 'block text-sm opacity-90 mt-1' }, modalMappedAwayTeamName)
+                            React.createElement('span', { className: 'block text-sm opacity-90 mt-1' }, awayTeamDisplayName)
                     )
                 ),
                 React.createElement(
@@ -2027,7 +2033,8 @@ const MatchDetailView = ({ match, teamNames, onBack, hallInfo, categoryDrawColor
             match: { ...match, status: currentMatchStatus, homeScore: currentHomeScore, awayScore: currentAwayScore },
             matchId: match.id,
             onTimeUpdate: handleTimeUpdate,
-            categorySettings: categorySettings
+            categorySettings: categorySettings,
+            teamNames: teamNames
         }),
         
         // Ak sa ešte načítavajú nastavenia, zobrazíme spinner
