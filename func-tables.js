@@ -1511,8 +1511,8 @@ let isTeamNameReplacerInitialized = false;
                 normal.forEach((match, idx) => {
                     // 🔥 DÔLEŽITÉ: Používame homeTeamName a awayTeamName, nie homeTeamIdentifier
                     // Tieto vlastnosti musíme nastaviť už v createAdvancedGroupTable
-                    let homeTeam = window.matchTracker.getTeamNameByDisplayId(match.homeTeamName);
-                    let awayTeam = window.matchTracker.getTeamNameByDisplayId(match.awayTeamName);
+                    let homeTeam = teamManager.getTeamNameByDisplayIdSync(match.homeTeamName);
+                    let awayTeam = teamManager.getTeamNameByDisplayIdSync(match.awayTeamName);
                     
                     // Pre istotu ešte skúsime namapovať, ak náhodou nie sú
                     if (looksLikeIdentifier(homeTeam)) {
