@@ -1912,17 +1912,21 @@ let isTeamNameReplacerInitialized = false;
                 if (normal.length > 0) {
                     log(`\n🏆 ZÁPASY V SKUPINE (${normal.length}):`);
                     normal.forEach((match, idx) => {
+                        // 🔥 PRE NADSTAVBOVÉ SKUPINY UŽ NEMAPUJEME - názvy sú už správne
+                        // PRE ZÁKLADNÉ SKUPINY TOTO MAPOVANIE ZOSTÁVA
                         let homeTeam = match.homeTeamName || match.homeTeamIdentifier;
                         let awayTeam = match.awayTeamName || match.awayTeamIdentifier;
                         
-                        // 🔥 MAPOVANIE NÁZVOV CEZ getTeamNameByDisplayId
-                        if (looksLikeIdentifier(homeTeam)) {
-                            const mapped = getTeamNameByDisplayId(homeTeam);
-                            if (mapped) homeTeam = mapped;
-                        }
-                        if (looksLikeIdentifier(awayTeam)) {
-                            const mapped = getTeamNameByDisplayId(awayTeam);
-                            if (mapped) awayTeam = mapped;
+                        // Ak ide o základnú skupinu (nie nadstavbovú), aplikujeme mapovanie
+                        if (table.groupType !== 'nadstavbová skupina') {
+                            if (looksLikeIdentifier(homeTeam)) {
+                                const mapped = getTeamNameByDisplayId(homeTeam);
+                                if (mapped) homeTeam = mapped;
+                            }
+                            if (looksLikeIdentifier(awayTeam)) {
+                                const mapped = getTeamNameByDisplayId(awayTeam);
+                                if (mapped) awayTeam = mapped;
+                            }
                         }
                         
                         const matchDate = match.scheduledTime ? match.scheduledTime.toDate() : null;
@@ -1936,22 +1940,11 @@ let isTeamNameReplacerInitialized = false;
                     });
                 }
                 
+                // Prenesené zápasy už majú názvy správne
                 if (transferred.length > 0) {
                     log(`\n🔄 PRENESENÉ ZÁPASY (zo základných skupín):`);
                     transferred.forEach((match, idx) => {
-                        let homeTeam = match.homeTeam;
-                        let awayTeam = match.awayTeam;
-                        
-                        if (looksLikeIdentifier(homeTeam)) {
-                            const mapped = getTeamNameByDisplayId(homeTeam);
-                            if (mapped) homeTeam = mapped;
-                        }
-                        if (looksLikeIdentifier(awayTeam)) {
-                            const mapped = getTeamNameByDisplayId(awayTeam);
-                            if (mapped) awayTeam = mapped;
-                        }
-                        
-                        log(`   ${idx+1}. ${homeTeam} ${match.homeScore}:${match.awayScore} ${awayTeam} (z ${match.fromGroup || 'základnej skupiny'})`);
+                        log(`   ${idx+1}. ${match.homeTeamName} ${match.homeScore}:${match.awayScore} ${match.awayTeamName} (z ${match.fromGroup || 'základnej skupiny'})`);
                     });
                 }
                 
