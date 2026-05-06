@@ -1287,12 +1287,14 @@ let isTeamNameReplacerInitialized = false;
         let teamsInAdvanced = getTeamsInGroupFromAllMatches(advancedMatches);
         const teamNameMapping = new Map();
         
-        // 🔥 PRVÉ: Mapujeme všetky tímy cez getTeamNameByDisplayId
+        // 🔥 MAPOVANIE VŠETKÝCH TÍMOV CEZ getTeamNameByDisplayId
         for (const team of teamsInAdvanced) {
             team.originalId = team.id;
             
-            // 🔥 KĽÚČOVÉ: Ak je to identifikátor, pošleme ho do getTeamNameByDisplayId
+            // 🔥 KĽÚČOVÉ: Pošleme každý názov tímu do getTeamNameByDisplayId
             let mappedName = null;
+            
+            // Skúsime mapovať pôvodný identifikátor
             if (looksLikeIdentifier(team.name)) {
                 mappedName = getTeamNameByDisplayId(team.name);
                 if (mappedName && mappedName !== team.name) {
@@ -1310,13 +1312,32 @@ let isTeamNameReplacerInitialized = false;
                     if (baseTable && baseTable.teams) {
                         const foundTeam = baseTable.teams.find(t => t.id === team.originalId);
                         if (foundTeam && foundTeam.name) {
-                            log(`   🔄 Mapovanie zo základnej skupiny: "${team.name}" → "${foundTeam.name}"`);
-                            team.name = foundTeam.name;
-                            team.id = foundTeam.name;
-                            teamNameMapping.set(team.originalId, foundTeam.name);
+                            // Skúsime zmapovať aj názov zo základnej skupiny
+                            let finalName = foundTeam.name;
+                            if (looksLikeIdentifier(finalName)) {
+                                const mappedAgain = getTeamNameByDisplayId(finalName);
+                                if (mappedAgain && mappedAgain !== finalName) {
+                                    finalName = mappedAgain;
+                                }
+                            }
+                            log(`   🔄 Mapovanie zo základnej skupiny: "${team.name}" → "${finalName}"`);
+                            team.name = finalName;
+                            team.id = finalName;
+                            teamNameMapping.set(team.originalId, finalName);
                             break;
                         }
                     }
+                }
+            }
+            
+            // Ak stále nemáme mapovaný názov a je to identifikátor, skúsime ešte raz
+            if (!mappedName && looksLikeIdentifier(team.name)) {
+                const mappedAgain = getTeamNameByDisplayId(team.name);
+                if (mappedAgain && mappedAgain !== team.name) {
+                    log(`   🔄 Mapovanie (getTeamNameByDisplayId - druhý pokus): "${team.name}" → "${mappedAgain}"`);
+                    team.name = mappedAgain;
+                    team.id = mappedAgain;
+                    teamNameMapping.set(team.originalId, mappedAgain);
                 }
             }
         }
@@ -1365,6 +1386,16 @@ let isTeamNameReplacerInitialized = false;
                     }
                     
                     if (!homeFinalName || !awayFinalName) continue;
+                    
+                    // Zmapujeme aj tieto názvy
+                    if (looksLikeIdentifier(homeFinalName)) {
+                        const mapped = getTeamNameByDisplayId(homeFinalName);
+                        if (mapped) homeFinalName = mapped;
+                    }
+                    if (looksLikeIdentifier(awayFinalName)) {
+                        const mapped = getTeamNameByDisplayId(awayFinalName);
+                        if (mapped) awayFinalName = mapped;
+                    }
                     
                     const homeInAdvanced = finalTeamNames.has(homeFinalName);
                     const awayInAdvanced = finalTeamNames.has(awayFinalName);
@@ -1466,6 +1497,7 @@ let isTeamNameReplacerInitialized = false;
             let homeFinalName = match.homeTeamIdentifier;
             let awayFinalName = match.awayTeamIdentifier;
             
+            // 🔥 MAPOVANIE NÁZVOV
             if (looksLikeIdentifier(homeFinalName)) {
                 const mapped = getTeamNameByDisplayId(homeFinalName);
                 if (mapped) homeFinalName = mapped;
@@ -1523,11 +1555,12 @@ let isTeamNameReplacerInitialized = false;
             return compareTeams(a, b, advancedMatches, tableSettings.sortingConditions);
         });
         
-        // 🔥 KROK: Mapovanie názvov tímov v sortedTeams (ak nejaké zostali nezmappedované)
+        // 🔥 FINÁLNE MAPOVANIE NÁZVOV TÍMOV V sortedTeams (pre tabuľku)
         for (const team of sortedTeams) {
             if (looksLikeIdentifier(team.name)) {
                 const mapped = getTeamNameByDisplayId(team.name);
                 if (mapped && mapped !== team.name) {
+                    log(`   🔄 Finálne mapovanie tímu v tabuľke: "${team.name}" → "${mapped}"`);
                     team.name = mapped;
                 }
             }
@@ -1555,6 +1588,16 @@ let isTeamNameReplacerInitialized = false;
             }
             if (awayFinalName === match.awayTeamIdentifier && teamNameMapping.has(match.awayTeamIdentifier)) {
                 awayFinalName = teamNameMapping.get(match.awayTeamIdentifier);
+            }
+            
+            // Ešte raz skúsime zmapovať konečné názvy
+            if (looksLikeIdentifier(homeFinalName)) {
+                const mapped = getTeamNameByDisplayId(homeFinalName);
+                if (mapped) homeFinalName = mapped;
+            }
+            if (looksLikeIdentifier(awayFinalName)) {
+                const mapped = getTeamNameByDisplayId(awayFinalName);
+                if (mapped) awayFinalName = mapped;
             }
             
             let homeScore = 0, awayScore = 0;
