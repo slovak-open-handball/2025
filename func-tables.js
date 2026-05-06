@@ -1439,8 +1439,8 @@ let isTeamNameReplacerInitialized = false;
                 awayScore = score.away;
             }
             
-            let homeFinalName = match.homeTeamIdentifier;
-            let awayFinalName = match.awayTeamIdentifier;
+            let homeFinalName = match.homeTeamName
+            let awayFinalName = match.awayTeamName;
             
             // 🔥 MAPOVANIE NÁZVOV CEZ getTeamNameByDisplayId
             if (looksLikeIdentifier(homeFinalName)) {
