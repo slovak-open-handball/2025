@@ -1151,7 +1151,7 @@ let isTeamNameReplacerInitialized = false;
             return null;
         }
         
-        // 🔥 Získame typ skupiny z databázy (NADSTAVBOVÁ)
+        const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
         const groupTypeFromDB = getGroupTypeSync(categoryName, groupName);
         
         // 🔥 Získame ID kategórie
