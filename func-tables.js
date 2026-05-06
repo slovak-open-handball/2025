@@ -1256,7 +1256,7 @@ let isTeamNameReplacerInitialized = false;
                 }
             }
             
-            log(`   📛 Tím v nadstavbovej: "${team.originalId}" → "${team.name}"`);
+            log(`   📛 Tím v nadstavbovej: "${team.originalId}" → "window.matchTracker.getTeamNameByDisplayId(${team.name})"`);
         }
         
         const pointsForWin = getPointsForWinSync();
