@@ -1210,54 +1210,33 @@ let isTeamNameReplacerInitialized = false;
         // ============================================================
         let teamsInAdvanced = getTeamsInGroupFromAllMatches(advancedMatches);
         
-        // 🔥 KROK 2: OKAMŽITÉ MAPOVANIE NÁZVOV TÍMOV
+        // ============================================================
+        // 🔥 KROK 2: Pre každý tím zavoláme getTeamNameByDisplayId
+        // ============================================================
+        const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
+    
         for (const team of teamsInAdvanced) {
             team.originalId = team.id;
-            let mappedName = null;
-            
-            // Najprv skúsime cez getTeamNameByDisplayId
+            let mappedTeamName = null;
+        
+            // 🔥 KĽÚČOVÉ: VŽDY voláme getTeamNameByDisplayId s identifikátorom tímu
             if (looksLikeIdentifier(team.name)) {
-                mappedName = getTeamNameByDisplayId(team.name);
-                if (mappedName && mappedName !== team.name) {
-                    team.name = mappedName;
-                    team.id = mappedName;
-                }
-            }
+                // Vytvoríme displayId v správnom formáte
+                const displayId = `${cleanCategory} ${team.name}`;
+                log(`   🔍 Volám getTeamNameByDisplayId("${displayId}")...`);
+                mappedTeamName = window.matchTracker.getTeamNameByDisplayId(displayId);
             
-            // Ak nenašlo, skúsime cez základné skupiny
-            if (!mappedName || mappedName === team.originalId) {
-                for (const baseGroup of allBaseGroupsFullyCompleted) {
-                    const baseTable = createGroupTable(categoryName, baseGroup);
-                    if (baseTable && baseTable.teams) {
-                        const foundTeam = baseTable.teams.find(t => t.id === team.originalId);
-                        if (foundTeam && foundTeam.name) {
-                            let finalName = foundTeam.name;
-                            if (looksLikeIdentifier(finalName)) {
-                                const mappedAgain = getTeamNameByDisplayId(finalName);
-                                if (mappedAgain && mappedAgain !== finalName) {
-                                    finalName = mappedAgain;
-                                }
-                            }
-                            team.name = finalName;
-                            team.id = finalName;
-                            break;
-                        }
-                    }
+                if (mappedTeamName && mappedTeamName !== displayId && mappedTeamName !== team.name) {
+                    log(`   ✅ MAPOVANÝ NÁZOV: "${team.name}" → "${mappedTeamName}"`);
+                    team.name = mappedTeamName;
+                    team.id = mappedTeamName;
+                } else if (!mappedTeamName) {
+                    log(`   ⚠️ getTeamNameByDisplayId vrátila null pre "${displayId}"`);
                 }
+            } else {
+                log(`   ℹ️ "${team.name}" nie je identifikátor, používam pôvodný názov`);
             }
-            
-            // Ešte jeden pokus - cez displayId
-            if (!mappedName || mappedName === team.originalId) {
-                const possibleDisplayId = `${cleanCategory} ${team.originalId}`;
-                const mappedAgain = getTeamNameByDisplayId(possibleDisplayId);
-                if (mappedAgain && mappedAgain !== possibleDisplayId) {
-                    team.name = mappedAgain;
-                    team.id = mappedAgain;
-                }
-            }
-            
-            log(`   📛 Tím v nadstavbovej: "${team.originalId}" → "${team.name}"`);
-        }
+        }        
         
         const pointsForWin = getPointsForWinSync();
         
