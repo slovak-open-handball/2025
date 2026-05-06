@@ -203,6 +203,10 @@ let isTeamNameReplacerInitialized = false;
         let teamBScore = 0;
         let teamAWins = 0;
         let teamBWins = 0;
+
+        if (!teamAId || !teamBId) {
+            return { teamAScore, teamBScore, teamAWins, teamBWins };
+        }
         
         // Odstránenie bielych znakov pre porovnanie
         const cleanA = teamAId.trim();
