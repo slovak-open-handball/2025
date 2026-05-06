@@ -1898,6 +1898,13 @@ let isTeamNameReplacerInitialized = false;
                     normal.forEach((match, idx) => {
                         let homeTeam = match.homeTeamName || match.homeTeamIdentifier;
                         let awayTeam = match.awayTeamName || match.awayTeamIdentifier;
+
+                        const containsCategoryName = (teamName, categoryName) => {
+                            if (!teamName || !categoryName) return false;
+                            // Odstránime "VS" z kategórie pre porovnanie
+                            const cleanCategory = cleanCategoryName(categoryName);
+                            return teamName.includes(cleanCategory);
+                        };
                         
                         // 🔥 MAPOVANIE NÁZVOV CEZ getTeamNameByDisplayId
                         if (looksLikeIdentifier(homeTeam)) {
