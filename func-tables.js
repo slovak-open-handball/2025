@@ -1914,8 +1914,8 @@ let isTeamNameReplacerInitialized = false;
                     normal.forEach((match, idx) => {
                         // 🔥 PRE NADSTAVBOVÉ SKUPINY UŽ NEMAPUJEME - názvy sú už správne
                         // PRE ZÁKLADNÉ SKUPINY TOTO MAPOVANIE ZOSTÁVA
-                        let homeTeam = match.homeTeamName || match.homeTeamIdentifier;
-                        let awayTeam = match.awayTeamName || match.awayTeamIdentifier;
+                        let homeTeam = match.homeTeamName;
+                        let awayTeam = match.awayTeamName;
                         
                         // Ak ide o základnú skupinu (nie nadstavbovú), aplikujeme mapovanie
                         if (table.groupType !== 'nadstavbová skupina') {
