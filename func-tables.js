@@ -2798,8 +2798,8 @@ function getTeamNameByDisplayId(displayId) {
     const fullGroupName = `skupina ${groupLetter}`;
     log(`🔍 Hľadám tím: kategória="${category}", skupina="${fullGroupName}", pozícia=${order}`);
     
-    // 🔥 DÔLEŽITÉ: Zistíme, či ide o nadstavbovú skupinu
-    const groupType = getGroupTypeSync(category, fullGroupName);
+    // 🔥 POUŽIJTE getGroupTypeSync CEZ window.matchTracker
+    const groupType = window.matchTracker?.getGroupTypeSync?.(category, fullGroupName);
     const isAdvancedGroup = (groupType === 'nadstavbová skupina');
     
     let groupTable = null;
