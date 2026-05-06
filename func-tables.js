@@ -537,65 +537,6 @@ let isTeamNameReplacerInitialized = false;
         log(`      ❌ Žiadny dokončený zápas medzi "${teamAName}" a "${teamBName}" nebol nájdený.`);
         return null;
     }
-
-    function getTeamsInGroupFromAllMatchesWithPairTracking(groupMatches, categoryName, groupName) {
-        const teamsMap = new Map();
-        const teamPairsPlayed = new Set(); // Sledujeme, ktoré páry už mali zápas v tejto skupine
-        
-        groupMatches.forEach(match => {
-            // PRESKOČÍME ZÁPASY O UMIESTNENIE
-            if (match.isPlacementMatch) return;
-            
-            const homeTeamId = match.homeTeamIdentifier;
-            const awayTeamId = match.awayTeamIdentifier;
-            
-            // Zaznamenáme, že tento pár tímov už hral v tejto skupine
-            const pairKey = `${homeTeamId}|${awayTeamId}`;
-            const reversePairKey = `${awayTeamId}|${homeTeamId}`;
-            teamPairsPlayed.add(pairKey);
-            teamPairsPlayed.add(reversePairKey);
-            
-            if (!teamsMap.has(homeTeamId)) {
-                teamsMap.set(homeTeamId, {
-                    id: homeTeamId,
-                    name: window.teamManager?.getTeamNameByDisplayIdSync?.(homeTeamId) || homeTeamId,
-                    played: 0,
-                    wins: 0,
-                    draws: 0,
-                    losses: 0,
-                    goalsFor: 0,
-                    goalsAgainst: 0,
-                    points: 0,
-                    // PRIDANÉ: Zoznam tímov, proti ktorým už hral v tejto skupine
-                    opponentsInThisGroup: new Set()
-                });
-            }
-            
-            if (!teamsMap.has(awayTeamId)) {
-                teamsMap.set(awayTeamId, {
-                    id: awayTeamId,
-                    name: window.teamManager?.getTeamNameByDisplayIdSync?.(awayTeamId) || awayTeamId,
-                    played: 0,
-                    wins: 0,
-                    draws: 0,
-                    losses: 0,
-                    goalsFor: 0,
-                    goalsAgainst: 0,
-                    points: 0,
-                    opponentsInThisGroup: new Set()
-                });
-            }
-            
-            // Pridáme súperov do zoznamu
-            teamsMap.get(homeTeamId).opponentsInThisGroup.add(awayTeamId);
-            teamsMap.get(awayTeamId).opponentsInThisGroup.add(homeTeamId);
-        });
-        
-        return {
-            teams: Array.from(teamsMap.values()),
-            teamPairsPlayed: teamPairsPlayed
-        };
-    }
     
     // Funkcia na získanie všetkých tímov v skupine (na základe všetkých zápasov, okrem zápasov o umiestnenie)
     function getTeamsInGroupFromAllMatches(groupMatches) {
