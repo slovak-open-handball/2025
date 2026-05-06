@@ -1256,9 +1256,19 @@ let isTeamNameReplacerInitialized = false;
                 }
             }
 
-            // Posledné mapovanie cez window.matchTracker.getTeamNameByDisplayId()
-//            const finalMappedName = window.matchTracker.getTeamNameByDisplayId(team.name);
-//            team.name = finalMappedName;
+            if (team.name && categoryName && team.name.includes(categoryName)) {
+                log(`   🔄 Názov "${team.name}" obsahuje názov kategórie "${categoryName}", posielam na dodatočné mapovanie...`);
+                const remappedName = window.matchTracker.getTeamNameByDisplayId(team.name);
+                if (remappedName && remappedName !== team.name) {
+                    log(`   ✅ Dodatočné mapovanie: "${team.name}" → "${remappedName}"`);
+                    team.name = remappedName;
+                    team.id = remappedName;
+                } else if (remappedName === team.name) {
+                    log(`   ℹ️ Dodatočné mapovanie neprinieslo zmenu: "${team.name}"`);
+                } else if (!remappedName) {
+                    log(`   ⚠️ Dodatočné mapovanie vrátilo null pre "${team.name}"`);
+                }
+            }
             
             log(`   📛 Tím v nadstavbovej: "${team.originalId}" → "${team.name}"`);
         }
