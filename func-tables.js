@@ -1257,8 +1257,8 @@ let isTeamNameReplacerInitialized = false;
             }
 
             // Posledné mapovanie cez window.matchTracker.getTeamNameByDisplayId()
-            const finalMappedName = window.matchTracker.getTeamNameByDisplayId(team.name);
-            team.name = finalMappedName;
+//            const finalMappedName = window.matchTracker.getTeamNameByDisplayId(team.name);
+//            team.name = finalMappedName;
             
             log(`   📛 Tím v nadstavbovej: "${team.originalId}" → "${team.name}"`);
         }
