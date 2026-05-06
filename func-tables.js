@@ -1516,8 +1516,8 @@ let isTeamNameReplacerInitialized = false;
         // TERAZ POUŽÍVAME MAPOVANÉ NÁZVY PRE DOMÁCICH AJ HOSTÍ
         // ============================================================
         for (const match of advancedMatches) {
-            let homeFinalName = match.homeTeamIdentifier;
-            let awayFinalName = match.awayTeamIdentifier;
+            let homeFinalName = match.homeTeamName;
+            let awayFinalName = match.awayTeamName;
             
             // 🔥 1. MAPOVANIE CEZ getTeamNameByDisplayId
             if (looksLikeIdentifier(homeFinalName)) {
@@ -1535,8 +1535,8 @@ let isTeamNameReplacerInitialized = false;
             }
             
             // 🔥 2. Ak sme nenašli, skúsime z teamNameMapping
-            if (homeFinalName === match.homeTeamIdentifier && teamNameMapping.has(match.homeTeamIdentifier)) {
-                homeFinalName = teamNameMapping.get(match.homeTeamIdentifier);
+            if (homeFinalName === match.homeTeamName && teamNameMapping.has(match.homeTeamName)) {
+                homeFinalName = teamNameMapping.get(match.homeTeamName);
             }
             if (awayFinalName === match.awayTeamIdentifier && teamNameMapping.has(match.awayTeamIdentifier)) {
                 awayFinalName = teamNameMapping.get(match.awayTeamIdentifier);
