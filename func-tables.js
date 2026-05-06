@@ -1511,66 +1511,62 @@ let isTeamNameReplacerInitialized = false;
             }
         }
         
-        // ============================================================
-        // 🔥 OPRAVENÉ: PRÍPRAVA ZOZNAMU ZÁPASOV NA ZOBRAZENIE
-        // TERAZ POUŽÍVAME MAPOVANÉ NÁZVY PRE DOMÁCICH AJ HOSTÍ
-        // ============================================================
         for (const match of advancedMatches) {
-            let homeFinalName = match.homeTeamName;
-            let awayFinalName = match.awayTeamName;
+            // Najprv skúsime nájsť tímy v teamsInAdvanced (kde už sú mapované názvy)
+            let homeTeamObj = teamsInAdvanced.find(t => 
+                t.originalId === match.homeTeamIdentifier || 
+                t.id === match.homeTeamIdentifier ||
+                t.name === match.homeTeamIdentifier
+            );
             
-            // 🔥 1. MAPOVANIE CEZ getTeamNameByDisplayId
-            if (looksLikeIdentifier(homeFinalName)) {
-                const mapped = getTeamNameByDisplayId(homeFinalName);
-                if (mapped && mapped !== homeFinalName) {
-                    homeFinalName = mapped;
+            let awayTeamObj = teamsInAdvanced.find(t => 
+                t.originalId === match.awayTeamIdentifier || 
+                t.id === match.awayTeamIdentifier ||
+                t.name === match.awayTeamIdentifier
+            );
+            
+            let homeFinalName = homeTeamObj?.name;
+            let awayFinalName = awayTeamObj?.name;
+            
+            // Ak sme nenašli v teamsInAdvanced, skúsime mapovať priamo
+            if (!homeFinalName) {
+                homeFinalName = match.homeTeamIdentifier;
+                if (looksLikeIdentifier(homeFinalName)) {
+                    const mapped = getTeamNameByDisplayId(homeFinalName);
+                    if (mapped) homeFinalName = mapped;
                 }
             }
             
-            if (looksLikeIdentifier(awayFinalName)) {
-                const mapped = getTeamNameByDisplayId(awayFinalName);
-                if (mapped && mapped !== awayFinalName) {
-                    awayFinalName = mapped;
+            if (!awayFinalName) {
+                awayFinalName = match.awayTeamIdentifier;
+                if (looksLikeIdentifier(awayFinalName)) {
+                    const mapped = getTeamNameByDisplayId(awayFinalName);
+                    if (mapped) awayFinalName = mapped;
                 }
             }
             
-            // 🔥 2. Ak sme nenašli, skúsime z teamNameMapping
-            if (homeFinalName === match.homeTeamName && teamNameMapping.has(match.homeTeamName)) {
-                homeFinalName = teamNameMapping.get(match.homeTeamName);
-            }
-            if (awayFinalName === match.awayTeamIdentifier && teamNameMapping.has(match.awayTeamIdentifier)) {
-                awayFinalName = teamNameMapping.get(match.awayTeamIdentifier);
-            }
-            
-            // 🔥 3. Ešte raz skúsime zmapovať konečné názvy (pre prípad, že sú to identifikátory)
-            if (looksLikeIdentifier(homeFinalName)) {
-                const mapped = getTeamNameByDisplayId(homeFinalName);
-                if (mapped && mapped !== homeFinalName) {
-                    homeFinalName = mapped;
-                }
-            }
-            if (looksLikeIdentifier(awayFinalName)) {
-                const mapped = getTeamNameByDisplayId(awayFinalName);
-                if (mapped && mapped !== awayFinalName) {
-                    awayFinalName = mapped;
+            // Ešte jeden pokus - cez teamNameMapping
+            if (!homeFinalName || looksLikeIdentifier(homeFinalName)) {
+                const mapped = window.__teamNameMapping?.[match.homeTeamIdentifier];
+                if (mapped?.teamName && !looksLikeIdentifier(mapped.teamName)) {
+                    homeFinalName = mapped.teamName;
                 }
             }
             
-            // 🔥 4. DOPLNKOVÁ KONTROLA - ak je homeFinalName stále identifikátor, skúsime nájsť v sortedTeams
-            if (looksLikeIdentifier(homeFinalName)) {
-                const foundTeam = sortedTeams.find(t => t.originalId === homeFinalName || t.id === homeFinalName);
-                if (foundTeam && foundTeam.name && !looksLikeIdentifier(foundTeam.name)) {
-                    homeFinalName = foundTeam.name;
-                    log(`   🔄 Mapovanie z sortedTeams (home): "${match.homeTeamIdentifier}" → "${homeFinalName}"`);
+            if (!awayFinalName || looksLikeIdentifier(awayFinalName)) {
+                const mapped = window.__teamNameMapping?.[match.awayTeamIdentifier];
+                if (mapped?.teamName && !looksLikeIdentifier(mapped.teamName)) {
+                    awayFinalName = mapped.teamName;
                 }
             }
             
-            if (looksLikeIdentifier(awayFinalName)) {
-                const foundTeam = sortedTeams.find(t => t.originalId === awayFinalName || t.id === awayFinalName);
-                if (foundTeam && foundTeam.name && !looksLikeIdentifier(foundTeam.name)) {
-                    awayFinalName = foundTeam.name;
-                    log(`   🔄 Mapovanie z sortedTeams (away): "${match.awayTeamIdentifier}" → "${awayFinalName}"`);
-                }
+            // Ak je homeFinalName stále identifikátor, použijeme pôvodný
+            if (!homeFinalName || looksLikeIdentifier(homeFinalName)) {
+                homeFinalName = match.homeTeamIdentifier;
+            }
+            
+            if (!awayFinalName || looksLikeIdentifier(awayFinalName)) {
+                awayFinalName = match.awayTeamIdentifier;
             }
             
             let homeScore = 0, awayScore = 0;
@@ -1593,8 +1589,8 @@ let isTeamNameReplacerInitialized = false;
                 id: match.id,
                 homeTeamIdentifier: match.homeTeamIdentifier,
                 awayTeamIdentifier: match.awayTeamIdentifier,
-                homeTeamName: homeFinalName,       // 🔥 TERAZ UŽ MAPOVANÝ NÁZOV
-                awayTeamName: awayFinalName,       // 🔥 TERAZ UŽ MAPOVANÝ NÁZOV
+                homeTeamName: homeFinalName,
+                awayTeamName: awayFinalName,
                 homeScore: homeScore,
                 awayScore: awayScore,
                 status: match.status,
