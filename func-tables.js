@@ -1593,8 +1593,8 @@ let isTeamNameReplacerInitialized = false;
                 id: match.id,
                 homeTeamIdentifier: match.homeTeamIdentifier,
                 awayTeamIdentifier: match.awayTeamIdentifier,
-                homeTeamName: homeFinalName,
-                awayTeamName: awayFinalName,
+                homeTeamName: homeFinalName,       // 🔥 TERAZ UŽ MAPOVANÝ NÁZOV
+                awayTeamName: awayFinalName,       // 🔥 TERAZ UŽ MAPOVANÝ NÁZOV
                 homeScore: homeScore,
                 awayScore: awayScore,
                 status: match.status,
@@ -1611,8 +1611,8 @@ let isTeamNameReplacerInitialized = false;
                 id: `transferred_${Date.now()}_${Math.random()}`,
                 homeTeamIdentifier: transferred.homeTeam,
                 awayTeamIdentifier: transferred.awayTeam,
-                homeTeamName: transferred.homeTeam,
-                awayTeamName: transferred.awayTeam,
+                homeTeamName: transferred.homeTeam,  // 🔥 UŽ JE MAPOVANÝ
+                awayTeamName: transferred.awayTeam,  // 🔥 UŽ JE MAPOVANÝ
                 homeScore: transferred.homeScore,
                 awayScore: transferred.awayScore,
                 status: 'completed',
