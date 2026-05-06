@@ -1834,8 +1834,8 @@ let isTeamNameReplacerInitialized = false;
                 if (normal.length > 0) {
                     log(`\n🏆 ZÁPASY V SKUPINE (${normal.length}):`);
                     normal.forEach((match, idx) => {
-                        let homeTeam = match.homeTeamName || match.homeTeamIdentifier;
-                        let awayTeam = match.awayTeamName || match.awayTeamIdentifier;
+                        let homeTeam = match.homeTeamName;
+                        let awayTeam = match.awayTeamName;
                         
                         const matchDate = match.scheduledTime ? match.scheduledTime.toDate() : null;
                         const dateStr = matchDate ? matchDate.toLocaleDateString('sk-SK') : 'neurčený';
