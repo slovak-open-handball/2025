@@ -783,44 +783,80 @@ let isTeamNameReplacerInitialized = false;
         
         return foundGroup ? foundGroup.type : 'základná skupina';
     }
+
+    window.categoryIdMap = window.categoryIdMap || {};
+
+    // Funkcia na načítanie kategórií a vytvorenie mapovania
+    async function loadCategoriesAndBuildMap() {
+        if (!window.db) return;
+        
+        try {
+            const { doc, getDoc } = window.firebaseModules || await importFirebaseModules();        
+            if (!doc) return;
+            
+            const categoriesRef = doc(window.db, 'settings', 'categories');
+            const categoriesSnap = await getDoc(categoriesRef);
+            
+            if (categoriesSnap.exists()) {
+                const data = categoriesSnap.data();
+                // Vytvoríme mapovanie: názov kategórie → ID
+                for (const [catId, catData] of Object.entries(data)) {
+                    if (catData.name) {
+                        window.categoryIdMap[catData.name] = catId;
+                        log(`📋 Mapovanie kategórie: "${catData.name}" → "${catId}"`);
+                    }
+                }
+                log('✅ Kategórie načítané a zmapované:', Object.keys(window.categoryIdMap).length);
+            }
+        } catch (error) {
+            error('❌ Chyba pri načítaní kategórií:', error);
+        }
+    }
     
     // Synchronná verzia pre rýchly prístup (ak je cache načítaná)
     function getGroupTypeSync(categoryName, groupName) {
-        // Ak cache nie je načítaná, vrátime 'základná skupina' (safe default)
+        // Ak cache nie je načítaná, vrátime 'základná skupina'
         if (!groupsCache) {
             log(`⚠️ getGroupTypeSync: Cache ešte nenačítaná pre ${categoryName} - ${groupName}, vracam 'základná skupina'`);
             return 'základná skupina';
         }
         
-        // Nájdeme ID kategórie podľa názvu
-        let categoryId = null;
+        // 🔥 KROK 1: Získame ID kategórie z mapy
+        let categoryId = window.categoryIdMap?.[categoryName];
         
-        // Metóda 1: Priamo z categoryIdMap
-        for (const [catId, catName] of Object.entries(window.categoryIdMap || {})) {
-            if (catName === categoryName) {
-                categoryId = catId;
-                break;
-            }
-        }
-        
-        // Metóda 2: Prehľadávanie groupsCache priamo
+        // 🔥 KROK 2: Ak nenašlo podľa názvu, skúsime priamo v groupsCache
         if (!categoryId) {
             for (const [catId, groups] of Object.entries(groupsCache)) {
-                // Skúsime porovnať ID s názvom kategórie
+                // Skontrolujeme, či toto ID zodpovedá nášmu názvu
+                // (niekedy sa názov kategórie z databázy líši od zobrazeného)
                 if (catId === categoryName) {
                     categoryId = catId;
                     break;
                 }
-                // Alebo skúsime nájsť podľa názvu v groupsCache
+            }
+        }
+        
+        // 🔥 KROK 3: Ak stále nemáme ID, skúsime nájsť podľa časti názvu
+        if (!categoryId) {
+            const categoryNameLower = categoryName.toLowerCase();
+            for (const [catId, groups] of Object.entries(groupsCache)) {
+                // Skúsime nájsť skupinu, ktorá patrí do tejto kategórie
+                // (pomocou názvu skupiny - napr. "skupina F" je nadstavbová)
                 for (const group of groups) {
-                    // Toto je len heuristika - ak máme v cache skupinu, ktorá patrí do tejto kategórie
-                    // Ukladáme si to do window.categoryIdMap v čase načítania
+                    if (group.name === groupName && group.type === 'nadstavbová skupina') {
+                        // Našli sme nadstavbovú skupinu, takže toto je správna kategória
+                        categoryId = catId;
+                        log(`🔍 Nájdená kategória pre nadstavbovú skupinu ${groupName} → ${catId}`);
+                        break;
+                    }
                 }
+                if (categoryId) break;
             }
         }
         
         if (!categoryId || !groupsCache[categoryId]) {
-            log(`⚠️ getGroupTypeSync: Kategória ${categoryName} (${categoryId}) nenájdená v groupsCache`);
+            log(`⚠️ getGroupTypeSync: Kategória "${categoryName}" (hľadaná ako ${categoryId}) nenájdená v groupsCache`);
+            log(`   Dostupné kategórie v cache: ${Object.keys(groupsCache).join(', ')}`);
             return 'základná skupina';
         }
         
@@ -1112,15 +1148,27 @@ let isTeamNameReplacerInitialized = false;
         // NAJPRV NAČÍTAME TYPY SKUPÍN
         if (!groupsCache) {
             log(`⚠️ createAdvancedGroupTable: Cache ešte nenačítaná, čakám...`);
-            // Vrátime null, nech sa to skúsi neskôr
             return null;
         }
         
-        const groupsData = window.groupsData || {};
-        const categoryId = window.categoryIdMap?.[categoryName] || null;
+        // 🔥 Získame ID kategórie
+        let categoryId = window.categoryIdMap?.[categoryName];
+        if (!categoryId) {
+            // Skúsime nájsť podľa názvu v groupsCache
+            for (const [catId, groups] of Object.entries(groupsCache)) {
+                for (const group of groups) {
+                    if (group.name === groupName) {
+                        categoryId = catId;
+                        log(`🔍 Nájdená kategória pre skupinu ${groupName} → ${catId}`);
+                        break;
+                    }
+                }
+                if (categoryId) break;
+            }
+        }
         
         // ============================================================
-        // 🔥 OPRAVENÉ: Získame VŠETKY základné skupiny z groupsCache
+        // 🔥 Získame VŠETKY základné skupiny z groupsCache
         // ============================================================
         let allBaseGroups = [];
         
@@ -1129,32 +1177,18 @@ let isTeamNameReplacerInitialized = false;
             allBaseGroups = groupsCache[categoryId]
                 .filter(g => g.type === 'základná skupina')
                 .map(g => g.name);
-            log(`🎯 Nadstavbová skupina ${groupName} - Základné skupiny z groupsCache (${categoryId}): ${allBaseGroups.join(', ')}`);
+            log(`🎯 Nadstavbová skupina ${groupName} - Základné skupiny z groupsCache: ${allBaseGroups.join(', ')}`);
         }
         
-        // Metóda 2: Prehľadávanie groupsCache priamo podľa názvu kategórie
-        if (allBaseGroups.length === 0) {
-            for (const [catId, groups] of Object.entries(groupsCache)) {
-                // Skúsime zistiť, či táto kategória zodpovedá nášmu názvu
-                const catName = window.categoryIdMap?.[catId];
-                if (catName === categoryName || catId === categoryName) {
-                    allBaseGroups = groups
-                        .filter(g => g.type === 'základná skupina')
-                        .map(g => g.name);
-                    log(`🎯 Nadstavbová skupina ${groupName} - Základné skupiny z groupsCache (podľa názvu ${categoryName}): ${allBaseGroups.join(', ')}`);
-                    break;
-                }
-            }
-        }
-        
-        // Metóda 3: Ak je zadaný baseGroupName, použijeme ho
+        // Metóda 2: Ak je zadaný baseGroupName, použijeme ho
         if (allBaseGroups.length === 0 && baseGroupName) {
             allBaseGroups = [baseGroupName];
             log(`🎯 Nadstavbová skupina ${groupName} - Používam zadaný baseGroupName: ${baseGroupName}`);
         }
         
-        // Metóda 4: Fallback - skúsime extrahovať písmeno z názvu nadstavbovej skupiny
+        // Metóda 3: Fallback - extrahujeme písmeno z názvu nadstavbovej skupiny
         if (allBaseGroups.length === 0) {
+            // Skúsime extrahovať písmeno (napr. "skupina F" -> "F", "nadstavbová skupina F" -> "F")
             const match = groupName.match(/[A-Za-z]/);
             if (match) {
                 const groupLetter = match[0].toUpperCase();
@@ -1165,6 +1199,46 @@ let isTeamNameReplacerInitialized = false;
         
         if (allBaseGroups.length === 0) {
             log(`❌ Žiadne základné skupiny neboli nájdené pre nadstavbovú skupinu ${groupName}`);
+            return null;
+        }
+        
+        // Kontrola dokončenosti základných skupín
+        const allBaseGroupsFullyCompleted = [];
+        const missingBaseGroups = [];
+        
+        for (const baseGroup of allBaseGroups) {
+            const baseGroupTable = createGroupTable(categoryName, baseGroup);
+            
+            if (!baseGroupTable) {
+                missingBaseGroups.push(baseGroup);
+                log(`   ❌ Základná skupina ${baseGroup} neexistuje!`);
+                continue;
+            }
+            
+            const isFullyCompleted = baseGroupTable.completionPercentage === 100;
+            
+            if (isFullyCompleted) {
+                allBaseGroupsFullyCompleted.push(baseGroup);
+                log(`   ✅ Základná skupina ${baseGroup} je 100% dokončená`);
+            } else {
+                missingBaseGroups.push(baseGroup);
+                log(`   ⏳ Základná skupina ${baseGroup} NIE JE dokončená (${baseGroupTable.completionPercentage}%)`);
+            }
+        }
+        
+        // Pre nadstavbovú tabuľku potrebujeme, aby boli VŠETKY základné skupiny 100%
+        if (missingBaseGroups.length > 0) {
+            log(`\n❌ NADSTAVBOVÁ SKUPINA ${groupName} NEMÔŽE BYŤ VYHODNOTENÁ, pretože nie všetky základné skupiny sú 100% dokončené!\n`);
+            return null;
+        }
+        
+        // Získame carryOverPoints pre túto kategóriu
+        const categorySetting = categorySettingsCache[categoryName];
+        const carryOverEnabled = categorySetting?.carryOverPoints ?? false;
+        
+        const advancedMatches = getGroupMatches(categoryName, groupName);
+        if (advancedMatches.length === 0) {
+            log(`❌ Žiadne zápasy pre nadstavbovú skupinu ${groupName}`);
             return null;
         }
         
@@ -2021,7 +2095,11 @@ let isTeamNameReplacerInitialized = false;
         
         log('✅ Firebase inicializovaný, spúšťam sledovanie...');
         
-        // 🔥 DÔLEŽITÉ: NAJPRV NAČÍTAME TYPY SKUPÍN
+        // 🔥 DÔLEŽITÉ: NAJPRV NAČÍTAME KATEGÓRIE A VYTVORÍME MAPOVANIE
+        log('📋 Načítavam kategórie a vytváram mapovanie...');
+        await loadCategoriesAndBuildMap();
+        
+        // Potom načítame typy skupín
         log('📋 Načítavam typy skupín z databázy...');
         await loadGroupsData();
         log('✅ Typy skupín načítané:', groupsCache ? Object.keys(groupsCache) : 'žiadne');
