@@ -1255,8 +1255,15 @@ let isTeamNameReplacerInitialized = false;
                     team.id = mappedAgain;
                 }
             }
+
+            // Posledné mapovanie cez window.matchTracker.getTeamNameByDisplayId()
+            const finalMappedName = window.matchTracker.getTeamNameByDisplayId(team.name);
+            if (finalMappedName && finalMappedName !== team.name) {
+                team.name = finalMappedName;
+                team.id = finalMappedName;
+            }    
             
-            log(`   📛 Tím v nadstavbovej: "${team.originalId}" → "window.matchTracker.getTeamNameByDisplayId(${team.name})"`);
+            log(`   📛 Tím v nadstavbovej: "${team.originalId}" → "${team.name}"`);
         }
         
         const pointsForWin = getPointsForWinSync();
