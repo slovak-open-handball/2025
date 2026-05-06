@@ -270,6 +270,10 @@ let isTeamNameReplacerInitialized = false;
                 
                 switch (parameter) {
                     case 'headToHead':
+                        if (!teamA.id || !teamB.id) {
+                            comparison = 0;
+                            break;
+                        }
                         const { teamAScore, teamBScore, teamAWins, teamBWins } = calculateHeadToHead(teamA.id, teamB.id, groupMatches);
                         
                         // 🔥 OPRAVENÁ LOGIKA PRE VZÁJOMNÝ ZÁPAS
