@@ -2457,6 +2457,7 @@ let isTeamNameReplacerInitialized = false;
         resetCarryOverCache: resetCarryOverCache,
         getGroupMatches: getGroupMatches,
         getGroupType: getGroupTypeSync,
+        getGroupTypeSync: getGroupTypeSync,
         loadGroupsData: loadGroupsData,
         getGroupsCache: () => groupsCache
     };
