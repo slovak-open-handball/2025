@@ -203,10 +203,6 @@ let isTeamNameReplacerInitialized = false;
         let teamBScore = 0;
         let teamAWins = 0;
         let teamBWins = 0;
-
-        if (!teamAId || !teamBId) {
-            return { teamAScore, teamBScore, teamAWins, teamBWins };
-        }
         
         // Odstránenie bielych znakov pre porovnanie
         const cleanA = teamAId.trim();
@@ -270,10 +266,6 @@ let isTeamNameReplacerInitialized = false;
                 
                 switch (parameter) {
                     case 'headToHead':
-                        if (!teamA.id || !teamB.id) {
-                            comparison = 0;
-                            break;
-                        }
                         const { teamAScore, teamBScore, teamAWins, teamBWins } = calculateHeadToHead(teamA.id, teamB.id, groupMatches);
                         
                         // 🔥 OPRAVENÁ LOGIKA PRE VZÁJOMNÝ ZÁPAS
@@ -1267,7 +1259,6 @@ let isTeamNameReplacerInitialized = false;
             // Posledné mapovanie cez window.matchTracker.getTeamNameByDisplayId()
             const finalMappedName = window.matchTracker.getTeamNameByDisplayId(team.name);
             team.name = finalMappedName;
-            team.id = finalMappedName;  
             
             log(`   📛 Tím v nadstavbovej: "${team.originalId}" → "${team.name}"`);
         }
