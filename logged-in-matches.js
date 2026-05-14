@@ -345,6 +345,8 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
     const [rankError, setRankError] = useState(''); // Chyba pre umiestnenie
     const [maxTeamsInGroup1, setMaxTeamsInGroup1] = useState(0);
     const [maxTeamsInGroup2, setMaxTeamsInGroup2] = useState(0);
+    const [accommodations, setAccommodations] = useState([]); // Zoznam ubytovní
+    const [teamAccommodations, setTeamAccommodations] = useState(new Map()); 
 
     useEffect(() => {
         if (!isOpen) {
@@ -5146,6 +5148,93 @@ const AddMatchesApp = ({ userProfileData }) => {
 
         return unsubscribe;
     };
+
+    const loadAccommodationData = () => {
+        if (!window.db) return;
+    
+        // Načítame ubytovne z kolekcie 'places'
+        const unsubscribePlaces = onSnapshot(
+            collection(window.db, 'places'),
+            (snapshot) => {
+                const loadedAccommodations = [];
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    if (data.type === "ubytovanie") {
+                        loadedAccommodations.push({
+                            id: docSnap.id,
+                            name: data.name,
+                            headerColor: data.headerColor || '#1e40af', // Farba z databázy
+                            headerTextColor: data.headerTextColor || '#000000'
+                        });
+                    }
+                });
+                setAccommodations(loadedAccommodations);
+            },
+            (err) => console.error("Chyba pri načítaní ubytovní:", err)
+        );
+    
+        // Načítame priradenia tímov k ubytovniam z kolekcie 'users'
+        const unsubscribeUsers = onSnapshot(
+            collection(window.db, 'users'),
+            (snapshot) => {
+                const teamAccommodationMap = new Map();
+    
+                snapshot.forEach((userDoc) => {
+                    const userData = userDoc.data() || {};
+                    const userTeams = userData.teams;
+    
+                    if (userTeams && typeof userTeams === 'object') {
+                        Object.entries(userTeams).forEach(([category, teamArray]) => {
+                            if (!Array.isArray(teamArray)) return;
+    
+                            teamArray.forEach((team) => {
+                                if (!team?.teamName) return;
+    
+                                // Vytvoríme identifikátor tímu v rovnakom formáte ako v zápasoch
+                                // Formát: "Kategória SkupinaČíslo" (napr. "U10 A1")
+                                // Musíme extrahovať skupinu a order z team.teamName alebo iných údajov
+                                // Predpokladáme, že team.group a team.order sú dostupné
+                                // Ak nie, budeme musieť vytvoriť mapovanie z názvu tímu na identifikátor
+                                
+                                // Získame skupinu (napr. "A") a order (napr. "1") z tímu
+                                // Toto závisí od štruktúry vašich dát v `team` objekte
+                                // Pre jednoduchosť použijeme team.teamName ako fallback
+                                let teamIdentifier = null;
+                                
+                                // Skúsime vytvoriť identifikátor v tvare "Kategória SkupinaOrder"
+                                if (team.groupName && team.order) {
+                                    // Odstránime "skupina " z názvu skupiny (napr. "skupina A" -> "A")
+                                    const groupLetter = team.groupName.replace('skupina ', '');
+                                    teamIdentifier = `${category} ${groupLetter}${team.order}`;
+                                } else {
+                                    // Fallback: použijeme team.teamName (môže byť nepresné)
+                                    teamIdentifier = team.teamName;
+                                }
+    
+                                // Získame farbu z priradenej ubytovne
+                                const accommodationName = team.accommodation?.name;
+                                if (accommodationName) {
+                                    const accommodation = loadedAccommodations.find(a => a.name === accommodationName);
+                                    if (accommodation) {
+                                        teamAccommodationMap.set(teamIdentifier, accommodation.headerColor);
+                                    }
+                                }
+                            });
+                        });
+                    }
+                });
+    
+                setTeamAccommodations(teamAccommodationMap);
+            },
+            (err) => console.error("Chyba pri načítaní priradení ubytovní:", err)
+        );
+    
+        // Vrátime unsubscribe funkcie pre prípad, že by sme ich potrebovali neskôr odregistrovať
+        return () => {
+            unsubscribePlaces();
+            unsubscribeUsers();
+        };
+    };
     
     // Prihlásenie na odber zmien v teamManager
     useEffect(() => {
@@ -5690,6 +5779,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         // Načítame zápasy
         const unsubscribeMatches = loadMatches();
         const unsubscribeSchedules = loadHallSchedules();
+        const unsubscribeAccommodations = loadAccommodationData();
 
         const loadTournamentDates = async () => {
             try {
@@ -5880,6 +5970,7 @@ const AddMatchesApp = ({ userProfileData }) => {
         return () => {
             if (unsubscribeMatches) unsubscribeMatches();
             if (unsubscribeSchedules) unsubscribeSchedules();
+            if (unsubscribeAccommodations) unsubscribeAccommodations();
             unsubscribePlaces();
         };
     }, []);
@@ -7447,17 +7538,24 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 )
                                                                             ),
                                                                             
-                                                                            // Domáci tím - názov
+                                                                            const homeTeamColor = teamAccommodations.get(match.homeTeamIdentifier) || '#f3f4f6'; // Sivá ak nemá ubytovňu
+                                                                            const homeTextColor = (homeTeamColor !== '#f3f4f6' && homeTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
+
                                                                             React.createElement(
                                                                                 'div', 
                                                                                 { 
                                                                                     className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300',
-                                                                                    style: { textAlign: 'center' }
+                                                                                    style: { 
+                                                                                        textAlign: 'center',
+                                                                                        backgroundColor: homeTeamColor,
+                                                                                        borderRadius: '4px'
+                                                                                    }
                                                                                 },
                                                                                 React.createElement(
                                                                                     'span',
                                                                                     { 
-                                                                                        className: (selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' text-gray-800 truncate block w-full',
+                                                                                        className: (selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
+                                                                                        style: { color: homeTextColor },
                                                                                         title: homeDisplay.name 
                                                                                     },
                                                                                     homeDisplay.name
@@ -7471,19 +7569,27 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 React.createElement('i', { className: 'fa-solid fa-vs text-xs' })
                                                                             ),
                                                                             
-                                                                            // Hosťovský tím - názov
+                                                                            // Hosťovský tím - názov s farbou ubytovne
+                                                                            const awayTeamColor = teamAccommodations.get(match.awayTeamIdentifier) || '#f3f4f6'; // Sivá ak nemá ubytovňu
+                                                                            const awayTextColor = (awayTeamColor !== '#f3f4f6' && awayTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
+
                                                                             React.createElement(
                                                                                 'div', 
                                                                                 { 
                                                                                     className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300',
-                                                                                    style: { textAlign: 'center' }
+                                                                                    style: { 
+                                                                                        textAlign: 'center',
+                                                                                        backgroundColor: awayTeamColor,
+                                                                                        borderRadius: '4px'
+                                                                                    }
                                                                                 },
                                                                                 React.createElement(
                                                                                     'span',
                                                                                     { 
-                                                                                        className: (selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' text-gray-800 truncate block w-full',
+                                                                                        className: (selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
+                                                                                        style: { color: awayTextColor },
                                                                                         title: awayDisplay.name 
-                                                                                    },   
+                                                                                    },
                                                                                     awayDisplay.name
                                                                                 )
                                                                             ),
