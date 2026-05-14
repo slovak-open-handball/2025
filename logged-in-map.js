@@ -121,6 +121,12 @@ const MapApp = ({ userProfileData }) => {
     const [isPlaceAssigned, setIsPlaceAssigned] = useState(false);
     const [isSportHallAssigned, setIsSportHallAssigned] = useState(false);
 
+    const formatDateForDisplay = (dateStr) => {
+        if (!dateStr) return '';
+        const [year, month, day] = dateStr.split('-');
+        return `${day}. ${month}. ${year}`;
+    };
+
     const formatPrice = (price) => {
         if (price == null) return '';
         return price.toFixed(2).replace('.', ',');
@@ -2432,7 +2438,7 @@ const MapApp = ({ userProfileData }) => {
                                   .sort(([a], [b]) => a.localeCompare(b))
                                   .map(([date, price]) => 
                                       React.createElement('p', { key: date, className: 'text-gray-600 text-sm' },
-                                          `${date}: ${formatPrice(price)} €/hodinu`
+                                          `${formatDateForDisplay(date)}: ${formatPrice(price)} €/hodinu`
                                       )
                                   )
                           )
@@ -2881,7 +2887,7 @@ const MapApp = ({ userProfileData }) => {
                     React.createElement('div', { className: 'space-y-2 max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50' },
                         tournamentDates.days.map(date => (
                             React.createElement('div', { key: date, className: 'flex items-center gap-3' },
-                                React.createElement('span', { className: 'w-32 text-sm text-gray-600 font-medium' }, date),
+                                React.createElement('span', { className: 'w-32 text-sm text-gray-600 font-medium' }, formatDateForDisplay(date)),
                                 React.createElement('div', { className: 'flex-1 relative' },
                                     React.createElement('input', {
                                         type: 'number',
@@ -3132,7 +3138,7 @@ const MapApp = ({ userProfileData }) => {
                     React.createElement('div', { className: 'space-y-2 max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50' },
                         tournamentDates.days.map(date => (
                             React.createElement('div', { key: date, className: 'flex items-center gap-3' },
-                                React.createElement('span', { className: 'w-32 text-sm text-gray-600 font-medium' }, date),
+                                React.createElement('span', { className: 'w-32 text-sm text-gray-600 font-medium' }, formatDateForDisplay(date)),
                                 React.createElement('div', { className: 'flex-1 relative' },
                                     React.createElement('input', {
                                         type: 'number',
