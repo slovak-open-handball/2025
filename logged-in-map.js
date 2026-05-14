@@ -1158,6 +1158,10 @@ const MapApp = ({ userProfileData }) => {
             return;
         }
 
+        const oldName = selectedPlace.name;
+        const newName = editName.trim();
+        let totalTransferredTeams = 0;
+
         const updates = {
             name: newName,
             type: editType,
@@ -1221,11 +1225,7 @@ const MapApp = ({ userProfileData }) => {
             }
         }
     
-        try {
-            const oldName = selectedPlace.name;
-            const newName = editName.trim();
-            let totalTransferredTeams = 0;
-            
+        try {            
             // Ak sa mení názov ubytovne, aktualizuj všetky priradené tímy
             if (oldName !== newName && editType === 'ubytovanie') {
                 const allUsers = await getDocs(collection(window.db, 'users'));
