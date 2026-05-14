@@ -3990,6 +3990,10 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [isSwapMatchesModalOpen, setIsSwapMatchesModalOpen] = useState(false);
     const [pendingSwap, setPendingSwap] = useState(null);
 
+    const [dayCardsHeights, setDayCardsHeights] = useState({});
+    const [maxDayCardHeight, setMaxDayCardHeight] = useState(0);
+    const [heightsCalculated, setHeightsCalculated] = useState(false);
+
     // Tieto premenné definujeme AŽ za všetkými useState
     const isFilterActive = selectedCategoryFilter || selectedGroupFilter || selectedHallFilter || selectedDayFilter || selectedTeamIdFilter;
 
@@ -4001,6 +4005,32 @@ const AddMatchesApp = ({ userProfileData }) => {
         const saved = localStorage.getItem('filtersPanelPinned');
         return saved === 'true';
     });
+
+    const measureDayCardsHeights = () => {
+        if (!heightsCalculated) {
+            // Počkáme, kým sa DOM vykreslí
+            setTimeout(() => {
+                const dayCards = document.querySelectorAll('.day-card-measure');
+                const newHeights = {};
+                let maxHeight = 0;
+            
+                dayCards.forEach((card, index) => {
+                    const height = card.offsetHeight;
+                    const cardId = card.getAttribute('data-card-id');
+                    if (cardId) {
+                        newHeights[cardId] = height;
+                        if (height > maxHeight) {
+                            maxHeight = height;
+                        }
+                    }
+                });
+                
+                setDayCardsHeights(newHeights);
+                setMaxDayCardHeight(maxHeight);
+                setHeightsCalculated(true);
+            }, 100);
+        }
+    };
 
     // Funkcia na výmenu zápasov medzi dňami/halami
     const handleSwapMatches = async ({ sourceHallId, sourceDate, targetHallId, targetDate, isWholeHall, swapMatches, swapSchedules }) => {
@@ -4908,6 +4938,13 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [selectedMatchForAssign, setSelectedMatchForAssign] = useState(null);
 
     const [filtersInitialized, setFiltersInitialized] = useState(false);
+
+    useEffect(() => {
+        if (matches.length > 0 && sportHalls.length > 0 && !loading) {
+            setHeightsCalculated(false);
+            measureDayCardsHeights();
+        }
+    }, [matches, sportHalls, loading, selectedCategoryFilter, selectedGroupFilter, selectedHallFilter, selectedDayFilter, selectedTeamIdFilter]);
 
     useEffect(() => {
         localStorage.setItem('filtersPanelPinned', isPinned);
@@ -7939,15 +7976,19 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                            else groupAlignmentMap[group] = 'center';
                                                        });
                                                    };
+
+                                                   const cardId = `${hall.id}_${dateStr}`;
                                                    
                                                    return React.createElement(
                                                        'div',
                                                        {
                                                            key: index,
-                                                           className: 'flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group/day',
+                                                           className: 'day-card-measure flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group/day',
                                                            style: { 
-                                                               width: '100%'
-                                                           }
+                                                               width: '100%',
+                                                               minHeight: heightsCalculated ? `${maxDayCardHeight}px` : 'auto'
+                                                           },
+                                                           'data-card-id': cardId
                                                        },
                                                        // Hlavička dňa s dátumom a počtom zápasov - klikateľná
                                                        React.createElement(
