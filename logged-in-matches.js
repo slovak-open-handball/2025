@@ -416,20 +416,16 @@ const MoveMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
     );
 };
 
-// Modálne okno pre výmenu zápasov medzi halami/dňami
+// Modálne okno pre výmenu zápasov medzi halami/dňami (bez checkboxov - vždy všetko)
 const SwapMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate, isWholeHall, sportHalls, availableDays }) => {
     const [targetHallId, setTargetHallId] = useState('');
     const [targetDate, setTargetDate] = useState('');
-    const [swapMatches, setSwapMatches] = useState(true);
-    const [swapSchedules, setSwapSchedules] = useState(true);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         if (!isOpen) {
             setTargetHallId('');
             setTargetDate('');
-            setSwapMatches(true);
-            setSwapSchedules(true);
             setLoading(false);
         }
     }, [isOpen]);
@@ -454,8 +450,8 @@ const SwapMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
             targetHallId,
             targetDate: isWholeHall ? null : targetDate,
             isWholeHall,
-            swapMatches,
-            swapSchedules
+            swapMatches: true,   // Vždy true
+            swapSchedules: true  // Vždy true
         });
         setLoading(false);
         onClose();
@@ -549,43 +545,21 @@ const SwapMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
                 )
             ),
 
-            // Možnosti výmeny
+            // Informácia o výmene (čo všetko sa vymení)
             React.createElement(
                 'div',
-                { className: 'mb-4 space-y-2 p-3 bg-gray-50 rounded-lg border border-gray-200' },
-                React.createElement(
-                    'label',
-                    { className: 'flex items-center gap-2 cursor-pointer' },
-                    React.createElement('input', {
-                        type: 'checkbox',
-                        checked: swapMatches,
-                        onChange: (e) => setSwapMatches(e.target.checked),
-                        className: 'w-4 h-4 text-blue-600 rounded'
-                    }),
-                    React.createElement('span', { className: 'text-gray-700' }, 'Vymeniť zápasy')
-                ),
-                React.createElement(
-                    'label',
-                    { className: 'flex items-center gap-2 cursor-pointer' },
-                    React.createElement('input', {
-                        type: 'checkbox',
-                        checked: swapSchedules,
-                        onChange: (e) => setSwapSchedules(e.target.checked),
-                        className: 'w-4 h-4 text-blue-600 rounded'
-                    }),
-                    React.createElement('span', { className: 'text-gray-700' }, 'Vymeniť nastavenia (čas začiatku)')
-                )
-            ),
-
-            // Informácia o výmene
-            React.createElement(
-                'div',
-                { className: 'mb-6 p-3 bg-green-50 border border-green-200 rounded-lg' },
+                { className: 'mb-6 p-3 bg-green-50 rounded-lg border border-green-200' },
                 React.createElement(
                     'p',
                     { className: 'text-sm text-green-700 flex items-center gap-2' },
                     React.createElement('i', { className: 'fa-solid fa-info-circle' }),
-                    'Zápasy budú vzájomne vymenené medzi zdrojom a cieľom.'
+                    'Budú vzájomne vymenené:'
+                ),
+                React.createElement(
+                    'ul',
+                    { className: 'mt-2 text-sm text-green-600 list-disc list-inside space-y-1' },
+                    React.createElement('li', null, 'Všetky zápasy medzi zdrojom a cieľom'),
+                    React.createElement('li', null, 'Nastavenia času začiatku (ak existujú)')
                 )
             ),
 
