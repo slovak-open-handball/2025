@@ -7369,7 +7369,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                     specialMatchText = matchTypeText;
                                                                 }
                                                                 
-                                                                // Extrahovanie čísel pre normálne zápasy (len pre ne-špeciálne)
+                                                                // Extrahovanie čísel pre normálne zápasy
                                                                 var extractLetterAndNumber = function(identifier) {
                                                                     if (!identifier) return { letter: '', number: '' };
                                                                     
@@ -7423,7 +7423,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             { 
                                                                                 className: 'grid items-start text-xs',
                                                                                 style: { 
-                                                                                    gridTemplateColumns: '130px 200px 10px 200px 90px', // Zmenené na 5 stĺpcov
+                                                                                    gridTemplateColumns: '130px 200px 10px 200px 50px 30px',
                                                                                     width: 'fit-content'
                                                                                 },
                                                                                 onClick: function(e) {
@@ -7513,31 +7513,72 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 )
                                                                             ),
                                                                             
-                                                                            // JEDEN STĹPEC - pre normálne zápasy zobrazuje čísla a písmeno, pre špeciálne zápasy typ zápasu
-                                                                            // VŽDY PODFARBENÉ FARBOU KATEGÓRIE
-                                                                            React.createElement(
+                                                                            // PRE NORMÁLNE ZÁPASY - samostatné stĺpce pre čísla a písmeno
+                                                                            !isSpecialMatch && React.createElement(
+                                                                                React.Fragment,
+                                                                                null,
+                                                                                // Stĺpec so spojenými číslami
+                                                                                React.createElement(
+                                                                                    'div', 
+                                                                                    { 
+                                                                                        className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300',
+                                                                                        style: { 
+                                                                                            textAlign: 'center',
+                                                                                            backgroundColor: 'transparent'
+                                                                                        }
+                                                                                    },
+                                                                                    React.createElement(
+                                                                                        'span',
+                                                                                        { 
+                                                                                            className: (selectedTeamIdFilter && (match.homeTeamIdentifier === selectedTeamIdFilter || match.awayTeamIdentifier === selectedTeamIdFilter) ? 'font-bold' : 'font-medium') + ' text-black font-mono text-[10px] truncate block w-full'
+                                                                                        },
+                                                                                        combinedNumbers
+                                                                                    )
+                                                                                ),
+                                                                                // Stĺpec s písmenom (podfarbený)
+                                                                                React.createElement(
+                                                                                    'div', 
+                                                                                    { 
+                                                                                        className: 'px-2 py-0 flex items-center justify-center',
+                                                                                        style: { 
+                                                                                            textAlign: 'center',
+                                                                                            backgroundColor: categoryColor,
+                                                                                            fontWeight: 'bold',
+                                                                                            borderRadius: '4px'
+                                                                                        }
+                                                                                    },
+                                                                                    React.createElement(
+                                                                                        'span',
+                                                                                        { 
+                                                                                            className: 'text-black font-bold text-xs truncate block w-full',
+                                                                                            style: { color: '#000', textShadow: 'none' }
+                                                                                        },
+                                                                                        letterToShow || ''
+                                                                                    )
+                                                                                )
+                                                                            ),
+                                                                            
+                                                                            // PRE ŠPECIÁLNE ZÁPASY - jeden stĺpec s colSpan=2 (zlúčené posledné dva stĺpce)
+                                                                            isSpecialMatch && React.createElement(
                                                                                 'div', 
                                                                                 { 
                                                                                     className: 'px-3 py-0 flex items-center justify-center',
+                                                                                    colSpan: 2,
                                                                                     style: { 
                                                                                         textAlign: 'center',
                                                                                         backgroundColor: categoryColor,
                                                                                         fontWeight: 'bold',
-                                                                                        borderRadius: '4px'
+                                                                                        borderRadius: '4px',
+                                                                                        gridColumn: 'span 2'
                                                                                     }
                                                                                 },
                                                                                 React.createElement(
                                                                                     'span',
                                                                                     { 
                                                                                         className: 'text-black font-bold text-xs truncate block w-full',
-                                                                                        style: { 
-                                                                                            color: '#000',
-                                                                                            textShadow: 'none'
-                                                                                        }
+                                                                                        style: { color: '#000', textShadow: 'none' }
                                                                                     },
-                                                                                    isSpecialMatch 
-                                                                                        ? specialMatchText 
-                                                                                        : (combinedNumbers + (letterToShow ? ' ' + letterToShow : ''))
+                                                                                    specialMatchText
                                                                                 )
                                                                             )
                                                                         ),
