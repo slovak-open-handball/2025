@@ -1131,275 +1131,200 @@ let isTeamNameReplacerInitialized = false;
     // ============================================================
     
     // ============================================================
-// OPRAVENÁ FUNKCIA: createAdvancedGroupTable - BEZ REKURZIE
-// ============================================================
-
-function createAdvancedGroupTable(categoryName, groupName, baseGroupName = null) {
-    // NAJPRV NAČÍTAME TYPY SKUPÍN
-    if (!groupsCache) {
-        log(`⚠️ createAdvancedGroupTable: Cache ešte nenačítaná, čakám...`);
-        return null;
-    }
-    
-    const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
-    const groupTypeFromDB = getGroupTypeSync(categoryName, groupName);
-    
-    // 🔥 Vyčistíme názov kategórie
-    const cleanCategory = cleanCategoryName(categoryName);
-    
-    // 🔥 Získame ID kategórie
-    let categoryId = window.categoryIdMap?.[categoryName];
-    if (!categoryId) {
-        for (const [catId, groups] of Object.entries(groupsCache)) {
-            for (const group of groups) {
-                if (group.name === groupName) {
-                    categoryId = catId;
-                    break;
-                }
-            }
-            if (categoryId) break;
-        }
-    }
-    
-    // Získame VŠETKY základné skupiny
-    let allBaseGroups = [];
-    if (categoryId && groupsCache[categoryId]) {
-        allBaseGroups = groupsCache[categoryId]
-            .filter(g => g.type === 'základná skupina')
-            .map(g => g.name);
-    }
-    
-    if (allBaseGroups.length === 0 && baseGroupName) {
-        allBaseGroups = [baseGroupName];
-    }
-    
-    if (allBaseGroups.length === 0) {
-        const match = groupName.match(/[A-Za-z]/);
-        if (match) {
-            const groupLetter = match[0].toUpperCase();
-            allBaseGroups = [`skupina ${groupLetter}`];
-        }
-    }
-    
-    if (allBaseGroups.length === 0) {
-        log(`❌ Žiadne základné skupiny neboli nájdené pre nadstavbovú skupinu ${groupName}`);
-        return null;
-    }
-    
-    // Kontrola dokončenosti základných skupín
-    const allBaseGroupsFullyCompleted = [];
-    for (const baseGroup of allBaseGroups) {
-        const baseGroupTable = createGroupTable(categoryName, baseGroup);
-        if (baseGroupTable && baseGroupTable.completionPercentage === 100) {
-            allBaseGroupsFullyCompleted.push(baseGroup);
-        }
-    }
-    
-    if (allBaseGroupsFullyCompleted.length === 0) {
-        log(`❌ NADSTAVBOVÁ SKUPINA ${groupName} NEMÔŽE BYŤ VYHODNOTENÁ - žiadna základná skupina nie je 100% dokončená`);
-        return null;
-    }
-    
-    const categorySetting = categorySettingsCache[categoryName];
-    const carryOverEnabled = categorySetting?.carryOverPoints ?? false;
-    
-    const advancedMatches = getGroupMatches(categoryName, groupName);
-    if (advancedMatches.length === 0) {
-        log(`❌ Žiadne zápasy pre nadstavbovú skupinu ${groupName}`);
-        return null;
-    }
-    
+    // OPRAVENÁ FUNKCIA: createAdvancedGroupTable - BEZ REKURZIE
     // ============================================================
-    // 🔥 KROK 1: Získame tímy v nadstavbovej skupine a OKAMŽITE ICH ZMAPUJEME
-    // ============================================================
-    let teamsInAdvanced = getTeamsInGroupFromAllMatches(advancedMatches);
     
-    // 🔥 KROK 2: OKAMŽITÉ MAPOVANIE NÁZVOV TÍMOV
-    for (const team of teamsInAdvanced) {
-        team.originalId = team.id;
-        let mappedName = null;
-        
-        // Najprv skúsime cez getTeamNameByDisplayId
-        if (looksLikeIdentifier(team.name)) {
-            mappedName = getTeamNameByDisplayId(team.name);
-            if (mappedName && mappedName !== team.name) {
-                team.name = mappedName;
-                team.id = mappedName;
-            }
+    function createAdvancedGroupTable(categoryName, groupName, baseGroupName = null) {
+        // NAJPRV NAČÍTAME TYPY SKUPÍN
+        if (!groupsCache) {
+            log(`⚠️ createAdvancedGroupTable: Cache ešte nenačítaná, čakám...`);
+            return null;
         }
         
-        // Ak nenašlo, skúsime cez základné skupiny
-        if (!mappedName || mappedName === team.originalId) {
-            for (const baseGroup of allBaseGroupsFullyCompleted) {
-                const baseTable = createGroupTable(categoryName, baseGroup);
-                if (baseTable && baseTable.teams) {
-                    const foundTeam = baseTable.teams.find(t => t.id === team.originalId);
-                    if (foundTeam && foundTeam.name) {
-                        let finalName = foundTeam.name;
-                        if (looksLikeIdentifier(finalName)) {
-                            const mappedAgain = getTeamNameByDisplayId(finalName);
-                            if (mappedAgain && mappedAgain !== finalName) {
-                                finalName = mappedAgain;
-                            }
-                        }
-                        team.name = finalName;
-                        team.id = finalName;
+        const looksLikeIdentifier = (str) => /[0-9]+[A-Za-z]+|[A-Za-z]+[0-9]+/.test(str);
+        const groupTypeFromDB = getGroupTypeSync(categoryName, groupName);
+        
+        // 🔥 Vyčistíme názov kategórie
+        const cleanCategory = cleanCategoryName(categoryName);
+        
+        // 🔥 Získame ID kategórie
+        let categoryId = window.categoryIdMap?.[categoryName];
+        if (!categoryId) {
+            for (const [catId, groups] of Object.entries(groupsCache)) {
+                for (const group of groups) {
+                    if (group.name === groupName) {
+                        categoryId = catId;
                         break;
                     }
                 }
+                if (categoryId) break;
             }
         }
         
-        // Ešte jeden pokus - cez displayId
-        if (!mappedName || mappedName === team.originalId) {
-            const possibleDisplayId = `${cleanCategory} ${team.originalId}`;
-            const mappedAgain = getTeamNameByDisplayId(possibleDisplayId);
-            if (mappedAgain && mappedAgain !== possibleDisplayId) {
-                team.name = mappedAgain;
-                team.id = mappedAgain;
-            }
+        // Získame VŠETKY základné skupiny
+        let allBaseGroups = [];
+        if (categoryId && groupsCache[categoryId]) {
+            allBaseGroups = groupsCache[categoryId]
+                .filter(g => g.type === 'základná skupina')
+                .map(g => g.name);
         }
-
-        if (team.name && categoryName && team.name.includes(categoryName)) {
-            const remappedName = window.matchTracker.getTeamNameByDisplayId(team.name);
-            if (remappedName && remappedName !== team.name) {
-                team.name = remappedName;
-                team.id = remappedName;
+        
+        if (allBaseGroups.length === 0 && baseGroupName) {
+            allBaseGroups = [baseGroupName];
+        }
+        
+        if (allBaseGroups.length === 0) {
+            const match = groupName.match(/[A-Za-z]/);
+            if (match) {
+                const groupLetter = match[0].toUpperCase();
+                allBaseGroups = [`skupina ${groupLetter}`];
             }
         }
         
-        log(`   📛 Tím v nadstavbovej: "${team.originalId}" → "${team.name}"`);
-    }
-    
-    const pointsForWin = getPointsForWinSync();
-    
-    // Zber prenesených výsledkov
-    const transferredMatches = [];
-    const processedPairs = new Set();
-    
-    if (carryOverEnabled) {
-        // 🔥 KROK 3: Získame VŠETKY ostatné NADSTAVBOVÉ SKUPINY v tejto kategórii (POUŽITIE raw dát, NIE rekurzie)
-        const allMatchesRaw = Object.values(matchesData);
-        const otherAdvancedGroups = new Set();
+        if (allBaseGroups.length === 0) {
+            log(`❌ Žiadne základné skupiny neboli nájdené pre nadstavbovú skupinu ${groupName}`);
+            return null;
+        }
         
-        for (const match of allMatchesRaw) {
-            if (match.isPlacementMatch) continue;
-            if (match.categoryName === categoryName && match.groupName) {
-                // Získame typ skupiny priamo z cache, NIE cez createAdvancedGroupTable
-                const groupType = getGroupTypeSync(categoryName, match.groupName);
-                if (groupType === 'nadstavbová skupina' && match.groupName !== groupName) {
-                    otherAdvancedGroups.add(match.groupName);
+        // Kontrola dokončenosti základných skupín
+        const allBaseGroupsFullyCompleted = [];
+        for (const baseGroup of allBaseGroups) {
+            const baseGroupTable = createGroupTable(categoryName, baseGroup);
+            if (baseGroupTable && baseGroupTable.completionPercentage === 100) {
+                allBaseGroupsFullyCompleted.push(baseGroup);
+            }
+        }
+        
+        if (allBaseGroupsFullyCompleted.length === 0) {
+            log(`❌ NADSTAVBOVÁ SKUPINA ${groupName} NEMÔŽE BYŤ VYHODNOTENÁ - žiadna základná skupina nie je 100% dokončená`);
+            return null;
+        }
+        
+        const categorySetting = categorySettingsCache[categoryName];
+        const carryOverEnabled = categorySetting?.carryOverPoints ?? false;
+        
+        const advancedMatches = getGroupMatches(categoryName, groupName);
+        if (advancedMatches.length === 0) {
+            log(`❌ Žiadne zápasy pre nadstavbovú skupinu ${groupName}`);
+            return null;
+        }
+        
+        // ============================================================
+        // 🔥 KROK 1: Získame tímy v nadstavbovej skupine a OKAMŽITE ICH ZMAPUJEME
+        // ============================================================
+        let teamsInAdvanced = getTeamsInGroupFromAllMatches(advancedMatches);
+        
+        // 🔥 KROK 2: OKAMŽITÉ MAPOVANIE NÁZVOV TÍMOV
+        for (const team of teamsInAdvanced) {
+            team.originalId = team.id;
+            let mappedName = null;
+            
+            // Najprv skúsime cez getTeamNameByDisplayId
+            if (looksLikeIdentifier(team.name)) {
+                mappedName = getTeamNameByDisplayId(team.name);
+                if (mappedName && mappedName !== team.name) {
+                    team.name = mappedName;
+                    team.id = mappedName;
                 }
             }
-        }
-        
-        log(`📋 Ostatné nadstavbové skupiny v kategórii ${categoryName}: ${Array.from(otherAdvancedGroups).join(', ') || 'žiadne'}`);
-        
-        // 🔥 KROK 4: Prenesenie zápasov zo základných skupín
-        for (const baseGroup of allBaseGroupsFullyCompleted) {
-            const baseTable = createGroupTable(categoryName, baseGroup);
-            if (!baseTable || !baseTable.matches) continue;
             
-            const completedBaseMatches = baseTable.matches.filter(m => m.status === 'completed');
-            
-            for (const match of completedBaseMatches) {
-                let homeFinalName = null;
-                let awayFinalName = null;
-                
-                for (const team of baseTable.teams) {
-                    if (team.id === match.homeTeamIdentifier) {
-                        homeFinalName = team.name;
-                    }
-                    if (team.id === match.awayTeamIdentifier) {
-                        awayFinalName = team.name;
-                    }
-                }
-                
-                if (!homeFinalName || !awayFinalName) continue;
-                
-                const homeInAdvanced = teamsInAdvanced.some(t => t.name === homeFinalName);
-                const awayInAdvanced = teamsInAdvanced.some(t => t.name === awayFinalName);
-                
-                if (homeInAdvanced && awayInAdvanced) {
-                    const pairKey = homeFinalName < awayFinalName ? 
-                        `${homeFinalName}|${awayFinalName}` : `${awayFinalName}|${homeFinalName}`;
-                    
-                    if (!processedPairs.has(pairKey)) {
-                        let homeScore = 0, awayScore = 0;
-                        if (match.finalScore && !match.forfeitResult) {
-                            homeScore = match.finalScore.home || 0;
-                            awayScore = match.finalScore.away || 0;
-                        } else if (match.forfeitResult && match.forfeitResult.isForfeit) {
-                            homeScore = match.forfeitResult.home || 0;
-                            awayScore = match.forfeitResult.away || 0;
-                        } else {
-                            const events = eventsData[match.id] || [];
-                            const score = getCurrentScore(events);
-                            homeScore = score.home;
-                            awayScore = score.away;
+            // Ak nenašlo, skúsime cez základné skupiny
+            if (!mappedName || mappedName === team.originalId) {
+                for (const baseGroup of allBaseGroupsFullyCompleted) {
+                    const baseTable = createGroupTable(categoryName, baseGroup);
+                    if (baseTable && baseTable.teams) {
+                        const foundTeam = baseTable.teams.find(t => t.id === team.originalId);
+                        if (foundTeam && foundTeam.name) {
+                            let finalName = foundTeam.name;
+                            if (looksLikeIdentifier(finalName)) {
+                                const mappedAgain = getTeamNameByDisplayId(finalName);
+                                if (mappedAgain && mappedAgain !== finalName) {
+                                    finalName = mappedAgain;
+                                }
+                            }
+                            team.name = finalName;
+                            team.id = finalName;
+                            break;
                         }
-                        
-                        transferredMatches.push({
-                            matchId: match.id,
-                            fromGroup: match.groupName,
-                            homeScore: homeScore,
-                            awayScore: awayScore,
-                            homeTeam: homeFinalName,
-                            awayTeam: awayFinalName,
-                            isTransferred: true,
-                            sourceType: 'base_group'
-                        });
-                        processedPairs.add(pairKey);
                     }
                 }
             }
+            
+            // Ešte jeden pokus - cez displayId
+            if (!mappedName || mappedName === team.originalId) {
+                const possibleDisplayId = `${cleanCategory} ${team.originalId}`;
+                const mappedAgain = getTeamNameByDisplayId(possibleDisplayId);
+                if (mappedAgain && mappedAgain !== possibleDisplayId) {
+                    team.name = mappedAgain;
+                    team.id = mappedAgain;
+                }
+            }
+    
+            if (team.name && categoryName && team.name.includes(categoryName)) {
+                const remappedName = window.matchTracker.getTeamNameByDisplayId(team.name);
+                if (remappedName && remappedName !== team.name) {
+                    team.name = remappedName;
+                    team.id = remappedName;
+                }
+            }
+            
+            log(`   📛 Tím v nadstavbovej: "${team.originalId}" → "${team.name}"`);
         }
         
-        // 🔥 KROK 5: PRENESENIE ZÁPASOV Z INÝCH NADSTAVBOVÝCH SKUPÍN
-        // DÔLEŽITÉ: Používame raw dáta z matchesData, NIE voláme createAdvancedGroupTable!
-        if (otherAdvancedGroups.size > 0) {
-            log(`🔍 Hľadám zápasy medzi tímami v iných nadstavbových skupinách (${otherAdvancedGroups.size} skupín)...`);
+        const pointsForWin = getPointsForWinSync();
+        
+        // Zber prenesených výsledkov
+        const transferredMatches = [];
+        const processedPairs = new Set();
+        
+        if (carryOverEnabled) {
+            // 🔥 KROK 3: Získame VŠETKY ostatné NADSTAVBOVÉ SKUPINY v tejto kategórii (POUŽITIE raw dát, NIE rekurzie)
+            const allMatchesRaw = Object.values(matchesData);
+            const otherAdvancedGroups = new Set();
             
-            for (const otherGroupName of otherAdvancedGroups) {
-                log(`   🔄 Spracúvam nadstavbovú skupinu: ${otherGroupName}`);
+            for (const match of allMatchesRaw) {
+                if (match.isPlacementMatch) continue;
+                if (match.categoryName === categoryName && match.groupName) {
+                    // Získame typ skupiny priamo z cache, NIE cez createAdvancedGroupTable
+                    const groupType = getGroupTypeSync(categoryName, match.groupName);
+                    if (groupType === 'nadstavbová skupina' && match.groupName !== groupName) {
+                        otherAdvancedGroups.add(match.groupName);
+                    }
+                }
+            }
+            
+            log(`📋 Ostatné nadstavbové skupiny v kategórii ${categoryName}: ${Array.from(otherAdvancedGroups).join(', ') || 'žiadne'}`);
+            
+            // 🔥 KROK 4: Prenesenie zápasov zo základných skupín
+            for (const baseGroup of allBaseGroupsFullyCompleted) {
+                const baseTable = createGroupTable(categoryName, baseGroup);
+                if (!baseTable || !baseTable.matches) continue;
                 
-                // Získame raw zápasy z tejto skupiny priamo z matchesData
-                const otherGroupMatchesRaw = Object.values(matchesData).filter(match => 
-                    match.categoryName === categoryName && 
-                    match.groupName === otherGroupName && 
-                    match.status === 'completed' &&
-                    !match.isPlacementMatch
-                );
+                const completedBaseMatches = baseTable.matches.filter(m => m.status === 'completed');
                 
-                for (const match of otherGroupMatchesRaw) {
-                    // Získame názvy tímov pre tento zápas - musíme ich zmapovať
-                    let homeTeamName = match.homeTeamIdentifier;
-                    let awayTeamName = match.awayTeamIdentifier;
+                for (const match of completedBaseMatches) {
+                    let homeFinalName = null;
+                    let awayFinalName = null;
                     
-                    // Mapovanie názvov (rovnaká logika ako vyššie)
-                    if (looksLikeIdentifier(homeTeamName)) {
-                        const mapped = getTeamNameByDisplayId(homeTeamName);
-                        if (mapped && mapped !== homeTeamName) {
-                            homeTeamName = mapped;
+                    for (const team of baseTable.teams) {
+                        if (team.id === match.homeTeamIdentifier) {
+                            homeFinalName = team.name;
+                        }
+                        if (team.id === match.awayTeamIdentifier) {
+                            awayFinalName = team.name;
                         }
                     }
-                    if (looksLikeIdentifier(awayTeamName)) {
-                        const mapped = getTeamNameByDisplayId(awayTeamName);
-                        if (mapped && mapped !== awayTeamName) {
-                            awayTeamName = mapped;
-                        }
-                    }
                     
-                    // Kontrola, či oba tímy sú v aktuálnej nadstavbovej skupine
-                    const homeInCurrent = teamsInAdvanced.some(t => t.name === homeTeamName);
-                    const awayInCurrent = teamsInAdvanced.some(t => t.name === awayTeamName);
+                    if (!homeFinalName || !awayFinalName) continue;
                     
-                    if (homeInCurrent && awayInCurrent) {
-                        const pairKey = homeTeamName < awayTeamName ? 
-                            `${homeTeamName}|${awayTeamName}` : `${awayTeamName}|${homeTeamName}`;
+                    const homeInAdvanced = teamsInAdvanced.some(t => t.name === homeFinalName);
+                    const awayInAdvanced = teamsInAdvanced.some(t => t.name === awayFinalName);
+                    
+                    if (homeInAdvanced && awayInAdvanced) {
+                        const pairKey = homeFinalName < awayFinalName ? 
+                            `${homeFinalName}|${awayFinalName}` : `${awayFinalName}|${homeFinalName}`;
                         
                         if (!processedPairs.has(pairKey)) {
-                            // Získame skóre
                             let homeScore = 0, awayScore = 0;
                             if (match.finalScore && !match.forfeitResult) {
                                 homeScore = match.finalScore.home || 0;
@@ -1414,169 +1339,137 @@ function createAdvancedGroupTable(categoryName, groupName, baseGroupName = null)
                                 awayScore = score.away;
                             }
                             
-                            log(`   ✅ Nájdený zápas v skupine ${otherGroupName}: ${homeTeamName} vs ${awayTeamName} (${homeScore}:${awayScore})`);
-                            
                             transferredMatches.push({
                                 matchId: match.id,
-                                fromGroup: otherGroupName,
+                                fromGroup: match.groupName,
                                 homeScore: homeScore,
                                 awayScore: awayScore,
-                                homeTeam: homeTeamName,
-                                awayTeam: awayTeamName,
+                                homeTeam: homeFinalName,
+                                awayTeam: awayFinalName,
                                 isTransferred: true,
-                                sourceType: 'other_advanced_group'
+                                sourceType: 'base_group'
                             });
                             processedPairs.add(pairKey);
                         }
                     }
                 }
             }
-        }
-        
-        // 🔥 KROK 6: Aplikujeme prenesené zápasy na štatistiky
-        for (const transferred of transferredMatches) {
-            const homeTeamStats = teamsInAdvanced.find(t => t.name === transferred.homeTeam);
-            const awayTeamStats = teamsInAdvanced.find(t => t.name === transferred.awayTeam);
             
-            if (homeTeamStats && awayTeamStats) {
-                homeTeamStats.played++;
-                awayTeamStats.played++;
-                homeTeamStats.goalsFor += transferred.homeScore;
-                homeTeamStats.goalsAgainst += transferred.awayScore;
-                awayTeamStats.goalsFor += transferred.awayScore;
-                awayTeamStats.goalsAgainst += transferred.homeScore;
+            // 🔥 KROK 5: PRENESENIE ZÁPASOV Z INÝCH NADSTAVBOVÝCH SKUPÍN
+            // DÔLEŽITÉ: Používame raw dáta z matchesData, NIE voláme createAdvancedGroupTable!
+            if (otherAdvancedGroups.size > 0) {
+                log(`🔍 Hľadám zápasy medzi tímami v iných nadstavbových skupinách (${otherAdvancedGroups.size} skupín)...`);
                 
-                if (transferred.homeScore > transferred.awayScore) {
-                    homeTeamStats.wins++;
-                    awayTeamStats.losses++;
-                    homeTeamStats.points += pointsForWin;
-                } else if (transferred.awayScore > transferred.homeScore) {
-                    awayTeamStats.wins++;
-                    homeTeamStats.losses++;
-                    awayTeamStats.points += pointsForWin;
-                } else {
-                    homeTeamStats.draws++;
-                    awayTeamStats.draws++;
-                    homeTeamStats.points += 1;
-                    awayTeamStats.points += 1;
+                for (const otherGroupName of otherAdvancedGroups) {
+                    log(`   🔄 Spracúvam nadstavbovú skupinu: ${otherGroupName}`);
+                    
+                    // Získame raw zápasy z tejto skupiny priamo z matchesData
+                    const otherGroupMatchesRaw = Object.values(matchesData).filter(match => 
+                        match.categoryName === categoryName && 
+                        match.groupName === otherGroupName && 
+                        match.status === 'completed' &&
+                        !match.isPlacementMatch
+                    );
+                    
+                    for (const match of otherGroupMatchesRaw) {
+                        // Získame názvy tímov pre tento zápas - musíme ich zmapovať
+                        let homeTeamName = match.homeTeamIdentifier;
+                        let awayTeamName = match.awayTeamIdentifier;
+                        
+                        // Mapovanie názvov (rovnaká logika ako vyššie)
+                        if (looksLikeIdentifier(homeTeamName)) {
+                            const mapped = getTeamNameByDisplayId(homeTeamName);
+                            if (mapped && mapped !== homeTeamName) {
+                                homeTeamName = mapped;
+                            }
+                        }
+                        if (looksLikeIdentifier(awayTeamName)) {
+                            const mapped = getTeamNameByDisplayId(awayTeamName);
+                            if (mapped && mapped !== awayTeamName) {
+                                awayTeamName = mapped;
+                            }
+                        }
+                        
+                        // Kontrola, či oba tímy sú v aktuálnej nadstavbovej skupine
+                        const homeInCurrent = teamsInAdvanced.some(t => t.name === homeTeamName);
+                        const awayInCurrent = teamsInAdvanced.some(t => t.name === awayTeamName);
+                        
+                        if (homeInCurrent && awayInCurrent) {
+                            const pairKey = homeTeamName < awayTeamName ? 
+                                `${homeTeamName}|${awayTeamName}` : `${awayTeamName}|${homeTeamName}`;
+                            
+                            if (!processedPairs.has(pairKey)) {
+                                // Získame skóre
+                                let homeScore = 0, awayScore = 0;
+                                if (match.finalScore && !match.forfeitResult) {
+                                    homeScore = match.finalScore.home || 0;
+                                    awayScore = match.finalScore.away || 0;
+                                } else if (match.forfeitResult && match.forfeitResult.isForfeit) {
+                                    homeScore = match.forfeitResult.home || 0;
+                                    awayScore = match.forfeitResult.away || 0;
+                                } else {
+                                    const events = eventsData[match.id] || [];
+                                    const score = getCurrentScore(events);
+                                    homeScore = score.home;
+                                    awayScore = score.away;
+                                }
+                                
+                                log(`   ✅ Nájdený zápas v skupine ${otherGroupName}: ${homeTeamName} vs ${awayTeamName} (${homeScore}:${awayScore})`);
+                                
+                                transferredMatches.push({
+                                    matchId: match.id,
+                                    fromGroup: otherGroupName,
+                                    homeScore: homeScore,
+                                    awayScore: awayScore,
+                                    homeTeam: homeTeamName,
+                                    awayTeam: awayTeamName,
+                                    isTransferred: true,
+                                    sourceType: 'other_advanced_group'
+                                });
+                                processedPairs.add(pairKey);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 🔥 KROK 6: Aplikujeme prenesené zápasy na štatistiky
+            for (const transferred of transferredMatches) {
+                const homeTeamStats = teamsInAdvanced.find(t => t.name === transferred.homeTeam);
+                const awayTeamStats = teamsInAdvanced.find(t => t.name === transferred.awayTeam);
+                
+                if (homeTeamStats && awayTeamStats) {
+                    homeTeamStats.played++;
+                    awayTeamStats.played++;
+                    homeTeamStats.goalsFor += transferred.homeScore;
+                    homeTeamStats.goalsAgainst += transferred.awayScore;
+                    awayTeamStats.goalsFor += transferred.awayScore;
+                    awayTeamStats.goalsAgainst += transferred.homeScore;
+                    
+                    if (transferred.homeScore > transferred.awayScore) {
+                        homeTeamStats.wins++;
+                        awayTeamStats.losses++;
+                        homeTeamStats.points += pointsForWin;
+                    } else if (transferred.awayScore > transferred.homeScore) {
+                        awayTeamStats.wins++;
+                        homeTeamStats.losses++;
+                        awayTeamStats.points += pointsForWin;
+                    } else {
+                        homeTeamStats.draws++;
+                        awayTeamStats.draws++;
+                        homeTeamStats.points += 1;
+                        awayTeamStats.points += 1;
+                    }
                 }
             }
         }
-    }
-    
-    // Spracovanie zápasov v nadstavbovej skupine (rovnaký kód ako predtým...)
-    const completedAdvancedMatches = advancedMatches.filter(m => m.status === 'completed');
-    
-    for (const match of completedAdvancedMatches) {
-        let homeScore = 0, awayScore = 0;
         
-        if (match.finalScore && !match.forfeitResult) {
-            homeScore = match.finalScore.home || 0;
-            awayScore = match.finalScore.away || 0;
-        } else if (match.forfeitResult && match.forfeitResult.isForfeit) {
-            homeScore = match.forfeitResult.home || 0;
-            awayScore = match.forfeitResult.away || 0;
-        } else {
-            const events = eventsData[match.id] || [];
-            const score = getCurrentScore(events);
-            homeScore = score.home;
-            awayScore = score.away;
-        }
+        // Spracovanie zápasov v nadstavbovej skupine (rovnaký kód ako predtým...)
+        const completedAdvancedMatches = advancedMatches.filter(m => m.status === 'completed');
         
-        let homeFinalName = null;
-        let awayFinalName = null;
-        
-        for (const team of teamsInAdvanced) {
-            if (team.id === match.homeTeamIdentifier || team.originalId === match.homeTeamIdentifier) {
-                homeFinalName = team.name;
-            }
-            if (team.id === match.awayTeamIdentifier || team.originalId === match.awayTeamIdentifier) {
-                awayFinalName = team.name;
-            }
-        }
-        
-        if (!homeFinalName && looksLikeIdentifier(match.homeTeamIdentifier)) {
-            homeFinalName = getTeamNameByDisplayId(match.homeTeamIdentifier);
-        }
-        if (!awayFinalName && looksLikeIdentifier(match.awayTeamIdentifier)) {
-            awayFinalName = getTeamNameByDisplayId(match.awayTeamIdentifier);
-        }
-        
-        if (!homeFinalName) homeFinalName = match.homeTeamIdentifier;
-        if (!awayFinalName) awayFinalName = match.awayTeamIdentifier;
-        
-        const homeTeamStats = teamsInAdvanced.find(t => t.name === homeFinalName);
-        const awayTeamStats = teamsInAdvanced.find(t => t.name === awayFinalName);
-        
-        if (homeTeamStats && awayTeamStats) {
-            const pairKey = homeFinalName < awayFinalName ? 
-                `${homeFinalName}|${awayFinalName}` : `${awayFinalName}|${homeFinalName}`;
+        for (const match of completedAdvancedMatches) {
+            let homeScore = 0, awayScore = 0;
             
-            if (!processedPairs.has(pairKey)) {
-                processedPairs.add(pairKey);
-                
-                homeTeamStats.played++;
-                awayTeamStats.played++;
-                homeTeamStats.goalsFor += homeScore;
-                homeTeamStats.goalsAgainst += awayScore;
-                awayTeamStats.goalsFor += awayScore;
-                awayTeamStats.goalsAgainst += homeScore;
-                
-                if (homeScore > awayScore) {
-                    homeTeamStats.wins++;
-                    awayTeamStats.losses++;
-                    homeTeamStats.points += pointsForWin;
-                } else if (awayScore > homeScore) {
-                    awayTeamStats.wins++;
-                    homeTeamStats.losses++;
-                    awayTeamStats.points += pointsForWin;
-                } else {
-                    homeTeamStats.draws++;
-                    awayTeamStats.draws++;
-                    homeTeamStats.points += 1;
-                    awayTeamStats.points += 1;
-                }
-            }
-        }
-    }
-    
-    // Výpočet rozdielu skóre a zoradenie
-    for (const team of teamsInAdvanced) {
-        team.goalDifference = team.goalsFor - team.goalsAgainst;
-    }
-    
-    const sortedTeams = [...teamsInAdvanced].sort((a, b) => {
-        return compareTeams(a, b, advancedMatches, tableSettings.sortingConditions);
-    });
-    
-    // Zápasy na zobrazenie
-    const allMatchesForDisplay = [];
-    
-    for (const match of advancedMatches) {
-        let homeFinalName = null;
-        let awayFinalName = null;
-        
-        for (const team of sortedTeams) {
-            if (team.id === match.homeTeamIdentifier || team.originalId === match.homeTeamIdentifier) {
-                homeFinalName = team.name;
-            }
-            if (team.id === match.awayTeamIdentifier || team.originalId === match.awayTeamIdentifier) {
-                awayFinalName = team.name;
-            }
-        }
-        
-        if (!homeFinalName && looksLikeIdentifier(match.homeTeamIdentifier)) {
-            homeFinalName = getTeamNameByDisplayId(match.homeTeamIdentifier);
-        }
-        if (!awayFinalName && looksLikeIdentifier(match.awayTeamIdentifier)) {
-            awayFinalName = getTeamNameByDisplayId(match.awayTeamIdentifier);
-        }
-        
-        if (!homeFinalName) homeFinalName = match.homeTeamIdentifier;
-        if (!awayFinalName) awayFinalName = match.awayTeamIdentifier;
-        
-        let homeScore = 0, awayScore = 0;
-        if (match.status === 'completed') {
             if (match.finalScore && !match.forfeitResult) {
                 homeScore = match.finalScore.home || 0;
                 awayScore = match.finalScore.away || 0;
@@ -1589,64 +1482,171 @@ function createAdvancedGroupTable(categoryName, groupName, baseGroupName = null)
                 homeScore = score.home;
                 awayScore = score.away;
             }
+            
+            let homeFinalName = null;
+            let awayFinalName = null;
+            
+            for (const team of teamsInAdvanced) {
+                if (team.id === match.homeTeamIdentifier || team.originalId === match.homeTeamIdentifier) {
+                    homeFinalName = team.name;
+                }
+                if (team.id === match.awayTeamIdentifier || team.originalId === match.awayTeamIdentifier) {
+                    awayFinalName = team.name;
+                }
+            }
+            
+            if (!homeFinalName && looksLikeIdentifier(match.homeTeamIdentifier)) {
+                homeFinalName = getTeamNameByDisplayId(match.homeTeamIdentifier);
+            }
+            if (!awayFinalName && looksLikeIdentifier(match.awayTeamIdentifier)) {
+                awayFinalName = getTeamNameByDisplayId(match.awayTeamIdentifier);
+            }
+            
+            if (!homeFinalName) homeFinalName = match.homeTeamIdentifier;
+            if (!awayFinalName) awayFinalName = match.awayTeamIdentifier;
+            
+            const homeTeamStats = teamsInAdvanced.find(t => t.name === homeFinalName);
+            const awayTeamStats = teamsInAdvanced.find(t => t.name === awayFinalName);
+            
+            if (homeTeamStats && awayTeamStats) {
+                const pairKey = homeFinalName < awayFinalName ? 
+                    `${homeFinalName}|${awayFinalName}` : `${awayFinalName}|${homeFinalName}`;
+                
+                if (!processedPairs.has(pairKey)) {
+                    processedPairs.add(pairKey);
+                    
+                    homeTeamStats.played++;
+                    awayTeamStats.played++;
+                    homeTeamStats.goalsFor += homeScore;
+                    homeTeamStats.goalsAgainst += awayScore;
+                    awayTeamStats.goalsFor += awayScore;
+                    awayTeamStats.goalsAgainst += homeScore;
+                    
+                    if (homeScore > awayScore) {
+                        homeTeamStats.wins++;
+                        awayTeamStats.losses++;
+                        homeTeamStats.points += pointsForWin;
+                    } else if (awayScore > homeScore) {
+                        awayTeamStats.wins++;
+                        homeTeamStats.losses++;
+                        awayTeamStats.points += pointsForWin;
+                    } else {
+                        homeTeamStats.draws++;
+                        awayTeamStats.draws++;
+                        homeTeamStats.points += 1;
+                        awayTeamStats.points += 1;
+                    }
+                }
+            }
         }
         
-        allMatchesForDisplay.push({
-            id: match.id,
-            homeTeamIdentifier: match.homeTeamIdentifier,
-            awayTeamIdentifier: match.awayTeamIdentifier,
-            homeTeamName: homeFinalName,
-            awayTeamName: awayFinalName,
-            homeScore: homeScore,
-            awayScore: awayScore,
-            status: match.status,
-            scheduledTime: match.scheduledTime,
-            isAdvancedMatch: true
+        // Výpočet rozdielu skóre a zoradenie
+        for (const team of teamsInAdvanced) {
+            team.goalDifference = team.goalsFor - team.goalsAgainst;
+        }
+        
+        const sortedTeams = [...teamsInAdvanced].sort((a, b) => {
+            return compareTeams(a, b, advancedMatches, tableSettings.sortingConditions);
         });
+        
+        // Zápasy na zobrazenie
+        const allMatchesForDisplay = [];
+        
+        for (const match of advancedMatches) {
+            let homeFinalName = null;
+            let awayFinalName = null;
+            
+            for (const team of sortedTeams) {
+                if (team.id === match.homeTeamIdentifier || team.originalId === match.homeTeamIdentifier) {
+                    homeFinalName = team.name;
+                }
+                if (team.id === match.awayTeamIdentifier || team.originalId === match.awayTeamIdentifier) {
+                    awayFinalName = team.name;
+                }
+            }
+            
+            if (!homeFinalName && looksLikeIdentifier(match.homeTeamIdentifier)) {
+                homeFinalName = getTeamNameByDisplayId(match.homeTeamIdentifier);
+            }
+            if (!awayFinalName && looksLikeIdentifier(match.awayTeamIdentifier)) {
+                awayFinalName = getTeamNameByDisplayId(match.awayTeamIdentifier);
+            }
+            
+            if (!homeFinalName) homeFinalName = match.homeTeamIdentifier;
+            if (!awayFinalName) awayFinalName = match.awayTeamIdentifier;
+            
+            let homeScore = 0, awayScore = 0;
+            if (match.status === 'completed') {
+                if (match.finalScore && !match.forfeitResult) {
+                    homeScore = match.finalScore.home || 0;
+                    awayScore = match.finalScore.away || 0;
+                } else if (match.forfeitResult && match.forfeitResult.isForfeit) {
+                    homeScore = match.forfeitResult.home || 0;
+                    awayScore = match.forfeitResult.away || 0;
+                } else {
+                    const events = eventsData[match.id] || [];
+                    const score = getCurrentScore(events);
+                    homeScore = score.home;
+                    awayScore = score.away;
+                }
+            }
+            
+            allMatchesForDisplay.push({
+                id: match.id,
+                homeTeamIdentifier: match.homeTeamIdentifier,
+                awayTeamIdentifier: match.awayTeamIdentifier,
+                homeTeamName: homeFinalName,
+                awayTeamName: awayFinalName,
+                homeScore: homeScore,
+                awayScore: awayScore,
+                status: match.status,
+                scheduledTime: match.scheduledTime,
+                isAdvancedMatch: true
+            });
+        }
+        
+        // Pridanie prenesených zápasov
+        for (const transferred of transferredMatches) {
+            allMatchesForDisplay.unshift({
+                id: `transferred_${Date.now()}_${Math.random()}`,
+                homeTeamIdentifier: transferred.homeTeam,
+                awayTeamIdentifier: transferred.awayTeam,
+                homeTeamName: transferred.homeTeam,
+                awayTeamName: transferred.awayTeam,
+                homeScore: transferred.homeScore,
+                awayScore: transferred.awayScore,
+                status: 'completed',
+                scheduledTime: null,
+                isTransferred: true,
+                fromGroup: transferred.fromGroup,
+                sourceType: transferred.sourceType
+            });
+        }
+        
+        const totalAdvancedMatches = advancedMatches.length;
+        const completedAdvancedCount = completedAdvancedMatches.length;
+        const completionPercentage = totalAdvancedMatches > 0 ? (completedAdvancedCount / totalAdvancedMatches * 100) : 0;
+        
+        log(`📊 Nadstavbová skupina ${groupName}: Prenesených ${transferredMatches.filter(m => m.sourceType === 'base_group').length} zo základných skupín, ${transferredMatches.filter(m => m.sourceType === 'other_advanced_group').length} z iných nadstavbových skupín`);
+        
+        return {
+            category: categoryName,
+            group: groupName,
+            groupType: groupTypeFromDB,
+            baseGroup: allBaseGroupsFullyCompleted.join(', '),
+            carryOverPoints: carryOverEnabled,
+            teams: sortedTeams,
+            matches: allMatchesForDisplay,
+            completedMatches: [...completedAdvancedMatches],
+            transferredMatches: transferredMatches,
+            totalMatches: totalAdvancedMatches,
+            completedCount: completedAdvancedCount,
+            remainingCount: totalAdvancedMatches - completedAdvancedCount,
+            completionPercentage: completionPercentage,
+            isFullyCompleted: totalAdvancedMatches === completedAdvancedCount,
+            pointsForWin: pointsForWin
+        };
     }
-    
-    // Pridanie prenesených zápasov
-    for (const transferred of transferredMatches) {
-        allMatchesForDisplay.unshift({
-            id: `transferred_${Date.now()}_${Math.random()}`,
-            homeTeamIdentifier: transferred.homeTeam,
-            awayTeamIdentifier: transferred.awayTeam,
-            homeTeamName: transferred.homeTeam,
-            awayTeamName: transferred.awayTeam,
-            homeScore: transferred.homeScore,
-            awayScore: transferred.awayScore,
-            status: 'completed',
-            scheduledTime: null,
-            isTransferred: true,
-            fromGroup: transferred.fromGroup,
-            sourceType: transferred.sourceType
-        });
-    }
-    
-    const totalAdvancedMatches = advancedMatches.length;
-    const completedAdvancedCount = completedAdvancedMatches.length;
-    const completionPercentage = totalAdvancedMatches > 0 ? (completedAdvancedCount / totalAdvancedMatches * 100) : 0;
-    
-    log(`📊 Nadstavbová skupina ${groupName}: Prenesených ${transferredMatches.filter(m => m.sourceType === 'base_group').length} zo základných skupín, ${transferredMatches.filter(m => m.sourceType === 'other_advanced_group').length} z iných nadstavbových skupín`);
-    
-    return {
-        category: categoryName,
-        group: groupName,
-        groupType: groupTypeFromDB,
-        baseGroup: allBaseGroupsFullyCompleted.join(', '),
-        carryOverPoints: carryOverEnabled,
-        teams: sortedTeams,
-        matches: allMatchesForDisplay,
-        completedMatches: [...completedAdvancedMatches],
-        transferredMatches: transferredMatches,
-        totalMatches: totalAdvancedMatches,
-        completedCount: completedAdvancedCount,
-        remainingCount: totalAdvancedMatches - completedAdvancedCount,
-        completionPercentage: completionPercentage,
-        isFullyCompleted: totalAdvancedMatches === completedAdvancedCount,
-        pointsForWin: pointsForWin
-    };
-}
 
     function mapAdvancedGroupTeamsGeneral(teamsInAdvanced, categoryName, allBaseGroupTables) {
         const cleanCategory = cleanCategoryName(categoryName);
