@@ -7423,7 +7423,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             { 
                                                                                 className: 'grid items-start text-xs',
                                                                                 style: { 
-                                                                                    gridTemplateColumns: '130px 200px 10px 200px 50px auto', // Zmenené: posledný stĺpec na 'auto' pre dynamickú šírku
+                                                                                    gridTemplateColumns: '130px 200px 10px 200px 50px 30px',
                                                                                     width: 'fit-content'
                                                                                 },
                                                                                 onClick: function(e) {
@@ -7546,21 +7546,21 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         fontWeight: 'bold',
                                                                                         borderRadius: '4px',
                                                                                         gridColumn: 'span 2',
-                                                                                        whiteSpace: 'normal',  // Povoliť zalamovanie textu
-                                                                                        wordBreak: 'keep-all',  // NEROZDEĽOVAŤ slová
-                                                                                        minWidth: '80px',       // Minimálna šírka pre text
-                                                                                        maxWidth: 'none'        // Žiadne maximálne obmedzenie
+                                                                                        whiteSpace: 'nowrap',
+                                                                                        wordBreak: 'keep-all',
+                                                                                        minWidth: '80px',
+                                                                                        maxWidth: 'none'
                                                                                     }
                                                                                 },
                                                                                 React.createElement(
                                                                                     'span',
                                                                                     { 
-                                                                                        className: 'text-black font-bold text-xs block w-full',
+                                                                                        className: 'text-black font-bold text-[10px] block w-full',
                                                                                         style: { 
                                                                                             color: '#000', 
                                                                                             textShadow: 'none',
-                                                                                            whiteSpace: 'normal',  // Povoliť zalamovanie na viac riadkov
-                                                                                            wordBreak: 'keep-all'   // Nerozdeľovať slová
+                                                                                            whiteSpace: 'nowrap',
+                                                                                            wordBreak: 'keep-all'
                                                                                         }
                                                                                     },
                                                                                     specialMatchText
