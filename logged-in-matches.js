@@ -7870,7 +7870,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                    style: { 
                                                                                                        gridTemplateColumns: '130px 1fr',
                                                                                                        width: '100%',
-                                                                                                       minHeight: '40px'
                                                                                                    }
                                                                                                },
                                                                                                // Prvý stĺpec - časový interval a dĺžka
