@@ -102,8 +102,6 @@ const MapApp = ({ userProfileData }) => {
     const [editCostPerNight, setEditCostPerNight] = useState('');
     const [priceError, setPriceError] = useState(null);
   
-    
-    // NOVÉ: Premenné pre ceny stravovania
     const [newBreakfastPrice, setNewBreakfastPrice] = useState('');
     const [newLunchPrice, setNewLunchPrice] = useState('');
     const [newDinnerPrice, setNewDinnerPrice] = useState('');
@@ -111,6 +109,10 @@ const MapApp = ({ userProfileData }) => {
     const [editLunchPrice, setEditLunchPrice] = useState('');
     const [editDinnerPrice, setEditDinnerPrice] = useState('');
     const [mealPriceError, setMealPriceError] = useState(null);
+
+    const [hallRentalPrices, setHallRentalPrices] = useState({}); // { "2024-01-01": 50, "2024-01-02": 50 }
+    const [editHallRentalPrices, setEditHallRentalPrices] = useState({});
+    const [tournamentDates, setTournamentDates] = useState({ start: null, end: null, days: [] });
 
     // NOVÉ: Premenná pre rozbaľovacie menu typov ubytovania
     const [showAccommodationTypesDropdown, setShowAccommodationTypesDropdown] = useState(false);
@@ -207,6 +209,82 @@ const MapApp = ({ userProfileData }) => {
             }
         }, 200);
     }, [selectedPlace]);
+
+    useEffect(() => {
+        if (!window.db) return;
+    
+        const fetchTournamentDates = async () => {
+            try {
+                const settingsRef = doc(window.db, 'settings', 'registration');
+                const settingsSnap = await getDoc(settingsRef);
+                
+                if (settingsSnap.exists()) {
+                    const data = settingsSnap.data();
+                    const startDate = data.tournamentStart?.toDate();
+                    const endDate = data.tournamentEnd?.toDate();
+                    
+                    if (startDate && endDate && startDate <= endDate) {
+                        const days = [];
+                        const currentDate = new Date(startDate);
+                        currentDate.setHours(0, 0, 0, 0);
+                        const endDateTime = new Date(endDate);
+                        endDateTime.setHours(0, 0, 0, 0);
+                        
+                        while (currentDate <= endDateTime) {
+                            const dateStr = currentDate.toISOString().split('T')[0];
+                            days.push(dateStr);
+                            currentDate.setDate(currentDate.getDate() + 1);
+                        }
+                        
+                        setTournamentDates({
+                            start: startDate,
+                            end: endDate,
+                            days: days
+                        });
+                    } else {
+                        setTournamentDates({ start: null, end: null, days: [] });
+                    }
+                }
+            } catch (err) {
+                console.error("Chyba pri načítaní dátumov turnaja:", err);
+            }
+        };
+        
+        fetchTournamentDates();
+        
+        // Počúvanie na zmeny v settings/registration
+        const unsubscribe = onSnapshot(doc(window.db, 'settings', 'registration'), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                const startDate = data.tournamentStart?.toDate();
+                const endDate = data.tournamentEnd?.toDate();
+                
+                if (startDate && endDate && startDate <= endDate) {
+                    const days = [];
+                    const currentDate = new Date(startDate);
+                    currentDate.setHours(0, 0, 0, 0);
+                    const endDateTime = new Date(endDate);
+                    endDateTime.setHours(0, 0, 0, 0);
+                    
+                    while (currentDate <= endDateTime) {
+                        const dateStr = currentDate.toISOString().split('T')[0];
+                        days.push(dateStr);
+                        currentDate.setDate(currentDate.getDate() + 1);
+                    }
+                    
+                    setTournamentDates({
+                        start: startDate,
+                        end: endDate,
+                        days: days
+                    });
+                } else {
+                    setTournamentDates({ start: null, end: null, days: [] });
+                }
+            }
+        });
+        
+        return () => unsubscribe();
+    }, []);
 
     useEffect(() => {
         const checkIfSportHallHasMatches = async () => {
@@ -591,6 +669,19 @@ const MapApp = ({ userProfileData }) => {
                 }
                 placeData.costPerNight = cost;
             }
+
+            if (newPlaceType === 'sportova_hala' && tournamentDates.days.length > 0) {
+                const prices = {};
+                tournamentDates.days.forEach(date => {
+                    const price = hallRentalPrices[date];
+                    if (price && !isNaN(parseFloat(price)) && parseFloat(price) > 0) {
+                        prices[date] = parseFloat(price);
+                    }
+                });
+                if (Object.keys(prices).length > 0) {
+                    placeData.hallRentalPrices = prices;
+                }
+            }
             
             // Stravovanie - ceny za jedlá
             if (newPlaceType === 'stravovanie') {
@@ -684,6 +775,10 @@ const MapApp = ({ userProfileData }) => {
             
             if (placeData.note) {
                 addMessage += `, poznámka: ${placeData.note}`;
+            }
+
+            if (newPlaceType === 'sportova_hala' && placeData.hallRentalPrices) {
+                addMessage += `, ceny prenájmu: ${Object.entries(placeData.hallRentalPrices).map(([date, price]) => `${date}: ${formatPrice(price)}€/h`).join(', ')}`;
             }
             
             await createPlaceChangeNotification('place_created', [addMessage], {
@@ -1015,6 +1110,8 @@ const MapApp = ({ userProfileData }) => {
         setActiveFilter(null);
         setSelectedAccommodationTypeFilter(null);
         setShowAccommodationTypesDropdown(false);
+        setHallRentalPrices({});
+        setEditHallRentalPrices({});
         
         if (editMarkerRef.current) {
             if (editMarkerRef.current._clickHandler) {
@@ -1054,6 +1151,12 @@ const MapApp = ({ userProfileData }) => {
             window.showGlobalNotification('Názov a typ musia byť vyplnené', 'error');
             return;
         }
+
+        const updates = {
+            name: newName,
+            type: editType,
+            updatedAt: Timestamp.now(),
+        };
         
         if (editType === 'ubytovanie' && !editAccommodationType) {
             window.showGlobalNotification('Vyberte typ ubytovania', 'error');
@@ -1074,6 +1177,23 @@ const MapApp = ({ userProfileData }) => {
                 return;
             }
         }
+
+        if (editType === 'sportova_hala' && tournamentDates.days.length > 0) {
+            const prices = {};
+            tournamentDates.days.forEach(date => {
+                const price = editHallRentalPrices[date];
+                if (price && !isNaN(parseFloat(price)) && parseFloat(price) > 0) {
+                    prices[date] = parseFloat(price);
+                }
+            });
+            if (Object.keys(prices).length > 0) {
+                updates.hallRentalPrices = prices;
+            } else {
+                updates.hallRentalPrices = null;
+            }
+        } else {
+            updates.hallRentalPrices = null;
+        }     
         
         // Validácia cien pre stravovanie
         if (editType === 'stravovanie') {
@@ -1153,12 +1273,6 @@ const MapApp = ({ userProfileData }) => {
                     console.log(`[AUTOMATICKÁ AKTUALIZÁCIA] ${update.transferredCount} tímov používateľa ${update.userId} bolo prenesené z '${oldName}' na '${newName}'`);
                 }
             }
-    
-            const updates = {
-                name: newName,
-                type: editType,
-                updatedAt: Timestamp.now(),
-            };
     
             if (editType === 'ubytovanie') {
                 updates.accommodationType = editAccommodationType || null;
@@ -2309,6 +2423,21 @@ const MapApp = ({ userProfileData }) => {
                         React.createElement('p', { className: 'text-gray-500 italic' }, 'Ceny nie sú nastavené')
                     )
                   ),
+
+                  selectedPlace.type === 'sportova_hala' && selectedPlace.hallRentalPrices && Object.keys(selectedPlace.hallRentalPrices).length > 0 && (
+                      React.createElement('div', { className: 'mb-3' },
+                          React.createElement('strong', { className: 'block text-gray-700 mb-2' }, 'Ceny prenájmu haly (€/hodinu):'),
+                          React.createElement('div', { className: 'space-y-1 pl-2' },
+                              Object.entries(selectedPlace.hallRentalPrices)
+                                  .sort(([a], [b]) => a.localeCompare(b))
+                                  .map(([date, price]) => 
+                                      React.createElement('p', { key: date, className: 'text-gray-600 text-sm' },
+                                          `${date}: ${formatPrice(price)} €/hodinu`
+                                      )
+                                  )
+                          )
+                      )
+                  ),
                   
                   React.createElement('p', { className: 'text-gray-600 mb-3' },
                     React.createElement('strong', null, 'Súradnice: '),
@@ -2398,24 +2527,24 @@ const MapApp = ({ userProfileData }) => {
                         },
                         className: 'w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition'
                       }, 'Upraviť polohu'),
-                  React.createElement('button', {
-                      onClick: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
-                               (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned) ? 
-                               null : handleDeletePlace,
-                      disabled: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
-                                (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned),
-                      className: `w-full py-3 font-medium rounded-lg transition flex items-center justify-center gap-2
-                        ${((selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
-                           (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned))
-                          ? 'bg-white text-red-600 border-2 border-red-600 opacity-100 hover:cursor-not-allowed' 
-                          : 'bg-red-600 hover:bg-red-700 text-white'
-                        }`,
-                      title: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) 
-                             ? 'Miesto nie je možné odstrániť (priradené tímy)'
-                             : (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned)
-                               ? 'Halu nie je možné odstrániť (priradené zápasy)'
-                               : 'Odstrániť miesto'
-                  }, 
+                      React.createElement('button', {
+                          onClick: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
+                                   (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned) ? 
+                                   null : handleDeletePlace,
+                          disabled: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
+                                    (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned),
+                          className: `w-full py-3 font-medium rounded-lg transition flex items-center justify-center gap-2
+                              ${((selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
+                                 (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned))
+                                  ? 'bg-white text-red-600 border-2 border-red-600 opacity-100 hover:cursor-not-allowed' 
+                                  : 'bg-red-600 hover:bg-red-700 text-white'
+                              }`,
+                          title: (selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) 
+                                 ? 'Miesto nie je možné odstrániť (priradené tímy)'
+                                 : (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned)
+                                   ? 'Halu nie je možné odstrániť (priradené zápasy)'
+                                   : 'Odstrániť miesto'
+                      }, 
                       ((selectedPlace?.type === 'ubytovanie' && isPlaceAssigned) || 
                        (selectedPlace?.type === 'sportova_hala' && isSportHallAssigned))
                       ? React.createElement(React.Fragment, null,
@@ -2744,6 +2873,38 @@ const MapApp = ({ userProfileData }) => {
               ),
               mealPriceError && React.createElement('p', { className: 'mt-2 text-sm text-red-600' }, mealPriceError)
             ),
+            newPlaceType === 'sportova_hala' && tournamentDates.days.length > 0 && (
+                React.createElement('div', { className: 'mb-5' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' },
+                        'Ceny prenájmu haly (€/hodinu) podľa dní'
+                    ),
+                    React.createElement('div', { className: 'space-y-2 max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50' },
+                        tournamentDates.days.map(date => (
+                            React.createElement('div', { key: date, className: 'flex items-center gap-3' },
+                                React.createElement('span', { className: 'w-32 text-sm text-gray-600 font-medium' }, date),
+                                React.createElement('div', { className: 'flex-1 relative' },
+                                    React.createElement('input', {
+                                        type: 'number',
+                                        step: '1',
+                                        min: '0',
+                                        value: hallRentalPrices[date] || '',
+                                        onChange: e => setHallRentalPrices(prev => ({
+                                            ...prev,
+                                            [date]: e.target.value
+                                        })),
+                                        placeholder: 'cena v €/hod',
+                                        className: 'w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition pl-8'
+                                    }),
+                                    React.createElement('span', { className: 'absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm' }, '€')
+                                )
+                            )
+                        ))
+                    ),
+                    React.createElement('p', { className: 'text-xs text-gray-500 mt-2' },
+                        'Nastavte cenu prenájmu haly za hodinu pre každý deň turnaja.'
+                    )
+                )
+            ),
             // Poznámka
             React.createElement('div', { className: 'mb-6' },
               React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1.5' }, 'Poznámka'),
@@ -2962,6 +3123,38 @@ const MapApp = ({ userProfileData }) => {
                 )
               ),
               mealPriceError && React.createElement('p', { className: 'mt-2 text-sm text-red-600' }, mealPriceError)
+            ),
+            editType === 'sportova_hala' && tournamentDates.days.length > 0 && (
+                React.createElement('div', { className: 'mb-5' },
+                    React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' },
+                        'Ceny prenájmu haly (€/hodinu) podľa dní'
+                    ),
+                    React.createElement('div', { className: 'space-y-2 max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50' },
+                        tournamentDates.days.map(date => (
+                            React.createElement('div', { key: date, className: 'flex items-center gap-3' },
+                                React.createElement('span', { className: 'w-32 text-sm text-gray-600 font-medium' }, date),
+                                React.createElement('div', { className: 'flex-1 relative' },
+                                    React.createElement('input', {
+                                        type: 'number',
+                                        step: '1',
+                                        min: '0',
+                                        value: editHallRentalPrices[date] || '',
+                                        onChange: e => setEditHallRentalPrices(prev => ({
+                                            ...prev,
+                                            [date]: e.target.value
+                                        })),
+                                        placeholder: 'cena v €/hod',
+                                        className: 'w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition pl-8'
+                                    }),
+                                    React.createElement('span', { className: 'absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm' }, '€')
+                                )
+                            )
+                        ))
+                    ),
+                    React.createElement('p', { className: 'text-xs text-gray-500 mt-2' },
+                        'Nastavte cenu prenájmu haly za hodinu pre každý deň turnaja.'
+                    )
+                )
             ),
             // Poznámka
             React.createElement('div', { className: 'mb-6' },
