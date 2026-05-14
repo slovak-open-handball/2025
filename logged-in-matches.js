@@ -226,20 +226,20 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferF
     return matches;
 };
 
-// Modálne okno pre presun zápasov medzi dňami/halami
-const MoveMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate, isWholeHall, sportHalls, availableDays }) => {
+// Modálne okno pre výmenu zápasov medzi halami/dňami
+const SwapMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate, isWholeHall, sportHalls, availableDays }) => {
     const [targetHallId, setTargetHallId] = useState('');
     const [targetDate, setTargetDate] = useState('');
-    const [moveMatches, setMoveMatches] = useState(false);
-    const [moveSchedules, setMoveSchedules] = useState(true);
+    const [swapMatches, setSwapMatches] = useState(true);
+    const [swapSchedules, setSwapSchedules] = useState(true);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         if (!isOpen) {
             setTargetHallId('');
             setTargetDate('');
-            setMoveMatches(true);
-            setMoveSchedules(true);
+            setSwapMatches(true);
+            setSwapSchedules(true);
             setLoading(false);
         }
     }, [isOpen]);
@@ -249,7 +249,7 @@ const MoveMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
     // Zoradenie hál podľa abecedy
     const sortedHalls = [...sportHalls].sort((a, b) => a.name.localeCompare(b.name));
     
-    // Filtrovanie hál - ak presúvame celú halu, neukazujeme zdrojovú halu
+    // Filtrovanie hál - pri výmene celej haly neukazujeme zdrojovú halu
     const availableHalls = isWholeHall 
         ? sortedHalls.filter(h => h.id !== sourceHallId)
         : sortedHalls;
@@ -264,8 +264,8 @@ const MoveMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
             targetHallId,
             targetDate: isWholeHall ? null : targetDate,
             isWholeHall,
-            moveMatches,
-            moveSchedules
+            swapMatches,
+            swapSchedules
         });
         setLoading(false);
         onClose();
@@ -288,7 +288,7 @@ const MoveMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
                 'div',
                 { className: 'flex justify-between items-center mb-4' },
                 React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 
-                    isWholeHall ? 'Presunúť všetky zápasy z haly' : 'Presunúť zápasy z dňa'
+                    isWholeHall ? 'Vymeniť zápasy medzi halami' : 'Vymeniť zápasy medzi dňami'
                 ),
                 React.createElement(
                     'button',
@@ -307,7 +307,7 @@ const MoveMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
                 React.createElement(
                     'div',
                     { className: 'flex items-center gap-2 text-blue-700' },
-                    React.createElement('i', { className: 'fa-solid fa-arrow-right-from-bracket' }),
+                    React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left' }),
                     React.createElement('span', { className: 'font-medium' }, 'Zdroj:'),
                     React.createElement('span', null, 
                         isWholeHall 
@@ -359,7 +359,7 @@ const MoveMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
                 )
             ),
 
-            // Možnosti presunu
+            // Možnosti výmeny
             React.createElement(
                 'div',
                 { className: 'mb-4 space-y-2 p-3 bg-gray-50 rounded-lg border border-gray-200' },
@@ -368,34 +368,34 @@ const MoveMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
                     { className: 'flex items-center gap-2 cursor-pointer' },
                     React.createElement('input', {
                         type: 'checkbox',
-                        checked: moveMatches,
-                        onChange: (e) => setMoveMatches(e.target.checked),
+                        checked: swapMatches,
+                        onChange: (e) => setSwapMatches(e.target.checked),
                         className: 'w-4 h-4 text-blue-600 rounded'
                     }),
-                    React.createElement('span', { className: 'text-gray-700' }, 'Presunúť zápasy')
+                    React.createElement('span', { className: 'text-gray-700' }, 'Vymeniť zápasy')
                 ),
                 React.createElement(
                     'label',
                     { className: 'flex items-center gap-2 cursor-pointer' },
                     React.createElement('input', {
                         type: 'checkbox',
-                        checked: moveSchedules,
-                        onChange: (e) => setMoveSchedules(e.target.checked),
+                        checked: swapSchedules,
+                        onChange: (e) => setSwapSchedules(e.target.checked),
                         className: 'w-4 h-4 text-blue-600 rounded'
                     }),
-                    React.createElement('span', { className: 'text-gray-700' }, 'Presunúť nastavenia (čas začiatku)')
+                    React.createElement('span', { className: 'text-gray-700' }, 'Vymeniť nastavenia (čas začiatku)')
                 )
             ),
 
-            // Varovanie
+            // Informácia o výmene
             React.createElement(
                 'div',
-                { className: 'mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg' },
+                { className: 'mb-6 p-3 bg-green-50 border border-green-200 rounded-lg' },
                 React.createElement(
                     'p',
-                    { className: 'text-sm text-yellow-700 flex items-center gap-2' },
-                    React.createElement('i', { className: 'fa-solid fa-exclamation-triangle' }),
-                    'Presun zápasov je nenávratný. Zápasy budú presunuté na nové miesto.'
+                    { className: 'text-sm text-green-700 flex items-center gap-2' },
+                    React.createElement('i', { className: 'fa-solid fa-info-circle' }),
+                    'Zápasy budú vzájomne vymenené medzi zdrojom a cieľom.'
                 )
             ),
 
@@ -418,12 +418,12 @@ const MoveMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
                         disabled: !isValid || loading,
                         className: `px-4 py-2 text-white rounded-lg transition-colors ${
                             isValid && !loading
-                                ? 'bg-blue-600 hover:bg-blue-700 cursor-pointer' 
+                                ? 'bg-purple-600 hover:bg-purple-700 cursor-pointer' 
                                 : 'bg-gray-400 cursor-not-allowed'
                         }`
                     },
                     loading ? React.createElement('i', { className: 'fa-solid fa-spinner fa-spin mr-2' }) : null,
-                    'Presunúť'
+                    'Vymeniť'
                 )
             )
         )
@@ -3830,6 +3830,8 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     const [isMoveMatchesModalOpen, setIsMoveMatchesModalOpen] = useState(false);
     const [pendingMove, setPendingMove] = useState(null);
+    const [isSwapMatchesModalOpen, setIsSwapMatchesModalOpen] = useState(false);
+    const [pendingSwap, setPendingSwap] = useState(null);
 
     // Tieto premenné definujeme AŽ za všetkými useState
     const isFilterActive = selectedCategoryFilter || selectedGroupFilter || selectedHallFilter || selectedDayFilter || selectedTeamIdFilter;
@@ -3842,6 +3844,156 @@ const AddMatchesApp = ({ userProfileData }) => {
         const saved = localStorage.getItem('filtersPanelPinned');
         return saved === 'true';
     });
+
+    // Funkcia na výmenu zápasov medzi dňami/halami
+    const handleSwapMatches = async ({ sourceHallId, sourceDate, targetHallId, targetDate, isWholeHall, swapMatches, swapSchedules }) => {
+        if (!window.db) {
+            window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
+            return;
+        }
+    
+        if (userProfileData?.role !== 'admin') {
+            window.showGlobalNotification('Na výmenu zápasov potrebujete administrátorské práva', 'error');
+            return;
+        }
+    
+        try {
+            let swappedCount = 0;
+            
+            // 1. Nájdeme zápasy na výmenu (zdroj)
+            const sourceMatches = matches.filter(match => {
+                if (!match.hallId || match.hallId !== sourceHallId) return false;
+                if (!isWholeHall && match.scheduledTime) {
+                    try {
+                        const matchDate = match.scheduledTime.toDate();
+                        const matchDateStr = getLocalDateStr(matchDate);
+                        return matchDateStr === sourceDate;
+                    } catch (e) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+    
+            // 2. Nájdeme zápasy na výmenu (cieľ)
+            const targetMatches = matches.filter(match => {
+                if (!match.hallId || match.hallId !== targetHallId) return false;
+                if (!isWholeHall && match.scheduledTime) {
+                    try {
+                        const matchDate = match.scheduledTime.toDate();
+                        const matchDateStr = getLocalDateStr(matchDate);
+                        return matchDateStr === targetDate;
+                    } catch (e) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+    
+            if (swapMatches) {
+                // Uložíme si pôvodné údaje cieľových zápasov pre prípad, že by bolo treba
+                const targetMatchesData = targetMatches.map(m => ({
+                    id: m.id,
+                    hallId: m.hallId,
+                    scheduledTime: m.scheduledTime
+                }));
+    
+                // 3. Presunieme zdrojové zápasy do cieľovej haly/dňa
+                for (const match of sourceMatches) {
+                    const matchRef = doc(window.db, 'matches', match.id);
+                    const updateData = { hallId: targetHallId };
+                    
+                    if (!isWholeHall && targetDate && match.scheduledTime) {
+                        const oldDate = match.scheduledTime.toDate();
+                        const [year, month, day] = targetDate.split('-').map(Number);
+                        const newDateTime = new Date(year, month - 1, day, 
+                            oldDate.getHours(), oldDate.getMinutes(), 0);
+                        updateData.scheduledTime = Timestamp.fromDate(newDateTime);
+                    }
+                    
+                    await updateDoc(matchRef, updateData);
+                    swappedCount++;
+                }
+    
+                // 4. Presunieme cieľové zápasy do zdrojovej haly/dňa
+                for (const match of targetMatches) {
+                    const matchRef = doc(window.db, 'matches', match.id);
+                    const updateData = { hallId: sourceHallId };
+                    
+                    if (!isWholeHall && sourceDate && match.scheduledTime) {
+                        const oldDate = match.scheduledTime.toDate();
+                        const [year, month, day] = sourceDate.split('-').map(Number);
+                        const newDateTime = new Date(year, month - 1, day, 
+                            oldDate.getHours(), oldDate.getMinutes(), 0);
+                        updateData.scheduledTime = Timestamp.fromDate(newDateTime);
+                    }
+                    
+                    await updateDoc(matchRef, updateData);
+                    swappedCount++;
+                }
+            }
+    
+            // 5. Výmena nastavení (čas začiatku)
+            if (swapSchedules) {
+                const sourceScheduleId = `${sourceHallId}_${!isWholeHall ? sourceDate : ''}`;
+                const targetScheduleId = `${targetHallId}_${!isWholeHall ? targetDate : ''}`;
+                
+                const sourceScheduleRef = doc(window.db, 'hallSchedules', sourceScheduleId);
+                const targetScheduleRef = doc(window.db, 'hallSchedules', targetScheduleId);
+                
+                const [sourceScheduleSnap, targetScheduleSnap] = await Promise.all([
+                    getDoc(sourceScheduleRef),
+                    getDoc(targetScheduleRef)
+                ]);
+                
+                const sourceScheduleData = sourceScheduleSnap.exists() ? sourceScheduleSnap.data() : null;
+                const targetScheduleData = targetScheduleSnap.exists() ? targetScheduleSnap.data() : null;
+                
+                // Uložíme zdrojové nastavenia do cieľa
+                if (sourceScheduleData) {
+                    await setDoc(targetScheduleRef, {
+                        ...sourceScheduleData,
+                        hallId: targetHallId,
+                        date: !isWholeHall ? targetDate : '',
+                        updatedAt: Timestamp.now(),
+                        updatedBy: userProfileData?.email || 'unknown'
+                    }, { merge: true });
+                } else if (targetScheduleData && !isWholeHall) {
+                    // Ak zdroj nemá nastavenia, ale cieľ áno, odstránime cieľové
+                    await deleteDoc(targetScheduleRef);
+                }
+                
+                // Uložíme cieľové nastavenia do zdroja
+                if (targetScheduleData) {
+                    await setDoc(sourceScheduleRef, {
+                        ...targetScheduleData,
+                        hallId: sourceHallId,
+                        date: !isWholeHall ? sourceDate : '',
+                        updatedAt: Timestamp.now(),
+                        updatedBy: userProfileData?.email || 'unknown'
+                    }, { merge: true });
+                } else if (sourceScheduleData && !isWholeHall) {
+                    // Ak cieľ nemá nastavenia, ale zdroj áno, odstránime zdrojové
+                    await deleteDoc(sourceScheduleRef);
+                }
+            }
+    
+            const message = isWholeHall
+                ? `Vymenilo sa ${swappedCount} zápasov medzi halou ${sportHalls.find(h => h.id === sourceHallId)?.name} a halou ${sportHalls.find(h => h.id === targetHallId)?.name}`
+                : `Vymenilo sa ${swappedCount} zápasov medzi dňami ${sourceDate} a ${targetDate}`;
+            
+            window.showGlobalNotification(message, 'success');
+            
+            // Obnovíme dáta
+            setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('refreshMatches'));
+            }, 500);
+            
+        } catch (error) {
+            console.error('Chyba pri výmene zápasov:', error);
+            window.showGlobalNotification('Chyba pri výmene: ' + error.message, 'error');
+        }
+    };
 
     // Funkcia na presun zápasov medzi dňami/halami
     const handleMoveMatches = async ({ sourceHallId, sourceDate, targetHallId, targetDate, isWholeHall, moveMatches, moveSchedules }) => {
@@ -6509,6 +6661,20 @@ const AddMatchesApp = ({ userProfileData }) => {
             sportHalls: sportHalls,
             availableDays: availableDays
         }),
+        // Pridajte k ostatným modálnym oknám
+        React.createElement(SwapMatchesModal, {
+            isOpen: isSwapMatchesModalOpen,
+            onClose: () => {
+                setIsSwapMatchesModalOpen(false);
+                setPendingSwap(null);
+            },
+            onConfirm: (swapData) => handleSwapMatches(swapData),
+            sourceHallId: pendingSwap?.sourceHallId,
+            sourceDate: pendingSwap?.sourceDate,
+            isWholeHall: pendingSwap?.isWholeHall || false,
+            sportHalls: sportHalls,
+            availableDays: availableDays
+        }),
 
         // Upravený kód pre panel filtrov (nahraďte existujúci panel filtrov týmto)
         React.createElement(
@@ -7636,25 +7802,25 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                            userProfileData?.role === 'admin' && hasAnyMatch && React.createElement(
                                                                'div',
                                                                { className: 'flex gap-1 ml-2' },
-                                                               // Ikona výmeny (modrá)
+                                                               // Ikona výmeny (fialová) - teraz naozaj vymieňa zápasy
                                                                React.createElement(
                                                                    'button',
                                                                    {
-                                                                       className: 'opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                       className: 'opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 bg-purple-500 hover:bg-purple-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
                                                                        onClick: (e) => {
                                                                            e.stopPropagation();
-                                                                           setPendingMove({
+                                                                           setPendingSwap({
                                                                                sourceHallId: hall.id,
                                                                                sourceDate: null,
                                                                                isWholeHall: true
                                                                            });
-                                                                           setIsMoveMatchesModalOpen(true);
+                                                                           setIsSwapMatchesModalOpen(true);
                                                                        },
-                                                                       title: 'Presunúť všetky zápasy do inej haly'
+                                                                       title: 'Vymeniť zápasy s inou halou (vzájomná výmena)'
                                                                    },
-                                                                   React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-sm' })
+                                                                   React.createElement('i', { className: 'fa-solid fa-arrows-spin text-sm' })
                                                                ),
-                                                               // Ikona koša (červená)
+                                                               // Ikona koša (červená) - odstránenie priradenia
                                                                React.createElement(
                                                                    'button',
                                                                    {
@@ -7772,28 +7938,29 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                    return React.createElement('i', { className: 'fa-regular fa-clock text-xs text-blue-400 ml-1 opacity-0 group-hover/day:opacity-100 transition-opacity flex-shrink-0' });
                                                                })()
                                                            ),
+                                                           // Tlačidlá pre admina - ikona výmeny a ikona koša vedľa seba
                                                            !isEmpty && userProfileData?.role === 'admin' && React.createElement(
                                                                'div',
                                                                { className: 'flex gap-1 ml-2' },
-                                                               // Ikona výmeny (modrá)
+                                                               // Ikona výmeny (fialová) - vzájomná výmena zápasov medzi dňami
                                                                React.createElement(
                                                                    'button',
                                                                    {
-                                                                       className: 'opacity-0 group-hover/day:opacity-100 transition-opacity w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                       className: 'opacity-0 group-hover/day:opacity-100 transition-opacity w-6 h-6 bg-purple-500 hover:bg-purple-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
                                                                        onClick: (e) => {
                                                                            e.stopPropagation();
-                                                                           setPendingMove({
+                                                                           setPendingSwap({
                                                                                sourceHallId: hall.id,
                                                                                sourceDate: dateStr,
                                                                                isWholeHall: false
                                                                            });
-                                                                           setIsMoveMatchesModalOpen(true);
+                                                                           setIsSwapMatchesModalOpen(true);
                                                                        },
-                                                                       title: 'Presunúť zápasy z tohto dňa do inej haly/dňa'
+                                                                       title: 'Vymeniť zápasy s iným dňom/halou (vzájomná výmena)'
                                                                    },
-                                                                   React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-xs' })
+                                                                   React.createElement('i', { className: 'fa-solid fa-arrows-spin text-xs' })
                                                                ),
-                                                               // Ikona koša (červená)
+                                                               // Ikona koša (červená) - odstránenie priradenia
                                                                React.createElement(
                                                                    'button',
                                                                    {
