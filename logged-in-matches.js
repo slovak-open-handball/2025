@@ -558,24 +558,6 @@ const SwapMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
                 )
             ),
 
-            // Informácia o výmene (čo všetko sa vymení)
-            React.createElement(
-                'div',
-                { className: 'mb-6 p-3 bg-green-50 rounded-lg border border-green-200' },
-                React.createElement(
-                    'p',
-                    { className: 'text-sm text-green-700 flex items-center gap-2' },
-                    React.createElement('i', { className: 'fa-solid fa-info-circle' }),
-                    'Budú vzájomne vymenené:'
-                ),
-                React.createElement(
-                    'ul',
-                    { className: 'mt-2 text-sm text-green-600 list-disc list-inside space-y-1' },
-                    React.createElement('li', null, 'Všetky zápasy medzi zdrojom a cieľom'),
-                    React.createElement('li', null, 'Nastavenia času začiatku (ak existujú)')
-                )
-            ),
-
             // Tlačidlá
             React.createElement(
                 'div',
