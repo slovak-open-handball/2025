@@ -2475,26 +2475,45 @@ const MapApp = ({ userProfileData }) => {
                     'Navigovať'
                   ),
                   React.createElement('button', {
-                    onClick: () => {
-                      setIsEditingNameAndType(true);
-                      setEditName(selectedPlace.name || '');
-                      setEditType(selectedPlace.type || '');
-                      setEditCapacity(selectedPlace.capacity != null ? String(selectedPlace.capacity) : '');
-                      setEditAccommodationType(selectedPlace.accommodationType || '');
-                      setEditPricePerNight(selectedPlace.pricePerNight != null ? String(selectedPlace.pricePerNight) : '');
-                      setEditCostPerNight(selectedPlace.costPerNight != null ? String(selectedPlace.costPerNight) : '');
-                      setEditBreakfastPrice(selectedPlace.breakfastPrice != null ? String(selectedPlace.breakfastPrice) : '');
-                      setEditLunchPrice(selectedPlace.lunchPrice != null ? String(selectedPlace.lunchPrice) : '');
-                      setEditDinnerPrice(selectedPlace.dinnerPrice != null ? String(selectedPlace.dinnerPrice) : '');
-                      setEditNote(selectedPlace.note || '');
-                    },
-                    className: 'w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition'
+                      onClick: () => {
+                          setIsEditingNameAndType(true);
+                          setEditName(selectedPlace.name || '');
+                          setEditType(selectedPlace.type || '');
+                          setEditCapacity(selectedPlace.capacity != null ? String(selectedPlace.capacity) : '');
+                          setEditAccommodationType(selectedPlace.accommodationType || '');
+                          setEditPricePerNight(selectedPlace.pricePerNight != null ? String(selectedPlace.pricePerNight) : '');
+                          setEditCostPerNight(selectedPlace.costPerNight != null ? String(selectedPlace.costPerNight) : '');
+                          setEditBreakfastPrice(selectedPlace.breakfastPrice != null ? String(selectedPlace.breakfastPrice) : '');
+                          setEditLunchPrice(selectedPlace.lunchPrice != null ? String(selectedPlace.lunchPrice) : '');
+                          setEditDinnerPrice(selectedPlace.dinnerPrice != null ? String(selectedPlace.dinnerPrice) : '');
+                          setEditNote(selectedPlace.note || '');
+        
+                          // Naplnenie cien prenájmu haly pre editáciu
+                          if (selectedPlace.type === 'sportova_hala') {
+                              const prices = {};
+                              tournamentDates.days.forEach(date => {
+                                  prices[date] = selectedPlace.hallRentalPrices?.[date]?.toString() || '';
+                              });
+                              setEditHallRentalPrices(prices);
+                          } else {
+                              setEditHallRentalPrices({});
+                          }
+                      },
+                      className: 'w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition'
                   },
-                    (selectedPlace?.type === 'ubytovanie' || selectedPlace?.type === 'stravovanie')
-                        ? isPlaceAssigned 
-                            ? 'Upraviť názov/kapacitu/cenu/poznámku'
-                            : 'Upraviť názov/typ/kapacitu/cenu/poznámku'
-                        : 'Upraviť názov/typ/poznámku'
+                      (() => {
+                          if (selectedPlace?.type === 'ubytovanie') {
+                              return isPlaceAssigned 
+                                  ? 'Upraviť názov/kapacitu/cenu/poznámku'
+                                  : 'Upraviť názov/typ/kapacitu/cenu/poznámku';
+                          } else if (selectedPlace?.type === 'stravovanie') {
+                              return 'Upraviť názov/typ/kapacitu/cenu/poznámku';
+                          } else if (selectedPlace?.type === 'sportova_hala') {
+                              return 'Upraviť názov/typ/cenu/poznámku';
+                          } else {
+                              return 'Upraviť názov/typ/poznámku';
+                          }
+                      })()
                   ),
                   isEditingLocation
                     ? React.createElement('div', { className: 'flex gap-2' },
