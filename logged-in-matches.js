@@ -7984,6 +7984,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            console.error('Chyba pri výpočte medzery:', e);
                                                                        }
                                                                    }
+                                                                });  
                                                                
                                                                return allElements;
                                                            })()
