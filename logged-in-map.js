@@ -1975,6 +1975,7 @@ const MapApp = ({ userProfileData }) => {
               lunchPrice: data.lunchPrice || null,
               dinnerPrice: data.dinnerPrice || null,
               note: data.note || null,
+              hallRentalPrices: data.hallRentalPrices || null,
             });
           });
           
