@@ -1264,7 +1264,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                                                         React.createElement('span', { 
                                                                             className: 'font-medium text-sm whitespace-nowrap overflow-visible flex-shrink-0',
                                                                             style: { color: textColor }
-                                                                        }, team.teamName),
+                                                                        }, `${team.category}: ${team.teamName}`),
                                                                         React.createElement('span', { 
                                                                             className: 'text-xs ml-2 whitespace-nowrap flex-shrink-0',
                                                                             style: { color: textColor, opacity: 0.8 }
