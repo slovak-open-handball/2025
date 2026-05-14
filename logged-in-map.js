@@ -2887,8 +2887,8 @@ const MapApp = ({ userProfileData }) => {
                                         type: 'number',
                                         step: '1',
                                         min: '0',
-                                        value: hallRentalPrices[date] || '',
-                                        onChange: e => setHallRentalPrices(prev => ({
+                                        value: editHallRentalPrices[date] || '',
+                                        onChange: e => setEditHallRentalPrices(prev => ({
                                             ...prev,
                                             [date]: e.target.value
                                         })),
@@ -3138,8 +3138,8 @@ const MapApp = ({ userProfileData }) => {
                                         type: 'number',
                                         step: '1',
                                         min: '0',
-                                        value: editHallRentalPrices[date] || '',
-                                        onChange: e => setEditHallRentalPrices(prev => ({
+                                        value: hallRentalPrices[date] || '',
+                                        onChange: e => setHallRentalPrices(prev => ({
                                             ...prev,
                                             [date]: e.target.value
                                         })),
