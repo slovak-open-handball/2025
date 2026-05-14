@@ -2012,9 +2012,20 @@ let isTeamNameReplacerInitialized = false;
         log('\n' + '='.repeat(80) + '\n');
     }
 
-    let isProcessingSnapshot = false;
-    
-   function subscribeToGroupsChanges() {
+    let isProcessingSnapshot = false;    
+
+    function subscribeToGroupsChanges() {
+        if (!window.db) return () => {};  // Return prázdnu unsubscribe funkciu
+        
+        const { doc, onSnapshot } = window.firebaseModules;
+        if (!doc || !onSnapshot) {
+            error('❌ Firebase moduly nie sú dostupné pre subscribeToGroupsChanges');
+            return () => {};
+        }
+        
+        // VYTVORÍME REFERENCIU TU, NIE VONKU
+        const groupsDocRef = doc(window.db, 'settings', 'groups');
+        
         return onSnapshot(groupsDocRef, (docSnap) => {
             if (isProcessingSnapshot) {
                 log('⏳ Už spracúvam snapshot, preskakujem...');
@@ -2023,14 +2034,25 @@ let isTeamNameReplacerInitialized = false;
             isProcessingSnapshot = true;
             
             try {
-                if (changed) {
-                    groupsCache = newGroupsData;
-                    log('🔄 Zmena v typoch skupín, prepočítavam tabuľky...');
-                    printAllGroupTables();
+                if (docSnap.exists()) {
+                    const newGroupsData = docSnap.data();
+                    const changed = JSON.stringify(groupsCache) !== JSON.stringify(newGroupsData);
+                    
+                    if (changed) {
+                        groupsCache = newGroupsData;
+                        groupsCacheLoaded = true;
+                        log('🔄 Zmena v typoch skupín, prepočítavam tabuľky...');
+                        printAllGroupTables();
+                    }
                 }
+            } catch (error) {
+                error('❌ Chyba pri spracovaní zmien skupín:', error);
             } finally {
                 isProcessingSnapshot = false;
             }
+        }, (error) => {
+            error('❌ Chyba pri sledovaní typov skupín:', error);
+            isProcessingSnapshot = false;
         });
     }
     
