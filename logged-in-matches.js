@@ -7337,7 +7337,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                             // Vytvoríme pole pre všetky elementy
                                                             const allElements = [];
                                                     
-                                                            // --- TERAZ PRIDÁME VŠETKY ZÁPASY (s medzerami medzi nimi) ---
+                                                            // --- TERAZ PRIDÁME VŠETKY ZÁPASY ---
                                                             sortedMatches.forEach((match, idx, sortedArray) => {
                                                                 // Výpočet času zápasu
                                                                 let matchTime = '--:--';
@@ -7349,7 +7349,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         const date = match.scheduledTime.toDate();
                                                                         matchTime = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
                                                                         
-                                                                        // Výpočet času konca zápasu (vrátane prestávky)
                                                                         const matchCategory = categories.find(c => c.name === match.categoryName);
                                                                         let matchDuration = 0;
                                                                         let matchBreak = 5;
@@ -7375,15 +7374,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                 const homeDisplay = getTeamDisplayText(match.homeTeamIdentifier);
                                                                 const awayDisplay = getTeamDisplayText(match.awayTeamIdentifier);
                                                                 
-                                                                // Pridáme zápas (VŽDY, bez ohľadu na filter)
                                                                 allElements.push(
                                                                     React.createElement(
                                                                         'div',
                                                                         {
                                                                             key: `match-${match.id}`,
-                                                                            className: `p-0 rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match ${
-                                                                                colorHighlight ? '' : 'bg-white'
-                                                                            }`,
+                                                                            className: `p-0 rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match ${colorHighlight ? '' : 'bg-white'}`,
                                                                             style: { 
                                                                                 width: 'fit-content',
                                                                                 backgroundColor: colorHighlight && match.categoryName ? 
@@ -7405,42 +7401,36 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     e.stopPropagation();
                                                                                     handleMatchCardClick(match);
                                                                                 },
-                                                                                title: `Kliknite pre úpravu zápasu`
+                                                                                title: 'Kliknite pre úpravu zápasu'
                                                                             },
-                                                                            // Časový údaj - upravený na dva riadky
+                                                                            // Časový údaj
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
                                                                                     className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300',
                                                                                     style: { minWidth: '130px', textAlign: 'center' }
                                                                                 },
-                                                                                // Prvý riadok - ikonka hodín a čas
                                                                                 React.createElement(
                                                                                     'div',
                                                                                     { className: 'flex items-center justify-center gap-1 w-full' },
                                                                                     React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs flex-shrink-0' }),
                                                                                     React.createElement('span', { className: 'font-medium text-blue-700 truncate' }, `${matchTime} - ${endTime}`)
                                                                                 ),
-                                                                                // Druhý riadok - pre zápasy o umiestnenie (placement matches)
                                                                                 match.isPlacementMatch && match.placementRank && React.createElement(
                                                                                     'div',
                                                                                     { className: 'flex items-center justify-center gap-1 w-full mt-0' },
                                                                                     React.createElement('span', { className: 'text-xs text-purple-600 font-medium' }, `o ${match.placementRank}. miesto`)
                                                                                 ),
-                                                                                // Druhý riadok - pre ostatné typy zápasov (finále, semifinále, atď.)
                                                                                 match.matchType && !match.isPlacementMatch && React.createElement(
                                                                                     'div',
                                                                                     { className: 'flex items-center justify-center gap-1 w-full mt-0' },
                                                                                     React.createElement('i', { 
-                                                                                        className: `fa-solid ${
-                                                                                            match.matchType === 'finále' ? 'fa-trophy' :
-                                                                                                ''
-                                                                                            } ${
-                                                                                                match.matchType.includes('finále') ? 'text-yellow-600' :
-                                                                                                match.matchType.includes('semifinále') ? 'text-blue-600' :
-                                                                                                match.matchType.includes('štvrťfinále') ? 'text-green-600' :
-                                                                                                'text-purple-600'
-                                                                                            } text-xs flex-shrink-0` 
+                                                                                        className: `fa-solid ${match.matchType === 'finále' ? 'fa-trophy' : ''} ${
+                                                                                            match.matchType.includes('finále') ? 'text-yellow-600' :
+                                                                                            match.matchType.includes('semifinále') ? 'text-blue-600' :
+                                                                                            match.matchType.includes('štvrťfinále') ? 'text-green-600' :
+                                                                                            'text-purple-600'
+                                                                                        } text-xs flex-shrink-0` 
                                                                                     }),
                                                                                     React.createElement('span', { 
                                                                                         className: `text-xs ${
@@ -7451,9 +7441,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         } font-medium` 
                                                                                     }, match.matchType)
                                                                                 )
-                                                                            },
+                                                                            ),
                                                                             
-                                                                            // Domáci tím - vždy na stred
+                                                                            // Domáci tím
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
@@ -7470,14 +7460,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 )
                                                                             ),
                                                                             
-                                                                            // VS ikona - vždy na stred
+                                                                            // VS ikona
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { className: 'text-gray-400 px-2 py-0 flex items-center justify-center' },
                                                                                 React.createElement('i', { className: 'fa-solid fa-vs text-xs' })
                                                                             ),
                                                                             
-                                                                            // Hosťovský tím - vždy na stred
+                                                                            // Hosťovský tím
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
@@ -7494,7 +7484,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 )
                                                                             ),
                                                                             
-                                                                            // ID domáceho tímu (ak je režim both) - vždy na stred
+                                                                            // ID domáceho tímu (ak je režim both)
                                                                             displayMode === 'both' ? React.createElement(
                                                                                 'div',
                                                                                 { 
@@ -7511,7 +7501,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 )
                                                                             ) : React.createElement('div', { className: 'px-2 py-0 overflow-hidden' }),
                                                                             
-                                                                            // ID hosťovského tímu (ak je režim both) - vždy na stred
+                                                                            // ID hosťovského tímu (ak je režim both)
                                                                             displayMode === 'both' ? React.createElement(
                                                                                 'div',
                                                                                 { 
@@ -7529,11 +7519,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             ) : React.createElement('div', { className: 'px-2 py-0 overflow-hidden' })
                                                                         ),
                                                                         
-                                                                        // Admin tlačidlá (bez zmeny)
+                                                                        // Admin tlačidlá
                                                                         userProfileData?.role === 'admin' && React.createElement(
                                                                             'div',
                                                                             { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/match:opacity-100 transition-opacity' },
-                                                                            // Nové zelené tlačidlo pre pridanie medzery
                                                                             React.createElement(
                                                                                 'button',
                                                                                 {
@@ -7548,7 +7537,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 },
                                                                                 React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
                                                                             ),
-                                                                            // Modré tlačidlo pre výmenu
                                                                             React.createElement(
                                                                                 'button',
                                                                                 {
@@ -7561,7 +7549,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 },
                                                                                 React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-xs' })
                                                                             ),
-                                                                            // Červené tlačidlo pre odstránenie priradenia
                                                                             React.createElement(
                                                                                 'button',
                                                                                 {
@@ -7585,9 +7572,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         'div',
                                                         {
                                                             className: 'w-full py-0 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-1 whitespace-nowrap',
-                                                            style: { 
-                                                                minWidth: '500px' // Minimálna šírka pre prázdny deň
-                                                            }
+                                                            style: { minWidth: '500px' }
                                                         },
                                                         React.createElement('i', { className: 'fa-solid fa-calendar-xmark text-xs flex-shrink-0' }),
                                                         React.createElement('span', null, 'Žiadne zápasy')
