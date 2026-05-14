@@ -7877,7 +7877,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                React.createElement(
                                                                                                    'div', 
                                                                                                    { 
-                                                                                                       className: 'flex flex-col items-center justify-center px-2 py-1 border-r border-gray-300',
+                                                                                                       className: 'flex flex-col items-center justify-center px-0 py-0 border-r border-gray-300',
                                                                                                        style: { minWidth: '130px', textAlign: 'center' }
                                                                                                    },
                                                                                                    React.createElement(
@@ -7894,7 +7894,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                React.createElement(
                                                                                                    'div', 
                                                                                                    { 
-                                                                                                       className: 'px-4 py-1 flex items-center justify-center',
+                                                                                                       className: 'px-0 py-0 flex items-center justify-center',
                                                                                                        style: { 
                                                                                                            textAlign: 'center',
                                                                                                            fontWeight: '500',
