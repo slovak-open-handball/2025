@@ -3601,8 +3601,6 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [isBulkUnassignModalOpen, setIsBulkUnassignModalOpen] = useState(false);
     const [pendingBulkUnassign, setPendingBulkUnassign] = useState(null);
 
-    const [colorHighlight, setColorHighlight] = useState(false);
-
     const [isBreakModalOpen, setIsBreakModalOpen] = useState(false);
     const [selectedMatchForBreak, setSelectedMatchForBreak] = useState(null);
     const [selectedMatchCurrentTime, setSelectedMatchCurrentTime] = useState('');
