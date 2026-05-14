@@ -440,6 +440,16 @@ const SwapMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
         ? sortedHalls.filter(h => h.id !== sourceHallId)
         : sortedHalls;
 
+    // Pomocná funkcia na formátovanie dátumu pre zobrazenie
+    const formatDateForDisplay = (dateStr) => {
+        if (!dateStr) return '';
+        const [year, month, day] = dateStr.split('-').map(Number);
+        return `${day}. ${month}. ${year}`;
+    };
+
+    // Formátovanie zdrojového dátumu pre zobrazenie
+    const formattedSourceDate = sourceDate ? formatDateForDisplay(sourceDate) : '';
+
     const isValid = targetHallId && (!isWholeHall ? targetDate : true);
 
     const handleConfirm = async () => {
@@ -486,7 +496,7 @@ const SwapMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
                 )
             ),
 
-            // Informácia o zdroji
+            // Informácia o zdroji - formátovaný dátum
             React.createElement(
                 'div',
                 { className: 'mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200' },
@@ -498,7 +508,7 @@ const SwapMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
                     React.createElement('span', null, 
                         isWholeHall 
                             ? sportHalls.find(h => h.id === sourceHallId)?.name || 'Neznáma hala'
-                            : `${sportHalls.find(h => h.id === sourceHallId)?.name || 'Neznáma hala'} - ${sourceDate}`
+                            : `${sportHalls.find(h => h.id === sourceHallId)?.name || 'Neznáma hala'} - ${formattedSourceDate}`
                     )
                 )
             ),
@@ -524,7 +534,7 @@ const SwapMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
                 )
             ),
 
-            // Výber cieľového dňa (len ak nie je celá hala)
+            // Výber cieľového dňa (len ak nie je celá hala) - formátované zobrazenie v selectboxe
             !isWholeHall && React.createElement(
                 'div',
                 { className: 'mb-4' },
@@ -539,9 +549,12 @@ const SwapMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
                         className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
                     },
                     React.createElement('option', { value: '' }, '-- Vyberte deň --'),
-                    availableDays.map(day => 
-                        React.createElement('option', { key: day.value, value: day.value }, day.label)
-                    )
+                    availableDays.map(day => {
+                        // Formátovanie dňa pre zobrazenie v selectboxe
+                        const [year, month, dayNum] = day.value.split('-').map(Number);
+                        const formattedDay = `${dayNum}. ${month}. ${year}`;
+                        return React.createElement('option', { key: day.value, value: day.value }, formattedDay);
+                    })
                 )
             ),
 
