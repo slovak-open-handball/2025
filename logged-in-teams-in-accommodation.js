@@ -167,6 +167,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
     const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
     const [teamToRemove, setTeamToRemove] = useState(null);
     const [viewMode, setViewMode] = useState('accommodation');
+    const [categorySettings, setCategorySettings] = useState({});
     const getUrlParams = () => {
         const params = new URLSearchParams(window.location.search);
         return {
@@ -188,6 +189,26 @@ const TeamsAccommApp = ({ userProfileData }) => {
         const newUrl = `${window.location.pathname}${urlParams.toString() ? '?' + urlParams.toString() : ''}${window.location.hash}`;
         window.history.replaceState({}, '', newUrl);
     };
+    useEffect(() => {
+        if (!window.db) return;    
+        const unsubscribe = onSnapshot(doc(window.db, 'settings', 'categories'), (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.data();
+                const settingsMap = {};
+                Object.entries(data).forEach(([id, catData]) => {
+                    if (catData.name) {
+                        settingsMap[catData.name] = {
+                            drawColor: catData.drawColor || '#3b82f6',
+                            transportColor: catData.transportColor || '#10b981',
+                        };
+                    }
+                });
+                setCategorySettings(settingsMap);
+                window.categorySettingsData = settingsMap;
+            }
+        });        
+        return () => unsubscribe();
+    }, [window.db]);
     useEffect(() => {
         const params = getUrlParams();
         setViewMode(params.viewMode);
@@ -1269,16 +1290,36 @@ const TeamsAccommApp = ({ userProfileData }) => {
                             )
                         )
                         : filteredCategoriesData.map(category => {
+                            // ZÍSKAME FARBU KATEGÓRIE (z globálnych dát alebo použijeme predvolenú)
+                            // Najprv sa pokúsime získať farbu z globálneho stavu kategórií
+                            let categoryColor = '#3b82f6'; // Predvolená modrá
+                            let categoryTextColor = '#ffffff'; // Predvolená biela pre text
+                            
+                            // Skúsime získať dáta kategórií z globálneho objektu (ak existuje)
+                            if (window.categorySettingsData && window.categorySettingsData[category.name]) {
+                                // Ak máme uloženú farbu pre rozlosovanie (drawColor), použijeme ju
+                                if (window.categorySettingsData[category.name].drawColor) {
+                                    categoryColor = window.categorySettingsData[category.name].drawColor;
+                                }
+                                // Pre text by sme mohli použiť kontrastnú farbu na základe pozadia
+                                // Alebo necháme bielu/čiernu podľa potreby
+                            }
+                            
                             return React.createElement(
                                 'div',
                                 { 
                                     key: category.name, 
                                     className: 'bg-white rounded-xl shadow-lg overflow-hidden flex flex-col min-w-0'
                                 },
+                                // HLAVIČKA KATEGÓRIE S DYNAMICKOU FARBOU ZO SETTINGS
                                 React.createElement(
                                     'div',
                                     {
-                                        className: 'bg-blue-600 text-white px-4 py-3 flex items-center justify-between flex-shrink-0 min-w-0'
+                                        className: 'text-white px-4 py-3 flex items-center justify-between flex-shrink-0 min-w-0',
+                                        style: { 
+                                            backgroundColor: categoryColor,
+                                            color: categoryTextColor
+                                        }
                                     },
                                     React.createElement(
                                         'div',
@@ -1297,10 +1338,14 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                     ),
                                     React.createElement(
                                         'div',
-                                        { className: 'flex-shrink-0 ml-2 text-xs font-medium bg-white text-blue-600 px-2 py-1 rounded-full whitespace-nowrap' },
+                                        { className: 'flex-shrink-0 ml-2 text-xs font-medium bg-white px-2 py-1 rounded-full whitespace-nowrap',
+                                          style: { color: categoryColor } // Farba textu v odznaku podľa farby kategórie
+                                        },
                                         `${category.totalTeams} tímov`
                                     )
-                                ),                                
+                                ),
+                                
+                                // Zvyšok komponentu pre kategóriu (zoznamy nepriradených a priradených tímov) zostáva rovnaký
                                 React.createElement(
                                     'div',
                                     { 
@@ -1365,7 +1410,8 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                                     )
                                                 )
                                         )
-                                    ),                                    
+                                    ),
+                                    
                                     category.assignedTeams.length > 0 && 
                                     (selectedAccommodationFilter || selectedTeamNameFilter ? 
                                         category.assignedTeams.filter(team => {
@@ -1414,7 +1460,8 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                                     return a.teamName.localeCompare(b.teamName, 'sk', { sensitivity: 'base' });
                                                 })
                                                 .map((team, index) => {
-                                                    const teamColor = getTeamAccommodationColor(team);                                                    
+                                                    const teamColor = getTeamAccommodationColor(team);
+                                                    
                                                     return React.createElement(
                                                         'li',
                                                         {
