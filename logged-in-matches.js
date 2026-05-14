@@ -7392,7 +7392,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         'div',
                                                                         {
                                                                             key: 'match-' + match.id,
-                                                                            className: 'p-0 rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match ' + (colorHighlight ? '' : 'bg-white'),
+                                                                            className: 'p-0 rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match bg-white',
                                                                             style: { 
                                                                                 width: 'fit-content',
                                                                                 backgroundColor: 'white'
@@ -7559,7 +7559,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             )
                                                                         ),
                                                                         
-                                                                        // Tlačidlá pre admina (nezmenené)
+                                                                        // Tlačidlá pre admina
                                                                         userProfileData?.role === 'admin' ? React.createElement(
                                                                             'div',
                                                                             { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/match:opacity-100 transition-opacity' },
