@@ -7876,7 +7876,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                React.createElement(
                                                                                                    'div', 
                                                                                                    { 
-                                                                                                       className: 'flex flex-col items-center justify-center px-0 py-0 border-r border-gray-300',
+                                                                                                       className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300',
                                                                                                        style: { minWidth: '130px', textAlign: 'center' }
                                                                                                    },
                                                                                                    React.createElement(
@@ -7907,7 +7907,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                    ),
                                                                                                    React.createElement(
                                                                                                        'div', 
-                                                                                                       { className: 'text-[10px] text-amber-600 mt-0.5' },
+                                                                                                       { className: 'text-[10px] text-amber-600 ml-1' },
                                                                                                        `(${gapMinutes} min)`
                                                                                                    )
                                                                                                )
