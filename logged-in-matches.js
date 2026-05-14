@@ -7205,8 +7205,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                key: hall.id,
                                                className: 'bg-white rounded-xl border-2 border-gray-200 shadow-sm hover:shadow-md transition-shadow group flex-shrink-0',
                                                style: { 
-                                                   width: '400px', // Pevná šírka pre každý box haly
-                                                   minWidth: '400px'
+                                                   width: '630px', // Pevná šírka pre každý box haly
+                                                   minWidth: '630px'
                                                }
                                            },
                                            React.createElement(
