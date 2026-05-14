@@ -7617,7 +7617,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                React.createElement(
                                                                                    'div', 
                                                                                    { 
-                                                                                       className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300',
+                                                                                       className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
                                                                                        style: { 
                                                                                            textAlign: 'center'
                                                                                        }
