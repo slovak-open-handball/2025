@@ -8096,13 +8096,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                
                                                                                // Vypočítame medzeru pred prvým zápasom
                                                                                let gapBeforeFirstMatch = firstMatchStartMinutes - hallStartMinutesTotal;
+                                                                               const isFilterActiveForGaps = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
                                                                                
-                                                                               if (gapBeforeFirstMatch > 0) {
+                                                                               if (gapBeforeFirstMatch > 0 && !isFilterActiveForGaps) {
                                                                                    const dateStr = getLocalDateStr(firstMatchDate);
                                                                                    const gapStartTime = formatTimeFromMinutes(hallStartMinutesTotal);
                                                                                    const gapEndTime = formatTimeFromMinutes(firstMatchStartMinutes);
                                                                                    const isGapBlocked = blockedBreaks ? !!blockedBreaks[`${hall.id}_${dateStr}_${gapStartTime}`] : false;
-                                                                                   
+    
                                                                                    allElements.push(
                                                                                        React.createElement(
                                                                                            'div',
@@ -8606,9 +8607,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                            
                                                                            // Získanie stavu blokovania z localStorage alebo state
                                                                            const isGapBlocked = blockedBreaks ? !!blockedBreaks[`${hallId}_${dateStr}_${gapStartTime}`] : false;
+                                                                           const isFilterActiveForGaps = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
                                                                            
                                                                            // Ak je medzera väčšia ako 0 (alebo je zablokovaná), zobrazíme riadok pre voľný čas
-                                                                           if (gapMinutes > 0 || isGapBlocked) {
+                                                                           if ((gapMinutes > 0 || isGapBlocked) && !isFilterActiveForGaps) {
                                                                                // Ak je medzera menšia ako 0, znamená to prekrývanie, nezobrazujeme
                                                                                if (gapMinutes >= 0) {
                                                                                    allElements.push(
