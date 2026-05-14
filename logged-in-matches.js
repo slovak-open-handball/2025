@@ -226,6 +226,210 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferF
     return matches;
 };
 
+// Modálne okno pre presun zápasov medzi dňami/halami
+const MoveMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate, isWholeHall, sportHalls, availableDays }) => {
+    const [targetHallId, setTargetHallId] = useState('');
+    const [targetDate, setTargetDate] = useState('');
+    const [moveMatches, setMoveMatches] = useState(false);
+    const [moveSchedules, setMoveSchedules] = useState(true);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (!isOpen) {
+            setTargetHallId('');
+            setTargetDate('');
+            setMoveMatches(true);
+            setMoveSchedules(true);
+            setLoading(false);
+        }
+    }, [isOpen]);
+
+    if (!isOpen) return null;
+
+    // Zoradenie hál podľa abecedy
+    const sortedHalls = [...sportHalls].sort((a, b) => a.name.localeCompare(b.name));
+    
+    // Filtrovanie hál - ak presúvame celú halu, neukazujeme zdrojovú halu
+    const availableHalls = isWholeHall 
+        ? sortedHalls.filter(h => h.id !== sourceHallId)
+        : sortedHalls;
+
+    const isValid = targetHallId && (!isWholeHall ? targetDate : true);
+
+    const handleConfirm = async () => {
+        setLoading(true);
+        await onConfirm({
+            sourceHallId,
+            sourceDate,
+            targetHallId,
+            targetDate: isWholeHall ? null : targetDate,
+            isWholeHall,
+            moveMatches,
+            moveSchedules
+        });
+        setLoading(false);
+        onClose();
+    };
+
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[105]',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) onClose();
+            }
+        },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
+            
+            // Hlavička
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center mb-4' },
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 
+                    isWholeHall ? 'Presunúť všetky zápasy z haly' : 'Presunúť zápasy z dňa'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'text-gray-500 hover:text-gray-700'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-times text-xl' })
+                )
+            ),
+
+            // Informácia o zdroji
+            React.createElement(
+                'div',
+                { className: 'mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200' },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center gap-2 text-blue-700' },
+                    React.createElement('i', { className: 'fa-solid fa-arrow-right-from-bracket' }),
+                    React.createElement('span', { className: 'font-medium' }, 'Zdroj:'),
+                    React.createElement('span', null, 
+                        isWholeHall 
+                            ? sportHalls.find(h => h.id === sourceHallId)?.name || 'Neznáma hala'
+                            : `${sportHalls.find(h => h.id === sourceHallId)?.name || 'Neznáma hala'} - ${sourceDate}`
+                    )
+                )
+            ),
+
+            // Výber cieľovej haly
+            React.createElement(
+                'div',
+                { className: 'mb-4' },
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                    'Cieľová hala:'
+                ),
+                React.createElement(
+                    'select',
+                    {
+                        value: targetHallId,
+                        onChange: (e) => setTargetHallId(e.target.value),
+                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                    },
+                    React.createElement('option', { value: '' }, '-- Vyberte halu --'),
+                    availableHalls.map(hall => 
+                        React.createElement('option', { key: hall.id, value: hall.id }, hall.name)
+                    )
+                )
+            ),
+
+            // Výber cieľového dňa (len ak nie je celá hala)
+            !isWholeHall && React.createElement(
+                'div',
+                { className: 'mb-4' },
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' },
+                    'Cieľový deň:'
+                ),
+                React.createElement(
+                    'select',
+                    {
+                        value: targetDate,
+                        onChange: (e) => setTargetDate(e.target.value),
+                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                    },
+                    React.createElement('option', { value: '' }, '-- Vyberte deň --'),
+                    availableDays.map(day => 
+                        React.createElement('option', { key: day.value, value: day.value }, day.label)
+                    )
+                )
+            ),
+
+            // Možnosti presunu
+            React.createElement(
+                'div',
+                { className: 'mb-4 space-y-2 p-3 bg-gray-50 rounded-lg border border-gray-200' },
+                React.createElement(
+                    'label',
+                    { className: 'flex items-center gap-2 cursor-pointer' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        checked: moveMatches,
+                        onChange: (e) => setMoveMatches(e.target.checked),
+                        className: 'w-4 h-4 text-blue-600 rounded'
+                    }),
+                    React.createElement('span', { className: 'text-gray-700' }, 'Presunúť zápasy')
+                ),
+                React.createElement(
+                    'label',
+                    { className: 'flex items-center gap-2 cursor-pointer' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        checked: moveSchedules,
+                        onChange: (e) => setMoveSchedules(e.target.checked),
+                        className: 'w-4 h-4 text-blue-600 rounded'
+                    }),
+                    React.createElement('span', { className: 'text-gray-700' }, 'Presunúť nastavenia (čas začiatku)')
+                )
+            ),
+
+            // Varovanie
+            React.createElement(
+                'div',
+                { className: 'mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg' },
+                React.createElement(
+                    'p',
+                    { className: 'text-sm text-yellow-700 flex items-center gap-2' },
+                    React.createElement('i', { className: 'fa-solid fa-exclamation-triangle' }),
+                    'Presun zápasov je nenávratný. Zápasy budú presunuté na nové miesto.'
+                )
+            ),
+
+            // Tlačidlá
+            React.createElement(
+                'div',
+                { className: 'flex justify-end gap-3' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
+                    },
+                    'Zrušiť'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: handleConfirm,
+                        disabled: !isValid || loading,
+                        className: `px-4 py-2 text-white rounded-lg transition-colors ${
+                            isValid && !loading
+                                ? 'bg-blue-600 hover:bg-blue-700 cursor-pointer' 
+                                : 'bg-gray-400 cursor-not-allowed'
+                        }`
+                    },
+                    loading ? React.createElement('i', { className: 'fa-solid fa-spinner fa-spin mr-2' }) : null,
+                    'Presunúť'
+                )
+            )
+        )
+    );
+};
+
 // Modálne okno pre výber typu generovania
 const GenerationTypeModal = ({ isOpen, onClose, onSelectType }) => {
     if (!isOpen) return null;
@@ -3616,7 +3820,6 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [isGenerationTypeModalOpen, setIsGenerationTypeModalOpen] = useState(false);
     const [isPlacementMatchModalOpen, setIsPlacementMatchModalOpen] = useState(false);
 
-    // Načítanie filtrov pri inicializácii
     const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
     const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
     const [selectedHallFilter, setSelectedHallFilter] = useState('');
@@ -3624,6 +3827,9 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     const [accommodations, setAccommodations] = useState([]);
     const [teamAccommodations, setTeamAccommodations] = useState(new Map());
+
+    const [isMoveMatchesModalOpen, setIsMoveMatchesModalOpen] = useState(false);
+    const [pendingMove, setPendingMove] = useState(null);
 
     // Tieto premenné definujeme AŽ za všetkými useState
     const isFilterActive = selectedCategoryFilter || selectedGroupFilter || selectedHallFilter || selectedDayFilter || selectedTeamIdFilter;
@@ -3636,6 +3842,103 @@ const AddMatchesApp = ({ userProfileData }) => {
         const saved = localStorage.getItem('filtersPanelPinned');
         return saved === 'true';
     });
+
+    // Funkcia na presun zápasov medzi dňami/halami
+    const handleMoveMatches = async ({ sourceHallId, sourceDate, targetHallId, targetDate, isWholeHall, moveMatches, moveSchedules }) => {
+        if (!window.db) {
+            window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
+            return;
+        }
+    
+        if (userProfileData?.role !== 'admin') {
+            window.showGlobalNotification('Na presun zápasov potrebujete administrátorské práva', 'error');
+            return;
+        }
+    
+        try {
+            let movedMatchesCount = 0;
+            
+            // Nájdeme zápasy na presun
+            const matchesToMove = matches.filter(match => {
+                if (!match.hallId || match.hallId !== sourceHallId) return false;
+                if (!isWholeHall && match.scheduledTime) {
+                    try {
+                        const matchDate = match.scheduledTime.toDate();
+                        const matchDateStr = getLocalDateStr(matchDate);
+                        return matchDateStr === sourceDate;
+                    } catch (e) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+    
+            if (moveMatches && matchesToMove.length > 0) {
+                // Presunieme zápasy
+                for (const match of matchesToMove) {
+                    const matchRef = doc(window.db, 'matches', match.id);
+                    const updateData = {
+                        hallId: targetHallId
+                    };
+                    
+                    if (!isWholeHall && targetDate && match.scheduledTime) {
+                        // Presun na konkrétny deň - zachováme čas
+                        const oldDate = match.scheduledTime.toDate();
+                        const [year, month, day] = targetDate.split('-').map(Number);
+                        const newDateTime = new Date(year, month - 1, day, 
+                            oldDate.getHours(), oldDate.getMinutes(), 0);
+                        updateData.scheduledTime = Timestamp.fromDate(newDateTime);
+                    }
+                    
+                    await updateDoc(matchRef, updateData);
+                    movedMatchesCount++;
+                }
+            }
+    
+            // Presun nastavení (čas začiatku)
+            if (moveSchedules) {
+                const sourceScheduleId = `${sourceHallId}_${!isWholeHall ? sourceDate : ''}`;
+                const targetScheduleId = `${targetHallId}_${!isWholeHall ? targetDate : ''}`;
+                
+                const sourceScheduleRef = doc(window.db, 'hallSchedules', sourceScheduleId);
+                const sourceScheduleSnap = await getDoc(sourceScheduleRef);
+                
+                if (sourceScheduleSnap.exists()) {
+                    const scheduleData = sourceScheduleSnap.data();
+                    
+                    // Uložíme na cieľové miesto
+                    const targetScheduleRef = doc(window.db, 'hallSchedules', targetScheduleId);
+                    await setDoc(targetScheduleRef, {
+                        ...scheduleData,
+                        hallId: targetHallId,
+                        date: !isWholeHall ? targetDate : '',
+                        updatedAt: Timestamp.now(),
+                        updatedBy: userProfileData?.email || 'unknown'
+                    }, { merge: true });
+                    
+                    // Odstránime zdrojové nastavenie (ak nie je wholeHall)
+                    if (!isWholeHall) {
+                        await deleteDoc(sourceScheduleRef);
+                    }
+                }
+            }
+    
+            const message = isWholeHall
+                ? `Presunutých ${movedMatchesCount} zápasov z haly ${sportHalls.find(h => h.id === sourceHallId)?.name} do haly ${sportHalls.find(h => h.id === targetHallId)?.name}`
+                : `Presunutých ${movedMatchesCount} zápasov z dňa ${sourceDate} do dňa ${targetDate}`;
+            
+            window.showGlobalNotification(message, 'success');
+            
+            // Obnovíme dáta
+            setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('refreshMatches'));
+            }, 500);
+            
+        } catch (error) {
+            console.error('Chyba pri presune zápasov:', error);
+            window.showGlobalNotification('Chyba pri presune: ' + error.message, 'error');
+        }
+    };
 
     const getAllUniqueTeamIds = () => {
         const teamIds = new Set();
@@ -6193,6 +6496,19 @@ const AddMatchesApp = ({ userProfileData }) => {
             groupsByCategory: groupsByCategory,
             teams: teamData
         }),
+        React.createElement(MoveMatchesModal, {
+            isOpen: isMoveMatchesModalOpen,
+            onClose: () => {
+                setIsMoveMatchesModalOpen(false);
+                setPendingMove(null);
+            },
+            onConfirm: (moveData) => handleMoveMatches(moveData),
+            sourceHallId: pendingMove?.sourceHallId,
+            sourceDate: pendingMove?.sourceDate,
+            isWholeHall: pendingMove?.isWholeHall || false,
+            sportHalls: sportHalls,
+            availableDays: availableDays
+        }),
 
         // Upravený kód pre panel filtrov (nahraďte existujúci panel filtrov týmto)
         React.createElement(
@@ -7316,18 +7632,41 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                }
                                                            }, 'Športová hala'),
                                                            
-                                                           // Ikona koša je teraz v riadku za typom miesta
+                                                           // Tlačidlá pre admina - ikona koša a ikona výmeny vedľa seba
                                                            userProfileData?.role === 'admin' && hasAnyMatch && React.createElement(
-                                                               'button',
-                                                               {
-                                                                   className: 'opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                                   onClick: (e) => {
-                                                                       e.stopPropagation();
-                                                                       handleBulkUnassign(hall.id, null, true);
+                                                               'div',
+                                                               { className: 'flex gap-1 ml-2' },
+                                                               // Ikona výmeny (modrá)
+                                                               React.createElement(
+                                                                   'button',
+                                                                   {
+                                                                       className: 'opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                       onClick: (e) => {
+                                                                           e.stopPropagation();
+                                                                           setPendingMove({
+                                                                               sourceHallId: hall.id,
+                                                                               sourceDate: null,
+                                                                               isWholeHall: true
+                                                                           });
+                                                                           setIsMoveMatchesModalOpen(true);
+                                                                       },
+                                                                       title: 'Presunúť všetky zápasy do inej haly'
                                                                    },
-                                                                   title: 'Odstrániť priradenie všetkých zápasov z tejto haly'
-                                                               },
-                                                               React.createElement('i', { className: 'fa-solid fa-trash-can text-sm' })
+                                                                   React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-sm' })
+                                                               ),
+                                                               // Ikona koša (červená)
+                                                               React.createElement(
+                                                                   'button',
+                                                                   {
+                                                                       className: 'opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                       onClick: (e) => {
+                                                                           e.stopPropagation();
+                                                                           handleBulkUnassign(hall.id, null, true);
+                                                                       },
+                                                                       title: 'Odstrániť priradenie všetkých zápasov z tejto haly'
+                                                                   },
+                                                                   React.createElement('i', { className: 'fa-solid fa-trash-can text-sm' })
+                                                               )
                                                            )
                                                        )
                                                    )
@@ -7434,16 +7773,39 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                })()
                                                            ),
                                                            !isEmpty && userProfileData?.role === 'admin' && React.createElement(
-                                                               'button',
-                                                               {
-                                                                   className: 'ml-2 opacity-0 group-hover/day:opacity-100 transition-opacity w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                                   onClick: (e) => {
-                                                                       e.stopPropagation();
-                                                                       handleBulkUnassign(hall.id, dateStr, false);
+                                                               'div',
+                                                               { className: 'flex gap-1 ml-2' },
+                                                               // Ikona výmeny (modrá)
+                                                               React.createElement(
+                                                                   'button',
+                                                                   {
+                                                                       className: 'opacity-0 group-hover/day:opacity-100 transition-opacity w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                       onClick: (e) => {
+                                                                           e.stopPropagation();
+                                                                           setPendingMove({
+                                                                               sourceHallId: hall.id,
+                                                                               sourceDate: dateStr,
+                                                                               isWholeHall: false
+                                                                           });
+                                                                           setIsMoveMatchesModalOpen(true);
+                                                                       },
+                                                                       title: 'Presunúť zápasy z tohto dňa do inej haly/dňa'
                                                                    },
-                                                                   title: 'Odstrániť priradenie všetkých zápasov z tohto dňa'
-                                                               },
-                                                               React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                                                   React.createElement('i', { className: 'fa-solid fa-arrow-right-arrow-left text-xs' })
+                                                               ),
+                                                               // Ikona koša (červená)
+                                                               React.createElement(
+                                                                   'button',
+                                                                   {
+                                                                       className: 'opacity-0 group-hover/day:opacity-100 transition-opacity w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                       onClick: (e) => {
+                                                                           e.stopPropagation();
+                                                                           handleBulkUnassign(hall.id, dateStr, false);
+                                                                       },
+                                                                       title: 'Odstrániť priradenie všetkých zápasov z tohto dňa'
+                                                                   },
+                                                                   React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                                               )
                                                            ),
                                                            React.createElement(
                                                                'div',
