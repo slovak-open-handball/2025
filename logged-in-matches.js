@@ -3548,23 +3548,6 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                 )
             ),
 
-            // Checkbox pre kombinácie s opakovaním
-            React.createElement(
-                'div',
-                { className: 'mb-4' },
-                React.createElement(
-                    'label',
-                    { className: 'flex items-center gap-2 cursor-pointer' },
-                    React.createElement('input', {
-                        type: 'checkbox',
-                        checked: withRepetitions,
-                        onChange: (e) => setWithRepetitions(e.target.checked),
-                        className: 'w-4 h-4 text-blue-600 rounded'
-                    }),
-                    React.createElement('span', { className: 'text-gray-700' }, 'Kombinácie s opakovaním (každý s každým doma/vonku)')
-                )
-            ),
-
             // ZMENENÉ: Namiesto checkboxu zobrazujeme INFO o stave prenosu zápasov (len pre nadstavbové skupiny)
             selectedGroup && selectedGroupType === 'Nadstavbová skupina' && React.createElement(
                 'div',
