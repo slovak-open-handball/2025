@@ -7957,8 +7957,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                    React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
                                                                                                ),
                                                                                                
-                                                                                               // Tlačidlo koša (odstrániť medzeru)
-                                                                                               React.createElement(
+                                                                                               // Tlačidlo koša (odstrániť medzeru) - zobrazí sa LEN ak NIE JE zablokované
+                                                                                               !isGapBlocked && React.createElement(
                                                                                                    'button',
                                                                                                    {
                                                                                                        className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
