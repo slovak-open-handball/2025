@@ -7409,7 +7409,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             { 
                                                                                 className: 'grid items-start text-xs',
                                                                                 style: { 
-                                                                                    gridTemplateColumns: '130px 200px 10px 200px 80px 50px', // Zmenené: 7 stĺpcov -> 6 stĺpcov (odstránené dva stĺpce ID)
+                                                                                    gridTemplateColumns: '100px 200px 10px 200px 30px 30px',
                                                                                     width: 'fit-content'
                                                                                 },
                                                                                 onClick: function(e) {
