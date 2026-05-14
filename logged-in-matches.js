@@ -7137,7 +7137,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 const awayTeamColor = accommodationsMap.get(match.awayTeamIdentifier) || '#f3f4f6';
                                                 const homeTextColor = (homeTeamColor !== '#f3f4f6' && homeTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
                                                 const awayTextColor = (awayTeamColor !== '#f3f4f6' && awayTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
-                                            
+
                                                 return {
                                                     ...match,
                                                     homeTeamColor,
