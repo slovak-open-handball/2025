@@ -1300,15 +1300,15 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                                                         )
                                                                     )
                                                                 );
-                                                            })
-                                                            )
+                                                            }
                                                         )
                                                     )
                                                 )
                                             )
-                                        );
-                                    })
-                                )
+                                        )
+                                    );
+                                })
+                            )
                         )
                     )
                 )
