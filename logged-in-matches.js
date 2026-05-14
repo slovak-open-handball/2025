@@ -4018,8 +4018,6 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [accommodations, setAccommodations] = useState([]);
     const [teamAccommodations, setTeamAccommodations] = useState(new Map());
 
-    const [isMoveMatchesModalOpen, setIsMoveMatchesModalOpen] = useState(false);
-    const [pendingMove, setPendingMove] = useState(null);
     const [isSwapMatchesModalOpen, setIsSwapMatchesModalOpen] = useState(false);
     const [pendingSwap, setPendingSwap] = useState(null);
 
@@ -4182,103 +4180,6 @@ const AddMatchesApp = ({ userProfileData }) => {
         } catch (error) {
             console.error('Chyba pri výmene zápasov:', error);
             window.showGlobalNotification('Chyba pri výmene: ' + error.message, 'error');
-        }
-    };
-
-    // Funkcia na presun zápasov medzi dňami/halami
-    const handleMoveMatches = async ({ sourceHallId, sourceDate, targetHallId, targetDate, isWholeHall, moveMatches, moveSchedules }) => {
-        if (!window.db) {
-            window.showGlobalNotification('Databáza nie je inicializovaná', 'error');
-            return;
-        }
-    
-        if (userProfileData?.role !== 'admin') {
-            window.showGlobalNotification('Na presun zápasov potrebujete administrátorské práva', 'error');
-            return;
-        }
-    
-        try {
-            let movedMatchesCount = 0;
-            
-            // Nájdeme zápasy na presun
-            const matchesToMove = matches.filter(match => {
-                if (!match.hallId || match.hallId !== sourceHallId) return false;
-                if (!isWholeHall && match.scheduledTime) {
-                    try {
-                        const matchDate = match.scheduledTime.toDate();
-                        const matchDateStr = getLocalDateStr(matchDate);
-                        return matchDateStr === sourceDate;
-                    } catch (e) {
-                        return false;
-                    }
-                }
-                return true;
-            });
-    
-            if (moveMatches && matchesToMove.length > 0) {
-                // Presunieme zápasy
-                for (const match of matchesToMove) {
-                    const matchRef = doc(window.db, 'matches', match.id);
-                    const updateData = {
-                        hallId: targetHallId
-                    };
-                    
-                    if (!isWholeHall && targetDate && match.scheduledTime) {
-                        // Presun na konkrétny deň - zachováme čas
-                        const oldDate = match.scheduledTime.toDate();
-                        const [year, month, day] = targetDate.split('-').map(Number);
-                        const newDateTime = new Date(year, month - 1, day, 
-                            oldDate.getHours(), oldDate.getMinutes(), 0);
-                        updateData.scheduledTime = Timestamp.fromDate(newDateTime);
-                    }
-                    
-                    await updateDoc(matchRef, updateData);
-                    movedMatchesCount++;
-                }
-            }
-    
-            // Presun nastavení (čas začiatku)
-            if (moveSchedules) {
-                const sourceScheduleId = `${sourceHallId}_${!isWholeHall ? sourceDate : ''}`;
-                const targetScheduleId = `${targetHallId}_${!isWholeHall ? targetDate : ''}`;
-                
-                const sourceScheduleRef = doc(window.db, 'hallSchedules', sourceScheduleId);
-                const sourceScheduleSnap = await getDoc(sourceScheduleRef);
-                
-                if (sourceScheduleSnap.exists()) {
-                    const scheduleData = sourceScheduleSnap.data();
-                    
-                    // Uložíme na cieľové miesto
-                    const targetScheduleRef = doc(window.db, 'hallSchedules', targetScheduleId);
-                    await setDoc(targetScheduleRef, {
-                        ...scheduleData,
-                        hallId: targetHallId,
-                        date: !isWholeHall ? targetDate : '',
-                        updatedAt: Timestamp.now(),
-                        updatedBy: userProfileData?.email || 'unknown'
-                    }, { merge: true });
-                    
-                    // Odstránime zdrojové nastavenie (ak nie je wholeHall)
-                    if (!isWholeHall) {
-                        await deleteDoc(sourceScheduleRef);
-                    }
-                }
-            }
-    
-            const message = isWholeHall
-                ? `Presunutých ${movedMatchesCount} zápasov z haly ${sportHalls.find(h => h.id === sourceHallId)?.name} do haly ${sportHalls.find(h => h.id === targetHallId)?.name}`
-                : `Presunutých ${movedMatchesCount} zápasov z dňa ${sourceDate} do dňa ${targetDate}`;
-            
-            window.showGlobalNotification(message, 'success');
-            
-            // Obnovíme dáta
-            setTimeout(() => {
-                window.dispatchEvent(new CustomEvent('refreshMatches'));
-            }, 500);
-            
-        } catch (error) {
-            console.error('Chyba pri presune zápasov:', error);
-            window.showGlobalNotification('Chyba pri presune: ' + error.message, 'error');
         }
     };
 
@@ -6837,19 +6738,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             categories: categories,
             groupsByCategory: groupsByCategory,
             teams: teamData
-        }),
-        React.createElement(MoveMatchesModal, {
-            isOpen: isMoveMatchesModalOpen,
-            onClose: () => {
-                setIsMoveMatchesModalOpen(false);
-                setPendingMove(null);
-            },
-            onConfirm: (moveData) => handleMoveMatches(moveData),
-            sourceHallId: pendingMove?.sourceHallId,
-            sourceDate: pendingMove?.sourceDate,
-            isWholeHall: pendingMove?.isWholeHall || false,
-            sportHalls: sportHalls,
-            availableDays: availableDays
         }),
         // Pridajte k ostatným modálnym oknám
         React.createElement(SwapMatchesModal, {
