@@ -226,6 +226,196 @@ const generateMatchesForGroup = (teams, withRepetitions, categoryName, transferF
     return matches;
 };
 
+// Modálne okno pre presun zápasov medzi dňami/halami (jednosmerný presun)
+const MoveMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate, isWholeHall, sportHalls, availableDays }) => {
+    const [targetHallId, setTargetHallId] = useState('');
+    const [targetDate, setTargetDate] = useState('');
+    const [moveMatches, setMoveMatches] = useState(true);
+    const [moveSchedules, setMoveSchedules] = useState(true);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (!isOpen) {
+            setTargetHallId('');
+            setTargetDate('');
+            setMoveMatches(true);
+            setMoveSchedules(true);
+            setLoading(false);
+        }
+    }, [isOpen]);
+
+    if (!isOpen) return null;
+
+    const sortedHalls = [...sportHalls].sort((a, b) => a.name.localeCompare(b.name));
+    const availableHalls = isWholeHall 
+        ? sortedHalls.filter(h => h.id !== sourceHallId)
+        : sortedHalls;
+
+    const isValid = targetHallId && (!isWholeHall ? targetDate : true);
+
+    const handleConfirm = async () => {
+        setLoading(true);
+        await onConfirm({
+            sourceHallId,
+            sourceDate,
+            targetHallId,
+            targetDate: isWholeHall ? null : targetDate,
+            isWholeHall,
+            moveMatches,
+            moveSchedules
+        });
+        setLoading(false);
+        onClose();
+    };
+
+    return React.createElement(
+        'div',
+        {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[105]',
+            onClick: (e) => {
+                if (e.target === e.currentTarget) onClose();
+            }
+        },
+        React.createElement(
+            'div',
+            { className: 'bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4' },
+            
+            React.createElement(
+                'div',
+                { className: 'flex justify-between items-center mb-4' },
+                React.createElement('h3', { className: 'text-xl font-bold text-gray-800' }, 
+                    isWholeHall ? 'Presunúť všetky zápasy z haly' : 'Presunúť zápasy z dňa'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'text-gray-500 hover:text-gray-700'
+                    },
+                    React.createElement('i', { className: 'fa-solid fa-times text-xl' })
+                )
+            ),
+
+            React.createElement(
+                'div',
+                { className: 'mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200' },
+                React.createElement(
+                    'div',
+                    { className: 'flex items-center gap-2 text-blue-700' },
+                    React.createElement('i', { className: 'fa-solid fa-arrow-right-from-bracket' }),
+                    React.createElement('span', { className: 'font-medium' }, 'Zdroj:'),
+                    React.createElement('span', null, 
+                        isWholeHall 
+                            ? sportHalls.find(h => h.id === sourceHallId)?.name || 'Neznáma hala'
+                            : `${sportHalls.find(h => h.id === sourceHallId)?.name || 'Neznáma hala'} - ${sourceDate}`
+                    )
+                )
+            ),
+
+            React.createElement(
+                'div',
+                { className: 'mb-4' },
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Cieľová hala:'),
+                React.createElement(
+                    'select',
+                    {
+                        value: targetHallId,
+                        onChange: (e) => setTargetHallId(e.target.value),
+                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                    },
+                    React.createElement('option', { value: '' }, '-- Vyberte halu --'),
+                    availableHalls.map(hall => 
+                        React.createElement('option', { key: hall.id, value: hall.id }, hall.name)
+                    )
+                )
+            ),
+
+            !isWholeHall && React.createElement(
+                'div',
+                { className: 'mb-4' },
+                React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-1' }, 'Cieľový deň:'),
+                React.createElement(
+                    'select',
+                    {
+                        value: targetDate,
+                        onChange: (e) => setTargetDate(e.target.value),
+                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black'
+                    },
+                    React.createElement('option', { value: '' }, '-- Vyberte deň --'),
+                    availableDays.map(day => 
+                        React.createElement('option', { key: day.value, value: day.value }, day.label)
+                    )
+                )
+            ),
+
+            React.createElement(
+                'div',
+                { className: 'mb-4 space-y-2 p-3 bg-gray-50 rounded-lg border border-gray-200' },
+                React.createElement(
+                    'label',
+                    { className: 'flex items-center gap-2 cursor-pointer' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        checked: moveMatches,
+                        onChange: (e) => setMoveMatches(e.target.checked),
+                        className: 'w-4 h-4 text-blue-600 rounded'
+                    }),
+                    React.createElement('span', { className: 'text-gray-700' }, 'Presunúť zápasy')
+                ),
+                React.createElement(
+                    'label',
+                    { className: 'flex items-center gap-2 cursor-pointer' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        checked: moveSchedules,
+                        onChange: (e) => setMoveSchedules(e.target.checked),
+                        className: 'w-4 h-4 text-blue-600 rounded'
+                    }),
+                    React.createElement('span', { className: 'text-gray-700' }, 'Presunúť nastavenia (čas začiatku)')
+                )
+            ),
+
+            React.createElement(
+                'div',
+                { className: 'mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg' },
+                React.createElement(
+                    'p',
+                    { className: 'text-sm text-yellow-700 flex items-center gap-2' },
+                    React.createElement('i', { className: 'fa-solid fa-exclamation-triangle' }),
+                    'Presun zápasov je nenávratný. Zápasy budú presunuté na nové miesto (pôvodné zostanú prázdne).'
+                )
+            ),
+
+            React.createElement(
+                'div',
+                { className: 'flex justify-end gap-3' },
+                React.createElement(
+                    'button',
+                    {
+                        onClick: onClose,
+                        className: 'px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors'
+                    },
+                    'Zrušiť'
+                ),
+                React.createElement(
+                    'button',
+                    {
+                        onClick: handleConfirm,
+                        disabled: !isValid || loading,
+                        className: `px-4 py-2 text-white rounded-lg transition-colors ${
+                            isValid && !loading
+                                ? 'bg-blue-600 hover:bg-blue-700 cursor-pointer' 
+                                : 'bg-gray-400 cursor-not-allowed'
+                        }`
+                    },
+                    loading ? React.createElement('i', { className: 'fa-solid fa-spinner fa-spin mr-2' }) : null,
+                    'Presunúť'
+                )
+            )
+        )
+    );
+};
+
 // Modálne okno pre výmenu zápasov medzi halami/dňami
 const SwapMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate, isWholeHall, sportHalls, availableDays }) => {
     const [targetHallId, setTargetHallId] = useState('');
