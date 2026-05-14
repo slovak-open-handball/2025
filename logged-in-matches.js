@@ -7909,7 +7909,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                    React.createElement(
                                                                                                        'div', 
                                                                                                        { className: 'text-[10px] text-amber-600 mt-0.5' },
-                                                                                                       `(${gapMinutes} min)`
+                                                                                                       ` (${gapMinutes} min)`
                                                                                                    )
                                                                                                )
                                                                                            ),
