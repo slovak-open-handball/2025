@@ -7472,6 +7472,160 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                    const mins = (minutes % 60).toString().padStart(2, '0');
                                                                    return `${hours}:${mins}`;
                                                                };
+
+                                                               if (sortedMatches.length > 0) {
+                                                                   const firstMatch = sortedMatches[0];
+                                                                   if (firstMatch.scheduledTime) {
+                                                                       try {
+                                                                           const firstMatchDate = firstMatch.scheduledTime.toDate();
+                                                                           const firstMatchStartMinutes = firstMatchDate.getHours() * 60 + firstMatchDate.getMinutes();
+                                                                           
+                                                                           // Získame nastavený čas začiatku pre túto halu a deň
+                                                                           const scheduleId = `${hall.id}_${getLocalDateStr(firstMatchDate)}`;
+                                                                           const savedSchedule = hallSchedules[scheduleId];
+                                                                           const hallStartTimeStr = savedSchedule?.startTime;
+                                                                           
+                                                                           if (hallStartTimeStr) {
+                                                                               const [hallStartHours, hallStartMinutes] = hallStartTimeStr.split(':').map(Number);
+                                                                               const hallStartMinutesTotal = hallStartHours * 60 + hallStartMinutes;
+                                                                               
+                                                                               // Vypočítame medzeru pred prvým zápasom
+                                                                               let gapBeforeFirstMatch = firstMatchStartMinutes - hallStartMinutesTotal;
+                                                                               
+                                                                               if (gapBeforeFirstMatch > 0) {
+                                                                                   const dateStr = getLocalDateStr(firstMatchDate);
+                                                                                   const gapStartTime = formatTimeFromMinutes(hallStartMinutesTotal);
+                                                                                   const gapEndTime = formatTimeFromMinutes(firstMatchStartMinutes);
+                                                                                   const isGapBlocked = blockedBreaks ? !!blockedBreaks[`${hall.id}_${dateStr}_${gapStartTime}`] : false;
+                                                                                   
+                                                                                   allElements.push(
+                                                                                       React.createElement(
+                                                                                           'div',
+                                                                                           {
+                                                                                               key: `gap-before-first-${firstMatch.id}`,
+                                                                                               className: 'p-0 rounded border border-dashed border-amber-400 hover:border-amber-500 transition-all relative group/gap',
+                                                                                               style: { 
+                                                                                                   width: '100%',
+                                                                                                   backgroundColor: isGapBlocked ? '#fed7aa' : '#fffbeb'
+                                                                                               }
+                                                                                           },
+                                                                                           React.createElement(
+                                                                                               'div', 
+                                                                                               { 
+                                                                                                   className: 'grid items-center text-xs',
+                                                                                                   style: { 
+                                                                                                       gridTemplateColumns: '130px 1fr',
+                                                                                                       width: '100%'
+                                                                                                   }
+                                                                                               },
+                                                                                               // Prvý stĺpec - časový interval a dĺžka
+                                                                                               React.createElement(
+                                                                                                   'div', 
+                                                                                                   { 
+                                                                                                       className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300',
+                                                                                                       style: { minWidth: '130px', textAlign: 'center' }
+                                                                                                   },
+                                                                                                   React.createElement(
+                                                                                                       'div', 
+                                                                                                       { className: 'flex items-center justify-center gap-1 w-full' },
+                                                                                                       React.createElement('i', { className: `fa-solid ${isGapBlocked ? 'fa-lock' : 'fa-hourglass-half'} text-amber-600 text-xs flex-shrink-0` }),
+                                                                                                       React.createElement('span', { className: 'font-medium text-amber-700 truncate' }, 
+                                                                                                           `${gapStartTime} - ${gapEndTime}`
+                                                                                                       )
+                                                                                                   )
+                                                                                               ),
+                                                                                               
+                                                                                               // Druhý stĺpec - text "Voľný čas"
+                                                                                               React.createElement(
+                                                                                                   'div', 
+                                                                                                   { 
+                                                                                                       className: 'px-0 py-0 flex items-center justify-center',
+                                                                                                       style: { 
+                                                                                                           textAlign: 'center',
+                                                                                                           fontWeight: '500',
+                                                                                                           color: '#d97706'
+                                                                                                       }
+                                                                                                   },
+                                                                                                   React.createElement(
+                                                                                                       'span',
+                                                                                                       { className: 'text-sm font-medium' },
+                                                                                                       isGapBlocked ? 'ZABLOKOVANÝ ČAS ' : 'VOĽNÝ ČAS '
+                                                                                                   ),
+                                                                                                   React.createElement(
+                                                                                                       'div', 
+                                                                                                       { className: 'text-[10px] text-amber-600 ml-1' },
+                                                                                                       `(${gapBeforeFirstMatch} min)`
+                                                                                                   )
+                                                                                               )
+                                                                                           ),
+                                                                                           
+                                                                                           // Tlačidlá pre admina
+                                                                                           userProfileData?.role === 'admin' ? React.createElement(
+                                                                                               'div',
+                                                                                               { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/gap:opacity-100 transition-opacity' },
+                                                                                               
+                                                                                               // Tlačidlo zámku
+                                                                                               React.createElement(
+                                                                                                   'button',
+                                                                                                   {
+                                                                                                       className: `w-6 h-6 ${isGapBlocked ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-500 hover:bg-gray-600'} text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
+                                                                                                       onClick: function(e) {
+                                                                                                           e.stopPropagation();
+                                                                                                           toggleBlockBreak(hall.id, dateStr, gapStartTime, gapEndTime, gapBeforeFirstMatch);
+                                                                                                       },
+                                                                                                       title: isGapBlocked ? 'Odblokovať voľný čas' : 'Zablokovať voľný čas'
+                                                                                                   },
+                                                                                                   React.createElement('i', { className: `fa-solid ${isGapBlocked ? 'fa-unlock' : 'fa-lock'} text-xs` })
+                                                                                               ),
+                                                                                               
+                                                                                               // Tlačidlo plus (priradiť zápas)
+                                                                                               !isGapBlocked && React.createElement(
+                                                                                                   'button',
+                                                                                                   {
+                                                                                                       className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                                       onClick: function(e) {
+                                                                                                           e.stopPropagation();
+                                                                                                           setSelectedBreakForAssign({
+                                                                                                               hallId: hall.id,
+                                                                                                               date: dateStr,
+                                                                                                               breakStartTime: gapStartTime,
+                                                                                                               breakEndTime: gapEndTime,
+                                                                                                               breakDuration: gapBeforeFirstMatch,
+                                                                                                               availableMatches: filteredUnassignedMatches
+                                                                                                           });
+                                                                                                           setIsAssignToBreakModalOpen(true);
+                                                                                                       },
+                                                                                                       title: 'Priradiť zápas do voľného času'
+                                                                                                   },
+                                                                                                   React.createElement('i', { className: 'fa-solid fa-plus text-xs' })
+                                                                                               ),
+                                                                                               
+                                                                                               // Tlačidlo koša (odstrániť medzeru) - posunie prvý zápas skôr
+                                                                                               !isGapBlocked && React.createElement(
+                                                                                                   'button',
+                                                                                                   {
+                                                                                                       className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                                                       onClick: function(e) {
+                                                                                                           e.stopPropagation();
+                                                                                                           handleDeleteBreakBefore({
+                                                                                                               matchId: firstMatch.id,
+                                                                                                               breakDuration: gapBeforeFirstMatch
+                                                                                                           });
+                                                                                                       },
+                                                                                                       title: 'Odstrániť medzeru (posunúť prvý zápas skôr)'
+                                                                                                   },
+                                                                                                   React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                                                                               )
+                                                                                           ) : null
+                                                                                       )
+                                                                                   );
+                                                                               }
+                                                                           }
+                                                                       } catch (e) {
+                                                                           console.error('Chyba pri výpočte medzery pred prvým zápasom:', e);
+                                                                       }
+                                                                   }
+                                                               }
                                                                
                                                                sortedMatches.forEach(function(match, idx, sortedArray) {
                                                                    let matchTime = '--:--';
