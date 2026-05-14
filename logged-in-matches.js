@@ -7434,7 +7434,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                 var awayDisplay = getTeamDisplayText(match.awayTeamIdentifier);
                                                                 
                                                                 // Získanie farby kategórie
-                                                                var categoryColor = '#f3f4f6'; // predvolená sivá
+                                                                var categoryColor = '#f3f4f6';
                                                                 if (match.categoryName) {
                                                                     var foundCategory = categories.find(function(c) { return c.name === match.categoryName; });
                                                                     if (foundCategory && foundCategory.drawColor) {
@@ -7442,7 +7442,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                     }
                                                                 }
                                                                 
-                                                                // Zistenie, či ide o špeciálny zápas (pavúk alebo o umiestnenie)
+                                                                // Zistenie, či ide o špeciálny zápas
                                                                 var isSpecialMatch = (match.matchType && !match.isPlacementMatch) || match.isPlacementMatch === true;
                                                                 
                                                                 // Príprava textu pre špeciálny zápas
@@ -7450,9 +7450,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                 if (match.isPlacementMatch && match.placementRank) {
                                                                     specialMatchText = `o ${match.placementRank}. miesto`;
                                                                 } else if (match.matchType && !match.isPlacementMatch) {
-                                                                    // Pre pavúkové zápasy - extrahujeme len typ (napr. "semifinále A" -> "semifinále")
                                                                     var matchTypeText = match.matchType;
-                                                                    // Odstránime písmeno ak je na konci (napr. "semifinále A" -> "semifinále")
                                                                     var lastChar = matchTypeText.charAt(matchTypeText.length - 1);
                                                                     if (lastChar >= 'A' && lastChar <= 'Z') {
                                                                         matchTypeText = matchTypeText.substring(0, matchTypeText.length - 1).trim();
@@ -7498,6 +7496,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                 var lettersAreSame = homeExtracted.letter && awayExtracted.letter && homeExtracted.letter === awayExtracted.letter;
                                                                 var letterToShow = lettersAreSame ? homeExtracted.letter : '';
                                                                 
+                                                                // *** FARBY UBYTOVNÍ - DEFINOVANÉ PRED React.createElement ***
+                                                                const homeTeamColor = teamAccommodations.get(match.homeTeamIdentifier) || '#f3f4f6';
+                                                                const homeTextColor = (homeTeamColor !== '#f3f4f6' && homeTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
+                                                                const awayTeamColor = teamAccommodations.get(match.awayTeamIdentifier) || '#f3f4f6';
+                                                                const awayTextColor = (awayTeamColor !== '#f3f4f6' && awayTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
+                                                                
                                                                 allElements.push(
                                                                     React.createElement(
                                                                         'div',
@@ -7523,7 +7527,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 },
                                                                                 title: 'Kliknite pre úpravu zápasu'
                                                                             },
-                                                                            // Stĺpec s časom (len čas, žiadny typ zápasu)
+                                                                            // Stĺpec s časom
                                                                             React.createElement(
                                                                                 'div', 
                                                                                 { 
@@ -7538,9 +7542,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 )
                                                                             ),
                                                                             
-                                                                            const homeTeamColor = teamAccommodations.get(match.homeTeamIdentifier) || '#f3f4f6'; // Sivá ak nemá ubytovňu
-                                                                            const homeTextColor = (homeTeamColor !== '#f3f4f6' && homeTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
-
+                                                                            // Domáci tím - názov s farbou ubytovne
                                                                             React.createElement(
                                                                                 'div', 
                                                                                 { 
@@ -7570,9 +7572,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             ),
                                                                             
                                                                             // Hosťovský tím - názov s farbou ubytovne
-                                                                            const awayTeamColor = teamAccommodations.get(match.awayTeamIdentifier) || '#f3f4f6'; // Sivá ak nemá ubytovňu
-                                                                            const awayTextColor = (awayTeamColor !== '#f3f4f6' && awayTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
-
                                                                             React.createElement(
                                                                                 'div', 
                                                                                 { 
@@ -7639,8 +7638,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 )
                                                                             ),
                                                                             
-                                                                            // PRE ŠPECIÁLNE ZÁPASY - jeden stĺpec s colSpan=2 (zlúčené posledné dva stĺpce)
-                                                                            // Zobrazuje typ zápasu podfarbený farbou kategórie - BEZ OREZANIA TEXTU
+                                                                            // PRE ŠPECIÁLNE ZÁPASY - jeden stĺpec s colSpan=2
                                                                             isSpecialMatch && React.createElement(
                                                                                 'div', 
                                                                                 { 
