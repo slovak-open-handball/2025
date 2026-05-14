@@ -2873,7 +2873,7 @@ const MapApp = ({ userProfileData }) => {
               ),
               mealPriceError && React.createElement('p', { className: 'mt-2 text-sm text-red-600' }, mealPriceError)
             ),
-            newPlaceType === 'sportova_hala' && tournamentDates.days.length > 0 && (
+            editType === 'sportova_hala' && tournamentDates.days.length > 0 && (
                 React.createElement('div', { className: 'mb-5' },
                     React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' },
                         'Ceny prenájmu haly (€/hodinu) podľa dní'
@@ -3124,7 +3124,7 @@ const MapApp = ({ userProfileData }) => {
               ),
               mealPriceError && React.createElement('p', { className: 'mt-2 text-sm text-red-600' }, mealPriceError)
             ),
-            editType === 'sportova_hala' && tournamentDates.days.length > 0 && (
+            newPlaceType === 'sportova_hala' && tournamentDates.days.length > 0 && (
                 React.createElement('div', { className: 'mb-5' },
                     React.createElement('label', { className: 'block text-sm font-medium text-gray-700 mb-2' },
                         'Ceny prenájmu haly (€/hodinu) podľa dní'
