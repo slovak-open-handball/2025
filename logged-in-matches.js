@@ -5163,7 +5163,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                         loadedAccommodations.push({
                             id: docSnap.id,
                             name: data.name,
-                            headerColor: data.headerColor || '#1e40af', // Farba z databázy
+                            headerColor: data.headerColor || '#1e40af',
                             headerTextColor: data.headerTextColor || '#000000'
                         });
                     }
@@ -5190,34 +5190,20 @@ const AddMatchesApp = ({ userProfileData }) => {
                             teamArray.forEach((team) => {
                                 if (!team?.teamName) return;
     
-                                // Vytvoríme identifikátor tímu v rovnakom formáte ako v zápasoch
-                                // Formát: "Kategória SkupinaČíslo" (napr. "U10 A1")
-                                // Musíme extrahovať skupinu a order z team.teamName alebo iných údajov
-                                // Predpokladáme, že team.group a team.order sú dostupné
-                                // Ak nie, budeme musieť vytvoriť mapovanie z názvu tímu na identifikátor
-                                
-                                // Získame skupinu (napr. "A") a order (napr. "1") z tímu
-                                // Toto závisí od štruktúry vašich dát v `team` objekte
-                                // Pre jednoduchosť použijeme team.teamName ako fallback
                                 let teamIdentifier = null;
                                 
-                                // Skúsime vytvoriť identifikátor v tvare "Kategória SkupinaOrder"
                                 if (team.groupName && team.order) {
-                                    // Odstránime "skupina " z názvu skupiny (napr. "skupina A" -> "A")
                                     const groupLetter = team.groupName.replace('skupina ', '');
                                     teamIdentifier = `${category} ${groupLetter}${team.order}`;
                                 } else {
-                                    // Fallback: použijeme team.teamName (môže byť nepresné)
                                     teamIdentifier = team.teamName;
                                 }
     
-                                // Získame farbu z priradenej ubytovne
                                 const accommodationName = team.accommodation?.name;
                                 if (accommodationName) {
-                                    const accommodation = loadedAccommodations.find(a => a.name === accommodationName);
-                                    if (accommodation) {
-                                        teamAccommodationMap.set(teamIdentifier, accommodation.headerColor);
-                                    }
+                                    // Farba sa nastaví neskôr po načítaní ubytovní
+                                    // Pre jednoduchosť ukladáme len názov ubytovne a farbu nastavíme neskôr
+                                    teamAccommodationMap.set(teamIdentifier, accommodationName);
                                 }
                             });
                         });
@@ -5230,7 +5216,6 @@ const AddMatchesApp = ({ userProfileData }) => {
             (err) => console.error("Chyba pri načítaní priradení ubytovní:", err)
         );
     
-        // Vrátime unsubscribe funkcie pre prípad, že by sme ich potrebovali neskôr odregistrovať
         return () => {
             unsubscribePlaces();
             unsubscribeUsers();
@@ -7099,7 +7084,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                             
                             sortedFilteredSportHalls.map((hall) => {
                                 const typeConfig = typeIcons[hall.type] || { icon: 'fa-futbol', color: '#dc2626' };
-                    
+                            
                                 const hasAnyMatch = matches.some(match => match.hallId === hall.id);
                                 
                                 // Zistíme, či je aktívny nejaký filter (kategória alebo skupina)
@@ -7107,7 +7092,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                 
                                 // Generovanie zoznamu dní medzi začiatkom a koncom turnaja
                                 const tournamentDays = [];
-                                const dayCards = []; // Sem budeme ukladať karty dní
+                                const dayCards = [];
                                 
                                 if (tournamentStartDate && tournamentEndDate) {
                                     const startDate = new Date(tournamentStartDate);
@@ -7124,28 +7109,48 @@ const AddMatchesApp = ({ userProfileData }) => {
                                         
                                         // Kontrola, či tento deň vyhovuje filtru dňa
                                         const matchesDayFilter = !selectedDayFilter || selectedDayFilter === dateStr;
-
-                                        const matchesWithColors = hallMatchesForDay.map(match => {
-                                            // Použijeme window.__teamAccommodationsMap namiesto priameho prístupu k state
-                                            const accommodationsMap = window.__teamAccommodationsMap || new Map();
-                                            const homeTeamColor = accommodationsMap.get(match.homeTeamIdentifier) || '#f3f4f6';
-                                            const awayTeamColor = accommodationsMap.get(match.awayTeamIdentifier) || '#f3f4f6';
-                                            const homeTextColor = (homeTeamColor !== '#f3f4f6' && homeTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
-                                            const awayTextColor = (awayTeamColor !== '#f3f4f6' && awayTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
-
-                                            return {
-                                                ...match,
-                                                homeTeamColor,
-                                                awayTeamColor,
-                                                homeTextColor,
-                                                awayTextColor
-                                            };
-                                        });
                                         
                                         if (matchesDayFilter) {
                                             // Získame zápasy pre túto halu a tento deň po aplikovaní všetkých filtrov
                                             const hallMatchesForDay = getMatchesForHallAndDay(hall.id, currentDate);
                                             const matchesCount = hallMatchesForDay.length;
+                                            
+                                            // Vytvorenie matchesWithColors TU - PRED POUŽITÍM
+                                            const matchesWithColors = hallMatchesForDay.map(match => {
+                                                // Použijeme window.__teamAccommodationsMap namiesto priameho prístupu k state
+                                                const accommodationsMap = window.__teamAccommodationsMap || new Map();
+                                                // Získame farbu ubytovne podľa názvu
+                                                let homeTeamColor = '#f3f4f6';
+                                                let awayTeamColor = '#f3f4f6';
+                                                
+                                                const homeAccommodationName = accommodationsMap.get(match.homeTeamIdentifier);
+                                                const awayAccommodationName = accommodationsMap.get(match.awayTeamIdentifier);
+                                                
+                                                // Nájdeme farbu podľa názvu ubytovne
+                                                if (homeAccommodationName) {
+                                                    const accommodation = accommodations.find(a => a.name === homeAccommodationName);
+                                                    if (accommodation) {
+                                                        homeTeamColor = accommodation.headerColor;
+                                                    }
+                                                }
+                                                if (awayAccommodationName) {
+                                                    const accommodation = accommodations.find(a => a.name === awayAccommodationName);
+                                                    if (accommodation) {
+                                                        awayTeamColor = accommodation.headerColor;
+                                                    }
+                                                }
+                                                
+                                                const homeTextColor = (homeTeamColor !== '#f3f4f6' && homeTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
+                                                const awayTextColor = (awayTeamColor !== '#f3f4f6' && awayTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
+                            
+                                                return {
+                                                    ...match,
+                                                    homeTeamColor,
+                                                    awayTeamColor,
+                                                    homeTextColor,
+                                                    awayTextColor
+                                                };
+                                            });
                                             
                                             // Rozhodnutie, či zobraziť tento deň:
                                             // - Ak je filter aktívny, zobrazíme LEN dni, ktoré majú zápasy
@@ -7156,7 +7161,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     dayCards.push({
                                                         date: new Date(currentDate),
                                                         dateStr: dateStr,
-                                                        matches: hallMatchesForDay,
+                                                        matches: matchesWithColors,
                                                         matchesCount: matchesCount,
                                                         isEmpty: false
                                                     });
@@ -7166,7 +7171,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                 dayCards.push({
                                                     date: new Date(currentDate),
                                                     dateStr: dateStr,
-                                                    matches: hallMatchesForDay,
+                                                    matches: matchesWithColors,
                                                     matchesCount: matchesCount,
                                                     isEmpty: matchesCount === 0
                                                 });
