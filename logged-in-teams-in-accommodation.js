@@ -1031,7 +1031,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                                 React.createElement('span', { 
                                                     className: 'ml-3 text-sm whitespace-nowrap',
                                                     style: { color: textColor, opacity: 0.8 }
-                                                }, `(${team.peopleWithAccommodation} z ${team.totalPeople} osôb)`)
+                                                }, `(${team.peopleWithAccommodation} z ${team.totalPeople})`)
                                             ),
                                             React.createElement(
                                                 'div',
@@ -1268,7 +1268,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                                                         React.createElement('span', { 
                                                                             className: 'text-xs ml-2 whitespace-nowrap flex-shrink-0',
                                                                             style: { color: textColor, opacity: 0.8 }
-                                                                        }, `(${team.peopleWithAccommodation} z ${team.totalPeople} osôb)`)
+                                                                        }, `(${team.peopleWithAccommodation} z ${team.totalPeople})`)
                                                                     ),
                                                                     React.createElement(
                                                                         'div',
