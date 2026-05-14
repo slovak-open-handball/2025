@@ -7364,15 +7364,21 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         }
                                                                     }
                                                                     
+                                                                    // Ak sme nenašli žiadne číslo, celý reťazec je písmeno
+                                                                    if (number === '') {
+                                                                        letter = lastPart;
+                                                                    }
+                                                                    
                                                                     return { letter: letter, number: number };
                                                                 };
                                                                 
                                                                 var homeExtracted = extractLetterAndNumber(match.homeTeamIdentifier);
                                                                 var awayExtracted = extractLetterAndNumber(match.awayTeamIdentifier);
                                                                 
-                                                                // Zobrazenie v nových bunkách - len čísla
-                                                                var homeNumberDisplay = homeExtracted.number;
-                                                                var awayNumberDisplay = awayExtracted.number;
+                                                                // Zobrazenie v nových bunkách - spojené čísla vo formáte "číslo-číslo"
+                                                                var combinedNumbers = homeExtracted.number && awayExtracted.number 
+                                                                    ? homeExtracted.number + '-' + awayExtracted.number 
+                                                                    : (homeExtracted.number || awayExtracted.number || '');
                                                                 
                                                                 // Kontrola, či sú písmená rovnaké
                                                                 var lettersAreSame = homeExtracted.letter && awayExtracted.letter && homeExtracted.letter === awayExtracted.letter;
@@ -7403,7 +7409,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             { 
                                                                                 className: 'grid items-start text-xs',
                                                                                 style: { 
-                                                                                    gridTemplateColumns: '130px 200px 10px 200px 80px 80px 50px', // Pridaný stĺpec pre písmeno
+                                                                                    gridTemplateColumns: '130px 200px 10px 200px 80px 50px', // Zmenené: 7 stĺpcov -> 6 stĺpcov (odstránené dva stĺpce ID)
                                                                                     width: 'fit-content'
                                                                                 },
                                                                                 onClick: function(e) {
@@ -7493,7 +7499,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 )
                                                                             ),
                                                                             
-                                                                            // Domáci tím - ID (LEN ČÍSLA, BEZ PODFARBENIA)
+                                                                            // Spojené čísla domáci-hosť (formát "číslo-číslo", BEZ PODFARBENIA)
                                                                             React.createElement(
                                                                                 'div', 
                                                                                 { 
@@ -7506,30 +7512,10 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 React.createElement(
                                                                                     'span',
                                                                                     { 
-                                                                                        className: (selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' text-black font-mono text-[10px] truncate block w-full',
-                                                                                        title: homeDisplay.id 
+                                                                                        className: (selectedTeamIdFilter && (match.homeTeamIdentifier === selectedTeamIdFilter || match.awayTeamIdentifier === selectedTeamIdFilter) ? 'font-bold' : 'font-medium') + ' text-black font-mono text-[10px] truncate block w-full',
+                                                                                        title: homeExtracted.number + ' - ' + awayExtracted.number
                                                                                     },
-                                                                                    '(' + homeNumberDisplay + ')'
-                                                                                )
-                                                                            ),
-                                                                            
-                                                                            // Hosťovský tím - ID (LEN ČÍSLA, BEZ PODFARBENIA)
-                                                                            React.createElement(
-                                                                                'div', 
-                                                                                { 
-                                                                                    className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300',
-                                                                                    style: { 
-                                                                                        textAlign: 'center',
-                                                                                        backgroundColor: 'transparent' // Žiadne podfarbenie
-                                                                                    }
-                                                                                },
-                                                                                React.createElement(
-                                                                                    'span',
-                                                                                    { 
-                                                                                        className: (selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' text-black font-mono text-[10px] truncate block w-full',
-                                                                                        title: awayDisplay.id 
-                                                                                    },
-                                                                                    '(' + awayNumberDisplay + ')'
+                                                                                    combinedNumbers
                                                                                 )
                                                                             ),
                                                                             
