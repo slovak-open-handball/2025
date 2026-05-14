@@ -7315,9 +7315,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     !isEmpty ? React.createElement(
                                                         'div',
                                                         { 
-                                                            className: 'space-y-1 text-xs',
+                                                            className: 'space-y-0 text-xs',
                                                             style: { 
-                                                                width: 'fit-content' // Prispôsobí sa najširšiemu zápasu
+                                                                width: 'fit-content'
                                                             }
                                                         },
                                                         (() => {
@@ -7374,7 +7374,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     'div',
                                                                                     {
                                                                                         key: 'break-before-first',
-                                                                                        className: `p-2 rounded border border-dashed transition-all relative group/break ${
+                                                                                        className: `p-0 rounded border border-dashed transition-all relative group/break ${
                                                                                             isBreakBlocked(hall.id, dateStr, breakBeforeStartTime)
                                                                                                 ? 'bg-orange-100 border-orange-300' 
                                                                                                 : 'border-green-300 bg-green-50'
@@ -7397,7 +7397,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         // Časový údaj medzery
                                                                                         React.createElement(
                                                                                             'div',
-                                                                                            { className: 'flex items-center justify-center gap-1 px-2 py-1 text-gray-500' },
+                                                                                            { className: 'flex items-center justify-center gap-1 px-0 py-0 text-gray-500' },
                                                                                             React.createElement('i', { className: 'fa-solid fa-clock text-gray-400 text-xs flex-shrink-0' }),
                                                                                             React.createElement('span', { className: 'font-medium' }, `${breakBeforeStartTime} - ${breakBeforeEndTime}`)
                                                                                         ),
@@ -7406,7 +7406,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         React.createElement(
                                                                                             'div',
                                                                                             { 
-                                                                                                className: 'px-2 py-1 text-green-700 font-medium flex items-center',
+                                                                                                className: 'px-0 py-0 text-green-700 font-medium flex items-center',
                                                                                                 style: { textAlign: 'left' }
                                                                                             },
                                                                                             `${gapMinutes} minút`
@@ -7419,7 +7419,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         React.createElement(
                                                                                             'div',
                                                                                             { 
-                                                                                                className: 'px-2 py-1 text-green-600 flex items-center',
+                                                                                                className: 'px-0 py-0 text-green-600 flex items-center',
                                                                                                 style: { textAlign: 'left' }
                                                                                             },
                                                                                             'voľný čas'
@@ -7429,15 +7429,15 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         displayMode === 'both' ? React.createElement(
                                                                                             'div',
                                                                                             { 
-                                                                                                className: 'px-2 py-1',
+                                                                                                className: 'px-0 py-0',
                                                                                                 style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
                                                                                             }
-                                                                                        ) : React.createElement('div', { className: 'px-2 py-1 overflow-hidden' }),
+                                                                                        ) : React.createElement('div', { className: 'px-0 py-0 overflow-hidden' }),
                                                                                         
                                                                                         displayMode === 'both' ? React.createElement(
                                                                                             'div',
                                                                                             { 
-                                                                                                className: 'px-2 py-1',
+                                                                                                className: 'px-0 py-0',
                                                                                                 style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
                                                                                             }
                                                                                         ) : React.createElement('div', { className: 'px-2 py-1 overflow-hidden' }),
@@ -7628,7 +7628,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         'div',
                                                                         {
                                                                             key: `match-${match.id}`,
-                                                                            className: `p-2 rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match ${
+                                                                            className: `p-0 rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match ${
                                                                                 colorHighlight ? '' : 'bg-white'
                                                                             }`,
                                                                             style: { 
@@ -7658,7 +7658,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
-                                                                                    className: 'flex flex-col items-center justify-center px-2 py-1 border-r border-gray-300',
+                                                                                    className: 'flex flex-col items-center justify-center px-0 py-0 border-r border-gray-300',
                                                                                     style: { minWidth: '130px' }
                                                                                 },
                                                                                 // Prvý riadok - ikonka hodín a čas
@@ -7704,7 +7704,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
-                                                                                    className: 'px-2 py-1 flex items-center border-r border-gray-300',
+                                                                                    className: 'px-0 py-0 flex items-center border-r border-gray-300',
                                                                                     style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
                                                                                 },
                                                                                 React.createElement(
@@ -7720,7 +7720,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             // VS ikona (bez zmeny)
                                                                             React.createElement(
                                                                                 'div',
-                                                                                { className: 'text-gray-400 px-2 py-1 flex items-center justify-center' },
+                                                                                { className: 'text-gray-400 px-0 py-0 flex items-center justify-center' },
                                                                                 React.createElement('i', { className: 'fa-solid fa-vs text-xs' })
                                                                             ),
                                                                             
@@ -7728,7 +7728,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
-                                                                                    className: `px-2 py-1 flex items-center ${displayMode === 'both' ? 'border-r border-gray-300' : ''}`,
+                                                                                    className: `px-0 py-0 flex items-center ${displayMode === 'both' ? 'border-r border-gray-300' : ''}`,
                                                                                     style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
                                                                                 },
                                                                                 React.createElement(
@@ -7745,7 +7745,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             displayMode === 'both' ? React.createElement(
                                                                                 'div',
                                                                                 { 
-                                                                                    className: 'px-2 py-1 flex items-center border-r border-gray-300',
+                                                                                    className: 'px-0 py-0 flex items-center border-r border-gray-300',
                                                                                     style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
                                                                                 },
                                                                                 React.createElement(
@@ -7762,7 +7762,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             displayMode === 'both' ? React.createElement(
                                                                                 'div',
                                                                                 { 
-                                                                                    className: 'px-2 py-1 flex items-center',
+                                                                                    className: 'px-0 py-0 flex items-center',
                                                                                     style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
                                                                                 },
                                                                                 React.createElement(
@@ -7832,7 +7832,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                         'div',
                                                                         {
                                                                             key: `break-${match.id}`,
-                                                                            className: `p-2 rounded border border-dashed transition-all relative group/break ${
+                                                                            className: `p-0 rounded border border-dashed transition-all relative group/break ${
                                                                                 isBreakBlocked(hall.id, dateStr, breakStartTime)
                                                                                     ? 'bg-orange-100 border-orange-300' 
                                                                                     : 'border-green-300 bg-green-50'
@@ -7855,7 +7855,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             // Časový údaj medzery
                                                                             React.createElement(
                                                                                 'div',
-                                                                                { className: 'flex items-center justify-center gap-1 px-2 py-1 text-gray-500' },
+                                                                                { className: 'flex items-center justify-center gap-1 px-0 py-0 text-gray-500' },
                                                                                 React.createElement('i', { className: 'fa-solid fa-clock text-gray-400 text-xs flex-shrink-0' }),
                                                                                 React.createElement('span', { className: 'font-medium' }, `${breakStartTime} - ${breakEndTime}`)
                                                                             ),
@@ -7864,7 +7864,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
-                                                                                    className: 'px-2 py-1 text-green-700 font-medium flex items-center',
+                                                                                    className: 'px-0 py-0 text-green-700 font-medium flex items-center',
                                                                                     style: { textAlign: 'left' }
                                                                                 },
                                                                                 `${breakBetweenMatches} minút`
@@ -7877,7 +7877,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
-                                                                                    className: 'px-2 py-1 text-green-600 flex items-center',
+                                                                                    className: 'px-0 py-0 text-green-600 flex items-center',
                                                                                     style: { textAlign: 'left' }
                                                                                 },
                                                                                 'voľný čas'
@@ -7887,15 +7887,15 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             displayMode === 'both' ? React.createElement(
                                                                                 'div',
                                                                                 { 
-                                                                                    className: 'px-2 py-1',
+                                                                                    className: 'px-0 py-0'
                                                                                     style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
                                                                                 }
-                                                                            ) : React.createElement('div', { className: 'px-2 py-1 overflow-hidden' }),
+                                                                            ) : React.createElement('div', { className: 'px-0 py-0 overflow-hidden' }),
                                                                             
                                                                             displayMode === 'both' ? React.createElement(
                                                                                 'div',
                                                                                 { 
-                                                                                    className: 'px-2 py-1',
+                                                                                    className: 'px-0 py-0',
                                                                                     style: { textAlign: alignment === 'left' ? 'left' : alignment === 'right' ? 'right' : 'center' }
                                                                                 }
                                                                             ) : React.createElement('div', { className: 'px-2 py-1 overflow-hidden' }),
@@ -7909,7 +7909,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     'button',
                                                                                     {
                                                                                         className: `w-6 h-6 ${
-                                                                                            isBreakBlocked(hall.id, dateStr, breakStartTime)  // <--- OPRAVENÉ: breakStartTime
+                                                                                            isBreakBlocked(hall.id, dateStr, breakStartTime)
                                                                                                 ? 'bg-yellow-500 hover:bg-yellow-600' 
                                                                                                 : 'bg-orange-500 hover:bg-orange-600'
                                                                                         } text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0`,
@@ -7995,7 +7995,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     ) : React.createElement(
                                                         'div',
                                                         {
-                                                            className: 'w-full py-2 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-1 whitespace-nowrap',
+                                                            className: 'w-full py-0 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-1 whitespace-nowrap',
                                                             style: { 
                                                                 minWidth: '500px' // Minimálna šírka pre prázdny deň
                                                             }
