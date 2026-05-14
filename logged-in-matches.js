@@ -4364,28 +4364,6 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     const [filtersInitialized, setFiltersInitialized] = useState(false);
 
-    // Funkcia na zmenu režimu zobrazenia a aktualizáciu URL
-    const handleDisplayModeChange = (mode) => {
-        setDisplayMode(mode);
-    
-        // Aktualizujeme URL hash
-        let hash = '';
-        switch (mode) {
-            case 'name':
-                hash = 'nazvy';
-                break;
-            case 'id':
-                hash = 'id';
-                break;
-            case 'both':
-                hash = 'oboje';
-                break;
-            default:
-                hash = 'nazvy';
-        }
-        window.location.hash = hash;
-    };
-
     useEffect(() => {
         localStorage.setItem('filtersPanelPinned', isPinned);
     }, [isPinned]);
