@@ -7130,11 +7130,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                                             const matchesCount = hallMatchesForDay.length;
 
                                             const matchesWithColors = hallMatchesForDay.map(match => {
-                                                const homeTeamColor = teamAccommodations.get(match.homeTeamIdentifier) || '#f3f4f6';
-                                                const awayTeamColor = teamAccommodations.get(match.awayTeamIdentifier) || '#f3f4f6';
+                                                // Použijeme window.__teamAccommodationsMap namiesto priameho prístupu k state
+                                                const accommodationsMap = window.__teamAccommodationsMap || new Map();
+                                                const homeTeamColor = accommodationsMap.get(match.homeTeamIdentifier) || '#f3f4f6';
+                                                const awayTeamColor = accommodationsMap.get(match.awayTeamIdentifier) || '#f3f4f6';
                                                 const homeTextColor = (homeTeamColor !== '#f3f4f6' && homeTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
                                                 const awayTextColor = (awayTeamColor !== '#f3f4f6' && awayTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
-    
+                                            
                                                 return {
                                                     ...match,
                                                     homeTeamColor,
