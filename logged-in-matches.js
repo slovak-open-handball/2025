@@ -6377,21 +6377,21 @@ const AddMatchesApp = ({ userProfileData }) => {
                             'Pavúk'
                         ),
         
-                        React.createElement(
-                            'div',
-                            { className: 'flex items-center gap-1 ml-2' },
-                            React.createElement('input', {
-                                type: 'checkbox',
-                                id: 'color-highlight',
-                                checked: colorHighlight,
-                                onChange: (e) => setColorHighlight(e.target.checked),
-                                className: 'w-4 h-4 text-blue-600 rounded cursor-pointer'
-                            }),
-                            React.createElement('label', { 
-                                htmlFor: 'color-highlight',
-                                className: 'text-sm font-medium text-gray-700 whitespace-nowrap cursor-pointer' 
-                            }, 'Podfarbenie')
-                        ),
+//                        React.createElement(
+//                            'div',
+//                            { className: 'flex items-center gap-1 ml-2' },
+//                            React.createElement('input', {
+//                                type: 'checkbox',
+//                                id: 'color-highlight',
+//                                checked: colorHighlight,
+//                                onChange: (e) => setColorHighlight(e.target.checked),
+//                                className: 'w-4 h-4 text-blue-600 rounded cursor-pointer'
+//                            }),
+//                            React.createElement('label', { 
+//                                htmlFor: 'color-highlight',
+//                                className: 'text-sm font-medium text-gray-700 whitespace-nowrap cursor-pointer' 
+//                            }, 'Podfarbenie')
+//                        ),
                         
                         // Oddeľovač
 //                        React.createElement('div', { className: 'w-px h-8 bg-gray-300 mx-1' }),
@@ -7313,6 +7313,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     
                                                             const allElements = [];
                                                     
+                                                            // Nahraďte celú časť vnútri sortedMatches.forEach (približne riadky 4300-4600) týmto kódom:
                                                             sortedMatches.forEach(function(match, idx, sortedArray) {
                                                                 let matchTime = '--:--';
                                                                 let endTime = '--:--';
@@ -7343,6 +7344,51 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                 var homeDisplay = getTeamDisplayText(match.homeTeamIdentifier);
                                                                 var awayDisplay = getTeamDisplayText(match.awayTeamIdentifier);
                                                                 
+                                                                // Extrahovanie písmena a čísla z identifikátorov
+                                                                var extractLetterAndNumber = function(identifier) {
+                                                                    if (!identifier) return { letter: '', number: '' };
+                                                                    
+                                                                    // Rozdelíme podľa medzier a vezmeme poslednú časť (napr. "A1")
+                                                                    var parts = identifier.split(' ');
+                                                                    var lastPart = parts[parts.length - 1];
+                                                                    
+                                                                    // Extrahujeme písmeno (prvé znaky, ktoré nie sú číslice)
+                                                                    var letter = '';
+                                                                    var number = '';
+                                                                    
+                                                                    for (var i = 0; i < lastPart.length; i++) {
+                                                                        var char = lastPart[i];
+                                                                        if (char >= '0' && char <= '9') {
+                                                                            // Našli sme prvú číslicu - všetko predtým je písmeno
+                                                                            letter = lastPart.substring(0, i);
+                                                                            number = lastPart.substring(i);
+                                                                            break;
+                                                                        }
+                                                                    }
+                                                                    
+                                                                    return { letter: letter, number: number };
+                                                                };
+                                                                
+                                                                var homeExtracted = extractLetterAndNumber(match.homeTeamIdentifier);
+                                                                var awayExtracted = extractLetterAndNumber(match.awayTeamIdentifier);
+                                                                
+                                                                // Zobrazenie v nových bunkách - len čísla
+                                                                var homeNumberDisplay = homeExtracted.number;
+                                                                var awayNumberDisplay = awayExtracted.number;
+                                                                
+                                                                // Kontrola, či sú písmená rovnaké
+                                                                var lettersAreSame = homeExtracted.letter && awayExtracted.letter && homeExtracted.letter === awayExtracted.letter;
+                                                                var letterToShow = lettersAreSame ? homeExtracted.letter : '';
+                                                                
+                                                                // Získanie farby kategórie pre novú bunku
+                                                                var categoryColor = '#f3f4f6'; // predvolená sivá
+                                                                if (match.categoryName) {
+                                                                    var foundCategory = categories.find(function(c) { return c.name === match.categoryName; });
+                                                                    if (foundCategory && foundCategory.drawColor) {
+                                                                        categoryColor = foundCategory.drawColor;
+                                                                    }
+                                                                }
+                                                                
                                                                 allElements.push(
                                                                     React.createElement(
                                                                         'div',
@@ -7355,11 +7401,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             }
                                                                         },
                                                                         React.createElement(
-                                                                            'div',
+                                                                            'div', 
                                                                             { 
                                                                                 className: 'grid items-start text-xs',
                                                                                 style: { 
-                                                                                    gridTemplateColumns: '130px 200px 10px 200px 80px 80px',
+                                                                                    gridTemplateColumns: '130px 200px 10px 200px 80px 80px 50px', // Pridaný stĺpec pre písmeno
                                                                                     width: 'fit-content'
                                                                                 },
                                                                                 onClick: function(e) {
@@ -7368,14 +7414,15 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 },
                                                                                 title: 'Kliknite pre úpravu zápasu'
                                                                             },
+                                                                            // Stĺpec s časom
                                                                             React.createElement(
-                                                                                'div',
+                                                                                'div', 
                                                                                 { 
                                                                                     className: 'flex flex-col items-center justify-center px-2 py-0 border-r border-gray-300',
                                                                                     style: { minWidth: '130px', textAlign: 'center' }
                                                                                 },
                                                                                 React.createElement(
-                                                                                    'div',
+                                                                                    'div', 
                                                                                     { className: 'flex items-center justify-center gap-1 w-full' },
                                                                                     React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs flex-shrink-0' }),
                                                                                     React.createElement('span', { className: 'font-medium text-blue-700 truncate' }, matchTime + ' - ' + endTime)
@@ -7407,8 +7454,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 ) : null
                                                                             ),
                                                                             
+                                                                            // Domáci tím - názov
                                                                             React.createElement(
-                                                                                'div',
+                                                                                'div', 
                                                                                 { 
                                                                                     className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300',
                                                                                     style: { textAlign: 'center' }
@@ -7423,14 +7471,16 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 )
                                                                             ),
                                                                             
+                                                                            // VS ikona
                                                                             React.createElement(
-                                                                                'div',
+                                                                                'div', 
                                                                                 { className: 'text-gray-400 px-2 py-0 flex items-center justify-center' },
                                                                                 React.createElement('i', { className: 'fa-solid fa-vs text-xs' })
                                                                             ),
                                                                             
+                                                                            // Hosťovský tím - názov
                                                                             React.createElement(
-                                                                                'div',
+                                                                                'div', 
                                                                                 { 
                                                                                     className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300',
                                                                                     style: { textAlign: 'center' }
@@ -7445,15 +7495,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 )
                                                                             ),
                                                                             
+                                                                            // Domáci tím - ID (LEN ČÍSLA, BEZ PODFARBENIA)
                                                                             React.createElement(
-                                                                                'div',
+                                                                                'div', 
                                                                                 { 
                                                                                     className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300',
                                                                                     style: { 
                                                                                         textAlign: 'center',
-                                                                                        backgroundColor: colorHighlight && match.categoryName ? 
-                                                                                            (categories.find(function(c) { return c.name === match.categoryName; })?.drawColor || 'transparent') 
-                                                                                            : 'transparent'
+                                                                                        backgroundColor: 'transparent' // Žiadne podfarbenie
                                                                                     }
                                                                                 },
                                                                                 React.createElement(
@@ -7462,19 +7511,18 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         className: (selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' text-black font-mono text-[10px] truncate block w-full',
                                                                                         title: homeDisplay.id 
                                                                                     },
-                                                                                    '(' + homeDisplay.id + ')'
+                                                                                    '(' + homeNumberDisplay + ')'
                                                                                 )
                                                                             ),
                                                                             
+                                                                            // Hosťovský tím - ID (LEN ČÍSLA, BEZ PODFARBENIA)
                                                                             React.createElement(
-                                                                                'div',
+                                                                                'div', 
                                                                                 { 
-                                                                                    className: 'px-2 py-0 flex items-center justify-center',
+                                                                                    className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300',
                                                                                     style: { 
                                                                                         textAlign: 'center',
-                                                                                        backgroundColor: colorHighlight && match.categoryName ? 
-                                                                                            (categories.find(function(c) { return c.name === match.categoryName; })?.drawColor || 'transparent') 
-                                                                                            : 'transparent'
+                                                                                        backgroundColor: 'transparent' // Žiadne podfarbenie
                                                                                     }
                                                                                 },
                                                                                 React.createElement(
@@ -7483,11 +7531,37 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         className: (selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' text-black font-mono text-[10px] truncate block w-full',
                                                                                         title: awayDisplay.id 
                                                                                     },
-                                                                                    '(' + awayDisplay.id + ')'
+                                                                                    '(' + awayNumberDisplay + ')'
+                                                                                )
+                                                                            ),
+                                                                            
+                                                                            // NOVÝ STĹPEC - Písmeno (LEN ak sú rovnaké, VŽDY PODFARBENÉ)
+                                                                            React.createElement(
+                                                                                'div', 
+                                                                                { 
+                                                                                    className: 'px-2 py-0 flex items-center justify-center',
+                                                                                    style: { 
+                                                                                        textAlign: 'center',
+                                                                                        backgroundColor: categoryColor,
+                                                                                        fontWeight: 'bold',
+                                                                                        borderRadius: '4px'
+                                                                                    }
+                                                                                },
+                                                                                React.createElement(
+                                                                                    'span',
+                                                                                    { 
+                                                                                        className: 'text-black font-bold text-xs truncate block w-full',
+                                                                                        style: { 
+                                                                                            color: '#000',
+                                                                                            textShadow: 'none'
+                                                                                        }
+                                                                                    },
+                                                                                    letterToShow || ''
                                                                                 )
                                                                             )
                                                                         ),
                                                                         
+                                                                        // Tlačidlá pre admina (nezmenené)
                                                                         userProfileData?.role === 'admin' ? React.createElement(
                                                                             'div',
                                                                             { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/match:opacity-100 transition-opacity' },
