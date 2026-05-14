@@ -345,8 +345,6 @@ const PlacementMatchModal = ({ isOpen, onClose, onConfirm, categories, groupsByC
     const [rankError, setRankError] = useState(''); // Chyba pre umiestnenie
     const [maxTeamsInGroup1, setMaxTeamsInGroup1] = useState(0);
     const [maxTeamsInGroup2, setMaxTeamsInGroup2] = useState(0);
-    const [accommodations, setAccommodations] = useState([]); // Zoznam ubytovní
-    const [teamAccommodations, setTeamAccommodations] = useState(new Map()); 
 
     useEffect(() => {
         if (!isOpen) {
@@ -3623,6 +3621,9 @@ const AddMatchesApp = ({ userProfileData }) => {
     const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
     const [selectedHallFilter, setSelectedHallFilter] = useState('');
     const [selectedDayFilter, setSelectedDayFilter] = useState('');
+
+    const [accommodations, setAccommodations] = useState([]);
+    const [teamAccommodations, setTeamAccommodations] = useState(new Map());
 
     // Tieto premenné definujeme AŽ za všetkými useState
     const isFilterActive = selectedCategoryFilter || selectedGroupFilter || selectedHallFilter || selectedDayFilter || selectedTeamIdFilter;
