@@ -7238,7 +7238,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                             ) :
                             React.createElement(
                                 'div',
-                                { className: 'flex-1 overflow-y-auto pr-2 space-y-3 mt-4' },
+                                { className: 'flex-1 overflow-y-auto pr-2 space-y-0 mt-4' },
                                 filteredUnassignedMatches.map(match => {
                                     // Získame zobrazenie pre tímy podľa prepínača
                                     const homeTeamDisplay = getTeamDisplayText(match.homeTeamIdentifier);
