@@ -7904,12 +7904,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                    React.createElement(
                                                                                                        'span',
                                                                                                        { className: 'text-sm font-medium' },
-                                                                                                       isGapBlocked ? 'ZABLOKOVANÝ ČAS' : 'VOĽNÝ ČAS'
+                                                                                                       isGapBlocked ? 'ZABLOKOVANÝ ČAS ' : 'VOĽNÝ ČAS '
                                                                                                    ),
                                                                                                    React.createElement(
                                                                                                        'div', 
                                                                                                        { className: 'text-[10px] text-amber-600 mt-0.5' },
-                                                                                                       ` (${gapMinutes} min)`
+                                                                                                       `(${gapMinutes} min)`
                                                                                                    )
                                                                                                )
                                                                                            ),
