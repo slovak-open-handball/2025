@@ -7432,7 +7432,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 },
                                                                                 title: 'Kliknite pre úpravu zápasu'
                                                                             },
-                                                                            // Stĺpec s časom
+                                                                            // Stĺpec s časom (len čas, žiadny typ zápasu)
                                                                             React.createElement(
                                                                                 'div', 
                                                                                 { 
@@ -7444,32 +7444,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     { className: 'flex items-center justify-center gap-1 w-full' },
                                                                                     React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs flex-shrink-0' }),
                                                                                     React.createElement('span', { className: 'font-medium text-blue-700 truncate' }, matchTime + ' - ' + endTime)
-                                                                                ),
-                                                                                match.isPlacementMatch && match.placementRank ? React.createElement(
-                                                                                    'div',
-                                                                                    { className: 'flex items-center justify-center gap-1 w-full mt-0' },
-                                                                                    React.createElement('span', { className: 'text-xs text-purple-600 font-medium' }, 'o ' + match.placementRank + '. miesto')
-                                                                                ) : null,
-                                                                                match.matchType && !match.isPlacementMatch ? React.createElement(
-                                                                                    'div',
-                                                                                    { className: 'flex items-center justify-center gap-1 w-full mt-0' },
-                                                                                    React.createElement('i', { 
-                                                                                        className: 'fa-solid ' + (match.matchType === 'finále' ? 'fa-trophy' : '') + ' ' + (
-                                                                                            match.matchType.includes('finále') ? 'text-yellow-600' :
-                                                                                            match.matchType.includes('semifinále') ? 'text-blue-600' :
-                                                                                            match.matchType.includes('štvrťfinále') ? 'text-green-600' :
-                                                                                            'text-purple-600'
-                                                                                        ) + ' text-xs flex-shrink-0'
-                                                                                    }),
-                                                                                    React.createElement('span', { 
-                                                                                        className: 'text-xs ' + (
-                                                                                            match.matchType.includes('finále') ? 'text-yellow-600' :
-                                                                                            match.matchType.includes('semifinále') ? 'text-blue-600' :
-                                                                                            match.matchType.includes('štvrťfinále') ? 'text-green-600' :
-                                                                                            'text-purple-600'
-                                                                                        ) + ' font-medium'
-                                                                                    }, match.matchType)
-                                                                                ) : null
+                                                                                )
+                                                                                // Odstránené zobrazenie match.isPlacementMatch a match.matchType v tomto stĺpci
                                                                             ),
                                                                             
                                                                             // Domáci tím - názov
@@ -7559,6 +7535,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             ),
                                                                             
                                                                             // PRE ŠPECIÁLNE ZÁPASY - jeden stĺpec s colSpan=2 (zlúčené posledné dva stĺpce)
+                                                                            // Zobrazuje typ zápasu podfarbený farbou kategórie
                                                                             isSpecialMatch && React.createElement(
                                                                                 'div', 
                                                                                 { 
