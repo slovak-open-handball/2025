@@ -3591,8 +3591,8 @@ const GenerationModal = ({ isOpen, onClose, onConfirm, categories, groupsByCateg
                                 }` 
                             },
                             carryOverPoints 
-                                ? 'Nebudú sa generovať zápasy medzi tímami, ktoré majú rovnaký posledný znak v názve (t.j. pochádzajú z rovnakej základnej skupiny)'
-                                : 'Budú sa generovať všetky zápasy medzi všetkými tímami v tejto nadstavbovej skupine'
+                                ? 'Nebudú sa generovať zápasy medzi tímami, ktoré pochádzajú z rovnakej základnej skupiny.'
+                                : 'Budú sa generovať všetky zápasy medzi všetkými tímami v tejto nadstavbovej skupine.'
                         )
                     )
                 )
