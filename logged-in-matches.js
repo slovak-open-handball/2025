@@ -7540,7 +7540,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             { 
                                                                                 className: 'grid items-start text-xs',
                                                                                 style: { 
-                                                                                    gridTemplateColumns: '130px 200px 10px 200px 50px 30px',
+                                                                                    gridTemplateColumns: '130px 200px 10px 200px 10px 50px 30px',
                                                                                     width: 'fit-content'
                                                                                 },
                                                                                 onClick: function(e) {
@@ -7564,22 +7564,19 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 )
                                                                             ),
                                                                             
-                                                                            // Domáci tím - názov s farbou ubytovne
+                                                                            // Domáci tím - názov (bez pozadia)
                                                                             React.createElement(
                                                                                 'div', 
                                                                                 { 
                                                                                     className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300',
                                                                                     style: { 
-                                                                                        textAlign: 'center',
-                                                                                        backgroundColor: homeTeamColor,
-                                                                                        borderRadius: '4px'
+                                                                                        textAlign: 'center'
                                                                                     }
                                                                                 },
                                                                                 React.createElement(
                                                                                     'span',
                                                                                     { 
                                                                                         className: (selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
-                                                                                        style: { color: homeTextColor },
                                                                                         title: homeDisplay.name 
                                                                                     },
                                                                                     homeDisplay.name
@@ -7593,26 +7590,38 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 React.createElement('i', { className: 'fa-solid fa-vs text-xs' })
                                                                             ),
                                                                             
-                                                                            // Hosťovský tím - názov s farbou ubytovne
+                                                                            // Hosťovský tím - názov (bez pozadia)
                                                                             React.createElement(
                                                                                 'div', 
                                                                                 { 
                                                                                     className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300',
                                                                                     style: { 
-                                                                                        textAlign: 'center',
-                                                                                        backgroundColor: awayTeamColor,
-                                                                                        borderRadius: '4px'
+                                                                                        textAlign: 'center'
                                                                                     }
                                                                                 },
                                                                                 React.createElement(
                                                                                     'span',
                                                                                     { 
                                                                                         className: (selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' truncate block w-full',
-                                                                                        style: { color: awayTextColor },
                                                                                         title: awayDisplay.name 
                                                                                     },
                                                                                     awayDisplay.name
                                                                                 )
+                                                                            ),
+                                                                            
+                                                                            // NOVÝ STĹPEC: Farba ubytovne pre DOMÁCI tím (10px)
+                                                                            React.createElement(
+                                                                                'div', 
+                                                                                { 
+                                                                                    className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
+                                                                                    style: { 
+                                                                                        textAlign: 'center',
+                                                                                        backgroundColor: homeTeamColor,
+                                                                                        width: '10px',
+                                                                                        height: '100%'
+                                                                                    }
+                                                                                },
+                                                                                React.createElement('div', { style: { width: '10px', height: '20px' } })
                                                                             ),
                                                                             
                                                                             // PRE NORMÁLNE ZÁPASY - samostatné stĺpce pre čísla a písmeno
