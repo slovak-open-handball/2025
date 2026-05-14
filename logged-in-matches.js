@@ -7582,12 +7582,20 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     homeDisplay.name
                                                                                 )
                                                                             ),
-                                                                            
-                                                                            // VS ikona
+
+                                                                            // NOVÝ STĹPEC: Farba ubytovne pre tím DOMÁCI (10px)
                                                                             React.createElement(
                                                                                 'div', 
-                                                                                { className: 'text-gray-400 px-2 py-0 flex items-center justify-center' },
-                                                                                React.createElement('i', { className: 'fa-solid fa-vs text-xs' })
+                                                                                { 
+                                                                                    className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
+                                                                                    style: { 
+                                                                                        textAlign: 'center',
+                                                                                        backgroundColor: homeTeamColor,
+                                                                                        width: '10px',
+                                                                                        height: '100%'
+                                                                                    }
+                                                                                },
+                                                                                React.createElement('div', { style: { width: '10px', height: '20px' } })
                                                                             ),
                                                                             
                                                                             // Hosťovský tím - názov (bez pozadia)
@@ -7609,14 +7617,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 )
                                                                             ),
                                                                             
-                                                                            // NOVÝ STĹPEC: Farba ubytovne pre DOMÁCI tím (10px)
+                                                                            // NOVÝ STĹPEC: Farba ubytovne pre tím HOSTIA (10px)
                                                                             React.createElement(
                                                                                 'div', 
                                                                                 { 
                                                                                     className: 'px-0 py-0 flex items-center justify-center border-r border-gray-300',
                                                                                     style: { 
                                                                                         textAlign: 'center',
-                                                                                        backgroundColor: homeTeamColor,
+                                                                                        backgroundColor: awayTeamColor,
                                                                                         width: '10px',
                                                                                         height: '100%'
                                                                                     }
