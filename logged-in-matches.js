@@ -596,7 +596,7 @@ const SwapMatchesModal = ({ isOpen, onClose, onConfirm, sourceHallId, sourceDate
                         className: `px-4 py-2 text-white rounded-lg transition-colors ${
                             isValid && !loading
                                 ? 'bg-purple-600 hover:bg-purple-700 cursor-pointer' 
-                                : 'bg-gray-400 cursor-not-allowed'
+                                : 'bg-white text-purple-600 border-purple-600 cursor-not-allowed'
                         }`
                     },
                     loading ? React.createElement('i', { className: 'fa-solid fa-spinner fa-spin mr-2' }) : null,
