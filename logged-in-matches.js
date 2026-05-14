@@ -7359,7 +7359,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             { 
                                                                                 className: 'grid items-start text-xs',
                                                                                 style: { 
-                                                                                    gridTemplateColumns: '130px 280px 10px 280px 160px 160px',
+                                                                                    gridTemplateColumns: '130px 280px 10px 280px 80px 80px',
                                                                                     width: 'fit-content'
                                                                                 },
                                                                                 onClick: function(e) {
