@@ -1330,7 +1330,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                     React.createElement(
                                         'div',
                                         { className: 'flex-shrink-0 ml-2 text-xs font-medium bg-white px-2 py-1 rounded-full whitespace-nowrap',
-                                          style: { color: categoryColor }
+                                          style: { color: '#000000' }
                                         },
                                         `${category.totalTeams} tímov`
                                     )
