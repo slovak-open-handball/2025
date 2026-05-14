@@ -6394,8 +6394,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                         ),
                         
                         // Oddeľovač
-                        React.createElement('div', { className: 'w-px h-8 bg-gray-300 mx-1' }),
-                        
+//                        React.createElement('div', { className: 'w-px h-8 bg-gray-300 mx-1' }),
+//                        
 //                        // Prepínač zobrazenia
 //                        React.createElement(
 //                            'div',
