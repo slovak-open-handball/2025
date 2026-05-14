@@ -2011,6 +2011,8 @@ let isTeamNameReplacerInitialized = false;
             
         log('\n' + '='.repeat(80) + '\n');
     }
+
+    let isProcessingSnapshot = false;
     
    function subscribeToGroupsChanges() {
         return onSnapshot(groupsDocRef, (docSnap) => {
