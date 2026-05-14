@@ -7342,29 +7342,52 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                 var homeDisplay = getTeamDisplayText(match.homeTeamIdentifier);
                                                                 var awayDisplay = getTeamDisplayText(match.awayTeamIdentifier);
                                                                 
-                                                                // Extrahovanie písmena a čísla z identifikátorov
+                                                                // Získanie farby kategórie
+                                                                var categoryColor = '#f3f4f6'; // predvolená sivá
+                                                                if (match.categoryName) {
+                                                                    var foundCategory = categories.find(function(c) { return c.name === match.categoryName; });
+                                                                    if (foundCategory && foundCategory.drawColor) {
+                                                                        categoryColor = foundCategory.drawColor;
+                                                                    }
+                                                                }
+                                                                
+                                                                // Zistenie, či ide o špeciálny zápas (pavúk alebo o umiestnenie)
+                                                                var isSpecialMatch = (match.matchType && !match.isPlacementMatch) || match.isPlacementMatch === true;
+                                                                
+                                                                // Príprava textu pre špeciálny zápas
+                                                                var specialMatchText = '';
+                                                                if (match.isPlacementMatch && match.placementRank) {
+                                                                    specialMatchText = `o ${match.placementRank}. miesto`;
+                                                                } else if (match.matchType && !match.isPlacementMatch) {
+                                                                    // Pre pavúkové zápasy - extrahujeme len typ (napr. "semifinále A" -> "semifinále")
+                                                                    var matchTypeText = match.matchType;
+                                                                    // Odstránime písmeno ak je na konci (napr. "semifinále A" -> "semifinále")
+                                                                    var lastChar = matchTypeText.charAt(matchTypeText.length - 1);
+                                                                    if (lastChar >= 'A' && lastChar <= 'Z') {
+                                                                        matchTypeText = matchTypeText.substring(0, matchTypeText.length - 1).trim();
+                                                                    }
+                                                                    specialMatchText = matchTypeText;
+                                                                }
+                                                                
+                                                                // Extrahovanie čísel pre normálne zápasy (len pre ne-špeciálne)
                                                                 var extractLetterAndNumber = function(identifier) {
                                                                     if (!identifier) return { letter: '', number: '' };
                                                                     
-                                                                    // Rozdelíme podľa medzier a vezmeme poslednú časť (napr. "A1")
                                                                     var parts = identifier.split(' ');
                                                                     var lastPart = parts[parts.length - 1];
                                                                     
-                                                                    // Extrahujeme písmeno (prvé znaky, ktoré nie sú číslice)
                                                                     var letter = '';
                                                                     var number = '';
                                                                     
                                                                     for (var i = 0; i < lastPart.length; i++) {
                                                                         var char = lastPart[i];
                                                                         if (char >= '0' && char <= '9') {
-                                                                            // Našli sme prvú číslicu - všetko predtým je písmeno
                                                                             letter = lastPart.substring(0, i);
                                                                             number = lastPart.substring(i);
                                                                             break;
                                                                         }
                                                                     }
                                                                     
-                                                                    // Ak sme nenašli žiadne číslo, celý reťazec je písmeno
                                                                     if (number === '') {
                                                                         letter = lastPart;
                                                                     }
@@ -7375,27 +7398,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                 var homeExtracted = extractLetterAndNumber(match.homeTeamIdentifier);
                                                                 var awayExtracted = extractLetterAndNumber(match.awayTeamIdentifier);
                                                                 
-                                                                // Zistenie, či ide o špeciálny zápas (pavúk alebo o umiestnenie)
-                                                                var isSpecialMatch = (match.matchType && !match.isPlacementMatch) || match.isPlacementMatch === true;
-                                                                
-                                                                // Zobrazenie v nových bunkách - spojené čísla vo formáte "číslo-číslo"
-                                                                // PRE ŠPECIÁLNE ZÁPASY (pavúk alebo o umiestnenie) SA NEZOBRAZUJE NIČ
-                                                                var combinedNumbers = !isSpecialMatch && homeExtracted.number && awayExtracted.number 
+                                                                // Pre normálne zápasy - spojené čísla
+                                                                var combinedNumbers = homeExtracted.number && awayExtracted.number 
                                                                     ? homeExtracted.number + '-' + awayExtracted.number 
-                                                                    : (!isSpecialMatch && (homeExtracted.number || awayExtracted.number) ? (homeExtracted.number || awayExtracted.number) : '');
+                                                                    : (homeExtracted.number || awayExtracted.number || '');
                                                                 
-                                                                // Kontrola, či sú písmená rovnaké - PRE ŠPECIÁLNE ZÁPASY NEROBÍME ŽIADNU KONTROLU
-                                                                var lettersAreSame = !isSpecialMatch && homeExtracted.letter && awayExtracted.letter && homeExtracted.letter === awayExtracted.letter;
+                                                                // Pre normálne zápasy - písmeno (len ak sú rovnaké)
+                                                                var lettersAreSame = homeExtracted.letter && awayExtracted.letter && homeExtracted.letter === awayExtracted.letter;
                                                                 var letterToShow = lettersAreSame ? homeExtracted.letter : '';
-                                                                
-                                                                // Získanie farby kategórie pre novú bunku (len pre ne-špeciálne zápasy)
-                                                                var categoryColor = '#f3f4f6'; // predvolená sivá
-                                                                if (!isSpecialMatch && match.categoryName) {
-                                                                    var foundCategory = categories.find(function(c) { return c.name === match.categoryName; });
-                                                                    if (foundCategory && foundCategory.drawColor) {
-                                                                        categoryColor = foundCategory.drawColor;
-                                                                    }
-                                                                }
                                                                 
                                                                 allElements.push(
                                                                     React.createElement(
@@ -7413,7 +7423,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             { 
                                                                                 className: 'grid items-start text-xs',
                                                                                 style: { 
-                                                                                    gridTemplateColumns: '130px 200px 10px 200px 60px 30px',
+                                                                                    gridTemplateColumns: '130px 200px 10px 200px 90px', // Zmenené na 5 stĺpcov
                                                                                     width: 'fit-content'
                                                                                 },
                                                                                 onClick: function(e) {
@@ -7503,36 +7513,15 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 )
                                                                             ),
                                                                             
-                                                                            // Spojené čísla domáci-hosť (formát "číslo-číslo", BEZ PODFARBENIA)
-                                                                            // PRE ŠPECIÁLNE ZÁPASY (pavúk alebo o umiestnenie) SA NEZOBRAZUJE NIČ
+                                                                            // JEDEN STĹPEC - pre normálne zápasy zobrazuje čísla a písmeno, pre špeciálne zápasy typ zápasu
+                                                                            // VŽDY PODFARBENÉ FARBOU KATEGÓRIE
                                                                             React.createElement(
                                                                                 'div', 
                                                                                 { 
-                                                                                    className: 'px-2 py-0 flex items-center justify-center border-r border-gray-300',
+                                                                                    className: 'px-3 py-0 flex items-center justify-center',
                                                                                     style: { 
                                                                                         textAlign: 'center',
-                                                                                        backgroundColor: 'transparent' // Žiadne podfarbenie
-                                                                                    }
-                                                                                },
-                                                                                React.createElement(
-                                                                                    'span',
-                                                                                    { 
-                                                                                        className: (selectedTeamIdFilter && (match.homeTeamIdentifier === selectedTeamIdFilter || match.awayTeamIdentifier === selectedTeamIdFilter) ? 'font-bold' : 'font-medium') + ' text-black font-mono text-[10px] truncate block w-full',
-                                                                                        title: isSpecialMatch ? '' : (homeExtracted.number + ' - ' + awayExtracted.number)
-                                                                                    },
-                                                                                    isSpecialMatch ? '' : combinedNumbers
-                                                                                )
-                                                                            ),
-                                                                            
-                                                                            // NOVÝ STĹPEC - Písmeno (LEN ak sú rovnaké, VŽDY PODFARBENÉ)
-                                                                            // PRE ŠPECIÁLNE ZÁPASY (pavúk alebo o umiestnenie) SA NEZOBRAZUJE NIČ
-                                                                            React.createElement(
-                                                                                'div', 
-                                                                                { 
-                                                                                    className: 'px-2 py-0 flex items-center justify-center',
-                                                                                    style: { 
-                                                                                        textAlign: 'center',
-                                                                                        backgroundColor: isSpecialMatch ? 'transparent' : categoryColor,
+                                                                                        backgroundColor: categoryColor,
                                                                                         fontWeight: 'bold',
                                                                                         borderRadius: '4px'
                                                                                     }
@@ -7546,8 +7535,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                             textShadow: 'none'
                                                                                         }
                                                                                     },
-                                                                                    // Pre špeciálne zápasy zobrazíme prázdny reťazec
-                                                                                    isSpecialMatch ? '' : (letterToShow || '')
+                                                                                    isSpecialMatch 
+                                                                                        ? specialMatchText 
+                                                                                        : (combinedNumbers + (letterToShow ? ' ' + letterToShow : ''))
                                                                                 )
                                                                             )
                                                                         ),
