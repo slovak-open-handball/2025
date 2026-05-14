@@ -7406,12 +7406,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                         'div',
                                                         { 
                                                             className: 'space-y-0',
-                                                            style: { 
-                                                                width: 'fit-content'
-                                                            }
+                                                            style: { width: 'fit-content' }
                                                         },
                                                         (function() {
-                                                            const sortedMatches = matchesWithColors.sort((a, b) => {
+                                                            // Tu používame hallMatches priamo - už obsahuje farby
+                                                            const sortedMatches = hallMatches.sort((a, b) => {
                                                                 if (!a.scheduledTime) return 1;
                                                                 if (!b.scheduledTime) return -1;
                                                                 try {
@@ -7422,10 +7421,9 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                     return 0;
                                                                 }
                                                             });
-                                                    
+                                                            
                                                             const allElements = [];
-                                                    
-                                                            // Nahraďte celú časť vnútri sortedMatches.forEach (približne riadky 4300-4600) týmto kódom:
+                                                            
                                                             sortedMatches.forEach(function(match, idx, sortedArray) {
                                                                 let matchTime = '--:--';
                                                                 let endTime = '--:--';
@@ -7519,7 +7517,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                 var lettersAreSame = homeExtracted.letter && awayExtracted.letter && homeExtracted.letter === awayExtracted.letter;
                                                                 var letterToShow = lettersAreSame ? homeExtracted.letter : '';
                                                                 
-                                                                // *** FARBY UBYTOVNÍ - DEFINOVANÉ PRED React.createElement ***
+                                                                // FARBY UBYTOVNÍ - použijeme priamo z match objektu (už sú vložené)
                                                                 const homeTeamColor = match.homeTeamColor || '#f3f4f6';
                                                                 const homeTextColor = match.homeTextColor || '#000000';
                                                                 const awayTeamColor = match.awayTeamColor || '#f3f4f6';
@@ -7741,7 +7739,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                     )
                                                                 );
                                                             });
-                                                    
+                                                            
                                                             return allElements;
                                                         })()
                                                     ) : React.createElement(
