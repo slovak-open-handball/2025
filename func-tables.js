@@ -1131,17 +1131,6 @@ let isTeamNameReplacerInitialized = false;
     // ============================================================
     
     function createAdvancedGroupTable(categoryName, groupName, baseGroupName = null) {
-
-        const processingKey = `${categoryName}|${groupName}`;
-        if (window._currentlyProcessingGroups?.has(processingKey)) {
-            log(`⚠️ SKUPINA ${processingKey} SA UŽ SPRACÚVA - PRESKAKUJEM (zabránenie cyklu)`);
-            return null;
-        }
-        if (!window._currentlyProcessingGroups) {
-            window._currentlyProcessingGroups = new Set();
-        }
-        window._currentlyProcessingGroups.add(processingKey);
-        
         // NAJPRV NAČÍTAME TYPY SKUPÍN
         if (!groupsCache) {
             log(`⚠️ createAdvancedGroupTable: Cache ešte nenačítaná, čakám...`);
@@ -1294,12 +1283,6 @@ let isTeamNameReplacerInitialized = false;
             for (const baseGroup of allBaseGroupsFullyCompleted) {
                 const baseTable = createGroupTable(categoryName, baseGroup);
                 if (!baseTable || !baseTable.matches) continue;
-
-                const pairKey = `${homeFinalName}|${awayFinalName}`;
-                if (processedPairs.has(pairKey)) {
-                    continue;  // Preskočiť duplicitné zápasy
-                }
-                processedPairs.add(pairKey);
                 
                 const completedBaseMatches = baseTable.matches.filter(m => m.status === 'completed');
                 
@@ -1552,7 +1535,6 @@ let isTeamNameReplacerInitialized = false;
         const totalAdvancedMatches = advancedMatches.length;
         const completedAdvancedCount = completedAdvancedMatches.length;
         const completionPercentage = totalAdvancedMatches > 0 ? (completedAdvancedCount / totalAdvancedMatches * 100) : 0;
-        window._currentlyProcessingGroups.delete(processingKey);
         
         return {
             category: categoryName,
@@ -2011,48 +1993,28 @@ let isTeamNameReplacerInitialized = false;
             
         log('\n' + '='.repeat(80) + '\n');
     }
-
-    let isProcessingSnapshot = false;    
-
-    function subscribeToGroupsChanges() {
-        if (!window.db) return () => {};  // Return prázdnu unsubscribe funkciu
-        
+    
+   function subscribeToGroupsChanges() {
+        if (!window.db) return;
+    
         const { doc, onSnapshot } = window.firebaseModules;
-        if (!doc || !onSnapshot) {
-            error('❌ Firebase moduly nie sú dostupné pre subscribeToGroupsChanges');
-            return () => {};
-        }
-        
-        // VYTVORÍME REFERENCIU TU, NIE VONKU
+        if (!doc || !onSnapshot) return;
+    
         const groupsDocRef = doc(window.db, 'settings', 'groups');
         
         return onSnapshot(groupsDocRef, (docSnap) => {
-            if (isProcessingSnapshot) {
-                log('⏳ Už spracúvam snapshot, preskakujem...');
-                return;
-            }
-            isProcessingSnapshot = true;
-            
-            try {
-                if (docSnap.exists()) {
-                    const newGroupsData = docSnap.data();
-                    const changed = JSON.stringify(groupsCache) !== JSON.stringify(newGroupsData);
-                    
-                    if (changed) {
-                        groupsCache = newGroupsData;
-                        groupsCacheLoaded = true;
-                        log('🔄 Zmena v typoch skupín, prepočítavam tabuľky...');
-                        printAllGroupTables();
-                    }
+            if (docSnap.exists()) {
+                const newGroupsData = docSnap.data();
+                const changed = JSON.stringify(groupsCache) !== JSON.stringify(newGroupsData);
+                
+                if (changed) {
+                    groupsCache = newGroupsData;
+                    log('🔄 Zmena v typoch skupín, prepočítavam tabuľky...');
+                    printAllGroupTables();
                 }
-            } catch (error) {
-                error('❌ Chyba pri spracovaní zmien skupín:', error);
-            } finally {
-                isProcessingSnapshot = false;
             }
         }, (error) => {
             error('❌ Chyba pri sledovaní typov skupín:', error);
-            isProcessingSnapshot = false;
         });
     }
     
