@@ -8011,7 +8011,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                            className: 'day-card-measure flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group/day',
                                                            style: { 
                                                                width: '100%',
-                                                               minHeight: heightsCalculated ? `${maxDayCardHeight}px` : 'auto'
+                                                               minHeight: heightsCalculated && maxHeightForDate > 0 ? `${maxHeightForDate}px` : 'auto'
                                                            },
                                                            'data-card-id': cardId,
                                                            'data-date-key': dateKey
