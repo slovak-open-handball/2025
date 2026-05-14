@@ -7887,11 +7887,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                        React.createElement('span', { className: 'font-medium text-amber-700 truncate' }, 
                                                                                                            `${gapStartTime} - ${gapEndTime}`
                                                                                                        )
-                                                                                                   ),
-                                                                                                   React.createElement(
-                                                                                                       'div', 
-                                                                                                       { className: 'text-[10px] text-amber-600 mt-0.5' },
-                                                                                                       `(${gapMinutes} min)`
                                                                                                    )
                                                                                                ),
                                                                                                
@@ -7910,6 +7905,11 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                                        'span',
                                                                                                        { className: 'text-sm font-medium' },
                                                                                                        isGapBlocked ? 'ZABLOKOVANÝ ČAS' : 'VOĽNÝ ČAS'
+                                                                                                   ),
+                                                                                                   React.createElement(
+                                                                                                       'div', 
+                                                                                                       { className: 'text-[10px] text-amber-600 mt-0.5' },
+                                                                                                       `(${gapMinutes} min)`
                                                                                                    )
                                                                                                )
                                                                                            ),
