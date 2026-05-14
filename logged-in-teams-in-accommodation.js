@@ -1290,32 +1290,23 @@ const TeamsAccommApp = ({ userProfileData }) => {
                             )
                         )
                         : filteredCategoriesData.map(category => {
-                            // ZÍSKAME FARBU KATEGÓRIE (z globálnych dát alebo použijeme predvolenú)
-                            // Najprv sa pokúsime získať farbu z globálneho stavu kategórií
-                            let categoryColor = '#3b82f6'; // Predvolená modrá
-                            let categoryTextColor = '#ffffff'; // Predvolená biela pre text
-                            
-                            // Skúsime získať dáta kategórií z globálneho objektu (ak existuje)
+                            let categoryColor = '#3b82f6';
+                            let categoryTextColor = '#000000';                            
                             if (window.categorySettingsData && window.categorySettingsData[category.name]) {
-                                // Ak máme uloženú farbu pre rozlosovanie (drawColor), použijeme ju
                                 if (window.categorySettingsData[category.name].drawColor) {
                                     categoryColor = window.categorySettingsData[category.name].drawColor;
                                 }
-                                // Pre text by sme mohli použiť kontrastnú farbu na základe pozadia
-                                // Alebo necháme bielu/čiernu podľa potreby
-                            }
-                            
+                            }                            
                             return React.createElement(
                                 'div',
                                 { 
                                     key: category.name, 
                                     className: 'bg-white rounded-xl shadow-lg overflow-hidden flex flex-col min-w-0'
                                 },
-                                // HLAVIČKA KATEGÓRIE S DYNAMICKOU FARBOU ZO SETTINGS
                                 React.createElement(
                                     'div',
                                     {
-                                        className: 'text-white px-4 py-3 flex items-center justify-between flex-shrink-0 min-w-0',
+                                        className: 'px-4 py-3 flex items-center justify-between flex-shrink-0 min-w-0',
                                         style: { 
                                             backgroundColor: categoryColor,
                                             color: categoryTextColor
@@ -1339,13 +1330,11 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                     React.createElement(
                                         'div',
                                         { className: 'flex-shrink-0 ml-2 text-xs font-medium bg-white px-2 py-1 rounded-full whitespace-nowrap',
-                                          style: { color: categoryColor } // Farba textu v odznaku podľa farby kategórie
+                                          style: { color: categoryColor }
                                         },
                                         `${category.totalTeams} tímov`
                                     )
-                                ),
-                                
-                                // Zvyšok komponentu pre kategóriu (zoznamy nepriradených a priradených tímov) zostáva rovnaký
+                                ),                                
                                 React.createElement(
                                     'div',
                                     { 
@@ -1410,8 +1399,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                                     )
                                                 )
                                         )
-                                    ),
-                                    
+                                    ),                                    
                                     category.assignedTeams.length > 0 && 
                                     (selectedAccommodationFilter || selectedTeamNameFilter ? 
                                         category.assignedTeams.filter(team => {
@@ -1460,8 +1448,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                                     return a.teamName.localeCompare(b.teamName, 'sk', { sensitivity: 'base' });
                                                 })
                                                 .map((team, index) => {
-                                                    const teamColor = getTeamAccommodationColor(team);
-                                                    
+                                                    const teamColor = getTeamAccommodationColor(team);                                                    
                                                     return React.createElement(
                                                         'li',
                                                         {
