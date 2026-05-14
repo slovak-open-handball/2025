@@ -1027,7 +1027,7 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                                 React.createElement('span', { 
                                                     className: 'font-medium whitespace-nowrap overflow-visible',
                                                     style: { color: textColor }
-                                                }, team.teamName),
+                                                }, `${team.category}: ${team.teamName}`),
                                                 React.createElement('span', { 
                                                     className: 'ml-3 text-sm whitespace-nowrap',
                                                     style: { color: textColor, opacity: 0.8 }
