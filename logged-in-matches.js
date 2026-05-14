@@ -7380,13 +7380,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                     ? homeExtracted.number + '-' + awayExtracted.number 
                                                                     : (homeExtracted.number || awayExtracted.number || '');
                                                                 
-                                                                // Kontrola, či sú písmená rovnaké
-                                                                var lettersAreSame = homeExtracted.letter && awayExtracted.letter && homeExtracted.letter === awayExtracted.letter;
+                                                                // Kontrola, či sú písmená rovnaké - PRE PAVÚKOVÉ ZÁPASY NEROBÍME ŽIADNU KONTROLU
+                                                                var isPlayoffMatch = match.matchType && !match.isPlacementMatch; // Zápas z pavúka
+                                                                var lettersAreSame = !isPlayoffMatch && homeExtracted.letter && awayExtracted.letter && homeExtracted.letter === awayExtracted.letter;
                                                                 var letterToShow = lettersAreSame ? homeExtracted.letter : '';
                                                                 
-                                                                // Získanie farby kategórie pre novú bunku
+                                                                // Získanie farby kategórie pre novú bunku (len pre ne-pavúkové zápasy)
                                                                 var categoryColor = '#f3f4f6'; // predvolená sivá
-                                                                if (match.categoryName) {
+                                                                if (!isPlayoffMatch && match.categoryName) {
                                                                     var foundCategory = categories.find(function(c) { return c.name === match.categoryName; });
                                                                     if (foundCategory && foundCategory.drawColor) {
                                                                         categoryColor = foundCategory.drawColor;
@@ -7520,13 +7521,14 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             ),
                                                                             
                                                                             // NOVÝ STĹPEC - Písmeno (LEN ak sú rovnaké, VŽDY PODFARBENÉ)
+                                                                            // Pre pavúkové zápasy (matchType) sa nezobrazuje nič
                                                                             React.createElement(
                                                                                 'div', 
                                                                                 { 
                                                                                     className: 'px-2 py-0 flex items-center justify-center',
                                                                                     style: { 
                                                                                         textAlign: 'center',
-                                                                                        backgroundColor: categoryColor,
+                                                                                        backgroundColor: isPlayoffMatch ? 'transparent' : categoryColor,
                                                                                         fontWeight: 'bold',
                                                                                         borderRadius: '4px'
                                                                                     }
@@ -7540,7 +7542,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                             textShadow: 'none'
                                                                                         }
                                                                                     },
-                                                                                    letterToShow || ''
+                                                                                    // Pre pavúkové zápasy zobrazíme prázdny reťazec
+                                                                                    isPlayoffMatch ? '' : (letterToShow || '')
                                                                                 )
                                                                             )
                                                                         ),
