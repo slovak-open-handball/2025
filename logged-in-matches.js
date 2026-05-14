@@ -7423,7 +7423,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             { 
                                                                                 className: 'grid items-start text-xs',
                                                                                 style: { 
-                                                                                    gridTemplateColumns: '130px 200px 10px 200px 50px 30px',
+                                                                                    gridTemplateColumns: '130px 200px 10px 200px 50px auto', // Zmenené: posledný stĺpec na 'auto' pre dynamickú šírku
                                                                                     width: 'fit-content'
                                                                                 },
                                                                                 onClick: function(e) {
@@ -7445,7 +7445,6 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs flex-shrink-0' }),
                                                                                     React.createElement('span', { className: 'font-medium text-blue-700 truncate' }, matchTime + ' - ' + endTime)
                                                                                 )
-                                                                                // Odstránené zobrazenie match.isPlacementMatch a match.matchType v tomto stĺpci
                                                                             ),
                                                                             
                                                                             // Domáci tím - názov
@@ -7535,7 +7534,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                             ),
                                                                             
                                                                             // PRE ŠPECIÁLNE ZÁPASY - jeden stĺpec s colSpan=2 (zlúčené posledné dva stĺpce)
-                                                                            // Zobrazuje typ zápasu podfarbený farbou kategórie
+                                                                            // Zobrazuje typ zápasu podfarbený farbou kategórie - BEZ OREZANIA TEXTU
                                                                             isSpecialMatch && React.createElement(
                                                                                 'div', 
                                                                                 { 
@@ -7546,14 +7545,23 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                         backgroundColor: categoryColor,
                                                                                         fontWeight: 'bold',
                                                                                         borderRadius: '4px',
-                                                                                        gridColumn: 'span 2'
+                                                                                        gridColumn: 'span 2',
+                                                                                        whiteSpace: 'normal',  // Povoliť zalamovanie textu
+                                                                                        wordBreak: 'keep-all',  // NEROZDEĽOVAŤ slová
+                                                                                        minWidth: '80px',       // Minimálna šírka pre text
+                                                                                        maxWidth: 'none'        // Žiadne maximálne obmedzenie
                                                                                     }
                                                                                 },
                                                                                 React.createElement(
                                                                                     'span',
                                                                                     { 
-                                                                                        className: 'text-black font-bold text-xs truncate block w-full',
-                                                                                        style: { color: '#000', textShadow: 'none' }
+                                                                                        className: 'text-black font-bold text-xs block w-full',
+                                                                                        style: { 
+                                                                                            color: '#000', 
+                                                                                            textShadow: 'none',
+                                                                                            whiteSpace: 'normal',  // Povoliť zalamovanie na viac riadkov
+                                                                                            wordBreak: 'keep-all'   // Nerozdeľovať slová
+                                                                                        }
                                                                                     },
                                                                                     specialMatchText
                                                                                 )
