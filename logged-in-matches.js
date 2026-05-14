@@ -7595,560 +7595,560 @@ const AddMatchesApp = ({ userProfileData }) => {
                         ),
                     
                        // PRAVÝ STĹPEC - Športové haly (OPRAVENÉ - vždy zobrazí všetky dni)
-React.createElement(
-    'div',
-    { className: `${filteredUnassignedMatches.length > 0 ? 'lg:w-2/3' : 'lg:w-full'} flex flex-col` },
-    (() => {
-        // Zistíme, či je aktívny filter
-        const isFilterActiveLocal = selectedCategoryFilter || selectedGroupFilter || selectedHallFilter || selectedDayFilter || selectedTeamIdFilter;
- 
-        // Zistíme, či existujú nejaké haly na zobrazenie
-        const hasVisibleHalls = !loading && sportHalls.length > 0 &&
-        (() => {
-            // Prejdeme všetky haly a zistíme, či aspoň jedna má viditeľné karty dní
-            for (const hall of sportHalls) {
-                // Ak je filter podľa haly aktívny, berieme len vybranú halu
-                if (selectedHallFilter && hall.id !== selectedHallFilter) continue;
-                
-                // Prejdeme všetky dni turnaja
-                if (tournamentStartDate && tournamentEndDate) {
-                    const startDate = new Date(tournamentStartDate);
-                    const endDate = new Date(tournamentEndDate);
-                    startDate.setHours(0, 0, 0, 0);
-                    endDate.setHours(0, 0, 0, 0);
-                    
-                    const currentDate = new Date(startDate);
-                    
-                    while (currentDate <= endDate) {
-                        const dateStr = getLocalDateStr(currentDate);
+                       React.createElement(
+                           'div',
+                           { className: `${filteredUnassignedMatches.length > 0 ? 'lg:w-2/3' : 'lg:w-full'} flex flex-col` },
+                           (() => {
+                               // Zistíme, či je aktívny filter
+                               const isFilterActiveLocal = selectedCategoryFilter || selectedGroupFilter || selectedHallFilter || selectedDayFilter || selectedTeamIdFilter;
                         
-                        // Kontrola filtra dňa
-                        if (selectedDayFilter && selectedDayFilter !== dateStr) {
-                            currentDate.setDate(currentDate.getDate() + 1);
-                            continue;
-                        }
-                        
-                        // Získame zápasy pre túto halu a deň
-                        const hallMatchesForDay = getMatchesForHallAndDay(hall.id, currentDate);
-                        const matchesCount = hallMatchesForDay.length;
-                        
-                        // Ak je filter aktívny, hľadáme aspoň jeden zápas
-                        if (isFilterActiveLocal) {
-                            if (matchesCount > 0) {
-                                return true;
-                            }
-                        } else {
-                            // Ak filter nie je aktívny, hala je vždy viditeľná
-                            return true;
-                        }
-                        
-                        currentDate.setDate(currentDate.getDate() + 1);
-                    }
-                }
-            }
-            return false;
-        })();
-    
-        // Ak je filter aktívny a nie sú žiadne haly na zobrazenie, zobrazíme špeciálny text
-        if (isFilterActiveLocal && !hasVisibleHalls) {
-            return React.createElement(
-                'div',
-                { className: 'text-center py-8 text-gray-500 bg-gray-50 rounded-lg mb-4' },
-                React.createElement('i', { className: 'fa-solid fa-filter-circle-xmark text-4xl mb-3 opacity-30' }),
-                React.createElement('p', { className: 'text-lg' }, 'Pre zvolené filtre neexistujú žiadne zápasy.')
-            );
-        }
-        
-        // Inak zobrazíme štandardný nadpis
-        return React.createElement(
-            'h3',
-            { className: 'text-xl font-semibold mb-4 text-gray-700 pb-2 flex-shrink-0' },
-            React.createElement('i', { className: 'fa-solid fa-futbol mr-2 text-red-500' }),
-            'Športové haly',
-            React.createElement('span', { className: 'ml-2 text-sm font-normal text-gray-500' },
-                `(${filteredSportHalls.length} ${filteredSportHalls.length === 1 ? 'hala' : filteredSportHalls.length < 5 ? 'haly' : 'hál'})`
-            )
-        );
-    })(),
-    
-    // Indikátor načítavania
-    loading && React.createElement(
-        'div',
-        { className: 'flex-1 flex justify-center items-center py-12' },
-        React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500' })
-    ),
-    
-    // Žiadne haly
-    !loading && sportHalls.length === 0 && React.createElement(
-        'div',
-        { className: 'flex-1 flex items-center justify-center text-center py-12 text-gray-500 bg-gray-50 rounded-lg' },
-        React.createElement(
-            'div',
-            null,
-            React.createElement('i', { className: 'fa-solid fa-map-pin text-5xl mb-4 opacity-30' }),
-            React.createElement('p', { className: 'text-lg' }, 'Žiadne športové haly nie sú k dispozícii'),
-            React.createElement('p', { className: 'text-sm mt-2' }, 'Pridajte prvú športovú halu v mape.')
-        )
-    ),
-    
-    // Grid zoznam športových hál
-    !loading && sportHalls.length > 0 && (() => {
-        // Získame zoznam hál, ktoré sa skutočne zobrazia
-        const visibleHalls = [];
-        
-        for (const hall of sortedFilteredSportHalls) {
-            const typeConfig = typeIcons[hall.type] || { icon: 'fa-futbol', color: '#dc2626' };
-            const hasAnyMatch = matches.some(match => match.hallId === hall.id);
-            const isFilterActiveLocal = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
-            
-            // Generovanie zoznamu dní pre kontrolu, či sa hala zobrazí
-            let hasVisibleDays = false;
-            
-            if (tournamentStartDate && tournamentEndDate) {
-                const startDate = new Date(tournamentStartDate);
-                const endDate = new Date(tournamentEndDate);
-                startDate.setHours(0, 0, 0, 0);
-                endDate.setHours(0, 0, 0, 0);
-                const currentDate = new Date(startDate);
-                
-                while (currentDate <= endDate) {
-                    const dateStr = getLocalDateStr(currentDate);
-                    const matchesDayFilter = !selectedDayFilter || selectedDayFilter === dateStr;
-                    
-                    if (matchesDayFilter) {
-                        const hallMatchesForDay = getMatchesForHallAndDay(hall.id, currentDate);
-                        const matchesCount = hallMatchesForDay.length;
-                        
-                        if (isFilterActiveLocal) {
-                            if (matchesCount > 0) {
-                                hasVisibleDays = true;
-                                break;
-                            }
-                        } else {
-                            hasVisibleDays = true;
-                            break;
-                        }
-                    }
-                    currentDate.setDate(currentDate.getDate() + 1);
-                }
-            }
-            
-            // Ak hala má viditeľné dni, pridáme ju do zoznamu
-            if (hasVisibleDays || (!isFilterActiveLocal && !tournamentStartDate)) {
-                visibleHalls.push(hall);
-            }
-        }
-        
-        const visibleHallsCount = visibleHalls.length;
-        const containerWidth = visibleHallsCount * (695 + 24);
-        
-        return React.createElement(
-            'div',
-            {
-                className: 'flex flex-row gap-6',
-                style: {
-                    width: `${containerWidth}px`,
-                    minWidth: '100%'
-                }
-            },
-            sortedFilteredSportHalls.map((hall) => {
-                const typeConfig = typeIcons[hall.type] || { icon: 'fa-futbol', color: '#dc2626' };
-                const hasAnyMatch = matches.some(match => match.hallId === hall.id);
-                const isFilterActiveLocal = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
-                
-                // ZÍSKAME KOMPLETNÝ ZOZNAM DNÍ TURNAJA (nie len tie s matchmi)
-                const tournamentDays = [];
-                const dayCards = [];
-                
-                if (tournamentStartDate && tournamentEndDate) {
-                    const startDate = new Date(tournamentStartDate);
-                    const endDate = new Date(tournamentEndDate);
-                    startDate.setHours(0, 0, 0, 0);
-                    endDate.setHours(0, 0, 0, 0);
-                    const currentDate = new Date(startDate);
-                    
-                    while (currentDate <= endDate) {
-                        const dateStr = getLocalDateStr(currentDate);
-                        const matchesDayFilter = !selectedDayFilter || selectedDayFilter === dateStr;
-                        
-                        if (matchesDayFilter) {
-                            // VŽDY PRIDÁME VŠETKY DNI do zoznamu dayCards
-                            const hallMatchesForDay = getMatchesForHallAndDay(hall.id, currentDate);
-                            const matchesCount = hallMatchesForDay.length;
-                            
-                            // Vytvorenie matchesWithColors
-                            const matchesWithColors = hallMatchesForDay.map(match => {
-                                const accommodationsMap = window.__teamAccommodationsMap || new Map();
-                                let homeTeamColor = '#f3f4f6';
-                                let awayTeamColor = '#f3f4f6';
-                                
-                                const homeAccommodationName = accommodationsMap.get(match.homeTeamIdentifier);
-                                const awayAccommodationName = accommodationsMap.get(match.awayTeamIdentifier);
-                                
-                                if (homeAccommodationName) {
-                                    const accommodation = accommodations.find(a => a.name === homeAccommodationName);
-                                    if (accommodation) {
-                                        homeTeamColor = accommodation.headerColor;
-                                    }
-                                }
-                                if (awayAccommodationName) {
-                                    const accommodation = accommodations.find(a => a.name === awayAccommodationName);
-                                    if (accommodation) {
-                                        awayTeamColor = accommodation.headerColor;
-                                    }
-                                }
-                                
-                                const homeTextColor = (homeTeamColor !== '#f3f4f6' && homeTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
-                                const awayTextColor = (awayTeamColor !== '#f3f4f6' && awayTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
-                                
-                                return {
-                                    ...match,
-                                    homeTeamColor,
-                                    awayTeamColor,
-                                    homeTextColor,
-                                    awayTextColor
-                                };
-                            });
-                            
-                            // VŽDY PRIDÁME KARTU DŇA (aj keď je prázdna)
-                            dayCards.push({
-                                date: new Date(currentDate),
-                                dateStr: dateStr,
-                                matches: matchesWithColors,
-                                matchesCount: matchesCount,
-                                isEmpty: matchesCount === 0
-                            });
-                        }
-                        currentDate.setDate(currentDate.getDate() + 1);
-                    }
-                }
-                
-                // ** NOVÁ PODMIENKA: Ak je filter aktívny a hala nemá žiadne karty dní, nevracame nič **
-                // Teraz už vždy budeme mať dayCards (všetky dni), takže kontrolujeme, či aspoň jedna karta nie je prázdna
-                if (isFilterActiveLocal && dayCards.every(card => card.isEmpty)) {
-                    return null;
-                }
-                
-                return React.createElement(
-                    'div',
-                    {
-                        key: hall.id,
-                        className: 'bg-white rounded-xl border-2 border-gray-200 shadow-sm hover:shadow-md transition-shadow group flex-shrink-0',
-                        style: {
-                            width: '695px',
-                            minWidth: '695px'
-                        }
-                    },
-                    // HLAVIČKA HALY (nezmenená)
-                    React.createElement(
-                        'div',
-                        { className: 'p-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200' },
-                        React.createElement(
-                            'div',
-                            { className: 'flex items-center' },
-                            React.createElement(
-                                'div',
-                                {
-                                    className: 'w-14 h-14 rounded-full flex items-center justify-center mr-4 flex-shrink-0',
-                                    style: {
-                                        backgroundColor: typeConfig.color + '20',
-                                        border: `3px solid ${typeConfig.color}`
-                                    }
-                                },
-                                React.createElement('i', {
-                                    className: `fa-solid ${typeConfig.icon} text-2xl`,
-                                    style: { color: typeConfig.color }
-                                })
-                            ),
-                            React.createElement(
-                                'div',
-                                { className: 'flex-1' },
-                                React.createElement(
-                                    'div',
-                                    { className: 'flex items-center justify-between' },
-                                    React.createElement('h4', { className: 'font-bold text-xl text-gray-800' }, hall.name)
-                                ),
-                                React.createElement(
-                                    'div',
-                                    { className: 'flex items-center gap-2 mt-1' },
-                                    React.createElement('span', {
-                                        className: 'inline-block px-3 py-1 text-xs font-medium rounded-full',
-                                        style: {
-                                            backgroundColor: typeConfig.color + '20',
-                                            color: typeConfig.color
-                                        }
-                                    }, 'Športová hala'),
-                                    
-                                    // Tlačidlá pre admina
-                                    userProfileData?.role === 'admin' && hasAnyMatch && React.createElement(
-                                        'div',
-                                        { className: 'flex gap-1 ml-2' },
-                                        React.createElement(
-                                            'button',
-                                            {
-                                                className: 'opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 bg-purple-500 hover:bg-purple-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                onClick: (e) => {
-                                                    e.stopPropagation();
-                                                    setPendingSwap({
-                                                        sourceHallId: hall.id,
-                                                        sourceDate: null,
-                                                        isWholeHall: true
-                                                    });
-                                                    setIsSwapMatchesModalOpen(true);
-                                                },
-                                                title: 'Vymeniť zápasy s inou halou (vzájomná výmena)'
-                                            },
-                                            React.createElement('i', { className: 'fa-solid fa-arrows-spin text-sm' })
-                                        ),
-                                        React.createElement(
-                                            'button',
-                                            {
-                                                className: 'opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                onClick: (e) => {
-                                                    e.stopPropagation();
-                                                    handleBulkUnassign(hall.id, null, true);
-                                                },
-                                                title: 'Odstrániť priradenie všetkých zápasov z tejto haly'
-                                            },
-                                            React.createElement('i', { className: 'fa-solid fa-trash-can text-sm' })
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    ),
-                    
-                    // Boxy dní - TERAZ VŽDY ZOBRAZÍME VŠETKY DNI (aj prázdne)
-                    dayCards.length > 0 && React.createElement(
-                        'div',
-                        {
-                            className: 'p-4 bg-gray-50 flex flex-col gap-2',
-                            style: {
-                                width: '100%'
-                            }
-                        },
-                        dayCards.map((dayCard, index) => {
-                            const date = dayCard.date;
-                            const dateStr = dayCard.dateStr;
-                            const hallMatches = dayCard.matches;
-                            const matchesCount = dayCard.matchesCount;
-                            const isEmpty = dayCard.isEmpty;
-                            
-                            // ** NOVÉ: Ak je prázdna a filter je aktívny, zobrazíme špeciálny text **
-                            const showEmptyMessage = isEmpty && isFilterActiveLocal;
-                            
-                            const isFilterActiveForDay = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
-                            
-                            const uniqueGroups = [...new Set(hallMatches.map(m => m.groupName).filter(Boolean))];
-                            const groupsCount = uniqueGroups.length;
-                            
-                            const groupAlignmentMap = {};
-                            
-                            if (groupsCount === 1) {
-                                groupAlignmentMap[uniqueGroups[0]] = 'center';
-                            } else if (groupsCount === 2) {
-                                groupAlignmentMap[uniqueGroups[0]] = 'left';
-                                groupAlignmentMap[uniqueGroups[1]] = 'right';
-                            } else if (groupsCount === 3) {
-                                groupAlignmentMap[uniqueGroups[0]] = 'left';
-                                groupAlignmentMap[uniqueGroups[1]] = 'center';
-                                groupAlignmentMap[uniqueGroups[2]] = 'right';
-                            } else if (groupsCount === 4) {
-                                groupAlignmentMap[uniqueGroups[0]] = 'left';
-                                groupAlignmentMap[uniqueGroups[1]] = 'center-left';
-                                groupAlignmentMap[uniqueGroups[2]] = 'center-right';
-                                groupAlignmentMap[uniqueGroups[3]] = 'right';
-                            } else if (groupsCount >= 5) {
-                                uniqueGroups.forEach((group, index) => {
-                                    if (index === 0) groupAlignmentMap[group] = 'left';
-                                    else if (index === groupsCount - 1) groupAlignmentMap[group] = 'right';
-                                    else groupAlignmentMap[group] = 'center';
-                                });
-                            }
-                            
-                            const cardId = `${hall.id}_${dateStr}`;
-                            const dateKey = dateStr;
-                            const maxHeightForDate = maxHeightsByDate[dateKey] || 0;
-                            
-                            return React.createElement(
-                                'div',
-                                {
-                                    key: index,
-                                    className: 'day-card-measure flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group/day',
-                                    style: {
-                                        width: '100%',
-                                        minHeight: heightsCalculated && maxHeightForDate > 0 ? `${maxHeightForDate}px` : 'auto'
-                                    },
-                                    'data-card-id': cardId,
-                                    'data-date-key': dateKey
-                                },
-                                // Hlavička dňa (nezmenená)
-                                React.createElement(
-                                    'div',
-                                    {
-                                        className: 'flex items-center justify-between mb-2 pb-1 border-b border-gray-100 cursor-pointer hover:bg-blue-50 p-2 -m-2 rounded transition-colors',
-                                        onClick: (e) => {
-                                            e.stopPropagation();
-                                            handleHallDayHeaderClick(hall, date, dateStr);
-                                        },
-                                        title: 'Kliknite pre nastavenie času začiatku prvého zápasu',
-                                        style: { width: '100%' }
-                                    },
-                                    React.createElement(
-                                        'div',
-                                        { className: 'flex items-center gap-2 whitespace-nowrap' },
-                                        React.createElement('i', { className: 'fa-solid fa-calendar-day text-gray-400 text-sm flex-shrink-0' }),
-                                        React.createElement(
-                                            'span',
-                                            { className: 'text-sm font-semibold text-gray-800' },
-                                            formatDateWithDay(date)
-                                        ),
-                                        (() => {
-                                            const scheduleId = `${hall.id}_${getLocalDateStr(date)}`;
-                                            const savedSchedule = hallSchedules[scheduleId];
-                                            if (savedSchedule?.startTime) {
-                                                return React.createElement(
-                                                    'span',
-                                                    { className: 'text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full ml-2 whitespace-nowrap' },
-                                                    React.createElement('i', { className: 'fa-regular fa-clock mr-1 text-xs flex-shrink-0' }),
-                                                    savedSchedule.startTime
-                                                );
-                                            }
-                                            return React.createElement('i', { className: 'fa-regular fa-clock text-xs text-blue-400 ml-1 opacity-0 group-hover/day:opacity-100 transition-opacity flex-shrink-0' });
-                                        })()
-                                    ),
-                                    // Tlačidlá pre admina (len ak nie je prázdna, lebo inak nemá zmysel)
-                                    !isEmpty && userProfileData?.role === 'admin' && React.createElement(
-                                        'div',
-                                        { className: 'flex gap-1 ml-2' },
-                                        React.createElement(
-                                            'button',
-                                            {
-                                                className: 'opacity-0 group-hover/day:opacity-100 transition-opacity w-6 h-6 bg-purple-500 hover:bg-purple-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                onClick: (e) => {
-                                                    e.stopPropagation();
-                                                    setPendingSwap({
-                                                        sourceHallId: hall.id,
-                                                        sourceDate: dateStr,
-                                                        isWholeHall: false
-                                                    });
-                                                    setIsSwapMatchesModalOpen(true);
-                                                },
-                                                title: 'Vymeniť zápasy s iným dňom/halou (vzájomná výmena)'
-                                            },
-                                            React.createElement('i', { className: 'fa-solid fa-arrows-spin text-xs' })
-                                        ),
-                                        React.createElement(
-                                            'button',
-                                            {
-                                                className: 'opacity-0 group-hover/day:opacity-100 transition-opacity w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                onClick: (e) => {
-                                                    e.stopPropagation();
-                                                    handleBulkUnassign(hall.id, dateStr, false);
-                                                },
-                                                title: 'Odstrániť priradenie všetkých zápasov z tohto dňa'
-                                            },
-                                            React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
-                                        )
-                                    ),
-                                    React.createElement(
-                                        'div',
-                                        { className: 'flex items-center gap-2 flex-shrink-0' },
-                                        isEmpty ? React.createElement(
-                                            'span',
-                                            { className: 'text-xs text-gray-400 whitespace-nowrap' },
-                                            showEmptyMessage ? 'Filtrované' : 'Žiadne zápasy'
-                                        ) : React.createElement(
-                                            React.Fragment,
-                                            null,
-                                            React.createElement(
-                                                'span',
-                                                { className: 'text-xs text-gray-500 whitespace-nowrap' },
-                                                (() => {
-                                                    if (matchesCount === 1) return `${matchesCount} zápas`;
-                                                    if (matchesCount >= 2 && matchesCount <= 4) return `${matchesCount} zápasy`;
-                                                    return `${matchesCount} zápasov`;
-                                                })()
-                                            ),
-                                            React.createElement(
-                                                'span',
-                                                { className: 'w-2 h-2 bg-green-500 rounded-full flex-shrink-0' }
-                                            )
-                                        )
-                                    )
-                                ),
-                                
-                                // ** UPRAVENÁ ČASŤ: Zobrazenie obsahu dňa **
-                                !isEmpty ? (
-                                    // Normálne zobrazenie zápasov (pôvodný kód, ktorý funguje)
-                                    React.createElement(
-                                        'div',
-                                        {
-                                            className: 'space-y-0',
-                                            style: { width: '100%' }
-                                        },
-                                        (function() {
-                                            // ... celá pôvodná logika pre zobrazenie zápasov a medzier ...
-                                            // (Túto časť ponechajte úplne nezmenenú z pôvodného kódu)
-                                            // Pre zachovanie prehľadnosti ju sem nevkladám celú, ale v praxi ju treba skopírovať.
-                                            // Nižšie je len zjednodušená verzia pre demonštráciu štruktúry.
-                                            
-                                            const sortedMatches = hallMatches.sort((a, b) => {
-                                                if (!a.scheduledTime) return 1;
-                                                if (!b.scheduledTime) return -1;
-                                                try {
-                                                    const timeA = a.scheduledTime.toDate().getTime();
-                                                    const timeB = b.scheduledTime.toDate().getTime();
-                                                    return timeA - timeB;
-                                                } catch (e) {
-                                                    return 0;
-                                                }
-                                            });
-                                            
-                                            const allElements = [];
-                                            
-                                            // ... tu by bola celá pôvodná logika pre matches a medzery ...
-                                            // (Skopírujte celý blok z pôvodného kódu, ktorý generuje allElements)
-                                            
-                                            return allElements;
-                                        })()
-                                    )
-                                ) : (
-                                    // ** NOVÉ: Zobrazenie placeholderu pre prázdny deň s filtrom **
-                                    React.createElement(
-                                        'div',
-                                        {
-                                            className: 'w-full py-6 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-2',
-                                            style: { minWidth: '500px' }
-                                        },
-                                        React.createElement('i', { className: 'fa-solid fa-filter-circle-xmark text-sm flex-shrink-0' }),
-                                        React.createElement('span', { className: 'text-center' }, 
-                                            showEmptyMessage 
-                                                ? 'Pre zvolené filtre neexistujú žiadne zápasy v tomto dni.'
-                                                : 'Žiadne zápasy'
-                                        )
-                                    )
-                                )
-                            );
-                        })
-                    ),
-                    
-                    // Ak nie sú nastavené dátumy turnaja
-                    !tournamentDatesLoaded || (!tournamentStartDate && !tournamentEndDate) ? React.createElement(
-                        'div',
-                        { className: 'p-4 bg-yellow-50 border-t border-yellow-200' },
-                        React.createElement(
-                            'div',
-                            { className: 'flex items-center gap-2 text-yellow-700' },
-                            React.createElement('i', { className: 'fa-solid fa-exclamation-triangle text-sm' }),
-                            React.createElement('span', { className: 'text-sm' }, 'Nie sú nastavené dátumy turnaja')
-                        )
-                    ) : null
-                );
-            })
-        );
-    })()
-)
+                               // Zistíme, či existujú nejaké haly na zobrazenie
+                               const hasVisibleHalls = !loading && sportHalls.length > 0 &&
+                               (() => {
+                                   // Prejdeme všetky haly a zistíme, či aspoň jedna má viditeľné karty dní
+                                   for (const hall of sportHalls) {
+                                       // Ak je filter podľa haly aktívny, berieme len vybranú halu
+                                       if (selectedHallFilter && hall.id !== selectedHallFilter) continue;
+                                       
+                                       // Prejdeme všetky dni turnaja
+                                       if (tournamentStartDate && tournamentEndDate) {
+                                           const startDate = new Date(tournamentStartDate);
+                                           const endDate = new Date(tournamentEndDate);
+                                           startDate.setHours(0, 0, 0, 0);
+                                           endDate.setHours(0, 0, 0, 0);
+                                           
+                                           const currentDate = new Date(startDate);
+                                           
+                                           while (currentDate <= endDate) {
+                                               const dateStr = getLocalDateStr(currentDate);
+                                               
+                                               // Kontrola filtra dňa
+                                               if (selectedDayFilter && selectedDayFilter !== dateStr) {
+                                                   currentDate.setDate(currentDate.getDate() + 1);
+                                                   continue;
+                                               }
+                                               
+                                               // Získame zápasy pre túto halu a deň
+                                               const hallMatchesForDay = getMatchesForHallAndDay(hall.id, currentDate);
+                                               const matchesCount = hallMatchesForDay.length;
+                                               
+                                               // Ak je filter aktívny, hľadáme aspoň jeden zápas
+                                               if (isFilterActiveLocal) {
+                                                   if (matchesCount > 0) {
+                                                       return true;
+                                                   }
+                                               } else {
+                                                   // Ak filter nie je aktívny, hala je vždy viditeľná
+                                                   return true;
+                                               }
+                                               
+                                               currentDate.setDate(currentDate.getDate() + 1);
+                                           }
+                                       }
+                                   }
+                                   return false;
+                               })();
+                           
+                               // Ak je filter aktívny a nie sú žiadne haly na zobrazenie, zobrazíme špeciálny text
+                               if (isFilterActiveLocal && !hasVisibleHalls) {
+                                   return React.createElement(
+                                       'div',
+                                       { className: 'text-center py-8 text-gray-500 bg-gray-50 rounded-lg mb-4' },
+                                       React.createElement('i', { className: 'fa-solid fa-filter-circle-xmark text-4xl mb-3 opacity-30' }),
+                                       React.createElement('p', { className: 'text-lg' }, 'Pre zvolené filtre neexistujú žiadne zápasy.')
+                                   );
+                               }
+                               
+                               // Inak zobrazíme štandardný nadpis
+                               return React.createElement(
+                                   'h3',
+                                   { className: 'text-xl font-semibold mb-4 text-gray-700 pb-2 flex-shrink-0' },
+                                   React.createElement('i', { className: 'fa-solid fa-futbol mr-2 text-red-500' }),
+                                   'Športové haly',
+                                   React.createElement('span', { className: 'ml-2 text-sm font-normal text-gray-500' },
+                                       `(${filteredSportHalls.length} ${filteredSportHalls.length === 1 ? 'hala' : filteredSportHalls.length < 5 ? 'haly' : 'hál'})`
+                                   )
+                               );
+                           })(),
+                           
+                           // Indikátor načítavania
+                           loading && React.createElement(
+                               'div',
+                               { className: 'flex-1 flex justify-center items-center py-12' },
+                               React.createElement('div', { className: 'animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500' })
+                           ),
+                           
+                           // Žiadne haly
+                           !loading && sportHalls.length === 0 && React.createElement(
+                               'div',
+                               { className: 'flex-1 flex items-center justify-center text-center py-12 text-gray-500 bg-gray-50 rounded-lg' },
+                               React.createElement(
+                                   'div',
+                                   null,
+                                   React.createElement('i', { className: 'fa-solid fa-map-pin text-5xl mb-4 opacity-30' }),
+                                   React.createElement('p', { className: 'text-lg' }, 'Žiadne športové haly nie sú k dispozícii'),
+                                   React.createElement('p', { className: 'text-sm mt-2' }, 'Pridajte prvú športovú halu v mape.')
+                               )
+                           ),
+                           
+                           // Grid zoznam športových hál
+                           !loading && sportHalls.length > 0 && (() => {
+                               // Získame zoznam hál, ktoré sa skutočne zobrazia
+                               const visibleHalls = [];
+                               
+                               for (const hall of sortedFilteredSportHalls) {
+                                   const typeConfig = typeIcons[hall.type] || { icon: 'fa-futbol', color: '#dc2626' };
+                                   const hasAnyMatch = matches.some(match => match.hallId === hall.id);
+                                   const isFilterActiveLocal = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
+                                   
+                                   // Generovanie zoznamu dní pre kontrolu, či sa hala zobrazí
+                                   let hasVisibleDays = false;
+                                   
+                                   if (tournamentStartDate && tournamentEndDate) {
+                                       const startDate = new Date(tournamentStartDate);
+                                       const endDate = new Date(tournamentEndDate);
+                                       startDate.setHours(0, 0, 0, 0);
+                                       endDate.setHours(0, 0, 0, 0);
+                                       const currentDate = new Date(startDate);
+                                       
+                                       while (currentDate <= endDate) {
+                                           const dateStr = getLocalDateStr(currentDate);
+                                           const matchesDayFilter = !selectedDayFilter || selectedDayFilter === dateStr;
+                                           
+                                           if (matchesDayFilter) {
+                                               const hallMatchesForDay = getMatchesForHallAndDay(hall.id, currentDate);
+                                               const matchesCount = hallMatchesForDay.length;
+                                               
+                                               if (isFilterActiveLocal) {
+                                                   if (matchesCount > 0) {
+                                                       hasVisibleDays = true;
+                                                       break;
+                                                   }
+                                               } else {
+                                                   hasVisibleDays = true;
+                                                   break;
+                                               }
+                                           }
+                                           currentDate.setDate(currentDate.getDate() + 1);
+                                       }
+                                   }
+                                   
+                                   // Ak hala má viditeľné dni, pridáme ju do zoznamu
+                                   if (hasVisibleDays || (!isFilterActiveLocal && !tournamentStartDate)) {
+                                       visibleHalls.push(hall);
+                                   }
+                               }
+                               
+                               const visibleHallsCount = visibleHalls.length;
+                               const containerWidth = visibleHallsCount * (695 + 24);
+                               
+                               return React.createElement(
+                                   'div',
+                                   {
+                                       className: 'flex flex-row gap-6',
+                                       style: {
+                                           width: `${containerWidth}px`,
+                                           minWidth: '100%'
+                                       }
+                                   },
+                                   sortedFilteredSportHalls.map((hall) => {
+                                       const typeConfig = typeIcons[hall.type] || { icon: 'fa-futbol', color: '#dc2626' };
+                                       const hasAnyMatch = matches.some(match => match.hallId === hall.id);
+                                       const isFilterActiveLocal = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
+                                       
+                                       // ZÍSKAME KOMPLETNÝ ZOZNAM DNÍ TURNAJA (nie len tie s matchmi)
+                                       const tournamentDays = [];
+                                       const dayCards = [];
+                                       
+                                       if (tournamentStartDate && tournamentEndDate) {
+                                           const startDate = new Date(tournamentStartDate);
+                                           const endDate = new Date(tournamentEndDate);
+                                           startDate.setHours(0, 0, 0, 0);
+                                           endDate.setHours(0, 0, 0, 0);
+                                           const currentDate = new Date(startDate);
+                                           
+                                           while (currentDate <= endDate) {
+                                               const dateStr = getLocalDateStr(currentDate);
+                                               const matchesDayFilter = !selectedDayFilter || selectedDayFilter === dateStr;
+                                               
+                                               if (matchesDayFilter) {
+                                                   // VŽDY PRIDÁME VŠETKY DNI do zoznamu dayCards
+                                                   const hallMatchesForDay = getMatchesForHallAndDay(hall.id, currentDate);
+                                                   const matchesCount = hallMatchesForDay.length;
+                                                   
+                                                   // Vytvorenie matchesWithColors
+                                                   const matchesWithColors = hallMatchesForDay.map(match => {
+                                                       const accommodationsMap = window.__teamAccommodationsMap || new Map();
+                                                       let homeTeamColor = '#f3f4f6';
+                                                       let awayTeamColor = '#f3f4f6';
+                                                       
+                                                       const homeAccommodationName = accommodationsMap.get(match.homeTeamIdentifier);
+                                                       const awayAccommodationName = accommodationsMap.get(match.awayTeamIdentifier);
+                                                       
+                                                       if (homeAccommodationName) {
+                                                           const accommodation = accommodations.find(a => a.name === homeAccommodationName);
+                                                           if (accommodation) {
+                                                               homeTeamColor = accommodation.headerColor;
+                                                           }
+                                                       }
+                                                       if (awayAccommodationName) {
+                                                           const accommodation = accommodations.find(a => a.name === awayAccommodationName);
+                                                           if (accommodation) {
+                                                               awayTeamColor = accommodation.headerColor;
+                                                           }
+                                                       }
+                                                       
+                                                       const homeTextColor = (homeTeamColor !== '#f3f4f6' && homeTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
+                                                       const awayTextColor = (awayTeamColor !== '#f3f4f6' && awayTeamColor !== '#1e40af') ? '#ffffff' : '#000000';
+                                                       
+                                                       return {
+                                                           ...match,
+                                                           homeTeamColor,
+                                                           awayTeamColor,
+                                                           homeTextColor,
+                                                           awayTextColor
+                                                       };
+                                                   });
+                                                   
+                                                   // VŽDY PRIDÁME KARTU DŇA (aj keď je prázdna)
+                                                   dayCards.push({
+                                                       date: new Date(currentDate),
+                                                       dateStr: dateStr,
+                                                       matches: matchesWithColors,
+                                                       matchesCount: matchesCount,
+                                                       isEmpty: matchesCount === 0
+                                                   });
+                                               }
+                                               currentDate.setDate(currentDate.getDate() + 1);
+                                           }
+                                       }
+                                       
+                                       // ** NOVÁ PODMIENKA: Ak je filter aktívny a hala nemá žiadne karty dní, nevracame nič **
+                                       // Teraz už vždy budeme mať dayCards (všetky dni), takže kontrolujeme, či aspoň jedna karta nie je prázdna
+                                       if (isFilterActiveLocal && dayCards.every(card => card.isEmpty)) {
+                                           return null;
+                                       }
+                                       
+                                       return React.createElement(
+                                           'div',
+                                           {
+                                               key: hall.id,
+                                               className: 'bg-white rounded-xl border-2 border-gray-200 shadow-sm hover:shadow-md transition-shadow group flex-shrink-0',
+                                               style: {
+                                                   width: '695px',
+                                                   minWidth: '695px'
+                                               }
+                                           },
+                                           // HLAVIČKA HALY (nezmenená)
+                                           React.createElement(
+                                               'div',
+                                               { className: 'p-5 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200' },
+                                               React.createElement(
+                                                   'div',
+                                                   { className: 'flex items-center' },
+                                                   React.createElement(
+                                                       'div',
+                                                       {
+                                                           className: 'w-14 h-14 rounded-full flex items-center justify-center mr-4 flex-shrink-0',
+                                                           style: {
+                                                               backgroundColor: typeConfig.color + '20',
+                                                               border: `3px solid ${typeConfig.color}`
+                                                           }
+                                                       },
+                                                       React.createElement('i', {
+                                                           className: `fa-solid ${typeConfig.icon} text-2xl`,
+                                                           style: { color: typeConfig.color }
+                                                       })
+                                                   ),
+                                                   React.createElement(
+                                                       'div',
+                                                       { className: 'flex-1' },
+                                                       React.createElement(
+                                                           'div',
+                                                           { className: 'flex items-center justify-between' },
+                                                           React.createElement('h4', { className: 'font-bold text-xl text-gray-800' }, hall.name)
+                                                       ),
+                                                       React.createElement(
+                                                           'div',
+                                                           { className: 'flex items-center gap-2 mt-1' },
+                                                           React.createElement('span', {
+                                                               className: 'inline-block px-3 py-1 text-xs font-medium rounded-full',
+                                                               style: {
+                                                                   backgroundColor: typeConfig.color + '20',
+                                                                   color: typeConfig.color
+                                                               }
+                                                           }, 'Športová hala'),
+                                                           
+                                                           // Tlačidlá pre admina
+                                                           userProfileData?.role === 'admin' && hasAnyMatch && React.createElement(
+                                                               'div',
+                                                               { className: 'flex gap-1 ml-2' },
+                                                               React.createElement(
+                                                                   'button',
+                                                                   {
+                                                                       className: 'opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 bg-purple-500 hover:bg-purple-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                       onClick: (e) => {
+                                                                           e.stopPropagation();
+                                                                           setPendingSwap({
+                                                                               sourceHallId: hall.id,
+                                                                               sourceDate: null,
+                                                                               isWholeHall: true
+                                                                           });
+                                                                           setIsSwapMatchesModalOpen(true);
+                                                                       },
+                                                                       title: 'Vymeniť zápasy s inou halou (vzájomná výmena)'
+                                                                   },
+                                                                   React.createElement('i', { className: 'fa-solid fa-arrows-spin text-sm' })
+                                                               ),
+                                                               React.createElement(
+                                                                   'button',
+                                                                   {
+                                                                       className: 'opacity-0 group-hover:opacity-100 transition-opacity w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                       onClick: (e) => {
+                                                                           e.stopPropagation();
+                                                                           handleBulkUnassign(hall.id, null, true);
+                                                                       },
+                                                                       title: 'Odstrániť priradenie všetkých zápasov z tejto haly'
+                                                                   },
+                                                                   React.createElement('i', { className: 'fa-solid fa-trash-can text-sm' })
+                                                               )
+                                                           )
+                                                       )
+                                                   )
+                                               )
+                                           ),
+                                           
+                                           // Boxy dní - TERAZ VŽDY ZOBRAZÍME VŠETKY DNI (aj prázdne)
+                                           dayCards.length > 0 && React.createElement(
+                                               'div',
+                                               {
+                                                   className: 'p-4 bg-gray-50 flex flex-col gap-2',
+                                                   style: {
+                                                       width: '100%'
+                                                   }
+                                               },
+                                               dayCards.map((dayCard, index) => {
+                                                   const date = dayCard.date;
+                                                   const dateStr = dayCard.dateStr;
+                                                   const hallMatches = dayCard.matches;
+                                                   const matchesCount = dayCard.matchesCount;
+                                                   const isEmpty = dayCard.isEmpty;
+                                                   
+                                                   // ** NOVÉ: Ak je prázdna a filter je aktívny, zobrazíme špeciálny text **
+                                                   const showEmptyMessage = isEmpty && isFilterActiveLocal;
+                                                   
+                                                   const isFilterActiveForDay = selectedCategoryFilter || selectedGroupFilter || selectedTeamIdFilter;
+                                                   
+                                                   const uniqueGroups = [...new Set(hallMatches.map(m => m.groupName).filter(Boolean))];
+                                                   const groupsCount = uniqueGroups.length;
+                                                   
+                                                   const groupAlignmentMap = {};
+                                                   
+                                                   if (groupsCount === 1) {
+                                                       groupAlignmentMap[uniqueGroups[0]] = 'center';
+                                                   } else if (groupsCount === 2) {
+                                                       groupAlignmentMap[uniqueGroups[0]] = 'left';
+                                                       groupAlignmentMap[uniqueGroups[1]] = 'right';
+                                                   } else if (groupsCount === 3) {
+                                                       groupAlignmentMap[uniqueGroups[0]] = 'left';
+                                                       groupAlignmentMap[uniqueGroups[1]] = 'center';
+                                                       groupAlignmentMap[uniqueGroups[2]] = 'right';
+                                                   } else if (groupsCount === 4) {
+                                                       groupAlignmentMap[uniqueGroups[0]] = 'left';
+                                                       groupAlignmentMap[uniqueGroups[1]] = 'center-left';
+                                                       groupAlignmentMap[uniqueGroups[2]] = 'center-right';
+                                                       groupAlignmentMap[uniqueGroups[3]] = 'right';
+                                                   } else if (groupsCount >= 5) {
+                                                       uniqueGroups.forEach((group, index) => {
+                                                           if (index === 0) groupAlignmentMap[group] = 'left';
+                                                           else if (index === groupsCount - 1) groupAlignmentMap[group] = 'right';
+                                                           else groupAlignmentMap[group] = 'center';
+                                                       });
+                                                   }
+                                                   
+                                                   const cardId = `${hall.id}_${dateStr}`;
+                                                   const dateKey = dateStr;
+                                                   const maxHeightForDate = maxHeightsByDate[dateKey] || 0;
+                                                   
+                                                   return React.createElement(
+                                                       'div',
+                                                       {
+                                                           key: index,
+                                                           className: 'day-card-measure flex flex-col p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all group/day',
+                                                           style: {
+                                                               width: '100%',
+                                                               minHeight: heightsCalculated && maxHeightForDate > 0 ? `${maxHeightForDate}px` : 'auto'
+                                                           },
+                                                           'data-card-id': cardId,
+                                                           'data-date-key': dateKey
+                                                       },
+                                                       // Hlavička dňa (nezmenená)
+                                                       React.createElement(
+                                                           'div',
+                                                           {
+                                                               className: 'flex items-center justify-between mb-2 pb-1 border-b border-gray-100 cursor-pointer hover:bg-blue-50 p-2 -m-2 rounded transition-colors',
+                                                               onClick: (e) => {
+                                                                   e.stopPropagation();
+                                                                   handleHallDayHeaderClick(hall, date, dateStr);
+                                                               },
+                                                               title: 'Kliknite pre nastavenie času začiatku prvého zápasu',
+                                                               style: { width: '100%' }
+                                                           },
+                                                           React.createElement(
+                                                               'div',
+                                                               { className: 'flex items-center gap-2 whitespace-nowrap' },
+                                                               React.createElement('i', { className: 'fa-solid fa-calendar-day text-gray-400 text-sm flex-shrink-0' }),
+                                                               React.createElement(
+                                                                   'span',
+                                                                   { className: 'text-sm font-semibold text-gray-800' },
+                                                                   formatDateWithDay(date)
+                                                               ),
+                                                               (() => {
+                                                                   const scheduleId = `${hall.id}_${getLocalDateStr(date)}`;
+                                                                   const savedSchedule = hallSchedules[scheduleId];
+                                                                   if (savedSchedule?.startTime) {
+                                                                       return React.createElement(
+                                                                           'span',
+                                                                           { className: 'text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full ml-2 whitespace-nowrap' },
+                                                                           React.createElement('i', { className: 'fa-regular fa-clock mr-1 text-xs flex-shrink-0' }),
+                                                                           savedSchedule.startTime
+                                                                       );
+                                                                   }
+                                                                   return React.createElement('i', { className: 'fa-regular fa-clock text-xs text-blue-400 ml-1 opacity-0 group-hover/day:opacity-100 transition-opacity flex-shrink-0' });
+                                                               })()
+                                                           ),
+                                                           // Tlačidlá pre admina (len ak nie je prázdna, lebo inak nemá zmysel)
+                                                           !isEmpty && userProfileData?.role === 'admin' && React.createElement(
+                                                               'div',
+                                                               { className: 'flex gap-1 ml-2' },
+                                                               React.createElement(
+                                                                   'button',
+                                                                   {
+                                                                       className: 'opacity-0 group-hover/day:opacity-100 transition-opacity w-6 h-6 bg-purple-500 hover:bg-purple-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                       onClick: (e) => {
+                                                                           e.stopPropagation();
+                                                                           setPendingSwap({
+                                                                               sourceHallId: hall.id,
+                                                                               sourceDate: dateStr,
+                                                                               isWholeHall: false
+                                                                           });
+                                                                           setIsSwapMatchesModalOpen(true);
+                                                                       },
+                                                                       title: 'Vymeniť zápasy s iným dňom/halou (vzájomná výmena)'
+                                                                   },
+                                                                   React.createElement('i', { className: 'fa-solid fa-arrows-spin text-xs' })
+                                                               ),
+                                                               React.createElement(
+                                                                   'button',
+                                                                   {
+                                                                       className: 'opacity-0 group-hover/day:opacity-100 transition-opacity w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
+                                                                       onClick: (e) => {
+                                                                           e.stopPropagation();
+                                                                           handleBulkUnassign(hall.id, dateStr, false);
+                                                                       },
+                                                                       title: 'Odstrániť priradenie všetkých zápasov z tohto dňa'
+                                                                   },
+                                                                   React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
+                                                               )
+                                                           ),
+                                                           React.createElement(
+                                                               'div',
+                                                               { className: 'flex items-center gap-2 flex-shrink-0' },
+                                                               isEmpty ? React.createElement(
+                                                                   'span',
+                                                                   { className: 'text-xs text-gray-400 whitespace-nowrap' },
+                                                                   showEmptyMessage ? 'Filtrované' : 'Žiadne zápasy'
+                                                               ) : React.createElement(
+                                                                   React.Fragment,
+                                                                   null,
+                                                                   React.createElement(
+                                                                       'span',
+                                                                       { className: 'text-xs text-gray-500 whitespace-nowrap' },
+                                                                       (() => {
+                                                                           if (matchesCount === 1) return `${matchesCount} zápas`;
+                                                                           if (matchesCount >= 2 && matchesCount <= 4) return `${matchesCount} zápasy`;
+                                                                           return `${matchesCount} zápasov`;
+                                                                       })()
+                                                                   ),
+                                                                   React.createElement(
+                                                                       'span',
+                                                                       { className: 'w-2 h-2 bg-green-500 rounded-full flex-shrink-0' }
+                                                                   )
+                                                               )
+                                                           )
+                                                       ),
+                                                       
+                                                       // ** UPRAVENÁ ČASŤ: Zobrazenie obsahu dňa **
+                                                       !isEmpty ? (
+                                                           // Normálne zobrazenie zápasov (pôvodný kód, ktorý funguje)
+                                                           React.createElement(
+                                                               'div',
+                                                               {
+                                                                   className: 'space-y-0',
+                                                                   style: { width: '100%' }
+                                                               },
+                                                               (function() {
+                                                                   // ... celá pôvodná logika pre zobrazenie zápasov a medzier ...
+                                                                   // (Túto časť ponechajte úplne nezmenenú z pôvodného kódu)
+                                                                   // Pre zachovanie prehľadnosti ju sem nevkladám celú, ale v praxi ju treba skopírovať.
+                                                                   // Nižšie je len zjednodušená verzia pre demonštráciu štruktúry.
+                                                                   
+                                                                   const sortedMatches = hallMatches.sort((a, b) => {
+                                                                       if (!a.scheduledTime) return 1;
+                                                                       if (!b.scheduledTime) return -1;
+                                                                       try {
+                                                                           const timeA = a.scheduledTime.toDate().getTime();
+                                                                           const timeB = b.scheduledTime.toDate().getTime();
+                                                                           return timeA - timeB;
+                                                                       } catch (e) {
+                                                                           return 0;
+                                                                       }
+                                                                   });
+                                                                   
+                                                                   const allElements = [];
+                                                                   
+                                                                   // ... tu by bola celá pôvodná logika pre matches a medzery ...
+                                                                   // (Skopírujte celý blok z pôvodného kódu, ktorý generuje allElements)
+                                                                   
+                                                                   return allElements;
+                                                               })()
+                                                           )
+                                                       ) : (
+                                                           // ** NOVÉ: Zobrazenie placeholderu pre prázdny deň s filtrom **
+                                                           React.createElement(
+                                                               'div',
+                                                               {
+                                                                   className: 'w-full py-6 text-xs text-gray-400 bg-gray-50 rounded border border-dashed border-gray-300 flex items-center justify-center gap-2',
+                                                                   style: { minWidth: '500px' }
+                                                               },
+                                                               React.createElement('i', { className: 'fa-solid fa-filter-circle-xmark text-sm flex-shrink-0' }),
+                                                               React.createElement('span', { className: 'text-center' }, 
+                                                                   showEmptyMessage 
+                                                                       ? 'Pre zvolené filtre neexistujú žiadne zápasy v tomto dni.'
+                                                                       : 'Žiadne zápasy'
+                                                               )
+                                                           )
+                                                       )
+                                                   );
+                                               })
+                                           ),
+                                           
+                                           // Ak nie sú nastavené dátumy turnaja
+                                           !tournamentDatesLoaded || (!tournamentStartDate && !tournamentEndDate) ? React.createElement(
+                                               'div',
+                                               { className: 'p-4 bg-yellow-50 border-t border-yellow-200' },
+                                               React.createElement(
+                                                   'div',
+                                                   { className: 'flex items-center gap-2 text-yellow-700' },
+                                                   React.createElement('i', { className: 'fa-solid fa-exclamation-triangle text-sm' }),
+                                                   React.createElement('span', { className: 'text-sm' }, 'Nie sú nastavené dátumy turnaja')
+                                               )
+                                           ) : null
+                                       );
+                                   })
+                               );
+                           })()
+                       )
                 )
             )
         )
