@@ -991,35 +991,66 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                 React.createElement(
                                     'ul',
                                     { className: 'space-y-3' },
-                                    filteredUnassignedTeams.map((team, i) =>
-                                        React.createElement(
+                                    filteredUnassignedTeams.map((team, i) => {
+                                        // Získanie farby pre kategóriu tímu
+                                        let categoryColor = '#6b7280'; // Predvolená sivá
+                                        if (window.categorySettingsData && window.categorySettingsData[team.category]) {
+                                            if (window.categorySettingsData[team.category].drawColor) {
+                                                categoryColor = window.categorySettingsData[team.category].drawColor;
+                                            }
+                                        }
+                                        
+                                        // Funkcia na výpočet kontrastnej farby textu
+                                        const getContrastColor = (hexColor) => {
+                                            const r = parseInt(hexColor.slice(1,3), 16);
+                                            const g = parseInt(hexColor.slice(3,5), 16);
+                                            const b = parseInt(hexColor.slice(5,7), 16);
+                                            const luminance = (0.299 * r + 0.587 * g + 0.114 * b);
+                                            return luminance > 128 ? '#000000' : '#ffffff';
+                                        };
+                                        
+                                        const textColor = getContrastColor(categoryColor);
+                                        
+                                        return React.createElement(
                                             'li',
                                             {
                                                 key: i,
-                                                className: 'py-3 px-4 bg-gray-50 rounded border-l-4 border-green-500 flex justify-between items-center'
+                                                className: 'py-3 px-4 rounded border-l-4 border-green-500 flex justify-between items-center',
+                                                style: { 
+                                                    backgroundColor: categoryColor,
+                                                    color: textColor
+                                                }
                                             },
                                             React.createElement(
                                                 'div',
                                                 { className: 'flex-grow min-w-0' },
                                                 React.createElement('span', { 
                                                     className: 'font-medium whitespace-nowrap overflow-visible',
-                                                    style: { textOverflow: 'clip' }
-                                                }, `${team.category}: ${team.teamName}`),
+                                                    style: { color: textColor }
+                                                }, team.teamName),
                                                 React.createElement('span', { 
-                                                    className: 'text-gray-500 ml-3 text-sm whitespace-nowrap'
+                                                    className: 'ml-3 text-sm whitespace-nowrap',
+                                                    style: { color: textColor, opacity: 0.8 }
                                                 }, `(${team.peopleWithAccommodation} z ${team.totalPeople} osôb)`)
                                             ),
                                             React.createElement(
                                                 'div',
                                                 { className: 'flex items-center gap-3 flex-shrink-0' },
                                                 React.createElement('span', { 
-                                                    className: 'font-medium text-green-700 whitespace-nowrap'
+                                                    className: 'font-medium whitespace-nowrap',
+                                                    style: { color: textColor, opacity: 0.9 }
                                                 }, team.accommodation),
                                                 React.createElement(
                                                     'button',
                                                     {
                                                         onClick: () => openAssignModal(team),
-                                                        className: 'p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors flex-shrink-0',
+                                                        className: 'p-2 rounded-full transition-colors flex-shrink-0',
+                                                        style: { 
+                                                            color: textColor,
+                                                            backgroundColor: 'rgba(255,255,255,0.2)'
+                                                        },
+                                                        onMouseEnter: (e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.3)',
+                                                        onMouseLeave: (e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'
                                                     },
                                                     React.createElement(
                                                         'svg',
@@ -1038,8 +1069,8 @@ const TeamsAccommApp = ({ userProfileData }) => {
                                                     )
                                                 )
                                             )
-                                        )
-                                    )
+                                        );
+                                    })
                                 )
                             )
                         )
