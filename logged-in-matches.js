@@ -5225,6 +5225,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                 });
     
                 setTeamAccommodations(teamAccommodationMap);
+                window.__teamAccommodationsMap = teamAccommodationMap;
             },
             (err) => console.error("Chyba pri načítaní priradení ubytovní:", err)
         );
