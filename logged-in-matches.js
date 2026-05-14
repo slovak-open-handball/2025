@@ -1481,13 +1481,13 @@ const DeleteMatchesModal = ({ isOpen, onClose, onConfirm, categories, groupsByCa
                                     : 'bg-purple-100 text-purple-800'
                             }` 
                         },
-                        React.createElement('i', { 
-                            className: `fa-solid ${
-                                selectedGroupType === 'Základná skupina' 
-                                    ? 'fa-layer-group' 
-                                    : 'fa-chart-line'
-                            } mr-1 text-xs` 
-                        }),
+//                        React.createElement('i', { 
+//                            className: `fa-solid ${
+//                                selectedGroupType === 'Základná skupina' 
+//                                    ? 'fa-layer-group' 
+//                                    : 'fa-chart-line'
+//                            } mr-1 text-xs` 
+//                        }),
                         selectedGroupType
                     )
                 )
