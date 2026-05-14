@@ -3992,7 +3992,9 @@ const AddMatchesApp = ({ userProfileData }) => {
 
     const [dayCardsHeights, setDayCardsHeights] = useState({});
     const [maxDayCardHeight, setMaxDayCardHeight] = useState(0);
+    const [maxHeightsByDate, setMaxHeightsByDate] = useState({});
     const [heightsCalculated, setHeightsCalculated] = useState(false);
+
 
     // Tieto premenné definujeme AŽ za všetkými useState
     const isFilterActive = selectedCategoryFilter || selectedGroupFilter || selectedHallFilter || selectedDayFilter || selectedTeamIdFilter;
@@ -4007,29 +4009,40 @@ const AddMatchesApp = ({ userProfileData }) => {
     });
 
     const measureDayCardsHeights = () => {
-        if (!heightsCalculated) {
-            // Počkáme, kým sa DOM vykreslí
-            setTimeout(() => {
-                const dayCards = document.querySelectorAll('.day-card-measure');
-                const newHeights = {};
-                let maxHeight = 0;
+        setTimeout(() => {
+            const dayCards = document.querySelectorAll('.day-card-measure');
+            const newHeights = {};
+            const heightsByDate = {};
+        
+            // Najprv zmeriame všetky karty a uložíme ich výšky
+            dayCards.forEach((card) => {
+                const height = card.offsetHeight;
+                const cardId = card.getAttribute('data-card-id');
+                const dateKey = card.getAttribute('data-date-key');
             
-                dayCards.forEach((card, index) => {
-                    const height = card.offsetHeight;
-                    const cardId = card.getAttribute('data-card-id');
-                    if (cardId) {
-                        newHeights[cardId] = height;
-                        if (height > maxHeight) {
-                            maxHeight = height;
-                        }
+                if (cardId && dateKey) {
+                    newHeights[cardId] = height;
+                    
+                    // Uložíme výšku pre konkrétny dátum
+                    if (!heightsByDate[dateKey]) {
+                        heightsByDate[dateKey] = [];
                     }
-                });
-                
-                setDayCardsHeights(newHeights);
-                setMaxDayCardHeight(maxHeight);
-                setHeightsCalculated(true);
-            }, 100);
-        }
+                    heightsByDate[dateKey].push(height);
+                }
+            });
+            
+            // Pre každý dátum nájdeme maximálnu výšku
+            const maxHeights = {};
+            Object.keys(heightsByDate).forEach(dateKey => {
+                maxHeights[dateKey] = Math.max(...heightsByDate[dateKey]);
+            });
+            
+            setDayCardsHeights(newHeights);
+            setMaxHeightsByDate(maxHeights);
+            setHeightsCalculated(true);
+        
+            console.log('Vypočítané maximálne výšky podľa dní:', maxHeights);
+        }, 150);
     };
 
     // Funkcia na výmenu zápasov medzi dňami/halami
@@ -4945,6 +4958,16 @@ const AddMatchesApp = ({ userProfileData }) => {
             measureDayCardsHeights();
         }
     }, [matches, sportHalls, loading, selectedCategoryFilter, selectedGroupFilter, selectedHallFilter, selectedDayFilter, selectedTeamIdFilter]);
+
+    useEffect(() => {
+        if (matches.length > 0 && heightsCalculated) {
+            const timeoutId = setTimeout(() => {
+                measureDayCardsHeights();
+            }, 200);
+            
+            return () => clearTimeout(timeoutId);
+        }
+    }, [matches]);
 
     useEffect(() => {
         localStorage.setItem('filtersPanelPinned', isPinned);
@@ -7978,6 +8001,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                    };
 
                                                    const cardId = `${hall.id}_${dateStr}`;
+                                                   const dateKey = dateStr;
+                                                   const maxHeightForDate = maxHeightsByDate[dateKey] || 0;
                                                    
                                                    return React.createElement(
                                                        'div',
@@ -7988,7 +8013,8 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                width: '100%',
                                                                minHeight: heightsCalculated ? `${maxDayCardHeight}px` : 'auto'
                                                            },
-                                                           'data-card-id': cardId
+                                                           'data-card-id': cardId,
+                                                           'data-date-key': dateKey
                                                        },
                                                        // Hlavička dňa s dátumom a počtom zápasov - klikateľná
                                                        React.createElement(
