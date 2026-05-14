@@ -3870,18 +3870,47 @@ const AddMatchesApp = ({ userProfileData }) => {
             const match = matches.find(m => m.id === matchId);
             if (!match || !match.scheduledTime) return;
     
-            // Posunieme prvý zápas o breakDuration neskôr
+            // Získame všetky zápasy pre tú istú halu a deň
             const matchDate = match.scheduledTime.toDate();
-            const newDateTime = new Date(matchDate);
-            newDateTime.setMinutes(newDateTime.getMinutes() + breakDuration);
+            const dateStr = getLocalDateStr(matchDate);
+            
+            // Získame všetky zápasy v tej istej hale a deň, zoradené podľa času
+            const hallDayMatches = matches
+                .filter(m => 
+                    m.hallId === match.hallId && 
+                    m.scheduledTime
+                )
+                .map(m => ({
+                    ...m,
+                    scheduledTimeObj: m.scheduledTime.toDate()
+                }))
+                .filter(m => {
+                    const mDateStr = getLocalDateStr(m.scheduledTimeObj);
+                    return mDateStr === dateStr;
+                })
+                .sort((a, b) => a.scheduledTimeObj.getTime() - b.scheduledTimeObj.getTime());
     
-            const matchRef = doc(window.db, 'matches', matchId);
-            await updateDoc(matchRef, {
-                scheduledTime: Timestamp.fromDate(newDateTime)
-            });
+            // Nájdeme prvý zápas (ktorý sa posúva)
+            const firstMatch = hallDayMatches[0];
+            if (!firstMatch || firstMatch.id !== matchId) {
+                window.showGlobalNotification('Tento zápas nie je prvým zápasom dňa', 'error');
+                return;
+            }
+    
+            // Posunieme VŠETKY zápasy v tento deň o breakDuration SKÔR (odpočítame minúty)
+            for (const m of hallDayMatches) {
+                const mRef = doc(window.db, 'matches', m.id);
+                const mDateTime = new Date(m.scheduledTimeObj);
+                mDateTime.setMinutes(mDateTime.getMinutes() - breakDuration);  // ZMENA: mínus namiesto plus
+                
+                await updateDoc(mRef, {
+                    scheduledTime: Timestamp.fromDate(mDateTime)
+                });
+                console.log(`Zápas ${m.id} posunutý na ${mDateTime.toLocaleTimeString()}`);
+            }
     
             window.showGlobalNotification(
-                `Prvý zápas bol posunutý o ${breakDuration} minút neskôr. Medzera bola odstránená.`,
+                `Medzera ${breakDuration} minút bola odstránená. Všetky zápasy boli posunuté o ${breakDuration} minút SKÔR.`,
                 'success'
             );
     
