@@ -7298,7 +7298,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                 width: 'fit-content'
                                                             }
                                                         },
-                                                        (() => {
+                                                        (function() {
                                                             const sortedMatches = hallMatches.sort((a, b) => {
                                                                 if (!a.scheduledTime) return 1;
                                                                 if (!b.scheduledTime) return -1;
@@ -7313,45 +7313,45 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                     
                                                             const allElements = [];
                                                     
-                                                            sortedMatches.forEach((match, idx, sortedArray) => {
+                                                            sortedMatches.forEach(function(match, idx, sortedArray) {
                                                                 let matchTime = '--:--';
                                                                 let endTime = '--:--';
                                                                 
                                                                 if (match.scheduledTime) {
                                                                     try {
-                                                                        const date = match.scheduledTime.toDate();
-                                                                        matchTime = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+                                                                        var date = match.scheduledTime.toDate();
+                                                                        matchTime = date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
                                                                         
-                                                                        const matchCategory = categories.find(c => c.name === match.categoryName);
-                                                                        let matchDuration = 0;
+                                                                        var matchCategory = categories.find(function(c) { return c.name === match.categoryName; });
+                                                                        var matchDuration = 0;
                                                                         
                                                                         if (matchCategory) {
-                                                                            const periods = matchCategory.periods || 2;
-                                                                            const periodDuration = matchCategory.periodDuration || 20;
-                                                                            const breakDuration = matchCategory.breakDuration || 2;
+                                                                            var periods = matchCategory.periods || 2;
+                                                                            var periodDuration = matchCategory.periodDuration || 20;
+                                                                            var breakDuration = matchCategory.breakDuration || 2;
                                                                             matchDuration = (periodDuration + breakDuration) * periods - breakDuration;
                                                                         }
                                                                         
-                                                                        const endDateTime = new Date(date.getTime() + matchDuration * 60000);
-                                                                        endTime = `${endDateTime.getHours().toString().padStart(2, '0')}:${endDateTime.getMinutes().toString().padStart(2, '0')}`;
+                                                                        var endDateTime = new Date(date.getTime() + matchDuration * 60000);
+                                                                        endTime = endDateTime.getHours().toString().padStart(2, '0') + ':' + endDateTime.getMinutes().toString().padStart(2, '0');
                                                                         
                                                                     } catch (e) {
                                                                         console.error('Chyba pri formátovaní času:', e);
                                                                     }
                                                                 }
                                                                 
-                                                                const homeDisplay = getTeamDisplayText(match.homeTeamIdentifier);
-                                                                const awayDisplay = getTeamDisplayText(match.awayTeamIdentifier);
+                                                                var homeDisplay = getTeamDisplayText(match.homeTeamIdentifier);
+                                                                var awayDisplay = getTeamDisplayText(match.awayTeamIdentifier);
                                                                 
                                                                 allElements.push(
                                                                     React.createElement(
                                                                         'div',
                                                                         {
-                                                                            key: `match-${match.id}`,
-                                                                            className: `p-0 rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match ${colorHighlight ? '' : 'bg-white'}`,
+                                                                            key: 'match-' + match.id,
+                                                                            className: 'p-0 rounded border border-gray-200 hover:border-blue-400 hover:shadow-sm transition-all relative group/match ' + (colorHighlight ? '' : 'bg-white'),
                                                                             style: { 
                                                                                 width: 'fit-content',
-                                                                                backgroundColor: 'white'  // Pozadie celej karty je vždy biele
+                                                                                backgroundColor: 'white'
                                                                             }
                                                                         },
                                                                         React.createElement(
@@ -7362,13 +7362,12 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     gridTemplateColumns: '130px 280px 10px 280px 160px 160px',
                                                                                     width: 'fit-content'
                                                                                 },
-                                                                                onClick: (e) => {
+                                                                                onClick: function(e) {
                                                                                     e.stopPropagation();
                                                                                     handleMatchCardClick(match);
                                                                                 },
                                                                                 title: 'Kliknite pre úpravu zápasu'
                                                                             },
-                                                                            // Časový údaj - BEZ PODFARBENIA
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
@@ -7379,36 +7378,35 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     'div',
                                                                                     { className: 'flex items-center justify-center gap-1 w-full' },
                                                                                     React.createElement('i', { className: 'fa-solid fa-clock text-blue-600 text-xs flex-shrink-0' }),
-                                                                                    React.createElement('span', { className: 'font-medium text-blue-700 truncate' }, `${matchTime} - ${endTime}`)
+                                                                                    React.createElement('span', { className: 'font-medium text-blue-700 truncate' }, matchTime + ' - ' + endTime)
                                                                                 ),
-                                                                                match.isPlacementMatch && match.placementRank && React.createElement(
+                                                                                match.isPlacementMatch && match.placementRank ? React.createElement(
                                                                                     'div',
                                                                                     { className: 'flex items-center justify-center gap-1 w-full mt-0' },
-                                                                                    React.createElement('span', { className: 'text-xs text-purple-600 font-medium' }, `o ${match.placementRank}. miesto`)
-                                                                                ),
-                                                                                match.matchType && !match.isPlacementMatch && React.createElement(
+                                                                                    React.createElement('span', { className: 'text-xs text-purple-600 font-medium' }, 'o ' + match.placementRank + '. miesto')
+                                                                                ) : null,
+                                                                                match.matchType && !match.isPlacementMatch ? React.createElement(
                                                                                     'div',
                                                                                     { className: 'flex items-center justify-center gap-1 w-full mt-0' },
                                                                                     React.createElement('i', { 
-                                                                                        className: `fa-solid ${match.matchType === 'finále' ? 'fa-trophy' : ''} ${
+                                                                                        className: 'fa-solid ' + (match.matchType === 'finále' ? 'fa-trophy' : '') + ' ' + (
                                                                                             match.matchType.includes('finále') ? 'text-yellow-600' :
                                                                                             match.matchType.includes('semifinále') ? 'text-blue-600' :
                                                                                             match.matchType.includes('štvrťfinále') ? 'text-green-600' :
                                                                                             'text-purple-600'
-                                                                                        } text-xs flex-shrink-0` 
+                                                                                        ) + ' text-xs flex-shrink-0'
                                                                                     }),
                                                                                     React.createElement('span', { 
-                                                                                        className: `text-xs ${
+                                                                                        className: 'text-xs ' + (
                                                                                             match.matchType.includes('finále') ? 'text-yellow-600' :
                                                                                             match.matchType.includes('semifinále') ? 'text-blue-600' :
                                                                                             match.matchType.includes('štvrťfinále') ? 'text-green-600' :
                                                                                             'text-purple-600'
-                                                                                        } font-medium` 
+                                                                                        ) + ' font-medium'
                                                                                     }, match.matchType)
-                                                                                )
-                                                                            },
+                                                                                ) : null
+                                                                            ),
                                                                             
-                                                                            // Domáci tím - BEZ PODFARBENIA
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
@@ -7418,21 +7416,19 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 React.createElement(
                                                                                     'span',
                                                                                     { 
-                                                                                        className: `${selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium'} text-gray-800 truncate block w-full`, 
+                                                                                        className: (selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' text-gray-800 truncate block w-full',
                                                                                         title: homeDisplay.name 
                                                                                     },
                                                                                     homeDisplay.name
                                                                                 )
                                                                             ),
                                                                             
-                                                                            // VS ikona - BEZ PODFARBENIA
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { className: 'text-gray-400 px-2 py-0 flex items-center justify-center' },
                                                                                 React.createElement('i', { className: 'fa-solid fa-vs text-xs' })
                                                                             ),
                                                                             
-                                                                            // Hosťovský tím - BEZ PODFARBENIA
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
@@ -7442,14 +7438,13 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 React.createElement(
                                                                                     'span',
                                                                                     { 
-                                                                                        className: `${selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium'} text-gray-800 truncate block w-full`,
+                                                                                        className: (selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' text-gray-800 truncate block w-full',
                                                                                         title: awayDisplay.name 
                                                                                     },   
                                                                                     awayDisplay.name
                                                                                 )
                                                                             ),
                                                                             
-                                                                            // ID domáceho tímu - S PODFARBENÍM (len ak je zapnuté) a ČIERNY TEXT
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
@@ -7457,21 +7452,20 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     style: { 
                                                                                         textAlign: 'center',
                                                                                         backgroundColor: colorHighlight && match.categoryName ? 
-                                                                                            (categories.find(c => c.name === match.categoryName)?.drawColor || 'transparent') 
+                                                                                            (categories.find(function(c) { return c.name === match.categoryName; })?.drawColor || 'transparent') 
                                                                                             : 'transparent'
                                                                                     }
                                                                                 },
                                                                                 React.createElement(
                                                                                     'span',
                                                                                     { 
-                                                                                        className: `${selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium'} text-black font-mono text-[10px] truncate block w-full`,
+                                                                                        className: (selectedTeamIdFilter && match.homeTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' text-black font-mono text-[10px] truncate block w-full',
                                                                                         title: homeDisplay.id 
                                                                                     },
-                                                                                    `(${homeDisplay.id})`
+                                                                                    '(' + homeDisplay.id + ')'
                                                                                 )
                                                                             ),
                                                                             
-                                                                            // ID hosťovského tímu - S PODFARBENÍM (len ak je zapnuté) a ČIERNY TEXT
                                                                             React.createElement(
                                                                                 'div',
                                                                                 { 
@@ -7479,30 +7473,29 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                     style: { 
                                                                                         textAlign: 'center',
                                                                                         backgroundColor: colorHighlight && match.categoryName ? 
-                                                                                            (categories.find(c => c.name === match.categoryName)?.drawColor || 'transparent') 
+                                                                                            (categories.find(function(c) { return c.name === match.categoryName; })?.drawColor || 'transparent') 
                                                                                             : 'transparent'
                                                                                     }
                                                                                 },
                                                                                 React.createElement(
                                                                                     'span',
                                                                                     { 
-                                                                                        className: `${selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium'} text-black font-mono text-[10px] truncate block w-full`,
+                                                                                        className: (selectedTeamIdFilter && match.awayTeamIdentifier === selectedTeamIdFilter ? 'font-bold' : 'font-medium') + ' text-black font-mono text-[10px] truncate block w-full',
                                                                                         title: awayDisplay.id 
                                                                                     },
-                                                                                    `(${awayDisplay.id})`
+                                                                                    '(' + awayDisplay.id + ')'
                                                                                 )
                                                                             )
                                                                         ),
                                                                         
-                                                                        // Admin tlačidlá
-                                                                        userProfileData?.role === 'admin' && React.createElement(
+                                                                        userProfileData?.role === 'admin' ? React.createElement(
                                                                             'div',
                                                                             { className: 'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover/match:opacity-100 transition-opacity' },
                                                                             React.createElement(
                                                                                 'button',
                                                                                 {
                                                                                     className: 'w-6 h-6 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                                                    onClick: (e) => {
+                                                                                    onClick: function(e) {
                                                                                         e.stopPropagation();
                                                                                         setSelectedMatchForBreak(match);
                                                                                         setSelectedMatchCurrentTime(matchTime);
@@ -7516,7 +7509,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 'button',
                                                                                 {
                                                                                     className: 'w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                                                    onClick: (e) => {
+                                                                                    onClick: function(e) {
                                                                                         e.stopPropagation();
                                                                                         handleSwapClick(match);
                                                                                     },
@@ -7528,7 +7521,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 'button',
                                                                                 {
                                                                                     className: 'w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-md flex-shrink-0',
-                                                                                    onClick: (e) => {
+                                                                                    onClick: function(e) {
                                                                                         e.stopPropagation();
                                                                                         handleUnassignMatch(match);
                                                                                     },
@@ -7536,7 +7529,7 @@ const AddMatchesApp = ({ userProfileData }) => {
                                                                                 },
                                                                                 React.createElement('i', { className: 'fa-solid fa-trash-can text-xs' })
                                                                             )
-                                                                        )
+                                                                        ) : null
                                                                     )
                                                                 );
                                                             });
