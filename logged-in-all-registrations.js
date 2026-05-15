@@ -2423,15 +2423,15 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                 value: selectedAccommodationType,
                                 onChange: (e) => {
                                     setSelectedAccommodationType(e.target.value);
-                                    handleChange('accommodation.type', e.target.value); // Aktualizovať vnorené pole
+                                    // Toto je kľúčové - aktualizujeme aj localEditedData
+                                    handleChange('accommodation.type', e.target.value);
                                 },
                                 disabled: !isSavable
                             },
                             React.createElement('option', { value: '', disabled: true }, 'Vyberte typ ubytovania'),
-                            // Zabezpečiť, že ak aktuálna hodnota nie je v možnostiach, stále sa zobrazí
-                            selectedAccommodationType && !accommodationOptionsWithNone.includes(selectedAccommodationType) && // Používame accommodationOptionsWithNone
+                            selectedAccommodationType && !accommodationOptionsWithNone.includes(selectedAccommodationType) &&
                                 React.createElement('option', { key: selectedAccommodationType, value: selectedAccommodationType, disabled: true, hidden: true }, selectedAccommodationType),
-                            accommodationOptionsWithNone.map(option => React.createElement('option', { key: option, value: option }, option)) // Používame accommodationOptionsWithNone
+                            accommodationOptionsWithNone.map(option => React.createElement('option', { key: option, value: option }, option))
                         )
                     )
                 );
@@ -2792,7 +2792,8 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
                                         dataToPrepareForSave.arrival = { type: '' };
                                     }
                                     
-                                    // Správne nastavenie ubytovania
+                                    // Správne nastavenie ubytovania - TOTO JE DÔLEŽITÉ
+                                    // Zabezpečte, že sa použije selectedAccommodationType, nie to, čo je v localEditedData
                                     dataToPrepareForSave.accommodation = { type: selectedAccommodationType };
                                     
                                     // Správne nastavenie tričiek
