@@ -647,8 +647,10 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
     }
 
     // Filtrujeme kľúče, aby sme sa uistili, že sú to platné dátumy jedál
-    const mealDates = (team.packageDetails && team.packageDetails.meals ? Object.keys(team.packageDetails.meals).sort() : [])
-        .filter(key => isDateKey(key)); // Používame novú pomocnú funkciu
+   const mealDates = (team.packageDetails && team.packageDetails.meals && typeof team.packageDetails.meals === 'object' 
+        ? Object.keys(team.packageDetails.meals).sort() 
+        : [])
+        .filter(key => isDateKey(key));
     
     const mealTypes = ['breakfast', 'lunch', 'dinner', 'refreshment'];
     const mealTypeLabels = {
@@ -1086,17 +1088,17 @@ function TeamDetailsContent({ team, tshirtSizeOrder, showDetailsAsCollapsible, s
                                     mealTypes.map(type => {
                                         const memberMealSetting = member.packageDetails?.meals?.[date]?.[type];
                                         const teamPackageMealSetting = team.packageDetails?.meals?.[date]?.[type];
-
+                                        
                                         const isChecked = (memberMealSetting !== undefined)
                                             ? (memberMealSetting === 1)
                                             : (teamPackageMealSetting === 1);
-
+    
                                         return React.createElement('input', {
-                                                            key: `${member.uniqueId}-${date}-${type}-checkbox`,
-                                                            type: 'checkbox',
-                                                            checked: isChecked,
-                                                            onChange: (e) => handleMealChange(member, date, type, e.target.checked),
-                                                            className: 'form-checkbox h-4 w-4 text-blue-600'
+                                            key: `${member.uniqueId}-${date}-${type}-checkbox`,
+                                            type: 'checkbox',
+                                            checked: isChecked || false, // Zabezpečiť, že checked je vždy boolean
+                                            onChange: (e) => handleMealChange(member, date, type, e.target.checked),
+                                            className: 'form-checkbox h-4 w-4 text-blue-600'
                                         });
                                     })
                                 )
@@ -1773,26 +1775,31 @@ function DataEditModal({ isOpen, onClose, title, data, onSave, onDeleteMember, o
             if (initialData.dateOfBirth === undefined) initialData.dateOfBirth = '';
             if (initialData.jerseyNumber === undefined) initialData.jerseyNumber = '';
             if (initialData.registrationNumber === undefined) initialData.registrationNumber = '';
-        } else if (title.includes('Upraviť tím') || title.includes('Pridať nový tím')) { // Changed for Add team modal
+        } else if (title.includes('Upraviť tím') || title.includes('Pridať nový tím')) {
             // Inicializovať selectedCategory s existujúcou kategóriou tímu
-            setSelectedCategory(initialData._category || initialData.category || ''); // Použiť _category pre flattened tímy
+            setSelectedCategory(initialData._category || initialData.category || '');
             if (initialData.teamName === undefined) initialData.teamName = '';
             
             // Inicializovať vybraný typ dopravy a čas príchodu
             setSelectedArrivalType(initialData.arrival?.type || '');
             setArrivalTime(initialData.arrival?.time || '');
-            
+    
             // Inicializovať vybraný typ ubytovania
             setSelectedAccommodationType(initialData.accommodation?.type || '');
-
+    
+            // DÔLEŽITÉ: Zabezpečiť, že packageDetails nie je null
+            if (initialData.packageDetails === null || initialData.packageDetails === undefined) {
+                initialData.packageDetails = {};
+            }
+    
             // Inicializovať selectedPackageName s existujúcim názvom balíka tímu
             setSelectedPackageName(initialData.packageDetails?.name || '');
-
-            // Inicializovať teamTshirts ako pole objektov { tempId, size, quantity }
+            
+            // Inicializovať teamTshirts...
             const initialTshirts = (initialData.tshirts || [])
-                .filter(tshirt => tshirt.size && (tshirt.quantity || 0) > 0) // Only include with quantity > 0
+                .filter(tshirt => tshirt.size && (tshirt.quantity || 0) > 0)
                 .map(tshirt => ({
-                    tempId: generateUniqueId(), // Assign a temporary unique ID
+                    tempId: generateUniqueId(),
                     size: String(tshirt.size).trim(),
                     quantity: tshirt.quantity || 0
                 }));
